@@ -1,8 +1,57 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import '../core/api.dart';
 import '../core/token_storage.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../comments/comments_screen.dart';
+
+// ================== MODELS ==================
+
+class Story {
+  final String id;
+  final String username;
+
+  Story({required this.id, required this.username});
+
+  factory Story.fromJson(Map<String, dynamic> json) {
+    return Story(
+      id: json['_id'] ?? '',
+      username: json['username'] ?? 'user',
+    );
+  }
+}
+
+class Post {
+  final String id;
+  final String username;
+  final String caption;
+  final int likes;
+  final bool liked;
+  final bool saved;
+
+  Post({
+    required this.id,
+    required this.username,
+    required this.caption,
+    required this.likes,
+    required this.liked,
+    required this.saved,
+  });
+
+  factory Post.fromJson(Map<String, dynamic> json) {
+    return Post(
+      id: json['_id'] ?? '',
+      username: json['username'] ?? 'user',
+      caption: json['caption'] ?? '',
+      likes: json['likesCount'] ?? 0,
+      liked: json['liked'] ?? false,
+      saved: json['saved'] ?? false,
+    );
+  }
+}
+
+// ================== SCREEN ==================
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -29,7 +78,7 @@ class _FeedScreenState extends State<FeedScreen> {
     });
   }
 
-  // ================= API =================
+  // ================== API ==================
 
   Future<List<Post>> fetchFeed() async {
     final token = await TokenStorage.read();
@@ -38,6 +87,7 @@ class _FeedScreenState extends State<FeedScreen> {
       headers: {'Authorization': 'Bearer $token'},
     );
 
+    if (res.statusCode != 200) return [];
     final data = jsonDecode(res.body) as List;
     return data.map((e) => Post.fromJson(e)).toList();
   }
@@ -63,7 +113,16 @@ class _FeedScreenState extends State<FeedScreen> {
     refresh();
   }
 
-  // ================= UI =================
+  Future<void> toggleSave(String postId) async {
+    final token = await TokenStorage.read();
+    await http.post(
+      Uri.parse('${Api.baseUrl}/save/$postId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    refresh();
+  }
+
+  // ================== UI ==================
 
   @override
   Widget build(BuildContext context) {
@@ -107,18 +166,17 @@ class _FeedScreenState extends State<FeedScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: Column(
                           children: [
-                            CircleAvatar(
+                            const CircleAvatar(
                               radius: 28,
                               backgroundColor: Colors.grey,
-                              child: Text(
-                                s.username[0].toUpperCase(),
-                                style: const TextStyle(color: Colors.white),
-                              ),
+                              child: Icon(Icons.person,
+                                  color: Colors.white),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               s.username,
-                              style: const TextStyle(fontSize: 12),
+                              style:
+                                  const TextStyle(fontSize: 12),
                             ),
                           ],
                         ),
@@ -138,15 +196,16 @@ class _FeedScreenState extends State<FeedScreen> {
                 if (!snap.hasData) {
                   return const Padding(
                     padding: EdgeInsets.only(top: 40),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(
+                        child: CircularProgressIndicator()),
                   );
                 }
 
                 final posts = snap.data!;
                 if (posts.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 60),
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 60),
+                    child: Center(
                       child: Text(
                         'No posts yet',
                         style: TextStyle(color: Colors.grey),
@@ -160,49 +219,82 @@ class _FeedScreenState extends State<FeedScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // HEADER
                         ListTile(
                           leading: const CircleAvatar(
                             backgroundColor: Colors.grey,
-                            child: Icon(Icons.person, color: Colors.white),
+                            child: Icon(Icons.person,
+                                color: Colors.white),
                           ),
                           title: Text(
                             p.username,
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                                fontWeight: FontWeight.bold),
                           ),
-                          trailing: const Icon(Icons.more_vert),
+                          trailing:
+                              const Icon(Icons.more_vert),
                         ),
 
+                        // MEDIA
                         Container(
                           height: 280,
                           color: Colors.grey[900],
                           child: const Center(
                             child: Icon(Icons.image,
-                                size: 80, color: Colors.grey),
+                                size: 80,
+                                color: Colors.grey),
                           ),
                         ),
 
+                        // ACTIONS
                         Row(
                           children: [
                             IconButton(
-                              onPressed: () => toggleLike(p.id),
                               icon: Icon(
                                 p.liked
                                     ? Icons.favorite
                                     : Icons.favorite_border,
-                                color:
-                                    p.liked ? Colors.red : Colors.white,
+                                color: p.liked
+                                    ? Colors.red
+                                    : Colors.white,
                               ),
+                              onPressed: () =>
+                                  toggleLike(p.id),
                             ),
                             Text('${p.likes}'),
+
                             const SizedBox(width: 16),
-                            const Icon(Icons.chat_bubble_outline),
+
+                            IconButton(
+                              icon: const Icon(
+                                  Icons.chat_bubble_outline),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CommentsScreen(
+                                            postId: p.id),
+                                  ),
+                                );
+                              },
+                            ),
+
                             const SizedBox(width: 16),
-                            const Icon(Icons.send),
+
+                            IconButton(
+                              icon: Icon(
+                                p.saved
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                              ),
+                              onPressed: () =>
+                                  toggleSave(p.id),
+                            ),
                           ],
                         ),
 
+                        // CAPTION
                         Padding(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 4),
@@ -212,7 +304,8 @@ class _FeedScreenState extends State<FeedScreen> {
                                 TextSpan(
                                   text: p.username,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
+                                      fontWeight:
+                                          FontWeight.bold),
                                 ),
                                 const TextSpan(text: '  '),
                                 TextSpan(text: p.caption),
@@ -231,48 +324,6 @@ class _FeedScreenState extends State<FeedScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ================= MODELS =================
-
-class Post {
-  final String id;
-  final String username;
-  final String caption;
-  final int likes;
-  final bool liked;
-
-  Post({
-    required this.id,
-    required this.username,
-    required this.caption,
-    required this.likes,
-    required this.liked,
-  });
-
-  factory Post.fromJson(Map<String, dynamic> json) {
-    return Post(
-      id: json['_id'],
-      username: json['username'] ?? 'user',
-      caption: json['caption'] ?? '',
-      likes: json['likesCount'] ?? 0,
-      liked: json['liked'] ?? false,
-    );
-  }
-}
-
-class Story {
-  final String id;
-  final String username;
-
-  Story({required this.id, required this.username});
-
-  factory Story.fromJson(Map<String, dynamic> json) {
-    return Story(
-      id: json['_id'],
-      username: json['username'] ?? 'user',
     );
   }
 }
