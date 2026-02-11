@@ -1,11 +1,14 @@
 import express from "express";
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
-// middleware
 app.use(express.json());
 
-// test route
+// routes
+app.use("/auth", authRoutes);
+
+// health check
 app.get("/", (req, res) => {
   res.json({ status: "Raonson server is running" });
 });
