@@ -8,6 +8,7 @@ import commentRoutes from "./routes/comment.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import path from "path";
 import uploadRoutes from "./routes/upload.routes.js";
+import reelRoutes from "./routes/reel.routes.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/likes", likeRoutes);
 app.use("/comments", commentRoutes);
 app.use("/follow", followRoutes);
 app.use("/upload", uploadRoutes);
+app.use("/reels", reelRoutes);
 
 app.get("/", (req, res) => {
   res.json({ status: "Raonson server is running" });
