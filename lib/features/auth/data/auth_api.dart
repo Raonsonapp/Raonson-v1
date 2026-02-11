@@ -19,3 +19,22 @@ class AuthApi {
     return response.statusCode == 200;
   }
 }
+static Future<bool> registerStep2({
+  required String phone,
+  required String code,
+}) async {
+  final url = Uri.parse(
+    "${ApiConstants.baseUrl}/auth/register/step2",
+  );
+
+  final response = await http.post(
+    url,
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode({
+      "phone": phone,
+      "code": code,
+    }),
+  );
+
+  return response.statusCode == 200;
+}
