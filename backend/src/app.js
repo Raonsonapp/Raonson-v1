@@ -1,8 +1,11 @@
 import express from "express";
+import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 
 const app = express();
+
+connectDB();
 
 app.use(express.json());
 
