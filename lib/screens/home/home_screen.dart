@@ -1,9 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/colors.dart';
 import '../../widgets/post_card.dart';
+import '../../services/feed_service.dart';
+import '../../models/post_model.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late Future<List<PostModel>> future;
+
+  @override
+  void initState() {
+    super.initState();
+    future = FeedService.getFeed();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,27 +27,29 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          "Raonson",
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.1,
-          ),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 14),
-            child: Icon(Icons.notifications_none),
-          )
-        ],
+        title: const Text("Raonson"),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(14),
-        children: const [
-          PostCard(),
-          PostCard(),
-          PostCard(),
-        ],
+      body: FutureBuilder<List<PostModel>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          final posts = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.all(14),
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              return PostCard(
+                // ҳоло UI static аст,
+                // баъд dynamic мекунем
+              );
+            },
+          );
+        },
       ),
     );
   }
