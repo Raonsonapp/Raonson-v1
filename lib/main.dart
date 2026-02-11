@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
-import 'screens/reels_screen.dart';
-import 'screens/chat_screen.dart';
-import 'screens/search_screen.dart';
-import 'screens/profile_screen.dart';
+
+// SCREENS
+import 'auth/login_screen.dart';
+import 'feed/feed_screen.dart';
+import 'reels/reels_screen.dart';
+import 'chat/chat_list_screen.dart';
+import 'search/search_screen.dart';
+import 'profile/profile_screen.dart';
 
 void main() {
   runApp(const RaonsonApp());
@@ -16,12 +19,21 @@ class RaonsonApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
-      home: const MainNavigation(),
+      title: 'Raonson',
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+        ),
+      ),
+      home: const LoginScreen(), // ⬅️ аввал Login
     );
   }
 }
 
+/// ================= AFTER LOGIN =================
+/// ин экран баъд аз login истифода мешавад
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -32,18 +44,18 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _index = 0;
 
-  final screens = const [
-    HomeScreen(),
+  final List<Widget> _screens = const [
+    FeedScreen(),
     ReelsScreen(),
-    ChatScreen(),
+    ChatListScreen(),
     SearchScreen(),
-    ProfileScreen(),
+    ProfileScreen(userId: 'me'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: screens[_index],
+      body: _screens[_index],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
@@ -51,12 +63,29 @@ class _MainNavigationState extends State<MainNavigation> {
         backgroundColor: Colors.black,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.grey,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.play_circle), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.play_circle_outline),
+            label: 'Reels',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'Profile',
+          ),
         ],
       ),
     );
