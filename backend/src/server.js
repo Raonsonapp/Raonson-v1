@@ -1,7 +1,7 @@
-import app from "./src/app.js";
+import app from "./app.js";
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Raonson backend running on port", PORT);
+  console.log(`Raonson backend running on port ${PORT}`);
 });
