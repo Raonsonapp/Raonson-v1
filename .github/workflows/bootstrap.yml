@@ -1,17 +1,22 @@
-name: Flutter Bootstrap
+name: Flutter Bootstrap (commit to repo)
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
-  flutter-bootstrap:
+  bootstrap:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # ⬅️ иҷозати push
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -20,10 +25,10 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter doctor (info only)
+      - name: Flutter doctor (ignore warnings)
         run: flutter doctor -v || true
 
-      - name: Create Flutter project (forced name)
+      - name: Create Flutter project (only once)
         run: |
           if [ ! -f pubspec.yaml ]; then
             flutter create --project-name raonson_v1 .
@@ -31,14 +36,18 @@ jobs:
             echo "Flutter project already exists"
           fi
 
-      - name: Flutter pub get
-        run: flutter pub get
+      - name: Git status
+        run: git status
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Commit Flutter project to repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: raonson-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "bootstrap: initialize Flutter project"
+            git push origin main
+          else
+            echo "Nothing to commit"
+          fi
