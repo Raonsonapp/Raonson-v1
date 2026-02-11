@@ -5,6 +5,7 @@ import profileRoutes from "./routes/profile.routes.js";
 import postRoutes from "./routes/post.routes.js";
 import likeRoutes from "./routes/like.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
+import followRoutes from "./routes/follow.routes.js";
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use("/profile", profileRoutes);
 app.use("/posts", postRoutes);
 app.use("/likes", likeRoutes);
 app.use("/comments", commentRoutes);
+app.use("/follow", followRoutes);
 
 app.get("/", (req, res) => {
   res.json({ status: "Raonson server is running" });
