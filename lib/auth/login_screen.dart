@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../core/token_storage.dart';
 import 'auth_api.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,19 +16,20 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> login() async {
     setState(() => loading = true);
 
-    final token = await AuthApi.login(
+    final res = await AuthApi.login(
       phoneCtrl.text.trim(),
       passCtrl.text.trim(),
     );
 
     setState(() => loading = false);
 
-    if (token != null) {
-      await TokenStorage.save(token);
+    if (res != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login success')),
       );
+
+      // баъдтар → Navigator to Home
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login failed')),
@@ -48,9 +48,11 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             const Text(
               'Raonson',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 32),
+
             TextField(
               controller: phoneCtrl,
               decoration: const InputDecoration(
@@ -58,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 16),
+
             TextField(
               controller: passCtrl,
               obscureText: true,
@@ -66,11 +69,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 24),
+
             loading
                 ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: login,
-                    child: const Text('Login'),
+                : SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: login,
+                      child: const Text('Login'),
+                    ),
                   ),
           ],
         ),
