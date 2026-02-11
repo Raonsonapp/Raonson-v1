@@ -38,3 +38,27 @@ static Future<bool> registerStep2({
 
   return response.statusCode == 200;
 }
+static Future<String?> login({
+  required String phone,
+  required String password,
+}) async {
+  final url = Uri.parse(
+    "${ApiConstants.baseUrl}/auth/login",
+  );
+
+  final response = await http.post(
+    url,
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode({
+      "phone": phone,
+      "password": password,
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    return data["token"]; // JWT
+  }
+
+  return null;
+}
