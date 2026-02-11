@@ -2,8 +2,7 @@ name: Flutter Bootstrap
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -11,42 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Clone repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Flutter
-      - name: Setup Flutter SDK
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.19.0"
-          channel: "stable"
+          channel: stable
           cache: true
 
-      # 3. Flutter doctor (debug)
-      - name: Flutter doctor
-        run: flutter doctor -v
+      - name: Flutter doctor (info only)
+        run: flutter doctor -v || true
 
-      # 4. Create Flutter project (ONLY if not exists)
-      - name: Create Flutter project
+      - name: Create Flutter project (forced name)
         run: |
           if [ ! -f pubspec.yaml ]; then
-            flutter create .
+            flutter create --project-name raonson_v1 .
           else
             echo "Flutter project already exists"
           fi
 
-      # 5. Get dependencies
       - name: Flutter pub get
         run: flutter pub get
 
-      # 6. Build APK (debug)
-      - name: Build APK
+      - name: Build debug APK
         run: flutter build apk --debug
 
-      # 7. Upload APK as artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: raonson-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
