@@ -11,8 +11,13 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final ctrl = TextEditingController();
-  List<SearchUser> users = [];
-  List<SearchPost> posts = [];
+  users = (res['users'] as List)
+    .map((e) => SearchUser.fromJson(e))
+    .toList();
+
+  posts = (res['posts'] as List)
+    .map((e) => SearchPost.fromJson(e))
+    .toList();
   bool loading = false;
 
   Future<void> runSearch(String q) async {
