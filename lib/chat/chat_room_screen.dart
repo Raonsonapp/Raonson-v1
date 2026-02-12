@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'chat_api.dart';
 import 'chat_model.dart';
+import 'message_model.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final String chatId;
