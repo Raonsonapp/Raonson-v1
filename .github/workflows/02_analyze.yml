@@ -1,0 +1,16 @@
+name: 02 - Flutter Analyze (Deep)
+
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+
+      - run: flutter pub get
+      - run: flutter analyze
