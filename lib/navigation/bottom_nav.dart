@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../features/feed/feed_screen.dart';
-import '../features/reels/reels_screen.dart';
-import '../features/create/create_screen.dart';
-import '../features/profile/profile_screen.dart';
+import '../screens/home/home_screen.dart';
+import '../screens/reels/reels_screen.dart';
+import '../screens/create/create_screen.dart';
+import '../screens/profile/profile_screen.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
@@ -12,39 +12,27 @@ class BottomNav extends StatefulWidget {
 }
 
 class _BottomNavState extends State<BottomNav> {
-  int _index = 0;
+  int index = 0;
 
   final screens = const [
-    FeedScreen(),
+    HomeScreen(),
     ReelsScreen(),
     CreateScreen(),
-    ProfileScreen(),
+    ProfileScreen(userId: 'u1'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: screens[_index],
+      body: screens[index],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
+        currentIndex: index,
+        onTap: (i) => setState(() => index = i),
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.video_library),
-            label: "Reels",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_box),
-            label: "Create",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Profile",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.play_arrow), label: 'Reels'),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Create'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
