@@ -1,48 +1,65 @@
-import User from "../models/user.model.js";
+import User from "../models/User.js";
+import jwt from "jsonwebtoken";
 
-// STEP 1
-export const registerStep1 = async (req, res) => {
+const OTP_TTL = 5 * 60 * 1000; // 5 minutes
+
+export const sendOtp = async (req, res) => {
   const { phone } = req.body;
-
-  if (!phone) return res.status(400).json({ error: "Phone required" });
-  if (!(phone.startsWith("+992") || phone.startsWith("+7"))) {
-    return res.status(400).json({ error: "Only +992 or +7 allowed" });
-  }
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
 
   let user = await User.findOne({ phone });
-  if (!user) {
-    user = await User.create({ phone });
-  }
+  if (!user) user = await User.create({ phone });
 
-  return res.json({ message: "Step 1 OK", phone });
-};
-
-// STEP 2 (mock code)
-export const registerStep2 = async (req, res) => {
-  const { phone, code } = req.body;
-
-  if (!phone || !code) {
-    return res.status(400).json({ error: "Phone & code required" });
-  }
-
-  const user = await User.findOne({ phone });
-  if (!user) return res.status(404).json({ error: "User not found" });
-
-  user.verified = true;
+  user.otpCode = code;
+  user.otpExpire = new Date(Date.now() + OTP_TTL);
   await user.save();
 
-  return res.json({ message: "Verified" });
+  console.log("OTP:", code); // 👉 ҳоло mock, баъд SMS
+
+  res.json({ ok: true });
 };
 
-// LOGIN (mock password)
-export const login = async (req, res) => {
-  const { phone, password } = req.body;
+export const verifyOtp = async (req, res) => {
+  const { phone, code } = req.body;
 
-  const user = await User.findOne({ phone, verified: true });
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  const user = await User.findOne({ phone });
+  if (!user) return res.status(400).json({ error: "User not found" });
 
-  // V1: mock token
-  return res.json({
-    token: `token_${user._id}`,
-  });
+  if (
+    user.otpCode !== code ||
+    !user.otpExpire ||
+    user.otpExpire < new Date()
+  ) {
+    return res.status(400).json({ error: "Invalid or expired code" });
+  }
+
+  const tempToken = jwt.sign(
+    { phone: user.phone },
+    process.env.JWT_SECRET,
+    { expiresIn: "5m" }
+  );
+
+  res.json({ tempToken });
+};
+
+export const verifyGmail = async (req, res) => {
+  const { email } = req.body;
+  const { phone } = req.user;
+
+  const user = await User.findOne({ phone });
+  if (!user) return res.status(400).json({ error: "User not found" });
+
+  user.email = email;
+  user.verified = true;
+  user.otpCode = null;
+  user.otpExpire = null;
+  await user.save();
+
+  const token = jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.json({ token, userId: user._id });
 };
