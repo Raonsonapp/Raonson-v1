@@ -1,0 +1,92 @@
+name: Raonson Full CI (Check → Analyze → Guard → Build)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  raonson-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+    # --------------------------------------------------
+    # 0. Checkout
+    # --------------------------------------------------
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    # --------------------------------------------------
+    # 1. STRUCTURE CHECK
+    # --------------------------------------------------
+    - name: 1️⃣ Structure check
+      run: |
+        echo "🔍 Checking project structure..."
+
+        files=(
+          lib/main.dart
+          lib/core/api/api.dart
+          lib/auth/auth_api.dart
+          lib/feed/feed_screen.dart
+          lib/reels/reels_screen.dart
+          lib/profile/profile_screen.dart
+          lib/navigation/bottom_nav.dart
+        )
+
+        for f in "${files[@]}"; do
+          if [ ! -f "$f" ]; then
+            echo "❌ Missing file: $f"
+            exit 1
+          fi
+        done
+
+        echo "✅ Structure OK"
+
+    # --------------------------------------------------
+    # 2. FLUTTER SETUP
+    # --------------------------------------------------
+    - name: 2️⃣ Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.22.0'
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    # --------------------------------------------------
+    # 3. ANALYZE (IMPORTS, TYPES, MODELS)
+    # --------------------------------------------------
+    - name: 3️⃣ Flutter analyze (deep)
+      run: |
+        echo "🔎 Running flutter analyze..."
+        flutter analyze
+
+    # --------------------------------------------------
+    # 4. API ↔ UI GUARD
+    # --------------------------------------------------
+    - name: 4️⃣ API guard (UI uses real API)
+      run: |
+        echo "🛡 Checking API methods..."
+
+        # Feed
+        grep -q "getFeed" lib/feed/feed_api.dart || (echo "❌ FeedApi.getFeed missing" && exit 1)
+        grep -q "like" lib/feed/feed_api.dart || (echo "❌ FeedApi.like missing" && exit 1)
+        grep -q "save" lib/feed/feed_api.dart || (echo "❌ FeedApi.save missing" && exit 1)
+
+        # Reels
+        grep -q "getReels" lib/reels/reel_api.dart || (echo "❌ ReelApi.getReels missing" && exit 1)
+        grep -q "toggleLike" lib/reels/reel_api.dart || (echo "❌ ReelApi.toggleLike missing" && exit 1)
+        grep -q "toggleSave" lib/reels/reel_api.dart || (echo "❌ ReelApi.toggleSave missing" && exit 1)
+
+        # Auth
+        grep -q "login" lib/auth/auth_api.dart || (echo "❌ AuthApi.login missing" && exit 1)
+
+        echo "✅ API Guard OK"
+
+    # --------------------------------------------------
+    # 5. BUILD APK
+    # --------------------------------------------------
+    - name: 5️⃣ Build APK
+      run: |
+        echo "📦 Building release APK..."
+        flutter build apk --release
