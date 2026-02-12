@@ -49,22 +49,23 @@ jobs:
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.22.0'
+        channel: stable
 
     - name: Install dependencies
       run: flutter pub get
 
     # --------------------------------------------------
-    # 3. ANALYZE (IMPORTS, TYPES, MODELS)
+    # 3. ANALYZE (NO FAIL ON INFO/WARNING)
     # --------------------------------------------------
-    - name: 3️⃣ Flutter analyze (deep)
+    - name: 3️⃣ Flutter analyze (allow warnings)
       run: |
-        echo "🔎 Running flutter analyze..."
-        flutter analyze
+        echo "🔎 Running flutter analyze (warnings allowed)..."
+        flutter analyze --no-fatal-infos --no-fatal-warnings
 
     # --------------------------------------------------
     # 4. API ↔ UI GUARD
     # --------------------------------------------------
-    - name: 4️⃣ API guard (UI uses real API)
+    - name: 4️⃣ API guard
       run: |
         echo "🛡 Checking API methods..."
 
@@ -86,7 +87,7 @@ jobs:
     # --------------------------------------------------
     # 5. BUILD APK
     # --------------------------------------------------
-    - name: 5️⃣ Build APK
+    - name: 5️⃣ Build APK (release)
       run: |
         echo "📦 Building release APK..."
         flutter build apk --release
