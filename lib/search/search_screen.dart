@@ -20,8 +20,13 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() => loading = true);
     final res = await SearchApi.search(q);
     setState(() {
-      users = int.parse(res['users'].toString());
-      posts = int.parse(res['posts'].toString());
+      users = (res['users'] as List)
+    .map((e) => SearchUser.fromJson(e))
+    .toList();
+
+      posts = (res['posts'] as List)
+    .map((e) => SearchPost.fromJson(e))
+    .toList();
       loading = false;
     });
   }
