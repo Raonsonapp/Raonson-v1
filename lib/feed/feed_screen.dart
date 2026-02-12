@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'feed_api.dart';
 import 'feed_model.dart';
+import '../comments/comments_screen.dart';
+import '../profile/profile_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -15,12 +17,12 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
-    future = FeedApi.getPosts();
+    future = FeedApi.getFeed();
   }
 
   Future<void> refresh() async {
     setState(() {
-      future = FeedApi.getPosts();
+      future = FeedApi.getFeed();
     });
   }
 
@@ -36,14 +38,15 @@ class _FeedScreenState extends State<FeedScreen> {
         onRefresh: refresh,
         child: FutureBuilder<List<FeedPost>>(
           future: future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState ==
-                ConnectionState.waiting) {
+          builder: (context, snap) {
+            if (!snap.hasData) {
               return const Center(
-                  child: CircularProgressIndicator());
+                child: CircularProgressIndicator(),
+              );
             }
 
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            final posts = snap.data!;
+            if (posts.isEmpty) {
               return const Center(
                 child: Text(
                   'No posts yet',
@@ -52,56 +55,95 @@ class _FeedScreenState extends State<FeedScreen> {
               );
             }
 
-            final posts = snapshot.data!;
-
             return ListView.builder(
               itemCount: posts.length,
-              itemBuilder: (context, index) {
-                final post = posts[index];
+              itemBuilder: (context, i) {
+                final p = posts[i];
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // IMAGE
-                    Image.network(post.image),
+                    // ---------- HEADER ----------
+                    ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Colors.grey,
+                        child: Icon(Icons.person),
+                      ),
+                      title: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ProfileScreen(userId: p.userId),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          p.userId,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      trailing: const Icon(Icons.more_vert),
+                    ),
 
-                    // ACTIONS
+                    // ---------- IMAGE ----------
+                    Image.network(
+                      p.image,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+
+                    // ---------- ACTIONS ----------
                     Row(
                       children: [
                         IconButton(
                           icon: const Icon(Icons.favorite_border),
                           onPressed: () async {
-                            await FeedApi.likePost(post.id);
+                            await FeedApi.like(p.id);
                             refresh();
                           },
                         ),
                         Text(
-                          '${post.likes}',
+                          p.likes.toString(),
                           style:
                               const TextStyle(color: Colors.white),
                         ),
                         const SizedBox(width: 16),
                         IconButton(
-                          icon:
-                              const Icon(Icons.bookmark_border),
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    CommentsScreen(postId: p.id),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 16),
+                        IconButton(
+                          icon: const Icon(Icons.bookmark_border),
                           onPressed: () async {
-                            await FeedApi.savePost(post.id);
+                            await FeedApi.save(p.id);
                             refresh();
                           },
                         ),
                         Text(
-                          '${post.saved}',
+                          p.saved.toString(),
                           style:
                               const TextStyle(color: Colors.white),
                         ),
                       ],
                     ),
 
-                    // CAPTION
+                    // ---------- CAPTION ----------
                     Padding(
                       padding: const EdgeInsets.all(8),
                       child: Text(
-                        post.caption,
+                        p.caption,
                         style:
                             const TextStyle(color: Colors.white),
                       ),
