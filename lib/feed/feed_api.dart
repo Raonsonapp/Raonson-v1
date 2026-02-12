@@ -1,27 +1,25 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/api/api.dart';
+import 'feed_model.dart';
 
 class FeedApi {
-  static Future<List<dynamic>> getPosts() async {
+  static Future<List<FeedPost>> getFeed() async {
     final res = await http.get(
       Uri.parse('${Api.baseUrl}/posts'),
     );
 
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load posts');
-    }
-
-    return jsonDecode(res.body);
+    final List data = jsonDecode(res.body);
+    return data.map((e) => FeedPost.fromJson(e)).toList();
   }
 
-  static Future<void> likePost(String postId) async {
+  static Future<void> like(String postId) async {
     await http.post(
       Uri.parse('${Api.baseUrl}/likes/$postId'),
     );
   }
 
-  static Future<void> savePost(String postId) async {
+  static Future<void> save(String postId) async {
     await http.post(
       Uri.parse('${Api.baseUrl}/save/$postId'),
     );
