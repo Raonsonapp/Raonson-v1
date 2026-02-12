@@ -1,19 +1,19 @@
-class Message {
+class Chat {
   final String id;
-  final String sender;
-  final String text;
+  final String title;
+  final String lastMessage;
 
-  Message({
+  Chat({
     required this.id,
-    required this.sender,
-    required this.text,
+    required this.title,
+    required this.lastMessage,
   });
 
-  factory Message.fromJson(Map<String, dynamic> json) {
-    return Message(
+  factory Chat.fromJson(Map<String, dynamic> json) {
+    return Chat(
       id: json['id'],
-      sender: json['sender'],
-      text: json['text'],
+      title: json['title'],
+      lastMessage: json['lastMessage'],
     );
   }
 }
