@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'reel_api.dart';
-import 'reel_model.dart';
 import '../comments/comments_screen.dart';
 
 class ReelsScreen extends StatefulWidget {
@@ -11,7 +10,7 @@ class ReelsScreen extends StatefulWidget {
 }
 
 class _ReelsScreenState extends State<ReelsScreen> {
-  late Future<List<Reel>> future;
+  late Future<List<dynamic>> future;
 
   @override
   void initState() {
@@ -29,7 +28,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: FutureBuilder<List<Reel>>(
+      body: FutureBuilder<List<dynamic>>(
         future: future,
         builder: (context, snap) {
           if (!snap.hasData) {
@@ -44,16 +43,19 @@ class _ReelsScreenState extends State<ReelsScreen> {
               final r = reels[i];
 
               // add view once shown
-              ReelApi.addView(r.id);
+              ReelApi.addView(r['id']);
 
               return Stack(
                 children: [
-                  // VIDEO PLACEHOLDER (баъд video_player мепайвандем)
+                  // VIDEO PLACEHOLDER
                   Container(
                     color: Colors.black,
                     child: const Center(
-                      child: Icon(Icons.play_circle,
-                          size: 80, color: Colors.white54),
+                      child: Icon(
+                        Icons.play_circle,
+                        size: 80,
+                        color: Colors.white54,
+                      ),
                     ),
                   ),
 
@@ -65,32 +67,37 @@ class _ReelsScreenState extends State<ReelsScreen> {
                       children: [
                         IconButton(
                           icon: Icon(
-                            r.liked
+                            (r['liked'] ?? false)
                                 ? Icons.favorite
                                 : Icons.favorite_border,
-                            color: r.liked ? Colors.red : Colors.white,
+                            color: (r['liked'] ?? false)
+                                ? Colors.red
+                                : Colors.white,
                             size: 28,
                           ),
                           onPressed: () async {
-                            await ReelApi.toggleLike(r.id);
+                            await ReelApi.toggleLike(r['id']);
                             refresh();
                           },
                         ),
-                        Text('${r.likes}',
-                            style:
-                                const TextStyle(color: Colors.white)),
+                        Text(
+                          '${r['likes'] ?? 0}',
+                          style: const TextStyle(color: Colors.white),
+                        ),
 
                         const SizedBox(height: 12),
 
                         IconButton(
-                          icon: const Icon(Icons.chat_bubble_outline,
-                              color: Colors.white),
+                          icon: const Icon(
+                            Icons.chat_bubble_outline,
+                            color: Colors.white,
+                          ),
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    CommentsScreen(postId: r.id),
+                                    CommentsScreen(postId: r['id']),
                               ),
                             );
                           },
@@ -100,13 +107,13 @@ class _ReelsScreenState extends State<ReelsScreen> {
 
                         IconButton(
                           icon: Icon(
-                            r.saved
+                            (r['saved'] ?? false)
                                 ? Icons.bookmark
                                 : Icons.bookmark_border,
                             color: Colors.white,
                           ),
                           onPressed: () async {
-                            await ReelApi.toggleSave(r.id);
+                            await ReelApi.toggleSave(r['id']);
                             refresh();
                           },
                         ),
@@ -121,14 +128,19 @@ class _ReelsScreenState extends State<ReelsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('@${r.username}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
+                        Text(
+                          '@${r['username'] ?? 'user'}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 6),
-                        const Text('Reel caption',
-                            style:
-                                TextStyle(color: Colors.white70)),
+                        Text(
+                          r['caption'] ?? 'Reel caption',
+                          style:
+                              const TextStyle(color: Colors.white70),
+                        ),
                       ],
                     ),
                   ),
