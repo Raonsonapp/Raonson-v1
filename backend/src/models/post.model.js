@@ -4,9 +4,11 @@ const postSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     caption: { type: String },
-    mediaUrl: { type: String, required: true }, // image/video URL
+    mediaUrl: { type: String, required: true },
     mediaType: { type: String, enum: ["image", "video"], required: true },
-    likesCount: { type: Number, default: 0 },
+
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    saves: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
