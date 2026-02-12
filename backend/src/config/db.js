@@ -1,11 +1,4 @@
-import mongoose from "mongoose";
-
+// MongoDB TEMPORARILY DISABLED (MVP in-memory mode)
 export const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB connected");
-  } catch (err) {
-    console.error("MongoDB error:", err.message);
-    process.exit(1);
-  }
+  console.log("⚠️ MongoDB disabled. Running without database.");
 };
