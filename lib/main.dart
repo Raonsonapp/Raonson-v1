@@ -45,7 +45,6 @@ class _MainNavigationState extends State<MainNavigation> {
   int _index = 0;
 
   final List<Widget> _screens = const [
-    home: const FeedScreen(),
     FeedScreen(),
     ReelsScreen(),
     ChatListScreen(),
