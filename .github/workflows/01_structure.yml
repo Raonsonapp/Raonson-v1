@@ -1,0 +1,30 @@
+name: 01 - Structure Check
+
+on: [push, pull_request]
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files
+        run: |
+          files=(
+            lib/main.dart
+            lib/core/api/api.dart
+            lib/auth/auth_api.dart
+            lib/feed/feed_screen.dart
+            lib/reels/reels_screen.dart
+            lib/profile/profile_screen.dart
+            lib/navigation/bottom_nav.dart
+          )
+
+          for f in "${files[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "❌ Missing file: $f"
+              exit 1
+            fi
+          done
+
+          echo "✅ Structure OK"
