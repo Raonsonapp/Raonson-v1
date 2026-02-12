@@ -12,22 +12,16 @@ import reelRoutes from "./routes/reel.routes.js";
 
 const app = express();
 
-connectDB();
-
+app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(path.join("src/uploads")));
-
-app.use("/auth", authRoutes);
-app.use("/profile", profileRoutes);
-app.use("/posts", postRoutes);
-app.use("/likes", likeRoutes);
-app.use("/comments", commentRoutes);
-app.use("/follow", followRoutes);
-app.use("/upload", uploadRoutes);
-app.use("/reels", reelRoutes);
 
 app.get("/", (req, res) => {
-  res.json({ status: "Raonson server is running" });
+  res.json({ status: "Raonson backend running ✅" });
 });
+
+app.use("/auth", authRoutes);
+app.use("/posts", postRoutes);
+app.use("/comments", commentRoutes);
+app.use("/follow", followRoutes);
 
 export default app;
