@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import '../core/api/api.dart';
 
 class AuthApi {
-  static Future<void> login(String email, String password) async {
-    await http.post(
+  static Future<bool> login(String email, String password) async {
+    final res = await http.post(
       Uri.parse('${Api.baseUrl}/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -12,5 +12,7 @@ class AuthApi {
         'password': password,
       }),
     );
+
+    return res.statusCode == 200;
   }
 }
