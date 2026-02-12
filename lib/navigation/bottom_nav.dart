@@ -14,13 +14,12 @@ class BottomNav extends StatefulWidget {
 class _BottomNavState extends State<BottomNav> {
   int index = 0;
 
-  final screens = const [
-    HomeScreen(),
-    ReelsScreen(),
-    CreateScreen(),
-    ProfileScreen(userId: 'u1'),
-  ];
-
+  final screens = [
+  const HomeScreen(),
+  const ReelsScreen(),
+  const CreateScreen(),
+  const ProfileScreen(userId: 'u1'),
+];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
