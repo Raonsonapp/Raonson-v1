@@ -1,11 +1,14 @@
 {
   "name": "raonson-backend",
   "version": "1.0.0",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node backend/src/server.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.1"
   }
 }
