@@ -1,16 +1,13 @@
-import '../core/api.dart';
 import '../models/reel_model.dart';
-import 'dart:convert';
 
 class ReelsApi {
   static Future<List<Reel>> getReels() async {
-    final res = await Api.get('/reels');
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    if (res.statusCode == 200) {
-      final List data = jsonDecode(res.body);
-      return data.map((e) => Reel.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load reels');
-    }
+    return [
+      Reel(id: '1', user: 'olivia_martin', caption: 'Sunset vibes 🌅'),
+      Reel(id: '2', user: 'raonson', caption: 'My first reel 🔥'),
+      Reel(id: '3', user: 'flutter_dev', caption: 'UI test 😎'),
+    ];
   }
 }
