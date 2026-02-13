@@ -2,7 +2,7 @@ class Reel {
   final String id;
   final String username;
   final String caption;
-  final String imageUrl;
+  final String videoUrl;
   int likes;
   bool liked;
 
@@ -10,7 +10,7 @@ class Reel {
     required this.id,
     required this.username,
     required this.caption,
-    required this.imageUrl,
+    required this.videoUrl,
     this.likes = 0,
     this.liked = false,
   });
