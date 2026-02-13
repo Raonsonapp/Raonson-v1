@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../models/reel_model.dart';
 
 class ReelPlayer extends StatefulWidget {
@@ -10,12 +11,29 @@ class ReelPlayer extends StatefulWidget {
 }
 
 class _ReelPlayerState extends State<ReelPlayer> {
+  late VideoPlayerController _controller;
   late Reel reel;
+  bool muted = true;
 
   @override
   void initState() {
     super.initState();
     reel = widget.reel;
+
+    _controller = VideoPlayerController.network(reel.videoUrl)
+      ..initialize().then((_) {
+        setState(() {});
+        _controller
+          ..setLooping(true)
+          ..setVolume(0)
+          ..play();
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void toggleLike() {
@@ -25,18 +43,28 @@ class _ReelPlayerState extends State<ReelPlayer> {
     });
   }
 
+  void toggleSound() {
+    setState(() {
+      muted = !muted;
+      _controller.setVolume(muted ? 0 : 1);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!_controller.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // BACKGROUND IMAGE (like video frame)
-        Image.network(
-          reel.imageUrl,
-          fit: BoxFit.cover,
-        ),
+        VideoPlayer(_controller),
 
-        // RIGHT ACTIONS
+        // TAP TO MUTE
+        GestureDetector(onTap: toggleSound),
+
+        // ACTIONS
         Positioned(
           right: 16,
           bottom: 120,
@@ -62,22 +90,16 @@ class _ReelPlayerState extends State<ReelPlayer> {
           ),
         ),
 
-        // BOTTOM INFO
+        // INFO
         Positioned(
           left: 16,
           bottom: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '@${reel.username}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                reel.caption,
-                style: const TextStyle(color: Colors.white),
-              ),
+              Text('@${reel.username}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text(reel.caption, style: const TextStyle(color: Colors.white)),
             ],
           ),
         ),
