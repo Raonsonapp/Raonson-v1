@@ -11,6 +11,6 @@ class ReelsApi {
   }
 
   static Future<void> likeReel(String reelId) async {
-    await Api.post('/reels/$reelId/like', {});
+    await Api.post('/reels/$reelId/like');
   }
 }
