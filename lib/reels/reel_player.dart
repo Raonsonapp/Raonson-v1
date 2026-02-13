@@ -20,8 +20,9 @@ class _ReelPlayerState extends State<ReelPlayer> {
     super.initState();
     reel = widget.reel;
 
-    _controller = VideoPlayerController.network(reel.videoUrl)
-      ..initialize().then((_) {
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(reel.videoUrl),
+    )..initialize().then((_) {
         setState(() {});
         _controller
           ..setLooping(true)
@@ -59,12 +60,25 @@ class _ReelPlayerState extends State<ReelPlayer> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        VideoPlayer(_controller),
+        // 🎥 VIDEO FULL SCREEN
+        FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: _controller.value.size.width,
+            height: _controller.value.size.height,
+            child: VideoPlayer(_controller),
+          ),
+        ),
 
-        // TAP TO MUTE
-        GestureDetector(onTap: toggleSound),
+        // 🔇 TAP TO MUTE / UNMUTE
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: toggleSound,
+          ),
+        ),
 
-        // ACTIONS
+        // ❤️ ACTIONS
         Positioned(
           right: 16,
           bottom: 120,
@@ -74,32 +88,41 @@ class _ReelPlayerState extends State<ReelPlayer> {
                 onTap: toggleLike,
                 child: Icon(
                   Icons.favorite,
-                  size: 36,
+                  size: 38,
                   color: reel.liked ? Colors.red : Colors.white,
                 ),
               ),
               const SizedBox(height: 6),
-              Text('${reel.likes}', style: const TextStyle(color: Colors.white)),
-
+              Text(
+                '${reel.likes}',
+                style: const TextStyle(color: Colors.white),
+              ),
               const SizedBox(height: 24),
-              const Icon(Icons.mode_comment_outlined, color: Colors.white, size: 32),
-
+              const Icon(Icons.mode_comment_outlined,
+                  color: Colors.white, size: 32),
               const SizedBox(height: 24),
               const Icon(Icons.send, color: Colors.white, size: 30),
             ],
           ),
         ),
 
-        // INFO
+        // ℹ️ INFO
         Positioned(
           left: 16,
           bottom: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('@${reel.username}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Text(reel.caption, style: const TextStyle(color: Colors.white)),
+              Text(
+                '@${reel.username}',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                reel.caption,
+                style: const TextStyle(color: Colors.white),
+              ),
             ],
           ),
         ),
