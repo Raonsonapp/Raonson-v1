@@ -1,70 +1,78 @@
 import 'package:flutter/material.dart';
 import '../models/reel_model.dart';
 
-class ReelPlayer extends StatelessWidget {
+class ReelPlayer extends StatefulWidget {
   final Reel reel;
-
   const ReelPlayer({super.key, required this.reel});
+
+  @override
+  State<ReelPlayer> createState() => _ReelPlayerState();
+}
+
+class _ReelPlayerState extends State<ReelPlayer> {
+  void toggleLike() {
+    setState(() {
+      widget.reel.liked = !widget.reel.liked;
+      widget.reel.likes += widget.reel.liked ? 1 : -1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        /// TEMP preview (то video_player)
-        Container(
-          color: Colors.black,
-          child: const Center(
-            child: Icon(Icons.play_circle_fill,
-                color: Colors.white, size: 80),
-          ),
-        ),
-
-        /// Gradient overlay
+        // 🔲 Placeholder background (ба ҷои видео)
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [Colors.black54, Colors.transparent],
+              colors: [Colors.black, Colors.black87],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
           ),
         ),
 
-        /// Right actions
+        // 📄 Caption + username
         Positioned(
-          right: 12,
-          bottom: 120,
+          left: 16,
+          bottom: 80,
           child: Column(
-            children: const [
-              Icon(Icons.favorite_border, color: Colors.white, size: 32),
-              SizedBox(height: 20),
-              Icon(Icons.comment, color: Colors.white, size: 30),
-              SizedBox(height: 20),
-              Icon(Icons.share, color: Colors.white, size: 30),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('@${widget.reel.user}',
+                  style: const TextStyle(color: Colors.white, fontSize: 16)),
+              const SizedBox(height: 6),
+              Text(widget.reel.caption,
+                  style: const TextStyle(color: Colors.white70)),
             ],
           ),
         ),
 
-        /// Caption
+        // ❤️ Actions
         Positioned(
-          left: 12,
-          bottom: 40,
-          right: 80,
+          right: 16,
+          bottom: 100,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '@${reel.user}',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold),
+              IconButton(
+                onPressed: toggleLike,
+                icon: Icon(
+                  widget.reel.liked
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: widget.reel.liked ? Colors.red : Colors.white,
+                  size: 32,
+                ),
               ),
-              const SizedBox(height: 6),
               Text(
-                reel.caption,
-                style: const TextStyle(color: Colors.white70),
+                widget.reel.likes.toString(),
+                style: const TextStyle(color: Colors.white),
               ),
+              const SizedBox(height: 20),
+              const Icon(Icons.comment, color: Colors.white, size: 30),
+              const SizedBox(height: 20),
+              const Icon(Icons.share, color: Colors.white, size: 28),
             ],
           ),
         ),
