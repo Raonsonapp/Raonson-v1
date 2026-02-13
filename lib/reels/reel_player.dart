@@ -1,125 +1,76 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import '../models/reel_model.dart';
 
-class ReelPlayer extends StatefulWidget {
+class ReelPlayer extends StatelessWidget {
   final Reel reel;
+
   const ReelPlayer({super.key, required this.reel});
 
   @override
-  State<ReelPlayer> createState() => _ReelPlayerState();
-}
-
-class _ReelPlayerState extends State<ReelPlayer> {
-  late VideoPlayerController controller;
-  bool liked = false;
-
-  @override
-  void initState() {
-    super.initState();
-    liked = widget.reel.liked;
-    controller = VideoPlayerController.network(widget.reel.videoUrl)
-      ..initialize().then((_) {
-        controller
-          ..play()
-          ..setLooping(true);
-        setState(() {});
-      });
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (!controller.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return Stack(
+      fit: StackFit.expand,
       children: [
-        SizedBox.expand(child: VideoPlayer(controller)),
-
-        // 🌑 gradient overlay (поён)
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 220,
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Colors.black87, Colors.transparent],
-              ),
+        /// 🎞 TEMP CONTENT (ба ҷои video_player)
+        Image.network(
+          reel.thumbnailUrl ?? reel.mediaUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: Colors.black,
+            child: const Center(
+              child: Icon(Icons.play_circle, color: Colors.white, size: 80),
             ),
           ),
         ),
 
-        // 👉 ACTIONS
+        /// 🔲 Gradient overlay (мисли Instagram)
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                Colors.black54,
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+
+        /// ❤️ UI OVERLAY
         Positioned(
-          right: 16,
+          right: 12,
           bottom: 120,
           child: Column(
-            children: [
-              GestureDetector(
-                onTap: () => setState(() => liked = !liked),
-                child: Icon(
-                  Icons.favorite,
-                  color: liked ? Colors.red : Colors.white,
-                  size: 32,
-                ),
-              ),
-              Text('${widget.reel.likes}',
-                  style: const TextStyle(color: Colors.white)),
-              const SizedBox(height: 20),
-              const Icon(Icons.chat_bubble_outline,
-                  color: Colors.white, size: 28),
-              Text('${widget.reel.comments}',
-                  style: const TextStyle(color: Colors.white)),
-              const SizedBox(height: 20),
-              const Icon(Icons.send, color: Colors.white, size: 28),
-              const SizedBox(height: 20),
-              const Icon(Icons.bookmark_border,
-                  color: Colors.white, size: 28),
+            children: const [
+              Icon(Icons.favorite_border, color: Colors.white, size: 32),
+              SizedBox(height: 20),
+              Icon(Icons.comment, color: Colors.white, size: 30),
+              SizedBox(height: 20),
+              Icon(Icons.share, color: Colors.white, size: 30),
             ],
           ),
         ),
 
-        // 👤 USER + CAPTION
+        /// 👤 USER + CAPTION
         Positioned(
-          left: 16,
-          bottom: 80,
-          right: 100,
+          left: 12,
+          bottom: 40,
+          right: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundImage:
-                        NetworkImage(widget.reel.avatar),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    widget.reel.username,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               Text(
-                widget.reel.caption,
-                style: const TextStyle(color: Colors.white),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                '@user',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Reel caption...',
+                style: TextStyle(color: Colors.white70),
               ),
             ],
           ),
