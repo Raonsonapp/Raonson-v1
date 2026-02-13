@@ -25,16 +25,27 @@ class _ReelsScreenState extends State<ReelsScreen> {
       backgroundColor: Colors.black,
       body: FutureBuilder<List<Reel>>(
         future: future,
-        builder: (c, s) {
-          if (!s.hasData) {
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final reels = s.data!;
+          if (!snap.hasData || snap.data!.isEmpty) {
+            return const Center(
+              child: Text(
+                'No reels',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          }
+
+          final reels = snap.data!;
           return PageView.builder(
             scrollDirection: Axis.vertical,
             itemCount: reels.length,
-            itemBuilder: (_, i) => ReelPlayer(reel: reels[i]),
+            itemBuilder: (_, i) {
+              return ReelPlayer(reel: reels[i]);
+            },
           );
         },
       ),
