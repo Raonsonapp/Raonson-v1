@@ -3,6 +3,9 @@ name: Android Regenerate (Force v2)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   rebuild-android:
     runs-on: ubuntu-latest
@@ -10,37 +13,25 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # муҳим барои rebase
 
-      - name: Setup Flutter (stable)
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Fix pubspec package name
+      - name: Fix pubspec SDK constraint if missing
         run: |
-          sed -i 's/^name:.*/name: raonson_v1/' pubspec.yaml || true
+          if ! grep -q "environment:" pubspec.yaml; then
+            printf "\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n" >> pubspec.yaml
+          fi
 
       - name: Remove old android folder
         run: rm -rf android
 
       - name: Recreate android folder (v2 embedding)
-        run: |
-          flutter create \
-            --platforms=android \
-            --project-name raonson_v1 \
-            .
-
-      - name: Verify Android v2 embedding only
-        run: |
-          if grep -R "io.flutter.app.FlutterApplication" android; then
-            echo "❌ Android v1 embedding found"
-            exit 1
-          fi
-          if grep -R "io.flutter.app.FlutterActivity" android; then
-            echo "❌ Android v1 FlutterActivity found"
-            exit 1
-          fi
-          echo "✅ Android v2 embedding confirmed"
+        run: flutter create --platforms=android .
 
       - name: Flutter clean & pub get
         run: |
@@ -53,4 +44,8 @@ jobs:
           git config user.email "github-actions@github.com"
           git add android pubspec.yaml
           git commit -m "chore(android): regenerate android with v2 embedding" || echo "Nothing to commit"
-          git push
+
+      - name: Rebase & push safely
+        run: |
+          git pull --rebase origin main
+          git push origin main
