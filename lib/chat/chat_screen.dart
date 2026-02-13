@@ -10,21 +10,18 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  late Future<List<dynamic>> messages;
-  final ctrl = TextEditingController();
+  late Future<List<dynamic>> future;
+  final controller = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    messages = ChatApi.getMessages(widget.chatId);
+    future = ChatApi.getMessages(widget.chatId);
   }
 
-  void send() async {
-    if (ctrl.text.isEmpty) return;
-    await ChatApi.sendMessage(widget.chatId, ctrl.text);
-    ctrl.clear();
+  void refresh() {
     setState(() {
-      messages = ChatApi.getMessages(widget.chatId);
+      future = ChatApi.getMessages(widget.chatId);
     });
   }
 
@@ -36,35 +33,40 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: FutureBuilder(
-              future: messages,
-              builder: (c, s) {
-                if (!s.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+              future: future,
+              builder: (_, snap) {
+                if (!snap.hasData) {
+                  return const Center(
+                      child: CircularProgressIndicator());
                 }
-                final data = s.data as List;
+
+                final messages = snap.data!;
                 return ListView.builder(
-                  itemCount: data.length,
+                  itemCount: messages.length,
                   itemBuilder: (_, i) {
-                    final m = data[i];
-                    return Align(
-                      alignment: m['me'] == true
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.all(8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: m['me'] == true
-                              ? Colors.blue
-                              : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          m['text'],
-                          style: TextStyle(
-                              color: m['me'] == true
+                    return Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Align(
+                        alignment: messages[i]['mine']
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: messages[i]['mine']
+                                ? Colors.blue
+                                : Colors.grey.shade300,
+                            borderRadius:
+                                BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            messages[i]['text'],
+                            style: TextStyle(
+                              color: messages[i]['mine']
                                   ? Colors.white
-                                  : Colors.black),
+                                  : Colors.black,
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -73,18 +75,25 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
+
           Row(
             children: [
               Expanded(
                 child: TextField(
-                  controller: ctrl,
+                  controller: controller,
                   decoration:
-                      const InputDecoration(hintText: 'Message...'),
+                      const InputDecoration(hintText: 'Message'),
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.send),
-                onPressed: send,
+                onPressed: () async {
+                  if (controller.text.isEmpty) return;
+                  await ChatApi.sendMessage(
+                      widget.chatId, controller.text);
+                  controller.clear();
+                  refresh();
+                },
               )
             ],
           )
