@@ -18,44 +18,32 @@ jobs:
         with:
           flutter-version: "3.22.0"
 
-      # 🛠 FIX pubspec (name + sdk)
+      # 🛠 FIX pubspec.yaml (name + sdk)
       - name: Fix pubspec.yaml
         run: |
           sed -i 's/^name:.*/name: raonson_v1/' pubspec.yaml
-          if ! grep -q "sdk:" pubspec.yaml; then
-            echo -e "\nenvironment:\n  sdk: \">=3.0.0 <4.0.0\"" >> pubspec.yaml
+          if ! grep -q "environment:" pubspec.yaml; then
+            echo -e "\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'" >> pubspec.yaml
           fi
 
-      # 🔍 DETECT v1 EMBEDDING (LOG ONLY)
-      - name: Detect Android v1 embedding
-        run: |
-          grep -R "io.flutter.app" android || true
-          grep -R "FlutterApplication" android || true
-          grep -R "registerWith" android || true
-
-      # 🧨 DELETE ONLY ANDROID (SAFE)
+      # 🧨 DELETE OLD ANDROID (v1)
       - name: Remove old android folder
         run: rm -rf android
 
-      # 🆕 REGENERATE ANDROID IN SAME REPO (v2)
-      - name: Regenerate Android (v2)
-        run: flutter create --platforms=android .
+      # 🆕 REGENERATE ANDROID (FORCE v2, SAFE NAME)
+      - name: Regenerate Android (v2 embedding)
+        run: flutter create --platforms=android --project-name raonson_v1 .
 
-      # 🔎 VERIFY v2 ONLY
-      - name: Verify Android v2 embedding
+      # 🔎 VERIFY NO v1 EMBEDDING LEFT
+      - name: Verify Android v2 only
         run: |
-          if grep -R "io.flutter.app" android; then
-            echo "❌ v1 embedding still exists"
-            exit 1
-          fi
-          if grep -R "FlutterApplication" android; then
-            echo "❌ old FlutterApplication still exists"
-            exit 1
-          fi
+          if grep -R "io.flutter.app" android; then exit 1; fi
+          if grep -R "FlutterApplication" android; then exit 1; fi
+          if grep -R "registerWith" android; then exit 1; fi
           echo "✅ Android v2 embedding confirmed"
 
-      # 📦 COMMIT & PUSH CHANGES
-      - name: Commit and push Android v2 fix
+      # 📦 COMMIT & PUSH
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
