@@ -10,10 +10,18 @@ class ReelPlayer extends StatefulWidget {
 }
 
 class _ReelPlayerState extends State<ReelPlayer> {
+  late Reel reel;
+
+  @override
+  void initState() {
+    super.initState();
+    reel = widget.reel;
+  }
+
   void toggleLike() {
     setState(() {
-      widget.reel.liked = !widget.reel.liked;
-      widget.reel.likes += widget.reel.liked ? 1 : -1;
+      reel.liked = !reel.liked;
+      reel.likes += reel.liked ? 1 : -1;
     });
   }
 
@@ -22,57 +30,54 @@ class _ReelPlayerState extends State<ReelPlayer> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 🔲 Placeholder background (ба ҷои видео)
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.black, Colors.black87],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
+        // BACKGROUND IMAGE (like video frame)
+        Image.network(
+          reel.imageUrl,
+          fit: BoxFit.cover,
         ),
 
-        // 📄 Caption + username
+        // RIGHT ACTIONS
         Positioned(
-          left: 16,
-          bottom: 80,
+          right: 16,
+          bottom: 120,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('@${widget.reel.user}',
-                  style: const TextStyle(color: Colors.white, fontSize: 16)),
+              GestureDetector(
+                onTap: toggleLike,
+                child: Icon(
+                  Icons.favorite,
+                  size: 36,
+                  color: reel.liked ? Colors.red : Colors.white,
+                ),
+              ),
               const SizedBox(height: 6),
-              Text(widget.reel.caption,
-                  style: const TextStyle(color: Colors.white70)),
+              Text('${reel.likes}', style: const TextStyle(color: Colors.white)),
+
+              const SizedBox(height: 24),
+              const Icon(Icons.mode_comment_outlined, color: Colors.white, size: 32),
+
+              const SizedBox(height: 24),
+              const Icon(Icons.send, color: Colors.white, size: 30),
             ],
           ),
         ),
 
-        // ❤️ Actions
+        // BOTTOM INFO
         Positioned(
-          right: 16,
-          bottom: 100,
+          left: 16,
+          bottom: 40,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: toggleLike,
-                icon: Icon(
-                  widget.reel.liked
-                      ? Icons.favorite
-                      : Icons.favorite_border,
-                  color: widget.reel.liked ? Colors.red : Colors.white,
-                  size: 32,
-                ),
-              ),
               Text(
-                widget.reel.likes.toString(),
+                '@${reel.username}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                reel.caption,
                 style: const TextStyle(color: Colors.white),
               ),
-              const SizedBox(height: 20),
-              const Icon(Icons.mode_comment_outlined, color: Colors.white, size: 30),
-              const SizedBox(height: 20),
-              const Icon(Icons.send, color: Colors.white, size: 28),
             ],
           ),
         ),
