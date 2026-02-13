@@ -10,12 +10,12 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  late Future<List<dynamic>> chats;
+  late Future<List<dynamic>> future;
 
   @override
   void initState() {
     super.initState();
-    chats = ChatApi.getChats();
+    future = ChatApi.getChats();
   }
 
   @override
@@ -23,30 +23,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Chats')),
       body: FutureBuilder(
-        future: chats,
-        builder: (c, s) {
-          if (s.connectionState == ConnectionState.waiting) {
+        future: future,
+        builder: (context, snap) {
+          if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (s.hasError) {
-            return const Center(child: Text('Error'));
-          }
 
-          final data = s.data as List;
-
+          final chats = snap.data!;
           return ListView.builder(
-            itemCount: data.length,
+            itemCount: chats.length,
             itemBuilder: (_, i) {
-              final chat = data[i];
+              final c = chats[i];
               return ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person)),
-                title: Text(chat['name'] ?? 'User'),
-                subtitle: Text(chat['lastMessage'] ?? ''),
+                leading: const CircleAvatar(
+                  child: Icon(Icons.person),
+                ),
+                title: Text(c['username']),
+                subtitle: Text(c['lastMessage'] ?? ''),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ChatScreen(chatId: chat['id']),
+                      builder: (_) =>
+                          ChatScreen(chatId: c['id']),
                     ),
                   );
                 },
