@@ -27,9 +27,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
         future: future,
         builder: (c, s) {
           if (!s.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           final reels = s.data!;
