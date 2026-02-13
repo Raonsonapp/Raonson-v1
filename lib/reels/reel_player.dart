@@ -11,33 +11,27 @@ class ReelPlayer extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        /// 🎞 TEMP CONTENT (ба ҷои video_player)
-        Image.network(
-          reel.thumbnailUrl ?? reel.mediaUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: Colors.black,
-            child: const Center(
-              child: Icon(Icons.play_circle, color: Colors.white, size: 80),
-            ),
+        /// TEMP preview (то video_player)
+        Container(
+          color: Colors.black,
+          child: const Center(
+            child: Icon(Icons.play_circle_fill,
+                color: Colors.white, size: 80),
           ),
         ),
 
-        /// 🔲 Gradient overlay (мисли Instagram)
+        /// Gradient overlay
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
-              colors: [
-                Colors.black54,
-                Colors.transparent,
-              ],
+              colors: [Colors.black54, Colors.transparent],
             ),
           ),
         ),
 
-        /// ❤️ UI OVERLAY
+        /// Right actions
         Positioned(
           right: 12,
           bottom: 120,
@@ -52,7 +46,7 @@ class ReelPlayer extends StatelessWidget {
           ),
         ),
 
-        /// 👤 USER + CAPTION
+        /// Caption
         Positioned(
           left: 12,
           bottom: 40,
@@ -61,16 +55,15 @@ class ReelPlayer extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '@user',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                '@${reel.user}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Text(
-                'Reel caption...',
-                style: TextStyle(color: Colors.white70),
+                reel.caption,
+                style: const TextStyle(color: Colors.white70),
               ),
             ],
           ),
