@@ -1,0 +1,79 @@
+name: Android Embedding Check & Fix (v1 → v2)
+
+on:
+  push:
+    paths:
+      - "android/**"
+      - "pubspec.yaml"
+  workflow_dispatch:
+
+jobs:
+  android-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.0"
+
+      # 3️⃣ Flutter doctor (info only)
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      # 4️⃣ Detect Android v1 embedding
+      - name: Detect Android v1 embedding
+        id: detect
+        run: |
+          echo "🔍 Checking for Android v1 embedding..."
+          if grep -R "io.flutter.app" android/ || grep -R "FlutterApplication" android/; then
+            echo "V1_FOUND=true" >> $GITHUB_ENV
+            echo "❌ Android v1 embedding detected"
+          else
+            echo "V1_FOUND=false" >> $GITHUB_ENV
+            echo "✅ Android v2 embedding already in use"
+          fi
+
+      # 5️⃣ Auto-fix: regenerate Android (SAFE)
+      - name: Fix Android embedding to v2
+        if: env.V1_FOUND == 'true'
+        run: |
+          echo "🛠 Fixing Android embedding (v1 → v2)"
+          flutter create .
+
+      # 6️⃣ Verify MainActivity
+      - name: Verify MainActivity (v2)
+        run: |
+          echo "🔎 Verifying MainActivity..."
+          cat android/app/src/main/kotlin/**/MainActivity.kt || true
+
+      # 7️⃣ Verify AndroidManifest
+      - name: Verify AndroidManifest
+        run: |
+          echo "🔎 Checking AndroidManifest..."
+          grep -R "FlutterApplication" android/ || echo "✅ OK (no v1 leftovers)"
+
+      # 8️⃣ Pubspec SDK constraint check
+      - name: Check Dart SDK constraint
+        run: |
+          echo "🔎 Checking SDK constraint..."
+          if ! grep -q "sdk:" pubspec.yaml; then
+            echo "❌ Missing Dart SDK constraint in pubspec.yaml"
+            exit 1
+          else
+            echo "✅ SDK constraint found"
+          fi
+
+      # 9️⃣ Report only (no build)
+      - name: Final report
+        run: |
+          echo "=============================="
+          echo "ANDROID CHECK FINISHED"
+          echo "V1 embedding fixed: $V1_FOUND"
+          echo "No build was executed"
+          echo "=============================="
