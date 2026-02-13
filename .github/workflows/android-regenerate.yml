@@ -11,22 +11,17 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Flutter
+      - name: Setup Flutter (stable)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: stable
+          channel: stable
 
-      - name: Fix pubspec package name if needed
+      - name: Fix pubspec package name
         run: |
-          if grep -q '^name: ' pubspec.yaml; then
-            sed -i 's/^name:.*/name: raonson_v1/' pubspec.yaml
-          else
-            echo "name: raonson_v1" >> pubspec.yaml
-          fi
+          sed -i 's/^name:.*/name: raonson_v1/' pubspec.yaml || true
 
       - name: Remove old android folder
-        run: |
-          rm -rf android
+        run: rm -rf android
 
       - name: Recreate android folder (v2 embedding)
         run: |
@@ -35,7 +30,7 @@ jobs:
             --project-name raonson_v1 \
             .
 
-      - name: Ensure Android v2 embedding only
+      - name: Verify Android v2 embedding only
         run: |
           if grep -R "io.flutter.app.FlutterApplication" android; then
             echo "❌ Android v1 embedding found"
