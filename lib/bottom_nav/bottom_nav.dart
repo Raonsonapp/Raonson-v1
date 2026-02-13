@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
-
-// screens
-import '../home/home_screen.dart';
 import '../reels/reels_screen.dart';
-import '../chat/chat_list_screen.dart';
-import '../search/search_screen.dart';
-import '../profile/profile_screen.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});
@@ -15,51 +9,47 @@ class BottomNav extends StatefulWidget {
 }
 
 class _BottomNavState extends State<BottomNav> {
-  int _index = 0;
+  int index = 1;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
+  final pages = const [
+    Center(child: Text('Home', style: TextStyle(color: Colors.white))),
     ReelsScreen(),
-    ChatListScreen(),
-    SearchScreen(),
-    ProfileScreen(userId: 'u1'), // MVP user
+    Center(child: Text('Chat', style: TextStyle(color: Colors.white))),
+    Center(child: Text('Search', style: TextStyle(color: Colors.white))),
+    Center(child: Text('Profile', style: TextStyle(color: Colors.white))),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_index],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) {
-          setState(() => _index = i);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.black,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.play_circle_outline),
-            label: 'Reels',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Chat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profile',
-          ),
-        ],
+      backgroundColor: Colors.black,
+      body: pages[index],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blueAccent.withOpacity(0.6),
+              blurRadius: 20,
+              spreadRadius: 1,
+            )
+          ],
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.black,
+          currentIndex: index,
+          onTap: (i) => setState(() => index = i),
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white54,
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.play_arrow), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.chat), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
+          ],
+        ),
       ),
     );
   }
