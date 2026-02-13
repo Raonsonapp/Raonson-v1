@@ -1,24 +1,27 @@
 import express from "express";
+import cors from "cors";
 import { connectDB } from "./config/db.js";
+
 import authRoutes from "./routes/auth.routes.js";
-import profileRoutes from "./routes/profile.routes.js";
 import postRoutes from "./routes/post.routes.js";
-import likeRoutes from "./routes/like.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import followRoutes from "./routes/follow.routes.js";
-import path from "path";
-import uploadRoutes from "./routes/upload.routes.js";
-import reelRoutes from "./routes/reel.routes.js";
 
 const app = express();
 
+// 🔗 DB connect (МУҲИМ)
+connectDB();
+
+// middlewares
 app.use(cors());
 app.use(express.json());
 
+// health check
 app.get("/", (req, res) => {
   res.json({ status: "Raonson backend running ✅" });
 });
 
+// routes
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
