@@ -14,14 +14,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # муҳим барои rebase
+          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Fix pubspec SDK constraint if missing
+      - name: Ensure Dart SDK constraint
         run: |
           if ! grep -q "environment:" pubspec.yaml; then
             printf "\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n" >> pubspec.yaml
@@ -38,14 +38,27 @@ jobs:
           flutter clean
           flutter pub get
 
-      - name: Commit regenerated android folder
+      - name: Commit regenerated android
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add android pubspec.yaml
+          git add android pubspec.yaml pubspec.lock
           git commit -m "chore(android): regenerate android with v2 embedding" || echo "Nothing to commit"
 
-      - name: Rebase & push safely
+      - name: Stash remaining changes
         run: |
-          git pull --rebase origin main
-          git push origin main
+          git stash push -u || echo "Nothing to stash"
+
+      - name: Rebase with main
+        run: git pull --rebase origin main
+
+      - name: Restore stashed changes
+        run: git stash pop || echo "No stash to apply"
+
+      - name: Final commit if needed
+        run: |
+          git add .
+          git commit -m "chore: sync after android regenerate" || echo "No changes"
+
+      - name: Push to main
+        run: git push origin main
