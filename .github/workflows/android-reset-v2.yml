@@ -1,4 +1,4 @@
-name: Android Reset to Embedding v2 (Safe)
+name: Android Reset to Embedding v2 (FINAL FIX)
 
 on:
   workflow_dispatch:
@@ -16,21 +16,22 @@ jobs:
         with:
           flutter-version: "3.22.0"
 
-      # 🛠 FIX pubspec name (Raonson-v1 → raonson_v1)
+      # 🛠 FIX pubspec.yaml name
       - name: Fix pubspec.yaml package name
         run: |
           sed -i 's/^name:.*/name: raonson_v1/' pubspec.yaml
-          cat pubspec.yaml | head -n 5
+          echo "pubspec.yaml fixed:"
+          head -n 5 pubspec.yaml
 
-      # 🔥 REMOVE OLD ANDROID (v1 may exist)
+      # 🔥 REMOVE OLD ANDROID (v1 embedding)
       - name: Remove android folder
         run: rm -rf android
 
-      # 🔁 RECREATE ANDROID WITH V2 EMBEDDING
-      - name: Recreate Android (v2)
-        run: flutter create --platforms=android .
+      # ✅ FORCE PROJECT NAME (THIS FIXES THE ERROR)
+      - name: Recreate Android with embedding v2
+        run: flutter create --platforms=android --project-name raonson_v1 .
 
-      # 🔎 VERIFY NO V1 EMBEDDING LEFT
+      # 🔎 VERIFY v2 EMBEDDING
       - name: Verify Android embedding v2
         run: |
           if grep -R "io.flutter.app" android/; then
@@ -41,8 +42,8 @@ jobs:
             echo "❌ Found old FlutterApplication"
             exit 1
           fi
-          echo "✅ Android v2 embedding OK"
+          echo "✅ Android v2 embedding confirmed"
 
-      # 🧪 FAST CHECK (debug only)
-      - name: Android debug build check
+      # 🧪 QUICK DEBUG BUILD
+      - name: Android debug build
         run: flutter build apk --debug
