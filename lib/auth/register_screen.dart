@@ -10,7 +10,7 @@ class RegisterScreen extends StatelessWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () {
-            Navigator.pushReplacementNamed(context, AppRoutes.app);
+            Navigator.pushReplacementNamed(context, AppRoutes.home);
           },
           child: const Text('Finish Registration'),
         ),
