@@ -12,14 +12,17 @@ class ReelPlayer extends StatefulWidget {
 
 class _ReelPlayerState extends State<ReelPlayer> {
   late VideoPlayerController controller;
+  bool liked = false;
 
   @override
   void initState() {
     super.initState();
+    liked = widget.reel.liked;
     controller = VideoPlayerController.network(widget.reel.videoUrl)
       ..initialize().then((_) {
-        controller.play();
-        controller.setLooping(true);
+        controller
+          ..play()
+          ..setLooping(true);
         setState(() {});
       });
   }
@@ -40,33 +43,84 @@ class _ReelPlayerState extends State<ReelPlayer> {
       children: [
         SizedBox.expand(child: VideoPlayer(controller)),
 
-        // 🔥 RIGHT ACTIONS
+        // 🌑 gradient overlay (поён)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 220,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Colors.black87, Colors.transparent],
+              ),
+            ),
+          ),
+        ),
+
+        // 👉 ACTIONS
         Positioned(
           right: 16,
-          bottom: 100,
+          bottom: 120,
           child: Column(
             children: [
-              Icon(Icons.favorite, color: Colors.white),
-              Text('${widget.reel.likes}', style: const TextStyle(color: Colors.white)),
+              GestureDetector(
+                onTap: () => setState(() => liked = !liked),
+                child: Icon(
+                  Icons.favorite,
+                  color: liked ? Colors.red : Colors.white,
+                  size: 32,
+                ),
+              ),
+              Text('${widget.reel.likes}',
+                  style: const TextStyle(color: Colors.white)),
               const SizedBox(height: 20),
-              Icon(Icons.chat_bubble, color: Colors.white),
-              Text('${widget.reel.comments}', style: const TextStyle(color: Colors.white)),
+              const Icon(Icons.chat_bubble_outline,
+                  color: Colors.white, size: 28),
+              Text('${widget.reel.comments}',
+                  style: const TextStyle(color: Colors.white)),
               const SizedBox(height: 20),
-              Icon(Icons.send, color: Colors.white),
+              const Icon(Icons.send, color: Colors.white, size: 28),
+              const SizedBox(height: 20),
+              const Icon(Icons.bookmark_border,
+                  color: Colors.white, size: 28),
             ],
           ),
         ),
 
-        // 👤 USER INFO
+        // 👤 USER + CAPTION
         Positioned(
           left: 16,
-          bottom: 60,
-          child: Row(
+          bottom: 80,
+          right: 100,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(backgroundImage: NetworkImage(widget.reel.avatar)),
-              const SizedBox(width: 8),
-              Text(widget.reel.username,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundImage:
+                        NetworkImage(widget.reel.avatar),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.reel.username,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.reel.caption,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
