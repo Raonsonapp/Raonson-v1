@@ -1,130 +1,43 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/colors.dart';
-import '../../widgets/raonson_bottom_nav.dart';
+import 'auth_api.dart';
+import '../home/home_screen.dart';
 
-class GmailScreen extends StatefulWidget {
-  const GmailScreen({super.key});
+class GmailScreen extends StatelessWidget {
+  final String tempToken;
+  final controller = TextEditingController();
 
-  @override
-  State<GmailScreen> createState() => _GmailScreenState();
-}
-
-class _GmailScreenState extends State<GmailScreen> {
-  final TextEditingController emailController = TextEditingController();
-  bool isValid = false;
-
-  void validateEmail(String value) {
-    setState(() {
-      isValid = value.endsWith("@gmail.com") && value.length > 10;
-    });
-  }
+  GmailScreen({super.key, required this.tempToken});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: RColors.bg,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
+      appBar: AppBar(title: const Text("Gmail")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: controller,
+              decoration:
+                  const InputDecoration(hintText: "test@gmail.com"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final token = await AuthApi.verifyGmail(
+                  controller.text,
+                  tempToken,
+                );
 
-              /// Title
-              Center(
-                child: Column(
-                  children: const [
-                    Text(
-                      "Raonson",
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.2,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      "Connect your Gmail",
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 60),
-
-              /// Gmail input
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                onChanged: validateEmail,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "example@gmail.com",
-                  hintStyle: TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: RColors.card,
-                  suffixIcon: isValid
-                      ? const Icon(Icons.check_circle, color: RColors.neon)
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => HomeScreen(token: token),
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              const Text(
-                "Only Gmail is supported for now",
-                style: TextStyle(
-                  color: Colors.white38,
-                  fontSize: 12,
-                ),
-              ),
-
-              const Spacer(),
-
-              /// Finish button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isValid ? RColors.neon : Colors.white24,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  onPressed: isValid
-                      ? () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const RaonsonBottomNav(),
-                            ),
-                          );
-                        }
-                      : null,
-                  child: const Text(
-                    "Finish Registration",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+                );
+              },
+              child: const Text("Finish"),
+            )
+          ],
         ),
       ),
     );
