@@ -27,15 +27,11 @@ android {
     compileSdkVersion flutter.compileSdkVersion
 
     defaultConfig {
-        applicationId "com.raonson.app"
-
-        // 🔴 МУҲИМ БАРОИ video_player
-        minSdkVersion 21
-
-        targetSdkVersion flutter.targetSdkVersion
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
-        multiDexEnabled true
+    applicationId "com.example.raonson_v1"
+    minSdkVersion 23
+    targetSdkVersion 34
+    versionCode flutterVersionCode.toInteger()
+    versionName flutterVersionName
     }
 
     buildTypes {
