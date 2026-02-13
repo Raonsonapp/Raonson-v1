@@ -1,22 +1,36 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../core/api/api.dart';
+import '../core/api.dart';
 
 class AuthApi {
-  static Future<Map<String, dynamic>?> login(
-      String phone, String password) async {
-    final res = await http.post(
-      Uri.parse('${Api.baseUrl}/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'phone': phone,
-        'password': password,
-      }),
+  static Future<void> sendOtp(String phone) async {
+    await Api.post(
+      "/auth/send-otp",
+      body: {"phone": phone},
     );
+  }
 
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body);
-    }
-    return null;
+  static Future<String> verifyOtp(
+    String phone,
+    String code,
+  ) async {
+    final res = await Api.post(
+      "/auth/verify-otp",
+      body: {
+        "phone": phone,
+        "code": code,
+      },
+    );
+    return res["tempToken"];
+  }
+
+  static Future<String> verifyGmail(
+    String email,
+    String tempToken,
+  ) async {
+    final res = await Api.post(
+      "/auth/verify-gmail",
+      body: {"email": email},
+      token: tempToken,
+    );
+    return res["token"];
   }
 }
