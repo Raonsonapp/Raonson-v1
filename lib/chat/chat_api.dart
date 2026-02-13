@@ -7,7 +7,7 @@ class ChatApi {
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     }
-    throw Exception('Load chats failed');
+    throw Exception('Chats load failed');
   }
 
   static Future<List<dynamic>> getMessages(String chatId) async {
@@ -15,11 +15,12 @@ class ChatApi {
     if (res.statusCode == 200) {
       return jsonDecode(res.body);
     }
-    throw Exception('Load messages failed');
+    throw Exception('Messages load failed');
   }
 
-  static Future<void> sendMessage(String chatId, String text) async {
-    await Api.post('/chats/$chatId/messages', {
+  static Future<void> sendMessage(
+      String chatId, String text) async {
+    await Api.post('/chats/$chatId/messages', body: {
       'text': text,
     });
   }
