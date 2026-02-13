@@ -1,16 +1,16 @@
 import '../core/api.dart';
+import '../models/reel_model.dart';
 import 'dart:convert';
 
 class ReelsApi {
-  static Future<List<dynamic>> getReels() async {
+  static Future<List<Reel>> getReels() async {
     final res = await Api.get('/reels');
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body);
-    }
-    throw Exception('Reels load error');
-  }
 
-  static Future<void> likeReel(String reelId) async {
-    await Api.post('/reels/$reelId/like');
+    if (res.statusCode == 200) {
+      final List data = jsonDecode(res.body);
+      return data.map((e) => Reel.fromJson(e)).toList();
+    } else {
+      throw Exception('Error loading reels');
+    }
   }
 }
