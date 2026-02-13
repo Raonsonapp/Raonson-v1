@@ -9,13 +9,13 @@ class ReelsApi {
         id: '1',
         username: 'olivia_martin',
         caption: 'Sunset vibes 🌅',
-        imageUrl: 'https://picsum.photos/800/1400?1',
+        videoUrl: 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
       ),
       Reel(
         id: '2',
         username: 'alex_dev',
-        caption: 'Night city ✨',
-        imageUrl: 'https://picsum.photos/800/1400?2',
+        caption: 'City night ✨',
+        videoUrl: 'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
       ),
     ];
   }
