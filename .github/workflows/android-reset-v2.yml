@@ -1,4 +1,4 @@
-name: Android Full Reset to Embedding v2
+name: Android Reset to Embedding v2 (Safe)
 
 on:
   workflow_dispatch:
@@ -16,30 +16,33 @@ jobs:
         with:
           flutter-version: "3.22.0"
 
-      # ⚠️ DELETE ANDROID COMPLETELY
-      - name: Remove old Android folder
+      # 🛠 FIX pubspec name (Raonson-v1 → raonson_v1)
+      - name: Fix pubspec.yaml package name
         run: |
-          echo "🔥 Removing android folder completely"
-          rm -rf android
+          sed -i 's/^name:.*/name: raonson_v1/' pubspec.yaml
+          cat pubspec.yaml | head -n 5
 
-      # 🔁 RECREATE ANDROID (V2)
-      - name: Recreate Android with v2 embedding
-        run: |
-          flutter create --platforms=android .
+      # 🔥 REMOVE OLD ANDROID (v1 may exist)
+      - name: Remove android folder
+        run: rm -rf android
 
-      # 🔎 VERIFY NO V1 LEFTOVERS
-      - name: Verify no v1 embedding remains
+      # 🔁 RECREATE ANDROID WITH V2 EMBEDDING
+      - name: Recreate Android (v2)
+        run: flutter create --platforms=android .
+
+      # 🔎 VERIFY NO V1 EMBEDDING LEFT
+      - name: Verify Android embedding v2
         run: |
           if grep -R "io.flutter.app" android/; then
-            echo "❌ V1 embedding still found"
+            echo "❌ Found v1 embedding"
             exit 1
           fi
           if grep -R "FlutterApplication" android/; then
-            echo "❌ Old FlutterApplication found"
+            echo "❌ Found old FlutterApplication"
             exit 1
           fi
-          echo "✅ Android v2 embedding confirmed"
+          echo "✅ Android v2 embedding OK"
 
-      # 🧪 DRY BUILD CHECK (NO APK)
-      - name: Android assembleDebug check
+      # 🧪 FAST CHECK (debug only)
+      - name: Android debug build check
         run: flutter build apk --debug
