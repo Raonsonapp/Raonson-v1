@@ -2,12 +2,21 @@ import '../models/reel_model.dart';
 
 class ReelsApi {
   static Future<List<Reel>> getReels() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     return [
-      Reel(id: '1', user: 'olivia_martin', caption: 'Sunset vibes 🌅'),
-      Reel(id: '2', user: 'raonson', caption: 'My first reel 🔥'),
-      Reel(id: '3', user: 'flutter_dev', caption: 'UI test 😎'),
+      Reel(
+        id: '1',
+        username: 'olivia_martin',
+        caption: 'Sunset vibes 🌅',
+        imageUrl: 'https://picsum.photos/800/1400?1',
+      ),
+      Reel(
+        id: '2',
+        username: 'alex_dev',
+        caption: 'Night city ✨',
+        imageUrl: 'https://picsum.photos/800/1400?2',
+      ),
     ];
   }
 }
