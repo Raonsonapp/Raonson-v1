@@ -1,0 +1,45 @@
+name: Android Full Reset to Embedding v2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  android-reset:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.0"
+
+      # ⚠️ DELETE ANDROID COMPLETELY
+      - name: Remove old Android folder
+        run: |
+          echo "🔥 Removing android folder completely"
+          rm -rf android
+
+      # 🔁 RECREATE ANDROID (V2)
+      - name: Recreate Android with v2 embedding
+        run: |
+          flutter create --platforms=android .
+
+      # 🔎 VERIFY NO V1 LEFTOVERS
+      - name: Verify no v1 embedding remains
+        run: |
+          if grep -R "io.flutter.app" android/; then
+            echo "❌ V1 embedding still found"
+            exit 1
+          fi
+          if grep -R "FlutterApplication" android/; then
+            echo "❌ Old FlutterApplication found"
+            exit 1
+          fi
+          echo "✅ Android v2 embedding confirmed"
+
+      # 🧪 DRY BUILD CHECK (NO APK)
+      - name: Android assembleDebug check
+        run: flutter build apk --debug
