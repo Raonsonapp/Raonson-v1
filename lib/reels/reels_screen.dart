@@ -23,21 +23,82 @@ class _ReelsScreenState extends State<ReelsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+
       body: FutureBuilder<List<Reel>>(
         future: future,
-        builder: (c, s) {
-          if (s.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (s.hasError) {
-            return const Center(child: Text('Error loading reels', style: TextStyle(color: Colors.white)));
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
           }
 
-          final reels = s.data!;
-          return PageView.builder(
-            scrollDirection: Axis.vertical,
-            itemCount: reels.length,
-            itemBuilder: (_, i) => ReelPlayer(reel: reels[i]),
+          if (snapshot.hasError || !snapshot.hasData) {
+            return const Center(
+              child: Text(
+                'Error loading reels',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          }
+
+          final reels = snapshot.data!;
+
+          return Stack(
+            children: [
+              /// 🎥 REELS (VERTICAL)
+              PageView.builder(
+                scrollDirection: Axis.vertical,
+                itemCount: reels.length,
+                itemBuilder: (_, i) {
+                  return ReelPlayer(reel: reels[i]);
+                },
+              ),
+
+              /// ✨ TOP GLOW (мисли расм)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 80,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0xFF00B3FF),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              /// ✨ BOTTOM GLOW (мисли расм)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 110,
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Color(0xFF00B3FF),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
