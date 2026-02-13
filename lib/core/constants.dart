@@ -1,3 +1,3 @@
-class AppConstants {
-  static const baseUrl = 'https://raonson-v1.onrender.com';
+class Constants {
+  static const String baseUrl = 'https://raonson-v1.onrender.com';
 }
