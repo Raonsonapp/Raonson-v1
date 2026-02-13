@@ -1,4 +1,4 @@
-import '../core/api.dart';
+import '../core/api/api.dart';
 
 class AuthApi {
   static Future<void> sendOtp(String phone) async {
