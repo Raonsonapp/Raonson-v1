@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'auth_api.dart';
-import '../home/home_screen.dart';
+import '../screens/home/home_screen.dart';
 
 class GmailScreen extends StatelessWidget {
   final String tempToken;
