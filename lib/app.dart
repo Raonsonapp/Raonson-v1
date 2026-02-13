@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
-import 'app_routes.dart';
-import 'app_theme.dart';
+import 'bottom_nav/bottom_nav.dart';
 
 class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Raonson',
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
-      initialRoute: AppRoutes.login,
-      onGenerateRoute: AppRoutes.generate, // ✅ ИН ҶО
+      home: BottomNav(),
     );
   }
 }
