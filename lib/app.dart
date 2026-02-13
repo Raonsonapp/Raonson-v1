@@ -11,8 +11,8 @@ class RaonsonApp extends StatelessWidget {
       title: 'Raonson',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
-      routes: AppRoutes.routes,
       initialRoute: AppRoutes.login,
+      onGenerateRoute: AppRoutes.generate, // ✅ ИН ҶО
     );
   }
 }
