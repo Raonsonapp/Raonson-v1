@@ -2,8 +2,10 @@ class Reel {
   final String id;
   final String videoUrl;
   final String caption;
+
   int likes;
   int views;
+  bool liked;
 
   Reel({
     required this.id,
@@ -11,15 +13,6 @@ class Reel {
     required this.caption,
     required this.likes,
     required this.views,
+    this.liked = false,
   });
-
-  factory Reel.fromJson(Map<String, dynamic> json) {
-    return Reel(
-      id: json['id'],
-      videoUrl: json['videoUrl'],
-      caption: json['caption'],
-      likes: json['likes'],
-      views: json['views'],
-    );
-  }
 }
