@@ -4,7 +4,12 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/:postId", authMiddleware, addComment);
-router.get("/:postId", getComments);
+// COMMENTS FOR REELS
+router.get("/reels/:targetId", getComments);
+router.post("/reels/:targetId", authMiddleware, addComment);
+
+// COMMENTS FOR POSTS
+router.get("/posts/:targetId", getComments);
+router.post("/posts/:targetId", authMiddleware, addComment);
 
 export default router;
