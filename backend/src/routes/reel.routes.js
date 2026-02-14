@@ -2,13 +2,17 @@ import express from "express";
 import {
   getReels,
   addView,
-  toggleLike,
+  likeReel,
+  shareReel,
+  saveReel,
 } from "../controllers/reel.controller.js";
 
 const router = express.Router();
 
-router.get("/", getReels);              // ✅ GET /reels
-router.post("/:id/view", addView);      // ✅ POST /reels/:id/view
-router.post("/:id/like", toggleLike);   // ✅ POST /reels/:id/like
+router.get("/", getReels);
+router.post("/:id/view", addView);
+router.post("/:id/like", likeReel);
+router.post("/:id/share", shareReel);
+router.post("/:id/save", saveReel);
 
 export default router;
