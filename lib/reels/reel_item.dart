@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:share_plus/share_plus.dart';
-
 import '../models/reel_model.dart';
+import '../reels/reels_api.dart';
+import 'comment_sheet.dart';
 
 class ReelItem extends StatefulWidget {
   final Reel reel;
-  final VoidCallback onLike;
   final VoidCallback onView;
 
   const ReelItem({
     super.key,
     required this.reel,
-    required this.onLike,
     required this.onView,
   });
 
@@ -22,18 +20,21 @@ class ReelItem extends StatefulWidget {
 }
 
 class _ReelItemState extends State<ReelItem> {
-  late VideoPlayerController _controller;
+  late VideoPlayerController controller;
+  late bool liked;
+  late int likes;
 
   @override
   void initState() {
     super.initState();
-
-    // 👁 VIEW (1 бор)
     widget.onView();
 
-    _controller = VideoPlayerController.network(widget.reel.videoUrl)
+    liked = widget.reel.liked;
+    likes = widget.reel.likes;
+
+    controller = VideoPlayerController.network(widget.reel.videoUrl)
       ..initialize().then((_) {
-        _controller
+        controller
           ..setLooping(true)
           ..play();
         setState(() {});
@@ -42,41 +43,24 @@ class _ReelItemState extends State<ReelItem> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    controller.dispose();
     super.dispose();
   }
 
-  // ❤️ LIKE
-  void _handleLike() {
-    if (widget.reel.liked) return;
-
+  Future<void> onLike() async {
+    // 🔥 Optimistic UI
     setState(() {
-      widget.reel.liked = true;
-      widget.reel.likes += 1;
+      liked = !liked;
+      likes += liked ? 1 : -1;
     });
 
-    widget.onLike();
-  }
+    final res = await ReelsApi.toggleLike(widget.reel.id);
 
-  // 📤 SHARE
-  void _handleShare() {
-    final text =
-        '🎬 ${widget.reel.caption}\n\nWatch on Raonson:\n${widget.reel.videoUrl}';
-
-    Share.share(text);
-
+    // 🔁 Sync from backend
     setState(() {
-      widget.reel.shares += 1;
+      liked = res['liked'];
+      likes = res['likes'];
     });
-  }
-
-  Widget _icon(String path, {Color color = Colors.white}) {
-    return SvgPicture.asset(
-      path,
-      width: 28,
-      height: 28,
-      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-    );
   }
 
   @override
@@ -84,88 +68,85 @@ class _ReelItemState extends State<ReelItem> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 🎥 VIDEO
-        _controller.value.isInitialized
-            ? VideoPlayer(_controller)
-            : const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
+        controller.value.isInitialized
+            ? VideoPlayer(controller)
+            : const Center(child: CircularProgressIndicator()),
 
-        // 👉 ACTIONS (RIGHT)
+        // ❤️ ACTIONS
         Positioned(
           right: 12,
           bottom: 120,
           child: Column(
             children: [
-              // ❤️ LIKE
               GestureDetector(
-                onTap: _handleLike,
+                onTap: onLike,
                 child: AnimatedScale(
-                  scale: widget.reel.liked ? 1.25 : 1.0,
+                  scale: liked ? 1.25 : 1,
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutBack,
-                  child: _icon(
+                  child: SvgPicture.asset(
                     'assets/icons/heart.svg',
-                    color: widget.reel.liked ? Colors.red : Colors.white,
+                    width: 28,
+                    colorFilter: ColorFilter.mode(
+                      liked ? Colors.red : Colors.white,
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                '${widget.reel.likes}',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
+              Text('$likes',
+                  style: const TextStyle(color: Colors.white)),
 
               const SizedBox(height: 22),
-
-              // 💬 COMMENT (ҳоло UI, backend аллакай дорӣ)
-              _icon('assets/icons/comment.svg'),
-              const SizedBox(height: 4),
-              Text(
-                '${widget.reel.comments}',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-
-              const SizedBox(height: 22),
-
-              // 📤 SHARE
               GestureDetector(
-                onTap: _handleShare,
-                child: _icon('assets/icons/share.svg'),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${widget.reel.shares}',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    isScrollControlled: true,
+                    builder: (_) =>
+                        CommentSheet(reelId: widget.reel.id),
+                  );
+                },
+                child: SvgPicture.asset(
+                  'assets/icons/comment.svg',
+                  width: 26,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
+                ),
               ),
 
               const SizedBox(height: 22),
+              SvgPicture.asset('assets/icons/share.svg',
+                  width: 26,
+                  colorFilter: const ColorFilter.mode(
+                      Colors.white, BlendMode.srcIn)),
 
-              // 🔖 SAVE (UI, backend қадамӣ)
-              _icon('assets/icons/save.svg'),
+              const SizedBox(height: 22),
+              SvgPicture.asset('assets/icons/save.svg',
+                  width: 26,
+                  colorFilter: const ColorFilter.mode(
+                      Colors.white, BlendMode.srcIn)),
             ],
           ),
         ),
 
-        // ℹ️ INFO (LEFT)
+        // ℹ️ INFO
         Positioned(
           left: 12,
           bottom: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '@${widget.reel.username}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                widget.reel.caption,
-                style: const TextStyle(color: Colors.white),
-              ),
+              Text('@${widget.reel.username}',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
+              Text(widget.reel.caption,
+                  style: const TextStyle(color: Colors.white)),
             ],
           ),
         ),
