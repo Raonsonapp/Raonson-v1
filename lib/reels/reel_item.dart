@@ -2,18 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/reel_model.dart';
-import '../reels/reels_api.dart';
-import 'comment_sheet.dart';
+import 'reels_api.dart';
 
 class ReelItem extends StatefulWidget {
   final Reel reel;
-  final VoidCallback onView;
-
-  const ReelItem({
-    super.key,
-    required this.reel,
-    required this.onView,
-  });
+  const ReelItem({super.key, required this.reel});
 
   @override
   State<ReelItem> createState() => _ReelItemState();
@@ -21,16 +14,11 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   late VideoPlayerController controller;
-  late bool liked;
-  late int likes;
+  bool likedOnce = false;
 
   @override
   void initState() {
     super.initState();
-    widget.onView();
-
-    liked = widget.reel.liked;
-    likes = widget.reel.likes;
 
     controller = VideoPlayerController.network(widget.reel.videoUrl)
       ..initialize().then((_) {
@@ -39,6 +27,9 @@ class _ReelItemState extends State<ReelItem> {
           ..play();
         setState(() {});
       });
+
+    // 👁 VIEW
+    ReelsApi.addView(widget.reel.id);
   }
 
   @override
@@ -48,19 +39,22 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Future<void> onLike() async {
-    // 🔥 Optimistic UI
+    if (likedOnce) return;
+
     setState(() {
-      liked = !liked;
-      likes += liked ? 1 : -1;
+      likedOnce = true;
+      widget.reel.likes += 1;
     });
 
-    final res = await ReelsApi.toggleLike(widget.reel.id);
+    try {
+      final newLikes = await ReelsApi.like(widget.reel.id);
+      setState(() => widget.reel.likes = newLikes);
+    } catch (_) {}
+  }
 
-    // 🔁 Sync from backend
-    setState(() {
-      liked = res['liked'];
-      likes = res['likes'];
-    });
+  Future<void> onSave() async {
+    final saved = await ReelsApi.toggleSave(widget.reel.id);
+    setState(() => widget.reel.saved = saved);
   }
 
   @override
@@ -70,9 +64,11 @@ class _ReelItemState extends State<ReelItem> {
       children: [
         controller.value.isInitialized
             ? VideoPlayer(controller)
-            : const Center(child: CircularProgressIndicator()),
+            : const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
 
-        // ❤️ ACTIONS
+        // ACTIONS
         Positioned(
           right: 12,
           bottom: 120,
@@ -81,72 +77,73 @@ class _ReelItemState extends State<ReelItem> {
               GestureDetector(
                 onTap: onLike,
                 child: AnimatedScale(
-                  scale: liked ? 1.25 : 1,
+                  scale: likedOnce ? 1.25 : 1,
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutBack,
                   child: SvgPicture.asset(
                     'assets/icons/heart.svg',
-                    width: 28,
+                    width: 30,
                     colorFilter: ColorFilter.mode(
-                      liked ? Colors.red : Colors.white,
+                      likedOnce ? Colors.red : Colors.white,
                       BlendMode.srcIn,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text('$likes',
+              Text('${widget.reel.likes}',
                   style: const TextStyle(color: Colors.white)),
 
               const SizedBox(height: 22),
-              GestureDetector(
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    backgroundColor: Colors.transparent,
-                    isScrollControlled: true,
-                    builder: (_) =>
-                        CommentSheet(reelId: widget.reel.id),
-                  );
-                },
-                child: SvgPicture.asset(
-                  'assets/icons/comment.svg',
-                  width: 26,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
+              SvgPicture.asset(
+                'assets/icons/comment.svg',
+                width: 26,
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
+              const Text('0',
+                  style: TextStyle(color: Colors.white)),
+
+              const SizedBox(height: 22),
+              SvgPicture.asset(
+                'assets/icons/share.svg',
+                width: 26,
+                colorFilter:
+                    const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
 
               const SizedBox(height: 22),
-              SvgPicture.asset('assets/icons/share.svg',
+              GestureDetector(
+                onTap: onSave,
+                child: SvgPicture.asset(
+                  widget.reel.saved
+                      ? 'assets/icons/save_filled.svg'
+                      : 'assets/icons/save.svg',
                   width: 26,
-                  colorFilter: const ColorFilter.mode(
-                      Colors.white, BlendMode.srcIn)),
-
-              const SizedBox(height: 22),
-              SvgPicture.asset('assets/icons/save.svg',
-                  width: 26,
-                  colorFilter: const ColorFilter.mode(
-                      Colors.white, BlendMode.srcIn)),
+                  colorFilter:
+                      const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                ),
+              ),
             ],
           ),
         ),
 
-        // ℹ️ INFO
+        // INFO
         Positioned(
           left: 12,
           bottom: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('@${widget.reel.username}',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
-              Text(widget.reel.caption,
-                  style: const TextStyle(color: Colors.white)),
+              Text(
+                '@${widget.reel.user}',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.reel.caption,
+                style: const TextStyle(color: Colors.white),
+              ),
             ],
           ),
         ),
