@@ -1,0 +1,51 @@
+name: Flutter Create (Safe)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: "Flutter project name (only if repo is empty)"
+        required: true
+        default: "raonson"
+
+jobs:
+  flutter_create:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Check if Flutter project already exists
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            echo "Flutter project already exists. Skipping flutter create."
+            exit 0
+          fi
+
+      - name: Flutter create in repo root
+        run: |
+          flutter create .
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Commit Flutter files only
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          git add android ios lib test pubspec.yaml pubspec.lock analysis_options.yaml .metadata
+
+          git commit -m "🚀 Flutter project initialized (safe)"
+          git push
