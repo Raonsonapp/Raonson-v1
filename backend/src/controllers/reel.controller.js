@@ -1,29 +1,24 @@
-import Reel from "../models/reel.model.js";
+import { reels } from "../data/reels.store.js";
 
-// ❤️ TOGGLE LIKE
-export const toggleLike = async (req, res) => {
-  const userId = req.user.id;
-  const { reelId } = req.params;
+// GET FEED
+export const getReels = (req, res) => {
+  res.json(reels);
+};
 
-  const reel = await Reel.findById(reelId);
-  if (!reel) {
-    return res.status(404).json({ error: "Reel not found" });
-  }
+// ADD VIEW
+export const addView = (req, res) => {
+  const reel = reels.find(r => r.id === req.params.id);
+  if (!reel) return res.status(404).json({ error: "Reel not found" });
 
-  const alreadyLiked = reel.likes.includes(userId);
+  reel.views += 1;
+  res.json({ views: reel.views });
+};
 
-  if (alreadyLiked) {
-    reel.likes.pull(userId);
-    reel.likesCount -= 1;
-  } else {
-    reel.likes.push(userId);
-    reel.likesCount += 1;
-  }
+// TOGGLE LIKE
+export const toggleLike = (req, res) => {
+  const reel = reels.find(r => r.id === req.params.id);
+  if (!reel) return res.status(404).json({ error: "Reel not found" });
 
-  await reel.save();
-
-  res.json({
-    liked: !alreadyLiked,
-    likesCount: reel.likesCount,
-  });
+  reel.likes += 1; // MVP: ҳар tap = +1
+  res.json({ likes: reel.likes });
 };
