@@ -1,82 +1,60 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/reel_model.dart';
 import '../core/constants.dart';
 
 class ReelsApi {
-  static String get _base => Constants.baseUrl;
-
-  // ======================
-  // GET REELS FEED
-  // ======================
-  static Future<List<dynamic>> fetchReels() async {
+  // GET FEED
+  static Future<List<Reel>> fetchReels() async {
     final res = await http.get(
-      Uri.parse('$_base/reels'),
+      Uri.parse('${Constants.baseUrl}/reels'),
+      headers: {'Content-Type': 'application/json'},
     );
 
     if (res.statusCode != 200) {
       throw Exception('Failed to load reels');
     }
 
-    return jsonDecode(res.body);
+    final List data = jsonDecode(res.body);
+    return data.map((e) => Reel.fromJson(e)).toList();
   }
 
-  // ======================
-  // ADD VIEW
-  // ======================
+  // VIEW
   static Future<void> addView(String reelId) async {
     await http.post(
-      Uri.parse('$_base/reels/$reelId/view'),
+      Uri.parse('${Constants.baseUrl}/reels/$reelId/view'),
+      headers: {'Content-Type': 'application/json'},
     );
   }
 
-  // ======================
-  // LIKE (+1 MVP)
-  // ======================
-  static Future<void> like(String reelId) async {
-    await http.post(
-      Uri.parse('$_base/reels/$reelId/like'),
-    );
-  }
-
-  // ======================
-  // GET COMMENTS
-  // ======================
-  static Future<List<dynamic>> getComments(String reelId) async {
-    final res = await http.get(
-      Uri.parse('$_base/comments/reels/$reelId'),
+  // LIKE
+  static Future<int> like(String reelId) async {
+    final res = await http.post(
+      Uri.parse('${Constants.baseUrl}/reels/$reelId/like'),
+      headers: {'Content-Type': 'application/json'},
     );
 
     if (res.statusCode != 200) {
-      return [];
+      throw Exception('Like failed');
     }
 
-    return jsonDecode(res.body);
+    final data = jsonDecode(res.body);
+    return data['likes'];
   }
 
-  // ======================
-  // ADD COMMENT
-  // ======================
-  static Future<void> addComment(String reelId, String text) async {
-    await http.post(
-      Uri.parse('$_base/comments/reels/$reelId'),
+  // SAVE / UNSAVE
+  static Future<bool> toggleSave(String reelId) async {
+    final res = await http.post(
+      Uri.parse('${Constants.baseUrl}/reels/$reelId/save'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'text': text}),
+      body: jsonEncode({'user': 'guest'}),
     );
-  }
 
-  // ======================
-  // SAVE (MVP – LOCAL)
-  // ======================
-  static Future<void> save(String reelId) async {
-    // MVP: backend надорад, баъдтар илова мекунем
-    return;
-  }
+    if (res.statusCode != 200) {
+      throw Exception('Save failed');
+    }
 
-  // ======================
-  // SHARE (MVP – UI ONLY)
-  // ======================
-  static Future<void> share(String reelId) async {
-    // MVP: танҳо UI
-    return;
+    final data = jsonDecode(res.body);
+    return data['saved'] == true;
   }
 }
