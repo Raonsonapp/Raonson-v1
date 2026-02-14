@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
 import '../models/reel_model.dart';
+import '../comments/comments_sheet.dart';
 
 class ReelItem extends StatefulWidget {
   final Reel reel;
   final VoidCallback onLike;
   final VoidCallback onView;
-  final VoidCallback onComment; // 👈 ИЛОВА
 
   const ReelItem({
     super.key,
     required this.reel,
     required this.onLike,
     required this.onView,
-    required this.onComment,
   });
 
   @override
@@ -23,11 +23,13 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   late VideoPlayerController _controller;
-  bool _viewSent = false; // 👁️ prevent double view
 
   @override
   void initState() {
     super.initState();
+
+    // 👁 VIEW
+    widget.onView();
 
     _controller = VideoPlayerController.network(widget.reel.videoUrl)
       ..initialize().then((_) {
@@ -39,23 +41,12 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // 👁️ VIEW – ТАНҲО 1 БОР
-    if (!_viewSent) {
-      widget.onView();
-      _viewSent = true;
-    }
-  }
-
-  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  Widget _svg(String path,
+  Widget _icon(String path,
       {double size = 28, Color color = Colors.white}) {
     return SvgPicture.asset(
       path,
@@ -70,75 +61,76 @@ class _ReelItemState extends State<ReelItem> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 🎬 VIDEO
+        // 🎥 VIDEO
         _controller.value.isInitialized
             ? VideoPlayer(_controller)
             : const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               ),
 
-        // ❤️ ACTIONS (RIGHT)
+        // ❤️💬📤🔖 ACTIONS
         Positioned(
           right: 12,
           bottom: 120,
           child: Column(
             children: [
-              // ❤️ LIKE
+              // LIKE
               GestureDetector(
                 onTap: widget.onLike,
                 child: AnimatedScale(
                   scale: widget.reel.liked ? 1.25 : 1.0,
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutBack,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 150),
-                    child: _svg(
-                      'assets/icons/heart.svg',
-                      key: ValueKey(widget.reel.liked),
-                      color: widget.reel.liked
-                          ? Colors.red
-                          : Colors.white,
-                    ),
+                  child: _icon(
+                    'assets/icons/heart.svg',
+                    color: widget.reel.liked ? Colors.red : Colors.white,
                   ),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 '${widget.reel.likes}',
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
 
               const SizedBox(height: 22),
 
-              // 💬 COMMENT
+              // COMMENT
               GestureDetector(
-                onTap: widget.onComment,
-                child: _svg('assets/icons/comment.svg', size: 26),
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) =>
+                        CommentsSheet(reelId: widget.reel.id),
+                  );
+                },
+                child: _icon('assets/icons/comment.svg'),
               ),
               const SizedBox(height: 4),
               Text(
                 '${widget.reel.comments}',
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
 
               const SizedBox(height: 22),
 
-              // 📤 SHARE
-              _svg('assets/icons/share.svg', size: 26),
+              // SHARE (UI ready)
+              _icon('assets/icons/share.svg'),
 
               const SizedBox(height: 22),
 
-              // 🔖 SAVE
-              _svg('assets/icons/save.svg', size: 26),
+              // SAVE (UI ready)
+              _icon('assets/icons/save.svg'),
             ],
           ),
         ),
 
-        // ℹ️ INFO (LEFT BOTTOM)
+        // ℹ️ USER + CAPTION
         Positioned(
           left: 12,
           bottom: 40,
-          right: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -153,8 +145,6 @@ class _ReelItemState extends State<ReelItem> {
               Text(
                 widget.reel.caption,
                 style: const TextStyle(color: Colors.white),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
