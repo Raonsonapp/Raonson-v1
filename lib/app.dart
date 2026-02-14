@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'reels/reels_screen.dart'; // ⬅️ муҳим
+import 'reels/reels_screen.dart';
 
 void main() {
   runApp(const RaonsonApp());
@@ -26,30 +26,26 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int index = 1; // ⬅️ Reels default
+  int index = 1;
 
   final pages = const [
-    HomeScreen(),
-    ReelsScreen(), // 🔥 ҲОЛО РЕЕЛС ЗИНДА МЕШАВАД
-    SearchScreen(),
-    ProfileScreen(),
+    Center(child: Text('HOME', style: TextStyle(fontSize: 22))),
+    ReelsScreen(), // 🔥 REELS
+    Center(child: Text('SEARCH', style: TextStyle(fontSize: 22))),
+    Center(child: Text('PROFILE', style: TextStyle(fontSize: 22))),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: pages[index],
-
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.blueAccent.withOpacity(0.6),
-              blurRadius: 20,
-              spreadRadius: 2,
-            ),
-          ],
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.transparent, Colors.blueAccent],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
         child: BottomNavigationBar(
           currentIndex: index,
@@ -60,59 +56,16 @@ class _MainNavigationState extends State<MainNavigation> {
           unselectedItemColor: Colors.grey,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-            ),
+                icon: Icon(Icons.home_outlined), label: 'Home'),
             BottomNavigationBarItem(
-              icon: Icon(Icons.play_circle_fill),
-              label: 'Reels',
-            ),
+                icon: Icon(Icons.play_circle_outline), label: 'Reels'),
             BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: 'Search',
-            ),
+                icon: Icon(Icons.search), label: 'Search'),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: 'Profile',
-            ),
+                icon: Icon(Icons.person_outline), label: 'Profile'),
           ],
         ),
       ),
-    );
-  }
-}
-
-/* ------------------ PLACEHOLDER SCREENS ------------------ */
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('HOME', style: TextStyle(fontSize: 24)),
-    );
-  }
-}
-
-class SearchScreen extends StatelessWidget {
-  const SearchScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('SEARCH', style: TextStyle(fontSize: 24)),
-    );
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('PROFILE', style: TextStyle(fontSize: 24)),
     );
   }
 }
