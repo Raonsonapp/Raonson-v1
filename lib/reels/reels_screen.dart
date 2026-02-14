@@ -11,8 +11,6 @@ class ReelsScreen extends StatefulWidget {
 
 class _ReelsScreenState extends State<ReelsScreen> {
   final List<String> videos = [
-    // 🔴 ҲОЗИР ВИДЕОҲОИ ТЕСТӢ (иваз мекунӣ)
-    'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
     'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
   ];
 
@@ -23,19 +21,14 @@ class _ReelsScreenState extends State<ReelsScreen> {
       body: PageView.builder(
         scrollDirection: Axis.vertical,
         itemCount: videos.length,
-        itemBuilder: (context, index) {
-          return ReelItem(videoUrl: videos[index]);
-        },
+        itemBuilder: (_, index) => ReelItem(videoUrl: videos[index]),
       ),
     );
   }
 }
 
-// --------------------------------------------------
-
 class ReelItem extends StatefulWidget {
   final String videoUrl;
-
   const ReelItem({super.key, required this.videoUrl});
 
   @override
@@ -43,31 +36,31 @@ class ReelItem extends StatefulWidget {
 }
 
 class _ReelItemState extends State<ReelItem> {
-  late VideoPlayerController _controller;
+  late VideoPlayerController controller;
+  bool isLiked = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+    controller = VideoPlayerController.network(widget.videoUrl)
       ..initialize().then((_) {
         setState(() {});
-        _controller
-          ..setLooping(true)
-          ..play();
+        controller.play();
+        controller.setLooping(true);
       });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    controller.dispose();
     super.dispose();
   }
 
-  Widget _svgIcon(String path, {double size = 28}) {
+  Widget _svgIcon(String path) {
     return SvgPicture.asset(
       path,
-      width: size,
-      height: size,
+      width: 28,
+      height: 28,
       colorFilter: const ColorFilter.mode(
         Colors.white,
         BlendMode.srcIn,
@@ -75,33 +68,49 @@ class _ReelItemState extends State<ReelItem> {
     );
   }
 
+  Widget _animatedLikeButton() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          isLiked = !isLiked;
+        });
+      },
+      child: AnimatedScale(
+        scale: isLiked ? 1.25 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutBack,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 150),
+          child: SvgPicture.asset(
+            'assets/icons/heart.svg',
+            key: ValueKey(isLiked),
+            width: 28,
+            height: 28,
+            colorFilter: ColorFilter.mode(
+              isLiked ? Colors.red : Colors.white,
+              BlendMode.srcIn,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
+      fit: StackFit.expand,
       children: [
-        // 🎥 VIDEO
-        Positioned.fill(
-          child: _controller.value.isInitialized
-              ? FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _controller.value.size.width,
-                    height: _controller.value.size.height,
-                    child: VideoPlayer(_controller),
-                  ),
-                )
-              : const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-        ),
+        controller.value.isInitialized
+            ? VideoPlayer(controller)
+            : const Center(child: CircularProgressIndicator()),
 
-        // ❤️ ACTION ICONS (RIGHT)
         Positioned(
           right: 12,
           bottom: 120,
           child: Column(
             children: [
-              _svgIcon('assets/icons/heart.svg'),
+              _animatedLikeButton(),
               const SizedBox(height: 6),
               const Text('45.2K',
                   style: TextStyle(color: Colors.white, fontSize: 12)),
@@ -121,48 +130,19 @@ class _ReelItemState extends State<ReelItem> {
           ),
         ),
 
-        // 👤 USER + CAPTION (LEFT BOTTOM)
         Positioned(
           left: 12,
-          bottom: 90,
-          right: 80,
+          bottom: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.grey,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'olivia_martin',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      minimumSize: Size.zero,
-                    ),
-                    child: const Text(
-                      'Follow',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Sunset vibes 🌅  #beachlife #flutter',
-                style: TextStyle(color: Colors.white, fontSize: 13),
-              ),
+            children: const [
+              Text('olivia_martin',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
+              SizedBox(height: 6),
+              Text('Sunset vibes 🌅 #beachlife',
+                  style: TextStyle(color: Colors.white)),
             ],
           ),
         ),
