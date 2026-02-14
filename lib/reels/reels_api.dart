@@ -3,6 +3,15 @@ import '../core/api.dart';
 import '../models/reel_model.dart';
 
 class ReelsApi {
+  static Future<void> view(String reelId) async {
+    await Api.post('/reels/$reelId/view');
+  }
+
+  static Future<void> like(String reelId) async {
+    await Api.post('/reels/$reelId/like');
+  }
+}
+class ReelsApi {
   static Future<List<Reel>> fetchReels() async {
     final res = await Api.get("/reels");
     final List data = jsonDecode(res.body);
