@@ -10,14 +10,18 @@ class ReelsScreen extends StatelessWidget {
       scrollDirection: Axis.vertical,
       children: const [
         ReelItem(
+          videoUrl:
+              'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
           username: 'olivia_martin',
           caption: 'Sunset vibes 🌅 #beachlife',
           initialLikes: 1200000,
         ),
         ReelItem(
+          videoUrl:
+              'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
           username: 'raonson',
-          caption: 'Next reel coming 🔥',
-          initialLikes: 53200,
+          caption: 'Next reel 🔥',
+          initialLikes: 54000,
         ),
       ],
     );
