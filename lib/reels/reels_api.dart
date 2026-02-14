@@ -1,28 +1,17 @@
+import '../core/api.dart';
 import '../models/reel_model.dart';
 
 class ReelsApi {
-  static Future<List<Reel>> getReels() async {
-    await Future.delayed(const Duration(milliseconds: 400));
+  static Future<List<Reel>> fetchReels() async {
+    final data = await Api.get('/reels');
+    return data.map<Reel>((e) => Reel.fromJson(e)).toList();
+  }
 
-    return [
-      Reel(
-        id: '1',
-        username: 'olivia_martin',
-        caption: 'Sunset vibes 🌅',
-        videoUrl:
-            'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
-        likes: 0,
-        liked: false,
-      ),
-      Reel(
-        id: '2',
-        username: 'alex_dev',
-        caption: 'City night ✨',
-        videoUrl:
-            'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4',
-        likes: 0,
-        liked: false,
-      ),
-    ];
+  static Future<void> addView(String reelId) async {
+    await Api.post('/reels/view/$reelId');
+  }
+
+  static Future<void> likeReel(String reelId, String token) async {
+    await Api.post('/reels/like/$reelId', token: token);
   }
 }
