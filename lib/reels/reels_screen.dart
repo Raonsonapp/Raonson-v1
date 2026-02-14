@@ -17,12 +17,19 @@ class _ReelsScreenState extends State<ReelsScreen> {
   @override
   void initState() {
     super.initState();
-    loadReels();
+    _loadReels();
   }
 
-  Future<void> loadReels() async {
-    reels = await ReelsApi.fetchReels();
-    setState(() => loading = false);
+  Future<void> _loadReels() async {
+    try {
+      final data = await ReelsApi.fetchReels();
+      setState(() {
+        reels = data;
+        loading = false;
+      });
+    } catch (e) {
+      setState(() => loading = false);
+    }
   }
 
   @override
@@ -30,7 +37,9 @@ class _ReelsScreenState extends State<ReelsScreen> {
     if (loading) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 
@@ -39,7 +48,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
         backgroundColor: Colors.black,
         body: Center(
           child: Text(
-            'Ҳоло ягон Reels нест',
+            'No reels yet',
             style: TextStyle(color: Colors.white),
           ),
         ),
@@ -59,9 +68,6 @@ class _ReelsScreenState extends State<ReelsScreen> {
   }
 }
 
-// ======================
-// SINGLE REEL
-// ======================
 class ReelItem extends StatefulWidget {
   final Reel reel;
   const ReelItem({super.key, required this.reel});
@@ -78,14 +84,17 @@ class _ReelItemState extends State<ReelItem> {
   void initState() {
     super.initState();
 
+    liked = widget.reel.liked;
+
     controller = VideoPlayerController.network(widget.reel.videoUrl)
       ..initialize().then((_) {
         setState(() {});
-        controller.play();
-        controller.setLooping(true);
+        controller
+          ..setLooping(true)
+          ..play();
       });
 
-    // 👁️ VIEW
+    // 👁️ view
     ReelsApi.view(widget.reel.id);
   }
 
@@ -95,11 +104,15 @@ class _ReelItemState extends State<ReelItem> {
     super.dispose();
   }
 
-  void onLike() async {
-    await ReelsApi.like(widget.reel.id);
+  Future<void> _like() async {
+    if (liked) return;
+
+    final newLikes = await ReelsApi.like(widget.reel.id);
+
     setState(() {
       liked = true;
-      widget.reel.likes += 1;
+      widget.reel.likes = newLikes;
+      widget.reel.liked = true;
     });
   }
 
@@ -108,62 +121,69 @@ class _ReelItemState extends State<ReelItem> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // VIDEO
+        // 🎥 VIDEO
         controller.value.isInitialized
             ? VideoPlayer(controller)
             : const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               ),
 
-        // RIGHT ACTIONS
+        // ❤️ ACTIONS (RIGHT)
         Positioned(
           right: 14,
           bottom: 120,
           child: Column(
             children: [
               GestureDetector(
-                onTap: onLike,
-                child: Icon(
-                  Icons.favorite,
-                  size: 36,
-                  color: liked ? Colors.red : Colors.white,
+                onTap: _like,
+                child: AnimatedScale(
+                  scale: liked ? 1.25 : 1.0,
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutBack,
+                  child: Icon(
+                    Icons.favorite,
+                    size: 34,
+                    color: liked ? Colors.red : Colors.white,
+                  ),
                 ),
               ),
+              const SizedBox(height: 6),
               Text(
-                '${widget.reel.likes}',
+                widget.reel.likes.toString(),
                 style: const TextStyle(color: Colors.white),
               ),
 
               const SizedBox(height: 22),
-
-              const Icon(Icons.mode_comment_outlined,
+              const Icon(Icons.chat_bubble_outline,
                   color: Colors.white, size: 30),
               const SizedBox(height: 6),
-              const Text('0', style: TextStyle(color: Colors.white)),
+              const Text('0',
+                  style: TextStyle(color: Colors.white, fontSize: 12)),
 
               const SizedBox(height: 22),
-
               const Icon(Icons.send, color: Colors.white, size: 28),
 
               const SizedBox(height: 22),
-
               const Icon(Icons.bookmark_border,
                   color: Colors.white, size: 28),
             ],
           ),
         ),
 
-        // LEFT INFO
+        // ℹ️ INFO (LEFT)
         Positioned(
           left: 14,
           bottom: 40,
+          right: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '@user',
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+              Text(
+                '@${widget.reel.username}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
