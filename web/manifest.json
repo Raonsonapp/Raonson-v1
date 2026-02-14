@@ -1,6 +1,6 @@
 {
-    "name": "raonson_v1",
-    "short_name": "raonson_v1",
+    "name": "raonson",
+    "short_name": "raonson",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
