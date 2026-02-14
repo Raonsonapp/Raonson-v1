@@ -7,5 +7,6 @@ export const reels = [
     likes: 0,
     views: 0,
     comments: 0,
+    saves: 0,
   },
 ];
