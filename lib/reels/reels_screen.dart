@@ -10,7 +10,7 @@ class ReelsScreen extends StatefulWidget {
 }
 
 class _ReelsScreenState extends State<ReelsScreen> {
-  List<dynamic> reels = [];
+  List<Map<String, dynamic>> reels = [];
   bool loading = true;
 
   @override
@@ -23,11 +23,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
     try {
       final data = await ReelsApi.fetchReels();
       setState(() {
-        reels = data;
+        reels = List<Map<String, dynamic>>.from(data);
         loading = false;
       });
-    } catch (_) {
-      setState(() => loading = false);
+    } catch (e) {
+      loading = false;
+      setState(() {});
     }
   }
 
@@ -36,7 +37,9 @@ class _ReelsScreenState extends State<ReelsScreen> {
     if (loading) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 
@@ -66,7 +69,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
 // =======================================================
 
 class ReelItem extends StatefulWidget {
-  final dynamic reel;
+  final Map<String, dynamic> reel;
   const ReelItem({super.key, required this.reel});
 
   @override
@@ -75,22 +78,27 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   late VideoPlayerController controller;
+
+  late int likes;
   bool liked = false;
-  int likes = 0;
 
   @override
   void initState() {
     super.initState();
+
     likes = widget.reel['likes'] ?? 0;
 
-    controller = VideoPlayerController.network(widget.reel['videoUrl'])
-      ..initialize().then((_) {
+    controller = VideoPlayerController.network(
+      widget.reel['videoUrl'],
+    )..initialize().then((_) {
+        if (!mounted) return;
         setState(() {});
-        controller.play();
-        controller.setLooping(true);
+        controller
+          ..setLooping(true)
+          ..play();
       });
 
-    // 👁 add view
+    // 👁 VIEW COUNT (+1 once)
     ReelsApi.addView(widget.reel['id']);
   }
 
@@ -101,10 +109,13 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   void onLike() {
+    if (liked) return;
+
     setState(() {
       liked = true;
       likes += 1;
     });
+
     ReelsApi.like(widget.reel['id']);
   }
 
@@ -113,13 +124,14 @@ class _ReelItemState extends State<ReelItem> {
     return Stack(
       fit: StackFit.expand,
       children: [
+        // 🎥 VIDEO
         controller.value.isInitialized
             ? VideoPlayer(controller)
             : const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               ),
 
-        // ===== ACTIONS =====
+        // ❤️💬✈️🔖 ACTIONS
         Positioned(
           right: 14,
           bottom: 120,
@@ -134,34 +146,49 @@ class _ReelItemState extends State<ReelItem> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text('$likes',
-                  style: const TextStyle(color: Colors.white)),
+              Text(
+                '$likes',
+                style: const TextStyle(color: Colors.white),
+              ),
 
               const SizedBox(height: 22),
-              const Icon(Icons.mode_comment_outlined,
-                  color: Colors.white, size: 30),
+              const Icon(
+                Icons.mode_comment_outlined,
+                color: Colors.white,
+                size: 30,
+              ),
 
               const SizedBox(height: 22),
-              const Icon(Icons.send, color: Colors.white, size: 28),
+              const Icon(
+                Icons.send,
+                color: Colors.white,
+                size: 28,
+              ),
 
               const SizedBox(height: 22),
-              const Icon(Icons.bookmark_border,
-                  color: Colors.white, size: 28),
+              const Icon(
+                Icons.bookmark_border,
+                color: Colors.white,
+                size: 28,
+              ),
             ],
           ),
         ),
 
-        // ===== INFO =====
+        // ℹ️ USER + CAPTION
         Positioned(
           left: 14,
           bottom: 40,
+          right: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.reel['user'],
+                widget.reel['user'] ?? 'unknown',
                 style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
