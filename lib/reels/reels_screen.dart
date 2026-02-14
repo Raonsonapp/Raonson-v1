@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import '../models/reel_model.dart';
-import '../core/api.dart';
+import 'reels_api.dart';
 
 class ReelsScreen extends StatefulWidget {
   const ReelsScreen({super.key});
@@ -18,30 +17,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
   @override
   void initState() {
     super.initState();
-    fetchReels();
+    loadReels();
   }
 
-  Future<void> fetchReels() async {
-    try {
-      final res = await Api.get('/reels');
-      final List data = jsonDecode(res.body);
-
-      setState(() {
-        reels = data
-            .map((e) => Reel(
-                  id: e['_id'],
-                  username: e['username'] ?? 'user',
-                  caption: e['caption'] ?? '',
-                  videoUrl: e['videoUrl'],
-                  likes: e['likesCount'] ?? 0,
-                  liked: false,
-                ))
-            .toList();
-        loading = false;
-      });
-    } catch (e) {
-      loading = false;
-    }
+  Future<void> loadReels() async {
+    reels = await ReelsApi.fetchReels();
+    setState(() => loading = false);
   }
 
   @override
@@ -53,70 +34,37 @@ class _ReelsScreenState extends State<ReelsScreen> {
       );
     }
 
+    if (reels.isEmpty) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            'Ҳоло ягон Reels нест',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: PageView.builder(
         scrollDirection: Axis.vertical,
         itemCount: reels.length,
-        itemBuilder: (_, i) => ReelItem(
-          reel: reels[i],
-          onLike: () => toggleLike(i),
-          onView: () => addView(reels[i].id),
-        ),
+        itemBuilder: (_, index) {
+          return ReelItem(reel: reels[index]);
+        },
       ),
     );
   }
-
-  // ❤️ LIKE (optimistic + backend)
-  Future<void> toggleLike(int index) async {
-    final reel = reels[index];
-    final oldLiked = reel.liked;
-    final oldLikes = reel.likes;
-
-    setState(() {
-      reel.liked = !oldLiked;
-      reel.likes += oldLiked ? -1 : 1;
-    });
-
-    try {
-      final res = await Api.post('/reels/like/${reel.id}');
-      final data = jsonDecode(res.body);
-
-      setState(() {
-        reel.liked = data['liked'];
-        reel.likes = data['likesCount'];
-      });
-    } catch (_) {
-      setState(() {
-        reel.liked = oldLiked;
-        reel.likes = oldLikes;
-      });
-    }
-  }
-
-  // 👁️ VIEW
-  Future<void> addView(String reelId) async {
-    try {
-      await Api.post('/reels/view/$reelId');
-    } catch (_) {}
-  }
 }
 
-// ===================================================================
-// ======================== REEL ITEM =================================
-// ===================================================================
-
+// ======================
+// SINGLE REEL
+// ======================
 class ReelItem extends StatefulWidget {
   final Reel reel;
-  final VoidCallback onLike;
-  final VoidCallback onView;
-
-  const ReelItem({
-    super.key,
-    required this.reel,
-    required this.onLike,
-    required this.onView,
-  });
+  const ReelItem({super.key, required this.reel});
 
   @override
   State<ReelItem> createState() => _ReelItemState();
@@ -124,7 +72,7 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   late VideoPlayerController controller;
-  bool viewed = false;
+  bool liked = false;
 
   @override
   void initState() {
@@ -133,18 +81,12 @@ class _ReelItemState extends State<ReelItem> {
     controller = VideoPlayerController.network(widget.reel.videoUrl)
       ..initialize().then((_) {
         setState(() {});
-        controller
-          ..setLooping(true)
-          ..setVolume(0)
-          ..play();
+        controller.play();
+        controller.setLooping(true);
       });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!viewed) {
-        widget.onView();
-        viewed = true;
-      }
-    });
+    // 👁️ VIEW
+    ReelsApi.view(widget.reel.id);
   }
 
   @override
@@ -153,88 +95,85 @@ class _ReelItemState extends State<ReelItem> {
     super.dispose();
   }
 
+  void onLike() async {
+    await ReelsApi.like(widget.reel.id);
+    setState(() {
+      liked = true;
+      widget.reel.likes += 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
       children: [
+        // VIDEO
         controller.value.isInitialized
             ? VideoPlayer(controller)
             : const Center(
-                child:
-                    CircularProgressIndicator(color: Colors.white),
+                child: CircularProgressIndicator(color: Colors.white),
               ),
 
-        // ❤️ ACTIONS (RIGHT)
+        // RIGHT ACTIONS
         Positioned(
-          right: 12,
+          right: 14,
           bottom: 120,
           child: Column(
             children: [
               GestureDetector(
-                onTap: widget.onLike,
-                child: AnimatedScale(
-                  scale: widget.reel.liked ? 1.25 : 1.0,
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutBack,
-                  child: Icon(
-                    Icons.favorite,
-                    color: widget.reel.liked
-                        ? Colors.red
-                        : Colors.white,
-                    size: 34,
-                  ),
+                onTap: onLike,
+                child: Icon(
+                  Icons.favorite,
+                  size: 36,
+                  color: liked ? Colors.red : Colors.white,
                 ),
               ),
-              const SizedBox(height: 6),
               Text(
-                _format(widget.reel.likes),
-                style:
-                    const TextStyle(color: Colors.white),
+                '${widget.reel.likes}',
+                style: const TextStyle(color: Colors.white),
               ),
 
               const SizedBox(height: 22),
-              const Icon(Icons.chat_bubble_outline,
+
+              const Icon(Icons.mode_comment_outlined,
                   color: Colors.white, size: 30),
+              const SizedBox(height: 6),
+              const Text('0', style: TextStyle(color: Colors.white)),
+
               const SizedBox(height: 22),
-              const Icon(Icons.send,
-                  color: Colors.white, size: 28),
+
+              const Icon(Icons.send, color: Colors.white, size: 28),
+
               const SizedBox(height: 22),
+
               const Icon(Icons.bookmark_border,
                   color: Colors.white, size: 28),
             ],
           ),
         ),
 
-        // ℹ️ INFO (LEFT)
+        // LEFT INFO
         Positioned(
-          left: 12,
+          left: 14,
           bottom: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '@${widget.reel.username}',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold),
+              const Text(
+                '@user',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
                 widget.reel.caption,
-                style:
-                    const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Colors.white),
               ),
             ],
           ),
         ),
       ],
     );
-  }
-
-  String _format(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
-    return n.toString();
   }
 }
