@@ -1,11 +1,7 @@
-<svg width="24" height="24" viewBox="0 0 24 24"
-     fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M12 21s-6.716-4.935-9.428-7.646C-0.142 10.784 
-           1.93 5.999 6.184 5.999c2.182 0 3.577 1.307 3.816 1.6
-           .239-.293 1.634-1.6 3.816-1.6 4.254 0 6.326 4.785
-           3.612 7.355C18.716 16.065 12 21 12 21z"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 21s-7-5.185-9.5-8.07c-3-3.462 0-8.93 4.5-8.93 2.5 0 4 2 5 3 1-1 2.5-3 5-3 4.5 0 7.5 5.468 4.5 8.93C19 15.815 12 21 12 21z" 
+        stroke="currentColor" 
+        stroke-width="1.8" 
+        stroke-linecap="round" 
         stroke-linejoin="round"/>
 </svg>
