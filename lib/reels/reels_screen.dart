@@ -1,54 +1,33 @@
 import 'package:flutter/material.dart';
-import 'reels_api.dart';
-import 'reel_player.dart';
-import '../models/reel_model.dart';
+import 'reel_item.dart';
+import 'reel_model.dart';
 
-class ReelsScreen extends StatefulWidget {
+class ReelsScreen extends StatelessWidget {
   const ReelsScreen({super.key});
 
-  @override
-  State<ReelsScreen> createState() => _ReelsScreenState();
-}
-
-class _ReelsScreenState extends State<ReelsScreen> {
-  late Future<List<Reel>> future;
-
-  @override
-  void initState() {
-    super.initState();
-    future = ReelsApi.getReels();
-  }
+  static final reels = [
+    Reel(
+      username: 'olivia_martin',
+      caption: 'Sunset vibes 🌅 #beachlife',
+      imageUrl: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e',
+      likes: 1200000,
+    ),
+    Reel(
+      username: 'alex_dev',
+      caption: 'City night ✨',
+      imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
+      likes: 56000,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: FutureBuilder<List<Reel>>(
-        future: future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snap.hasData || snap.data!.isEmpty) {
-            return const Center(
-              child: Text(
-                'No reels',
-                style: TextStyle(color: Colors.white),
-              ),
-            );
-          }
-
-          final reels = snap.data!;
-          return PageView.builder(
-            scrollDirection: Axis.vertical,
-            itemCount: reels.length,
-            itemBuilder: (_, i) {
-              return ReelPlayer(reel: reels[i]);
-            },
-          );
-        },
-      ),
+    return PageView.builder(
+      scrollDirection: Axis.vertical,
+      itemCount: reels.length,
+      itemBuilder: (_, index) {
+        return ReelItem(reel: reels[index]);
+      },
     );
   }
 }
