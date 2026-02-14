@@ -3,61 +3,84 @@ import 'package:flutter/material.dart';
 class ReelsScreen extends StatelessWidget {
   const ReelsScreen({super.key});
 
-  String formatCount(int n) {
-    if (n >= 1000000) {
-      return '${(n / 1000000).toStringAsFixed(1)}M';
-    } else if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(1)}K';
-    }
-    return n.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
-        children: [
-          // VIDEO PLACEHOLDER
-          Container(color: Colors.black),
+        children:,
+                  stops: const [0, 0.2, 0.8, 1],
+                ),
+              ),
+            ),
+          ),
 
-          // RIGHT ICONS
+          // 3. Қисми болоӣ (Header)
           Positioned(
-            right: 12,
+            top: 50,
+            left: 15,
+            right: 15,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children:,
+            ),
+          ),
+
+          // 4. Тугмаҳои рост (Actions: Like, Comment, Share)
+          Positioned(
+            right: 15,
             bottom: 120,
             child: Column(
               children: [
-                _icon(Icons.favorite_border, formatCount(1200000)),
-                const SizedBox(height: 18),
-                _icon(Icons.chat_bubble_outline, formatCount(56300)),
-                const SizedBox(height: 18),
-                _icon(Icons.send_outlined, formatCount(18700)),
-                const SizedBox(height: 18),
-                const Icon(Icons.bookmark_border,
-                    color: Colors.white, size: 30),
+                _buildActionButton(Icons.favorite_border, '1.2M'),
+                const SizedBox(height: 20),
+                _buildActionButton(Icons.chat_bubble_outline, '56.3K'),
+                const SizedBox(height: 20),
+                _buildActionButton(Icons.send_outlined, '18.7K'),
+                const SizedBox(height: 20),
+                const Icon(Icons.bookmark_border, color: Colors.white, size: 35),
               ],
             ),
           ),
 
-          // BOTTOM LEFT TEXT
+          // 5. Маълумоти корбар ва матни паст (User Info & Caption)
           Positioned(
-            left: 12,
-            bottom: 80,
+            left: 15,
+            bottom: 110,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  '@olivia_martin',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
+              children:,
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Sunset vibes 🌅  #beachlife',
-                  style: TextStyle(color: Colors.white70),
+                const SizedBox(height: 10),
+                const Text(
+                  'Sunset vibes 🌟✨ #beachlife',
+                  style: TextStyle(color: Colors.white, fontSize: 15),
                 ),
               ],
+            ),
+          ),
+
+          // 6. Панели пайвандӣ (Bottom Navigation Bar)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              color: Colors.black.withOpacity(0.8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  const Icon(Icons.home, color: Colors.white, size: 30),
+                  const Icon(Icons.play_circle_outline, color: Colors.white, size: 30),
+                  const Icon(Icons.explore_outlined, color: Colors.white, size: 30),
+                  const Icon(Icons.search, color: Colors.white, size: 30),
+                  const CircleAvatar(
+                    radius: 15,
+                    backgroundImage: NetworkImage('https://i.pravatar.cc'),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -65,16 +88,10 @@ class ReelsScreen extends StatelessWidget {
     );
   }
 
-  Widget _icon(IconData icon, String count) {
+  // Виджет барои тугмаҳои амалиётӣ (лайк, коммент)
+  Widget _buildActionButton(IconData icon, String label) {
     return Column(
-      children: [
-        Icon(icon, color: Colors.white, size: 32),
-        const SizedBox(height: 4),
-        Text(
-          count,
-          style: const TextStyle(color: Colors.white),
-        ),
-      ],
+      children:,
     );
   }
 }
