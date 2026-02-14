@@ -5,15 +5,40 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  video_player: ^2.8.2
-  flutter_svg: ^2.0.9
+
+  cupertino_icons: ^1.0.6
+  video_player: ^2.8.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+
+  # 👇 ПАКЕТ БАРОИ ЛОГОИ БАРНОМА
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+
+  # 👇 ASSETS (ФАҚАТ ФАЙЛҲО, НА КОД)
   assets:
+    - assets/icon/app_icon.png
     - assets/icons/
+
+# 👇 ТАНЗИМОТИ ЛОГОИ БАРНОМА
+flutter_launcher_icons:
+  android: true
+  ios: true
+
+  # ЛОГОИ АСОСӢ
+  image_path: assets/icon/app_icon.png
+
+  # ANDROID (МИСЛИ INSTAGRAM)
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: assets/icon/app_icon.png
