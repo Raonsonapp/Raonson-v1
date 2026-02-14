@@ -1,7 +1,8 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M21 11.5c0-4.694-4.253-8.5-9.5-8.5S2 6.806 2 11.5c0 1.743.547 3.385 1.489 4.666L2 21l5.573-1.417c.993.309 2.056.417 3.163.417 5.247 0 10.264-3.806 10.264-8.5z" 
+  <path d="M21 12c0 4.418-4.03 8-9 8-1.052 0-2.06-.147-3-.417L3 21l1.528-4.584C3.563 15.285 3 13.676 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" 
         stroke="currentColor" 
         stroke-width="2" 
         stroke-linecap="round" 
-        stroke-linejoin="round"/>
+        stroke-linejoin="round"
+        transform="scale(-1, 1) translate(-24, 0)"/>
 </svg>
