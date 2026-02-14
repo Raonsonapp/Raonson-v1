@@ -1,5 +1,26 @@
-- name: Detect Android v1 plugins
-  run: |
-    echo "🔍 Scanning plugins for Android v1 embedding..."
-    grep -R "io.flutter.app.FlutterApplication" ~/.pub-cache/hosted || true
-    grep -R "PluginRegistry.Registrar" ~/.pub-cache/hosted || true
+name: Android Regenerate & Detect v1 Plugins
+
+on:
+  workflow_dispatch:
+
+jobs:
+  android-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Detect Android v1 plugins
+        run: |
+          echo "🔍 Scanning plugins for Android v1 embedding..."
+          grep -R "io.flutter.app.FlutterApplication" ~/.pub-cache/hosted || true
+          grep -R "PluginRegistry.Registrar" ~/.pub-cache/hosted || true
