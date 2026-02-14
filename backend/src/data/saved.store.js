@@ -1,3 +1,8 @@
+// In-memory saved reels (bookmark)
 export const savedReels = [
-  // { userId: "u1", reelId: "1" }
+  // {
+  //   reelId: "1",
+  //   user: "alex_dev",
+  //   createdAt: new Date()
+  // }
 ];
