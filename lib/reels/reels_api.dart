@@ -7,11 +7,17 @@ class ReelsApi {
     return data.map<Reel>((e) => Reel.fromJson(e)).toList();
   }
 
-  static Future<void> addView(String reelId) async {
-    await Api.post('/reels/view/$reelId');
+  static Future<Map<String, dynamic>> toggleLike(
+    String reelId,
+    String token,
+  ) async {
+    return await Api.post(
+      '/reels/like/$reelId',
+      token: token,
+    );
   }
 
-  static Future<void> likeReel(String reelId, String token) async {
-    await Api.post('/reels/like/$reelId', token: token);
+  static Future<void> addView(String reelId) async {
+    await Api.post('/reels/view/$reelId');
   }
 }
