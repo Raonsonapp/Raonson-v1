@@ -8,26 +8,19 @@ class ReelsScreen extends StatefulWidget {
 }
 
 class _ReelsScreenState extends State<ReelsScreen> {
-  bool isLiked = false;
+  bool liked = false;
   int likes = 1200000;
 
-  String formatCount(int value) {
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    } else if (value >= 10000) {
-      return '${(value / 1000).toStringAsFixed(0)}K';
-    }
-    return value.toString();
+  String formatCount(int v) {
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 10000) return '${(v / 1000).toStringAsFixed(0)}K';
+    return v.toString();
   }
 
-  void toggleLike() {
+  void onLike() {
     setState(() {
-      if (isLiked) {
-        likes--;
-      } else {
-        likes++;
-      }
-      isLiked = !isLiked;
+      liked ? likes-- : likes++;
+      liked = !liked;
     });
   }
 
@@ -37,55 +30,56 @@ class _ReelsScreenState extends State<ReelsScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 🔲 Background (temporary)
+          // 🔲 background (temporary)
           Container(color: Colors.black),
 
-          // 📍 Right icons (Instagram style)
+          // 🔹 Right action icons
           Positioned(
-            right: 14,
-            bottom: 110,
+            right: 16,
+            bottom: 120,
             child: Column(
               children: [
                 // ❤️ LIKE
-                IconButton(
-                  icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: isLiked ? Colors.red : Colors.white,
+                GestureDetector(
+                  onTap: onLike,
+                  child: Icon(
+                    liked ? Icons.favorite : Icons.favorite_border,
+                    color: liked ? Colors.red : Colors.white,
                     size: 34,
                   ),
-                  onPressed: toggleLike,
                 ),
+                const SizedBox(height: 6),
                 Text(
                   formatCount(likes),
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: const TextStyle(color: Colors.white),
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
 
-                // 💬 COMMENT
+                // 💬 COMMENT (outline bubble)
                 const Icon(
-                  Icons.chat_bubble_outline,
+                  Icons.mode_comment_outlined,
                   color: Colors.white,
                   size: 30,
                 ),
                 const SizedBox(height: 6),
                 const Text(
                   '56.3K',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(color: Colors.white),
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
 
-                // ✈️ SHARE
+                // ✈️ SHARE (paper plane)
                 const Icon(
                   Icons.send_outlined,
                   color: Colors.white,
                   size: 30,
                 ),
 
-                const SizedBox(height: 22),
+                const SizedBox(height: 26),
 
-                // 🔖 SAVE
+                // 🔖 SAVE (bookmark outline)
                 const Icon(
                   Icons.bookmark_border,
                   color: Colors.white,
@@ -95,19 +89,20 @@ class _ReelsScreenState extends State<ReelsScreen> {
             ),
           ),
 
-          // 📍 Bottom info
+          // 🔹 Bottom text
           Positioned(
-            left: 14,
+            left: 16,
             bottom: 90,
-            right: 90,
+            right: 100,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
                   '@olivia_martin',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: 6),
                 Text(
