@@ -7,8 +7,8 @@ import {
 
 const router = express.Router();
 
-router.get("/", getReels);
-router.post("/:id/view", addView);
-router.post("/:id/like", toggleLike);
+router.get("/", getReels);              // ✅ GET /reels
+router.post("/:id/view", addView);      // ✅ POST /reels/:id/view
+router.post("/:id/like", toggleLike);   // ✅ POST /reels/:id/like
 
 export default router;
