@@ -7,17 +7,14 @@ const reelSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
     videoUrl: { type: String, required: true },
     caption: { type: String },
 
-    // 🔴 ЗИНДА
-    likesCount: { type: Number, default: 0 },
-    commentsCount: { type: Number, default: 0 },
-    viewsCount: { type: Number, default: 0 },
+    // 🔥 LIKE SYSTEM
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
-    // 👇 кӣ лайк кард
-    likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    likesCount: { type: Number, default: 0 },
+    viewsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
