@@ -1,35 +1,22 @@
 import 'dart:convert';
-import '../core/api.dart';
+import 'package:http/http.dart' as http;
 import '../models/reel_model.dart';
 
 class ReelsApi {
-  // 🔹 GET REELS FEED
+  static const baseUrl = 'https://raonson-v1.onrender.com';
+
   static Future<List<Reel>> fetchReels() async {
-    final res = await Api.get('/reels');
-
+    final res = await http.get(Uri.parse('$baseUrl/reels'));
     final List data = jsonDecode(res.body);
-
-    return data.map<Reel>((e) {
-      return Reel(
-        id: e['id'].toString(),
-        username: e['username'] ?? 'user',
-        caption: e['caption'] ?? '',
-        videoUrl: e['videoUrl'],
-        likes: e['likes'] ?? 0,
-        views: e['views'] ?? 0,
-        liked: false,
-      );
-    }).toList();
+    return data.map((e) => Reel.fromJson(e)).toList();
   }
 
-  // 🔹 ADD VIEW
-  static Future<void> view(String reelId) async {
-    await Api.post('/reels/$reelId/view');
+  static Future<void> view(String id) async {
+    await http.post(Uri.parse('$baseUrl/reels/$id/view'));
   }
 
-  // 🔹 LIKE
-  static Future<int> like(String reelId) async {
-    final res = await Api.post('/reels/$reelId/like');
+  static Future<int> like(String id) async {
+    final res = await http.post(Uri.parse('$baseUrl/reels/$id/like'));
     final data = jsonDecode(res.body);
     return data['likes'];
   }
