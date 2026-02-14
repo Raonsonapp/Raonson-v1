@@ -1,49 +1,5 @@
-name: Flutter Recreate (Safe)
-
-on:
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  recreate:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Fix pubspec SDK constraint if missing
-        run: |
-          if ! grep -q "environment:" pubspec.yaml; then
-            echo "" >> pubspec.yaml
-            echo "environment:" >> pubspec.yaml
-            echo "  sdk: '>=3.0.0 <4.0.0'" >> pubspec.yaml
-          fi
-
-      - name: Flutter clean
-        run: flutter clean
-
-      - name: Recreate Flutter scaffold (SAFE)
-        run: flutter create .
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Commit recreated scaffold
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "chore(flutter): recreate scaffold safely" || echo "Nothing to commit"
-
-      - name: Push changes
-        run: git push origin main
+- name: Detect Android v1 plugins
+  run: |
+    echo "🔍 Scanning plugins for Android v1 embedding..."
+    grep -R "io.flutter.app.FlutterApplication" ~/.pub-cache/hosted || true
+    grep -R "PluginRegistry.Registrar" ~/.pub-cache/hosted || true
