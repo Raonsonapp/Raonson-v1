@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'reels_screen.dart';
+import 'reels/reels_screen.dart';
 
 class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
