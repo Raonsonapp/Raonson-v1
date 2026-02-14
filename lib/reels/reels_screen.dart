@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../models/reel_model.dart';
 import 'reels_api.dart';
 
@@ -17,19 +18,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadReels();
+    load();
   }
 
-  Future<void> _loadReels() async {
-    try {
-      final data = await ReelsApi.fetchReels();
-      setState(() {
-        reels = data;
-        loading = false;
-      });
-    } catch (e) {
-      setState(() => loading = false);
-    }
+  Future<void> load() async {
+    reels = await ReelsApi.fetchReels();
+    setState(() => loading = false);
   }
 
   @override
@@ -37,9 +31,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
     if (loading) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
 
@@ -47,10 +39,8 @@ class _ReelsScreenState extends State<ReelsScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text(
-            'No reels yet',
-            style: TextStyle(color: Colors.white),
-          ),
+          child: Text('No reels yet',
+              style: TextStyle(color: Colors.white)),
         ),
       );
     }
@@ -60,9 +50,7 @@ class _ReelsScreenState extends State<ReelsScreen> {
       body: PageView.builder(
         scrollDirection: Axis.vertical,
         itemCount: reels.length,
-        itemBuilder: (_, index) {
-          return ReelItem(reel: reels[index]);
-        },
+        itemBuilder: (_, i) => ReelItem(reel: reels[i]),
       ),
     );
   }
@@ -78,24 +66,17 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   late VideoPlayerController controller;
-  bool liked = false;
 
   @override
   void initState() {
     super.initState();
-
-    liked = widget.reel.liked;
-
     controller = VideoPlayerController.network(widget.reel.videoUrl)
       ..initialize().then((_) {
         setState(() {});
-        controller
-          ..setLooping(true)
-          ..play();
+        controller.play();
+        controller.setLooping(true);
+        ReelsApi.view(widget.reel.id); // 👁️ view +1
       });
-
-    // 👁️ view
-    ReelsApi.view(widget.reel.id);
   }
 
   @override
@@ -104,16 +85,13 @@ class _ReelItemState extends State<ReelItem> {
     super.dispose();
   }
 
-  Future<void> _like() async {
-    if (liked) return;
-
-    final newLikes = await ReelsApi.like(widget.reel.id);
-
-    setState(() {
-      liked = true;
-      widget.reel.likes = newLikes;
-      widget.reel.liked = true;
-    });
+  Widget icon(String path, {Color color = Colors.white}) {
+    return SvgPicture.asset(
+      path,
+      width: 28,
+      height: 28,
+      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    );
   }
 
   @override
@@ -121,75 +99,76 @@ class _ReelItemState extends State<ReelItem> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 🎥 VIDEO
         controller.value.isInitialized
             ? VideoPlayer(controller)
             : const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
+                child: CircularProgressIndicator(color: Colors.white)),
 
-        // ❤️ ACTIONS (RIGHT)
+        // ACTIONS
         Positioned(
           right: 14,
           bottom: 120,
           child: Column(
             children: [
               GestureDetector(
-                onTap: _like,
-                child: AnimatedScale(
-                  scale: liked ? 1.25 : 1.0,
-                  duration: const Duration(milliseconds: 180),
-                  curve: Curves.easeOutBack,
-                  child: Icon(
-                    Icons.favorite,
-                    size: 34,
-                    color: liked ? Colors.red : Colors.white,
-                  ),
+                onTap: () async {
+                  final likes =
+                      await ReelsApi.like(widget.reel.id);
+                  setState(() {
+                    widget.reel.likes = likes;
+                    widget.reel.liked = true;
+                  });
+                },
+                child: icon(
+                  'assets/icons/heart.svg',
+                  color: widget.reel.liked
+                      ? Colors.red
+                      : Colors.white,
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                widget.reel.likes.toString(),
-                style: const TextStyle(color: Colors.white),
+              Text('${widget.reel.likes}',
+                  style: const TextStyle(color: Colors.white)),
+
+              const SizedBox(height: 22),
+              icon('assets/icons/comment.svg'),
+              Text('${widget.reel.comments}',
+                  style: const TextStyle(color: Colors.white)),
+
+              const SizedBox(height: 22),
+              icon('assets/icons/share.svg'),
+
+              const SizedBox(height: 22),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    widget.reel.saved = !widget.reel.saved;
+                  });
+                },
+                child: icon(
+                  'assets/icons/save.svg',
+                  color: widget.reel.saved
+                      ? Colors.yellow
+                      : Colors.white,
+                ),
               ),
-
-              const SizedBox(height: 22),
-              const Icon(Icons.chat_bubble_outline,
-                  color: Colors.white, size: 30),
-              const SizedBox(height: 6),
-              const Text('0',
-                  style: TextStyle(color: Colors.white, fontSize: 12)),
-
-              const SizedBox(height: 22),
-              const Icon(Icons.send, color: Colors.white, size: 28),
-
-              const SizedBox(height: 22),
-              const Icon(Icons.bookmark_border,
-                  color: Colors.white, size: 28),
             ],
           ),
         ),
 
-        // ℹ️ INFO (LEFT)
+        // INFO
         Positioned(
           left: 14,
           bottom: 40,
-          right: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '@${widget.reel.username}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(widget.reel.user,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              Text(
-                widget.reel.caption,
-                style: const TextStyle(color: Colors.white),
-              ),
+              Text(widget.reel.caption,
+                  style: const TextStyle(color: Colors.white)),
             ],
           ),
         ),
