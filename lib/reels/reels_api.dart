@@ -3,37 +3,80 @@ import 'package:http/http.dart' as http;
 import '../core/constants.dart';
 
 class ReelsApi {
-  static Future<List> fetchReels() async {
+  static String get _base => Constants.baseUrl;
+
+  // ======================
+  // GET REELS FEED
+  // ======================
+  static Future<List<dynamic>> fetchReels() async {
     final res = await http.get(
-      Uri.parse('${Constants.baseUrl}/reels'),
+      Uri.parse('$_base/reels'),
     );
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load reels');
+    }
+
     return jsonDecode(res.body);
   }
 
-  static Future<void> addView(String id) async {
+  // ======================
+  // ADD VIEW
+  // ======================
+  static Future<void> addView(String reelId) async {
     await http.post(
-      Uri.parse('${Constants.baseUrl}/reels/$id/view'),
+      Uri.parse('$_base/reels/$reelId/view'),
     );
   }
 
-  static Future<void> like(String id) async {
+  // ======================
+  // LIKE (+1 MVP)
+  // ======================
+  static Future<void> like(String reelId) async {
     await http.post(
-      Uri.parse('${Constants.baseUrl}/reels/$id/like'),
+      Uri.parse('$_base/reels/$reelId/like'),
     );
   }
 
-  static Future<List> getComments(String id) async {
+  // ======================
+  // GET COMMENTS
+  // ======================
+  static Future<List<dynamic>> getComments(String reelId) async {
     final res = await http.get(
-      Uri.parse('${Constants.baseUrl}/comments/reels/$id'),
+      Uri.parse('$_base/comments/reels/$reelId'),
     );
+
+    if (res.statusCode != 200) {
+      return [];
+    }
+
     return jsonDecode(res.body);
   }
 
-  static Future<void> addComment(String id, String text) async {
+  // ======================
+  // ADD COMMENT
+  // ======================
+  static Future<void> addComment(String reelId, String text) async {
     await http.post(
-      Uri.parse('${Constants.baseUrl}/comments/reels/$id'),
+      Uri.parse('$_base/comments/reels/$reelId'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'text': text}),
     );
+  }
+
+  // ======================
+  // SAVE (MVP – LOCAL)
+  // ======================
+  static Future<void> save(String reelId) async {
+    // MVP: backend надорад, баъдтар илова мекунем
+    return;
+  }
+
+  // ======================
+  // SHARE (MVP – UI ONLY)
+  // ======================
+  static Future<void> share(String reelId) async {
+    // MVP: танҳо UI
+    return;
   }
 }
