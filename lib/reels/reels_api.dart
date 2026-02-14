@@ -1,23 +1,39 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/reel_model.dart';
+import '../core/constants.dart';
 
 class ReelsApi {
-  static const baseUrl = 'https://raonson-v1.onrender.com';
-
-  static Future<List<Reel>> fetchReels() async {
-    final res = await http.get(Uri.parse('$baseUrl/reels'));
-    final List data = jsonDecode(res.body);
-    return data.map((e) => Reel.fromJson(e)).toList();
+  static Future<List> fetchReels() async {
+    final res = await http.get(
+      Uri.parse('${Constants.baseUrl}/reels'),
+    );
+    return jsonDecode(res.body);
   }
 
-  static Future<void> view(String id) async {
-    await http.post(Uri.parse('$baseUrl/reels/$id/view'));
+  static Future<void> addView(String id) async {
+    await http.post(
+      Uri.parse('${Constants.baseUrl}/reels/$id/view'),
+    );
   }
 
-  static Future<int> like(String id) async {
-    final res = await http.post(Uri.parse('$baseUrl/reels/$id/like'));
-    final data = jsonDecode(res.body);
-    return data['likes'];
+  static Future<void> like(String id) async {
+    await http.post(
+      Uri.parse('${Constants.baseUrl}/reels/$id/like'),
+    );
+  }
+
+  static Future<List> getComments(String id) async {
+    final res = await http.get(
+      Uri.parse('${Constants.baseUrl}/comments/reels/$id'),
+    );
+    return jsonDecode(res.body);
+  }
+
+  static Future<void> addComment(String id, String text) async {
+    await http.post(
+      Uri.parse('${Constants.baseUrl}/comments/reels/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'text': text}),
+    );
   }
 }
