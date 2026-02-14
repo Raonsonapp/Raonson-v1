@@ -1,4 +1,4 @@
-name: Android Regenerate (Force v2)
+name: Flutter Recreate (Safe)
 
 on:
   workflow_dispatch:
@@ -7,11 +7,11 @@ permissions:
   contents: write
 
 jobs:
-  rebuild-android:
+  recreate:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -21,44 +21,29 @@ jobs:
         with:
           channel: stable
 
-      - name: Ensure Dart SDK constraint
+      - name: Fix pubspec SDK constraint if missing
         run: |
           if ! grep -q "environment:" pubspec.yaml; then
-            printf "\nenvironment:\n  sdk: '>=3.0.0 <4.0.0'\n" >> pubspec.yaml
+            echo "" >> pubspec.yaml
+            echo "environment:" >> pubspec.yaml
+            echo "  sdk: '>=3.0.0 <4.0.0'" >> pubspec.yaml
           fi
 
-      - name: Remove old android folder
-        run: rm -rf android
+      - name: Flutter clean
+        run: flutter clean
 
-      - name: Recreate android folder (v2 embedding)
-        run: flutter create --platforms=android .
+      - name: Recreate Flutter scaffold (SAFE)
+        run: flutter create .
 
-      - name: Flutter clean & pub get
-        run: |
-          flutter clean
-          flutter pub get
+      - name: Flutter pub get
+        run: flutter pub get
 
-      - name: Commit regenerated android
+      - name: Commit recreated scaffold
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add android pubspec.yaml pubspec.lock
-          git commit -m "chore(android): regenerate android with v2 embedding" || echo "Nothing to commit"
-
-      - name: Stash remaining changes
-        run: |
-          git stash push -u || echo "Nothing to stash"
-
-      - name: Rebase with main
-        run: git pull --rebase origin main
-
-      - name: Restore stashed changes
-        run: git stash pop || echo "No stash to apply"
-
-      - name: Final commit if needed
-        run: |
           git add .
-          git commit -m "chore: sync after android regenerate" || echo "No changes"
+          git commit -m "chore(flutter): recreate scaffold safely" || echo "Nothing to commit"
 
-      - name: Push to main
+      - name: Push changes
         run: git push origin main
