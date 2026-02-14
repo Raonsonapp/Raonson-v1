@@ -1,8 +1,8 @@
 import Comment from "../models/comment.model.js";
 
-// ADD COMMENT
+// ADD COMMENT (POST ё REEL)
 export const addComment = async (req, res) => {
-  const { postId } = req.params;
+  const { targetId, targetType } = req.params;
   const { text } = req.body;
 
   if (!text) {
@@ -11,18 +11,22 @@ export const addComment = async (req, res) => {
 
   const comment = await Comment.create({
     userId: req.user.id,
-    postId,
+    targetId,
+    targetType,
     text,
   });
 
   res.json(comment);
 };
 
-// GET COMMENTS FOR POST
+// GET COMMENTS
 export const getComments = async (req, res) => {
-  const { postId } = req.params;
+  const { targetId, targetType } = req.params;
 
-  const comments = await Comment.find({ postId })
+  const comments = await Comment.find({
+    targetId,
+    targetType,
+  })
     .sort({ createdAt: -1 })
     .limit(50);
 
