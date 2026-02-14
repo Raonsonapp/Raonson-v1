@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '../models/reel_model.dart';
-import 'reels_api.dart';
+import '../reels/reels_api.dart';
 
 class ReelsScreen extends StatefulWidget {
   const ReelsScreen({super.key});
@@ -12,18 +10,25 @@ class ReelsScreen extends StatefulWidget {
 }
 
 class _ReelsScreenState extends State<ReelsScreen> {
-  List<Reel> reels = [];
+  List<dynamic> reels = [];
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    load();
+    loadReels();
   }
 
-  Future<void> load() async {
-    reels = await ReelsApi.fetchReels();
-    setState(() => loading = false);
+  Future<void> loadReels() async {
+    try {
+      final data = await ReelsApi.fetchReels();
+      setState(() {
+        reels = data;
+        loading = false;
+      });
+    } catch (_) {
+      setState(() => loading = false);
+    }
   }
 
   @override
@@ -39,8 +44,10 @@ class _ReelsScreenState extends State<ReelsScreen> {
       return const Scaffold(
         backgroundColor: Colors.black,
         body: Center(
-          child: Text('No reels yet',
-              style: TextStyle(color: Colors.white)),
+          child: Text(
+            'No reels yet',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
@@ -56,8 +63,10 @@ class _ReelsScreenState extends State<ReelsScreen> {
   }
 }
 
+// =======================================================
+
 class ReelItem extends StatefulWidget {
-  final Reel reel;
+  final dynamic reel;
   const ReelItem({super.key, required this.reel});
 
   @override
@@ -66,17 +75,23 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   late VideoPlayerController controller;
+  bool liked = false;
+  int likes = 0;
 
   @override
   void initState() {
     super.initState();
-    controller = VideoPlayerController.network(widget.reel.videoUrl)
+    likes = widget.reel['likes'] ?? 0;
+
+    controller = VideoPlayerController.network(widget.reel['videoUrl'])
       ..initialize().then((_) {
         setState(() {});
         controller.play();
         controller.setLooping(true);
-        ReelsApi.view(widget.reel.id); // 👁️ view +1
       });
+
+    // 👁 add view
+    ReelsApi.addView(widget.reel['id']);
   }
 
   @override
@@ -85,13 +100,12 @@ class _ReelItemState extends State<ReelItem> {
     super.dispose();
   }
 
-  Widget icon(String path, {Color color = Colors.white}) {
-    return SvgPicture.asset(
-      path,
-      width: 28,
-      height: 28,
-      colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-    );
+  void onLike() {
+    setState(() {
+      liked = true;
+      likes += 1;
+    });
+    ReelsApi.like(widget.reel['id']);
   }
 
   @override
@@ -102,73 +116,58 @@ class _ReelItemState extends State<ReelItem> {
         controller.value.isInitialized
             ? VideoPlayer(controller)
             : const Center(
-                child: CircularProgressIndicator(color: Colors.white)),
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
 
-        // ACTIONS
+        // ===== ACTIONS =====
         Positioned(
           right: 14,
           bottom: 120,
           child: Column(
             children: [
               GestureDetector(
-                onTap: () async {
-                  final likes =
-                      await ReelsApi.like(widget.reel.id);
-                  setState(() {
-                    widget.reel.likes = likes;
-                    widget.reel.liked = true;
-                  });
-                },
-                child: icon(
-                  'assets/icons/heart.svg',
-                  color: widget.reel.liked
-                      ? Colors.red
-                      : Colors.white,
+                onTap: onLike,
+                child: Icon(
+                  Icons.favorite,
+                  size: 36,
+                  color: liked ? Colors.red : Colors.white,
                 ),
               ),
-              Text('${widget.reel.likes}',
+              const SizedBox(height: 4),
+              Text('$likes',
                   style: const TextStyle(color: Colors.white)),
 
               const SizedBox(height: 22),
-              icon('assets/icons/comment.svg'),
-              Text('${widget.reel.comments}',
-                  style: const TextStyle(color: Colors.white)),
+              const Icon(Icons.mode_comment_outlined,
+                  color: Colors.white, size: 30),
 
               const SizedBox(height: 22),
-              icon('assets/icons/share.svg'),
+              const Icon(Icons.send, color: Colors.white, size: 28),
 
               const SizedBox(height: 22),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    widget.reel.saved = !widget.reel.saved;
-                  });
-                },
-                child: icon(
-                  'assets/icons/save.svg',
-                  color: widget.reel.saved
-                      ? Colors.yellow
-                      : Colors.white,
-                ),
-              ),
+              const Icon(Icons.bookmark_border,
+                  color: Colors.white, size: 28),
             ],
           ),
         ),
 
-        // INFO
+        // ===== INFO =====
         Positioned(
           left: 14,
           bottom: 40,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.reel.user,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+              Text(
+                widget.reel['user'],
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 6),
-              Text(widget.reel.caption,
-                  style: const TextStyle(color: Colors.white)),
+              Text(
+                widget.reel['caption'] ?? '',
+                style: const TextStyle(color: Colors.white),
+              ),
             ],
           ),
         ),
