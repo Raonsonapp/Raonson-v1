@@ -10,7 +10,6 @@ import 'chat/chat_screen.dart';
 import 'search/search_screen.dart';
 import 'profile/profile_screen.dart';
 
-/// 🔹 ROOT APP (MaterialApp ONLY HERE)
 class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
 
@@ -26,7 +25,6 @@ class RaonsonApp extends StatelessWidget {
   }
 }
 
-/// 🔹 MAIN NAVIGATION (AFTER LOGIN)
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -35,14 +33,14 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int index = 0; // ⬅️ Home аввал
+  int index = 0;
 
   final List<Widget> pages = const [
-    HomeScreen(),   // 🏠 HOME
-    ReelsScreen(),  // 🎬 REELS
-    ChatScreen(),   // 💬 CHAT
-    SearchScreen(), // 🔍 SEARCH
-    ProfileScreen() // 👤 PROFILE
+    HomeScreen(),                         // 🏠 HOME
+    ReelsScreen(),                        // 🎬 REELS
+    ChatScreen(chatId: 'test_chat'),      // 💬 CHAT (TEMP)
+    SearchScreen(),                       // 🔍 SEARCH
+    ProfileScreen(userId: 'raonson'),     // 👤 PROFILE (TEMP)
   ];
 
   @override
@@ -58,32 +56,16 @@ class _MainNavigationState extends State<MainNavigation> {
         onTap: (i) => setState(() => index = i),
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.black,
-        elevation: 0,
         showSelectedLabels: false,
         showUnselectedLabels: false,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white54,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.play_circle_outline),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: '',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
         ],
       ),
     );
