@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'home_api.dart';
-import 'models/post_model.dart';
-import 'widgets/post_item.dart';
-import '../upload/upload_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../home/post_item.dart';
+import '../home/post_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,60 +11,77 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Post> posts = [];
-  bool loading = true;
+  bool hasUnseenNotifications = true;
 
-  @override
-  void initState() {
-    super.initState();
-    load();
-  }
-
-  Future<void> load() async {
-    final data = await HomeApi.fetchFeed();
-    posts = data.map<Post>((e) => Post.fromJson(e)).toList();
-    loading = false;
-    setState(() {});
-  }
+  final posts = [
+    Post(
+      id: '1',
+      username: 'raonson',
+      imageUrl: 'https://picsum.photos/500',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+
+      // 🔝 APP BAR
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add, size: 28),
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const UploadScreen()),
-            );
+            // upload modal later
           },
         ),
+        centerTitle: true,
         title: const Text(
           'Raonson',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
         ),
-        centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border),
-            onPressed: () {
-              // likes / followers screen (баъд)
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.favorite_border),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  );
+                  setState(() => hasUnseenNotifications = false);
+                },
+              ),
+              if (hasUnseenNotifications)
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: load,
-              child: ListView(
-                children: posts.map((p) => PostItem(post: p)).toList(),
-              ),
-            ),
+
+      // 📰 FEED
+      body: ListView(
+        children: posts.map((p) => PostItem(post: p)).toList(),
+      ),
     );
   }
 }
