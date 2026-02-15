@@ -10,8 +10,20 @@ class RaonsonApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
+      theme: ThemeData(
+        brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       home: const AuthGate(),
     );
@@ -31,15 +43,18 @@ class _MainNavigationState extends State<MainNavigation> {
   final pages = const [
     HomeScreen(),
     ReelsScreen(),
-    Center(child: Text('Chat', style: TextStyle(color: Colors.white))),
-    Center(child: Text('Search', style: TextStyle(color: Colors.white))),
-    Center(child: Text('Profile', style: TextStyle(color: Colors.white))),
+    Center(child: Text('Chat')),
+    Center(child: Text('Search')),
+    Center(child: Text('Profile')),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: index, children: pages),
+      body: IndexedStack(
+        index: index,
+        children: pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: index,
         onTap: (i) => setState(() => index = i),
