@@ -22,9 +22,8 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> checkAuth() async {
     final token = await AuthApi.getToken();
-
     setState(() {
-      loggedIn = token != null && token.isNotEmpty;
+      loggedIn = token != null;
       loading = false;
     });
   }
@@ -34,18 +33,12 @@ class _AuthGateState extends State<AuthGate> {
     if (loading) {
       return const Scaffold(
         backgroundColor: Colors.black,
-        body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // 🔐 IF LOGGED IN → HOME
-    if (loggedIn) {
-      return const MainNavigation();
-    }
-
-    // 🚪 ELSE → LOGIN
-    return const SendOtpScreen();
+    return loggedIn
+        ? const MainNavigation()
+        : const SendOtpScreen();
   }
 }
