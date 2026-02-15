@@ -25,10 +25,9 @@ class _PostItemState extends State<PostItem> {
                 child: Icon(Icons.person, color: Colors.black),
               ),
               const SizedBox(width: 8),
-              Text(widget.post.username,
-                  style: const TextStyle(color: Colors.white)),
+              Text(widget.post.username),
               const Spacer(),
-              const Icon(Icons.more_vert, color: Colors.white),
+              const Icon(Icons.more_vert),
             ],
           ),
         ),
@@ -53,18 +52,16 @@ class _PostItemState extends State<PostItem> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline,
-                  color: Colors.white),
+              icon: const Icon(Icons.chat_bubble_outline),
               onPressed: () {},
             ),
             IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
+              icon: const Icon(Icons.send),
               onPressed: () {},
             ),
             const Spacer(),
             IconButton(
-              icon: const Icon(Icons.bookmark_border,
-                  color: Colors.white),
+              icon: const Icon(Icons.bookmark_border),
               onPressed: () {},
             ),
           ],
@@ -76,7 +73,7 @@ class _PostItemState extends State<PostItem> {
             widget.post.liked
                 ? 'Liked by raonson'
                 : 'Be the first to like this',
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white70),
           ),
         ),
 
