@@ -20,7 +20,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> load() async {
-    final data = await NotificationApi.fetch('raonson');
+    final data = await NotificationApi.fetchForUser('raonson');
     setState(() {
       items = data;
       loading = false;
