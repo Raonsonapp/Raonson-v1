@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'stories_api.dart';
+import 'story_api.dart';
 import 'story_model.dart';
-import 'story_upload_screen.dart';
 import 'story_viewer.dart';
+import 'story_upload_screen.dart';
 
 class StoriesBar extends StatefulWidget {
   const StoriesBar({super.key});
@@ -12,8 +12,8 @@ class StoriesBar extends StatefulWidget {
 }
 
 class _StoriesBarState extends State<StoriesBar> {
+  Map<String, List<Story>> storiesByUser = {};
   bool loading = true;
-  Map<String, List<Story>> stories = {};
 
   @override
   void initState() {
@@ -23,14 +23,16 @@ class _StoriesBarState extends State<StoriesBar> {
 
   Future<void> loadStories() async {
     try {
-      final data = await StoriesApi.fetchStories();
-      setState(() {
-        stories = data;
-        loading = false;
-      });
-    } catch (_) {
-      loading = false;
-      setState(() {});
+      final data = await StoryApi.fetchStories();
+
+      storiesByUser = data.map(
+        (user, list) => MapEntry(
+          user,
+          list.map((e) => Story.fromJson(e)).toList(),
+        ),
+      );
+    } finally {
+      setState(() => loading = false);
     }
   }
 
@@ -40,7 +42,7 @@ class _StoriesBarState extends State<StoriesBar> {
       return const SizedBox(height: 100);
     }
 
-    final users = stories.keys.toList();
+    final users = storiesByUser.keys.toList();
 
     return SizedBox(
       height: 100,
@@ -49,35 +51,33 @@ class _StoriesBarState extends State<StoriesBar> {
         padding: const EdgeInsets.all(12),
         itemCount: users.length + 1,
         itemBuilder: (_, i) {
-          // ➕ MY STORY
+          // ➕ YOUR STORY
           if (i == 0) {
-            return _StoryAvatar(
+            return _StoryItem(
               username: 'Your story',
               isMe: true,
               onTap: () async {
-                final r = await Navigator.push(
+                final ok = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const StoryUploadScreen(),
                   ),
                 );
-                if (r == true) loadStories();
+                if (ok == true) loadStories();
               },
             );
           }
 
           final user = users[i - 1];
-          final userStories = stories[user]!;
+          final stories = storiesByUser[user]!;
 
-          return _StoryAvatar(
+          return _StoryItem(
             username: user,
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => StoryViewer(
-                    stories: userStories,
-                  ),
+                  builder: (_) => StoryViewer(stories: stories),
                 ),
               );
             },
@@ -88,15 +88,15 @@ class _StoriesBarState extends State<StoriesBar> {
   }
 }
 
-class _StoryAvatar extends StatelessWidget {
+class _StoryItem extends StatelessWidget {
   final String username;
   final bool isMe;
   final VoidCallback onTap;
 
-  const _StoryAvatar({
+  const _StoryItem({
     required this.username,
-    this.isMe = false,
     required this.onTap,
+    this.isMe = false,
   });
 
   @override
@@ -122,10 +122,7 @@ class _StoryAvatar extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               username,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ],
         ),
