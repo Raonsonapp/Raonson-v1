@@ -253,4 +253,73 @@ class _StoryViewerState extends State<StoryViewer> {
       ),
     );
   }
+  // ❤️ + ✉️ REACTIONS (BOTTOM)
+Positioned(
+  bottom: 24,
+  left: 16,
+  right: 16,
+  child: Row(
+    children: [
+      // 💬 REPLY INPUT
+      Expanded(
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: const TextField(
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Send message',
+              hintStyle: TextStyle(color: Colors.white54),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+      ),
+
+      const SizedBox(width: 12),
+
+      // ❤️ LIKE
+      GestureDetector(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('❤️ Story liked'),
+              duration: Duration(milliseconds: 600),
+            ),
+          );
+        },
+        child: const Icon(
+          Icons.favorite,
+          color: Colors.white,
+          size: 30,
+        ),
+      ),
+
+      const SizedBox(width: 12),
+
+      // ✈️ SEND
+      GestureDetector(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('📩 Message sent'),
+              duration: Duration(milliseconds: 600),
+            ),
+          );
+        },
+        child: const Icon(
+          Icons.send,
+          color: Colors.white,
+          size: 26,
+        ),
+      ),
+    ],
+  ),
+),
 }
+
