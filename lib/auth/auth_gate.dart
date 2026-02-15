@@ -21,7 +21,7 @@ class AuthGate extends StatelessWidget {
 
         // logged in
         if (snapshot.hasData) {
-          return const RaonsonApp();
+          return const MainNavigation();
         }
 
         // not logged in
