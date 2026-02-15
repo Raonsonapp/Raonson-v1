@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'post_model.dart';
 import 'home_api.dart';
+import '../comments/comments_screen.dart';
 
 class PostItem extends StatefulWidget {
   final Post post;
@@ -17,39 +18,50 @@ class _PostItemState extends State<PostItem> {
     if (liking) return;
 
     setState(() {
-      liking = true;
       widget.post.liked = true;
       widget.post.likes += 1;
+      liking = true;
     });
 
     try {
-      final newLikes = await HomeApi.likePost(widget.post.id);
-      setState(() => widget.post.likes = newLikes);
-    } catch (_) {}
-
-    liking = false;
+      await HomeApi.likePost(widget.post.id);
+    } catch (_) {
+      // rollback агар backend хато диҳад
+      setState(() {
+        widget.post.liked = false;
+        widget.post.likes -= 1;
+      });
+    } finally {
+      liking = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final media = widget.post.media.first;
+    final media = widget.post.media.isNotEmpty
+        ? widget.post.media.first
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // HEADER
+        // ================= HEADER =================
         Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
               const CircleAvatar(
+                radius: 16,
                 backgroundColor: Colors.orange,
-                child: Icon(Icons.person, color: Colors.black),
+                child: Icon(Icons.person, size: 18, color: Colors.black),
               ),
               const SizedBox(width: 8),
               Text(
                 widget.post.user,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const Spacer(),
               const Icon(Icons.more_vert, color: Colors.white),
@@ -57,54 +69,95 @@ class _PostItemState extends State<PostItem> {
           ),
         ),
 
-        // MEDIA
-        Image.network(
-          media.url,
-          fit: BoxFit.cover,
-          width: double.infinity,
-        ),
+        // ================= MEDIA =================
+        if (media != null)
+          media['type'] == 'image'
+              ? Image.network(
+                  media['url'],
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                )
+              : AspectRatio(
+                  aspectRatio: 9 / 16,
+                  child: Container(
+                    color: Colors.black,
+                    child: const Center(
+                      child: Icon(Icons.play_circle,
+                          color: Colors.white, size: 64),
+                    ),
+                  ),
+                ),
 
-        // ACTIONS
-        Row(
-          children: [
-            IconButton(
-              icon: Icon(
-                widget.post.liked
-                    ? Icons.favorite
-                    : Icons.favorite_border,
-                color: widget.post.liked ? Colors.red : Colors.white,
+        // ================= ACTIONS =================
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Row(
+            children: [
+              IconButton(
+                icon: Icon(
+                  widget.post.liked
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color:
+                      widget.post.liked ? Colors.red : Colors.white,
+                ),
+                onPressed: onLike,
               ),
-              onPressed: onLike,
-            ),
-            const Icon(Icons.chat_bubble_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            const Icon(Icons.send, color: Colors.white),
-            const Spacer(),
-            const Icon(Icons.bookmark_border, color: Colors.white),
-          ],
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline,
+                    color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CommentsScreen(postId: widget.post.id),
+                    ),
+                  );
+                },
+              ),
+              const Icon(Icons.send, color: Colors.white),
+              const Spacer(),
+              const Icon(Icons.bookmark_border,
+                  color: Colors.white),
+            ],
+          ),
         ),
 
-        // LIKES
+        // ================= LIKES =================
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            widget.post.likes == 0
-                ? 'Be the first to like this'
-                : 'Liked by ${widget.post.user}',
-            style: const TextStyle(color: Colors.white),
+            '${widget.post.likes} likes',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
 
-        // CAPTION
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Text(
-            widget.post.caption,
-            style: const TextStyle(color: Colors.white),
+        // ================= CAPTION =================
+        if (widget.post.caption.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 6),
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: widget.post.user,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const TextSpan(text: '  '),
+                  TextSpan(text: widget.post.caption),
+                ],
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
           ),
-        ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
       ],
     );
   }
