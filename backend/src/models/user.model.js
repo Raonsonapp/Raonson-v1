@@ -2,13 +2,13 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    phone: { type: String, unique: true, required: true },
+    phone: { type: String },
     email: { type: String },
-
-    verified: { type: Boolean, default: false },
 
     otpCode: { type: String },
     otpExpire: { type: Date },
+
+    verified: { type: Boolean, default: false },
 
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
