@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'auth/auth_gate.dart';
 import 'reels/reels_screen.dart';
 
-/// 🔹 ROOT APP
+/// 🔹 ROOT APP (MaterialApp ONLY HERE)
 class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
 
@@ -25,13 +25,28 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int index = 1;
+  int index = 0; // ⬅️ аввал Home
 
   final pages = const [
-    Center(child: Text('Home', style: TextStyle(color: Colors.white))),
+    Center(
+      child: Text(
+        'Home',
+        style: TextStyle(color: Colors.white),
+      ),
+    ),
     ReelsScreen(),
-    Center(child: Text('Search', style: TextStyle(color: Colors.white))),
-    Center(child: Text('Profile', style: TextStyle(color: Colors.white))),
+    Center(
+      child: Text(
+        'Search',
+        style: TextStyle(color: Colors.white),
+      ),
+    ),
+    Center(
+      child: Text(
+        'Profile',
+        style: TextStyle(color: Colors.white),
+      ),
+    ),
   ];
 
   @override
@@ -49,10 +64,22 @@ class _MainNavigationState extends State<MainNavigation> {
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white54,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.play_circle), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.play_circle),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: '',
+          ),
         ],
       ),
     );
