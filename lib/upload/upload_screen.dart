@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'media_picker.dart';
+import 'firebase_upload_service.dart';
 import 'upload_api.dart';
 
 class UploadScreen extends StatefulWidget {
@@ -14,37 +14,33 @@ class UploadScreen extends StatefulWidget {
 class _UploadScreenState extends State<UploadScreen> {
   List<PickedMedia> media = [];
   final captionCtrl = TextEditingController();
-  bool loading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    pick();
-  }
+  bool uploading = false;
 
   Future<void> pick() async {
-    final picked = await MediaPicker.pick();
+    final picked = await MediaPicker.pickMultiple();
     if (picked.isNotEmpty) {
       setState(() => media = picked);
-    } else {
-      Navigator.pop(context);
     }
   }
 
-  Future<void> share() async {
+  Future<void> upload() async {
     if (media.isEmpty) return;
-    setState(() => loading = true);
 
-    final payload = media.map((m) {
-      return {
-        'url': m.file.path, // ⬅️ ҳоло local, баъд storage
-        'type': m.isVideo ? 'video' : 'image',
-      };
-    }).toList();
+    setState(() => uploading = true);
 
-    await UploadApi.uploadPost(
+    final urls = <String>[];
+
+    for (final m in media) {
+      final url = await FirebaseUploadService.uploadFile(
+        m.file,
+        isVideo: m.isVideo,
+      );
+      urls.add(url);
+    }
+
+    await UploadApi.createPost(
       caption: captionCtrl.text,
-      media: payload,
+      mediaUrls: urls,
     );
 
     if (!mounted) return;
@@ -54,81 +50,44 @@ class _UploadScreenState extends State<UploadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('New post'),
         actions: [
           TextButton(
-            onPressed: loading ? null : share,
-            child: loading
+            onPressed: uploading ? null : upload,
+            child: uploading
                 ? const CircularProgressIndicator()
-                : const Text('Share',
-                    style: TextStyle(color: Colors.blue)),
-          )
+                : const Text('Share'),
+          ),
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: PageView.builder(
-              itemCount: media.length,
-              itemBuilder: (_, i) {
-                final m = media[i];
-                return m.isVideo
-                    ? _Video(file: m.file)
-                    : Image.file(m.file, fit: BoxFit.cover);
-              },
-            ),
+            child: media.isEmpty
+                ? Center(
+                    child: IconButton(
+                      icon: const Icon(Icons.add, size: 50),
+                      onPressed: pick,
+                    ),
+                  )
+                : PageView(
+                    children: media.map((m) {
+                      return Image.file(m.file, fit: BoxFit.cover);
+                    }).toList(),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
               controller: captionCtrl,
-              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 hintText: 'Write a caption...',
-                hintStyle: TextStyle(color: Colors.white54),
-                border: InputBorder.none,
               ),
             ),
           ),
         ],
       ),
     );
-  }
-}
-
-class _Video extends StatefulWidget {
-  final File file;
-  const _Video({required this.file});
-
-  @override
-  State<_Video> createState() => _VideoState();
-}
-
-class _VideoState extends State<_Video> {
-  late VideoPlayerController c;
-
-  @override
-  void initState() {
-    super.initState();
-    c = VideoPlayerController.file(widget.file)
-      ..initialize().then((_) {
-        c..play()..setLooping(true);
-        setState(() {});
-      });
-  }
-
-  @override
-  void dispose() {
-    c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return c.value.isInitialized
-        ? VideoPlayer(c)
-        : const Center(child: CircularProgressIndicator());
   }
 }
