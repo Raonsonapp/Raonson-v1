@@ -3,17 +3,34 @@ import 'package:http/http.dart' as http;
 import 'constants.dart';
 
 class Api {
-  static Future<dynamic> get(String path) async {
-    final res = await http.get(
-      Uri.parse('${Constants.baseUrl}$path'),
-    );
-    return jsonDecode(res.body);
+  /// 👤 TOKEN (пас аз login мегирем)
+  static String? token;
+
+  /// 📦 HEADER (худкор)
+  static Map<String, String> headers() {
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
   }
 
-  static Future<dynamic> post(String path) async {
-    final res = await http.post(
+  /// 📥 GET
+  static Future<http.Response> get(String path) {
+    return http.get(
       Uri.parse('${Constants.baseUrl}$path'),
+      headers: headers(),
     );
-    return jsonDecode(res.body);
+  }
+
+  /// 📤 POST
+  static Future<http.Response> post(
+    String path, {
+    Map<String, dynamic>? body,
+  }) {
+    return http.post(
+      Uri.parse('${Constants.baseUrl}$path'),
+      headers: headers(),
+      body: body == null ? null : jsonEncode(body),
+    );
   }
 }
