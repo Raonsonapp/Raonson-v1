@@ -31,7 +31,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
+  
+  fonts:
+    - family: RaonsonFont
+      fonts:
+        - asset: assets/fonts/Pacifico-Regular.ttf
   assets:
     - assets/icon/app_icon.png
     - assets/icons/
