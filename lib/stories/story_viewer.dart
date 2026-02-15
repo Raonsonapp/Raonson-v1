@@ -1,33 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+
+import 'story_model.dart';
 import 'story_api.dart';
-
-/// ================= MODEL =================
-
-class Story {
-  final String id;
-  final String user;
-  final String mediaUrl;
-  final String mediaType; // image | video
-
-  Story({
-    required this.id,
-    required this.user,
-    required this.mediaUrl,
-    required this.mediaType,
-  });
-
-  factory Story.fromJson(Map<String, dynamic> json) {
-    return Story(
-      id: json['id'],
-      user: json['user'],
-      mediaUrl: json['mediaUrl'],
-      mediaType: json['mediaType'],
-    );
-  }
-}
-
-/// ================= STORY VIEWER =================
 
 class StoryViewer extends StatefulWidget {
   final List<Story> stories;
@@ -48,37 +24,63 @@ class _StoryViewerState extends State<StoryViewer> {
   Timer? timer;
   double progress = 0;
 
-  final TextEditingController replyCtrl = TextEditingController();
-  bool liking = false;
-
-  Story get current => widget.stories[index];
+  VideoPlayerController? videoController;
 
   @override
   void initState() {
     super.initState();
     index = widget.startIndex;
-    _viewStory();
-    _startTimer();
+    _startStory();
   }
 
-  void _startTimer() {
+  void _startStory() {
     timer?.cancel();
     progress = 0;
 
-    timer = Timer.periodic(const Duration(milliseconds: 50), (t) {
-      setState(() {
-        progress += 0.01;
-        if (progress >= 1) _next();
+    videoController?.dispose();
+    videoController = null;
+
+    final story = widget.stories[index];
+
+    // 👁 VIEW COUNT
+    StoryApi.viewStory(story.id);
+
+    if (story.mediaType == 'video') {
+      videoController = VideoPlayerController.network(story.mediaUrl)
+        ..initialize().then((_) {
+          if (!mounted) return;
+          setState(() {});
+          videoController!
+            ..play()
+            ..setLooping(false);
+
+          videoController!.addListener(() {
+            final v = videoController!;
+            if (v.value.isInitialized &&
+                v.value.duration.inMilliseconds > 0) {
+              setState(() {
+                progress = v.value.position.inMilliseconds /
+                    v.value.duration.inMilliseconds;
+              });
+              if (progress >= 1) _next();
+            }
+          });
+        });
+    } else {
+      timer = Timer.periodic(const Duration(milliseconds: 50), (t) {
+        setState(() {
+          progress += 0.01;
+          if (progress >= 1) _next();
+        });
       });
-    });
+    }
   }
 
   void _next() {
     timer?.cancel();
     if (index < widget.stories.length - 1) {
       setState(() => index++);
-      _viewStory();
-      _startTimer();
+      _startStory();
     } else {
       Navigator.pop(context);
     }
@@ -88,61 +90,24 @@ class _StoryViewerState extends State<StoryViewer> {
     timer?.cancel();
     if (index > 0) {
       setState(() => index--);
-      _viewStory();
-      _startTimer();
+      _startStory();
     }
-  }
-
-  Future<void> _viewStory() async {
-    await StoryApi.viewStory(current.id, 'raonson');
-  }
-
-  Future<void> _likeStory() async {
-    if (liking) return;
-    liking = true;
-    await StoryApi.likeStory(current.id, 'raonson');
-    liking = false;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('❤️ Story liked'),
-        duration: Duration(milliseconds: 600),
-      ),
-    );
-  }
-
-  Future<void> _sendReply(String text) async {
-    if (text.trim().isEmpty) return;
-
-    await StoryApi.replyStory(
-      id: current.id,
-      user: 'raonson',
-      text: text.trim(),
-    );
-
-    replyCtrl.clear();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('📩 Reply sent'),
-        duration: Duration(milliseconds: 600),
-      ),
-    );
   }
 
   @override
   void dispose() {
     timer?.cancel();
-    replyCtrl.dispose();
+    videoController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final story = widget.stories[index];
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
         onTapDown: (d) {
           final w = MediaQuery.of(context).size.width;
           if (d.globalPosition.dx < w / 2) {
@@ -153,105 +118,84 @@ class _StoryViewerState extends State<StoryViewer> {
         },
         child: Stack(
           children: [
-            // ================= MEDIA =================
+            // 🖼 / 🎬 MEDIA
             Positioned.fill(
-              child: Image.network(
-                current.mediaUrl,
-                fit: BoxFit.cover,
-              ),
+              child: story.mediaType == 'video'
+                  ? (videoController != null &&
+                          videoController!.value.isInitialized)
+                      ? VideoPlayer(videoController!)
+                      : const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
+                        )
+                  : Image.network(
+                      story.mediaUrl,
+                      fit: BoxFit.cover,
+                    ),
             ),
 
-            // ================= PROGRESS =================
+            // ⏱ PROGRESS BAR
             Positioned(
               top: 40,
               left: 12,
               right: 12,
               child: LinearProgressIndicator(
-                value: progress,
+                value: progress.clamp(0, 1),
                 backgroundColor: Colors.white24,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Colors.white,
+                ),
               ),
             ),
 
-            // ================= USER =================
+            // 👤 USERNAME
             Positioned(
               top: 60,
               left: 16,
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Colors.orange,
-                    child: Icon(Icons.person,
-                        size: 16, color: Colors.black),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    current.user,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              child: Text(
+                story.user,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
 
-            // ================= BOTTOM BAR =================
+            // 💬 ❤️ ACTIONS
             Positioned(
               bottom: 24,
               left: 16,
               right: 16,
               child: Row(
                 children: [
-                  // 💬 REPLY
                   Expanded(
                     child: Container(
                       height: 44,
                       padding:
                           const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(24),
-                        border:
-                            Border.all(color: Colors.white24),
+                        border: Border.all(color: Colors.white24),
                       ),
-                      child: TextField(
-                        controller: replyCtrl,
-                        style:
-                            const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          hintText: 'Reply…',
+                      child: const TextField(
+                        style: TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Send message',
                           hintStyle:
                               TextStyle(color: Colors.white54),
                           border: InputBorder.none,
                         ),
-                        onSubmitted: _sendReply,
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // ❤️ LIKE
-                  GestureDetector(
-                    onTap: _likeStory,
-                    child: const Icon(
-                      Icons.favorite,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-
+                  const Icon(Icons.favorite,
+                      color: Colors.white, size: 30),
                   const SizedBox(width: 12),
-
-                  // ✈️ SEND (dummy)
-                  const Icon(
-                    Icons.send,
-                    color: Colors.white,
-                    size: 26,
-                  ),
+                  const Icon(Icons.send,
+                      color: Colors.white, size: 26),
                 ],
               ),
             ),
