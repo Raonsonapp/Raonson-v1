@@ -1,31 +1,28 @@
 import { comments } from "../data/comments.store.js";
-import { reels } from "../data/reels.store.js";
+import { v4 as uuid } from "uuid";
 
-// ADD COMMENT
+export const getComments = (req, res) => {
+  const { reelId } = req.params;
+  const list = comments.filter(c => c.reelId === reelId);
+  res.json(list);
+};
+
 export const addComment = (req, res) => {
-  const { id } = req.params;
-  const { text, user } = req.body;
+  const { reelId } = req.params;
+  const { text } = req.body;
 
-  if (!text) return res.status(400).json({ error: "Text required" });
+  if (!text) {
+    return res.status(400).json({ error: "Text required" });
+  }
 
   const comment = {
-    id: `c${comments.length + 1}`,
-    reelId: id,
-    user: user || "anonymous",
+    id: uuid(),
+    reelId,
+    user: "guest",
     text,
     createdAt: new Date(),
   };
 
-  comments.push(comment);
-
-  const reel = reels.find(r => r.id === id);
-  if (reel) reel.comments += 1;
-
+  comments.unshift(comment);
   res.json(comment);
-};
-
-// GET COMMENTS
-export const getComments = (req, res) => {
-  const { id } = req.params;
-  res.json(comments.filter(c => c.reelId === id));
 };
