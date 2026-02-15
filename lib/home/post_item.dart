@@ -26,7 +26,7 @@ class _PostItemState extends State<PostItem> {
     });
 
     try {
-      await HomeApi.likePost(widget.post.id, 'raonson');
+      await HomeApi.likePost(widget.post.id);
     } catch (_) {}
 
     liking = false;
