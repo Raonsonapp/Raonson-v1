@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../app.dart';
+import '../app.dart'; // 👈 барои MainNavigation
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -29,16 +29,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       error = null;
     });
 
-    // 🟢 MVP: ҳоло ба backend намефиристем
-    // баъдтар /auth/register мекунем
-
+    // 🔹 MVP: ҳоло backend нест
     await Future.delayed(const Duration(milliseconds: 600));
 
     if (!mounted) return;
 
+    // ✅ БА HOME / REELS МЕРАВЕМ
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const RaonsonApp()),
+      MaterialPageRoute(builder: (_) => const MainNavigation()),
       (_) => false,
     );
   }
