@@ -3,23 +3,26 @@ class Story {
   final String user;
   final String mediaUrl;
   final String mediaType; // image | video
-  bool viewed;
+  final int views;
+  final DateTime createdAt;
 
   Story({
     required this.id,
     required this.user,
     required this.mediaUrl,
     required this.mediaType,
-    this.viewed = false,
+    required this.views,
+    required this.createdAt,
   });
 
   factory Story.fromJson(Map<String, dynamic> json) {
     return Story(
-      id: json['id'].toString(),
+      id: json['id'],
       user: json['user'],
       mediaUrl: json['mediaUrl'],
       mediaType: json['mediaType'],
-      viewed: json['viewed'] ?? false,
+      views: (json['views'] as List?)?.length ?? 0,
+      createdAt: DateTime.parse(json['createdAt']),
     );
   }
 }
