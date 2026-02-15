@@ -15,6 +15,7 @@ class PostItem extends StatefulWidget {
 
 class _PostItemState extends State<PostItem> {
   bool liking = false;
+  bool saved = false;
 
   Future<void> onLike() async {
     if (liking) return;
@@ -61,7 +62,7 @@ class _PostItemState extends State<PostItem> {
           ),
         ),
 
-        // ================= MEDIA (IMAGE / VIDEO) =================
+        // ================= MEDIA =================
         SizedBox(
           height: 360,
           child: PageView.builder(
@@ -100,10 +101,8 @@ class _PostItemState extends State<PostItem> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CommentsScreen(
-                      targetId: widget.post.id,
-                      type: 'post',
-                    ),
+                    builder: (_) =>
+                        CommentsScreen(postId: widget.post.id),
                   ),
                 );
               },
@@ -115,15 +114,11 @@ class _PostItemState extends State<PostItem> {
             const Spacer(),
             IconButton(
               icon: Icon(
-                widget.post.saved
-                    ? Icons.bookmark
-                    : Icons.bookmark_border,
+                saved ? Icons.bookmark : Icons.bookmark_border,
                 color: Colors.white,
               ),
               onPressed: () {
-                setState(() {
-                  widget.post.saved = !widget.post.saved;
-                });
+                setState(() => saved = !saved);
               },
             ),
           ],
