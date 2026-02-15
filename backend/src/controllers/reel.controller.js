@@ -3,7 +3,7 @@ import { savedReels } from "../data/saved.store.js";
 
 // GET ALL REELS (FEED)
 export const getReels = (req, res) => {
-  const user = req.query.user || "guest";
+   const userId = req.user.id;
 
   const feed = reels.map((r) => ({
     ...r,
