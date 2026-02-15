@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'story_api.dart';
+import 'stories_api.dart';
 import 'story_model.dart';
 import 'story_upload_screen.dart';
 import 'story_viewer.dart';
@@ -13,7 +13,7 @@ class StoriesBar extends StatefulWidget {
 
 class _StoriesBarState extends State<StoriesBar> {
   bool loading = true;
-  Map<String, List<Story>> storiesByUser = {};
+  Map<String, List<Story>> stories = {};
 
   @override
   void initState() {
@@ -23,9 +23,9 @@ class _StoriesBarState extends State<StoriesBar> {
 
   Future<void> loadStories() async {
     try {
-      final data = await StoryApi.fetchStories();
+      final data = await StoriesApi.fetchStories();
       setState(() {
-        storiesByUser = data;
+        stories = data;
         loading = false;
       });
     } catch (_) {
@@ -37,62 +37,56 @@ class _StoriesBarState extends State<StoriesBar> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const SizedBox(
-        height: 100,
-        child: Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
-      );
+      return const SizedBox(height: 100);
     }
+
+    final users = stories.keys.toList();
 
     return SizedBox(
       height: 100,
-      child: ListView(
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.all(12),
-        children: [
-          // ➕ YOUR STORY
-          _StoryAvatar(
-            username: 'Your story',
-            isMe: true,
-            onTap: () async {
-              final ok = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const StoryUploadScreen(),
-                ),
-              );
-              if (ok == true) loadStories();
-            },
-          ),
-
-          // 👥 OTHER USERS
-          ...storiesByUser.entries.map((entry) {
-            final user = entry.key;
-            final userStories = entry.value;
-
+        itemCount: users.length + 1,
+        itemBuilder: (_, i) {
+          // ➕ MY STORY
+          if (i == 0) {
             return _StoryAvatar(
-              username: user,
-              onTap: () {
-                Navigator.push(
+              username: 'Your story',
+              isMe: true,
+              onTap: () async {
+                final r = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => StoryViewer(
-                      stories: userStories,
-                      startIndex: 0,
-                    ),
+                    builder: (_) => const StoryUploadScreen(),
                   ),
                 );
+                if (r == true) loadStories();
               },
             );
-          }),
-        ],
+          }
+
+          final user = users[i - 1];
+          final userStories = stories[user]!;
+
+          return _StoryAvatar(
+            username: user,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StoryViewer(
+                    stories: userStories,
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
 }
-
-// ================= AVATAR =================
 
 class _StoryAvatar extends StatelessWidget {
   final String username;
@@ -101,8 +95,8 @@ class _StoryAvatar extends StatelessWidget {
 
   const _StoryAvatar({
     required this.username,
-    required this.onTap,
     this.isMe = false,
+    required this.onTap,
   });
 
   @override
