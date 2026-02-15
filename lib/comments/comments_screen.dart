@@ -11,8 +11,8 @@ class CommentsScreen extends StatefulWidget {
 
 class _CommentsScreenState extends State<CommentsScreen> {
   final ctrl = TextEditingController();
-  List<dynamic> comments = [];
   bool loading = true;
+  List comments = [];
 
   @override
   void initState() {
@@ -27,9 +27,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   Future<void> send() async {
     if (ctrl.text.trim().isEmpty) return;
+
     await CommentApi.addComment(widget.postId, ctrl.text.trim());
     ctrl.clear();
-    load();
+    await load();
   }
 
   @override
@@ -37,50 +38,59 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Comments'),
         backgroundColor: Colors.black,
+        title: const Text('Comments'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  )
-                : ListView.builder(
-                    itemCount: comments.length,
-                    itemBuilder: (_, i) => ListTile(
-                      title: Text(
-                        comments[i]['text'],
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          : Column(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: ctrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Add comment...',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      border: InputBorder.none,
-                    ),
+                  child: ListView.builder(
+                    itemCount: comments.length,
+                    itemBuilder: (_, i) {
+                      final c = comments[i];
+                      return ListTile(
+                        title: Text(
+                          c['user'],
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        subtitle: Text(
+                          c['text'],
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      );
+                    },
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blue),
-                  onPressed: send,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.white12)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: ctrl,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            hintText: 'Add a comment...',
+                            hintStyle:
+                                TextStyle(color: Colors.white54),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Colors.blue),
+                        onPressed: send,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
