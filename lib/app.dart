@@ -6,6 +6,9 @@ import 'auth/auth_gate.dart';
 // SCREENS
 import 'home/home_screen.dart';
 import 'reels/reels_screen.dart';
+import 'chat/chat_screen.dart';
+import 'search/search_screen.dart';
+import 'profile/profile_screen.dart';
 
 /// 🔹 ROOT APP (MaterialApp ONLY HERE)
 class RaonsonApp extends StatelessWidget {
@@ -35,20 +38,11 @@ class _MainNavigationState extends State<MainNavigation> {
   int index = 0; // ⬅️ Home аввал
 
   final List<Widget> pages = const [
-    HomeScreen(),   // 🏠 HOME (реалӣ)
+    HomeScreen(),   // 🏠 HOME
     ReelsScreen(),  // 🎬 REELS
-    Center(
-      child: Text(
-        'Search',
-        style: TextStyle(color: Colors.white),
-      ),
-    ),
-    Center(
-      child: Text(
-        'Profile',
-        style: TextStyle(color: Colors.white),
-      ),
-    ),
+    ChatScreen(),   // 💬 CHAT
+    SearchScreen(), // 🔍 SEARCH
+    ProfileScreen() // 👤 PROFILE
   ];
 
   @override
@@ -64,6 +58,7 @@ class _MainNavigationState extends State<MainNavigation> {
         onTap: (i) => setState(() => index = i),
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.black,
+        elevation: 0,
         showSelectedLabels: false,
         showUnselectedLabels: false,
         selectedItemColor: Colors.white,
@@ -74,7 +69,11 @@ class _MainNavigationState extends State<MainNavigation> {
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.play_circle),
+            icon: Icon(Icons.play_circle_outline),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
             label: '',
           ),
           BottomNavigationBarItem(
