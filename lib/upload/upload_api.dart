@@ -1,14 +1,13 @@
 import '../core/api.dart';
 
 class UploadApi {
-  static Future<void> uploadPost({
+  static Future<void> createPost({
     required String caption,
-    required List<Map<String, String>> media,
+    required List<String> mediaUrls,
   }) async {
     await Api.post('/posts', body: {
-      'user': 'raonson',
       'caption': caption,
-      'media': media,
+      'media': mediaUrls,
     });
   }
 }
