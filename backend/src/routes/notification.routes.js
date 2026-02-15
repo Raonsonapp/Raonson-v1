@@ -7,6 +7,6 @@ import {
 const router = express.Router();
 
 router.get("/", getNotifications);
-router.post("/seen", markSeen);
+router.post("/:id/seen", markSeen);
 
 export default router;
