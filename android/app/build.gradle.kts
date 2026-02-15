@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.raonson"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
 
         // ✅ Kotlin DSL: MUST be function calls
