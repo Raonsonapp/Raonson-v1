@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import '../reels/reels_api.dart';
+import 'reels_api.dart';
 
 class ReelsScreen extends StatefulWidget {
   const ReelsScreen({super.key});
@@ -12,6 +12,7 @@ class ReelsScreen extends StatefulWidget {
 class _ReelsScreenState extends State<ReelsScreen> {
   List<Map<String, dynamic>> reels = [];
   bool loading = true;
+  String? error;
 
   @override
   void initState() {
@@ -27,8 +28,10 @@ class _ReelsScreenState extends State<ReelsScreen> {
         loading = false;
       });
     } catch (e) {
-      loading = false;
-      setState(() {});
+      setState(() {
+        loading = false;
+        error = 'Failed to load reels';
+      });
     }
   }
 
@@ -39,6 +42,18 @@ class _ReelsScreenState extends State<ReelsScreen> {
         backgroundColor: Colors.black,
         body: Center(
           child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Text(
+            error!,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
@@ -60,12 +75,16 @@ class _ReelsScreenState extends State<ReelsScreen> {
       body: PageView.builder(
         scrollDirection: Axis.vertical,
         itemCount: reels.length,
-        itemBuilder: (_, i) => ReelItem(reel: reels[i]),
+        itemBuilder: (_, index) {
+          return ReelItem(reel: reels[index]);
+        },
       ),
     );
   }
 }
 
+// =======================================================
+// ====================== REEL ITEM ======================
 // =======================================================
 
 class ReelItem extends StatefulWidget {
@@ -77,7 +96,8 @@ class ReelItem extends StatefulWidget {
 }
 
 class _ReelItemState extends State<ReelItem> {
-  late VideoPlayerController controller;
+  late VideoPlayerController _controller;
+  bool initialized = false;
 
   late int likes;
   bool liked = false;
@@ -88,23 +108,30 @@ class _ReelItemState extends State<ReelItem> {
 
     likes = widget.reel['likes'] ?? 0;
 
-    controller = VideoPlayerController.network(
+    _controller = VideoPlayerController.network(
       widget.reel['videoUrl'],
-    )..initialize().then((_) {
-        if (!mounted) return;
-        setState(() {});
-        controller
-          ..setLooping(true)
-          ..play();
-      });
+    );
 
-    // 👁 VIEW COUNT (+1 once)
-    ReelsApi.addView(widget.reel['id']);
+    _controller.initialize().then((_) {
+      if (!mounted) return;
+      setState(() {
+        initialized = true;
+      });
+      _controller
+        ..setLooping(true)
+        ..play();
+    });
+
+    // 👁️ VIEW COUNT (only once)
+    try {
+      ReelsApi.addView(widget.reel['id']);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    _controller.pause();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -113,10 +140,12 @@ class _ReelItemState extends State<ReelItem> {
 
     setState(() {
       liked = true;
-      likes += 1;
+      likes++;
     });
 
-    ReelsApi.like(widget.reel['id']);
+    try {
+      ReelsApi.like(widget.reel['id']);
+    } catch (_) {}
   }
 
   @override
@@ -125,8 +154,8 @@ class _ReelItemState extends State<ReelItem> {
       fit: StackFit.expand,
       children: [
         // 🎥 VIDEO
-        controller.value.isInitialized
-            ? VideoPlayer(controller)
+        initialized
+            ? VideoPlayer(_controller)
             : const Center(
                 child: CircularProgressIndicator(color: Colors.white),
               ),
@@ -140,7 +169,7 @@ class _ReelItemState extends State<ReelItem> {
               GestureDetector(
                 onTap: onLike,
                 child: Icon(
-                  Icons.favorite,
+                  liked ? Icons.favorite : Icons.favorite_border,
                   size: 36,
                   color: liked ? Colors.red : Colors.white,
                 ),
@@ -175,11 +204,11 @@ class _ReelItemState extends State<ReelItem> {
           ),
         ),
 
-        // ℹ️ USER + CAPTION
+        // 👤 USER + CAPTION
         Positioned(
           left: 14,
           bottom: 40,
-          right: 80,
+          right: 90,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -194,6 +223,8 @@ class _ReelItemState extends State<ReelItem> {
               Text(
                 widget.reel['caption'] ?? '',
                 style: const TextStyle(color: Colors.white),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
