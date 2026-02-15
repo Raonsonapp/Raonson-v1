@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'register_screen.dart';
+import 'email_register_screen.dart';
 
 class EmailLoginScreen extends StatefulWidget {
   const EmailLoginScreen({super.key});
@@ -13,33 +13,57 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   final email = TextEditingController();
   final pass = TextEditingController();
 
-  Future<void> login() async {
+  void login() async {
     await FirebaseAuth.instance.signInWithEmailAndPassword(
       email: email.text.trim(),
-      password: pass.text,
+      password: pass.text.trim(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Email Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(controller: email, decoration: const InputDecoration(hintText: 'Email')),
-            TextField(controller: pass, decoration: const InputDecoration(hintText: 'Password'), obscureText: true),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: login, child: const Text('Login')),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RegisterScreen()),
+      backgroundColor: Colors.black,
+      appBar: AppBar(backgroundColor: Colors.black),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _field(email, 'Email'),
+              const SizedBox(height: 16),
+              _field(pass, 'Password', obscure: true),
+              const SizedBox(height: 24),
+              ElevatedButton(onPressed: login, child: const Text('Login')),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const EmailRegisterScreen()),
+                  );
+                },
+                child: const Text('Create account'),
               ),
-              child: const Text('Create account'),
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _field(TextEditingController c, String h,
+      {bool obscure = false}) {
+    return TextField(
+      controller: c,
+      obscureText: obscure,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: h,
+        hintStyle: const TextStyle(color: Colors.white54),
+        enabledBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white38),
         ),
       ),
     );
