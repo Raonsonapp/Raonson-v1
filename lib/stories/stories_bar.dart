@@ -37,15 +37,8 @@ class _StoriesBarState extends State<StoriesBar> {
   }
 
   void loadStories() {
-    // ⛔ ҲОЛО MOCK
-    // ✅ Баъд аз backend
     stories = [
-      Story(
-        id: 'me',
-        user: 'Your story',
-        mediaUrl: '',
-        mediaType: 'image',
-      ),
+      Story(id: 'me', user: 'Your story', mediaUrl: '', mediaType: 'image'),
       Story(
         id: '1',
         user: 'raonson',
@@ -100,22 +93,17 @@ class _StoriesBarState extends State<StoriesBar> {
               },
               child: Column(
                 children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.orange,
-                        child: CircleAvatar(
-                          radius: 27,
-                          backgroundColor: Colors.black,
-                          child: Icon(
-                            isMe ? Icons.add : Icons.person,
-                            color: Colors.orange,
-                          ),
-                        ),
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.orange,
+                    child: CircleAvatar(
+                      radius: 27,
+                      backgroundColor: Colors.black,
+                      child: Icon(
+                        isMe ? Icons.add : Icons.person,
+                        color: Colors.orange,
                       ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -155,6 +143,7 @@ class _StoryViewerState extends State<StoryViewer> {
   late int index;
   Timer? timer;
   double progress = 0;
+  bool isPaused = false;
 
   @override
   void initState() {
@@ -167,7 +156,9 @@ class _StoryViewerState extends State<StoryViewer> {
     timer?.cancel();
     progress = 0;
 
-    timer = Timer.periodic(const Duration(milliseconds: 50), (t) {
+    timer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (isPaused) return;
+
       setState(() {
         progress += 0.01;
         if (progress >= 1) next();
@@ -214,6 +205,12 @@ class _StoryViewerState extends State<StoryViewer> {
             next();
           }
         },
+        onLongPressStart: (_) {
+          setState(() => isPaused = true);
+        },
+        onLongPressEnd: (_) {
+          setState(() => isPaused = false);
+        },
         child: Stack(
           children: [
             Positioned.fill(
@@ -238,7 +235,7 @@ class _StoryViewerState extends State<StoryViewer> {
 
             // 👤 USER
             Positioned(
-              top: 60,
+              top: 64,
               left: 16,
               child: Text(
                 story.user,
@@ -248,78 +245,43 @@ class _StoryViewerState extends State<StoryViewer> {
                 ),
               ),
             ),
+
+            // ❤️ + ✉️ REACTIONS
+            Positioned(
+              bottom: 24,
+              left: 16,
+              right: 16,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const TextField(
+                        style: TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Send message',
+                          hintStyle: TextStyle(color: Colors.white54),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.favorite, color: Colors.white, size: 30),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.send, color: Colors.white, size: 26),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-  // ❤️ + ✉️ REACTIONS (BOTTOM)
-Positioned(
-  bottom: 24,
-  left: 16,
-  right: 16,
-  child: Row(
-    children: [
-      // 💬 REPLY INPUT
-      Expanded(
-        child: Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white24),
-          ),
-          child: const TextField(
-            style: TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Send message',
-              hintStyle: TextStyle(color: Colors.white54),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-      ),
-
-      const SizedBox(width: 12),
-
-      // ❤️ LIKE
-      GestureDetector(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❤️ Story liked'),
-              duration: Duration(milliseconds: 600),
-            ),
-          );
-        },
-        child: const Icon(
-          Icons.favorite,
-          color: Colors.white,
-          size: 30,
-        ),
-      ),
-
-      const SizedBox(width: 12),
-
-      // ✈️ SEND
-      GestureDetector(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('📩 Message sent'),
-              duration: Duration(milliseconds: 600),
-            ),
-          );
-        },
-        child: const Icon(
-          Icons.send,
-          color: Colors.white,
-          size: 26,
-        ),
-      ),
-    ],
-  ),
-),
 }
-
