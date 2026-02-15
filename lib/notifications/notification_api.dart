@@ -1,31 +1,18 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../core/constants.dart';
 
 class NotificationApi {
-  // GET NOTIFICATIONS
-  static Future<List<dynamic>> fetchNotifications() async {
-    final res = await http.get(
-      Uri.parse('${Constants.baseUrl}/notifications'),
-      headers: {'Content-Type': 'application/json'},
-    );
+  static const baseUrl = 'https://YOUR_RENDER_URL';
 
-    if (res.statusCode != 200) {
-      throw Exception('Failed to load notifications');
+  static Future<List<dynamic>> fetchForUser(String user) async {
+    final res = await http.get(Uri.parse('$baseUrl/notifications/$user'));
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
     }
-
-    return jsonDecode(res.body);
+    throw Exception('Failed to load notifications');
   }
 
-  // MARK AS SEEN
   static Future<void> markSeen(String id) async {
-    final res = await http.post(
-      Uri.parse('${Constants.baseUrl}/notifications/$id/seen'),
-      headers: {'Content-Type': 'application/json'},
-    );
-
-    if (res.statusCode != 200) {
-      throw Exception('Failed to mark notification seen');
-    }
+    await http.post(Uri.parse('$baseUrl/notifications/$id/seen'));
   }
 }
