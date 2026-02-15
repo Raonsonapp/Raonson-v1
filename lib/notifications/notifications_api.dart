@@ -1,8 +1,14 @@
 import '../core/api.dart';
 
-class NotificationsApi {
-  static Future<List<dynamic>> getNotifications() async {
-    final res = await Api.get('/notifications');
-    return res as List<dynamic>;
+class NotificationApi {
+  static Future<List<dynamic>> fetch() async {
+    final res = await Api.get('/notifications?user=raonson');
+    return res;
+  }
+
+  static Future<void> markSeen() async {
+    await Api.post('/notifications/seen', body: {
+      'user': 'raonson',
+    });
   }
 }
