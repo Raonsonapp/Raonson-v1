@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'auth/auth_api.dart';
 import 'reels/reels_screen.dart';
-import 'reels/reels_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
