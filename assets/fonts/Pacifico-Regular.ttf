@@ -1,0 +1,12 @@
+AppBar(
+  backgroundColor: Colors.black, // Ранги сиёҳ мисли Instagram
+  title: Text(
+    'Raonson',
+    style: TextStyle(
+      fontFamily: 'Pacifico', // Номи шрифте, ки дар pubspec.yaml мондед
+      fontSize: 28,           // Андозаи мувофиқ
+      color: Colors.white,    // Ранги сафед
+    ),
+  ),
+  centerTitle: false, // Мисли Instagram дар тарафи чап бошад
+)
