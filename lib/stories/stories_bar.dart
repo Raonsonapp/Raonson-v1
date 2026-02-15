@@ -1,24 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'story_api.dart';
+import 'story_model.dart';
 import 'story_upload_screen.dart';
-
-/// ================= MODEL =================
-
-class Story {
-  final String id;
-  final String user;
-  final String mediaUrl;
-  final String mediaType; // image | video
-
-  Story({
-    required this.id,
-    required this.user,
-    required this.mediaUrl,
-    required this.mediaType,
-  });
-}
-
-/// ================= STORIES BAR =================
+import 'story_viewer.dart';
 
 class StoriesBar extends StatefulWidget {
   const StoriesBar({super.key});
@@ -28,7 +12,8 @@ class StoriesBar extends StatefulWidget {
 }
 
 class _StoriesBarState extends State<StoriesBar> {
-  List<Story> stories = [];
+  bool loading = true;
+  Map<String, List<Story>> storiesByUser = {};
 
   @override
   void initState() {
@@ -36,247 +21,116 @@ class _StoriesBarState extends State<StoriesBar> {
     loadStories();
   }
 
-  void loadStories() {
-    stories = [
-      Story(id: 'me', user: 'Your story', mediaUrl: '', mediaType: 'image'),
-      Story(
-        id: '1',
-        user: 'raonson',
-        mediaUrl: 'https://picsum.photos/600/900',
-        mediaType: 'image',
-      ),
-      Story(
-        id: '2',
-        user: 'user_1',
-        mediaUrl: 'https://picsum.photos/601/900',
-        mediaType: 'image',
-      ),
-    ];
-    setState(() {});
+  Future<void> loadStories() async {
+    try {
+      final data = await StoryApi.fetchStories();
+      setState(() {
+        storiesByUser = data;
+        loading = false;
+      });
+    } catch (_) {
+      loading = false;
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const SizedBox(
+        height: 100,
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 100,
-      child: ListView.builder(
+      child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.all(12),
-        itemCount: stories.length,
-        itemBuilder: (_, i) {
-          final s = stories[i];
-          final isMe = s.id == 'me';
+        children: [
+          // ➕ YOUR STORY
+          _StoryAvatar(
+            username: 'Your story',
+            isMe: true,
+            onTap: () async {
+              final ok = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const StoryUploadScreen(),
+                ),
+              );
+              if (ok == true) loadStories();
+            },
+          ),
 
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () async {
-                if (isMe) {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const StoryUploadScreen(),
+          // 👥 OTHER USERS
+          ...storiesByUser.entries.map((entry) {
+            final user = entry.key;
+            final userStories = entry.value;
+
+            return _StoryAvatar(
+              username: user,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StoryViewer(
+                      stories: userStories,
+                      startIndex: 0,
                     ),
-                  );
-                  if (result == true) loadStories();
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StoryViewer(
-                        stories: stories.where((e) => e.id != 'me').toList(),
-                        startIndex: i - 1,
-                      ),
-                    ),
-                  );
-                }
+                  ),
+                );
               },
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.orange,
-                    child: CircleAvatar(
-                      radius: 27,
-                      backgroundColor: Colors.black,
-                      child: Icon(
-                        isMe ? Icons.add : Icons.person,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    s.user,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+            );
+          }),
+        ],
       ),
     );
   }
 }
 
-/// ================= STORY VIEWER =================
+// ================= AVATAR =================
 
-class StoryViewer extends StatefulWidget {
-  final List<Story> stories;
-  final int startIndex;
+class _StoryAvatar extends StatelessWidget {
+  final String username;
+  final bool isMe;
+  final VoidCallback onTap;
 
-  const StoryViewer({
-    super.key,
-    required this.stories,
-    required this.startIndex,
+  const _StoryAvatar({
+    required this.username,
+    required this.onTap,
+    this.isMe = false,
   });
 
   @override
-  State<StoryViewer> createState() => _StoryViewerState();
-}
-
-class _StoryViewerState extends State<StoryViewer> {
-  late int index;
-  Timer? timer;
-  double progress = 0;
-  bool isPaused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    index = widget.startIndex;
-    startTimer();
-  }
-
-  void startTimer() {
-    timer?.cancel();
-    progress = 0;
-
-    timer = Timer.periodic(const Duration(milliseconds: 50), (_) {
-      if (isPaused) return;
-
-      setState(() {
-        progress += 0.01;
-        if (progress >= 1) next();
-      });
-    });
-  }
-
-  void next() {
-    timer?.cancel();
-    if (index < widget.stories.length - 1) {
-      setState(() => index++);
-      startTimer();
-    } else {
-      Navigator.pop(context);
-    }
-  }
-
-  void prev() {
-    timer?.cancel();
-    if (index > 0) {
-      setState(() => index--);
-      startTimer();
-    }
-  }
-
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final story = widget.stories[index];
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTapDown: (d) {
-          final w = MediaQuery.of(context).size.width;
-          if (d.globalPosition.dx < w / 2) {
-            prev();
-          } else {
-            next();
-          }
-        },
-        onLongPressStart: (_) {
-          setState(() => isPaused = true);
-        },
-        onLongPressEnd: (_) {
-          setState(() => isPaused = false);
-        },
-        child: Stack(
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
           children: [
-            Positioned.fill(
-              child: Image.network(
-                story.mediaUrl,
-                fit: BoxFit.cover,
-              ),
-            ),
-
-            // 🔝 PROGRESS
-            Positioned(
-              top: 40,
-              left: 12,
-              right: 12,
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Colors.white24,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-
-            // 👤 USER
-            Positioned(
-              top: 64,
-              left: 16,
-              child: Text(
-                story.user,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.orange,
+              child: CircleAvatar(
+                radius: 27,
+                backgroundColor: Colors.black,
+                child: Icon(
+                  isMe ? Icons.add : Icons.person,
+                  color: Colors.orange,
                 ),
               ),
             ),
-
-            // ❤️ + ✉️ REACTIONS
-            Positioned(
-              bottom: 24,
-              left: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 44,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: const TextField(
-                        style: TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Send message',
-                          hintStyle: TextStyle(color: Colors.white54),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Icon(Icons.favorite, color: Colors.white, size: 30),
-                  const SizedBox(width: 12),
-                  const Icon(Icons.send, color: Colors.white, size: 26),
-                ],
+            const SizedBox(height: 6),
+            Text(
+              username,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
               ),
             ),
           ],
