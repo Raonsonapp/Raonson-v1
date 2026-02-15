@@ -14,7 +14,7 @@ class RaonsonApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: const AuthGate(), // 👈 МУҲИМ
+      home: const AuthGate(),
     );
   }
 }
