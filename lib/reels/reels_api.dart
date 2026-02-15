@@ -4,7 +4,9 @@ import '../models/reel_model.dart';
 import '../core/constants.dart';
 
 class ReelsApi {
-  // GET FEED
+  // =========================
+  // GET REELS FEED
+  // =========================
   static Future<List<Reel>> fetchReels() async {
     final res = await http.get(
       Uri.parse('${Constants.baseUrl}/reels'),
@@ -19,7 +21,9 @@ class ReelsApi {
     return data.map((e) => Reel.fromJson(e)).toList();
   }
 
-  // VIEW
+  // =========================
+  // ADD VIEW
+  // =========================
   static Future<void> addView(String reelId) async {
     await http.post(
       Uri.parse('${Constants.baseUrl}/reels/$reelId/view'),
@@ -27,7 +31,9 @@ class ReelsApi {
     );
   }
 
+  // =========================
   // LIKE
+  // =========================
   static Future<int> like(String reelId) async {
     final res = await http.post(
       Uri.parse('${Constants.baseUrl}/reels/$reelId/like'),
@@ -39,10 +45,12 @@ class ReelsApi {
     }
 
     final data = jsonDecode(res.body);
-    return data['likes'];
+    return data['likes'] ?? 0;
   }
 
+  // =========================
   // SAVE / UNSAVE
+  // =========================
   static Future<bool> toggleSave(String reelId) async {
     final res = await http.post(
       Uri.parse('${Constants.baseUrl}/reels/$reelId/save'),
@@ -57,25 +65,35 @@ class ReelsApi {
     final data = jsonDecode(res.body);
     return data['saved'] == true;
   }
-    // GET COMMENTS
-static Future<List<dynamic>> getComments(String reelId) async {
-  final res = await http.get(
-    Uri.parse('${Constants.baseUrl}/comments/$reelId'),
-    headers: {'Content-Type': 'application/json'},
-  );
 
-  if (res.statusCode != 200) {
-    throw Exception('Failed to load comments');
+  // =========================
+  // GET COMMENTS
+  // =========================
+  static Future<List<dynamic>> getComments(String reelId) async {
+    final res = await http.get(
+      Uri.parse('${Constants.baseUrl}/comments/$reelId'),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load comments');
+    }
+
+    return jsonDecode(res.body);
   }
 
-  return jsonDecode(res.body);
-}
+  // =========================
+  // ADD COMMENT
+  // =========================
+  static Future<void> addComment(String reelId, String text) async {
+    final res = await http.post(
+      Uri.parse('${Constants.baseUrl}/comments/$reelId'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'text': text}),
+    );
 
-// ADD COMMENT
-static Future<void> addComment(String reelId, String text) async {
-  await http.post(
-    Uri.parse('${Constants.baseUrl}/comments/$reelId'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'text': text}),
-  );
+    if (res.statusCode != 200) {
+      throw Exception('Add comment failed');
+    }
+  }
 }
