@@ -5,17 +5,18 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       throw UnsupportedError(
-        'Web is not supported in this project.',
+        'Web is not supported for this Firebase project.',
       );
     }
     return android;
   }
 
+  /// ANDROID
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyXXXXXXXXXXXX',
+    apiKey: 'AIzaSyC3ZAhlMl7uYsdaaHmmlD2IoJz4LDtR6Jg',
     appId: '1:402617742376:android:39d326fd63cd5c5f7ff11d',
     messagingSenderId: '402617742376',
     projectId: 'raonson',
-    storageBucket: 'raonson.appspot.com',
+    storageBucket: 'raonson.firebasestorage.app',
   );
 }
