@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'comment_api.dart';
 
 class CommentsScreen extends StatefulWidget {
-  final String postId;
-  const CommentsScreen({super.key, required this.postId});
+  final String targetId;
+  final String type; // post | reel
+
+  const CommentsScreen({
+    super.key,
+    required this.targetId,
+    required this.type,
+  });
 
   @override
   State<CommentsScreen> createState() => _CommentsScreenState();
@@ -21,16 +27,25 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   Future<void> load() async {
-    comments = await CommentApi.fetchComments(widget.postId);
+    comments = await CommentApi.fetchComments(
+      targetId: widget.targetId,
+      type: widget.type,
+    );
     setState(() => loading = false);
   }
 
   Future<void> send() async {
     if (ctrl.text.trim().isEmpty) return;
 
-    await CommentApi.addComment(widget.postId, ctrl.text.trim());
+    await CommentApi.addComment(
+      targetId: widget.targetId,
+      type: widget.type,
+      user: 'raonson',
+      text: ctrl.text.trim(),
+    );
+
     ctrl.clear();
-    await load();
+    load();
   }
 
   @override
@@ -41,12 +56,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
         backgroundColor: Colors.black,
         title: const Text('Comments'),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator(color: Colors.white))
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
+      body: Column(
+        children: [
+          Expanded(
+            child: loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                : ListView.builder(
                     itemCount: comments.length,
                     itemBuilder: (_, i) {
                       final c = comments[i];
@@ -62,35 +79,31 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       );
                     },
                   ),
+          ),
+          SafeArea(
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: ctrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Add a comment...',
+                      hintStyle: TextStyle(color: Colors.white54),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(12),
+                    ),
+                  ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Colors.white12)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: ctrl,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            hintText: 'Add a comment...',
-                            hintStyle:
-                                TextStyle(color: Colors.white54),
-                            border: InputBorder.none,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: Colors.blue),
-                        onPressed: send,
-                      ),
-                    ],
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: send,
                 ),
               ],
             ),
+          ),
+        ],
+      ),
     );
   }
 }
