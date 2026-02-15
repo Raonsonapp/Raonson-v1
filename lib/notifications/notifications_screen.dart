@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'notifications_api.dart';
+import 'notification_api.dart';
+import 'notification_model.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -9,43 +10,53 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late Future<List<dynamic>> future;
+  List<AppNotification> items = [];
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    future = NotificationsApi.getNotifications();
+    load();
+  }
+
+  Future<void> load() async {
+    final data = await NotificationApi.fetch();
+    items = data
+        .map<AppNotification>((e) => AppNotification.fromJson(e))
+        .toList();
+    setState(() => loading = false);
+    await NotificationApi.markSeen();
+  }
+
+  String buildText(AppNotification n) {
+    if (n.type == 'like') return '${n.from} liked your post';
+    if (n.type == 'follow') return '${n.from} started following you';
+    if (n.type == 'comment') return '${n.from} commented on your post';
+    return '';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
-      body: FutureBuilder<List<dynamic>>(
-        future: future,
-        builder: (context, snap) {
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final items = snap.data!;
-          if (items.isEmpty) {
-            return const Center(child: Text('No notifications yet'));
-          }
-
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, i) {
-              final n = items[i];
-              return ListTile(
-                leading: const Icon(Icons.notifications),
-                title: Text(n['text']),
-                subtitle: Text(n['time'] ?? ''),
-              );
-            },
-          );
-        },
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        backgroundColor: Colors.black,
       ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              children: items.map((n) {
+                return ListTile(
+                  title: Text(
+                    buildText(n),
+                    style: TextStyle(
+                      color: n.seen ? Colors.white54 : Colors.white,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
     );
   }
 }
