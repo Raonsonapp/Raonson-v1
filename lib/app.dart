@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+
+// AUTH
 import 'auth/auth_gate.dart';
+
+// SCREENS
+import 'home/home_screen.dart';
 import 'reels/reels_screen.dart';
 
 /// 🔹 ROOT APP (MaterialApp ONLY HERE)
@@ -10,13 +15,15 @@ class RaonsonApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
+      ),
       home: const AuthGate(),
     );
   }
 }
 
-/// 🔹 MAIN NAVIGATION (after login)
+/// 🔹 MAIN NAVIGATION (AFTER LOGIN)
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -25,16 +32,11 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int index = 0; // ⬅️ аввал Home
+  int index = 0; // ⬅️ Home аввал
 
-  final pages = const [
-    Center(
-      child: Text(
-        'Home',
-        style: TextStyle(color: Colors.white),
-      ),
-    ),
-    ReelsScreen(),
+  final List<Widget> pages = const [
+    HomeScreen(),   // 🏠 HOME (реалӣ)
+    ReelsScreen(),  // 🎬 REELS
     Center(
       child: Text(
         'Search',
@@ -53,7 +55,10 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: pages[index],
+      body: IndexedStack(
+        index: index,
+        children: pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: index,
         onTap: (i) => setState(() => index = i),
