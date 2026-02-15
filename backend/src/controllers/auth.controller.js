@@ -1,61 +1,87 @@
 import jwt from "jsonwebtoken";
+import User from "../models/user.model.js";
 
-const users = {};
-const OTP_TTL = 5 * 60 * 1000;
+const OTP_EXPIRE_MINUTES = 5;
 
-// STEP 1
+// helper
+const generateOtp = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
+// ============================
+// SEND OTP (PHONE OR EMAIL)
+// ============================
 export const sendOtp = async (req, res) => {
-  const { phone } = req.body;
-  if (!phone) return res.status(400).json({ error: "Phone required" });
+  const { phone, email } = req.body;
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-  users[phone] = {
-    phone,
-    otpCode: code,
-    otpExpire: Date.now() + OTP_TTL,
-    verified: false,
-  };
-
-  console.log("OTP (mock):", code);
-  res.json({ ok: true });
-};
-
-// STEP 2
-export const verifyOtp = async (req, res) => {
-  const { phone, code } = req.body;
-  const user = users[phone];
-
-  if (!user) return res.status(400).json({ error: "User not found" });
-  if (user.otpCode !== code || user.otpExpire < Date.now()) {
-    return res.status(400).json({ error: "Invalid or expired code" });
+  if (!phone && !email) {
+    return res.status(400).json({ error: "phone or email required" });
   }
 
-  const tempToken = jwt.sign(
-    { phone },
-    process.env.JWT_SECRET || "dev-secret",
-    { expiresIn: "5m" }
-  );
+  let user = await User.findOne({
+    ...(phone ? { phone } : { email }),
+  });
 
-  res.json({ tempToken });
+  if (!user) {
+    user = await User.create({
+      phone,
+      email,
+    });
+  }
+
+  const otp = generateOtp();
+
+  user.otpCode = otp;
+  user.otpExpire = new Date(Date.now() + OTP_EXPIRE_MINUTES * 60 * 1000);
+  await user.save();
+
+  // MVP: OTP-ро бармегардонем (баъд SMS/Email)
+  console.log("OTP:", otp);
+
+  res.json({
+    success: true,
+    otp, // ❗️MVP ONLY
+  });
 };
 
-// STEP 3
-export const verifyGmail = async (req, res) => {
-  const { email } = req.body;
-  const { phone } = req.user;
+// ============================
+// VERIFY OTP
+// ============================
+export const verifyOtp = async (req, res) => {
+  const { phone, email, otp } = req.body;
 
-  const user = users[phone];
-  if (!user) return res.status(400).json({ error: "User not found" });
+  if ((!phone && !email) || !otp) {
+    return res.status(400).json({ error: "invalid request" });
+  }
 
-  user.email = email;
+  const user = await User.findOne({
+    ...(phone ? { phone } : { email }),
+  });
+
+  if (!user || user.otpCode !== otp) {
+    return res.status(400).json({ error: "invalid otp" });
+  }
+
+  if (user.otpExpire < new Date()) {
+    return res.status(400).json({ error: "otp expired" });
+  }
+
   user.verified = true;
+  user.otpCode = null;
+  user.otpExpire = null;
+  await user.save();
 
   const token = jwt.sign(
-    { phone },
+    { id: user._id },
     process.env.JWT_SECRET || "dev-secret",
-    { expiresIn: "7d" }
+    { expiresIn: "30d" }
   );
 
-  res.json({ token, user: { phone, email } });
+  res.json({
+    token,
+    user: {
+      id: user._id,
+      phone: user.phone,
+      email: user.email,
+    },
+  });
 };
