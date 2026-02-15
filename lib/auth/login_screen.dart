@@ -11,11 +11,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController controller = TextEditingController();
-
   bool loading = false;
   String? error;
-
-  bool get isEmail => controller.text.contains('@');
 
   Future<void> sendOtp() async {
     final value = controller.text.trim();
@@ -34,7 +31,6 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthApi.sendOtp(value);
 
       if (!mounted) return;
-
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -60,45 +56,36 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 60),
 
-              // LOGO / TITLE
               const Text(
-                'Raonson',
+                'Log in or Sign up',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 34,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               const Text(
-                'Sign in with phone or email',
+                'Enter your phone number or email',
                 style: TextStyle(color: Colors.white54),
               ),
 
-              const SizedBox(height: 40),
-
-              // INPUT
+              const SizedBox(height: 30),
               TextField(
                 controller: controller,
-                keyboardType:
-                    isEmail ? TextInputType.emailAddress : TextInputType.phone,
+                keyboardType: TextInputType.emailAddress,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'Phone number or email',
+                  hintText: 'Phone or email',
                   hintStyle: const TextStyle(color: Colors.white38),
                   filled: true,
                   fillColor: const Color(0xFF1C1C1C),
-                  prefixIcon: Icon(
-                    isEmail ? Icons.email_outlined : Icons.phone_outlined,
-                    color: Colors.white54,
-                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                 ),
-                onChanged: (_) => setState(() {}),
               ),
 
               if (error != null) ...[
@@ -106,9 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(error!, style: const TextStyle(color: Colors.red)),
               ],
 
-              const SizedBox(height: 30),
-
-              // SEND OTP BUTTON
+              const Spacer(),
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -122,28 +107,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   child: loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black,
-                          ),
-                        )
+                      ? const CircularProgressIndicator()
                       : const Text(
-                          'Send code',
+                          'Continue',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                ),
-              ),
-
-              const Spacer(),
-
-              // FOOTER
-              const Center(
-                child: Text(
-                  'By continuing you agree to our Terms',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ),
             ],
