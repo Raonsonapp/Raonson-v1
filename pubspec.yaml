@@ -18,6 +18,9 @@ dependencies:
   http: ^1.2.0
   share_plus: ^10.0.2
   shared_preferences: ^2.2.3
+  firebase_core: ^2.27.0
+  firebase_auth: ^4.17.0
+  country_picker: ^2.0.26
 
 dev_dependencies:
   flutter_test:
