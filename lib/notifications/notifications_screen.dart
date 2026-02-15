@@ -20,11 +20,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> load() async {
-    final data = await NotificationApi.fetchForUser('raonson');
-    setState(() {
-      items = data;
-      loading = false;
-    });
+  final data = await NotificationApi.fetch('raonson');
+
+  setState(() {
+    items = data
+        .map<AppNotification>((e) => AppNotification.fromJson(e))
+        .toList();
+    loading = false;
+  });
   }
 
   String text(AppNotification n) {
