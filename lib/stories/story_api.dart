@@ -1,44 +1,31 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants.dart';
-import 'story_model.dart';
 
-class StoriesApi {
-  /// GET stories (grouped by user)
-  static Future<Map<String, List<Story>>> fetchStories() async {
+class StoryApi {
+  // GET STORIES (24h, grouped by user)
+  static Future<Map<String, List<dynamic>>> fetchStories() async {
     final res = await http.get(
       Uri.parse('${Constants.baseUrl}/stories'),
+      headers: {'Content-Type': 'application/json'},
     );
 
     if (res.statusCode != 200) {
       throw Exception('Failed to load stories');
     }
 
-    final Map data = jsonDecode(res.body);
+    final Map<String, dynamic> data = jsonDecode(res.body);
 
-    final Map<String, List<Story>> result = {};
-    data.forEach((user, list) {
-      result[user] =
-          (list as List).map((e) => Story.fromJson(e)).toList();
-    });
-
-    return result;
-  }
-
-  /// VIEW story
-  static Future<void> viewStory(String id, String user) async {
-    await http.post(
-      Uri.parse('${Constants.baseUrl}/stories/$id/view'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'user': user}),
+    return data.map(
+      (key, value) => MapEntry(key, List<dynamic>.from(value)),
     );
   }
 
-  /// CREATE story
-  static Future<void> createStory({
+  // CREATE STORY
+  static Future<void> uploadStory({
     required String user,
     required String mediaUrl,
-    required String mediaType,
+    required String mediaType, // image | video
   }) async {
     await http.post(
       Uri.parse('${Constants.baseUrl}/stories'),
@@ -48,6 +35,15 @@ class StoriesApi {
         'mediaUrl': mediaUrl,
         'mediaType': mediaType,
       }),
+    );
+  }
+
+  // VIEW STORY
+  static Future<void> viewStory(String storyId, String user) async {
+    await http.post(
+      Uri.parse('${Constants.baseUrl}/stories/$storyId/view'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'user': user}),
     );
   }
 }
