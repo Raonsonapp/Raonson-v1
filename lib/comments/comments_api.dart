@@ -19,14 +19,10 @@ class CommentApi {
 
   // ADD COMMENT
   static Future<void> addComment(String postId, String text) async {
-    final res = await http.post(
+    await http.post(
       Uri.parse('${Constants.baseUrl}/comments/$postId'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'text': text}),
     );
-
-    if (res.statusCode != 200) {
-      throw Exception('Failed to add comment');
-    }
   }
 }
