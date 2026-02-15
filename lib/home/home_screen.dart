@@ -31,14 +31,18 @@ class _HomeScreenState extends State<HomeScreen> {
     loadFeed();
   }
 
+  // ================= LOAD FEED =================
   Future<void> loadFeed() async {
     try {
       final data = await HomeApi.fetchFeed();
+
+      // 🔴 ИСЛОҲИ АСОСӢ:
+      // fetchFeed() аллакай List<Post> медиҳад
       setState(() {
-        posts = data.map<Post>((e) => Post.fromJson(e)).toList();
+        posts = List<Post>.from(data);
         loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       loading = false;
       setState(() {});
     }
@@ -54,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.black,
         elevation: 0,
 
-        // ➕ UPLOAD (NO BORDER)
+        // ➕ UPLOAD (Instagram-style, no border)
         leading: IconButton(
           icon: const Icon(Icons.add, size: 28),
           onPressed: () async {
@@ -64,11 +68,13 @@ class _HomeScreenState extends State<HomeScreen> {
               isScrollControlled: true,
               builder: (_) => const UploadModal(),
             );
-            loadFeed(); // 🔄 refresh after upload
+
+            // 🔄 refresh feed after upload
+            loadFeed();
           },
         ),
 
-        // 🧠 LOGO
+        // 🧠 LOGO / TITLE
         title: const Text(
           'Raonson',
           style: TextStyle(
@@ -122,7 +128,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     )
                   else
-                    ...posts.map((p) => PostItem(post: p)),
+                    ...posts.map(
+                      (p) => PostItem(post: p),
+                    ),
                 ],
               ),
             ),
