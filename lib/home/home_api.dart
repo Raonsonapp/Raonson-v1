@@ -1,18 +1,26 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../core/api.dart';
 
 class HomeApi {
-  static const String baseUrl = 'https://YOUR_BACKEND_URL';
-
   static Future<List<dynamic>> fetchFeed() async {
-    final res = await http.get(Uri.parse('$baseUrl/feed'));
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body);
-    }
-    throw Exception('Failed to load feed');
+    final res = await Api.get('/posts/feed');
+    return res;
   }
 
-  static Future<void> likePost(String postId) async {
-    await http.post(Uri.parse('$baseUrl/posts/$postId/like'));
+  static Future<int> toggleLike(String postId) async {
+    final res = await Api.post('/posts/$postId/like');
+    return res['likes'];
+  }
+
+  static Future<bool> toggleSave(String postId) async {
+    final res = await Api.post('/posts/$postId/save');
+    return res['saved'];
+  }
+
+  static Future<List<dynamic>> getComments(String postId) async {
+    return await Api.get('/posts/$postId/comments');
+  }
+
+  static Future<void> addComment(String postId, String text) async {
+    await Api.post('/posts/$postId/comments', body: {'text': text});
   }
 }
