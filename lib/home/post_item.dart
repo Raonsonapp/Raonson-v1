@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'post_model.dart';
 import 'home_api.dart';
-import '../comments/comments_screen.dart';
 
 class PostItem extends StatefulWidget {
   final Post post;
@@ -13,35 +11,13 @@ class PostItem extends StatefulWidget {
 }
 
 class _PostItemState extends State<PostItem> {
-  VideoPlayerController? _videoCtrl;
   bool liking = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    if (widget.post.mediaType == 'video') {
-      _videoCtrl = VideoPlayerController.network(widget.post.mediaUrl)
-        ..initialize().then((_) {
-          setState(() {});
-          _videoCtrl!
-            ..setLooping(true)
-            ..play();
-        });
-    }
-  }
-
-  @override
-  void dispose() {
-    _videoCtrl?.dispose();
-    super.dispose();
-  }
 
   Future<void> onLike() async {
     if (liking) return;
-    liking = true;
 
     setState(() {
+      liking = true;
       widget.post.liked = true;
       widget.post.likes += 1;
     });
@@ -54,13 +30,10 @@ class _PostItemState extends State<PostItem> {
     liking = false;
   }
 
-  Future<void> onSave() async {
-    final saved = await HomeApi.toggleSave(widget.post.id);
-    setState(() => widget.post.saved = saved);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final media = widget.post.media.first;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -74,8 +47,10 @@ class _PostItemState extends State<PostItem> {
                 child: Icon(Icons.person, color: Colors.black),
               ),
               const SizedBox(width: 8),
-              Text(widget.post.user,
-                  style: const TextStyle(color: Colors.white)),
+              Text(
+                widget.post.user,
+                style: const TextStyle(color: Colors.white),
+              ),
               const Spacer(),
               const Icon(Icons.more_vert, color: Colors.white),
             ],
@@ -83,17 +58,11 @@ class _PostItemState extends State<PostItem> {
         ),
 
         // MEDIA
-        widget.post.mediaType == 'video'
-            ? (_videoCtrl != null && _videoCtrl!.value.isInitialized)
-                ? AspectRatio(
-                    aspectRatio: _videoCtrl!.value.aspectRatio,
-                    child: VideoPlayer(_videoCtrl!),
-                  )
-                : const SizedBox(
-                    height: 250,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-            : Image.network(widget.post.mediaUrl),
+        Image.network(
+          media.url,
+          fit: BoxFit.cover,
+          width: double.infinity,
+        ),
 
         // ACTIONS
         Row(
@@ -107,41 +76,21 @@ class _PostItemState extends State<PostItem> {
               ),
               onPressed: onLike,
             ),
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline,
-                  color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        CommentsScreen(postId: widget.post.id),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: () {},
-            ),
+            const Icon(Icons.chat_bubble_outline, color: Colors.white),
+            const SizedBox(width: 8),
+            const Icon(Icons.send, color: Colors.white),
             const Spacer(),
-            IconButton(
-              icon: Icon(
-                widget.post.saved
-                    ? Icons.bookmark
-                    : Icons.bookmark_border,
-                color: Colors.white,
-              ),
-              onPressed: onSave,
-            ),
+            const Icon(Icons.bookmark_border, color: Colors.white),
           ],
         ),
 
-        // LIKES TEXT
+        // LIKES
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            'Liked by ${widget.post.user} and others',
+            widget.post.likes == 0
+                ? 'Be the first to like this'
+                : 'Liked by ${widget.post.user}',
             style: const TextStyle(color: Colors.white),
           ),
         ),
@@ -149,17 +98,9 @@ class _PostItemState extends State<PostItem> {
         // CAPTION
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: RichText(
-            text: TextSpan(
-              style: const TextStyle(color: Colors.white),
-              children: [
-                TextSpan(
-                  text: '${widget.post.user} ',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                TextSpan(text: widget.post.caption),
-              ],
-            ),
+          child: Text(
+            widget.post.caption,
+            style: const TextStyle(color: Colors.white),
           ),
         ),
 
