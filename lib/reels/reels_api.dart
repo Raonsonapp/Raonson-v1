@@ -57,4 +57,25 @@ class ReelsApi {
     final data = jsonDecode(res.body);
     return data['saved'] == true;
   }
+    // GET COMMENTS
+static Future<List<dynamic>> getComments(String reelId) async {
+  final res = await http.get(
+    Uri.parse('${Constants.baseUrl}/comments/$reelId'),
+    headers: {'Content-Type': 'application/json'},
+  );
+
+  if (res.statusCode != 200) {
+    throw Exception('Failed to load comments');
+  }
+
+  return jsonDecode(res.body);
+}
+
+// ADD COMMENT
+static Future<void> addComment(String reelId, String text) async {
+  await http.post(
+    Uri.parse('${Constants.baseUrl}/comments/$reelId'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'text': text}),
+  );
 }
