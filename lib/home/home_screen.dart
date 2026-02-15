@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+
+// STORIES
+import '../stories/stories_bar.dart';
+
+// UPLOAD
 import '../upload/upload_modal.dart';
+
+// POSTS
 import 'post_item.dart';
 import 'post_model.dart';
 import 'home_api.dart';
+
+// NOTIFICATIONS
+import '../notifications/notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,11 +35,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final data = await HomeApi.fetchFeed();
       setState(() {
-        posts = data;
+        posts = data.map<Post>((e) => Post.fromJson(e)).toList();
         loading = false;
       });
     } catch (_) {
-      setState(() => loading = false);
+      loading = false;
+      setState(() {});
     }
   }
 
@@ -38,14 +49,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
 
-      // 🔝 APP BAR (Instagram-style)
+      // ================= APP BAR =================
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
 
-        // ➕ UPLOAD (бе рамка)
+        // ➕ UPLOAD (NO BORDER)
         leading: IconButton(
-          icon: const Icon(Icons.add),
+          icon: const Icon(Icons.add, size: 28),
           onPressed: () async {
             await showModalBottomSheet(
               context: context,
@@ -57,13 +68,13 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
 
-        // 🧠 LOGO / TITLE
+        // 🧠 LOGO
         title: const Text(
           'Raonson',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.4,
+            letterSpacing: 0.6,
           ),
         ),
         centerTitle: true,
@@ -73,12 +84,18 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.favorite_border),
             onPressed: () {
-              // TODO: NotificationsScreen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const NotificationsScreen(),
+                ),
+              );
             },
           ),
         ],
       ),
 
+      // ================= BODY =================
       body: loading
           ? const Center(
               child: CircularProgressIndicator(color: Colors.white),
@@ -88,25 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  // 📸 STORIES (ҳоло static)
-                  SizedBox(
-                    height: 100,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: const [
-                        _StoryItem(isMe: true, username: 'Your story'),
-                        _StoryItem(username: 'raonson'),
-                        _StoryItem(username: 'user_1'),
-                        _StoryItem(username: 'user_2'),
-                        _StoryItem(username: 'user_3'),
-                      ],
-                    ),
-                  ),
+                  // ================= STORIES =================
+                  const StoriesBar(),
 
-                  const Divider(color: Colors.white12, height: 1),
+                  const Divider(color: Colors.white12),
 
-                  // 📰 POSTS
+                  // ================= FEED =================
                   if (posts.isEmpty)
                     const Padding(
                       padding: EdgeInsets.only(top: 80),
@@ -122,57 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-    );
-  }
-}
-
-// ================= STORIES =================
-
-class _StoryItem extends StatelessWidget {
-  final String username;
-  final bool isMe;
-
-  const _StoryItem({
-    this.username = '',
-    this.isMe = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.orange,
-                child: CircleAvatar(
-                  radius: 27,
-                  backgroundColor: Colors.black,
-                  child: const Icon(Icons.person, color: Colors.orange),
-                ),
-              ),
-              if (isMe)
-                const CircleAvatar(
-                  radius: 10,
-                  backgroundColor: Colors.orange,
-                  child: Icon(Icons.add, size: 14, color: Colors.black),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            username,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
