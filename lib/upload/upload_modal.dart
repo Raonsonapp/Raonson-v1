@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'upload_screen.dart';
-import 'reel_upload.dart';
 
 class UploadModal extends StatelessWidget {
   const UploadModal({super.key});
@@ -8,30 +7,16 @@ class UploadModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.image),
-            title: const Text('New Post'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const UploadScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.movie),
-            title: const Text('New Reel'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ReelUpload()),
-              );
-            },
-          ),
-        ],
+      child: ListTile(
+        leading: const Icon(Icons.image),
+        title: const Text('New Post'),
+        onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const UploadScreen()),
+          );
+        },
       ),
     );
   }
