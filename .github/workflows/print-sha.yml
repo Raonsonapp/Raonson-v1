@@ -1,0 +1,24 @@
+name: Print SHA-1
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sha:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Print debug SHA-1
+        run: |
+          keytool -list -v \
+          -keystore ~/.android/debug.keystore \
+          -storepass android \
+          -alias androiddebugkey \
+          -keypass android
