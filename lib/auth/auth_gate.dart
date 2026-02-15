@@ -1,44 +1,29 @@
 import 'package:flutter/material.dart';
 import 'auth_api.dart';
-import '../app.dart';
 import 'send_otp_screen.dart';
+import '../app.dart';
 
-class AuthGate extends StatefulWidget {
+class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
   @override
-  State<AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<AuthGate> {
-  bool loading = true;
-  bool loggedIn = false;
-
-  @override
-  void initState() {
-    super.initState();
-    checkAuth();
-  }
-
-  Future<void> checkAuth() async {
-    final token = await AuthApi.getToken();
-    setState(() {
-      loggedIn = token != null;
-      loading = false;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    return FutureBuilder<String?>(
+      future: AuthApi.getToken(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Colors.black,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    return loggedIn
-        ? const MainNavigation()
-        : const SendOtpScreen();
+        if (snapshot.hasData && snapshot.data != null) {
+          return const MainNavigation();
+        }
+
+        return const SendOtpScreen();
+      },
+    );
   }
 }
