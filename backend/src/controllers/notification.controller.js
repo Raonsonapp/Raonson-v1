@@ -1,36 +1,26 @@
 import { notifications } from "../data/notifications.store.js";
 
-// GET notifications for user
-export const getNotifications = (req, res) => {
-  const user = req.query.user || "raonson";
-
-  const list = notifications
-    .filter(n => n.to === user)
-    .sort((a, b) => b.createdAt - a.createdAt);
-
-  res.json(list);
-};
-
-// MARK ALL AS SEEN
-export const markSeen = (req, res) => {
-  const user = req.body.user || "raonson";
-
-  notifications.forEach(n => {
-    if (n.to === user) n.seen = true;
-  });
-
-  res.json({ success: true });
-};
-
-// INTERNAL: add notification
 export const addNotification = ({ to, from, type, postId }) => {
-  notifications.push({
+  notifications.unshift({
     id: Date.now().toString(),
     to,
     from,
-    type, // like | follow | comment
+    type, // like | comment | follow
     postId,
     seen: false,
     createdAt: new Date(),
   });
+};
+
+export const getNotifications = (req, res) => {
+  const { user } = req.query;
+  const list = notifications.filter(n => n.to === user);
+  res.json(list);
+};
+
+export const markSeen = (req, res) => {
+  const { id } = req.params;
+  const n = notifications.find(n => n.id === id);
+  if (n) n.seen = true;
+  res.json({ ok: true });
 };
