@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
+
 import 'story_api.dart';
-import 'story_model.dart';
-import 'story_viewer.dart';
 import 'story_upload_screen.dart';
+import 'story_viewer.dart';
+
+class Story {
+  final String id;
+  final String user;
+  final String mediaUrl;
+  final String mediaType;
+
+  Story({
+    required this.id,
+    required this.user,
+    required this.mediaUrl,
+    required this.mediaType,
+  });
+
+  factory Story.fromJson(Map<String, dynamic> json) {
+    return Story(
+      id: json['id'],
+      user: json['user'],
+      mediaUrl: json['mediaUrl'],
+      mediaType: json['mediaType'],
+    );
+  }
+}
 
 class StoriesBar extends StatefulWidget {
   const StoriesBar({super.key});
@@ -12,77 +35,62 @@ class StoriesBar extends StatefulWidget {
 }
 
 class _StoriesBarState extends State<StoriesBar> {
-  Map<String, List<Story>> storiesByUser = {};
-  bool loading = true;
+  Map<String, List<Story>> grouped = {};
 
   @override
   void initState() {
     super.initState();
-    loadStories();
+    load();
   }
 
-  Future<void> loadStories() async {
-    try {
-      final data = await StoryApi.fetchStories();
+  Future<void> load() async {
+    final data = await StoryApi.fetchStories();
+    final Map<String, List<Story>> result = {};
 
-      storiesByUser = data.map(
-        (user, list) => MapEntry(
-          user,
-          list.map((e) => Story.fromJson(e)).toList(),
-        ),
-      );
-    } finally {
-      setState(() => loading = false);
-    }
+    data.forEach((user, list) {
+      result[user] =
+          (list as List).map((e) => Story.fromJson(e)).toList();
+    });
+
+    setState(() => grouped = result);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const SizedBox(height: 100);
-    }
-
-    final users = storiesByUser.keys.toList();
+    final users = grouped.keys.toList();
 
     return SizedBox(
       height: 100,
-      child: ListView.builder(
+      child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.all(12),
-        itemCount: users.length + 1,
-        itemBuilder: (_, i) {
-          // ➕ YOUR STORY
-          if (i == 0) {
-            return _StoryItem(
-              username: 'Your story',
-              isMe: true,
-              onTap: () async {
-                final ok = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const StoryUploadScreen(),
-                  ),
-                );
-                if (ok == true) loadStories();
-              },
-            );
-          }
-
-          final user = users[i - 1];
-          final stories = storiesByUser[user]!;
-
-          return _StoryItem(
-            username: user,
-            onTap: () {
-              Navigator.push(
+        children: [
+          _StoryItem(
+            isMe: true,
+            username: 'Your story',
+            onTap: () async {
+              final ok = await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => StoryViewer(stories: stories),
-                ),
+                MaterialPageRoute(builder: (_) => const StoryUploadScreen()),
               );
+              if (ok == true) load();
             },
-          );
-        },
+          ),
+          ...users.map((u) => _StoryItem(
+                username: u,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StoryViewer(
+                        user: u,
+                        stories: grouped[u]!,
+                      ),
+                    ),
+                  );
+                },
+              )),
+        ],
       ),
     );
   }
@@ -120,10 +128,8 @@ class _StoryItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              username,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
+            Text(username,
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
           ],
         ),
       ),
