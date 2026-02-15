@@ -8,52 +8,51 @@ class AuthHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFFF6A00),
-              Color(0xFFFF0000),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 80),
-
+              // LOGO (no background)
               Image.asset(
-                'assets/logo.png',
+                'assets/logo.png', // 🔴 БЕ ФОН
                 width: 120,
               ),
-
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
               const Text(
                 'Login or Register',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 32),
 
               _btn(
-                context,
                 text: 'Continue with Phone',
-                screen: const PhoneLoginScreen(),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PhoneLoginScreen()),
+                  );
+                },
               ),
 
               const SizedBox(height: 16),
 
               _btn(
-                context,
                 text: 'Continue with Email',
-                screen: const EmailLoginScreen(),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EmailLoginScreen()),
+                  );
+                },
               ),
             ],
           ),
@@ -62,24 +61,17 @@ class AuthHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _btn(
-    BuildContext context, {
-    required String text,
-    required Widget screen,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
+  Widget _btn({required String text, required VoidCallback onTap}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
       child: ElevatedButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => screen),
-        ),
+        onPressed: onTap,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
-          minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(30),
           ),
         ),
         child: Text(text, style: const TextStyle(fontSize: 16)),
