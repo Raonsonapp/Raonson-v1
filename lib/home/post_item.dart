@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'post_model.dart';
+import '../comments/comments_screen.dart';
 import 'home_api.dart';
 
 class PostItem extends StatefulWidget {
@@ -11,19 +12,27 @@ class PostItem extends StatefulWidget {
 }
 
 class _PostItemState extends State<PostItem> {
-  Future<void> onLike() async {
-    setState(() {
-      widget.post.liked = true;
-      widget.post.likes += 1;
-    });
+  late int likes;
+  late bool liked;
 
-    final likes = await HomeApi.like(widget.post.id);
-    setState(() => widget.post.likes = likes);
+  @override
+  void initState() {
+    super.initState();
+    likes = widget.post.likes;
+    liked = widget.post.liked;
   }
 
-  Future<void> onSave() async {
-    final saved = await HomeApi.toggleSave(widget.post.id);
-    setState(() => widget.post.saved = saved);
+  Future<void> onLike() async {
+    if (liked) return;
+
+    setState(() {
+      liked = true;
+      likes += 1;
+    });
+
+    try {
+      await HomeApi.likePost(widget.post.id);
+    } catch (_) {}
   }
 
   @override
@@ -31,47 +40,55 @@ class _PostItemState extends State<PostItem> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // HEADER
+        // 🔝 HEADER
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              const CircleAvatar(backgroundColor: Colors.orange),
+              const CircleAvatar(
+                backgroundColor: Colors.orange,
+                child: Icon(Icons.person, color: Colors.black),
+              ),
               const SizedBox(width: 8),
-              Text(widget.post.user,
-                  style: const TextStyle(color: Colors.white)),
+              Text(
+                widget.post.username,
+                style: const TextStyle(color: Colors.white),
+              ),
               const Spacer(),
               const Icon(Icons.more_vert, color: Colors.white),
             ],
           ),
         ),
 
-        // MEDIA
-        SizedBox(
-          height: 380,
-          child: PageView(
-            children: widget.post.media
-                .map((url) => Image.network(url, fit: BoxFit.cover))
-                .toList(),
-          ),
+        // 🖼 IMAGE
+        Image.network(
+          widget.post.imageUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
         ),
 
-        // ACTIONS
+        // ❤️ 💬 ✈️ 🔖 ACTIONS
         Row(
           children: [
             IconButton(
               icon: Icon(
-                widget.post.liked
-                    ? Icons.favorite
-                    : Icons.favorite_border,
-                color: widget.post.liked ? Colors.red : Colors.white,
+                liked ? Icons.favorite : Icons.favorite_border,
+                color: liked ? Colors.red : Colors.white,
               ),
               onPressed: onLike,
             ),
             IconButton(
-              icon:
-                  const Icon(Icons.mode_comment_outlined, color: Colors.white),
-              onPressed: () {},
+              icon: const Icon(Icons.chat_bubble_outline,
+                  color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        CommentsScreen(postId: widget.post.id),
+                  ),
+                );
+              },
             ),
             IconButton(
               icon: const Icon(Icons.send, color: Colors.white),
@@ -79,27 +96,27 @@ class _PostItemState extends State<PostItem> {
             ),
             const Spacer(),
             IconButton(
-              icon: Icon(
-                widget.post.saved
-                    ? Icons.bookmark
-                    : Icons.bookmark_border,
-                color: Colors.white,
-              ),
-              onPressed: onSave,
+              icon: const Icon(Icons.bookmark_border,
+                  color: Colors.white),
+              onPressed: () {},
             ),
           ],
         ),
 
+        // ❤️ LIKES TEXT
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            '${widget.post.likes} likes',
+            liked
+                ? 'Liked by ${widget.post.username}'
+                : 'Be the first to like this',
             style: const TextStyle(color: Colors.white),
           ),
         ),
 
+        // 📝 CAPTION
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Text(
             widget.post.caption,
             style: const TextStyle(color: Colors.white),
