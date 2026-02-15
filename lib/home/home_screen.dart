@@ -1,98 +1,71 @@
 import 'package:flutter/material.dart';
-import 'post_model.dart';
-import 'post_item.dart';
+import 'home_api.dart';
+import 'models/post_model.dart';
+import 'widgets/post_item.dart';
+import '../upload/upload_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final posts = [
-      Post(
-        username: 'raonson',
-        imageUrl:
-            'https://images.unsplash.com/photo-1501785888041-af3ef285b470',
-      ),
-      Post(
-        username: 'user_1',
-        imageUrl:
-            'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f',
-      ),
-    ];
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
+class _HomeScreenState extends State<HomeScreen> {
+  List<Post> posts = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    final data = await HomeApi.fetchFeed();
+    posts = data.map<Post>((e) => Post.fromJson(e)).toList();
+    loading = false;
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.add_box_outlined),
-          onPressed: () {}, // upload
+          icon: const Icon(Icons.add),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const UploadScreen()),
+            );
+          },
         ),
-        title: const Text('Raonson'),
+        title: const Text(
+          'Raonson',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite_border),
-            onPressed: () {},
+            onPressed: () {
+              // likes / followers screen (баъд)
+            },
           ),
         ],
       ),
-      body: ListView(
-        children: [
-          SizedBox(
-            height: 110,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                _addStory(),
-                _story('raonson'),
-                _story('ardamehr'),
-                _story('mehrat'),
-                _story('qurbiddin'),
-              ],
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView(
+                children: posts.map((p) => PostItem(post: p)).toList(),
+              ),
             ),
-          ),
-          const Divider(color: Colors.white12),
-          ...posts.map((p) => PostItem(post: p)),
-        ],
-      ),
-    );
-  }
-
-  Widget _addStory() {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Column(
-        children: const [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.grey,
-            child: Icon(Icons.add, color: Colors.black),
-          ),
-          SizedBox(height: 6),
-          Text('Your story', style: TextStyle(fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _story(String name) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.orange,
-            child: CircleAvatar(
-              radius: 25,
-              backgroundColor: Colors.black,
-              child: const Icon(Icons.person, color: Colors.orange),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(name, style: const TextStyle(fontSize: 12)),
-        ],
-      ),
     );
   }
 }
