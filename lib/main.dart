@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'auth/auth_gate.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const RaonsonApp());
 }
 
