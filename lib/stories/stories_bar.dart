@@ -1,35 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'story_api.dart';
+import 'story_model.dart';
 import 'story_upload_screen.dart';
 import 'story_viewer.dart';
-
-/// ================= MODEL =================
-
-class Story {
-  final String id;
-  final String user;
-  final String mediaUrl;
-  final String mediaType;
-
-  Story({
-    required this.id,
-    required this.user,
-    required this.mediaUrl,
-    required this.mediaType,
-  });
-
-  factory Story.fromJson(Map<String, dynamic> json) {
-    return Story(
-      id: json['id'].toString(),
-      user: json['user'],
-      mediaUrl: json['mediaUrl'],
-      mediaType: json['mediaType'],
-    );
-  }
-}
-
-/// ================= STORIES BAR =================
 
 class StoriesBar extends StatefulWidget {
   const StoriesBar({super.key});
@@ -39,7 +13,6 @@ class StoriesBar extends StatefulWidget {
 }
 
 class _StoriesBarState extends State<StoriesBar> {
-  /// grouped stories by user
   Map<String, List<Story>> grouped = {};
   bool loading = true;
 
@@ -63,7 +36,7 @@ class _StoriesBarState extends State<StoriesBar> {
         grouped = result;
         loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       loading = false;
       setState(() {});
     }
@@ -83,10 +56,10 @@ class _StoriesBarState extends State<StoriesBar> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.all(12),
               children: [
-                /// ➕ YOUR STORY
+                // ➕ YOUR STORY
                 _StoryItem(
-                  isMe: true,
                   username: 'Your story',
+                  isMe: true,
                   onTap: () async {
                     final ok = await Navigator.push(
                       context,
@@ -98,31 +71,28 @@ class _StoriesBarState extends State<StoriesBar> {
                   },
                 ),
 
-                /// 👥 OTHER USERS STORIES
-                ...users.map((u) {
-                  final stories = grouped[u]!;
-                  return _StoryItem(
-                    username: u,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => StoryViewer(
-                            stories: stories,
-                            startIndex: 0,
+                // 👥 OTHER USERS
+                ...users.map((u) => _StoryItem(
+                      username: u,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => StoryViewer(
+                              stories: grouped[u]!,
+                              startIndex: 0,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                }).toList(),
+                        );
+                      },
+                    )),
               ],
             ),
     );
   }
 }
 
-/// ================= STORY AVATAR =================
+// ================= STORY CIRCLE =================
 
 class _StoryItem extends StatelessWidget {
   final String username;
@@ -156,17 +126,11 @@ class _StoryItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            SizedBox(
-              width: 70,
-              child: Text(
-                username,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                ),
+            Text(
+              username,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
               ),
             ),
           ],
