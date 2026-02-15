@@ -10,8 +10,8 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  List<AppNotification> items = [];
   bool loading = true;
+  List<AppNotification> items = [];
 
   @override
   void initState() {
@@ -20,19 +20,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> load() async {
-    final data = await NotificationApi.fetch();
-    items = data
-        .map<AppNotification>((e) => AppNotification.fromJson(e))
-        .toList();
-    setState(() => loading = false);
-    await NotificationApi.markSeen();
+    final data = await NotificationApi.fetch('raonson');
+    setState(() {
+      items = data;
+      loading = false;
+    });
   }
 
-  String buildText(AppNotification n) {
-    if (n.type == 'like') return '${n.from} liked your post';
-    if (n.type == 'follow') return '${n.from} started following you';
-    if (n.type == 'comment') return '${n.from} commented on your post';
-    return '';
+  String text(AppNotification n) {
+    switch (n.type) {
+      case 'like':
+        return 'liked your post';
+      case 'comment':
+        return 'commented on your post';
+      case 'follow':
+        return 'started following you';
+      default:
+        return '';
+    }
   }
 
   @override
@@ -45,17 +50,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: items.map((n) {
+          : ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final n = items[i];
                 return ListTile(
-                  title: Text(
-                    buildText(n),
-                    style: TextStyle(
-                      color: n.seen ? Colors.white54 : Colors.white,
+                  leading: const CircleAvatar(
+                    backgroundColor: Colors.orange,
+                    child: Icon(Icons.person, color: Colors.black),
+                  ),
+                  title: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(color: Colors.white),
+                      children: [
+                        TextSpan(
+                          text: n.from,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: ' ${text(n)}'),
+                      ],
                     ),
                   ),
+                  trailing: n.seen
+                      ? null
+                      : const Icon(Icons.circle,
+                          size: 8, color: Colors.blue),
+                  onTap: () async {
+                    await NotificationApi.markSeen(n.id);
+                    load();
+                  },
                 );
-              }).toList(),
+              },
             ),
     );
   }
