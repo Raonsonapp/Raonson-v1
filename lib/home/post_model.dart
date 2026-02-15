@@ -1,31 +1,29 @@
 class Post {
   final String id;
-  final String user;
+  final String username;
+  final String imageUrl;
   final String caption;
-  final List<String> media;
+
   int likes;
   bool liked;
-  bool saved;
 
   Post({
     required this.id,
-    required this.user,
+    required this.username,
+    required this.imageUrl,
     required this.caption,
-    required this.media,
-    required this.likes,
+    this.likes = 0,
     this.liked = false,
-    this.saved = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
-      id: json['id'],
-      user: json['user'],
+      id: json['id'].toString(),
+      username: json['user'] ?? 'user',
+      imageUrl: json['imageUrl'],
       caption: json['caption'] ?? '',
-      media: List<String>.from(json['media'] ?? []),
       likes: json['likes'] ?? 0,
       liked: json['liked'] ?? false,
-      saved: json['saved'] ?? false,
     );
   }
 }
