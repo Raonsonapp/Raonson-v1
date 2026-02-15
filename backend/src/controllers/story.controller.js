@@ -1,19 +1,17 @@
 import { stories } from "../data/stories.store.js";
+import { addNotification } from "./notification.controller.js";
 
-// ⏱ 24 hours in ms
 const DAY = 24 * 60 * 60 * 1000;
 
-// GET STORIES (only last 24h, grouped by user)
+// GET STORIES (24h)
 export const getStories = (req, res) => {
   const now = Date.now();
-
-  const activeStories = stories.filter(
+  const active = stories.filter(
     s => now - new Date(s.createdAt).getTime() < DAY
   );
 
-  // group by user
   const grouped = {};
-  for (const s of activeStories) {
+  for (const s of active) {
     if (!grouped[s.user]) grouped[s.user] = [];
     grouped[s.user].push(s);
   }
@@ -24,7 +22,6 @@ export const getStories = (req, res) => {
 // CREATE STORY
 export const createStory = (req, res) => {
   const { user, mediaUrl, mediaType } = req.body;
-
   if (!user || !mediaUrl || !mediaType) {
     return res.status(400).json({ error: "Missing fields" });
   }
@@ -33,8 +30,10 @@ export const createStory = (req, res) => {
     id: Date.now().toString(),
     user,
     mediaUrl,
-    mediaType, // image | video
+    mediaType,
     views: [],
+    likes: [],
+    replies: [],
     createdAt: new Date(),
   };
 
@@ -50,9 +49,59 @@ export const viewStory = (req, res) => {
   const story = stories.find(s => s.id === id);
   if (!story) return res.status(404).json({ error: "Story not found" });
 
-  if (!story.views.includes(user)) {
-    story.views.push(user);
+  if (!story.views.includes(user)) story.views.push(user);
+  res.json({ views: story.views.length });
+};
+
+// ❤️ LIKE STORY
+export const likeStory = (req, res) => {
+  const { id } = req.params;
+  const { user } = req.body;
+
+  const story = stories.find(s => s.id === id);
+  if (!story) return res.status(404).json({ error: "Story not found" });
+
+  if (!story.likes.includes(user)) {
+    story.likes.push(user);
+
+    if (story.user !== user) {
+      addNotification({
+        to: story.user,
+        from: user,
+        type: "story_like",
+        storyId: story.id,
+      });
+    }
   }
 
-  res.json({ views: story.views.length });
+  res.json({ likes: story.likes.length });
+};
+
+// 💬 REPLY STORY
+export const replyStory = (req, res) => {
+  const { id } = req.params;
+  const { user, text } = req.body;
+
+  const story = stories.find(s => s.id === id);
+  if (!story) return res.status(404).json({ error: "Story not found" });
+  if (!text) return res.status(400).json({ error: "Text required" });
+
+  story.replies.push({
+    id: Date.now().toString(),
+    user,
+    text,
+    createdAt: new Date(),
+  });
+
+  if (story.user !== user) {
+    addNotification({
+      to: story.user,
+      from: user,
+      type: "story_reply",
+      storyId: story.id,
+      text,
+    });
+  }
+
+  res.json({ ok: true });
 };
