@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants.dart';
 
-class CommentsApi {
-  static Future<List<dynamic>> fetchComments(String reelId) async {
+class CommentApi {
+  // GET COMMENTS
+  static Future<List<dynamic>> fetchComments(String postId) async {
     final res = await http.get(
-      Uri.parse('${Constants.baseUrl}/comments/$reelId'),
+      Uri.parse('${Constants.baseUrl}/comments/$postId'),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -16,14 +17,15 @@ class CommentsApi {
     return jsonDecode(res.body);
   }
 
-  static Future<void> addComment(String reelId, String text) async {
+  // ADD COMMENT
+  static Future<void> addComment(String postId, String text) async {
     final res = await http.post(
-      Uri.parse('${Constants.baseUrl}/comments/$reelId'),
+      Uri.parse('${Constants.baseUrl}/comments/$postId'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'text': text}),
     );
 
-    if (res.statusCode != 200 && res.statusCode != 201) {
+    if (res.statusCode != 200) {
       throw Exception('Failed to add comment');
     }
   }
