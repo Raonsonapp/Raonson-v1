@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-import '../app.dart';
 import 'auth_api.dart';
+import '../app.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
-  final String value; // phone or email
-
-  const VerifyOtpScreen({
-    super.key,
-    required this.value,
-  });
+  final String value;
+  const VerifyOtpScreen({super.key, required this.value});
 
   @override
   State<VerifyOtpScreen> createState() => _VerifyOtpScreenState();
@@ -16,15 +12,14 @@ class VerifyOtpScreen extends StatefulWidget {
 
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   final TextEditingController otpController = TextEditingController();
-
   bool loading = false;
   String? error;
 
-  Future<void> verifyOtp() async {
+  Future<void> verify() async {
     final otp = otpController.text.trim();
 
     if (otp.length < 4) {
-      setState(() => error = 'Enter valid code');
+      setState(() => error = 'Invalid code');
       return;
     }
 
@@ -34,7 +29,6 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     });
 
     try {
-      // ✅ VERIFY + SAVE TOKEN
       await AuthApi.verifyOtp(
         value: widget.value,
         otp: otp,
@@ -42,14 +36,14 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
       if (!mounted) return;
 
-      // ✅ GO TO APP (AuthGate will decide)
+      // 🔥 Auto-login → app
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const RaonsonApp()),
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
         (_) => false,
       );
     } catch (e) {
-      setState(() => error = 'Invalid code');
+      setState(() => error = 'Wrong code');
     } finally {
       setState(() => loading = false);
     }
@@ -67,9 +61,8 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
             children: [
               const SizedBox(height: 40),
 
-              // TITLE
               const Text(
-                'Enter code',
+                'Enter confirmation code',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 26,
@@ -78,25 +71,21 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               ),
 
               const SizedBox(height: 12),
-
-              // SUBTITLE
               Text(
-                'We sent a code to ${widget.value}',
+                'Code sent to ${widget.value}',
                 style: const TextStyle(color: Colors.white54),
               ),
 
               const SizedBox(height: 30),
-
-              // OTP INPUT
               TextField(
                 controller: otpController,
                 keyboardType: TextInputType.number,
-                maxLength: 6,
                 style: const TextStyle(
                   color: Colors.white,
                   letterSpacing: 6,
                   fontSize: 20,
                 ),
+                maxLength: 6,
                 decoration: InputDecoration(
                   counterText: '',
                   hintText: '••••••',
@@ -104,29 +93,23 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                   filled: true,
                   fillColor: const Color(0xFF1C1C1C),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                 ),
               ),
 
-              // ERROR
               if (error != null) ...[
                 const SizedBox(height: 10),
-                Text(
-                  error!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                Text(error!, style: const TextStyle(color: Colors.red)),
               ],
 
               const Spacer(),
-
-              // VERIFY BUTTON
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: loading ? null : verifyOtp,
+                  onPressed: loading ? null : verify,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.black,
@@ -135,16 +118,9 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     ),
                   ),
                   child: loading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.black,
-                          ),
-                        )
+                      ? const CircularProgressIndicator()
                       : const Text(
-                          'Verify',
+                          'Confirm',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                 ),
