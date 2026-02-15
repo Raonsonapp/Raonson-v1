@@ -25,12 +25,11 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final data = await HomeApi.fetchFeed();
       setState(() {
-        posts = data.map<Post>((e) => Post.fromJson(e)).toList();
+        posts = data;
         loading = false;
       });
-    } catch (e) {
-      loading = false;
-      setState(() {});
+    } catch (_) {
+      setState(() => loading = false);
     }
   }
 
@@ -47,12 +46,14 @@ class _HomeScreenState extends State<HomeScreen> {
         // ➕ UPLOAD (бе рамка)
         leading: IconButton(
           icon: const Icon(Icons.add),
-          onPressed: () {
-            showModalBottomSheet(
+          onPressed: () async {
+            await showModalBottomSheet(
               context: context,
               backgroundColor: Colors.black,
+              isScrollControlled: true,
               builder: (_) => const UploadModal(),
-            ).then((_) => loadFeed()); // 🔄 refresh after upload
+            );
+            loadFeed(); // 🔄 refresh after upload
           },
         ),
 
@@ -62,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
+            letterSpacing: 0.4,
           ),
         ),
         centerTitle: true,
@@ -72,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.favorite_border),
             onPressed: () {
-              // баъд NotificationsScreen
+              // TODO: NotificationsScreen
             },
           ),
         ],
@@ -87,12 +88,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  // 📸 STORIES (ҳоло static, баъд зинда)
+                  // 📸 STORIES (ҳоло static)
                   SizedBox(
                     height: 100,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: const [
                         _StoryItem(isMe: true, username: 'Your story'),
                         _StoryItem(username: 'raonson'),
@@ -103,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  const Divider(color: Colors.white12),
+                  const Divider(color: Colors.white12, height: 1),
 
                   // 📰 POSTS
                   if (posts.isEmpty)
@@ -142,16 +143,25 @@ class _StoryItem extends StatelessWidget {
       padding: const EdgeInsets.only(right: 12),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: Colors.orange,
-            child: CircleAvatar(
-              radius: 27,
-              backgroundColor: Colors.black,
-              child: isMe
-                  ? const Icon(Icons.add, color: Colors.orange)
-                  : const Icon(Icons.person, color: Colors.orange),
-            ),
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.orange,
+                child: CircleAvatar(
+                  radius: 27,
+                  backgroundColor: Colors.black,
+                  child: const Icon(Icons.person, color: Colors.orange),
+                ),
+              ),
+              if (isMe)
+                const CircleAvatar(
+                  radius: 10,
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.add, size: 14, color: Colors.black),
+                ),
+            ],
           ),
           const SizedBox(height: 6),
           Text(
