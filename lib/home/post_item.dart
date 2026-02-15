@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'post_model.dart';
+import 'home_api.dart';
 
 class PostItem extends StatefulWidget {
   final Post post;
@@ -10,6 +11,21 @@ class PostItem extends StatefulWidget {
 }
 
 class _PostItemState extends State<PostItem> {
+  Future<void> onLike() async {
+    setState(() {
+      widget.post.liked = true;
+      widget.post.likes += 1;
+    });
+
+    final likes = await HomeApi.like(widget.post.id);
+    setState(() => widget.post.likes = likes);
+  }
+
+  Future<void> onSave() async {
+    final saved = await HomeApi.toggleSave(widget.post.id);
+    setState(() => widget.post.saved = saved);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -20,20 +36,25 @@ class _PostItemState extends State<PostItem> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              const CircleAvatar(
-                backgroundColor: Colors.orange,
-                child: Icon(Icons.person, color: Colors.black),
-              ),
+              const CircleAvatar(backgroundColor: Colors.orange),
               const SizedBox(width: 8),
-              Text(widget.post.username),
+              Text(widget.post.user,
+                  style: const TextStyle(color: Colors.white)),
               const Spacer(),
-              const Icon(Icons.more_vert),
+              const Icon(Icons.more_vert, color: Colors.white),
             ],
           ),
         ),
 
-        // IMAGE
-        Image.network(widget.post.imageUrl),
+        // MEDIA
+        SizedBox(
+          height: 380,
+          child: PageView(
+            children: widget.post.media
+                .map((url) => Image.network(url, fit: BoxFit.cover))
+                .toList(),
+          ),
+        ),
 
         // ACTIONS
         Row(
@@ -45,24 +66,26 @@ class _PostItemState extends State<PostItem> {
                     : Icons.favorite_border,
                 color: widget.post.liked ? Colors.red : Colors.white,
               ),
-              onPressed: () {
-                setState(() {
-                  widget.post.liked = !widget.post.liked;
-                });
-              },
+              onPressed: onLike,
             ),
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline),
+              icon:
+                  const Icon(Icons.mode_comment_outlined, color: Colors.white),
               onPressed: () {},
             ),
             IconButton(
-              icon: const Icon(Icons.send),
+              icon: const Icon(Icons.send, color: Colors.white),
               onPressed: () {},
             ),
             const Spacer(),
             IconButton(
-              icon: const Icon(Icons.bookmark_border),
-              onPressed: () {},
+              icon: Icon(
+                widget.post.saved
+                    ? Icons.bookmark
+                    : Icons.bookmark_border,
+                color: Colors.white,
+              ),
+              onPressed: onSave,
             ),
           ],
         ),
@@ -70,10 +93,16 @@ class _PostItemState extends State<PostItem> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            widget.post.liked
-                ? 'Liked by raonson'
-                : 'Be the first to like this',
-            style: const TextStyle(color: Colors.white70),
+            '${widget.post.likes} likes',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            widget.post.caption,
+            style: const TextStyle(color: Colors.white),
           ),
         ),
 
