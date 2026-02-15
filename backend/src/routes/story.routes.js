@@ -3,17 +3,16 @@ import {
   getStories,
   createStory,
   viewStory,
+  likeStory,
+  replyStory,
 } from "../controllers/story.controller.js";
 
 const router = express.Router();
 
-// GET all stories (24h)
 router.get("/", getStories);
-
-// CREATE story
 router.post("/", createStory);
-
-// VIEW story
 router.post("/:id/view", viewStory);
+router.post("/:id/like", likeStory);
+router.post("/:id/reply", replyStory);
 
 export default router;
