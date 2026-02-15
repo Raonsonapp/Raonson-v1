@@ -1,45 +1,54 @@
 import 'package:flutter/material.dart';
-import 'feed_api.dart';
+import 'post_widget.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<dynamic>> feed;
-
-  @override
-  void initState() {
-    super.initState();
-    feed = FeedApi.getFeed();
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Raonson')),
-      body: FutureBuilder(
-        future: feed,
-        builder: (c, s) {
-          if (s.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (s.hasError) return const Center(child: Text('Error'));
-
-          final items = s.data as List;
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (_, i) {
-              final post = items[i];
-              return ListTile(
-                title: Text(post['title'] ?? ''),
-              );
-            },
-          );
-        },
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/logo.png',
+              height: 28,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Raonson',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        actions: const [
+          Icon(Icons.favorite_border, color: Colors.white),
+          SizedBox(width: 16),
+          Icon(Icons.send, color: Colors.white),
+          SizedBox(width: 12),
+        ],
+      ),
+      body: ListView(
+        children: const [
+          PostWidget(
+            username: 'raonson',
+            imageUrl: 'https://picsum.photos/500/500',
+          ),
+          PostWidget(
+            username: 'user_1',
+            imageUrl: 'https://picsum.photos/501/501',
+          ),
+          PostWidget(
+            username: 'user_2',
+            imageUrl: 'https://picsum.photos/502/502',
+          ),
+        ],
       ),
     );
   }
