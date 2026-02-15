@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import '../core/constants.dart';
 
 class CommentApi {
-  // GET COMMENTS FOR POST
   static Future<List<dynamic>> fetchComments(String postId) async {
     final res = await http.get(
       Uri.parse('${Constants.baseUrl}/comments/$postId'),
@@ -17,7 +16,6 @@ class CommentApi {
     return jsonDecode(res.body);
   }
 
-  // ADD COMMENT
   static Future<void> addComment(String postId, String text) async {
     final res = await http.post(
       Uri.parse('${Constants.baseUrl}/comments/$postId'),
