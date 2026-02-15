@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../app.dart';
-import 'send_otp_screen.dart';
+import 'auth_home_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -11,7 +11,6 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: Colors.black,
@@ -19,13 +18,11 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // logged in
         if (snapshot.hasData) {
           return const MainNavigation();
         }
 
-        // not logged in
-        return const SendOtpScreen();
+        return const AuthHomeScreen();
       },
     );
   }
