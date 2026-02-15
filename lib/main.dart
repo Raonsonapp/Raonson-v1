@@ -11,10 +11,9 @@ class RaonsonApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
-      home: const AuthGate(),
+      home: AuthGate(), // ✅ ҚАДАМИ 5 ДАР ИН ҶО
     );
   }
 }
