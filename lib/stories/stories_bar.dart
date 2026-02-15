@@ -4,6 +4,8 @@ import 'story_api.dart';
 import 'story_upload_screen.dart';
 import 'story_viewer.dart';
 
+/// ================= MODEL =================
+
 class Story {
   final String id;
   final String user;
@@ -19,13 +21,15 @@ class Story {
 
   factory Story.fromJson(Map<String, dynamic> json) {
     return Story(
-      id: json['id'],
+      id: json['id'].toString(),
       user: json['user'],
       mediaUrl: json['mediaUrl'],
       mediaType: json['mediaType'],
     );
   }
 }
+
+/// ================= STORIES BAR =================
 
 class StoriesBar extends StatefulWidget {
   const StoriesBar({super.key});
@@ -35,24 +39,34 @@ class StoriesBar extends StatefulWidget {
 }
 
 class _StoriesBarState extends State<StoriesBar> {
+  /// grouped stories by user
   Map<String, List<Story>> grouped = {};
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    load();
+    loadStories();
   }
 
-  Future<void> load() async {
-    final data = await StoryApi.fetchStories();
-    final Map<String, List<Story>> result = {};
+  Future<void> loadStories() async {
+    try {
+      final data = await StoryApi.fetchStories();
 
-    data.forEach((user, list) {
-      result[user] =
-          (list as List).map((e) => Story.fromJson(e)).toList();
-    });
+      final Map<String, List<Story>> result = {};
+      data.forEach((user, list) {
+        result[user] =
+            (list as List).map((e) => Story.fromJson(e)).toList();
+      });
 
-    setState(() => grouped = result);
+      setState(() {
+        grouped = result;
+        loading = false;
+      });
+    } catch (e) {
+      loading = false;
+      setState(() {});
+    }
   }
 
   @override
@@ -61,40 +75,54 @@ class _StoriesBarState extends State<StoriesBar> {
 
     return SizedBox(
       height: 100,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.all(12),
-        children: [
-          _StoryItem(
-            isMe: true,
-            username: 'Your story',
-            onTap: () async {
-              final ok = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const StoryUploadScreen()),
-              );
-              if (ok == true) load();
-            },
-          ),
-          ...users.map((u) => _StoryItem(
-                username: u,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StoryViewer(
-                        user: u,
-                        stories: grouped[u]!,
+      child: loading
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            )
+          : ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.all(12),
+              children: [
+                /// ➕ YOUR STORY
+                _StoryItem(
+                  isMe: true,
+                  username: 'Your story',
+                  onTap: () async {
+                    final ok = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StoryUploadScreen(),
                       ),
-                    ),
+                    );
+                    if (ok == true) loadStories();
+                  },
+                ),
+
+                /// 👥 OTHER USERS STORIES
+                ...users.map((u) {
+                  final stories = grouped[u]!;
+                  return _StoryItem(
+                    username: u,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StoryViewer(
+                            stories: stories,
+                            startIndex: 0,
+                          ),
+                        ),
+                      );
+                    },
                   );
-                },
-              )),
-        ],
-      ),
+                }).toList(),
+              ],
+            ),
     );
   }
 }
+
+/// ================= STORY AVATAR =================
 
 class _StoryItem extends StatelessWidget {
   final String username;
@@ -128,8 +156,19 @@ class _StoryItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text(username,
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
+            SizedBox(
+              width: 70,
+              child: Text(
+                username,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ],
         ),
       ),
