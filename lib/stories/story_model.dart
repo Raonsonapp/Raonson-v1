@@ -13,7 +13,7 @@ class Story {
 
   factory Story.fromJson(Map<String, dynamic> json) {
     return Story(
-      id: json['id'],
+      id: json['id'].toString(),
       user: json['user'],
       mediaUrl: json['mediaUrl'],
       mediaType: json['mediaType'],
