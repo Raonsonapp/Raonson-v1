@@ -2,8 +2,7 @@ class Story {
   final String id;
   final String user;
   final String mediaUrl;
-  final String mediaType; // image | video
-  final DateTime createdAt;
+  final String mediaType;
   final int views;
 
   Story({
@@ -11,7 +10,6 @@ class Story {
     required this.user,
     required this.mediaUrl,
     required this.mediaType,
-    required this.createdAt,
     required this.views,
   });
 
@@ -21,7 +19,6 @@ class Story {
       user: json['user'],
       mediaUrl: json['mediaUrl'],
       mediaType: json['mediaType'],
-      createdAt: DateTime.parse(json['createdAt']),
       views: (json['views'] as List?)?.length ?? 0,
     );
   }
