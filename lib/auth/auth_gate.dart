@@ -10,18 +10,14 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: Colors.black,
             body: Center(child: CircularProgressIndicator()),
           );
         }
-
-        if (snapshot.hasData) {
-          return const MainNavigation();
-        }
-
+        if (snap.hasData) return const MainNavigation();
         return const AuthHomeScreen();
       },
     );
