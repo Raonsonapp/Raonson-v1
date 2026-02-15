@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     // Flutter Gradle plugin (must be last)
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
