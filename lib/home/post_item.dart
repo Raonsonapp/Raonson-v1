@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+
 import '../comments/comments_screen.dart';
 import 'post_model.dart';
 import 'home_api.dart';
@@ -17,16 +18,17 @@ class _PostItemState extends State<PostItem> {
 
   Future<void> onLike() async {
     if (liking) return;
+    liking = true;
 
     setState(() {
       widget.post.liked = !widget.post.liked;
       widget.post.likes += widget.post.liked ? 1 : -1;
     });
 
-    liking = true;
     try {
-      await HomeApi.likePost(widget.post.id);
+      await HomeApi.likePost(widget.post.id, 'raonson');
     } catch (_) {}
+
     liking = false;
   }
 
@@ -59,7 +61,7 @@ class _PostItemState extends State<PostItem> {
           ),
         ),
 
-        // ================= MEDIA =================
+        // ================= MEDIA (IMAGE / VIDEO) =================
         SizedBox(
           height: 360,
           child: PageView.builder(
@@ -90,14 +92,18 @@ class _PostItemState extends State<PostItem> {
               onPressed: onLike,
             ),
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline,
-                  color: Colors.white),
+              icon: const Icon(
+                Icons.chat_bubble_outline,
+                color: Colors.white,
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        CommentsScreen(postId: widget.post.id),
+                    builder: (_) => CommentsScreen(
+                      targetId: widget.post.id,
+                      type: 'post',
+                    ),
                   ),
                 );
               },
@@ -115,7 +121,9 @@ class _PostItemState extends State<PostItem> {
                 color: Colors.white,
               ),
               onPressed: () {
-                setState(() => widget.post.saved = !widget.post.saved);
+                setState(() {
+                  widget.post.saved = !widget.post.saved;
+                });
               },
             ),
           ],
@@ -126,7 +134,7 @@ class _PostItemState extends State<PostItem> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             widget.post.likes > 0
-                ? 'Liked by ${widget.post.user}'
+                ? '${widget.post.likes} likes'
                 : 'Be the first to like this',
             style: const TextStyle(
               color: Colors.white,
@@ -164,7 +172,7 @@ class _PostItemState extends State<PostItem> {
   }
 }
 
-// ================= VIDEO POST =================
+// ================= VIDEO PLAYER =================
 
 class _VideoPost extends StatefulWidget {
   final String url;
@@ -182,6 +190,7 @@ class _VideoPostState extends State<_VideoPost> {
     super.initState();
     controller = VideoPlayerController.network(widget.url)
       ..initialize().then((_) {
+        if (!mounted) return;
         setState(() {});
         controller
           ..setLooping(true)
