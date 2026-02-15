@@ -7,6 +7,7 @@ import postRoutes from "./routes/post.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import reelRoutes from "./routes/reel.routes.js";
+import storyRoutes from "./routes/story.routes.js";
 
 const app = express();
 
@@ -28,5 +29,6 @@ app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/follow", followRoutes);
 app.use("/reels", reelRoutes);
+app.use("/stories", storyRoutes);
 
 export default app;
