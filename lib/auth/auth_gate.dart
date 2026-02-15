@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../auth/auth_api.dart';
-import '../auth/login_screen.dart';
+import 'auth_api.dart';
 import '../app.dart';
+import 'send_otp_screen.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -24,7 +24,7 @@ class _AuthGateState extends State<AuthGate> {
     final token = await AuthApi.getToken();
 
     setState(() {
-      loggedIn = token != null;
+      loggedIn = token != null && token.isNotEmpty;
       loading = false;
     });
   }
@@ -40,12 +40,12 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
 
-    // 🔐 Агар token ҳаст → app
+    // 🔐 IF LOGGED IN → HOME
     if (loggedIn) {
       return const MainNavigation();
     }
 
-    // 🚪 Агар token нест → login
-    return const LoginScreen();
+    // 🚪 ELSE → LOGIN
+    return const SendOtpScreen();
   }
 }
