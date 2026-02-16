@@ -1,11 +1,11 @@
 import { stories } from "../data/stories.store.js";
 
+// ⏱ 24 hours
 const DAY = 24 * 60 * 60 * 1000;
 
 // GET STORIES
 export const getStories = (req, res) => {
   const now = Date.now();
-
   const active = stories.filter(
     s => now - new Date(s.createdAt).getTime() < DAY
   );
@@ -19,20 +19,20 @@ export const getStories = (req, res) => {
   res.json(grouped);
 };
 
-// CREATE STORY (WITH FILE)
+// CREATE STORY
 export const createStory = (req, res) => {
-  const { user, mediaType } = req.body;
-  if (!req.file) {
-    return res.status(400).json({ error: "File missing" });
-  }
+  const { user, mediaUrl, mediaType } = req.body;
 
-  const mediaUrl = `${req.protocol}://${req.get("host")}/uploads/stories/${req.file.filename}`;
+  if (!user || !mediaUrl || !mediaType) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
 
   const story = {
     id: Date.now().toString(),
     user,
     mediaUrl,
     mediaType,
+    likes: [],
     views: [],
     createdAt: new Date(),
   };
@@ -47,11 +47,26 @@ export const viewStory = (req, res) => {
   const { user } = req.body;
 
   const story = stories.find(s => s.id === id);
-  if (!story) return res.status(404).json({ error: "Not found" });
+  if (!story) return res.status(404).json({ error: "Story not found" });
 
-  if (!story.views.includes(user)) {
+  if (user && !story.views.includes(user)) {
     story.views.push(user);
   }
 
   res.json({ views: story.views.length });
+};
+
+// ❤️ LIKE STORY  ✅ ИН ҶО МУҲИМ
+export const likeStory = (req, res) => {
+  const { id } = req.params;
+  const { user } = req.body;
+
+  const story = stories.find(s => s.id === id);
+  if (!story) return res.status(404).json({ error: "Story not found" });
+
+  if (!story.likes.includes(user)) {
+    story.likes.push(user);
+  }
+
+  res.json({ likes: story.likes.length });
 };
