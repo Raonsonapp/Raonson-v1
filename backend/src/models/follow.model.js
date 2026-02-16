@@ -2,12 +2,12 @@ import mongoose from "mongoose";
 
 const FollowSchema = new mongoose.Schema(
   {
-    from: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
-    to: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+    from: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    to: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     status: {
       type: String,
-      enum: ["following", "requested"],
-      default: "following",
+      enum: ["pending", "accepted"],
+      default: "pending",
     },
   },
   { timestamps: true }
