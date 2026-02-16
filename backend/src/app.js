@@ -1,7 +1,8 @@
+// backend/src/app.js
 import express from "express";
 import cors from "cors";
-import { connectDB } from "./config/db.js";
 
+// ROUTES
 import authRoutes from "./routes/auth.routes.js";
 import postRoutes from "./routes/post.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
@@ -12,20 +13,16 @@ import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 
-// 🔗 DB connect (МУҲИМ)
-connectDB();
-
-// middlewares
+// ================= MIDDLEWARE =================
 app.use(cors());
 app.use(express.json());
-app.use("/uploads",
 
-// health check
+// ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
   res.json({ status: "Raonson backend running ✅" });
 });
 
-// routes
+// ================= ROUTES =================
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
@@ -35,4 +32,3 @@ app.use("/stories", storyRoutes);
 app.use("/notifications", notificationRoutes);
 
 export default app;
-express.static("uploads"));
