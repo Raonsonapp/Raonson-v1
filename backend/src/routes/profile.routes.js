@@ -1,13 +1,10 @@
 import express from "express";
-import {
-  getProfile,
-  updateProfile,
-} from "../controllers/profile.controller.js";
+import { getProfile, toggleFollow } from "../controllers/profile.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/:username", authMiddleware, getProfile);
-router.put("/", authMiddleware, updateProfile);
+router.get("/:id", authMiddleware, getProfile);
+router.post("/:id/follow", authMiddleware, toggleFollow);
 
 export default router;
