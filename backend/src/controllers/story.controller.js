@@ -1,72 +1,107 @@
-import { stories } from "../data/stories.store.js";
+import { Story } from "../models/story.model.js";
+import { addNotification } from "./notification.controller.js";
 
-// ⏱ 24 hours
-const DAY = 24 * 60 * 60 * 1000;
+/* ======================================================
+   CREATE STORY
+====================================================== */
+export async function createStory(req, res) {
+  try {
+    const { mediaUrl, mediaType } = req.body;
 
-// GET STORIES
-export const getStories = (req, res) => {
-  const now = Date.now();
-  const active = stories.filter(
-    s => now - new Date(s.createdAt).getTime() < DAY
-  );
+    if (!mediaUrl || !mediaType) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
 
-  const grouped = {};
-  for (const s of active) {
-    if (!grouped[s.user]) grouped[s.user] = [];
-    grouped[s.user].push(s);
+    const story = await Story.create({
+      user: req.user._id,
+      mediaUrl,
+      mediaType,
+    });
+
+    const populated = await story.populate(
+      "user",
+      "username avatar verified"
+    );
+
+    res.json(populated);
+  } catch (err) {
+    console.error("CREATE STORY ERROR:", err);
+    res.status(500).json({ error: "Failed to create story" });
   }
+}
 
-  res.json(grouped);
-};
+/* ======================================================
+   GET STORIES (grouped by user)
+====================================================== */
+export async function getStories(req, res) {
+  try {
+    const stories = await Story.find({
+      expiresAt: { $gt: new Date() },
+    })
+      .populate("user", "username avatar verified")
+      .sort({ createdAt: 1 })
+      .lean();
 
-// CREATE STORY
-export const createStory = (req, res) => {
-  const { user, mediaUrl, mediaType } = req.body;
+    // group by user
+    const grouped = {};
+    for (const s of stories) {
+      const uid = s.user._id.toString();
+      if (!grouped[uid]) grouped[uid] = [];
+      grouped[uid].push(s);
+    }
 
-  if (!user || !mediaUrl || !mediaType) {
-    return res.status(400).json({ error: "Missing fields" });
+    res.json(grouped);
+  } catch (err) {
+    console.error("GET STORIES ERROR:", err);
+    res.status(500).json({ error: "Failed to load stories" });
   }
+}
 
-  const story = {
-    id: Date.now().toString(),
-    user,
-    mediaUrl,
-    mediaType,
-    likes: [],
-    views: [],
-    createdAt: new Date(),
-  };
+/* ======================================================
+   VIEW STORY
+====================================================== */
+export async function viewStory(req, res) {
+  try {
+    await Story.findByIdAndUpdate(req.params.id, {
+      $addToSet: { views: req.user._id },
+    });
 
-  stories.push(story);
-  res.json(story);
-};
-
-// VIEW STORY
-export const viewStory = (req, res) => {
-  const { id } = req.params;
-  const { user } = req.body;
-
-  const story = stories.find(s => s.id === id);
-  if (!story) return res.status(404).json({ error: "Story not found" });
-
-  if (user && !story.views.includes(user)) {
-    story.views.push(user);
+    res.json({ viewed: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to view story" });
   }
+}
 
-  res.json({ views: story.views.length });
-};
+/* ======================================================
+   LIKE / UNLIKE STORY
+====================================================== */
+export async function toggleLikeStory(req, res) {
+  try {
+    const story = await Story.findById(req.params.id);
+    if (!story) {
+      return res.status(404).json({ error: "Story not found" });
+    }
 
-// ❤️ LIKE STORY  ✅ ИН ҶО МУҲИМ
-export const likeStory = (req, res) => {
-  const { id } = req.params;
-  const { user } = req.body;
+    const liked = story.likes.includes(req.user._id);
 
-  const story = stories.find(s => s.id === id);
-  if (!story) return res.status(404).json({ error: "Story not found" });
+    await Story.findByIdAndUpdate(
+      story._id,
+      liked
+        ? { $pull: { likes: req.user._id } }
+        : { $addToSet: { likes: req.user._id } }
+    );
 
-  if (!story.likes.includes(user)) {
-    story.likes.push(user);
+    if (!liked && story.user.toString() !== req.user._id.toString()) {
+      addNotification({
+        to: story.user,
+        from: req.user._id,
+        type: "story_like",
+        storyId: story._id,
+      });
+    }
+
+    res.json({ liked: !liked });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to like story" });
   }
-
-  res.json({ likes: story.likes.length });
-};
+}
