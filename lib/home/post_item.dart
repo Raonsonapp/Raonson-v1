@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
-import '../comments/comments_screen.dart';
 import 'post_model.dart';
 import 'home_api.dart';
 
@@ -15,7 +14,6 @@ class PostItem extends StatefulWidget {
 
 class _PostItemState extends State<PostItem> {
   bool liking = false;
-  bool saved = false;
 
   Future<void> onLike() async {
     if (liking) return;
@@ -38,23 +36,21 @@ class _PostItemState extends State<PostItem> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ================= HEADER =================
+        // HEADER
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.all(12),
           child: Row(
             children: [
               const CircleAvatar(
-                radius: 16,
                 backgroundColor: Colors.orange,
-                child: Icon(Icons.person, size: 18, color: Colors.black),
+                child: Icon(Icons.person, color: Colors.black),
               ),
               const SizedBox(width: 8),
               Text(
                 widget.post.user,
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               const Icon(Icons.more_vert, color: Colors.white),
@@ -62,7 +58,7 @@ class _PostItemState extends State<PostItem> {
           ),
         ),
 
-        // ================= MEDIA =================
+        // MEDIA (carousel)
         SizedBox(
           height: 360,
           child: PageView.builder(
@@ -70,7 +66,7 @@ class _PostItemState extends State<PostItem> {
             itemBuilder: (_, i) {
               final m = widget.post.media[i];
               return m.type == 'video'
-                  ? _VideoPost(url: m.url)
+                  ? _Video(url: m.url)
                   : Image.network(
                       m.url,
                       fit: BoxFit.cover,
@@ -80,7 +76,7 @@ class _PostItemState extends State<PostItem> {
           ),
         ),
 
-        // ================= ACTIONS =================
+        // ACTIONS
         Row(
           children: [
             IconButton(
@@ -92,45 +88,23 @@ class _PostItemState extends State<PostItem> {
               ),
               onPressed: onLike,
             ),
-            IconButton(
-              icon: const Icon(
-                Icons.chat_bubble_outline,
-                color: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        CommentsScreen(postId: widget.post.id),
-                  ),
-                );
-              },
+            const IconButton(
+              icon: Icon(Icons.chat_bubble_outline,
+                  color: Colors.white),
+              onPressed: null,
             ),
-            IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: () {},
-            ),
-            const Spacer(),
-            IconButton(
-              icon: Icon(
-                saved ? Icons.bookmark : Icons.bookmark_border,
-                color: Colors.white,
-              ),
-              onPressed: () {
-                setState(() => saved = !saved);
-              },
+            const IconButton(
+              icon: Icon(Icons.send, color: Colors.white),
+              onPressed: null,
             ),
           ],
         ),
 
-        // ================= LIKES =================
+        // LIKES
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
-            widget.post.likes > 0
-                ? '${widget.post.likes} likes'
-                : 'Be the first to like this',
+            '${widget.post.likes} likes',
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
@@ -138,18 +112,17 @@ class _PostItemState extends State<PostItem> {
           ),
         ),
 
-        // ================= CAPTION =================
+        // CAPTION
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.all(12),
           child: RichText(
             text: TextSpan(
               children: [
                 TextSpan(
                   text: widget.post.user,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 const TextSpan(text: '  '),
                 TextSpan(
@@ -160,24 +133,20 @@ class _PostItemState extends State<PostItem> {
             ),
           ),
         ),
-
-        const SizedBox(height: 12),
       ],
     );
   }
 }
 
-// ================= VIDEO PLAYER =================
-
-class _VideoPost extends StatefulWidget {
+class _Video extends StatefulWidget {
   final String url;
-  const _VideoPost({required this.url});
+  const _Video({required this.url});
 
   @override
-  State<_VideoPost> createState() => _VideoPostState();
+  State<_Video> createState() => _VideoState();
 }
 
-class _VideoPostState extends State<_VideoPost> {
+class _VideoState extends State<_Video> {
   late VideoPlayerController controller;
 
   @override
