@@ -11,6 +11,7 @@ const router = express.Router();
 
 router.get("/feed", authMiddleware, getFeed);
 router.post("/", authMiddleware, createPost);
+
 router.post("/:id/like", authMiddleware, toggleLike);
 router.post("/:id/save", authMiddleware, toggleSave);
 
