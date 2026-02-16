@@ -1,22 +1,47 @@
 import mongoose from "mongoose";
 
-const reelSchema = new mongoose.Schema(
+const ReelSchema = new mongoose.Schema(
   {
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
+
     videoUrl: { type: String, required: true },
-    caption: { type: String },
+    caption: { type: String, default: "" },
 
-    // 🔥 LIKE SYSTEM
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    views: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
 
-    likesCount: { type: Number, default: 0 },
-    viewsCount: { type: Number, default: 0 },
+    likedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    savedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    shares: { type: Number, default: 0 },
+
+    // 🔥 algorithm score
+    score: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Reel", reelSchema);
+export const Reel = mongoose.model("Reel", ReelSchema);
