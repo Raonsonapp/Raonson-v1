@@ -1,8 +1,8 @@
 import { Post } from "../models/post.model.js";
 import { User } from "../models/user.model.js";
-import { getUserFeed } from "../services/feed.service.js";
+import { getPersonalFeed } from "../services/feed.service.js";
 
-// CREATE POST
+// ================= CREATE POST =================
 export async function createPost(req, res, next) {
   try {
     const { caption, media } = req.body;
@@ -23,34 +23,28 @@ export async function createPost(req, res, next) {
   }
 }
 
-// 🔥 INSTAGRAM FEED
+// ================= PERSONAL FEED =================
 export async function getFeed(req, res, next) {
   try {
-    const { limit, cursor } = req.query;
+    const page = Number(req.query.page || 1);
+    const limit = Number(req.query.limit || 10);
 
-    const posts = await getUserFeed({
+    const posts = await getPersonalFeed({
       userId: req.user._id,
-      limit: Number(limit) || 20,
-      cursor,
+      page,
+      limit,
     });
 
-    res.json({
-      items: posts,
-      nextCursor:
-        posts.length > 0
-          ? posts[posts.length - 1].createdAt
-          : null,
-    });
+    res.json(posts);
   } catch (e) {
     next(e);
   }
 }
 
-// LIKE / UNLIKE
+// ================= LIKE =================
 export async function toggleLike(req, res, next) {
   try {
     const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ error: "Post not found" });
 
     const liked = post.likes.includes(req.user._id);
 
@@ -65,7 +59,7 @@ export async function toggleLike(req, res, next) {
   }
 }
 
-// SAVE / UNSAVE
+// ================= SAVE =================
 export async function toggleSave(req, res, next) {
   try {
     const post = await Post.findById(req.params.id);
@@ -81,4 +75,4 @@ export async function toggleSave(req, res, next) {
   } catch (e) {
     next(e);
   }
-       }
+                                     }
