@@ -1,6 +1,5 @@
 import express from "express";
 import {
-  createPost,
   getFeed,
   toggleLike,
   toggleSave,
@@ -9,9 +8,7 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", authMiddleware, getFeed);
-router.post("/", authMiddleware, createPost);
-
+router.get("/feed", authMiddleware, getFeed);
 router.post("/:id/like", authMiddleware, toggleLike);
 router.post("/:id/save", authMiddleware, toggleSave);
 
