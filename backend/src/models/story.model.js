@@ -2,48 +2,19 @@ import mongoose from "mongoose";
 
 const StorySchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
-
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     mediaUrl: { type: String, required: true },
-    mediaType: {
-      type: String,
-      enum: ["image", "video"],
-      required: true,
-    },
+    mediaType: { type: String, enum: ["image", "video"], required: true },
 
-    views: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+    views: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
-    likes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-
-    expiresAt: {
-      type: Date,
-      index: { expires: 0 }, // ⏱ auto delete
-    },
+    expiresAt: { type: Date, required: true },
   },
   { timestamps: true }
 );
 
-// 24h TTL
-StorySchema.pre("save", function (next) {
-  if (!this.expiresAt) {
-    this.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  }
-  next();
-});
+// 🔥 Auto-expire index
+StorySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const Story = mongoose.model("Story", StorySchema);
