@@ -1,10 +1,18 @@
 import express from "express";
-import { createPost, getFeed } from "../controllers/post.controller.js";
+import {
+  createPost,
+  getFeed,
+  toggleLike,
+  toggleSave,
+} from "../controllers/post.controller.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// ❌ authMiddleware-ро гирифтем (MVP)
-router.post("/", createPost);
-router.get("/", getFeed);
+router.get("/", authMiddleware, getFeed);
+router.post("/", authMiddleware, createPost);
+
+router.post("/:id/like", authMiddleware, toggleLike);
+router.post("/:id/save", authMiddleware, toggleSave);
 
 export default router;
