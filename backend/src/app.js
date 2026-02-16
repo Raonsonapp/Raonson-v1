@@ -6,6 +6,7 @@ import commentRoutes from "./routes/comment.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
 import searchRoutes from "./routes/search.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.use("/comments", commentRoutes);
 app.use("/follow", followRoutes);
 app.use("/profile", profileRoutes);
 app.use("/search", searchRoutes);
+app.use("/chats", chatRoutes);
 
 export default app;
