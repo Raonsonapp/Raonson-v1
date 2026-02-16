@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../profile/profile_screen.dart';
+import '../home/post_item.dart';
 import 'search_api.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -10,61 +12,118 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final ctrl = TextEditingController();
-  Map<String, dynamic>? result;
+  List users = [];
+  List posts = [];
   bool loading = false;
 
-  void doSearch() async {
-    if (ctrl.text.isEmpty) return;
+  Future<void> onSearch(String q) async {
+    if (q.isEmpty) {
+      setState(() {
+        users = [];
+        posts = [];
+      });
+      return;
+    }
+
     setState(() => loading = true);
-    result = await SearchApi.search(ctrl.text);
-    setState(() => loading = false);
+    final res = await SearchApi.search(q);
+    setState(() {
+      users = res['users'];
+      posts = res['posts'];
+      loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
+        backgroundColor: Colors.black,
         title: TextField(
           controller: ctrl,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
             hintText: 'Search',
+            hintStyle: TextStyle(color: Colors.white54),
             border: InputBorder.none,
           ),
-          onSubmitted: (_) => doSearch(),
+          onChanged: onSearch,
         ),
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : result == null
-              ? const Center(child: Text('Search users or posts'))
-              : ListView(
-                  children: [
-                    if ((result!['users'] as List).isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text('Users',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      ...(result!['users'] as List).map((u) => ListTile(
-                            leading: const CircleAvatar(
-                                child: Icon(Icons.person)),
-                            title: Text(u['username']),
-                          )),
-                    ],
-                    if ((result!['posts'] as List).isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Text('Posts',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                      ...(result!['posts'] as List).map((p) => Image.network(
-                            p['image'],
-                            height: 220,
-                            fit: BoxFit.cover,
-                          )),
-                    ]
-                  ],
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            )
+          : ListView(
+              children: [
+                if (users.isNotEmpty) _Users(users),
+                if (posts.isNotEmpty) _Posts(posts),
+              ],
+            ),
+    );
+  }
+}
+
+class _Users extends StatelessWidget {
+  final List users;
+  const _Users(this.users);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: users.map((u) {
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundImage:
+                u['avatar'] != null ? NetworkImage(u['avatar']) : null,
+          ),
+          title: Row(
+            children: [
+              Text(u['username'],
+                  style: const TextStyle(color: Colors.white)),
+              if (u['verified'] == true)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child:
+                      Icon(Icons.verified, color: Colors.blue, size: 16),
                 ),
+            ],
+          ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfileScreen(userId: u['_id']),
+              ),
+            );
+          },
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _Posts extends StatelessWidget {
+  final List posts;
+  const _Posts(this.posts);
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      itemCount: posts.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 1,
+        mainAxisSpacing: 1,
+      ),
+      itemBuilder: (_, i) {
+        final media = posts[i]['media'][0];
+        return Image.network(media['url'], fit: BoxFit.cover);
+      },
     );
   }
 }
