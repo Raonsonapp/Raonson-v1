@@ -1,24 +1,18 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema(
+const UserSchema = new mongoose.Schema(
   {
     username: {
       type: String,
       unique: true,
       required: true,
-      lowercase: true,
-      trim: true,
+      index: true,
     },
 
     email: {
       type: String,
       unique: true,
-      required: true,
-    },
-
-    passwordHash: {
-      type: String,
-      required: true,
+      sparse: true,
     },
 
     avatar: {
@@ -35,26 +29,17 @@ const userSchema = new mongoose.Schema(
     verified: {
       type: Boolean,
       default: false,
+      index: true,
     },
 
-    followersCount: {
-      type: Number,
-      default: 0,
-    },
+    followersCount: { type: Number, default: 0 },
+    followingCount: { type: Number, default: 0 },
+    postsCount: { type: Number, default: 0 },
 
-    followingCount: {
-      type: Number,
-      default: 0,
-    },
-
-    postsCount: {
-      type: Number,
-      default: 0,
-    },
+    // 🔒 auth
+    passwordHash: String,
   },
-  {
-    timestamps: true, // createdAt, updatedAt
-  }
+  { timestamps: true }
 );
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.model("User", UserSchema);
