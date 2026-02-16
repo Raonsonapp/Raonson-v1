@@ -1,38 +1,29 @@
 import { User } from "../models/user.model.js";
 import { Post } from "../models/post.model.js";
+import { Reel } from "../models/reel.model.js";
 
-// GET PROFILE
+// GET PROFILE (Instagram-style)
 export async function getProfile(req, res) {
-  const user = await User.findById(req.params.id)
-    .select("-password")
-    .populate("followers following", "username avatar verified");
+  const { username } = req.params;
+
+  const user = await User.findOne({ username })
+    .select("username avatar bio verified followers following postsCount");
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
 
   const posts = await Post.find({ user: user._id })
-    .sort({ createdAt: -1 })
-    .select("media");
+    .select("media likes")
+    .sort({ createdAt: -1 });
+
+  const reels = await Reel.find({ user: user._id })
+    .select("video cover likes")
+    .sort({ createdAt: -1 });
 
   res.json({
     user,
     posts,
-    isFollowing: user.followers.includes(req.user._id),
+    reels,
   });
-}
-
-// FOLLOW / UNFOLLOW
-export async function toggleFollow(req, res) {
-  const targetId = req.params.id;
-  const me = req.user._id;
-
-  const target = await User.findById(targetId);
-  const isFollowing = target.followers.includes(me);
-
-  await User.findByIdAndUpdate(targetId, {
-    [isFollowing ? "$pull" : "$addToSet"]: { followers: me },
-  });
-
-  await User.findByIdAndUpdate(me, {
-    [isFollowing ? "$pull" : "$addToSet"]: { following: targetId },
-  });
-
-  res.json({ following: !isFollowing });
 }
