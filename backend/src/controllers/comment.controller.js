@@ -1,28 +1,53 @@
-import { comments } from "../data/comments.store.js";
-import { v4 as uuid } from "uuid";
+import { Comment } from "../models/comment.model.js";
+import { Post } from "../models/post.model.js";
 
-export const getComments = (req, res) => {
-  const { reelId } = req.params;
-  const list = comments.filter(c => c.reelId === reelId);
-  res.json(list);
-};
+// ADD COMMENT
+export async function addComment(req, res) {
+  const { postId, text, parentId } = req.body;
 
-export const addComment = (req, res) => {
-  const { reelId } = req.params;
-  const { text } = req.body;
+  const comment = await Comment.create({
+    post: postId,
+    user: req.user._id,
+    text,
+    parent: parentId || null,
+  });
 
-  if (!text) {
-    return res.status(400).json({ error: "Text required" });
+  // sync counter
+  await Post.findByIdAndUpdate(postId, {
+    $inc: { commentsCount: 1 },
+  });
+
+  res.json(comment);
+}
+
+// GET COMMENTS FOR POST
+export async function getComments(req, res) {
+  const comments = await Comment.find({
+    post: req.params.postId,
+  })
+    .populate("user", "username avatar verified")
+    .sort({ createdAt: 1 });
+
+  res.json(comments);
+}
+
+// DELETE COMMENT
+export async function deleteComment(req, res) {
+  const comment = await Comment.findById(req.params.id);
+  if (!comment) return res.sendStatus(404);
+
+  // only owner can delete
+  if (comment.user.toString() !== req.user._id.toString()) {
+    return res.sendStatus(403);
   }
 
-  const comment = {
-    id: uuid(),
-    reelId,
-    user: "guest",
-    text,
-    createdAt: new Date(),
-  };
+  await Comment.deleteMany({
+    $or: [{ _id: comment._id }, { parent: comment._id }],
+  });
 
-  comments.unshift(comment);
-  res.json(comment);
-};
+  await Post.findByIdAndUpdate(comment.post, {
+    $inc: { commentsCount: -1 },
+  });
+
+  res.json({ success: true });
+    }
