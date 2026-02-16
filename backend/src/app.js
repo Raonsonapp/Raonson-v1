@@ -13,6 +13,7 @@ import followRoutes from "./routes/follow.routes.js";
 import storyRoutes from "./routes/story.routes.js";
 import reelRoutes from "./routes/reel.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import profileRoutes from "./routes/profile.routes.js";
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/follow", followRoutes);
 app.use("/stories", storyRoutes);
 app.use("/reels", reelRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/profile", profileRoutes);
 
 // ================= ERROR =================
 app.use(errorHandler);
