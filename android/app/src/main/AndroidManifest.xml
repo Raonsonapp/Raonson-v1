@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
     <!-- ✅ INTERNET PERMISSION (ҶОЙИ ДУРУСТ) -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <activity
