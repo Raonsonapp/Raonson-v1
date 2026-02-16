@@ -1,19 +1,18 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import {
-  follow,
-  unfollow,
-  accept,
-  reject,
+  followUser,
+  unfollowUser,
+  acceptRequest,
+  rejectRequest,
 } from "../controllers/follow.controller.js";
 
 const router = express.Router();
 
-router.post("/:id/follow", authMiddleware, follow);
-router.post("/:id/unfollow", authMiddleware, unfollow);
+router.post("/:userId/follow", authMiddleware, followUser);
+router.post("/:userId/unfollow", authMiddleware, unfollowUser);
 
-// private account
-router.post("/:id/accept", authMiddleware, accept);
-router.post("/:id/reject", authMiddleware, reject);
+router.post("/:userId/accept", authMiddleware, acceptRequest);
+router.post("/:userId/reject", authMiddleware, rejectRequest);
 
 export default router;
