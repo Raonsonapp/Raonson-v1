@@ -1,78 +1,159 @@
 import { Post } from "../models/post.model.js";
-import { Follow } from "../models/follow.model.js";
+import { User } from "../models/user.model.js";
+import { addNotification } from "./notification.controller.js";
 
-// ================= FEED =================
+/* =====================================================
+   CREATE POST
+   ===================================================== */
+export async function createPost(req, res) {
+  try {
+    const { caption, media } = req.body;
+
+    if (!media || !Array.isArray(media) || media.length === 0) {
+      return res.status(400).json({ error: "Media is required" });
+    }
+
+    const post = await Post.create({
+      user: req.user._id,
+      caption: caption || "",
+      media, // [{ url, type }]
+    });
+
+    // increase posts count
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { postsCount: 1 },
+    });
+
+    const populated = await post.populate(
+      "user",
+      "username avatar verified"
+    );
+
+    res.json(populated);
+  } catch (err) {
+    console.error("createPost error:", err);
+    res.status(500).json({ error: "Failed to create post" });
+  }
+}
+
+/* =====================================================
+   GET FEED (FOLLOWING ONLY – Instagram logic)
+   ===================================================== */
 export async function getFeed(req, res) {
-  const userId = req.user._id;
-  const page = Math.max(1, Number(req.query.page || 1));
-  const limit = Math.min(20, Number(req.query.limit || 10));
-  const skip = (page - 1) * limit;
+  try {
+    const me = req.user._id;
 
-  // 🔹 users I follow
-  const following = await Follow.find({ follower: userId })
-    .select("following");
+    const user = await User.findById(me).select("following");
 
-  const followingIds = following.map(f => f.following);
+    const posts = await Post.find({
+      user: { $in: user.following },
+    })
+      .populate("user", "username avatar verified")
+      .sort({ createdAt: -1 })
+      .limit(50);
 
-  // 🔹 posts from following
-  const posts = await Post.find({ user: { $in: followingIds } })
-    .populate("user", "username avatar verified")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit + 1);
-
-  const hasMore = posts.length > limit;
-  if (hasMore) posts.pop();
-
-  const items = posts.map(p => ({
-    _id: p._id,
-    user: p.user,
-    caption: p.caption,
-    media: p.media,
-    likesCount: p.likes.length,
-    commentsCount: p.commentsCount || 0,
-    liked: p.likes.includes(userId),
-    saved: p.saves.includes(userId),
-    createdAt: p.createdAt,
-  }));
-
-  res.json({
-    items,
-    nextPage: page + 1,
-    hasMore,
-  });
+    res.json(posts);
+  } catch (err) {
+    console.error("getFeed error:", err);
+    res.status(500).json({ error: "Failed to load feed" });
+  }
 }
 
-// ================= LIKE =================
+/* =====================================================
+   LIKE / UNLIKE POST
+   ===================================================== */
 export async function toggleLike(req, res) {
-  const userId = req.user._id;
-  const post = await Post.findById(req.params.id);
+  try {
+    const post = await Post.findById(req.params.id);
 
-  const liked = post.likes.includes(userId);
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
 
-  await Post.findByIdAndUpdate(
-    post._id,
-    liked
-      ? { $pull: { likes: userId } }
-      : { $addToSet: { likes: userId } }
-  );
+    const userId = req.user._id;
+    const liked = post.likes.includes(userId);
 
-  res.json({ liked: !liked });
+    if (liked) {
+      post.likes.pull(userId);
+    } else {
+      post.likes.addToSet(userId);
+
+      // notification (not to yourself)
+      if (!post.user.equals(userId)) {
+        await addNotification({
+          to: post.user,
+          from: userId,
+          type: "like",
+          postId: post._id,
+        });
+      }
+    }
+
+    await post.save();
+
+    res.json({
+      liked: !liked,
+      likesCount: post.likes.length,
+    });
+  } catch (err) {
+    console.error("toggleLike error:", err);
+    res.status(500).json({ error: "Failed to like post" });
+  }
 }
 
-// ================= SAVE =================
+/* =====================================================
+   SAVE / UNSAVE POST
+   ===================================================== */
 export async function toggleSave(req, res) {
-  const userId = req.user._id;
-  const post = await Post.findById(req.params.id);
+  try {
+    const post = await Post.findById(req.params.id);
 
-  const saved = post.saves.includes(userId);
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
 
-  await Post.findByIdAndUpdate(
-    post._id,
-    saved
-      ? { $pull: { saves: userId } }
-      : { $addToSet: { saves: userId } }
-  );
+    const user = await User.findById(req.user._id);
+    const saved = user.savedPosts.includes(post._id);
 
-  res.json({ saved: !saved });
+    if (saved) {
+      user.savedPosts.pull(post._id);
+    } else {
+      user.savedPosts.addToSet(post._id);
+    }
+
+    await user.save();
+
+    res.json({ saved: !saved });
+  } catch (err) {
+    console.error("toggleSave error:", err);
+    res.status(500).json({ error: "Failed to save post" });
+  }
 }
+
+/* =====================================================
+   DELETE POST (OWNER ONLY)
+   ===================================================== */
+export async function deletePost(req, res) {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    if (!post.user.equals(req.user._id)) {
+      return res.status(403).json({ error: "Not allowed" });
+    }
+
+    await Post.findByIdAndDelete(post._id);
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { postsCount: -1 },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("deletePost error:", err);
+    res.status(500).json({ error: "Failed to delete post" });
+  }
+             }
