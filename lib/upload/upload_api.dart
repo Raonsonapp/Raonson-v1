@@ -5,14 +5,14 @@ class UploadApi {
   static Future<void> createPost({
     required String user,
     required String caption,
-    required List<Map<String, String>> media, // ✅ FIXED
+    required List<Map<String, String>> media,
   }) async {
     await Api.post(
       '/posts',
-      body: {
+      {
         'user': user,
         'caption': caption,
-        'media': media, // [{url, type}]
+        'media': media,
       },
     );
   }
@@ -25,7 +25,7 @@ class UploadApi {
   }) async {
     await Api.post(
       '/reels',
-      body: {
+      {
         'user': user,
         'caption': caption,
         'videoUrl': videoUrl,
