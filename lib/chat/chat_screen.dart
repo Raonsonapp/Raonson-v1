@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'chat_api.dart';
 
 class ChatScreen extends StatefulWidget {
-  final Map chat;
-  const ChatScreen({super.key, required this.chat});
+  final String chatId;
+  const ChatScreen({super.key, required this.chatId});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -11,45 +11,17 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final ctrl = TextEditingController();
-  bool sending = false;
-
-  @override
-  void initState() {
-    super.initState();
-    ChatApi.markSeen(widget.chat['_id']);
-  }
-
-  Future<void> send() async {
-    if (ctrl.text.isEmpty || sending) return;
-    sending = true;
-
-    await ChatApi.sendMessage(
-      chatId: widget.chat['_id'],
-      text: ctrl.text.trim(),
-    );
-
-    ctrl.clear();
-    sending = false;
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text('Chat'),
-      ),
+      appBar: AppBar(backgroundColor: Colors.black),
       body: Column(
         children: [
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Messages render here (realtime next step)',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
-          ),
+          const Expanded(child: SizedBox()),
+
+          // INPUT
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -59,7 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: ctrl,
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                      hintText: 'Message…',
+                      hintText: 'Message...',
                       hintStyle: TextStyle(color: Colors.white54),
                       border: InputBorder.none,
                     ),
@@ -67,7 +39,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.send, color: Colors.blue),
-                  onPressed: send,
+                  onPressed: () async {
+                    await ChatApi.sendMessage(
+                      widget.chatId,
+                      ctrl.text,
+                    );
+                    ctrl.clear();
+                  },
                 ),
               ],
             ),
