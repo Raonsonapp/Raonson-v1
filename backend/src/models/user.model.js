@@ -2,18 +2,59 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    phone: { type: String },
-    email: { type: String },
+    username: {
+      type: String,
+      unique: true,
+      required: true,
+      lowercase: true,
+      trim: true,
+    },
 
-    otpCode: { type: String },
-    otpExpire: { type: Date },
+    email: {
+      type: String,
+      unique: true,
+      required: true,
+    },
 
-    verified: { type: Boolean, default: false },
+    passwordHash: {
+      type: String,
+      required: true,
+    },
 
-    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    avatar: {
+      type: String,
+      default: "",
+    },
+
+    bio: {
+      type: String,
+      default: "",
+      maxlength: 150,
+    },
+
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+
+    followersCount: {
+      type: Number,
+      default: 0,
+    },
+
+    followingCount: {
+      type: Number,
+      default: 0,
+    },
+
+    postsCount: {
+      type: Number,
+      default: 0,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // createdAt, updatedAt
+  }
 );
 
-export default mongoose.model("User", userSchema);
+export const User = mongoose.model("User", userSchema);
