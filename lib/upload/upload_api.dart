@@ -1,16 +1,23 @@
+import 'dart:io';
 import '../core/api.dart';
 
 class UploadApi {
-  static Future<void> createPost({
+  static Future<void> uploadPost({
+    required String user,
     required String caption,
-    required List<Map<String, String>> media,
+    required List<File> files,
+    required List<String> types,
   }) async {
-    await Api.post(
+    await Api.multipart(
       '/posts',
-      body: {
-        'user': 'raonson',
+      fields: {
+        'user': user,
         'caption': caption,
-        'media': media,
+      },
+      files: files,
+      fileField: 'media',
+      extra: {
+        'types': types,
       },
     );
   }
