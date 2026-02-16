@@ -1,22 +1,19 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../core/api.dart';
 
 class HomeApi {
-  static const baseUrl = 'https://YOUR_RENDER_URL';
-
-  static Future<List<dynamic>> fetchFeed() async {
-    final res = await http.get(Uri.parse('$baseUrl/posts'));
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body);
-    }
-    throw Exception('Feed error');
+  static Future<Map<String, dynamic>> fetchFeed(int page) async {
+    final res = await Api.get('/posts/feed?page=$page&limit=10');
+    return jsonDecode(res.body);
   }
 
-  static Future<void> likePost(String postId) async {
-    await http.post(
-      Uri.parse('$baseUrl/posts/$postId/like'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'user': 'raonson'}),
-    );
+  static Future<bool> toggleLike(String postId) async {
+    final res = await Api.post('/posts/$postId/like', {});
+    return jsonDecode(res.body)['liked'];
+  }
+
+  static Future<bool> toggleSave(String postId) async {
+    final res = await Api.post('/posts/$postId/save', {});
+    return jsonDecode(res.body)['saved'];
   }
 }
