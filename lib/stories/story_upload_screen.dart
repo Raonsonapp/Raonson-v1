@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
-import '../upload/media_picker.dart';
-import '../upload/storage_service.dart';
 import 'story_api.dart';
 
 class StoryUploadScreen extends StatefulWidget {
@@ -13,41 +12,45 @@ class StoryUploadScreen extends StatefulWidget {
 }
 
 class _StoryUploadScreenState extends State<StoryUploadScreen> {
-  PickedMedia? media;
+  File? file;
+  bool isVideo = false;
   bool uploading = false;
 
+  final picker = ImagePicker();
+
+  // ⛔ ҳоло static (баъд аз auth мегирем)
+  final String currentUser = 'raonson';
+
   Future<void> pick() async {
-    final picked = await MediaPicker.pickMultiple();
-    if (picked.isNotEmpty) {
-      setState(() => media = picked.first);
-    }
+    final XFile? picked = await picker.pickImage(
+      source: ImageSource.gallery,
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      file = File(picked.path);
+      isVideo = false;
+    });
   }
 
   Future<void> upload() async {
-    if (media == null || uploading) return;
+    if (file == null) return;
+
     setState(() => uploading = true);
 
-    try {
-      final url = await StorageService.uploadFile(
-        media!.file,
-        path: 'stories/${DateTime.now().millisecondsSinceEpoch}',
-      );
+    // ⚠️ ҲОЗИР mock URL
+    // ҚАДАМИ БАДӢ: upload real file → storage
+    final mediaUrl = 'https://picsum.photos/600/900';
 
-      await StoryApi.createStory(
-        user: 'raonson',
-        mediaUrl: url,
-        mediaType: media!.isVideo ? 'video' : 'image',
-      );
+    await StoryApi.createStory(
+      user: currentUser,
+      mediaUrl: mediaUrl,
+      mediaType: isVideo ? 'video' : 'image',
+    );
 
-      if (!mounted) return;
-      Navigator.pop(context, true);
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Story upload failed')),
-      );
-    } finally {
-      uploading = false;
-    }
+    if (!mounted) return;
+    Navigator.pop(context, true);
   }
 
   @override
@@ -56,24 +59,30 @@ class _StoryUploadScreenState extends State<StoryUploadScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('New story'),
+        title: const Text('New Story'),
         actions: [
           TextButton(
-            onPressed: upload,
+            onPressed: uploading ? null : upload,
             child: uploading
                 ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('Share',
-                    style: TextStyle(color: Colors.blue)),
+                : const Text(
+                    'Share',
+                    style: TextStyle(color: Colors.blue),
+                  ),
           ),
         ],
       ),
       body: Center(
-        child: media == null
+        child: file == null
             ? IconButton(
-                icon: const Icon(Icons.add, size: 64, color: Colors.white54),
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  size: 72,
+                  color: Colors.white,
+                ),
                 onPressed: pick,
               )
-            : Image.file(media!.file, fit: BoxFit.cover),
+            : Image.file(file!, fit: BoxFit.cover),
       ),
     );
   }
