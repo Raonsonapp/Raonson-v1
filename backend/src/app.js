@@ -18,6 +18,7 @@ connectDB();
 // middlewares
 app.use(cors());
 app.use(express.json());
+app.use("/uploads",
 
 // health check
 app.get("/", (req, res) => {
@@ -34,3 +35,4 @@ app.use("/stories", storyRoutes);
 app.use("/notifications", notificationRoutes);
 
 export default app;
+express.static("uploads"));
