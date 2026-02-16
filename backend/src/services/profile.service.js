@@ -1,29 +1,17 @@
+import { Follow } from "../models/follow.model.js";
 import { User } from "../models/user.model.js";
-import { Post } from "../models/post.model.js";
 
-export async function getProfile({ viewerId, username }) {
-  const user = await User.findOne({ username }).select(
-    "username avatar verified isPrivate followers following postsCount followersCount followingCount"
-  );
+export async function canViewProfile({ viewer, owner }) {
+  if (viewer.equals(owner)) return true;
 
-  if (!user) throw new Error("User not found");
+  const user = await User.findById(owner);
+  if (!user.isPrivate) return true;
 
-  const isOwner = viewerId.equals(user._id);
-  const isFollowing = user.followers.includes(viewerId);
-  const canViewPosts = !user.isPrivate || isOwner || isFollowing;
+  const follow = await Follow.findOne({
+    from: viewer,
+    to: owner,
+    status: "accepted",
+  });
 
-  let posts = [];
-  if (canViewPosts) {
-    posts = await Post.find({ user: user._id })
-      .sort({ createdAt: -1 })
-      .select("media createdAt");
-  }
-
-  return {
-    user,
-    isOwner,
-    isFollowing,
-    canViewPosts,
-    posts,
-  };
+  return !!follow;
 }
