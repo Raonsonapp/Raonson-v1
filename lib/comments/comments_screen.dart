@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
 import 'comment_api.dart';
-import 'comment_model.dart';
 
 class CommentsScreen extends StatefulWidget {
   final String postId;
@@ -12,9 +10,8 @@ class CommentsScreen extends StatefulWidget {
 }
 
 class _CommentsScreenState extends State<CommentsScreen> {
+  List comments = [];
   final ctrl = TextEditingController();
-  bool loading = true;
-  List<Comment> comments = [];
 
   @override
   void initState() {
@@ -23,20 +20,17 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   Future<void> load() async {
-    try {
-      final data = await CommentApi.fetchComments(widget.postId);
-      comments = data.map<Comment>((e) => Comment.fromJson(e)).toList();
-    } catch (_) {}
-    loading = false;
+    comments = await CommentApi.fetch(widget.postId);
     setState(() {});
   }
 
   Future<void> send() async {
-    final text = ctrl.text.trim();
-    if (text.isEmpty) return;
-
+    if (ctrl.text.trim().isEmpty) return;
+    await CommentApi.add(
+      postId: widget.postId,
+      text: ctrl.text.trim(),
+    );
     ctrl.clear();
-    await CommentApi.addComment(widget.postId, text);
     load();
   }
 
@@ -45,56 +39,34 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
         title: const Text('Comments'),
+        backgroundColor: Colors.black,
       ),
       body: Column(
         children: [
           Expanded(
-            child: loading
-                ? const Center(
-                    child:
-                        CircularProgressIndicator(color: Colors.white),
-                  )
-                : ListView.builder(
-                    itemCount: comments.length,
-                    itemBuilder: (_, i) {
-                      final c = comments[i];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: c.user,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const TextSpan(text: '  '),
-                              TextSpan(
-                                text: c.text,
-                                style: const TextStyle(
-                                    color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+            child: ListView.builder(
+              itemCount: comments.length,
+              itemBuilder: (_, i) {
+                final c = comments[i];
+                return ListTile(
+                  title: Text(
+                    c['user']['username'],
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-          ),
-
-          // INPUT
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.white12),
-              ),
+                  subtitle: Text(
+                    c['text'],
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                );
+              },
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
                 Expanded(
@@ -102,16 +74,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     controller: ctrl,
                     style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                      hintText: 'Add a comment...',
-                      hintStyle:
-                          TextStyle(color: Colors.white54),
-                      border: InputBorder.none,
+                      hintText: 'Add a comment…',
+                      hintStyle: TextStyle(color: Colors.white54),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon:
-                      const Icon(Icons.send, color: Colors.blue),
+                  icon: const Icon(Icons.send, color: Colors.blue),
                   onPressed: send,
                 ),
               ],
