@@ -2,101 +2,76 @@ import 'package:flutter/material.dart';
 import 'chat_api.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String chatId;
-  const ChatScreen({super.key, required this.chatId});
+  final Map chat;
+  const ChatScreen({super.key, required this.chat});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  late Future<List<dynamic>> future;
-  final controller = TextEditingController();
+  final ctrl = TextEditingController();
+  bool sending = false;
 
   @override
   void initState() {
     super.initState();
-    future = ChatApi.getMessages(widget.chatId);
+    ChatApi.markSeen(widget.chat['_id']);
   }
 
-  void refresh() {
-    setState(() {
-      future = ChatApi.getMessages(widget.chatId);
-    });
+  Future<void> send() async {
+    if (ctrl.text.isEmpty || sending) return;
+    sending = true;
+
+    await ChatApi.sendMessage(
+      chatId: widget.chat['_id'],
+      text: ctrl.text.trim(),
+    );
+
+    ctrl.clear();
+    sending = false;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text('Chat'),
+      ),
       body: Column(
         children: [
-          Expanded(
-            child: FutureBuilder(
-              future: future,
-              builder: (_, snap) {
-                if (!snap.hasData) {
-                  return const Center(
-                      child: CircularProgressIndicator());
-                }
-
-                final messages = snap.data!;
-                return ListView.builder(
-                  itemCount: messages.length,
-                  itemBuilder: (_, i) {
-                    return Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Align(
-                        alignment: messages[i]['mine']
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: messages[i]['mine']
-                                ? Colors.blue
-                                : Colors.grey.shade300,
-                            borderRadius:
-                                BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            messages[i]['text'],
-                            style: TextStyle(
-                              color: messages[i]['mine']
-                                  ? Colors.white
-                                  : Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+          const Expanded(
+            child: Center(
+              child: Text(
+                'Messages render here (realtime next step)',
+                style: TextStyle(color: Colors.white54),
+              ),
             ),
           ),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  decoration:
-                      const InputDecoration(hintText: 'Message'),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: ctrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Message…',
+                      hintStyle: TextStyle(color: Colors.white54),
+                      border: InputBorder.none,
+                    ),
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: () async {
-                  if (controller.text.isEmpty) return;
-                  await ChatApi.sendMessage(
-                      widget.chatId, controller.text);
-                  controller.clear();
-                  refresh();
-                },
-              )
-            ],
-          )
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.blue),
+                  onPressed: send,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
