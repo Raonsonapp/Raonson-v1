@@ -1,9 +1,14 @@
 import express from "express";
-import { searchAll } from "../controllers/search.controller.js";
+import {
+  searchUsers,
+  searchPosts,
+  exploreReels,
+} from "../controllers/search.controller.js";
 
 const router = express.Router();
 
-// /search?q=raon
-router.get("/", searchAll);
+router.get("/users", searchUsers);
+router.get("/posts", searchPosts);
+router.get("/reels", exploreReels);
 
 export default router;
