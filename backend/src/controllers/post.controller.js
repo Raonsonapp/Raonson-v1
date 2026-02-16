@@ -1,47 +1,57 @@
-import { posts } from "../data/posts.store.js";
-import { addNotification } from "./notification.controller.js";
-
-// GET FEED
-export const getFeed = (req, res) => {
-  res.json(posts);
-};
+import { Post } from "../models/post.model.js";
+import { User } from "../models/user.model.js";
 
 // CREATE POST
-export const createPost = (req, res) => {
-  const { user, caption, media } = req.body;
+export async function createPost(req, res) {
+  const { caption, media } = req.body;
 
-  const post = {
-    id: Date.now().toString(),
-    user,
+  const post = await Post.create({
+    user: req.user._id,
     caption,
-    media, // [{url,type}]
-    likes: 0,
-    comments: [],
-    createdAt: new Date(),
-  };
+    media,
+  });
 
-  posts.unshift(post);
+  await User.findByIdAndUpdate(req.user._id, {
+    $inc: { postsCount: 1 },
+  });
+
   res.json(post);
-};
+}
 
-// LIKE POST
-export const likePost = (req, res) => {
-  const { id } = req.params;
-  const { user } = req.body;
+// GET FEED (latest, Instagram-style)
+export async function getFeed(req, res) {
+  const posts = await Post.find()
+    .populate("user", "username avatar verified")
+    .sort({ createdAt: -1 })
+    .limit(50);
 
-  const post = posts.find(p => p.id === id);
-  if (!post) return res.status(404).json({ error: "Post not found" });
+  res.json(posts);
+}
 
-  post.likes += 1;
+// LIKE / UNLIKE
+export async function toggleLike(req, res) {
+  const post = await Post.findById(req.params.id);
 
-  if (post.user !== user) {
-    addNotification({
-      to: post.user,
-      from: user,
-      type: "like",
-      postId: post.id,
-    });
-  }
+  const liked = post.likes.includes(req.user._id);
 
-  res.json({ likes: post.likes });
-};
+  await Post.findByIdAndUpdate(req.params.id, liked
+    ? { $pull: { likes: req.user._id } }
+    : { $addToSet: { likes: req.user._id } }
+  );
+
+  res.json({ liked: !liked });
+}
+
+// SAVE / UNSAVE
+export async function toggleSave(req, res) {
+  const post = await Post.findById(req.params.id);
+
+  const saved = post.saves.includes(req.user._id);
+
+  await Post.findByIdAndUpdate(req.params.id, saved
+    ? { $pull: { saves: req.user._id } }
+    : { $addToSet: { saves: req.user._id } }
+  );
+
+  res.json({ saved: !saved });
+    }
