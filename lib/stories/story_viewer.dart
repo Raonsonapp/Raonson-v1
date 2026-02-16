@@ -26,6 +26,9 @@ class _StoryViewerState extends State<StoryViewer> {
 
   VideoPlayerController? videoController;
 
+  // ⛔ ҳоло user static (баъд аз auth иваз мекунем)
+  final String currentUser = 'raonson';
+
   @override
   void initState() {
     super.initState();
@@ -42,8 +45,8 @@ class _StoryViewerState extends State<StoryViewer> {
 
     final story = widget.stories[index];
 
-    // 👁 VIEW COUNT
-    StoryApi.viewStory(story.id);
+    // 👁 VIEW COUNT — ИСЛОҲИ АСОСӢ
+    StoryApi.viewStory(story.id, currentUser);
 
     if (story.mediaType == 'video') {
       videoController = VideoPlayerController.network(story.mediaUrl)
@@ -56,11 +59,14 @@ class _StoryViewerState extends State<StoryViewer> {
 
           videoController!.addListener(() {
             final v = videoController!;
-            if (v.value.isInitialized &&
-                v.value.duration.inMilliseconds > 0) {
+            if (!v.value.isInitialized) return;
+
+            final duration = v.value.duration.inMilliseconds;
+            final position = v.value.position.inMilliseconds;
+
+            if (duration > 0) {
               setState(() {
-                progress = v.value.position.inMilliseconds /
-                    v.value.duration.inMilliseconds;
+                progress = position / duration;
               });
               if (progress >= 1) _next();
             }
@@ -143,15 +149,14 @@ class _StoryViewerState extends State<StoryViewer> {
               child: LinearProgressIndicator(
                 value: progress.clamp(0, 1),
                 backgroundColor: Colors.white24,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  Colors.white,
-                ),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             ),
 
             // 👤 USERNAME
             Positioned(
-              top: 60,
+              top: 64,
               left: 16,
               child: Text(
                 story.user,
