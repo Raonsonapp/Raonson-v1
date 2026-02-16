@@ -1,11 +1,16 @@
 import mongoose from "mongoose";
 
-const postSchema = new mongoose.Schema(
+const PostSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    caption: { type: String },
-    mediaUrl: { type: String, required: true },
-    mediaType: { type: String, enum: ["image", "video"], required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+    caption: { type: String, default: "" },
+
+    media: [
+      {
+        url: String,
+        type: { type: String, enum: ["image", "video"] },
+      },
+    ],
 
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     saves: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -13,4 +18,7 @@ const postSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Post", postSchema);
+// 🔥 FEED PERFORMANCE
+PostSchema.index({ user: 1, createdAt: -1 });
+
+export const Post = mongoose.model("Post", PostSchema);
