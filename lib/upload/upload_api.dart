@@ -5,7 +5,7 @@ class UploadApi {
   static Future<void> createPost({
     required String user,
     required String caption,
-    required List<File> files,
+    required List<File> media, // ✅ media
   }) async {
     await Api.multipart(
       path: '/posts',
@@ -13,14 +13,14 @@ class UploadApi {
         'user': user,
         'caption': caption,
       },
-      files: files,
+      files: media,          // ✅
       fileField: 'media',
     );
   }
 
   static Future<void> createStory({
     required String user,
-    required File file,
+    required File media,
     required String mediaType,
   }) async {
     await Api.multipart(
@@ -29,7 +29,7 @@ class UploadApi {
         'user': user,
         'mediaType': mediaType,
       },
-      files: [file],
+      files: [media],
       fileField: 'media',
     );
   }
