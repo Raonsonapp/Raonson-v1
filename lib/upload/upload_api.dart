@@ -1,36 +1,35 @@
-import 'dart:io';
 import '../core/api.dart';
 
 class UploadApi {
+  // ================= CREATE POST =================
   static Future<void> createPost({
     required String user,
     required String caption,
-    required List<File> media, // ✅ media
+    required List<Map<String, String>> media, // ✅ FIXED
   }) async {
-    await Api.multipart(
-      path: '/posts',
-      fields: {
+    await Api.post(
+      '/posts',
+      body: {
         'user': user,
         'caption': caption,
+        'media': media, // [{url, type}]
       },
-      files: media,          // ✅
-      fileField: 'media',
     );
   }
 
-  static Future<void> createStory({
+  // ================= CREATE REEL =================
+  static Future<void> createReel({
     required String user,
-    required File media,
-    required String mediaType,
+    required String caption,
+    required String videoUrl,
   }) async {
-    await Api.multipart(
-      path: '/stories',
-      fields: {
+    await Api.post(
+      '/reels',
+      body: {
         'user': user,
-        'mediaType': mediaType,
+        'caption': caption,
+        'videoUrl': videoUrl,
       },
-      files: [media],
-      fileField: 'media',
     );
   }
 }
