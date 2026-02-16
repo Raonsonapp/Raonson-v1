@@ -2,28 +2,30 @@ import { Follow } from "../models/follow.model.js";
 import { User } from "../models/user.model.js";
 import { addNotification } from "./notification.controller.js";
 
-// FOLLOW / UNFOLLOW
+/* ======================================================
+   FOLLOW / UNFOLLOW
+====================================================== */
 export async function toggleFollow(req, res) {
-  const targetUserId = req.params.userId;
-  const myId = req.user._id;
+  const targetId = req.params.id;
+  const userId = req.user._id;
 
-  if (targetUserId === myId.toString()) {
+  if (targetId === String(userId)) {
     return res.status(400).json({ error: "Cannot follow yourself" });
   }
 
-  const existing = await Follow.findOne({
-    from: myId,
-    to: targetUserId,
+  const exists = await Follow.findOne({
+    follower: userId,
+    following: targetId,
   });
 
-  if (existing) {
+  if (exists) {
     // UNFOLLOW
-    await existing.deleteOne();
+    await Follow.deleteOne({ _id: exists._id });
 
-    await User.findByIdAndUpdate(myId, {
+    await User.findByIdAndUpdate(userId, {
       $inc: { followingCount: -1 },
     });
-    await User.findByIdAndUpdate(targetUserId, {
+    await User.findByIdAndUpdate(targetId, {
       $inc: { followersCount: -1 },
     });
 
@@ -32,41 +34,37 @@ export async function toggleFollow(req, res) {
 
   // FOLLOW
   await Follow.create({
-    from: myId,
-    to: targetUserId,
+    follower: userId,
+    following: targetId,
   });
 
-  await User.findByIdAndUpdate(myId, {
+  await User.findByIdAndUpdate(userId, {
     $inc: { followingCount: 1 },
   });
-  await User.findByIdAndUpdate(targetUserId, {
+  await User.findByIdAndUpdate(targetId, {
     $inc: { followersCount: 1 },
   });
 
-  // notification
-  addNotification({
-    to: targetUserId,
-    from: myId,
+  // 🔔 notification
+  await addNotification({
+    to: targetId,
+    from: userId,
     type: "follow",
   });
 
   res.json({ following: true });
 }
 
-// GET FOLLOWERS
-export async function getFollowers(req, res) {
-  const list = await Follow.find({ to: req.params.userId })
-    .populate("from", "username avatar verified")
-    .limit(100);
+/* ======================================================
+   CHECK FOLLOW STATUS
+====================================================== */
+export async function isFollowing(req, res) {
+  const targetId = req.params.id;
 
-  res.json(list);
-}
+  const exists = await Follow.findOne({
+    follower: req.user._id,
+    following: targetId,
+  });
 
-// GET FOLLOWING
-export async function getFollowing(req, res) {
-  const list = await Follow.find({ from: req.params.userId })
-    .populate("to", "username avatar verified")
-    .limit(100);
-
-  res.json(list);
+  res.json({ following: !!exists });
 }
