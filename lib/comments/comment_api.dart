@@ -1,25 +1,25 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../core/api.dart';
 
 class CommentApi {
-  static const baseUrl = 'https://YOUR_RENDER_URL';
-
-  static Future<List<dynamic>> fetchComments(String postId) async {
-    final res = await http.get(Uri.parse('$baseUrl/comments/$postId'));
-    if (res.statusCode == 200) {
-      return jsonDecode(res.body);
-    }
-    throw Exception('Comments load failed');
+  static Future<List<dynamic>> fetch(String postId) async {
+    final res = await Api.get('/comments/$postId');
+    return jsonDecode(res.body);
   }
 
-  static Future<void> addComment(String postId, String text) async {
-    await http.post(
-      Uri.parse('$baseUrl/comments/$postId'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user': 'raonson',
-        'text': text,
-      }),
-    );
+  static Future<void> add({
+    required String postId,
+    required String text,
+    String? parentId,
+  }) async {
+    await Api.post('/comments/$postId', {
+      'text': text,
+      if (parentId != null) 'parentId': parentId,
+    });
+  }
+
+  static Future<bool> like(String commentId) async {
+    final res = await Api.post('/comments/like/$commentId', {});
+    return jsonDecode(res.body)['liked'];
   }
 }
