@@ -1,70 +1,115 @@
-import { Follow } from "../models/follow.model.js";
 import { User } from "../models/user.model.js";
 import { addNotification } from "./notification.controller.js";
 
-/* ======================================================
-   FOLLOW / UNFOLLOW
-====================================================== */
-export async function toggleFollow(req, res) {
-  const targetId = req.params.id;
-  const userId = req.user._id;
+// FOLLOW / REQUEST
+export async function followUser(req, res) {
+  const me = req.user._id;
+  const { id } = req.params; // target user
 
-  if (targetId === String(userId)) {
+  if (me.toString() === id) {
     return res.status(400).json({ error: "Cannot follow yourself" });
   }
 
-  const exists = await Follow.findOne({
-    follower: userId,
-    following: targetId,
-  });
+  const target = await User.findById(id);
+  if (!target) return res.status(404).json({ error: "User not found" });
 
-  if (exists) {
-    // UNFOLLOW
-    await Follow.deleteOne({ _id: exists._id });
-
-    await User.findByIdAndUpdate(userId, {
-      $inc: { followingCount: -1 },
-    });
-    await User.findByIdAndUpdate(targetId, {
-      $inc: { followersCount: -1 },
-    });
-
-    return res.json({ following: false });
+  // already following
+  if (target.followers.includes(me)) {
+    return res.json({ status: "already_following" });
   }
 
-  // FOLLOW
-  await Follow.create({
-    follower: userId,
-    following: targetId,
-  });
+  // PRIVATE ACCOUNT → REQUEST
+  if (target.isPrivate) {
+    if (!target.followRequests.includes(me)) {
+      target.followRequests.push(me);
+      await target.save();
 
-  await User.findByIdAndUpdate(userId, {
+      await addNotification({
+        to: target._id,
+        from: me,
+        type: "follow_request",
+      });
+    }
+
+    return res.json({ status: "request_sent" });
+  }
+
+  // PUBLIC ACCOUNT → DIRECT FOLLOW
+  await User.findByIdAndUpdate(me, {
+    $addToSet: { following: target._id },
     $inc: { followingCount: 1 },
   });
-  await User.findByIdAndUpdate(targetId, {
+
+  await User.findByIdAndUpdate(target._id, {
+    $addToSet: { followers: me },
     $inc: { followersCount: 1 },
   });
 
-  // 🔔 notification
   await addNotification({
-    to: targetId,
-    from: userId,
+    to: target._id,
+    from: me,
     type: "follow",
   });
 
-  res.json({ following: true });
+  res.json({ status: "followed" });
 }
 
-/* ======================================================
-   CHECK FOLLOW STATUS
-====================================================== */
-export async function isFollowing(req, res) {
-  const targetId = req.params.id;
+// UNFOLLOW
+export async function unfollowUser(req, res) {
+  const me = req.user._id;
+  const { id } = req.params;
 
-  const exists = await Follow.findOne({
-    follower: req.user._id,
-    following: targetId,
+  await User.findByIdAndUpdate(me, {
+    $pull: { following: id },
+    $inc: { followingCount: -1 },
   });
 
-  res.json({ following: !!exists });
+  await User.findByIdAndUpdate(id, {
+    $pull: { followers: me },
+    $inc: { followersCount: -1 },
+  });
+
+  res.json({ status: "unfollowed" });
 }
+
+// ACCEPT FOLLOW REQUEST
+export async function acceptRequest(req, res) {
+  const me = req.user._id;
+  const { id } = req.params; // requester
+
+  const user = await User.findById(me);
+  if (!user.followRequests.includes(id)) {
+    return res.status(400).json({ error: "No such request" });
+  }
+
+  await User.findByIdAndUpdate(me, {
+    $pull: { followRequests: id },
+    $addToSet: { followers: id },
+    $inc: { followersCount: 1 },
+  });
+
+  await User.findByIdAndUpdate(id, {
+    $addToSet: { following: me },
+    $inc: { followingCount: 1 },
+  });
+
+  await addNotification({
+    to: id,
+    from: me,
+    type: "follow_accept",
+  });
+
+  res.json({ status: "accepted" });
+}
+
+// REJECT FOLLOW REQUEST
+export async function rejectRequest(req, res) {
+  const me = req.user._id;
+  const { id } = req.params;
+
+  await User.findByIdAndUpdate(me, {
+    $pull: { followRequests: id },
+  });
+
+  res.json({ status: "rejected" });
+       }
