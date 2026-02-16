@@ -1,17 +1,17 @@
 import express from "express";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 import {
-  createStory,
   getStories,
+  createStory,
   viewStory,
-  toggleLikeStory,
+  likeStory,
 } from "../controllers/story.controller.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 router.get("/", authMiddleware, getStories);
 router.post("/", authMiddleware, createStory);
 router.post("/:id/view", authMiddleware, viewStory);
-router.post("/:id/like", authMiddleware, toggleLikeStory);
+router.post("/:id/like", authMiddleware, likeStory);
 
 export default router;
