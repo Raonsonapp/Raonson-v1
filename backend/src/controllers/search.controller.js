@@ -1,39 +1,38 @@
-import { User } from "../models/user.model.js";
-import { Post } from "../models/post.model.js";
-import { Reel } from "../models/reel.model.js";
+import {
+  searchAll,
+  getRecentSearches,
+  clearRecentSearches,
+} from "../services/search.service.js";
 
-// 🔍 SEARCH USERS
-export async function searchUsers(req, res) {
-  const q = req.query.q || "";
+export async function search(req, res, next) {
+  try {
+    const { q } = req.query;
 
-  const users = await User.find({
-    username: { $regex: q, $options: "i" },
-  })
-    .select("username avatar verified")
-    .limit(20);
+    const result = await searchAll({
+      userId: req.user._id,
+      q,
+    });
 
-  res.json(users);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
 }
 
-// 🔍 SEARCH POSTS (hashtags / caption)
-export async function searchPosts(req, res) {
-  const q = req.query.q || "";
-
-  const posts = await Post.find({
-    caption: { $regex: q, $options: "i" },
-  })
-    .populate("user", "username avatar verified")
-    .sort({ createdAt: -1 })
-    .limit(20);
-
-  res.json(posts);
+export async function recent(req, res, next) {
+  try {
+    const items = await getRecentSearches(req.user._id);
+    res.json(items);
+  } catch (e) {
+    next(e);
+  }
 }
 
-// 🔥 EXPLORE REELS (TRENDING)
-export async function exploreReels(req, res) {
-  const reels = await Reel.find()
-    .sort({ views: -1, likes: -1 })
-    .limit(30);
-
-  res.json(reels);
+export async function clear(req, res, next) {
+  try {
+    await clearRecentSearches(req.user._id);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
 }
