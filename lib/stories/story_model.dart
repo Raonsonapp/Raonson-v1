@@ -2,7 +2,7 @@ class Story {
   final String id;
   final String user;
   final String mediaUrl;
-  final String mediaType;
+  final String mediaType; // image | video
 
   Story({
     required this.id,
@@ -13,7 +13,7 @@ class Story {
 
   factory Story.fromJson(Map<String, dynamic> json) {
     return Story(
-      id: json['id'].toString(),
+      id: json['id'],
       user: json['user'],
       mediaUrl: json['mediaUrl'],
       mediaType: json['mediaType'],
