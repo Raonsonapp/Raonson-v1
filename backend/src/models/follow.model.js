@@ -1,24 +1,24 @@
 import mongoose from "mongoose";
 
-const followSchema = new mongoose.Schema(
+const FollowSchema = new mongoose.Schema(
   {
-    from: {
+    follower: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
       index: true,
+      required: true,
     },
-    to: {
+    following: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
       index: true,
+      required: true,
     },
   },
   { timestamps: true }
 );
 
-// prevent duplicate follows
-followSchema.index({ from: 1, to: 1 }, { unique: true });
+// ❗ як нафар як нафарро 1 бор follow кунад
+FollowSchema.index({ follower: 1, following: 1 }, { unique: true });
 
-export const Follow = mongoose.model("Follow", followSchema);
+export const Follow = mongoose.model("Follow", FollowSchema);
