@@ -1,47 +1,53 @@
-import { User } from "../models/user.model.js";
+import {
+  followUser,
+  unfollowUser,
+  acceptRequest,
+  rejectRequest,
+} from "../services/follow.service.js";
 
-export async function toggleFollow(req, res, next) {
+export async function follow(req, res, next) {
   try {
-    const target = await User.findById(req.params.id);
-    const me = req.user;
+    const result = await followUser({
+      from: req.user._id,
+      to: req.params.id,
+    });
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+}
 
-    if (!target) return res.status(404).json({ error: "User not found" });
+export async function unfollow(req, res, next) {
+  try {
+    await unfollowUser({
+      from: req.user._id,
+      to: req.params.id,
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+}
 
-    const isFollowing = target.followers.includes(me._id);
+export async function accept(req, res, next) {
+  try {
+    const r = await acceptRequest({
+      owner: req.user._id,
+      from: req.params.id,
+    });
+    res.json(r);
+  } catch (e) {
+    next(e);
+  }
+}
 
-    // PRIVATE → REQUEST
-    if (target.isPrivate && !isFollowing) {
-      if (!target.followRequests.includes(me._id)) {
-        target.followRequests.push(me._id);
-        await target.save();
-      }
-      return res.json({ requested: true });
-    }
-
-    // FOLLOW / UNFOLLOW
-    await User.findByIdAndUpdate(target._id, isFollowing
-      ? {
-          $pull: { followers: me._id },
-          $inc: { followersCount: -1 },
-        }
-      : {
-          $addToSet: { followers: me._id },
-          $inc: { followersCount: 1 },
-        }
-    );
-
-    await User.findByIdAndUpdate(me._id, isFollowing
-      ? {
-          $pull: { following: target._id },
-          $inc: { followingCount: -1 },
-        }
-      : {
-          $addToSet: { following: target._id },
-          $inc: { followingCount: 1 },
-        }
-    );
-
-    res.json({ following: !isFollowing });
+export async function reject(req, res, next) {
+  try {
+    await rejectRequest({
+      owner: req.user._id,
+      from: req.params.id,
+    });
+    res.json({ ok: true });
   } catch (e) {
     next(e);
   }
