@@ -1,57 +1,131 @@
 import { Post } from "../models/post.model.js";
 import { User } from "../models/user.model.js";
+import { Follow } from "../models/follow.model.js";
+import { addNotification } from "./notification.controller.js";
 
-// CREATE POST
+/* ======================================================
+   CREATE POST
+====================================================== */
 export async function createPost(req, res) {
-  const { caption, media } = req.body;
+  try {
+    const { caption = "", media = [] } = req.body;
 
-  const post = await Post.create({
-    user: req.user._id,
-    caption,
-    media,
-  });
-
-  await User.findByIdAndUpdate(req.user._id, {
-    $inc: { postsCount: 1 },
-  });
-
-  res.json(post);
-}
-
-// GET FEED (latest, Instagram-style)
-export async function getFeed(req, res) {
-  const posts = await Post.find()
-    .populate("user", "username avatar verified")
-    .sort({ createdAt: -1 })
-    .limit(50);
-
-  res.json(posts);
-}
-
-// LIKE / UNLIKE
-export async function toggleLike(req, res) {
-  const post = await Post.findById(req.params.id);
-
-  const liked = post.likes.includes(req.user._id);
-
-  await Post.findByIdAndUpdate(req.params.id, liked
-    ? { $pull: { likes: req.user._id } }
-    : { $addToSet: { likes: req.user._id } }
-  );
-
-  res.json({ liked: !liked });
-}
-
-// SAVE / UNSAVE
-export async function toggleSave(req, res) {
-  const post = await Post.findById(req.params.id);
-
-  const saved = post.saves.includes(req.user._id);
-
-  await Post.findByIdAndUpdate(req.params.id, saved
-    ? { $pull: { saves: req.user._id } }
-    : { $addToSet: { saves: req.user._id } }
-  );
-
-  res.json({ saved: !saved });
+    if (!media.length) {
+      return res.status(400).json({ error: "Media is required" });
     }
+
+    const post = await Post.create({
+      user: req.user._id,
+      caption,
+      media,
+      likes: [],
+      saves: [],
+    });
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { postsCount: 1 },
+    });
+
+    const populated = await post.populate(
+      "user",
+      "username avatar verified"
+    );
+
+    res.json(populated);
+  } catch (err) {
+    console.error("CREATE POST ERROR:", err);
+    res.status(500).json({ error: "Failed to create post" });
+  }
+}
+
+/* ======================================================
+   GET FEED (Instagram-style)
+   - my posts
+   - following posts
+====================================================== */
+export async function getFeed(req, res) {
+  try {
+    const myId = req.user._id;
+
+    // users I follow
+    const following = await Follow.find({ from: myId }).select("to");
+
+    const userIds = following.map(f => f.to);
+    userIds.push(myId); // include my posts
+
+    const posts = await Post.find({ user: { $in: userIds } })
+      .populate("user", "username avatar verified")
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    res.json(posts);
+  } catch (err) {
+    console.error("GET FEED ERROR:", err);
+    res.status(500).json({ error: "Failed to load feed" });
+  }
+}
+
+/* ======================================================
+   LIKE / UNLIKE POST
+====================================================== */
+export async function toggleLike(req, res) {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const userId = req.user._id;
+    const liked = post.likes.includes(userId);
+
+    await Post.findByIdAndUpdate(
+      post._id,
+      liked
+        ? { $pull: { likes: userId } }
+        : { $addToSet: { likes: userId } }
+    );
+
+    // 🔔 notification
+    if (!liked && post.user.toString() !== userId.toString()) {
+      addNotification({
+        to: post.user,
+        from: userId,
+        type: "like",
+        postId: post._id,
+      });
+    }
+
+    res.json({ liked: !liked });
+  } catch (err) {
+    console.error("LIKE ERROR:", err);
+    res.status(500).json({ error: "Failed to like post" });
+  }
+}
+
+/* ======================================================
+   SAVE / UNSAVE POST
+====================================================== */
+export async function toggleSave(req, res) {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    const userId = req.user._id;
+    const saved = post.saves.includes(userId);
+
+    await Post.findByIdAndUpdate(
+      post._id,
+      saved
+        ? { $pull: { saves: userId } }
+        : { $addToSet: { saves: userId } }
+    );
+
+    res.json({ saved: !saved });
+  } catch (err) {
+    console.error("SAVE ERROR:", err);
+    res.status(500).json({ error: "Failed to save post" });
+  }
+}
