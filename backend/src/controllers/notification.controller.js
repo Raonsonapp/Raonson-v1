@@ -1,26 +1,35 @@
-import { notifications } from "../data/notifications.store.js";
+import { Notification } from "../models/notification.model.js";
+import { emitToUser } from "../socket/index.js";
 
-export const addNotification = ({ to, from, type, postId }) => {
-  notifications.unshift({
-    id: Date.now().toString(),
+export async function getNotifications(req, res) {
+  const items = await Notification.find({ to: req.user._id })
+    .populate("from", "username avatar")
+    .sort({ createdAt: -1 });
+
+  res.json(items);
+}
+
+export async function createNotification({
+  to,
+  from,
+  type,
+  post,
+  story,
+}) {
+  const n = await Notification.create({
     to,
     from,
-    type, // like | comment | follow
-    postId,
-    seen: false,
-    createdAt: new Date(),
+    type,
+    post,
+    story,
   });
-};
 
-export const getNotifications = (req, res) => {
-  const { user } = req.query;
-  const list = notifications.filter(n => n.to === user);
-  res.json(list);
-};
+  emitToUser(to, "notification", n);
+}
 
-export const markSeen = (req, res) => {
-  const { id } = req.params;
-  const n = notifications.find(n => n.id === id);
-  if (n) n.seen = true;
+export async function markSeen(req, res) {
+  await Notification.findByIdAndUpdate(req.params.id, {
+    seen: true,
+  });
   res.json({ ok: true });
-};
+}
