@@ -3,12 +3,12 @@ import { Post } from "../models/post.model.js";
 import { Reel } from "../models/reel.model.js";
 
 /* =====================================================
-   GET PROFILE
+   GET PROFILE (Instagram logic)
    ===================================================== */
 export async function getProfile(req, res) {
   try {
     const viewerId = req.user._id;
-    const username = req.params.username;
+    const { username } = req.params;
 
     const user = await User.findOne({ username })
       .select("-password")
@@ -19,15 +19,21 @@ export async function getProfile(req, res) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // ===== RELATIONSHIP =====
     const isOwner = user._id.equals(viewerId);
+
     const isFollowing = user.followers.some(f =>
       f._id.equals(viewerId)
     );
-    const isRequested = user.followRequests?.includes(viewerId);
+
+    const isRequested = user.followRequests.some(id =>
+      id.equals(viewerId)
+    );
 
     const canViewContent =
-      !user.private || isOwner || isFollowing;
+      !user.isPrivate || isOwner || isFollowing;
 
+    // ===== CONTENT =====
     let posts = [];
     let reels = [];
 
@@ -40,18 +46,19 @@ export async function getProfile(req, res) {
         .sort({ createdAt: -1 });
     }
 
+    // ===== RESPONSE =====
     res.json({
       user: {
         id: user._id,
         username: user.username,
         avatar: user.avatar,
         verified: user.verified,
-        private: user.private,
+        isPrivate: user.isPrivate,
       },
       stats: {
         posts: user.postsCount,
-        followers: user.followers.length,
-        following: user.following.length,
+        followers: user.followersCount,
+        following: user.followingCount,
       },
       relationship: {
         isOwner,
@@ -65,4 +72,4 @@ export async function getProfile(req, res) {
     console.error("getProfile error:", err);
     res.status(500).json({ error: "Failed to load profile" });
   }
-      }
+       }
