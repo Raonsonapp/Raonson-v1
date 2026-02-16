@@ -15,7 +15,7 @@ class UploadScreen extends StatefulWidget {
 
 class _UploadScreenState extends State<UploadScreen> {
   List<PickedMedia> media = [];
-  final captionCtrl = TextEditingController();
+  final TextEditingController captionCtrl = TextEditingController();
   bool uploading = false;
 
   // ================= PICK MEDIA =================
@@ -26,13 +26,14 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ================= UPLOAD =================
+  // ================= UPLOAD POST =================
   Future<void> upload() async {
     if (media.isEmpty || uploading) return;
 
     setState(() => uploading = true);
 
     try {
+      // 1️⃣ upload files → get URLs
       final List<Map<String, String>> uploadedMedia = [];
 
       for (final m in media) {
@@ -47,14 +48,15 @@ class _UploadScreenState extends State<UploadScreen> {
         });
       }
 
+      // 2️⃣ send JSON to backend
       await UploadApi.createPost(
-        user: 'raonson', // ✅ REQUIRED PARAM (ҳоло static, баъд auth)
+        user: 'raonson', // ⚠️ ҳоло static, баъд аз auth мегирем
         caption: captionCtrl.text.trim(),
         media: uploadedMedia,
       );
 
       if (!mounted) return;
-      Navigator.pop(context, true); // 🔄 success
+      Navigator.pop(context, true); // ✅ SUCCESS
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
