@@ -1,25 +1,17 @@
+import { Follow } from "../models/follow.model.js";
 import { Post } from "../models/post.model.js";
-import { User } from "../models/user.model.js";
 
-export async function getPersonalFeed({
-  userId,
-  page = 1,
-  limit = 10,
-}) {
-  const me = await User.findById(userId).select("following");
+export async function getHomeFeed(userId) {
+  const following = await Follow.find({
+    from: userId,
+    status: "accepted",
+  }).select("to");
 
-  const visibleUsers = [
-    userId,
-    ...me.following,
-  ];
+  const ids = following.map((f) => f.to);
+  ids.push(userId);
 
-  const posts = await Post.find({
-    user: { $in: visibleUsers },
-  })
+  return Post.find({ user: { $in: ids } })
     .populate("user", "username avatar verified")
     .sort({ createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit);
-
-  return posts;
-}
+    .limit(50);
+                            }
