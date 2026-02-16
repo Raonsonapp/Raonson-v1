@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'notification_api.dart';
 import 'notification_model.dart';
 
@@ -21,7 +22,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> load() async {
     try {
-      final data = await NotificationApi.fetch('raonson');
+      final data = await NotificationApi.fetch('raonson'); // temp user
       setState(() {
         items = data;
         loading = false;
@@ -47,7 +48,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           : items.isEmpty
               ? const Center(
                   child: Text(
-                    'No notifications yet',
+                    'No notifications',
                     style: TextStyle(color: Colors.white54),
                   ),
                 )
@@ -55,29 +56,53 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   itemCount: items.length,
                   itemBuilder: (_, i) {
                     final n = items[i];
+
                     return ListTile(
                       onTap: () async {
                         if (!n.seen) {
                           await NotificationApi.markSeen(n.id);
-                          load();
+                          setState(() => n.seen = true);
                         }
                       },
-                      leading: const Icon(
-                        Icons.favorite,
-                        color: Colors.red,
+                      leading: Icon(
+                        n.type == 'like'
+                            ? Icons.favorite
+                            : n.type == 'comment'
+                                ? Icons.chat_bubble
+                                : Icons.person_add,
+                        color: n.seen ? Colors.white54 : Colors.red,
                       ),
                       title: Text(
-                        '${n.from} ${n.type} your post',
+                        '${n.from} ${_text(n.type)}',
                         style: const TextStyle(color: Colors.white),
                       ),
                       subtitle: Text(
-                        n.createdAt,
-                        style:
-                            const TextStyle(color: Colors.white54, fontSize: 12),
+                        _time(n.createdAt),
+                        style: const TextStyle(color: Colors.white54),
                       ),
                     );
                   },
                 ),
     );
+  }
+
+  String _text(String type) {
+    switch (type) {
+      case 'like':
+        return 'liked your post';
+      case 'comment':
+        return 'commented on your post';
+      case 'follow':
+        return 'started following you';
+      default:
+        return '';
+    }
+  }
+
+  String _time(DateTime t) {
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
   }
 }
