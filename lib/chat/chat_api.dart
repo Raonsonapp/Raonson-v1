@@ -1,22 +1,16 @@
 import '../core/api.dart';
+import 'dart:convert';
 
 class ChatApi {
-  static Future<List<dynamic>> fetchChats() async {
+  static Future<List> getChats() async {
     final res = await Api.get('/chats');
-    return res;
+    return jsonDecode(res.body);
   }
 
-  static Future<void> sendMessage({
-    required String chatId,
-    required String text,
-  }) async {
+  static Future<void> sendMessage(String chatId, String text) async {
     await Api.post('/chats/send', {
       'chatId': chatId,
       'text': text,
     });
-  }
-
-  static Future<void> markSeen(String chatId) async {
-    await Api.post('/chats/$chatId/seen', {});
   }
 }
