@@ -1,75 +1,86 @@
 import { User } from "../models/user.model.js";
 import { Post } from "../models/post.model.js";
-import { Reel } from "../models/reel.model.js";
 
-/* =====================================================
-   GET PROFILE (Instagram logic)
-   ===================================================== */
-export async function getProfile(req, res) {
+// ================= PROFILE INFO =================
+export async function getProfile(req, res, next) {
   try {
-    const viewerId = req.user._id;
     const { username } = req.params;
+    const viewerId = req.user._id;
 
     const user = await User.findOne({ username })
-      .select("-password")
-      .populate("followers", "_id")
-      .populate("following", "_id");
+      .select(
+        "username avatar verified isPrivate postsCount followersCount followingCount followers followRequests"
+      );
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    // ===== RELATIONSHIP =====
     const isOwner = user._id.equals(viewerId);
+    const isFollowing = user.followers.includes(viewerId);
+    const isRequested = user.followRequests.includes(viewerId);
 
-    const isFollowing = user.followers.some(f =>
-      f._id.equals(viewerId)
-    );
-
-    const isRequested = user.followRequests.some(id =>
-      id.equals(viewerId)
-    );
-
-    const canViewContent =
-      !user.isPrivate || isOwner || isFollowing;
-
-    // ===== CONTENT =====
-    let posts = [];
-    let reels = [];
-
-    if (canViewContent) {
-      posts = await Post.find({ user: user._id })
-        .sort({ createdAt: -1 })
-        .select("media createdAt");
-
-      reels = await Reel.find({ user: user._id })
-        .sort({ createdAt: -1 });
+    let access = "public";
+    if (user.isPrivate && !isOwner && !isFollowing) {
+      access = isRequested ? "requested" : "private";
     }
 
-    // ===== RESPONSE =====
     res.json({
       user: {
         id: user._id,
         username: user.username,
         avatar: user.avatar,
         verified: user.verified,
-        isPrivate: user.isPrivate,
-      },
-      stats: {
-        posts: user.postsCount,
-        followers: user.followersCount,
-        following: user.followingCount,
+        postsCount: user.postsCount,
+        followersCount: user.followersCount,
+        followingCount: user.followingCount,
       },
       relationship: {
         isOwner,
         isFollowing,
         isRequested,
+        access,
       },
-      posts,
-      reels,
     });
-  } catch (err) {
-    console.error("getProfile error:", err);
-    res.status(500).json({ error: "Failed to load profile" });
+  } catch (e) {
+    next(e);
   }
-       }
+}
+
+// ================= PROFILE POSTS =================
+export async function getProfilePosts(req, res, next) {
+  try {
+    const { username } = req.params;
+    const { cursor, limit } = req.query;
+
+    const viewerId = req.user._id;
+
+    const user = await User.findOne({ username })
+      .select("isPrivate followers");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isOwner = user._id.equals(viewerId);
+    const isFollowing = user.followers.includes(viewerId);
+
+    if (user.isPrivate && !isOwner && !isFollowing) {
+      return res.status(403).json({ error: "Private profile" });
+    }
+
+    const query = { user: user._id };
+    if (cursor) query.createdAt = { $lt: new Date(cursor) };
+
+    const posts = await Post.find(query)
+      .sort({ createdAt: -1 })
+      .limit(Number(limit) || 12)
+      .select("media createdAt");
+
+    res.json({
+      items: posts,
+      nextCursor:
+        posts.length > 0
+          ? posts[posts.length - 1].createdAt
+          : null,
+    });
+  } catch (e) {
+    next(e);
+  }
+}
