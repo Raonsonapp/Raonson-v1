@@ -2,6 +2,7 @@
     <!-- ✅ INTERNET PERMISSION (ҶОЙИ ДУРУСТ) -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <activity
+        
     <application
         android:label="Raonson"
         android:icon="@mipmap/ic_launcher">
