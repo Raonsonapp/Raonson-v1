@@ -6,6 +6,8 @@
     <application
         android:label="Raonson"
         android:icon="@mipmap/ic_launcher">
+     
+    <activity
     
             android:name=".MainActivity"
             android:exported="true"
