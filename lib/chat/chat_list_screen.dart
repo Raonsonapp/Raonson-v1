@@ -10,50 +10,74 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  late Future<List<dynamic>> future;
+  List chats = [];
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    future = ChatApi.getChats();
+    load();
+  }
+
+  Future<void> load() async {
+    final data = await ChatApi.fetchChats();
+    setState(() {
+      chats = data;
+      loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chats')),
-      body: FutureBuilder(
-        future: future,
-        builder: (context, snap) {
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final chats = snap.data!;
-          return ListView.builder(
-            itemCount: chats.length,
-            itemBuilder: (_, i) {
-              final c = chats[i];
-              return ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.person),
-                ),
-                title: Text(c['username']),
-                subtitle: Text(c['lastMessage'] ?? ''),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ChatScreen(chatId: c['id']),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: const Text('Messages'),
       ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
+          : ListView.builder(
+              itemCount: chats.length,
+              itemBuilder: (_, i) {
+                final c = chats[i];
+                final last = c['lastMessage'];
+                final seen = last?['seen'] == true;
+
+                return ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Colors.orange,
+                    child: Icon(Icons.person, color: Colors.black),
+                  ),
+                  title: Text(
+                    c['users']
+                        .firstWhere((u) => u['_id'] != 'me')['username'],
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    last?['text'] ?? '',
+                    style: TextStyle(
+                      color: seen ? Colors.white54 : Colors.white,
+                      fontWeight:
+                          seen ? FontWeight.normal : FontWeight.bold,
+                    ),
+                  ),
+                  trailing: !seen
+                      ? const Icon(Icons.circle,
+                          color: Colors.blue, size: 10)
+                      : null,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(chat: c),
+                      ),
+                    );
+                    load();
+                  },
+                );
+              },
+            ),
     );
   }
 }
