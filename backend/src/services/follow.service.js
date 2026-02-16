@@ -1,77 +1,108 @@
+import { Follow } from "../models/follow.model.js";
 import { User } from "../models/user.model.js";
+import { addNotification } from "./notification.service.js";
 
-export async function followUser({ fromUser, toUserId }) {
-  if (fromUser._id.equals(toUserId)) {
-    throw new Error("Cannot follow yourself");
-  }
+export async function followUser({ from, to }) {
+  if (from.equals(to)) throw new Error("Cannot follow yourself");
 
-  const target = await User.findById(toUserId);
+  const target = await User.findById(to);
   if (!target) throw new Error("User not found");
 
-  // already following
-  if (target.followers.includes(fromUser._id)) {
-    return { status: "already_following" };
-  }
+  const exists = await Follow.findOne({ from, to });
+  if (exists) return exists;
 
-  // PRIVATE ACCOUNT → REQUEST
+  // PRIVATE → REQUEST
   if (target.isPrivate) {
-    if (!target.followRequests.includes(fromUser._id)) {
-      target.followRequests.push(fromUser._id);
-      await target.save();
-    }
-    return { status: "requested" };
+    const req = await Follow.create({
+      from,
+      to,
+      status: "pending",
+    });
+
+    await addNotification({
+      to,
+      from,
+      type: "follow_request",
+    });
+
+    return req;
   }
 
-  // PUBLIC → FOLLOW
-  await User.findByIdAndUpdate(toUserId, {
-    $addToSet: { followers: fromUser._id },
-    $inc: { followersCount: 1 },
+  // PUBLIC → AUTO FOLLOW
+  const follow = await Follow.create({
+    from,
+    to,
+    status: "accepted",
   });
 
-  await User.findByIdAndUpdate(fromUser._id, {
-    $addToSet: { following: toUserId },
+  await User.findByIdAndUpdate(from, {
     $inc: { followingCount: 1 },
   });
 
-  return { status: "following" };
-}
-
-export async function unfollowUser({ fromUser, toUserId }) {
-  await User.findByIdAndUpdate(toUserId, {
-    $pull: { followers: fromUser._id },
-    $inc: { followersCount: -1 },
+  await User.findByIdAndUpdate(to, {
+    $inc: { followersCount: 1 },
   });
 
-  await User.findByIdAndUpdate(fromUser._id, {
-    $pull: { following: toUserId },
+  await addNotification({
+    to,
+    from,
+    type: "follow",
+  });
+
+  return follow;
+}
+
+export async function unfollowUser({ from, to }) {
+  const follow = await Follow.findOneAndDelete({
+    from,
+    to,
+    status: "accepted",
+  });
+
+  if (!follow) return;
+
+  await User.findByIdAndUpdate(from, {
     $inc: { followingCount: -1 },
   });
 
-  return { status: "unfollowed" };
+  await User.findByIdAndUpdate(to, {
+    $inc: { followersCount: -1 },
+  });
 }
 
-export async function acceptFollow({ user, fromUserId }) {
-  const requester = await User.findById(fromUserId);
-  if (!requester) throw new Error("User not found");
+export async function acceptRequest({ owner, from }) {
+  const req = await Follow.findOne({
+    from,
+    to: owner,
+    status: "pending",
+  });
 
-  await User.findByIdAndUpdate(user._id, {
-    $pull: { followRequests: fromUserId },
-    $addToSet: { followers: fromUserId },
+  if (!req) throw new Error("Request not found");
+
+  req.status = "accepted";
+  await req.save();
+
+  await User.findByIdAndUpdate(owner, {
     $inc: { followersCount: 1 },
   });
 
-  await User.findByIdAndUpdate(fromUserId, {
-    $addToSet: { following: user._id },
+  await User.findByIdAndUpdate(from, {
     $inc: { followingCount: 1 },
   });
 
-  return { status: "accepted" };
-}
-
-export async function rejectFollow({ user, fromUserId }) {
-  await User.findByIdAndUpdate(user._id, {
-    $pull: { followRequests: fromUserId },
+  await addNotification({
+    to: from,
+    from: owner,
+    type: "follow_accept",
   });
 
-  return { status: "rejected" };
+  return req;
+}
+
+export async function rejectRequest({ owner, from }) {
+  await Follow.findOneAndDelete({
+    from,
+    to: owner,
+    status: "pending",
+  });
 }
