@@ -48,19 +48,22 @@ class _UploadScreenState extends State<UploadScreen> {
       }
 
       await UploadApi.createPost(
+        user: 'raonson', // ✅ REQUIRED PARAM (ҳоло static, баъд auth)
         caption: captionCtrl.text.trim(),
         media: uploadedMedia,
       );
 
       if (!mounted) return;
-      Navigator.pop(context, true); // 🔄 return success
+      Navigator.pop(context, true); // 🔄 success
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Upload failed')),
       );
     } finally {
-      uploading = false;
+      if (mounted) {
+        setState(() => uploading = false);
+      }
     }
   }
 
