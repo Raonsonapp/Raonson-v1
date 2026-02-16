@@ -1,27 +1,24 @@
 import { Post } from "../models/post.model.js";
 import { User } from "../models/user.model.js";
 
-export async function getUserFeed({
+export async function getPersonalFeed({
   userId,
-  limit = 20,
-  cursor,
+  page = 1,
+  limit = 10,
 }) {
-  const user = await User.findById(userId).select("following");
-  if (!user) throw new Error("User not found");
+  const me = await User.findById(userId).select("following");
 
-  const feedUsers = [userId, ...user.following];
+  const visibleUsers = [
+    userId,
+    ...me.following,
+  ];
 
-  const query = {
-    user: { $in: feedUsers },
-  };
-
-  if (cursor) {
-    query.createdAt = { $lt: new Date(cursor) };
-  }
-
-  const posts = await Post.find(query)
+  const posts = await Post.find({
+    user: { $in: visibleUsers },
+  })
     .populate("user", "username avatar verified")
     .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
     .limit(limit);
 
   return posts;
