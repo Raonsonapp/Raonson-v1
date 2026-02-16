@@ -1,21 +1,20 @@
 import jwt from "jsonwebtoken";
+import { ENV } from "../config/env.js";
+import { User } from "../models/user.model.js";
 
-export const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: "No token" });
-  }
-
-  const token = authHeader.replace("Bearer ", "");
-
+export async function authMiddleware(req, res, next) {
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "dev-secret"
-    );
-    req.user = decoded;
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) return res.sendStatus(401);
+
+    const payload = jwt.verify(token, ENV.JWT_SECRET);
+    const user = await User.findById(payload.id);
+
+    if (!user) return res.sendStatus(401);
+
+    req.user = user;
     next();
   } catch {
-    res.status(401).json({ error: "Invalid token" });
+    res.sendStatus(401);
   }
-};
+}
