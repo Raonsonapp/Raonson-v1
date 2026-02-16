@@ -2,14 +2,13 @@ import 'dart:convert';
 import '../core/api.dart';
 
 class ProfileApi {
-  /// GET /profile/:userId
-  static Future<Map<String, dynamic>> getProfile(String userId) async {
+  static Future<Map<String, dynamic>> fetch(String userId) async {
     final res = await Api.get('/profile/$userId');
     return jsonDecode(res.body);
   }
 
-  /// POST /follow/:userId
-  static Future<void> follow(String userId) async {
-    await Api.post('/follow/$userId');
+  static Future<bool> follow(String userId) async {
+    final res = await Api.post('/profile/$userId/follow', {});
+    return jsonDecode(res.body)['following'];
   }
 }
