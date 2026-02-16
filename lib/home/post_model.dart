@@ -2,7 +2,10 @@ class PostMedia {
   final String url;
   final String type; // image | video
 
-  PostMedia({required this.url, required this.type});
+  PostMedia({
+    required this.url,
+    required this.type,
+  });
 
   factory PostMedia.fromJson(Map<String, dynamic> json) {
     return PostMedia(
@@ -19,16 +22,14 @@ class Post {
   final List<PostMedia> media;
   int likes;
   bool liked;
-  bool saved;
 
   Post({
     required this.id,
     required this.user,
     required this.caption,
     required this.media,
-    this.likes = 0,
+    required this.likes,
     this.liked = false,
-    this.saved = false,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -36,12 +37,10 @@ class Post {
       id: json['id'],
       user: json['user'],
       caption: json['caption'] ?? '',
+      likes: json['likes'] ?? 0,
       media: (json['media'] as List)
           .map((e) => PostMedia.fromJson(e))
           .toList(),
-      likes: json['likes'] ?? 0,
-      liked: false,
-      saved: false,
     );
   }
 }
