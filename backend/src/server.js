@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import http from "http";
 
 import app from "./app.js";
-import { connectDatabase } from "./core/database.js";
+import { initDatabase } from "./core/database.js";
 import { initSocket } from "./sockets/socket.js";
 
 dotenv.config();
@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 10000;
 const BASE_URL = process.env.BASE_URL || "https://raonson-v1.onrender.com";
 
 // ================= DATABASE =================
-await connectDatabase(mongoose);
+await initDatabase();
 
 // ================= SERVER =================
 const server = http.createServer(app);
