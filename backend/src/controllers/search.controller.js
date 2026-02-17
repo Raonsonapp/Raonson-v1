@@ -1,38 +1,16 @@
-import {
-  searchAll,
-  getRecentSearches,
-  clearRecentSearches,
-} from "../services/search.service.js";
+import { User } from "../models/user.model.js";
+import { Post } from "../models/post.model.js";
 
-export async function search(req, res, next) {
-  try {
-    const { q } = req.query;
+export async function search(req, res) {
+  const q = req.query.q;
 
-    const result = await searchAll({
-      userId: req.user._id,
-      q,
-    });
+  const users = await User.find({
+    username: { $regex: q, $options: "i" },
+  }).select("username avatar verified");
 
-    res.json(result);
-  } catch (e) {
-    next(e);
-  }
-}
+  const posts = await Post.find({
+    caption: { $regex: q, $options: "i" },
+  }).limit(20);
 
-export async function recent(req, res, next) {
-  try {
-    const items = await getRecentSearches(req.user._id);
-    res.json(items);
-  } catch (e) {
-    next(e);
-  }
-}
-
-export async function clear(req, res, next) {
-  try {
-    await clearRecentSearches(req.user._id);
-    res.json({ ok: true });
-  } catch (e) {
-    next(e);
-  }
+  res.json({ users, posts });
 }
