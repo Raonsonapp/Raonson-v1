@@ -16,7 +16,7 @@ class ChatListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ChatListController(
-        context.read<ChatRepository>(),
+        ChatRepository(),
       )..loadChats(),
       child: const _ChatListView(),
     );
@@ -35,7 +35,7 @@ class _ChatListView extends StatelessWidget {
         title: const Text('Messages'),
       ),
       body: controller.isLoading
-          ? const LoadingIndicator()
+          ? const Center(child: LoadingIndicator())
           : controller.chats.isEmpty
               ? const EmptyState(
                   title: 'No messages yet',
