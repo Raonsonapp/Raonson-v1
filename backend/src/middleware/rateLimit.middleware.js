@@ -1,24 +1,42 @@
-const requests = new Map();
+// src/middlewares/rateLimit.middleware.js
+import crypto from "crypto";
 
-export function rateLimitMiddleware(limit = 100, windowMs = 60000) {
+const store = new Map();
+
+/**
+ * Rate Limit Middleware (Production-ready)
+ * Works correctly on Render / Proxy / Load Balancer
+ */
+export function rateLimitMiddleware({
+  limit = 100,
+  windowMs = 60_000,
+} = {}) {
   return (req, res, next) => {
-    const ip = req.ip;
     const now = Date.now();
 
-    if (!requests.has(ip)) {
-      requests.set(ip, []);
+    // ✅ Correct IP resolution (Render / Proxy safe)
+    const ip =
+      req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
+      req.socket.remoteAddress ||
+      crypto.randomUUID();
+
+    if (!store.has(ip)) {
+      store.set(ip, []);
     }
 
-    const timestamps = requests.get(ip).filter(
-      t => now - t < windowMs
-    );
+    // ✅ keep only valid timestamps
+    const timestamps = store
+      .get(ip)
+      .filter((time) => now - time < windowMs);
 
     timestamps.push(now);
-    requests.set(ip, timestamps);
+    store.set(ip, timestamps);
 
+    // ✅ hard limit reached
     if (timestamps.length > limit) {
       return res.status(429).json({
-        error: "Too many requests",
+        success: false,
+        message: "Too many requests. Please try again later.",
       });
     }
 
