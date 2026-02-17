@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: Raonson API
+  description: Full Instagram-like social network backend
+  version: 1.0.0
+servers:
+  - url: https://raonson-v1.onrender.com
+paths:
+
+  /auth/login:
+    post:
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+      responses:
+        "200":
+          description: Auth success
+
+  /posts:
+    get:
+      summary: Get feed
+      responses:
+        "200":
+          description: List of posts
+    post:
+      summary: Create post
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                caption:
+                  type: string
+                media:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                      type:
+                        type: string
+      responses:
+        "200":
+          description: Post created
+
+  /posts/{id}/like:
+    post:
+      summary: Like / Unlike post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Like toggled
+
+  /stories:
+    get:
+      summary: Get stories
+      responses:
+        "200":
+          description: Active stories
+    post:
+      summary: Create story
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mediaUrl:
+                  type: string
+                mediaType:
+                  type: string
+      responses:
+        "200":
+          description: Story created
+
+  /reels:
+    get:
+      summary: Get reels
+      responses:
+        "200":
+          description: List of reels
+
+  /notifications:
+    get:
+      summary: Get notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notifications list
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
