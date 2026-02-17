@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const commentSchema = new mongoose.Schema(
+const CommentSchema = new mongoose.Schema(
   {
     post: {
       type: mongoose.Schema.Types.ObjectId,
@@ -12,25 +12,11 @@ const commentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    text: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 1000,
-    },
-    parent: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Comment",
-      default: null, // reply support
-    },
-    likes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
+
+    text: { type: String, required: true },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
 
-export const Comment = mongoose.model("Comment", commentSchema);
+export const Comment = mongoose.model("Comment", CommentSchema);
