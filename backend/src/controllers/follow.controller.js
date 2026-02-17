@@ -1,54 +1,26 @@
-import {
-  followUser,
-  unfollowUser,
-  acceptRequest,
-  rejectRequest,
-} from "../services/follow.service.js";
+import { User } from "../models/user.model.js";
 
-export async function follow(req, res, next) {
-  try {
-    const result = await followUser({
-      from: req.user._id,
-      to: req.params.id,
-    });
-    res.json(result);
-  } catch (e) {
-    next(e);
-  }
-}
+export async function toggleFollow(req, res) {
+  const target = await User.findById(req.params.userId);
+  const me = await User.findById(req.user._id);
 
-export async function unfollow(req, res, next) {
-  try {
-    await unfollowUser({
-      from: req.user._id,
-      to: req.params.id,
-    });
-    res.json({ ok: true });
-  } catch (e) {
-    next(e);
-  }
-}
+  const isFollowing = me.following.includes(target._id);
 
-export async function accept(req, res, next) {
-  try {
-    const r = await acceptRequest({
-      owner: req.user._id,
-      from: req.params.id,
-    });
-    res.json(r);
-  } catch (e) {
-    next(e);
+  if (isFollowing) {
+    me.following.pull(target._id);
+    target.followers.pull(me._id);
+  } else {
+    if (target.isPrivate) {
+      target.followRequests.addToSet(me._id);
+      await target.save();
+      return res.json({ requested: true });
+    }
+    me.following.addToSet(target._id);
+    target.followers.addToSet(me._id);
   }
-}
 
-export async function reject(req, res, next) {
-  try {
-    await rejectRequest({
-      owner: req.user._id,
-      from: req.params.id,
-    });
-    res.json({ ok: true });
-  } catch (e) {
-    next(e);
-  }
+  await me.save();
+  await target.save();
+
+  res.json({ following: !isFollowing });
 }
