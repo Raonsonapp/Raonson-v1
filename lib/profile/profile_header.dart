@@ -22,7 +22,7 @@ class ProfileHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              Avatar(url: profile.avatar, size: 72),
+              Avatar(imageUrl: profile.avatar, size: 72),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
