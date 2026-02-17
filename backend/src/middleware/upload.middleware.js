@@ -19,8 +19,11 @@ function fileFilter(_, file, cb) {
   }
 }
 
-export const uploadMiddleware = multer({
+const upload = multer({
   storage,
   fileFilter,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 });
+
+// ⬇️ ИН ҶО МУҲИМ АСТ
+export const uploadMiddleware = upload.single("file");
