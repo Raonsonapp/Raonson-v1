@@ -1,0 +1,37 @@
+name: Flutter Analyze Only (Errors Report)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Flutter analyze (errors only)
+        run: |
+          flutter analyze --no-fatal-infos --no-fatal-warnings \
+          | tee analyze.log || true
+
+      - name: Show error count
+        run: |
+          echo "=============================="
+          echo "ANALYZE ERROR SUMMARY"
+          echo "=============================="
+          grep -E "error •" analyze.log || echo "No errors found"
+          echo "------------------------------"
+          echo "TOTAL ERRORS:"
+          grep -c "error •" analyze.log || echo 0
