@@ -1,8 +1,15 @@
 import 'secure_storage.dart';
 
 class TokenStorage {
+  TokenStorage._();
+
+  /// ✅ Singleton instance
+  static final TokenStorage instance = TokenStorage._();
+
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
+
+  // ---------------- STATIC API (қадимӣ) ----------------
 
   static Future<void> saveAccessToken(String token) {
     return SecureStorage.write(_accessTokenKey, token);
@@ -23,5 +30,12 @@ class TokenStorage {
   static Future<void> clearTokens() async {
     await SecureStorage.delete(_accessTokenKey);
     await SecureStorage.delete(_refreshTokenKey);
+  }
+
+  // ---------------- INSTANCE WRAPPERS ----------------
+  // ✅ Барои controller-ҳо
+
+  Future<void> saveToken(String token) {
+    return saveAccessToken(token);
   }
 }
