@@ -1,0 +1,46 @@
+name: Flutter Full Debug & Analyze
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  flutter-debug:
+    name: Flutter Analyze & Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      # ---------------- CHECKOUT ----------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ---------------- FLUTTER SETUP ----------------
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: stable
+          cache: true
+
+      # ---------------- FLUTTER INFO ----------------
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      # ---------------- DEPENDENCIES ----------------
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # ---------------- FORMAT CHECK ----------------
+      - name: Dart format check
+        run: dart format --set-exit-if-changed .
+
+      # ---------------- ANALYZE ----------------
+      - name: Flutter analyze (STRICT)
+        run: flutter analyze
+
+      # ---------------- BUILD (NO INSTALL) ----------------
+      - name: Build APK (Release check only)
+        run: flutter build apk --release --no-tree-shake-icons
