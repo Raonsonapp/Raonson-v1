@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import { errorHandler } from "./core/errorHandler.js";
-import { rateLimitMiddleware } from "./middlewares/rateLimit.middleware.js";
+import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
 
 // ROUTES
 import authRoutes from "./routes/auth.routes.js";
