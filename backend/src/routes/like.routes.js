@@ -1,9 +1,13 @@
 import express from "express";
-import { toggleLike } from "../controllers/like.controller.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
+import {
+  likeTarget,
+  unlikeTarget,
+} from "../controllers/like.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/:postId", authMiddleware, toggleLike);
+router.post("/", authMiddleware, likeTarget);
+router.delete("/", authMiddleware, unlikeTarget);
 
 export default router;
