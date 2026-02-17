@@ -4,8 +4,18 @@ import 'package:provider/provider.dart';
 import 'feed_controller.dart';
 import 'feed_state.dart';
 import '../post/post_card.dart';
+
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/empty_state.dart';
+
+import '../../navigation/bottom_nav/bottom_nav_bar.dart';
+import '../../navigation/bottom_nav/bottom_nav_controller.dart';
+import '../../navigation/drawer/app_drawer.dart';
+
+import '../../reels/reels_feed/reels_screen.dart';
+import '../../chat/inbox/chat_list_screen.dart';
+import '../../profile/profile_screen.dart';
+
 import '../../app/app_routes.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -13,21 +23,24 @@ class FeedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => FeedController(),
-      child: const _FeedView(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => FeedController()),
+        ChangeNotifierProvider(create: (_) => BottomNavController()),
+      ],
+      child: const _FeedShell(),
     );
   }
 }
 
-class _FeedView extends StatefulWidget {
-  const _FeedView();
+class _FeedShell extends StatefulWidget {
+  const _FeedShell();
 
   @override
-  State<_FeedView> createState() => _FeedViewState();
+  State<_FeedShell> createState() => _FeedShellState();
 }
 
-class _FeedViewState extends State<_FeedView> {
+class _FeedShellState extends State<_FeedShell> {
   late final ScrollController _scrollController;
 
   @override
@@ -52,15 +65,33 @@ class _FeedViewState extends State<_FeedView> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<FeedController>(
-      builder: (_, controller, __) {
-        final FeedState state = controller.state;
+    final nav = context.watch<BottomNavController>();
 
-        return Scaffold(
-          appBar: _buildAppBar(context),
-          body: _buildBody(context, state, controller),
-        );
-      },
+    return Scaffold(
+      drawer: AppDrawer(
+        onProfile: () {
+          Navigator.pop(context);
+          nav.setIndex(4);
+        },
+        onSaved: () {},
+        onSettings: () {},
+        onLogout: () {},
+      ),
+      appBar: _buildAppBar(context),
+      body: IndexedStack(
+        index: nav.currentIndex,
+        children: [
+          _buildFeed(context),
+          const ReelsScreen(),
+          const ChatListScreen(),
+          const Center(child: Text('Search')), // Search placeholder
+          const ProfileScreen(userId: 'me'),
+        ],
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: nav.currentIndex,
+        onTap: nav.setIndex,
+      ),
     );
   }
 
@@ -103,47 +134,49 @@ class _FeedViewState extends State<_FeedView> {
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    FeedState state,
-    FeedController controller,
-  ) {
-    if (state.isLoading && state.posts.isEmpty) {
-      return const Center(child: LoadingIndicator());
-    }
+  Widget _buildFeed(BuildContext context) {
+    return Consumer<FeedController>(
+      builder: (_, controller, __) {
+        final FeedState state = controller.state;
 
-    if (state.hasError) {
-      return Center(
-        child: Text(
-          state.errorMessage ?? 'Unexpected error',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      );
-    }
+        if (state.isLoading && state.posts.isEmpty) {
+          return const Center(child: LoadingIndicator());
+        }
 
-    if (state.posts.isEmpty) {
-      return const EmptyState(
-        title: 'No posts yet',
-        subtitle: 'Follow users to see posts in your feed',
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: controller.refresh,
-      child: ListView.builder(
-        controller: _scrollController,
-        itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index < state.posts.length) {
-            return PostCard(post: state.posts[index]);
-          }
-
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: LoadingIndicator()),
+        if (state.hasError) {
+          return Center(
+            child: Text(
+              state.errorMessage ?? 'Unexpected error',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           );
-        },
-      ),
+        }
+
+        if (state.posts.isEmpty) {
+          return const EmptyState(
+            title: 'No posts yet',
+            subtitle: 'Follow users to see posts in your feed',
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: controller.refresh,
+          child: ListView.builder(
+            controller: _scrollController,
+            itemCount: state.posts.length + (state.hasMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index < state.posts.length) {
+                return PostCard(post: state.posts[index]);
+              }
+
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: LoadingIndicator()),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
