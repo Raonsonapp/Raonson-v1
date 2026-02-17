@@ -77,7 +77,7 @@ class ApiClient {
   }
 
   // ================= INSTANCE WRAPPERS =================
-  // ✅ барои ApiClient.instance.post(...)
+  // ❗ НОМҲО ДИГАР, ТО БАРХӮРД НАШАВАД
 
   Future<http.Response> getRequest(
     String path, {
@@ -102,13 +102,5 @@ class ApiClient {
 
   Future<http.Response> deleteRequest(String path) {
     return ApiClient.delete(path);
-  }
-
-  /// ⭐ МАХЗ ИН МЕТОД барои login_controller.dart
-  Future<http.Response> post(
-    String path, {
-    Map<String, dynamic>? body,
-  }) {
-    return ApiClient.post(path, body: body);
   }
 }
