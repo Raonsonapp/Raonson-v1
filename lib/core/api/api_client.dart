@@ -7,17 +7,17 @@ import 'api_interceptors.dart';
 class ApiClient {
   ApiClient._();
 
-  /// ✅ Singleton instance (барои controller-ҳо)
+  /// Singleton instance
   static final ApiClient instance = ApiClient._();
 
   static final http.Client _client = http.Client();
 
   static Uri _uri(String path, [Map<String, String>? query]) {
-    return Uri.parse('${AppConfig.baseUrl}$path')
+    return Uri.parse('${AppConfig.apiBaseUrl}$path')
         .replace(queryParameters: query);
   }
 
-  // ---------------- STATIC API ----------------
+  // ================= STATIC METHODS =================
 
   static Future<http.Response> get(
     String path, {
@@ -76,31 +76,40 @@ class ApiClient {
     return ApiInterceptors.handleResponse(response);
   }
 
-  // ---------------- INSTANCE WRAPPERS ----------------
-  // ✅ Барои кодҳое, ки ApiClient.instance.post(...) менависанд
+  // ================= INSTANCE WRAPPERS =================
+  // ⚠️ БАРОИ КОДҲОЕ, КИ ApiClient.instance.post(...) МЕНАВИСАНД
 
   Future<http.Response> getRequest(
     String path, {
     Map<String, String>? query,
   }) {
-    return get(path, query: query);
+    return ApiClient.get(path, query: query);
   }
 
   Future<http.Response> postRequest(
     String path, {
     Map<String, dynamic>? body,
   }) {
-    return post(path, body: body);
+    return ApiClient.post(path, body: body);
   }
 
   Future<http.Response> putRequest(
     String path, {
     Map<String, dynamic>? body,
   }) {
-    return put(path, body: body);
+    return ApiClient.put(path, body: body);
   }
 
   Future<http.Response> deleteRequest(String path) {
-    return delete(path);
+    return ApiClient.delete(path);
+  }
+
+  /// ✅ МЕТОДИ МУВОФИҚ БАРОИ login_controller.dart
+  /// ApiClient.instance.post(...)
+  Future<http.Response> post(
+    String path, {
+    Map<String, dynamic>? body,
+  }) {
+    return ApiClient.post(path, body: body);
   }
 }
