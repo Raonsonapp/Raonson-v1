@@ -1,7 +1,7 @@
 import express from "express";
 import { uploadMedia } from "../controllers/media.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { uploadMiddleware } from "../middlewares/upload.middleware.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
+import { uploadMiddleware } from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 
