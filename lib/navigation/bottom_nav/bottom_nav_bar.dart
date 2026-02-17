@@ -25,8 +25,8 @@ class BottomNavBar extends StatelessWidget {
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: activeColor.withOpacity(0.35),
-            blurRadius: 20,
+            color: activeColor.withOpacity(0.25),
+            blurRadius: 18,
             spreadRadius: 2,
           ),
         ],
@@ -38,36 +38,11 @@ class BottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _item(
-                icon: Icons.home_rounded,
-                index: 0,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-              ),
-              _item(
-                icon: Icons.play_circle_outline,
-                index: 1,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-              ),
-              _item(
-                icon: Icons.chat_bubble_outline,
-                index: 2,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-              ),
-              _item(
-                icon: Icons.search_rounded,
-                index: 3,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-              ),
-              _item(
-                icon: Icons.person_rounded,
-                index: 4,
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
-              ),
+              _item(Icons.home_rounded, 0, activeColor, inactiveColor),
+              _item(Icons.play_circle_outline, 1, activeColor, inactiveColor),
+              _item(Icons.chat_bubble_outline, 2, activeColor, inactiveColor),
+              _item(Icons.search_rounded, 3, activeColor, inactiveColor),
+              _item(Icons.person_rounded, 4, activeColor, inactiveColor),
             ],
           ),
         ),
@@ -75,12 +50,12 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _item({
-    required IconData icon,
-    required int index,
-    required Color activeColor,
-    required Color inactiveColor,
-  }) {
+  Widget _item(
+    IconData icon,
+    int index,
+    Color activeColor,
+    Color inactiveColor,
+  ) {
     final selected = currentIndex == index;
 
     return GestureDetector(
