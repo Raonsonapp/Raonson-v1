@@ -1,8 +1,15 @@
+import 'package:flutter/widgets.dart';
+
 class AppConfig {
-  static const String appName = 'Raonson';
-  static const String baseUrl = 'https://raonson-v1.onrender.com';
+  static late String apiBaseUrl;
+  static late bool enableLogs;
 
-  static const Duration apiTimeout = Duration(seconds: 30);
-
-  static const bool enableLogs = true;
+  static Future<void> initialize({
+    required String baseUrl,
+    bool logs = true,
+  }) async {
+    apiBaseUrl = baseUrl;
+    enableLogs = logs;
+    WidgetsFlutterBinding.ensureInitialized();
+  }
 }
