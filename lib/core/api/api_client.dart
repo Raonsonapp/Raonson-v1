@@ -7,17 +7,21 @@ import 'api_interceptors.dart';
 class ApiClient {
   ApiClient._();
 
-  /// Singleton instance
+  /// Singleton instance (барои controller-ҳо)
   static final ApiClient instance = ApiClient._();
 
   static final http.Client _client = http.Client();
 
+  // --------------------------------------------------
+  // URI builder
   static Uri _uri(String path, [Map<String, String>? query]) {
     return Uri.parse('${AppConfig.apiBaseUrl}$path')
         .replace(queryParameters: query);
   }
 
-  // ================= STATIC METHODS =================
+  // ==================================================
+  // STATIC METHODS (ApiClient.post(...))
+  // ==================================================
 
   static Future<http.Response> get(
     String path, {
@@ -76,8 +80,9 @@ class ApiClient {
     return ApiInterceptors.handleResponse(response);
   }
 
-  // ================= INSTANCE WRAPPERS =================
-  // ❗ НОМҲО ДИГАР, ТО БАРХӮРД НАШАВАД
+  // ==================================================
+  // INSTANCE METHODS (ApiClient.instance.postRequest)
+  // ==================================================
 
   Future<http.Response> getRequest(
     String path, {
