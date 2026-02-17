@@ -1,11 +1,11 @@
 import express from "express";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
 import {
   getStories,
   createStory,
   viewStory,
   likeStory,
 } from "../controllers/story.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
