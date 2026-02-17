@@ -9,10 +9,6 @@ import { initSocket } from "./sockets/socket.js";
 dotenv.config();
 
 const PORT = process.env.PORT || 10000;
-const BASE_URL = process.env.BASE_URL || "https://raonson-v1.onrender.com";
-
-// ================= DATABASE =================
-await initDatabase();
 
 // ================= SERVER =================
 const server = http.createServer(app);
@@ -20,15 +16,19 @@ const server = http.createServer(app);
 // ================= SOCKET =================
 initSocket(server);
 
-// ================= START =================
+// ================= START SERVER FIRST =================
 server.listen(PORT, () => {
   console.log("====================================");
   console.log("🚀 Raonson Backend STARTED");
-  console.log(`🌍 URL: ${BASE_URL}`);
   console.log(`📡 Port: ${PORT}`);
   console.log(`🧠 Node: ${process.version}`);
   console.log("====================================");
 });
+
+// ================= DATABASE (AFTER LISTEN) =================
+initDatabase()
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB error:", err));
 
 // ================= GRACEFUL SHUTDOWN =================
 process.on("SIGINT", async () => {
