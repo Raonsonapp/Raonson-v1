@@ -1,20 +1,19 @@
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../config/jwt.config.js";
+import { verifyAccessToken } from "../config/jwt.config.js";
 
 export function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   const token = header.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    const payload = verifyAccessToken(token);
+    req.user = payload;
     next();
   } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ message: "Invalid or expired token" });
   }
-}
+      }
