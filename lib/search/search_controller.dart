@@ -1,0 +1,67 @@
+import 'package:flutter/material.dart';
+import 'search_state.dart';
+import '../models/user_model.dart';
+import '../models/post_model.dart';
+
+class SearchController extends ChangeNotifier {
+  SearchState _state = SearchState.initial();
+  SearchState get state => _state;
+
+  void updateQuery(String value) {
+    _state = _state.copyWith(query: value);
+    notifyListeners();
+
+    if (value.isEmpty) {
+      clearResults();
+    } else {
+      _mockSearch(value);
+    }
+  }
+
+  Future<void> _mockSearch(String query) async {
+    _state = _state.copyWith(isLoading: true, error: null);
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // ⛔ backend пайваст мешавад баъд
+    final users = List.generate(
+      5,
+      (i) => UserModel(
+        id: 'u$i',
+        username: '$query\_user$i',
+        avatarUrl: '',
+        verified: i.isEven,
+      ),
+    );
+
+    final posts = List.generate(
+      6,
+      (i) => PostModel(
+        id: 'p$i',
+        user: users.first,
+        caption: '$query post $i',
+        mediaUrl: '',
+        likesCount: 0,
+        commentsCount: 0,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    _state = _state.copyWith(
+      isLoading: false,
+      users: users,
+      posts: posts,
+    );
+    notifyListeners();
+  }
+
+  void clearResults() {
+    _state = _state.copyWith(
+      users: [],
+      posts: [],
+      isLoading: false,
+    );
+    notifyListeners();
+  }
+}
