@@ -44,6 +44,7 @@ class ProfileTabs extends StatelessWidget {
     }
 
     return GridView.builder(
+      physics: const BouncingScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         mainAxisSpacing: 2,
