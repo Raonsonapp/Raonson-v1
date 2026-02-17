@@ -1,21 +1,26 @@
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-
-const uploadDir = "uploads/stories";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, uploadDir),
+  destination: "uploads/",
   filename: (_, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
+    const unique =
+      Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
   },
 });
 
-export const storyUpload = multer({
+function fileFilter(_, file, cb) {
+  const allowed = ["image/", "video/"];
+  if (allowed.some(type => file.mimetype.startsWith(type))) {
+    cb(null, true);
+  } else {
+    cb(new Error("Unsupported media type"), false);
+  }
+}
+
+export const uploadMiddleware = multer({
   storage,
+  fileFilter,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 });
