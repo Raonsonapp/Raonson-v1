@@ -1,36 +1,25 @@
 import { Story } from "../models/story.model.js";
-import { Follow } from "../models/follow.model.js";
-import { User } from "../models/user.model.js";
 
-export async function canViewStories({ viewer, owner }) {
-  if (viewer.equals(owner)) return true;
+const DAY = 24 * 60 * 60 * 1000;
 
-  const user = await User.findById(owner);
-  if (!user.isPrivate) return true;
+export async function getActiveStories() {
+  const since = new Date(Date.now() - DAY);
 
-  const follow = await Follow.findOne({
-    from: viewer,
-    to: owner,
-    status: "accepted",
-  });
-
-  return !!follow;
+  return Story.find({ createdAt: { $gte: since } })
+    .populate("user", "username avatar verified")
+    .sort({ createdAt: -1 });
 }
 
-export async function getVisibleStories(userId) {
-  // find people I can see
-  const following = await Follow.find({
-    from: userId,
-    status: "accepted",
-  }).select("to");
+export async function createStory(userId, mediaUrl, mediaType) {
+  return Story.create({
+    user: userId,
+    mediaUrl,
+    mediaType,
+  });
+}
 
-  const ids = following.map((f) => f.to);
-  ids.push(userId);
-
-  return Story.find({
-    user: { $in: ids },
-    expiresAt: { $gt: new Date() },
-  })
-    .populate("user", "username avatar verified")
-    .sort({ createdAt: 1 });
+export async function viewStory(storyId, userId) {
+  await Story.findByIdAndUpdate(storyId, {
+    $addToSet: { views: userId },
+  });
 }
