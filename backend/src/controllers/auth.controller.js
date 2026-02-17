@@ -1,16 +1,11 @@
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { User } from "../models/user.model.js";
-import { jwtConfig } from "../config/jwt.config.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+} from "../config/jwt.config.js";
 
-function generateToken(user) {
-  return jwt.sign(
-    { id: user._id },
-    jwtConfig.secret,
-    { expiresIn: jwtConfig.expiresIn }
-  );
-}
-
+// REGISTER
 export async function register(req, res) {
   const { username, password } = req.body;
 
@@ -26,11 +21,17 @@ export async function register(req, res) {
     password: hash,
   });
 
-  const token = generateToken(user);
+  const accessToken = signAccessToken({ id: user._id });
+  const refreshToken = signRefreshToken({ id: user._id });
 
-  res.json({ user, token });
+  res.json({
+    user,
+    accessToken,
+    refreshToken,
+  });
 }
 
+// LOGIN
 export async function login(req, res) {
   const { username, password } = req.body;
 
@@ -44,16 +45,23 @@ export async function login(req, res) {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
-  const token = generateToken(user);
+  const accessToken = signAccessToken({ id: user._id });
+  const refreshToken = signRefreshToken({ id: user._id });
 
-  res.json({ user, token });
+  res.json({
+    user,
+    accessToken,
+    refreshToken,
+  });
 }
 
+// REFRESH TOKEN
 export async function refreshToken(req, res) {
-  const token = generateToken(req.user);
-  res.json({ token });
+  const accessToken = signAccessToken({ id: req.user.id });
+  res.json({ accessToken });
 }
 
+// LOGOUT
 export async function logout(req, res) {
   res.json({ success: true });
     }
