@@ -5,21 +5,20 @@ import 'reels_controller.dart';
 import '../../widgets/loading_indicator.dart';
 import '../player/reel_player.dart';
 
-class ReelsScreen extends StatefulWidget {
+class ReelsScreen extends StatelessWidget {
   const ReelsScreen({super.key});
 
   @override
-  State<ReelsScreen> createState() => _ReelsScreenState();
-}
-
-class _ReelsScreenState extends State<ReelsScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(
-      () => context.read<ReelsController>().loadReels(),
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ReelsController()..loadReels(),
+      child: const _ReelsView(),
     );
   }
+}
+
+class _ReelsView extends StatelessWidget {
+  const _ReelsView();
 
   @override
   Widget build(BuildContext context) {
@@ -27,28 +26,45 @@ class _ReelsScreenState extends State<ReelsScreen> {
     final state = controller.state;
 
     if (state.isLoading) {
-      return const Center(child: LoadingIndicator());
+      return const Scaffold(
+        body: Center(child: LoadingIndicator()),
+      );
     }
 
     if (state.hasError) {
-      return const Center(
-        child: Text(
-          'Failed to load reels',
-          style: TextStyle(color: Colors.white),
+      return const Scaffold(
+        body: Center(
+          child: Text(
+            'Failed to load reels',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
 
-    return PageView.builder(
-      scrollDirection: Axis.vertical,
-      itemCount: state.reels.length,
-      itemBuilder: (context, index) {
-        final reel = state.reels[index];
-        return ReelPlayer(
-          reel: reel,
-          onLike: () => controller.likeReel(reel.id),
-        );
-      },
+    if (state.reels.isEmpty) {
+      return const Scaffold(
+        body: Center(
+          child: Text(
+            'No reels available',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      body: PageView.builder(
+        scrollDirection: Axis.vertical,
+        itemCount: state.reels.length,
+        itemBuilder: (context, index) {
+          final reel = state.reels[index];
+          return ReelPlayer(
+            reel: reel,
+            onLike: () => controller.likeReel(reel.id),
+          );
+        },
+      ),
     );
   }
 }
