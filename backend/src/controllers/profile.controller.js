@@ -1,16 +1,24 @@
-import { getProfile } from "../services/profile.service.js";
+import { User } from "../models/user.model.js";
 
-export async function viewProfile(req, res, next) {
-  try {
-    const { username } = req.params;
+export async function getProfile(req, res) {
+  const user = await User.findOne({ username: req.params.username })
+    .select("-password");
 
-    const data = await getProfile({
-      viewerId: req.user._id,
-      username,
-    });
-
-    res.json(data);
-  } catch (e) {
-    next(e);
+  if (!user) {
+    return res.status(404).json({ message: "Profile not found" });
   }
+
+  res.json(user);
+}
+
+export async function updateProfile(req, res) {
+  const updates = req.body;
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    updates,
+    { new: true }
+  ).select("-password");
+
+  res.json(user);
 }
