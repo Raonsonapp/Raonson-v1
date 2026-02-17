@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+
 import 'app_state.dart';
 import 'app_routes.dart';
+
+// ✅ ИМПОРТИ ЭКРАНИ ВОҚЕӢ
+import '../auth/login/login_screen.dart';
 
 class AppController {
   final AppState appState;
@@ -17,19 +21,26 @@ class AppController {
   Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.login:
-        return _page(const Placeholder());
+        return _page(const LoginScreen());
+
       case AppRoutes.register:
         return _page(const Placeholder());
+
       case AppRoutes.home:
         return _page(const Placeholder());
+
       case AppRoutes.profile:
         return _page(const Placeholder());
+
       case AppRoutes.create:
         return _page(const Placeholder());
+
       case AppRoutes.chat:
         return _page(const Placeholder());
+
       case AppRoutes.notifications:
         return _page(const Placeholder());
+
       default:
         return _page(const Placeholder());
     }
