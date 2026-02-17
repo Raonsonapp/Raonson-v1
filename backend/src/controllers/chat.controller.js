@@ -1,28 +1,24 @@
-import { Chat } from "../models/chat.model.js";
+import { Message } from "../models/message.model.js";
 
-// GET USER CHATS
-export async function getChats(req, res) {
-  const chats = await Chat.find({
-    members: req.user._id,
-  })
-    .populate("members", "username avatar")
-    .sort({ updatedAt: -1 });
-
-  res.json(chats);
-}
-
-// SEND MESSAGE
 export async function sendMessage(req, res) {
-  const { chatId, text } = req.body;
+  const { to, text } = req.body;
 
-  const chat = await Chat.findById(chatId);
-  chat.messages.push({
-    sender: req.user._id,
+  const message = await Message.create({
+    from: req.user._id,
+    to,
     text,
   });
 
-  chat.updatedAt = new Date();
-  await chat.save();
+  res.json(message);
+}
 
-  res.json(chat.messages.at(-1));
+export async function getMessages(req, res) {
+  const messages = await Message.find({
+    $or: [
+      { from: req.user._id, to: req.params.userId },
+      { from: req.params.userId, to: req.user._id },
+    ],
+  }).sort({ createdAt: 1 });
+
+  res.json(messages);
 }
