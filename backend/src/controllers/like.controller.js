@@ -1,16 +1,32 @@
-import { Post } from "../models/post.model.js";
+import { Like } from "../models/like.model.js";
 
-export async function toggleLike(req, res) {
-  const post = await Post.findById(req.params.postId);
+export async function likeTarget(req, res) {
+  const { targetId, targetType } = req.body;
 
-  const liked = post.likes.includes(req.user._id);
+  const like = await Like.create({
+    user: req.user.id,
+    targetId,
+    targetType,
+  });
 
-  await Post.findByIdAndUpdate(
-    req.params.postId,
-    liked
-      ? { $pull: { likes: req.user._id } }
-      : { $addToSet: { likes: req.user._id } }
-  );
-
-  res.json({ liked: !liked });
+  res.json({ success: true, like });
 }
+
+export async function unlikeTarget(req, res) {
+  const { targetId } = req.body;
+
+  await Like.deleteOne({
+    user: req.user.id,
+    targetId,
+  });
+
+  res.json({ success: true });
+}
+
+export async function getLikes(req, res) {
+  const { targetId } = req.params;
+
+  const likes = await Like.countDocuments({ targetId });
+
+  res.json({ likes });
+    }
