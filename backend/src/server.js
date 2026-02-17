@@ -1,14 +1,37 @@
 import dotenv from "dotenv";
-dotenv.config();
+import mongoose from "mongoose";
+import http from "http";
 
 import app from "./app.js";
-import { connectDB } from "./config/db.config.js";
+import { connectDatabase } from "./core/database.js";
+import { initSocket } from "./sockets/socket.js";
 
-const PORT = process.env.PORT || 5000;
+dotenv.config();
 
-(async () => {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
-})();
+const PORT = process.env.PORT || 10000;
+const BASE_URL = process.env.BASE_URL || "https://raonson-v1.onrender.com";
+
+// ================= DATABASE =================
+await connectDatabase(mongoose);
+
+// ================= SERVER =================
+const server = http.createServer(app);
+
+// ================= SOCKET =================
+initSocket(server);
+
+// ================= START =================
+server.listen(PORT, () => {
+  console.log("====================================");
+  console.log("🚀 Raonson Backend STARTED");
+  console.log(`🌍 URL: ${BASE_URL}`);
+  console.log(`📡 Port: ${PORT}`);
+  console.log(`🧠 Node: ${process.version}`);
+  console.log("====================================");
+});
+
+// ================= GRACEFUL SHUTDOWN =================
+process.on("SIGINT", async () => {
+  await mongoose.disconnect();
+  process.exit(0);
+});
