@@ -1,51 +1,76 @@
 import 'package:flutter/material.dart';
-import '../../theme/colors.dart';
-import 'bottom_nav_controller.dart';
 
 class BottomNavBar extends StatelessWidget {
-  final BottomNavController controller;
+  final int currentIndex;
   final ValueChanged<int> onTap;
 
   const BottomNavBar({
     super.key,
-    required this.controller,
+    required this.currentIndex,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final activeColor =
+        isDark ? theme.colorScheme.primary : theme.colorScheme.secondary;
+    final inactiveColor =
+        isDark ? Colors.white54 : Colors.black45;
+
     return Container(
-      height: 64,
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.border,
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _item(
-            icon: Icons.home_rounded,
-            index: 0,
-          ),
-          _item(
-            icon: Icons.video_collection_rounded,
-            index: 1,
-          ),
-          _createButton(context),
-          _item(
-            icon: Icons.notifications_none_rounded,
-            index: 3,
-          ),
-          _item(
-            icon: Icons.person_outline_rounded,
-            index: 4,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: activeColor.withOpacity(0.35),
+            blurRadius: 20,
+            spreadRadius: 2,
           ),
         ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _item(
+                icon: Icons.home_rounded,
+                index: 0,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+              ),
+              _item(
+                icon: Icons.play_circle_outline,
+                index: 1,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+              ),
+              _item(
+                icon: Icons.chat_bubble_outline,
+                index: 2,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+              ),
+              _item(
+                icon: Icons.search_rounded,
+                index: 3,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+              ),
+              _item(
+                icon: Icons.person_rounded,
+                index: 4,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -53,38 +78,32 @@ class BottomNavBar extends StatelessWidget {
   Widget _item({
     required IconData icon,
     required int index,
+    required Color activeColor,
+    required Color inactiveColor,
   }) {
-    final active = controller.currentIndex == index;
+    final selected = currentIndex == index;
 
     return GestureDetector(
-      behavior: HitTestBehavior.opaque,
       onTap: () => onTap(index),
-      child: SizedBox(
-        width: 48,
-        height: 48,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withOpacity(0.6),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : [],
+        ),
         child: Icon(
           icon,
-          size: 26,
-          color: active ? AppColors.primary : AppColors.iconMuted,
-        ),
-      ),
-    );
-  }
-
-  Widget _createButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => onTap(2),
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
           size: 28,
+          color: selected ? activeColor : inactiveColor,
         ),
       ),
     );
