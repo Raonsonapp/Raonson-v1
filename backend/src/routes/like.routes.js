@@ -3,7 +3,7 @@ import {
   likeTarget,
   unlikeTarget,
 } from "../controllers/like.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
