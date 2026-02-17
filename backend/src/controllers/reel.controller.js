@@ -1,128 +1,45 @@
 import { Reel } from "../models/reel.model.js";
-import { addNotification } from "./notification.controller.js";
 
-/* ======================================================
-   CREATE REEL
-====================================================== */
-export async function createReel(req, res) {
-  try {
-    const { videoUrl, caption } = req.body;
-
-    if (!videoUrl) {
-      return res.status(400).json({ error: "Video required" });
-    }
-
-    const reel = await Reel.create({
-      user: req.user._id,
-      videoUrl,
-      caption,
-    });
-
-    const populated = await reel.populate(
-      "user",
-      "username avatar verified"
-    );
-
-    res.json(populated);
-  } catch (e) {
-    res.status(500).json({ error: "Failed to create reel" });
-  }
-}
-
-/* ======================================================
-   FOR YOU FEED (ALGORITHM)
-====================================================== */
 export async function getReels(req, res) {
-  try {
-    const reels = await Reel.find()
-      .populate("user", "username avatar verified")
-      .sort({ score: -1, createdAt: -1 })
-      .limit(50);
+  const reels = await Reel.find()
+    .populate("user", "username avatar verified")
+    .sort({ createdAt: -1 });
 
-    res.json(reels);
-  } catch (e) {
-    res.status(500).json({ error: "Failed to load reels" });
-  }
+  res.json(reels);
 }
 
-/* ======================================================
-   VIEW REEL
-====================================================== */
 export async function addView(req, res) {
-  try {
-    await Reel.findByIdAndUpdate(req.params.id, {
-      $inc: { views: 1, score: 1 },
-    });
-
-    res.json({ viewed: true });
-  } catch (e) {
-    res.status(500).json({ error: "View failed" });
-  }
+  await Reel.findByIdAndUpdate(
+    req.params.id,
+    { $addToSet: { views: req.user._id } }
+  );
+  res.json({ viewed: true });
 }
 
-/* ======================================================
-   LIKE / UNLIKE
-====================================================== */
 export async function toggleLike(req, res) {
-  try {
-    const reel = await Reel.findById(req.params.id);
-    if (!reel) return res.sendStatus(404);
+  const reel = await Reel.findById(req.params.id);
+  const liked = reel.likes.includes(req.user._id);
 
-    const liked = reel.likedBy.includes(req.user._id);
+  await Reel.findByIdAndUpdate(
+    req.params.id,
+    liked
+      ? { $pull: { likes: req.user._id } }
+      : { $addToSet: { likes: req.user._id } }
+  );
 
-    await Reel.findByIdAndUpdate(
-      reel._id,
-      liked
-        ? {
-            $pull: { likedBy: req.user._id },
-            $inc: { score: -2 },
-          }
-        : {
-            $addToSet: { likedBy: req.user._id },
-            $inc: { score: 3 },
-          }
-    );
-
-    if (!liked && reel.user.toString() !== req.user._id.toString()) {
-      addNotification({
-        to: reel.user,
-        from: req.user._id,
-        type: "reel_like",
-        reelId: reel._id,
-      });
-    }
-
-    res.json({ liked: !liked });
-  } catch (e) {
-    res.status(500).json({ error: "Like failed" });
-  }
+  res.json({ liked: !liked });
 }
 
-/* ======================================================
-   SAVE / UNSAVE
-====================================================== */
 export async function toggleSave(req, res) {
-  try {
-    const reel = await Reel.findById(req.params.id);
-    if (!reel) return res.sendStatus(404);
+  const reel = await Reel.findById(req.params.id);
+  const saved = reel.saves.includes(req.user._id);
 
-    const saved = reel.savedBy.includes(req.user._id);
+  await Reel.findByIdAndUpdate(
+    req.params.id,
+    saved
+      ? { $pull: { saves: req.user._id } }
+      : { $addToSet: { saves: req.user._id } }
+  );
 
-    await Reel.findByIdAndUpdate(
-      reel._id,
-      saved
-        ? {
-            $pull: { savedBy: req.user._id },
-            $inc: { score: -1 },
-          }
-        : {
-            $addToSet: { savedBy: req.user._id },
-            $inc: { score: 2 },
-          }
-    );
-
-    res.json({ saved: !saved });
-  } catch (e) {
-    res.status(500).json({ error: "Save failed" });
-  }
-       }
+  res.json({ saved: !saved });
+}
