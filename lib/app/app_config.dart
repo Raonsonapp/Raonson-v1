@@ -6,6 +6,7 @@ class AppConfig {
   static late bool enableLogs;
 
   static Future<void> initialize({
+    bool enableLogs = false,
     required String appName,
     required String baseUrl,
     bool logs = true,
