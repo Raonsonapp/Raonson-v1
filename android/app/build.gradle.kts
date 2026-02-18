@@ -17,8 +17,8 @@ android {
         targetSdk = flutter.targetSdkVersion
 
         // ✅ Kotlin DSL: MUST be function calls
-        versionCode = flutter.versionCode()
-        versionName = flutter.versionName()
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     compileOptions {
