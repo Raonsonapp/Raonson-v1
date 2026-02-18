@@ -6,24 +6,31 @@ class AuthService {
   final AuthRepository _repository;
   final TokenStorage _tokenStorage;
 
-  AuthService(this._repository, this._tokenStorage);
+  AuthService(
+    this._repository,
+    this._tokenStorage,
+  );
 
+  // ================= LOGIN =================
   Future<void> login({
-    required String username,
+    required String email,
     required String password,
   }) async {
     final data = await _repository.login(
-      username: username,
+      email: email,
       password: password,
     );
 
-    if (!data.containsKey('token')) {
-      throw Exception('Token missing');
+    final token = data['token'];
+    if (token == null) {
+      throw Exception('Token missing in login response');
     }
 
-    await _tokenStorage.saveToken(data['token']);
+    await _tokenStorage.saveToken(token);
+    ApiClient.instance.setAuthToken(token);
   }
 
+  // ================= REGISTER =================
   Future<void> register({
     required String username,
     required String email,
@@ -35,19 +42,24 @@ class AuthService {
       password: password,
     );
 
-    if (data.containsKey('token')) {
-      await _tokenStorage.saveToken(data['token']);
+    final token = data['token'];
+    if (token != null) {
+      await _tokenStorage.saveToken(token);
+      ApiClient.instance.setAuthToken(token);
     }
   }
 
+  // ================= LOGOUT =================
   Future<void> logout() async {
     try {
       await _repository.logout();
     } finally {
       await _tokenStorage.clear();
+      ApiClient.instance.setAuthToken(null);
     }
   }
 
+  // ================= RESTORE SESSION =================
   Future<void> restoreSession() async {
     final token = await _tokenStorage.getToken();
     if (token != null) {
@@ -55,29 +67,20 @@ class AuthService {
     }
   }
 
-  Future<void> refreshSession() async {
-    final data = await _repository.refreshToken();
-    if (!data.containsKey('token')) {
-      throw Exception('Refresh failed');
+  // ================= REFRESH TOKEN =================
+  Future<void> refreshSession({
+    required String refreshToken,
+  }) async {
+    final data = await _repository.refreshToken(
+      refreshToken: refreshToken,
+    );
+
+    final token = data['token'];
+    if (token == null) {
+      throw Exception('Refresh token failed');
     }
 
-    await _tokenStorage.saveToken(data['token']);
-    ApiClient.instance.setAuthToken(data['token']);
-  }
-
-  Future<void> forgotPassword(String email) {
-    return _repository.forgotPassword(email);
-  }
-
-  Future<void> resetPassword({
-    required String email,
-    required String otp,
-    required String newPassword,
-  }) {
-    return _repository.resetPassword(
-      email: email,
-      otp: otp,
-      newPassword: newPassword,
-    );
+    await _tokenStorage.saveToken(token);
+    ApiClient.instance.setAuthToken(token);
   }
 }
