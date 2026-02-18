@@ -5,10 +5,13 @@ import '../core/api/api_endpoints.dart';
 import '../models/notification_model.dart';
 
 class NotificationsRepository {
-  /// GET NOTIFICATIONS
+  final ApiClient _api = ApiClient.instance;
+
+  // ================= GET NOTIFICATIONS =================
   Future<List<NotificationModel>> fetchNotifications() async {
-    final response =
-        await ApiClient.get(ApiEndpoints.notifications);
+    final response = await _api.getRequest(
+      ApiEndpoints.notifications,
+    );
 
     final List list = jsonDecode(response.body) as List;
     return list
@@ -16,16 +19,16 @@ class NotificationsRepository {
         .toList();
   }
 
-  /// MARK ONE AS READ
+  // ================= MARK ONE AS READ =================
   Future<void> markAsRead(String notificationId) async {
-    await ApiClient.post(
+    await _api.postRequest(
       '${ApiEndpoints.notifications}/$notificationId/read',
     );
   }
 
-  /// MARK ALL AS READ
+  // ================= MARK ALL AS READ =================
   Future<void> markAllAsRead() async {
-    await ApiClient.post(
+    await _api.postRequest(
       '${ApiEndpoints.notifications}/read-all',
     );
   }
