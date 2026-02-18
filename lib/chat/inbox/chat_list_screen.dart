@@ -38,6 +38,7 @@ class _ChatListView extends StatelessWidget {
           ? const Center(child: LoadingIndicator())
           : controller.chats.isEmpty
               ? const EmptyState(
+                  icon: Icons.chat_bubble_outline,
                   title: 'No messages yet',
                   subtitle: 'Start a conversation',
                 )
@@ -63,7 +64,7 @@ class _ChatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Avatar(
-        imageUrl: chat.peer.avatarUrl,
+        imageUrl: chat.peer.avatar,
         size: 44,
       ),
       title: Text(
@@ -86,9 +87,7 @@ class _ChatTile extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ChatRoomScreen(
-              peer: chat.peer,
-            ),
+            builder: (_) => ChatRoomScreen(peer: chat.peer),
           ),
         );
       },
