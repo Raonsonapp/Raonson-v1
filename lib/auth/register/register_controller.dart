@@ -1,65 +1,37 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
-import '../../core/storage/token_storage.dart';
-import '../../core/analytics/analytics_service.dart';
-import '../../core/analytics/analytics_events.dart';
-import 'register_state.dart';
+import '../../core/api/api_endpoints.dart';
 
 class RegisterController extends ChangeNotifier {
-  RegisterState _state = const RegisterState();
+  bool isLoading = false;
+  String? error;
 
-  RegisterState get state => _state;
-
-  void updateUsername(String value) {
-    _state = _state.copyWith(username: value, error: null);
-    notifyListeners();
-  }
-
-  void updatePassword(String value) {
-    _state = _state.copyWith(password: value, error: null);
-    notifyListeners();
-  }
-
-  void updateConfirmPassword(String value) {
-    _state = _state.copyWith(confirmPassword: value, error: null);
-    notifyListeners();
-  }
-
-  Future<void> register(BuildContext context) async {
-    if (!_state.canSubmit) return;
-
-    _state = _state.copyWith(isLoading: true, error: null);
+  Future<void> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    isLoading = true;
+    error = null;
     notifyListeners();
 
     try {
       final response = await ApiClient.instance.post(
-        '/auth/register',
+        ApiEndpoints.register,
         body: {
-          'username': _state.username,
-          'password': _state.password,
+          'username': username,
+          'email': email,
+          'password': password,
         },
       );
 
-      final token = response['token'] as String;
-
-      await TokenStorage.instance.saveToken(token);
-
-      AnalyticsService.instance.logEvent(
-        AnalyticsEvents.register,
-        params: {'username': _state.username},
-      );
-
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      jsonDecode(response.body);
     } catch (e) {
-      _state = _state.copyWith(
-        error: 'Registration failed. Try another username.',
-      );
-      notifyListeners();
-    } finally {
-      _state = _state.copyWith(isLoading: false);
-      notifyListeners();
+      error = e.toString();
     }
+
+    isLoading = false;
+    notifyListeners();
   }
 }
