@@ -4,7 +4,7 @@ import 'search_state.dart';
 import '../models/user_model.dart';
 import '../models/post_model.dart';
 
-class SearchController extends ChangeNotifier {
+class RaonsonSearchController extends ChangeNotifier {
   SearchState _state = SearchState.initial();
   SearchState get state => _state;
 
@@ -63,7 +63,11 @@ class SearchController extends ChangeNotifier {
   }
 
   void clearResults() {
-    _state = SearchState.initial();
+    _state = _state.copyWith(
+      users: [],
+      posts: [],
+      isLoading: false,
+    );
     notifyListeners();
   }
 }
