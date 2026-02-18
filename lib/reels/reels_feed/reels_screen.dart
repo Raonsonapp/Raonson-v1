@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'reels_controller.dart';
+import '../../core/api/api_client.dart';
 import '../reels_repository.dart';
+import '../../models/reel_model.dart';
 import '../../widgets/loading_indicator.dart';
-import '../player/reel_player.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/media_viewer.dart';
 
 class ReelsScreen extends StatelessWidget {
   const ReelsScreen({super.key});
@@ -13,12 +15,47 @@ class ReelsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ReelsController(
-        repository: ReelsRepository(),
+        ReelsRepository(ApiClient.instance),
       )..loadReels(),
       child: const _ReelsView(),
     );
   }
 }
+
+// =======================================================
+// CONTROLLER
+// =======================================================
+
+class ReelsController extends ChangeNotifier {
+  final ReelsRepository _repository;
+
+  ReelsController(this._repository);
+
+  bool isLoading = false;
+  List<ReelModel> reels = [];
+
+  Future<void> loadReels() async {
+    if (isLoading) return;
+
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      reels = await _repository.fetchReels();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> likeReel(String reelId) async {
+    await _repository.likeReel(reelId);
+  }
+}
+
+// =======================================================
+// VIEW
+// =======================================================
 
 class _ReelsView extends StatelessWidget {
   const _ReelsView();
@@ -26,38 +63,85 @@ class _ReelsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<ReelsController>();
-    final state = controller.state;
 
-    if (state.isLoading) {
-      return const Scaffold(
-        body: Center(child: LoadingIndicator()),
+    if (controller.isLoading && controller.reels.isEmpty) {
+      return const Center(child: LoadingIndicator());
+    }
+
+    if (controller.reels.isEmpty) {
+      return const EmptyState(
+        icon: Icons.video_collection_outlined,
+        title: 'No reels',
+        subtitle: 'Videos will appear here',
       );
     }
 
-    if (state.hasError) {
-      return const Scaffold(
-        body: Center(child: Text('Failed to load reels')),
-      );
-    }
+    return PageView.builder(
+      scrollDirection: Axis.vertical,
+      itemCount: controller.reels.length,
+      itemBuilder: (context, index) {
+        final reel = controller.reels[index];
 
-    if (state.reels.isEmpty) {
-      return const Scaffold(
-        body: Center(child: Text('No reels available')),
-      );
-    }
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            MediaViewer(
+              url: reel.videoUrl,
+              type: 'video',
+            ),
 
-    return Scaffold(
-      body: PageView.builder(
-        scrollDirection: Axis.vertical,
-        itemCount: state.reels.length,
-        itemBuilder: (context, index) {
-          final reel = state.reels[index];
-          return ReelPlayer(
-            reel: reel,
-            onLike: () => controller.likeReel(reel.id),
-          );
-        },
-      ),
+            // ===== Overlay actions =====
+            Positioned(
+              right: 16,
+              bottom: 80,
+              child: Column(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      reel.isLiked
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      color: reel.isLiked ? Colors.red : Colors.white,
+                      size: 30,
+                    ),
+                    onPressed: () {
+                      controller.likeReel(reel.id);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  const Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                  const SizedBox(height: 12),
+                  const Icon(
+                    Icons.share,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ],
+              ),
+            ),
+
+            // ===== Caption =====
+            Positioned(
+              left: 16,
+              bottom: 40,
+              right: 80,
+              child: Text(
+                reel.caption,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
