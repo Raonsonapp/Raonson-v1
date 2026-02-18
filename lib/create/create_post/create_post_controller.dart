@@ -6,14 +6,20 @@ import '../upload/upload_manager.dart';
 class CreatePostController extends ChangeNotifier {
   final UploadManager _uploadManager = UploadManager();
 
-  final ValueNotifier<List<File>> media = ValueNotifier([]);
+  final ValueNotifier<List<File>> media = ValueNotifier<List<File>>([]);
   bool isUploading = false;
 
   void addMedia(File file) {
     media.value = [...media.value, file];
   }
 
-  Future<void> publishPost({required String caption}) async {
+  void removeMedia(File file) {
+    media.value = media.value.where((f) => f != file).toList();
+  }
+
+  Future<void> publishPost({
+    required String caption,
+  }) async {
     if (media.value.isEmpty || isUploading) return;
 
     isUploading = true;
@@ -22,8 +28,9 @@ class CreatePostController extends ChangeNotifier {
     try {
       await _uploadManager.uploadPost(
         caption: caption,
-        files: media.value,
+        media: media.value,
       );
+
       media.value = [];
     } finally {
       isUploading = false;
