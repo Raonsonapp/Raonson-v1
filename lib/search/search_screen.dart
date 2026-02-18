@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'search_controller.dart' show SearchController;
+import 'search_controller.dart';
 import 'search_state.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/empty_state.dart';
@@ -45,6 +45,7 @@ class _SearchBody extends StatelessWidget {
               ? const LoadingIndicator()
               : state.users.isEmpty && state.posts.isEmpty
                   ? const EmptyState(
+                      icon: Icons.search,
                       title: 'Search Raonson',
                       subtitle: 'Find people and posts',
                     )
