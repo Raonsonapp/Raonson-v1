@@ -5,18 +5,18 @@ import '../core/api/api_endpoints.dart';
 import '../models/reel_model.dart';
 
 class ReelsRepository {
-  Future<List<ReelModel>> fetchReels() async {
-    final res = await ApiClient.get(
-      ApiEndpoints.reels,
-    );
+  final ApiClient _api;
 
-    final List list = jsonDecode(res.body);
-    return list.map((e) => ReelModel.fromJson(e)).toList();
+  ReelsRepository(this._api);
+
+  Future<List<ReelModel>> fetchReels() async {
+    final res = await _api.get(ApiEndpoints.reels);
+    return (jsonDecode(res.data) as List)
+        .map((e) => ReelModel.fromJson(e))
+        .toList();
   }
 
   Future<void> likeReel(String reelId) async {
-    await ApiClient.post(
-      '${ApiEndpoints.reels}/$reelId/like',
-    );
+    await _api.post('${ApiEndpoints.reels}/$reelId/like');
   }
 }
