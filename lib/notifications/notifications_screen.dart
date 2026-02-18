@@ -1,98 +1,61 @@
-import 'package:flutter/material.dart';
+import 'user_model.dart';
 
-import 'notifications_repository.dart';
-import 'notification_item.dart';
-import '../models/notification_model.dart';
-import '../widgets/loading_indicator.dart';
-import '../widgets/empty_state.dart';
+class NotificationModel {
+  final String id;
+  final String type;
+  final String title;
+  final String body;
+  bool read; // ⬅ mutable
+  final DateTime createdAt;
+  final UserModel? fromUser;
 
-class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  NotificationModel({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.body,
+    required this.read,
+    required this.createdAt,
+    this.fromUser,
+  });
 
-  @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
-}
+  // ---------- COMPAT ----------
+  bool get isRead => read;
+  String get message => body;
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationsRepository _repository = NotificationsRepository();
-
-  List<NotificationModel> _notifications = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
+  String get timeAgo {
+    final diff = DateTime.now().difference(createdAt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
   }
 
-  Future<void> _load() async {
-    try {
-      final data = await _repository.fetchNotifications();
-      setState(() {
-        _notifications = data;
-        _loading = false;
-      });
-    } catch (_) {
-      setState(() => _loading = false);
-    }
+  NotificationModel copyWith({
+    bool? read,
+  }) {
+    return NotificationModel(
+      id: id,
+      type: type,
+      title: title,
+      body: body,
+      read: read ?? this.read,
+      createdAt: createdAt,
+      fromUser: fromUser,
+    );
   }
 
-  Future<void> _onNotificationTap(NotificationModel n) async {
-    if (n.isRead) return;
-
-    await _repository.markAsRead(n.id);
-
-    setState(() {
-      _notifications = _notifications.map((e) {
-        if (e.id == n.id) {
-          return e.copyWith(isRead: true);
-        }
-        return e;
-      }).toList();
-    });
-  }
-
-  Future<void> _markAll() async {
-    await _repository.markAllAsRead();
-
-    setState(() {
-      _notifications =
-          _notifications.map((e) => e.copyWith(isRead: true)).toList();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          TextButton(
-            onPressed: _notifications.isEmpty ? null : _markAll,
-            child: const Text('Mark all'),
-          ),
-        ],
-      ),
-      body: _loading
-          ? const LoadingIndicator()
-          : _notifications.isEmpty
-              ? const EmptyState(
-                  title: 'No notifications',
-                  subtitle: 'You’re all caught up 🎉',
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    itemCount: _notifications.length,
-                    itemBuilder: (_, i) {
-                      final n = _notifications[i];
-                      return NotificationItem(
-                        notification: n,
-                        onTap: () => _onNotificationTap(n),
-                      );
-                    },
-                  ),
-                ),
+  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    return NotificationModel(
+      id: json['_id'],
+      type: json['type'] ?? '',
+      title: json['title'] ?? '',
+      body: json['body'] ?? '',
+      read: json['read'] ?? false,
+      createdAt: DateTime.parse(json['createdAt']),
+      fromUser: json['fromUser'] != null
+          ? UserModel.fromJson(json['fromUser'])
+          : null,
     );
   }
 }
