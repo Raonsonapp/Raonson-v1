@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'search_controller.dart';
+import 'search_controller.dart' show RaonsonSearchController;
 import 'search_state.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/empty_state.dart';
@@ -13,7 +13,7 @@ class SearchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => SearchController(),
+      create: (_) => RaonsonSearchController(),
       child: const _SearchBody(),
     );
   }
@@ -24,8 +24,8 @@ class _SearchBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<SearchController>();
-    final state = controller.state;
+    final controller = context.watch<RaonsonSearchController>();
+    final SearchState state = controller.state;
 
     return Column(
       children: [
@@ -53,8 +53,10 @@ class _SearchBody extends StatelessWidget {
                       children: state.users
                           .map(
                             (u) => ListTile(
-                              leading:
-                                  Avatar(imageUrl: u.avatar, size: 40),
+                              leading: Avatar(
+                                imageUrl: u.avatar,
+                                size: 40,
+                              ),
                               title: Text(u.username),
                             ),
                           )
