@@ -1,6 +1,6 @@
 class NotificationModel {
   final String id;
-  final String type; // like, follow, comment, message
+  final String type;
   final String title;
   final String body;
   final bool read;
@@ -18,9 +18,9 @@ class NotificationModel {
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id: json['_id'],
-      type: json['type'],
-      title: json['title'],
-      body: json['body'],
+      type: json['type'] ?? '',
+      title: json['title'] ?? '',
+      body: json['body'] ?? '',
       read: json['read'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
     );
