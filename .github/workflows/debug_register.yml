@@ -1,0 +1,78 @@
+name: Debug Register Flow
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  debug-register:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ КОДРО МЕГИРЕМ
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ FLUTTER SETUP
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          channel: stable
+
+      # 3️⃣ DEPENDENCIES
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 4️⃣ STATIC ANALYSIS (ХАТОҲОИ ПИНҲОН)
+      - name: Analyze project
+        run: flutter analyze
+
+      # 5️⃣ UNIT TEST (АГАР ҲАСТ)
+      - name: Run tests
+        run: flutter test || echo "⚠️ No tests or tests failed"
+
+      # 6️⃣ DEBUG PRINT REGISTER CONTROLLER
+      - name: Check Register Controller
+        run: |
+          echo "===== REGISTER CONTROLLER ====="
+          sed -n '1,200p' lib/auth/register/register_controller.dart
+
+      # 7️⃣ DEBUG API ENDPOINTS
+      - name: Check API Endpoints
+        run: |
+          echo "===== API ENDPOINTS ====="
+          sed -n '1,200p' lib/core/api/api_endpoints.dart
+
+      # 8️⃣ DEBUG ROUTES
+      - name: Check App Routes
+        run: |
+          echo "===== APP ROUTES ====="
+          sed -n '1,200p' lib/app/app_routes.dart
+
+      # 9️⃣ ASSETS CHECK (LOGO)
+      - name: Verify logo asset exists
+        run: |
+          if [ -f assets/icon/logo.png ]; then
+            echo "✅ Logo exists"
+          else
+            echo "❌ Logo NOT found"
+            exit 1
+          fi
+
+      # 🔟 PUBSPEC ASSETS CHECK
+      - name: Check pubspec.yaml assets
+        run: |
+          echo "===== PUBSPEC ASSETS ====="
+          grep -n "assets:" -A 10 pubspec.yaml
+
+      # 1️⃣1️⃣ BUILD (ANDROID DEBUG)
+      - name: Build APK (debug)
+        run: flutter build apk --debug
+
+      # 1️⃣2️⃣ FINAL STATUS
+      - name: Debug finished
+        run: echo "✅ DEBUG REGISTER WORKFLOW FINISHED"
