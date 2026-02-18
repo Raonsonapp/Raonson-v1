@@ -12,7 +12,7 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMe = false; // TODO: compare with current user id
+    final bool isMe = message.isMine;
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -22,7 +22,12 @@ class MessageBubble extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
           color: isMe ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
+            bottomRight: isMe ? Radius.zero : const Radius.circular(16),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
