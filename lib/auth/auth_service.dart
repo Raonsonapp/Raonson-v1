@@ -1,4 +1,3 @@
-import '../core/api/api_client.dart';
 import '../core/storage/token_storage.dart';
 import 'auth_repository.dart';
 
@@ -27,7 +26,6 @@ class AuthService {
     }
 
     await _tokenStorage.saveToken(token);
-    ApiClient.instance.setAuthToken(token);
   }
 
   // ================= REGISTER =================
@@ -45,7 +43,6 @@ class AuthService {
     final token = data['token'];
     if (token != null) {
       await _tokenStorage.saveToken(token);
-      ApiClient.instance.setAuthToken(token);
     }
   }
 
@@ -55,16 +52,13 @@ class AuthService {
       await _repository.logout();
     } finally {
       await _tokenStorage.clear();
-      ApiClient.instance.setAuthToken(null);
     }
   }
 
   // ================= RESTORE SESSION =================
-  Future<void> restoreSession() async {
+  Future<bool> restoreSession() async {
     final token = await _tokenStorage.getToken();
-    if (token != null) {
-      ApiClient.instance.setAuthToken(token);
-    }
+    return token != null;
   }
 
   // ================= REFRESH TOKEN =================
@@ -81,6 +75,5 @@ class AuthService {
     }
 
     await _tokenStorage.saveToken(token);
-    ApiClient.instance.setAuthToken(token);
   }
 }
