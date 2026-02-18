@@ -99,13 +99,9 @@ class _FeedShellState extends State<_FeedShell> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      elevation: 0,
-      title: const Padding(
-        padding: EdgeInsets.only(left: 16),
-        child: Text(
-          'Raonson',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        ),
+      title: const Text(
+        'Raonson',
+        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
       ),
       actions: [
         IconButton(
@@ -120,7 +116,6 @@ class _FeedShellState extends State<_FeedShell> {
             Navigator.pushNamed(context, AppRoutes.notifications);
           },
         ),
-        const SizedBox(width: 8),
       ],
     );
   }
@@ -157,7 +152,6 @@ class _FeedShellState extends State<_FeedShell> {
               if (index < state.posts.length) {
                 return PostCard(post: state.posts[index]);
               }
-
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Center(child: LoadingIndicator()),
