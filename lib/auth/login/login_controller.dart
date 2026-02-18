@@ -64,7 +64,7 @@ class LoginController extends ChangeNotifier {
   }
 
   Future<void> login() async {
-    if (_state.isLoading) return;
+    if (!_state.canSubmit) return;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
@@ -78,12 +78,16 @@ class LoginController extends ChangeNotifier {
         },
       );
 
-      final data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonDecode(response.body);
 
-      if (!data.containsKey('token')) {
-        throw Exception('Token missing');
+      // ✅ ДУРУСТ: backend accessToken мефиристад
+      final token = data['accessToken'];
+      if (token == null) {
+        throw Exception('Access token missing');
       }
+
+      // 🔐 token-ро нигоҳ медорем
+      ApiClient.instance.setAuthToken(token);
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
     }
