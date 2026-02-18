@@ -10,17 +10,25 @@ class ReelsController extends ChangeNotifier {
   ReelsState _state = ReelsState.initial();
   ReelsState get state => _state;
 
-  ReelsController(this._repository);
+  ReelsController({
+    required ReelsRepository repository,
+  }) : _repository = repository;
 
   Future<void> loadReels() async {
     _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
     try {
-      final List<ReelModel> data = await _repository.fetchReels();
-      _state = _state.copyWith(reels: data, isLoading: false);
+      final List<ReelModel> reels = await _repository.fetchReels();
+      _state = _state.copyWith(
+        reels: reels,
+        isLoading: false,
+      );
     } catch (_) {
-      _state = _state.copyWith(isLoading: false, hasError: true);
+      _state = _state.copyWith(
+        isLoading: false,
+        hasError: true,
+      );
     }
 
     notifyListeners();
