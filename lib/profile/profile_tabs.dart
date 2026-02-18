@@ -29,13 +29,13 @@ class ProfileTabs extends StatelessWidget {
           Expanded(
             child: TabBarView(
               children: [
-                _gridImages(
+                _grid(
                   posts
                       .where((p) => p.media.isNotEmpty)
                       .map((p) => p.media.first['url'] ?? '')
                       .toList(),
                 ),
-                _gridVideos(
+                _grid(
                   reels.map((r) => r.videoUrl).toList(),
                 ),
               ],
@@ -46,7 +46,7 @@ class ProfileTabs extends StatelessWidget {
     );
   }
 
-  Widget _gridImages(List<String> urls) {
+  Widget _grid(List<String> urls) {
     if (urls.isEmpty) {
       return const Center(child: Text('No content'));
     }
@@ -57,25 +57,7 @@ class ProfileTabs extends StatelessWidget {
       ),
       itemCount: urls.length,
       itemBuilder: (_, i) => MediaViewer(
-        url: urls[i],
-        type: 'image', // ✅ STRING
-      ),
-    );
-  }
-
-  Widget _gridVideos(List<String> urls) {
-    if (urls.isEmpty) {
-      return const Center(child: Text('No content'));
-    }
-
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-      ),
-      itemCount: urls.length,
-      itemBuilder: (_, i) => MediaViewer(
-        url: urls[i],
-        type: 'video', // ✅ STRING
+        url: urls[i], // ✅ фақат url
       ),
     );
   }
