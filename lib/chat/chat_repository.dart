@@ -1,32 +1,32 @@
+import 'dart:convert';
+
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/message_model.dart';
 import '../models/user_model.dart';
 
 class ChatRepository {
-  final ApiClient _api;
-
-  ChatRepository(this._api);
-
   // =========================
   // 📥 GET CHAT LIST (INBOX)
   // =========================
-  Future<List<UserModel>> getChatUsers() async {
-    final res = await _api.get(ApiEndpoints.chatList);
+  Future<List<MessageModel>> getInboxChats() async {
+    final response = await ApiClient.get(
+      ApiEndpoints.chat,
+    );
 
-    final List data = res as List;
-    return data.map((e) => UserModel.fromJson(e)).toList();
+    final List data = jsonDecode(response.body) as List;
+    return data.map((e) => MessageModel.fromJson(e)).toList();
   }
 
   // =========================
   // 💬 GET MESSAGES WITH USER
   // =========================
   Future<List<MessageModel>> getMessagesWithUser(String userId) async {
-    final res = await _api.get(
-      ApiEndpoints.chatMessages(userId),
+    final response = await ApiClient.get(
+      '${ApiEndpoints.chat}/$userId',
     );
 
-    final List data = res as List;
+    final List data = jsonDecode(response.body) as List;
     return data.map((e) => MessageModel.fromJson(e)).toList();
   }
 
@@ -37,32 +37,35 @@ class ChatRepository {
     required String toUserId,
     required String text,
   }) async {
-    final res = await _api.post(
-      ApiEndpoints.sendMessage,
+    final response = await ApiClient.post(
+      ApiEndpoints.chat,
       body: {
         'to': toUserId,
         'text': text,
       },
     );
 
-    return MessageModel.fromJson(res);
+    final Map<String, dynamic> data =
+        jsonDecode(response.body) as Map<String, dynamic>;
+
+    return MessageModel.fromJson(data);
   }
 
   // =========================
-  // 👁️ MARK AS READ
+  // 👁️ MARK CHAT AS READ
   // =========================
   Future<void> markAsRead(String peerId) async {
-    await _api.post(
-      ApiEndpoints.markChatRead(peerId),
+    await ApiClient.post(
+      '${ApiEndpoints.chat}/$peerId/read',
     );
   }
 
   // =========================
-  // 🧹 DELETE CHAT (OPTIONAL)
+  // 🧹 DELETE CHAT
   // =========================
   Future<void> deleteChat(String peerId) async {
-    await _api.delete(
-      ApiEndpoints.deleteChat(peerId),
+    await ApiClient.delete(
+      '${ApiEndpoints.chat}/$peerId',
     );
   }
 }
