@@ -1,3 +1,4 @@
+import '../core/api/api_client.dart';
 import '../core/storage/token_storage.dart';
 import 'auth_repository.dart';
 
@@ -5,10 +6,7 @@ class AuthService {
   final AuthRepository _repository;
   final TokenStorage _tokenStorage;
 
-  AuthService(
-    this._repository,
-    this._tokenStorage,
-  );
+  AuthService(this._repository, this._tokenStorage);
 
   // ================= LOGIN =================
   Future<void> login({
@@ -22,10 +20,11 @@ class AuthService {
 
     final token = data['token'];
     if (token == null) {
-      throw Exception('Token missing in login response');
+      throw Exception('Token missing');
     }
 
     await _tokenStorage.saveToken(token);
+    ApiClient.instance.setAuthToken(token);
   }
 
   // ================= REGISTER =================
@@ -43,37 +42,35 @@ class AuthService {
     final token = data['token'];
     if (token != null) {
       await _tokenStorage.saveToken(token);
+      ApiClient.instance.setAuthToken(token);
     }
   }
 
   // ================= LOGOUT =================
   Future<void> logout() async {
-    try {
-      await _repository.logout();
-    } finally {
-      await _tokenStorage.clear();
+    await _repository.logout();
+    await _tokenStorage.clear();
+    ApiClient.instance.setAuthToken(null);
+  }
+
+  // ================= RESTORE =================
+  Future<void> restoreSession() async {
+    final token = await _tokenStorage.getToken();
+    if (token != null) {
+      ApiClient.instance.setAuthToken(token);
     }
   }
 
-  // ================= RESTORE SESSION =================
-  Future<bool> restoreSession() async {
-    final token = await _tokenStorage.getToken();
-    return token != null;
-  }
-
-  // ================= REFRESH TOKEN =================
-  Future<void> refreshSession({
-    required String refreshToken,
-  }) async {
-    final data = await _repository.refreshToken(
-      refreshToken: refreshToken,
-    );
+  // ================= REFRESH =================
+  Future<void> refreshSession() async {
+    final data = await _repository.refreshToken();
 
     final token = data['token'];
     if (token == null) {
-      throw Exception('Refresh token failed');
+      throw Exception('Refresh failed');
     }
 
     await _tokenStorage.saveToken(token);
+    ApiClient.instance.setAuthToken(token);
   }
 }
