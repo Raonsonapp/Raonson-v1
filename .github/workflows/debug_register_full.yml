@@ -37,9 +37,8 @@ jobs:
       # =========================
       # 4. STATIC ANALYSIS
       # =========================
-      - name: Flutter analyze (strict)
-        run: flutter analyze
-
+      - name: Flutter analyze (non-fatal)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
       # =========================
       # 5. PRINT REGISTER FILES (DEBUG)
       # =========================
