@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/notification_model.dart';
 import '../widgets/avatar.dart';
 
@@ -14,6 +15,8 @@ class NotificationItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = notification.fromUser;
+
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -25,7 +28,7 @@ class NotificationItem extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Avatar(
-              imageUrl: notification.fromUser.avatar,
+              imageUrl: user?.avatar ?? '',
               size: 44,
             ),
             const SizedBox(width: 12),
@@ -34,12 +37,11 @@ class NotificationItem extends StatelessWidget {
                 text: TextSpan(
                   style: Theme.of(context).textTheme.bodyMedium,
                   children: [
-                    TextSpan(
-                      text: notification.fromUser.username,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+                    if (user != null)
+                      TextSpan(
+                        text: user.username,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    ),
                     const TextSpan(text: " "),
                     TextSpan(text: notification.message),
                   ],
