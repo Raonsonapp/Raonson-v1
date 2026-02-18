@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../core/api/api_client.dart';
 import '../../models/user_model.dart';
 import '../profile_repository.dart';
 
@@ -16,7 +16,8 @@ class FollowersScreen extends StatefulWidget {
 }
 
 class _FollowersScreenState extends State<FollowersScreen> {
-  final ProfileRepository _repo = ProfileRepository();
+  final ProfileRepository _repo =
+      ProfileRepository(ApiClient.instance);
 
   bool _loading = true;
   String? _error;
