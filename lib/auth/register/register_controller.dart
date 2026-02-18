@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 
+/// =======================
+/// STATE
+/// =======================
 class RegisterState {
   final String username;
   final String email;
@@ -57,6 +60,9 @@ class RegisterState {
   }
 }
 
+/// =======================
+/// CONTROLLER
+/// =======================
 class RegisterController extends ChangeNotifier {
   RegisterState _state = RegisterState.initial();
   RegisterState get state => _state;
@@ -88,16 +94,16 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await ApiClient.post(
+      final response = await ApiClient.instance.post(
         ApiEndpoints.register,
         body: {
-          'username': _state.username,
-          'email': _state.email,
+          'username': _state.username.trim(),
+          'email': _state.email.trim(),
           'password': _state.password,
         },
       );
 
-      jsonDecode(res.body);
+      jsonDecode(response.body);
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
     }
