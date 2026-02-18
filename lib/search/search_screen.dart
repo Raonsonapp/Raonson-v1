@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'search_controller.dart';
+import 'search_controller.dart' show SearchController;
 import 'search_state.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/empty_state.dart';
@@ -25,52 +25,40 @@ class _SearchBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<SearchController>();
-    final SearchState state = controller.state;
+    final state = controller.state;
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.all(12),
           child: TextField(
             onChanged: controller.updateQuery,
             decoration: const InputDecoration(
-              hintText: 'Search users or posts',
               prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(14)),
-              ),
+              hintText: 'Search',
+              border: OutlineInputBorder(),
             ),
           ),
         ),
         Expanded(
-          child: _buildResults(state),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResults(SearchState state) {
-    if (state.isLoading) {
-      return const Center(child: LoadingIndicator());
-    }
-
-    if (state.users.isEmpty && state.posts.isEmpty) {
-      return const EmptyState(
-        title: 'Search Raonson',
-        subtitle: 'Find people and posts',
-      );
-    }
-
-    return ListView(
-      children: [
-        ...state.users.map(
-          (u) => ListTile(
-            leading: Avatar(imageUrl: u.avatar, size: 40),
-            title: Text(u.username),
-            trailing: u.verified
-                ? const Icon(Icons.verified, color: Colors.blue, size: 18)
-                : null,
-          ),
+          child: state.isLoading
+              ? const LoadingIndicator()
+              : state.users.isEmpty && state.posts.isEmpty
+                  ? const EmptyState(
+                      title: 'Search Raonson',
+                      subtitle: 'Find people and posts',
+                    )
+                  : ListView(
+                      children: state.users
+                          .map(
+                            (u) => ListTile(
+                              leading:
+                                  Avatar(imageUrl: u.avatar, size: 40),
+                              title: Text(u.username),
+                            ),
+                          )
+                          .toList(),
+                    ),
         ),
       ],
     );
