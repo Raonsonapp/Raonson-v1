@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../models/post_model.dart';
+import '../../models/comment_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 
@@ -43,48 +43,24 @@ class CommentItem extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  comment.text,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
+                Text(comment.text),
                 const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      comment.timeAgo,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: Colors.grey),
-                    ),
-                    const SizedBox(width: 16),
-                    GestureDetector(
-                      onTap: () {
-                        // reply
-                      },
-                      child: const Text(
-                        'Reply',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
+                Text(
+                  comment.timeAgo,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.grey),
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: Icon(
-              comment.isLiked
-                  ? Icons.favorite
-                  : Icons.favorite_border,
-              size: 18,
-              color: comment.isLiked ? Colors.red : null,
-            ),
-            onPressed: () {
-              // like comment
-            },
+          Icon(
+            comment.isLiked
+                ? Icons.favorite
+                : Icons.favorite_border,
+            size: 18,
+            color: comment.isLiked ? Colors.red : null,
           ),
         ],
       ),
