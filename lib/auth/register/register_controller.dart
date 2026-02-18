@@ -21,15 +21,13 @@ class RegisterState {
     this.error,
   });
 
-  factory RegisterState.initial() {
-    return const RegisterState(
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      isLoading: false,
-    );
-  }
+  factory RegisterState.initial() => const RegisterState(
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        isLoading: false,
+      );
 
   bool get canSubmit =>
       username.isNotEmpty &&
@@ -81,9 +79,7 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ РЕГИСТРАЦИЯИ ВОҚЕӢ
-  /// return true -> SUCCESS
-  /// return false -> ERROR
+  /// ✅ ТАНҲО CREATE ACCOUNT (NO LOGIN HERE)
   Future<bool> register() async {
     if (!_state.canSubmit) return false;
 
@@ -91,7 +87,7 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await ApiClient.instance.post(
+      final res = await ApiClient.instance.post(
         ApiEndpoints.register,
         body: {
           'username': _state.username.trim(),
@@ -100,14 +96,10 @@ class RegisterController extends ChangeNotifier {
         },
       );
 
-      final data = jsonDecode(response.body);
-      final token = data['accessToken'];
-
-      if (token == null || token.toString().isEmpty) {
-        throw Exception('Registration failed: token missing');
+      final data = jsonDecode(res.body);
+      if (data['user'] == null) {
+        throw Exception('Registration failed');
       }
-
-      ApiClient.instance.setAuthToken(token);
 
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
