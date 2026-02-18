@@ -11,7 +11,7 @@ class ApiClient {
 
   String? _authToken;
 
-  // ================= AUTH HEADER =================
+  // ================= AUTH =================
   void setAuthToken(String? token) {
     _authToken = token;
   }
@@ -33,7 +33,9 @@ class ApiClient {
         .replace(queryParameters: query);
   }
 
-  // ================= HTTP METHODS =================
+  // ==================================================
+  // 🔹 CORE HTTP (НАВ)
+  // ==================================================
 
   Future<http.Response> get(
     String path, {
@@ -72,5 +74,34 @@ class ApiClient {
       _uri(path),
       headers: _headers(),
     );
+  }
+
+  // ==================================================
+  // 🔹 BACKWARD COMPATIBILITY (КӮҲНА)
+  // ==================================================
+
+  Future<http.Response> getRequest(
+    String path, {
+    Map<String, String>? query,
+  }) {
+    return get(path, query: query);
+  }
+
+  Future<http.Response> postRequest(
+    String path, {
+    Map<String, dynamic>? body,
+  }) {
+    return post(path, body: body);
+  }
+
+  Future<http.Response> putRequest(
+    String path, {
+    Map<String, dynamic>? body,
+  }) {
+    return put(path, body: body);
+  }
+
+  Future<http.Response> deleteRequest(String path) {
+    return delete(path);
   }
 }
