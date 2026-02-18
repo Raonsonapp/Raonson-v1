@@ -11,9 +11,8 @@ class ReelsRepository {
 
   Future<List<ReelModel>> fetchReels() async {
     final res = await _api.get(ApiEndpoints.reels);
-    return (jsonDecode(res.data) as List)
-        .map((e) => ReelModel.fromJson(e))
-        .toList();
+    final List data = jsonDecode(res.body);
+    return data.map((e) => ReelModel.fromJson(e)).toList();
   }
 
   Future<void> likeReel(String reelId) async {
