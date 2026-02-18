@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/user_model.dart';
@@ -42,11 +43,7 @@ class ProfileController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (wasFollowing) {
-        await _repo.unfollow(userId);
-      } else {
-        await _repo.follow(userId);
-      }
+      await _repo.follow(userId);
     } catch (_) {
       profile = profile!.copyWith(isFollowing: wasFollowing);
       notifyListeners();
