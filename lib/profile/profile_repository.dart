@@ -1,19 +1,20 @@
+import 'dart:convert';
+
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/user_model.dart';
 
 class ProfileRepository {
-  final ApiClient _api = ApiClient.instance;
-
   /// =========================
   /// GET PROFILE BY USER ID
   /// =========================
   Future<UserModel> getProfile(String userId) async {
-    final response = await _api.get(
+    final response = await ApiClient.get(
       ApiEndpoints.userProfile(userId),
     );
 
-    return UserModel.fromJson(response.data);
+    final data = jsonDecode(response.body);
+    return UserModel.fromJson(data);
   }
 
   /// =========================
@@ -25,9 +26,9 @@ class ProfileRepository {
     String? bio,
     bool? isPrivate,
   }) async {
-    final response = await _api.put(
+    final response = await ApiClient.put(
       ApiEndpoints.updateProfile,
-      data: {
+      body: {
         'username': username,
         if (avatar != null) 'avatar': avatar,
         if (bio != null) 'bio': bio,
@@ -35,18 +36,19 @@ class ProfileRepository {
       },
     );
 
-    return UserModel.fromJson(response.data);
+    final data = jsonDecode(response.body);
+    return UserModel.fromJson(data);
   }
 
   /// =========================
   /// GET FOLLOWERS
   /// =========================
   Future<List<UserModel>> getFollowers(String userId) async {
-    final response = await _api.get(
+    final response = await ApiClient.get(
       ApiEndpoints.followers(userId),
     );
 
-    final List list = response.data as List;
+    final List list = jsonDecode(response.body);
     return list.map((e) => UserModel.fromJson(e)).toList();
   }
 
@@ -54,11 +56,11 @@ class ProfileRepository {
   /// GET FOLLOWING
   /// =========================
   Future<List<UserModel>> getFollowing(String userId) async {
-    final response = await _api.get(
+    final response = await ApiClient.get(
       ApiEndpoints.following(userId),
     );
 
-    final List list = response.data as List;
+    final List list = jsonDecode(response.body);
     return list.map((e) => UserModel.fromJson(e)).toList();
   }
 
@@ -66,7 +68,7 @@ class ProfileRepository {
   /// FOLLOW / UNFOLLOW USER
   /// =========================
   Future<void> toggleFollow(String userId) async {
-    await _api.post(
+    await ApiClient.post(
       ApiEndpoints.toggleFollow(userId),
     );
   }
@@ -75,7 +77,7 @@ class ProfileRepository {
   /// ACCEPT FOLLOW REQUEST
   /// =========================
   Future<void> acceptFollowRequest(String userId) async {
-    await _api.post(
+    await ApiClient.post(
       ApiEndpoints.acceptFollow(userId),
     );
   }
@@ -84,7 +86,7 @@ class ProfileRepository {
   /// DECLINE FOLLOW REQUEST
   /// =========================
   Future<void> declineFollowRequest(String userId) async {
-    await _api.post(
+    await ApiClient.post(
       ApiEndpoints.declineFollow(userId),
     );
   }
