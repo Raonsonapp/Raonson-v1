@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'register_controller.dart';
 
 class RegisterScreen extends StatelessWidget {
@@ -27,19 +28,24 @@ class _RegisterView extends StatelessWidget {
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
 
-              // ✅ LOGO (100% ДУРУСТ)
-              Image.asset(
-                'assets/icon/logo.png',
-                height: 120,
+              // ✅ LOGO (100% дуруст)
+              Center(
+                child: Image.asset(
+                  'assets/icon/logo.png',
+                  height: 120,
+                  fit: BoxFit.contain,
+                ),
               ),
 
               const SizedBox(height: 24),
 
               const Text(
                 'Create Raonson Account',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
@@ -50,32 +56,40 @@ class _RegisterView extends StatelessWidget {
 
               TextField(
                 onChanged: controller.updateUsername,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'Username',
                 ),
               ),
+
               const SizedBox(height: 16),
 
               TextField(
                 onChanged: controller.updateEmail,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'Email',
                 ),
               ),
+
               const SizedBox(height: 16),
 
               TextField(
                 onChanged: controller.updatePassword,
                 obscureText: true,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'Password',
                 ),
               ),
+
               const SizedBox(height: 16),
 
               TextField(
                 onChanged: controller.updateConfirmPassword,
                 obscureText: true,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'Confirm Password',
                 ),
@@ -88,22 +102,33 @@ class _RegisterView extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     state.error!,
-                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
 
               SizedBox(
-                width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
                   onPressed: state.canSubmit
-                      ? controller.register
+                      ? () => controller.register(context)
                       : null,
                   child: state.isLoading
-                      ? const CircularProgressIndicator(
-                          color: Colors.white,
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
-                      : const Text('Register'),
+                      : const Text(
+                          'Register',
+                          style: TextStyle(fontSize: 16),
+                        ),
                 ),
               ),
 
