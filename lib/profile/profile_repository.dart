@@ -13,7 +13,7 @@ class ProfileRepository {
 
   Future<UserModel> getProfile(String userId) async {
     final res = await _api.get(ApiEndpoints.userProfile(userId));
-    return UserModel.fromJson(jsonDecode(res.data));
+    return UserModel.fromJson(jsonDecode(res.body));
   }
 
   Future<UserModel> updateProfile({
@@ -32,44 +32,41 @@ class ProfileRepository {
       },
     );
 
-    return UserModel.fromJson(jsonDecode(res.data));
+    return UserModel.fromJson(jsonDecode(res.body));
   }
 
   Future<List<UserModel>> getFollowers(String userId) async {
     final res = await _api.get(ApiEndpoints.followers(userId));
-    return (jsonDecode(res.data) as List)
-        .map((e) => UserModel.fromJson(e))
-        .toList();
+    final List data = jsonDecode(res.body);
+    return data.map((e) => UserModel.fromJson(e)).toList();
   }
 
   Future<List<UserModel>> getFollowing(String userId) async {
     final res = await _api.get(ApiEndpoints.following(userId));
-    return (jsonDecode(res.data) as List)
-        .map((e) => UserModel.fromJson(e))
-        .toList();
+    final List data = jsonDecode(res.body);
+    return data.map((e) => UserModel.fromJson(e)).toList();
   }
 
   Future<List<PostModel>> getUserPosts(String userId) async {
-    final res = await _api.get(
-      '${ApiEndpoints.posts}?user=$userId',
-    );
-
-    return (jsonDecode(res.data) as List)
-        .map((e) => PostModel.fromJson(e))
-        .toList();
+    final res =
+        await _api.get('${ApiEndpoints.posts}?user=$userId');
+    final List data = jsonDecode(res.body);
+    return data.map((e) => PostModel.fromJson(e)).toList();
   }
 
   Future<List<ReelModel>> getUserReels(String userId) async {
-    final res = await _api.get(
-      '${ApiEndpoints.reels}?user=$userId',
-    );
-
-    return (jsonDecode(res.data) as List)
-        .map((e) => ReelModel.fromJson(e))
-        .toList();
+    final res =
+        await _api.get('${ApiEndpoints.reels}?user=$userId');
+    final List data = jsonDecode(res.body);
+    return data.map((e) => ReelModel.fromJson(e)).toList();
   }
 
-  Future<void> toggleFollow(String userId) async {
+  // ✅ ИН ДУТО ҲАТМАН ЛОЗИМ БУДАНД
+  Future<void> follow(String userId) async {
+    await _api.post(ApiEndpoints.toggleFollow(userId));
+  }
+
+  Future<void> unfollow(String userId) async {
     await _api.post(ApiEndpoints.toggleFollow(userId));
   }
 }
