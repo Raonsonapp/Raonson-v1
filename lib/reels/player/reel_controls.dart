@@ -22,30 +22,47 @@ class ReelControls extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // ---------- USER AVATAR ----------
           Avatar(
-            imageUrl: reel.user.avatarUrl,
+            imageUrl: reel.user.avatar, // ✅ ИСЛОҲ: avatarUrl → avatar
             size: 48,
           ),
+
           const SizedBox(height: 6),
-          if (reel.user.isVerified) const VerifiedBadge(),
+
+          // ---------- VERIFIED BADGE ----------
+          if (reel.user.verified) // ✅ ИСЛОҲ: isVerified → verified
+            const VerifiedBadge(),
+
           const SizedBox(height: 20),
 
+          // ---------- LIKES ----------
           _IconWithCount(
             icon: Icons.favorite,
             count: reel.likesCount,
             active: reel.isLiked,
           ),
+
           const SizedBox(height: 16),
 
+          // ---------- COMMENTS ----------
           _IconWithCount(
             icon: Icons.comment,
             count: reel.commentsCount,
           ),
+
           const SizedBox(height: 16),
 
-          const Icon(Icons.share, color: Colors.white),
+          // ---------- SHARE ----------
+          const Icon(
+            Icons.share,
+            color: Colors.white,
+            size: 28,
+          ),
+
           const SizedBox(height: 24),
 
+          // ---------- PLAY / PAUSE ----------
           Icon(
             isPlaying ? Icons.pause_circle : Icons.play_circle,
             color: Colors.white,
@@ -56,6 +73,8 @@ class ReelControls extends StatelessWidget {
     );
   }
 }
+
+// ======================================================
 
 class _IconWithCount extends StatelessWidget {
   final IconData icon;
