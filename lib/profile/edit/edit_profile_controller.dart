@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../models/user_model.dart';
 import '../profile_repository.dart';
 
@@ -7,6 +6,7 @@ class EditProfileController extends ChangeNotifier {
   final ProfileRepository _repo = ProfileRepository();
 
   final usernameController = TextEditingController();
+  final bioController = TextEditingController(); // ✅
 
   bool isPrivate = false;
   bool isLoading = false;
@@ -22,6 +22,7 @@ class EditProfileController extends ChangeNotifier {
     try {
       _original = await _repo.getProfile(userId);
       usernameController.text = _original.username;
+      bioController.text = _original.bio ?? '';
       isPrivate = _original.isPrivate;
       error = null;
     } catch (e) {
@@ -32,6 +33,11 @@ class EditProfileController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void togglePrivate(bool value) { // ✅
+    isPrivate = value;
+    notifyListeners();
+  }
+
   Future<bool> save() async {
     isSaving = true;
     notifyListeners();
@@ -39,6 +45,7 @@ class EditProfileController extends ChangeNotifier {
     try {
       await _repo.updateProfile(
         username: usernameController.text.trim(),
+        bio: bioController.text.trim(),
         isPrivate: isPrivate,
       );
       return true;
@@ -54,6 +61,7 @@ class EditProfileController extends ChangeNotifier {
   @override
   void dispose() {
     usernameController.dispose();
+    bioController.dispose();
     super.dispose();
   }
 }
