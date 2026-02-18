@@ -5,128 +5,107 @@ import {
   signRefreshToken,
 } from "../config/jwt.config.js";
 
+// =======================
 // REGISTER
+// =======================
 export async function register(req, res) {
-  const { username, password } = req.body;
+  try {
+    const { username, email, password } = req.body;
 
-  const exists = await User.findOne({ username });
-  if (exists) {
-    return res.status(400).json({ message: "Username already taken" });
+    // validation
+    if (!username || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Username, email and password are required" });
+    }
+
+    // check existing user
+    const exists = await User.findOne({
+      $or: [{ username }, { email }],
+    });
+
+    if (exists) {
+      return res
+        .status(400)
+        .json({ message: "Username or email already taken" });
+    }
+
+    // hash password
+    const hash = await bcrypt.hash(password, 10);
+
+    // create user
+    const user = await User.create({
+      username,
+      email,
+      password: hash,
+    });
+
+    // tokens
+    const accessToken = signAccessToken({ id: user._id });
+    const refreshToken = signRefreshToken({ id: user._id });
+
+    return res.json({
+      user,
+      accessToken,
+      refreshToken,
+    });
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
-
-  const hash = await bcrypt.hash(password, 10);
-
-  const user = await User.create({
-    username,
-    password: hash,
-  });
-
-  const accessToken = signAccessToken({ id: user._id });
-  const refreshToken = signRefreshToken({ id: user._id });
-
-  res.json({
-    user,
-    accessToken,
-    refreshToken,
-  });
 }
 
-// LOGIN
+// =======================
+// LOGIN (username OR email)
+// =======================
 export async function login(req, res) {
-  const { username, password } = req.body;
+  try {
+    const { username, email, password } = req.body;
 
-  const user = await User.findOne({ username });
-  if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
+    if ((!username && !email) || !password) {
+      return res
+        .status(400)
+        .json({ message: "Credentials missing" });
+    }
+
+    const user = await User.findOne({
+      $or: [{ username }, { email }],
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const accessToken = signAccessToken({ id: user._id });
+    const refreshToken = signRefreshToken({ id: user._id });
+
+    return res.json({
+      user,
+      accessToken,
+      refreshToken,
+    });
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
-
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  const accessToken = signAccessToken({ id: user._id });
-  const refreshToken = signRefreshToken({ id: user._id });
-
-  res.json({
-    user,
-    accessToken,
-    refreshToken,
-  });
 }
 
+// =======================
 // REFRESH TOKEN
+// =======================
 export async function refreshToken(req, res) {
   const accessToken = signAccessToken({ id: req.user.id });
-  res.json({ accessToken });
+  return res.json({ accessToken });
 }
 
+// =======================
 // LOGOUT
+// =======================
 export async function logout(req, res) {
-  res.json({ success: true });
-    }
-// REGISTER
-export async function register(req, res) {
-  const { username, email, password } = req.body; // ⬅ ИЛОВА
-
-  // ⬇ ИЛОВА: санҷиши email
-  if (!email) {
-    return res.status(400).json({ message: "Email is required" });
-  }
-
-  const exists = await User.findOne({
-    $or: [{ username }, { email }], // ⬅ ИЛОВА
-  });
-
-  if (exists) {
-    return res
-      .status(400)
-      .json({ message: "Username or email already taken" });
-  }
-
-  const hash = await bcrypt.hash(password, 10);
-
-  const user = await User.create({
-    username,
-    email,            // ⬅ ИЛОВА
-    password: hash,
-  });
-
-  const accessToken = signAccessToken({ id: user._id });
-  const refreshToken = signRefreshToken({ id: user._id });
-
-  res.json({
-    user,
-    accessToken,
-    refreshToken,
-  });
-    }
-// LOGIN
-export async function login(req, res) {
-  const { username, email, password } = req.body; // ⬅ ИЛОВА
-
-  const user = await User.findOne({
-    $or: [
-      { username },
-      { email }, // ⬅ ИЛОВА
-    ],
-  });
-
-  if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-
-  const accessToken = signAccessToken({ id: user._id });
-  const refreshToken = signRefreshToken({ id: user._id });
-
-  res.json({
-    user,
-    accessToken,
-    refreshToken,
-  });
-}
+  return res.json({ success: true });
+        }
