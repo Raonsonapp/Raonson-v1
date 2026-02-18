@@ -21,13 +21,15 @@ class RegisterState {
     this.error,
   });
 
-  factory RegisterState.initial() => const RegisterState(
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        isLoading: false,
-      );
+  factory RegisterState.initial() {
+    return const RegisterState(
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      isLoading: false,
+    );
+  }
 
   bool get canSubmit =>
       username.isNotEmpty &&
@@ -79,7 +81,8 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ ТАНҲО CREATE ACCOUNT (NO LOGIN HERE)
+  /// ✅ INSTAGRAM-STYLE REGISTER
+  /// Token интизор НЕ мешавем
   Future<bool> register() async {
     if (!_state.canSubmit) return false;
 
@@ -87,7 +90,7 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await ApiClient.instance.post(
+      final response = await ApiClient.instance.post(
         ApiEndpoints.register,
         body: {
           'username': _state.username.trim(),
@@ -96,11 +99,12 @@ class RegisterController extends ChangeNotifier {
         },
       );
 
-      final data = jsonDecode(res.body);
-      if (data['user'] == null) {
-        throw Exception('Registration failed');
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Registration failed');
       }
 
+      // ✅ Account created successfully
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;
