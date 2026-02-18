@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'app_routes.dart';
 
-// REAL SCREEN
+// AUTH SCREENS
 import '../auth/login/login_screen.dart';
+import '../auth/register/register_screen.dart';
 
 class AppController {
   final AppState appState;
@@ -13,6 +14,7 @@ class AppController {
 
   String get initialRoute {
     if (!appState.isInitialized) return AppRoutes.splash;
+
     return appState.isAuthenticated
         ? AppRoutes.home
         : AppRoutes.login;
@@ -20,34 +22,49 @@ class AppController {
 
   Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
+      // ================= AUTH =================
       case AppRoutes.login:
         return _page(const LoginScreen());
 
       case AppRoutes.register:
-        return _page(const Scaffold(body: Center(child: Text('Register'))));
+        return _page(const RegisterScreen());
 
-      // Bottom tabs
+      // ================= MAIN =================
       case AppRoutes.home:
-        return _page(const Scaffold(body: Center(child: Text('Home'))));
+        return _page(const Scaffold(
+          body: Center(child: Text('Home')),
+        ));
 
       case AppRoutes.reels:
-        return _page(const Scaffold(body: Center(child: Text('Reels'))));
+        return _page(const Scaffold(
+          body: Center(child: Text('Reels')),
+        ));
 
       case AppRoutes.chat:
-        return _page(const Scaffold(body: Center(child: Text('Chat'))));
+        return _page(const Scaffold(
+          body: Center(child: Text('Chat')),
+        ));
 
       case AppRoutes.search:
-        return _page(const Scaffold(body: Center(child: Text('Search'))));
+        return _page(const Scaffold(
+          body: Center(child: Text('Search')),
+        ));
 
       case AppRoutes.profile:
-        return _page(const Scaffold(body: Center(child: Text('Profile'))));
+        return _page(const Scaffold(
+          body: Center(child: Text('Profile')),
+        ));
 
-      // Home actions (NOT tabs)
+      // ================= ACTIONS =================
       case AppRoutes.create:
-        return _page(const Scaffold(body: Center(child: Text('Create Post'))));
+        return _page(const Scaffold(
+          body: Center(child: Text('Create Post')),
+        ));
 
       case AppRoutes.notifications:
-        return _page(const Scaffold(body: Center(child: Text('Notifications'))));
+        return _page(const Scaffold(
+          body: Center(child: Text('Notifications')),
+        ));
 
       default:
         return _page(const Scaffold(body: SizedBox()));
