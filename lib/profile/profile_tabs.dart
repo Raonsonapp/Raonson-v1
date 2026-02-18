@@ -4,9 +4,6 @@ import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../widgets/media_viewer.dart';
 
-// ---------- FIX ----------
-enum MediaType { image, video }
-
 class ProfileTabs extends StatelessWidget {
   final List<PostModel> posts;
   final List<ReelModel> reels;
@@ -55,12 +52,13 @@ class ProfileTabs extends StatelessWidget {
     }
 
     return GridView.builder(
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+      ),
       itemCount: urls.length,
       itemBuilder: (_, i) => MediaViewer(
         url: urls[i],
-        type: MediaType.image,
+        type: 'image',
       ),
     );
   }
@@ -71,12 +69,13 @@ class ProfileTabs extends StatelessWidget {
     }
 
     return GridView.builder(
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+      ),
       itemCount: urls.length,
       itemBuilder: (_, i) => MediaViewer(
         url: urls[i],
-        type: MediaType.video,
+        type: 'video',
       ),
     );
   }
