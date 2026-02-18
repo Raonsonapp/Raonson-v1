@@ -17,6 +17,8 @@ import '../../chat/inbox/chat_list_screen.dart';
 import '../../profile/profile_screen.dart';
 
 import '../../app/app_routes.dart';
+import '../../core/api/api_client.dart';
+import '../feed_repository.dart';
 
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
@@ -25,8 +27,14 @@ class FeedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => FeedController()),
-        ChangeNotifierProvider(create: (_) => BottomNavController()),
+        ChangeNotifierProvider(
+          create: (_) => FeedController(
+            FeedRepository(ApiClient.instance),
+          )..loadInitialFeed(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => BottomNavController(),
+        ),
       ],
       child: const _FeedShell(),
     );
@@ -46,17 +54,11 @@ class _FeedShellState extends State<_FeedShell> {
   @override
   void initState() {
     super.initState();
-
     _scrollController = ScrollController()..addListener(_onScroll);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FeedController>().loadInitialFeed();
-    });
   }
 
   void _onScroll() {
     final controller = context.read<FeedController>();
-
     if (_scrollController.position.pixels >
         _scrollController.position.maxScrollExtent - 300) {
       controller.loadMore();
@@ -84,7 +86,7 @@ class _FeedShellState extends State<_FeedShell> {
           _buildFeed(context),
           const ReelsScreen(),
           const ChatListScreen(),
-          const Center(child: Text('Search')), // Search placeholder
+          const Center(child: Text('Search')),
           const ProfileScreen(userId: 'me'),
         ],
       ),
@@ -97,23 +99,15 @@ class _FeedShellState extends State<_FeedShell> {
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return AppBar(
       elevation: 0,
       backgroundColor: theme.scaffoldBackgroundColor,
-      titleSpacing: 0,
-      title: Padding(
-        padding: const EdgeInsets.only(left: 16),
+      title: const Padding(
+        padding: EdgeInsets.only(left: 16),
         child: Text(
           'Raonson',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: isDark
-                ? theme.colorScheme.primary
-                : theme.colorScheme.secondary,
-          ),
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
       ),
       actions: [
@@ -145,15 +139,13 @@ class _FeedShellState extends State<_FeedShell> {
 
         if (state.hasError) {
           return Center(
-            child: Text(
-              state.errorMessage ?? 'Unexpected error',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(state.errorMessage ?? 'Unexpected error'),
           );
         }
 
         if (state.posts.isEmpty) {
           return const EmptyState(
+            icon: Icons.image_not_supported,
             title: 'No posts yet',
             subtitle: 'Follow users to see posts in your feed',
           );
@@ -168,7 +160,6 @@ class _FeedShellState extends State<_FeedShell> {
               if (index < state.posts.length) {
                 return PostCard(post: state.posts[index]);
               }
-
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Center(child: LoadingIndicator()),
