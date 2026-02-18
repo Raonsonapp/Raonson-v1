@@ -14,9 +14,9 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationsRepository _repo = NotificationsRepository();
+  final NotificationsRepository _repository = NotificationsRepository();
 
-  List<NotificationModel> _items = [];
+  List<NotificationModel> _notifications = [];
   bool _loading = true;
 
   @override
@@ -27,9 +27,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _load() async {
     try {
-      final data = await _repo.fetchNotifications();
+      final data = await _repository.fetchNotifications();
       setState(() {
-        _items = data;
+        _notifications = data;
         _loading = false;
       });
     } catch (_) {
@@ -37,11 +37,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _onTap(NotificationModel n) async {
+  Future<void> _onNotificationTap(NotificationModel n) async {
     if (!n.isRead) {
-      await _repo.markAsRead(n.id);
+      await _repository.markAsRead(n.id);
+
       setState(() {
-        n.read = true;
+        _notifications = _notifications.map((item) {
+          if (item.id == n.id) {
+            return item.copyWith(read: true);
+          }
+          return item;
+        }).toList();
       });
     }
   }
@@ -54,11 +60,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           TextButton(
             onPressed: () async {
-              await _repo.markAllAsRead();
+              await _repository.markAllAsRead();
               setState(() {
-                for (final n in _items) {
-                  n.read = true;
-                }
+                _notifications =
+                    _notifications.map((e) => e.copyWith(read: true)).toList();
               });
             },
             child: const Text('Mark all'),
@@ -67,19 +72,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: _loading
           ? const LoadingIndicator()
-          : _items.isEmpty
+          : _notifications.isEmpty
               ? const EmptyState(
+                  icon: Icons.notifications_none,
                   title: 'No notifications',
-                  subtitle: 'You are all caught up',
+                  subtitle: 'You’re all caught up 🎉',
                 )
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.builder(
-                    itemCount: _items.length,
-                    itemBuilder: (_, i) => NotificationItem(
-                      notification: _items[i],
-                      onTap: () => _onTap(_items[i]),
-                    ),
+                    itemCount: _notifications.length,
+                    itemBuilder: (_, i) {
+                      final n = _notifications[i];
+                      return NotificationItem(
+                        notification: n,
+                        onTap: () => _onNotificationTap(n),
+                      );
+                    },
                   ),
                 ),
     );
