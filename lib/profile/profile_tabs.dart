@@ -29,13 +29,15 @@ class ProfileTabs extends StatelessWidget {
           Expanded(
             child: TabBarView(
               children: [
-                _grid(
+                _gridImages(
                   posts
                       .where((p) => p.media.isNotEmpty)
                       .map((p) => p.media.first['url'] ?? '')
                       .toList(),
                 ),
-                _grid(reels.map((r) => r.videoUrl).toList()),
+                _gridVideos(
+                  reels.map((r) => r.videoUrl).toList(),
+                ),
               ],
             ),
           ),
@@ -44,20 +46,37 @@ class ProfileTabs extends StatelessWidget {
     );
   }
 
-  Widget _grid(List<String> urls) {
+  Widget _gridImages(List<String> urls) {
     if (urls.isEmpty) {
       return const Center(child: Text('No content'));
     }
 
     return GridView.builder(
-      physics: const BouncingScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 2,
-        crossAxisSpacing: 2,
       ),
       itemCount: urls.length,
-      itemBuilder: (_, i) => MediaViewer(url: urls[i]),
+      itemBuilder: (_, i) => MediaViewer(
+        url: urls[i],
+        type: MediaType.image,
+      ),
+    );
+  }
+
+  Widget _gridVideos(List<String> urls) {
+    if (urls.isEmpty) {
+      return const Center(child: Text('No content'));
+    }
+
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+      ),
+      itemCount: urls.length,
+      itemBuilder: (_, i) => MediaViewer(
+        url: urls[i],
+        type: MediaType.video,
+      ),
     );
   }
 }
