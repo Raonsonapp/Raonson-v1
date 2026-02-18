@@ -65,3 +65,39 @@ export async function refreshToken(req, res) {
 export async function logout(req, res) {
   res.json({ success: true });
     }
+// REGISTER
+export async function register(req, res) {
+  const { username, email, password } = req.body; // ⬅ ИЛОВА
+
+  // ⬇ ИЛОВА: санҷиши email
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
+
+  const exists = await User.findOne({
+    $or: [{ username }, { email }], // ⬅ ИЛОВА
+  });
+
+  if (exists) {
+    return res
+      .status(400)
+      .json({ message: "Username or email already taken" });
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+
+  const user = await User.create({
+    username,
+    email,            // ⬅ ИЛОВА
+    password: hash,
+  });
+
+  const accessToken = signAccessToken({ id: user._id });
+  const refreshToken = signRefreshToken({ id: user._id });
+
+  res.json({
+    user,
+    accessToken,
+    refreshToken,
+  });
+    }
