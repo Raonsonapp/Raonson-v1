@@ -7,40 +7,53 @@ import 'api_interceptors.dart';
 class ApiClient {
   ApiClient._();
 
-  /// Singleton instance (барои controller-ҳо)
+  /// ✅ Singleton instance
   static final ApiClient instance = ApiClient._();
 
   static final http.Client _client = http.Client();
 
-  // --------------------------------------------------
+  String? _authToken;
+
+  // ==================================================
+  // AUTH TOKEN
+  // ==================================================
+
+  void setAuthToken(String token) {
+    _authToken = token;
+  }
+
+  void clearAuthToken() {
+    _authToken = null;
+  }
+
+  // ==================================================
   // URI builder
+  // ⚠️ AppConfig.apibaseUrl (на apiBaseUrl!)
+  // ==================================================
+
   static Uri _uri(String path, [Map<String, String>? query]) {
-    return Uri.parse('${AppConfig.apiBaseUrl}$path')
+    return Uri.parse('${AppConfig.apibaseUrl}$path')
         .replace(queryParameters: query);
   }
 
   // ==================================================
-  // STATIC METHODS (ApiClient.post(...))
+  // INTERNAL REQUEST BUILDER
   // ==================================================
 
-  static Future<http.Response> get(
+  Future<http.Response> _send(
+    String method,
     String path, {
     Map<String, String>? query,
-  }) async {
-    final request = http.Request('GET', _uri(path, query));
-    await ApiInterceptors.attachHeaders(request);
-
-    final streamed = await _client.send(request);
-    final response = await http.Response.fromStream(streamed);
-
-    return ApiInterceptors.handleResponse(response);
-  }
-
-  static Future<http.Response> post(
-    String path, {
     Map<String, dynamic>? body,
   }) async {
-    final request = http.Request('POST', _uri(path));
+    final request = http.Request(method, _uri(path, query));
+
+    request.headers['Content-Type'] = 'application/json';
+
+    if (_authToken != null) {
+      request.headers['Authorization'] = 'Bearer $_authToken';
+    }
+
     await ApiInterceptors.attachHeaders(request);
 
     if (body != null) {
@@ -53,59 +66,61 @@ class ApiClient {
     return ApiInterceptors.handleResponse(response);
   }
 
-  static Future<http.Response> put(
-    String path, {
-    Map<String, dynamic>? body,
-  }) async {
-    final request = http.Request('PUT', _uri(path));
-    await ApiInterceptors.attachHeaders(request);
-
-    if (body != null) {
-      request.body = jsonEncode(body);
-    }
-
-    final streamed = await _client.send(request);
-    final response = await http.Response.fromStream(streamed);
-
-    return ApiInterceptors.handleResponse(response);
-  }
-
-  static Future<http.Response> delete(String path) async {
-    final request = http.Request('DELETE', _uri(path));
-    await ApiInterceptors.attachHeaders(request);
-
-    final streamed = await _client.send(request);
-    final response = await http.Response.fromStream(streamed);
-
-    return ApiInterceptors.handleResponse(response);
-  }
-
   // ==================================================
-  // INSTANCE METHODS (ApiClient.instance.postRequest)
+  // INSTANCE METHODS (АСОСӢ – ИНҲОРО ИСТИФОДА КУН)
   // ==================================================
 
-  Future<http.Response> getRequest(
+  Future<http.Response> get(
     String path, {
     Map<String, String>? query,
   }) {
-    return ApiClient.get(path, query: query);
+    return _send('GET', path, query: query);
   }
 
-  Future<http.Response> postRequest(
+  Future<http.Response> post(
     String path, {
     Map<String, dynamic>? body,
   }) {
-    return ApiClient.post(path, body: body);
+    return _send('POST', path, body: body);
   }
 
-  Future<http.Response> putRequest(
+  Future<http.Response> put(
     String path, {
     Map<String, dynamic>? body,
   }) {
-    return ApiClient.put(path, body: body);
+    return _send('PUT', path, body: body);
   }
 
-  Future<http.Response> deleteRequest(String path) {
-    return ApiClient.delete(path);
+  Future<http.Response> delete(String path) {
+    return _send('DELETE', path);
+  }
+
+  // ==================================================
+  // STATIC API (BACKWARD COMPATIBILITY)
+  // ==================================================
+
+  static Future<http.Response> getStatic(
+    String path, {
+    Map<String, String>? query,
+  }) {
+    return instance.get(path, query: query);
+  }
+
+  static Future<http.Response> postStatic(
+    String path, {
+    Map<String, dynamic>? body,
+  }) {
+    return instance.post(path, body: body);
+  }
+
+  static Future<http.Response> putStatic(
+    String path, {
+    Map<String, dynamic>? body,
+  }) {
+    return instance.put(path, body: body);
+  }
+
+  static Future<http.Response> deleteStatic(String path) {
+    return instance.delete(path);
   }
 }
