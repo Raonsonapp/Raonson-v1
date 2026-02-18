@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
+import '../../app/app_routes.dart';
 
-/// =======================
-/// STATE
-/// =======================
 class RegisterState {
   final String username;
   final String email;
@@ -60,9 +58,6 @@ class RegisterState {
   }
 }
 
-/// =======================
-/// CONTROLLER
-/// =======================
 class RegisterController extends ChangeNotifier {
   RegisterState _state = RegisterState.initial();
   RegisterState get state => _state;
@@ -87,14 +82,14 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> register() async {
+  Future<void> register(BuildContext context) async {
     if (!_state.canSubmit) return;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
 
     try {
-      final response = await ApiClient.instance.post(
+      final res = await ApiClient.instance.post(
         ApiEndpoints.register,
         body: {
           'username': _state.username.trim(),
@@ -103,16 +98,18 @@ class RegisterController extends ChangeNotifier {
         },
       );
 
-      final data = jsonDecode(response.body);
-
-      // ✅ backend accessToken мефиристад
+      final data = jsonDecode(res.body);
       final token = data['accessToken'];
+
       if (token == null) {
         throw Exception('Access token missing');
       }
 
-      // 🔐 token-ро нигоҳ медорем
       ApiClient.instance.setAuthToken(token);
+
+      // ✅ ИН ҶО РЕГИСТРАЦИЯ “ЗИНДА” МЕШАВАД
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
     }
