@@ -85,24 +85,20 @@ class _ReelsView extends StatelessWidget {
         return Stack(
           fit: StackFit.expand,
           children: [
-            /// 🎥 VIDEO
+            // ✅ ТАНҲО url
             MediaViewer(
               url: reel.videoUrl,
-              type: 'video',
             ),
 
-            /// ❤️ ACTIONS
             Positioned(
               right: 16,
               bottom: 80,
               child: Column(
                 children: [
                   IconButton(
-                    icon: Icon(
-                      reel.isLiked
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: reel.isLiked ? Colors.red : Colors.white,
+                    icon: const Icon(
+                      Icons.favorite_border,
+                      color: Colors.white,
                       size: 30,
                     ),
                     onPressed: () {
@@ -122,6 +118,21 @@ class _ReelsView extends StatelessWidget {
                     size: 28,
                   ),
                 ],
+              ),
+            ),
+
+            Positioned(
+              left: 16,
+              bottom: 40,
+              right: 80,
+              child: Text(
+                reel.caption,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
