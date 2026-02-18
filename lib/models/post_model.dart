@@ -23,16 +23,23 @@ class PostModel {
     required this.createdAt,
   });
 
+  // ---------- COMPAT GETTERS ----------
+  bool get isLiked => liked;
+  String get mediaUrl => media.isNotEmpty ? media.first['url'] ?? '' : '';
+  String get mediaType => media.isNotEmpty ? media.first['type'] ?? '' : '';
+
   factory PostModel.fromJson(Map<String, dynamic> json) {
     return PostModel(
       id: json['_id'],
       user: UserModel.fromJson(json['user']),
       caption: json['caption'] ?? '',
       media: List<Map<String, String>>.from(
-        json['media'].map((m) => {
-              'url': m['url'],
-              'type': m['type'],
-            }),
+        (json['media'] ?? []).map<Map<String, String>>(
+          (m) => {
+            'url': m['url'] ?? '',
+            'type': m['type'] ?? 'image',
+          },
+        ),
       ),
       likesCount: json['likesCount'] ?? 0,
       commentsCount: json['commentsCount'] ?? 0,
