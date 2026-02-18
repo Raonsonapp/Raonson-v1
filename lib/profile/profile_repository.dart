@@ -7,11 +7,9 @@ import '../models/post_model.dart';
 import '../models/reel_model.dart';
 
 class ProfileRepository {
-  final ApiClient _api = ApiClient.instance;
-
   /// GET PROFILE
   Future<UserModel> getProfile(String userId) async {
-    final res = await _api.getRequest(
+    final res = await ApiClient.get(
       ApiEndpoints.userProfile(userId),
     );
 
@@ -25,7 +23,7 @@ class ProfileRepository {
     String? bio,
     bool? isPrivate,
   }) async {
-    final res = await _api.putRequest(
+    final res = await ApiClient.put(
       ApiEndpoints.updateProfile,
       body: {
         'username': username,
@@ -40,7 +38,7 @@ class ProfileRepository {
 
   /// FOLLOWERS
   Future<List<UserModel>> getFollowers(String userId) async {
-    final res = await _api.getRequest(
+    final res = await ApiClient.get(
       ApiEndpoints.followers(userId),
     );
 
@@ -50,7 +48,7 @@ class ProfileRepository {
 
   /// FOLLOWING
   Future<List<UserModel>> getFollowing(String userId) async {
-    final res = await _api.getRequest(
+    final res = await ApiClient.get(
       ApiEndpoints.following(userId),
     );
 
@@ -60,7 +58,7 @@ class ProfileRepository {
 
   /// USER POSTS
   Future<List<PostModel>> getUserPosts(String userId) async {
-    final res = await _api.getRequest(
+    final res = await ApiClient.get(
       '${ApiEndpoints.posts}?user=$userId',
     );
 
@@ -70,7 +68,7 @@ class ProfileRepository {
 
   /// USER REELS
   Future<List<ReelModel>> getUserReels(String userId) async {
-    final res = await _api.getRequest(
+    final res = await ApiClient.get(
       '${ApiEndpoints.reels}?user=$userId',
     );
 
@@ -80,7 +78,7 @@ class ProfileRepository {
 
   /// FOLLOW / UNFOLLOW
   Future<void> toggleFollow(String userId) async {
-    await _api.postRequest(
+    await ApiClient.post(
       ApiEndpoints.toggleFollow(userId),
     );
   }
