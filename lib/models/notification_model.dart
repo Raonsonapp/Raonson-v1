@@ -19,7 +19,6 @@ class NotificationModel {
     this.fromUser,
   });
 
-  // ---------- COMPAT ----------
   bool get isRead => read;
   String get message => body;
 
@@ -31,6 +30,20 @@ class NotificationModel {
     return '${diff.inDays}d';
   }
 
+  NotificationModel copyWith({
+    bool? read,
+  }) {
+    return NotificationModel(
+      id: id,
+      type: type,
+      title: title,
+      body: body,
+      read: read ?? this.read,
+      createdAt: createdAt,
+      fromUser: fromUser,
+    );
+  }
+
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id: json['_id'],
@@ -39,8 +52,9 @@ class NotificationModel {
       body: json['body'] ?? '',
       read: json['read'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
-      fromUser:
-          json['fromUser'] != null ? UserModel.fromJson(json['fromUser']) : null,
+      fromUser: json['fromUser'] != null
+          ? UserModel.fromJson(json['fromUser'])
+          : null,
     );
   }
 }
