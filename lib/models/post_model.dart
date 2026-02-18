@@ -23,10 +23,16 @@ class PostModel {
     required this.createdAt,
   });
 
-  // ---------- COMPAT GETTERS ----------
+  // ---------- COMPAT ----------
   bool get isLiked => liked;
-  String get mediaUrl => media.isNotEmpty ? media.first['url'] ?? '' : '';
-  String get mediaType => media.isNotEmpty ? media.first['type'] ?? '' : '';
+  bool get isSaved => saved;
+  bool get isOwner => false; // backend дертар
+  List get comments => const [];
+
+  String get mediaUrl =>
+      media.isNotEmpty ? media.first['url'] ?? '' : '';
+  String get mediaType =>
+      media.isNotEmpty ? media.first['type'] ?? 'image' : 'image';
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
     return PostModel(
