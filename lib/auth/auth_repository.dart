@@ -4,14 +4,12 @@ import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 
 class AuthRepository {
-  final ApiClient _api = ApiClient.instance;
-
   // ================= LOGIN =================
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
-    final response = await _api.post(
+    final response = await ApiClient.post(
       ApiEndpoints.login,
       body: {
         'email': email,
@@ -28,7 +26,7 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final response = await _api.post(
+    final response = await ApiClient.post(
       ApiEndpoints.register,
       body: {
         'username': username,
@@ -41,14 +39,9 @@ class AuthRepository {
   }
 
   // ================= REFRESH TOKEN =================
-  Future<Map<String, dynamic>> refreshToken({
-    required String refreshToken,
-  }) async {
-    final response = await _api.post(
+  Future<Map<String, dynamic>> refreshToken() async {
+    final response = await ApiClient.post(
       ApiEndpoints.refreshToken,
-      body: {
-        'refreshToken': refreshToken,
-      },
     );
 
     return jsonDecode(response.body) as Map<String, dynamic>;
@@ -56,6 +49,32 @@ class AuthRepository {
 
   // ================= LOGOUT =================
   Future<void> logout() async {
-    await _api.post(ApiEndpoints.logout);
+    await ApiClient.post(ApiEndpoints.logout);
+  }
+
+  // ================= FORGOT PASSWORD =================
+  Future<void> forgotPassword(String email) async {
+    await ApiClient.post(
+      ApiEndpoints.forgotPassword,
+      body: {
+        'email': email,
+      },
+    );
+  }
+
+  // ================= RESET PASSWORD =================
+  Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await ApiClient.post(
+      ApiEndpoints.resetPassword,
+      body: {
+        'email': email,
+        'otp': otp,
+        'newPassword': newPassword,
+      },
+    );
   }
 }
