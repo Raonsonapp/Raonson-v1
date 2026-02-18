@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'login_controller.dart';
+import '../../app/app_state.dart';
 import '../../app/app_routes.dart';
+import 'login_controller.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -25,81 +26,141 @@ class _LoginView extends StatelessWidget {
     final state = controller.state;
 
     return Scaffold(
+      backgroundColor: Colors.black, // ✅ REAL BLACK
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // LOGO / TITLE
-              const Text(
-                'Raonson',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 60),
+
+              // LOGO
+              Center(
+                child: Image.asset(
+                  'assets/icon/logo.png',
+                  height: 110,
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              const Center(
+                child: Text(
+                  'Log in to Raonson',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
 
               const SizedBox(height: 40),
 
-              // EMAIL
-              TextField(
+              _field(
+                label: 'Email',
                 onChanged: controller.updateEmail,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                ),
               ),
-
               const SizedBox(height: 16),
 
-              // PASSWORD
-              TextField(
+              _field(
+                label: 'Password',
+                obscure: true,
                 onChanged: controller.updatePassword,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                ),
               ),
 
               const SizedBox(height: 24),
 
-              // ERROR
               if (state.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    state.error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
+                Text(
+                  state.error!,
+                  style: const TextStyle(color: Colors.redAccent),
+                  textAlign: TextAlign.center,
                 ),
-
-              // LOGIN BUTTON
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: state.canSubmit
-                      ? controller.login
-                      : null,
-                  child: state.isLoading
-                      ? const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        )
-                      : const Text('Log In'),
-                ),
-              ),
 
               const SizedBox(height: 16),
 
-              // GO TO REGISTER
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2EFF8A),
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: state.canSubmit
+                      ? () async {
+                          final ok = await controller.login();
+                          if (!context.mounted) return;
+
+                          if (ok) {
+                            context.read<AppState>().login(); // ✅ ONLY HERE
+                          }
+                        }
+                      : null,
+                  child: state.isLoading
+                      ? const SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: Colors.black,
+                          ),
+                        )
+                      : const Text(
+                          'Log In',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
               TextButton(
                 onPressed: () {
                   Navigator.pushNamed(context, AppRoutes.register);
                 },
-                child: const Text('Create new account'),
+                child: const Text(
+                  'Create new account',
+                  style: TextStyle(
+                    color: Color(0xFF2EFF8A),
+                  ),
+                ),
               ),
+
+              const SizedBox(height: 40),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _field({
+    required String label,
+    required ValueChanged<String> onChanged,
+    bool obscure = false,
+  }) {
+    return TextField(
+      obscureText: obscure,
+      onChanged: onChanged,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        enabledBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white38),
+        ),
+        focusedBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: Color(0xFF2EFF8A),
+            width: 2,
           ),
         ),
       ),
