@@ -103,7 +103,16 @@ class RegisterController extends ChangeNotifier {
         },
       );
 
-      jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+
+      // ✅ backend accessToken мефиристад
+      final token = data['accessToken'];
+      if (token == null) {
+        throw Exception('Access token missing');
+      }
+
+      // 🔐 token-ро нигоҳ медорем
+      ApiClient.instance.setAuthToken(token);
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
     }
