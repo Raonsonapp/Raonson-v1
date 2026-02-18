@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'register_controller.dart';
-import 'register_state.dart';
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
@@ -49,6 +48,14 @@ class _RegisterView extends StatelessWidget {
               const SizedBox(height: 16),
 
               TextField(
+                onChanged: controller.updateEmail,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
                 onChanged: controller.updatePassword,
                 obscureText: true,
                 decoration: const InputDecoration(
@@ -79,7 +86,7 @@ class _RegisterView extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: state.canSubmit
-                      ? () => controller.register(context)
+                      ? () => controller.register()
                       : null,
                   child: state.isLoading
                       ? const SizedBox(
@@ -96,9 +103,7 @@ class _RegisterView extends StatelessWidget {
               const SizedBox(height: 16),
 
               TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+                onPressed: () => Navigator.pop(context),
                 child: const Text('Already have an account? Log in'),
               ),
             ],
