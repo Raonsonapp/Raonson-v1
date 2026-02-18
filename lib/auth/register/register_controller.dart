@@ -8,6 +8,7 @@ class RegisterState {
   final String username;
   final String email;
   final String password;
+  final String confirmPassword;
   final bool isLoading;
   final String? error;
 
@@ -15,6 +16,7 @@ class RegisterState {
     required this.username,
     required this.email,
     required this.password,
+    required this.confirmPassword,
     required this.isLoading,
     this.error,
   });
@@ -24,6 +26,7 @@ class RegisterState {
       username: '',
       email: '',
       password: '',
+      confirmPassword: '',
       isLoading: false,
     );
   }
@@ -32,12 +35,14 @@ class RegisterState {
       username.isNotEmpty &&
       email.isNotEmpty &&
       password.isNotEmpty &&
+      password == confirmPassword &&
       !isLoading;
 
   RegisterState copyWith({
     String? username,
     String? email,
     String? password,
+    String? confirmPassword,
     bool? isLoading,
     String? error,
   }) {
@@ -45,6 +50,7 @@ class RegisterState {
       username: username ?? this.username,
       email: email ?? this.email,
       password: password ?? this.password,
+      confirmPassword: confirmPassword ?? this.confirmPassword,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -67,6 +73,11 @@ class RegisterController extends ChangeNotifier {
 
   void updatePassword(String v) {
     _state = _state.copyWith(password: v);
+    notifyListeners();
+  }
+
+  void updateConfirmPassword(String v) {
+    _state = _state.copyWith(confirmPassword: v);
     notifyListeners();
   }
 
