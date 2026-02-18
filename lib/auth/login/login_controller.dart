@@ -63,9 +63,9 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔐 LOGIN (NO BuildContext — 100% SAFE)
-  Future<void> login() async {
-    if (_state.isLoading) return;
+  /// 🔐 REAL LOGIN (Instagram-style)
+  Future<bool> login() async {
+    if (_state.isLoading) return false;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
@@ -81,17 +81,23 @@ class LoginController extends ChangeNotifier {
 
       final data = jsonDecode(response.body);
 
-      final token = data['accessToken'];
-      if (token == null) {
-        throw Exception('Access token missing');
+      final accessToken = data['accessToken'];
+      if (accessToken == null || accessToken.toString().isEmpty) {
+        throw Exception('Login failed');
       }
 
-      ApiClient.instance.setAuthToken(token);
-    } catch (e) {
-      _state = _state.copyWith(error: e.toString());
-    }
+      ApiClient.instance.setAuthToken(accessToken);
 
-    _state = _state.copyWith(isLoading: false);
-    notifyListeners();
+      _state = _state.copyWith(isLoading: false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _state = _state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+      notifyListeners();
+      return false;
+    }
   }
 }
