@@ -11,9 +11,8 @@ class StoryRepository {
 
   Future<List<StoryModel>> fetchStories() async {
     final res = await _api.get(ApiEndpoints.stories);
-    return (jsonDecode(res.data) as List)
-        .map((e) => StoryModel.fromJson(e))
-        .toList();
+    final List list = jsonDecode(res.body);
+    return list.map((e) => StoryModel.fromJson(e)).toList();
   }
 
   Future<void> markStoryViewed(String storyId) async {
