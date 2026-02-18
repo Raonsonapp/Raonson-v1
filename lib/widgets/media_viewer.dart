@@ -14,52 +14,38 @@ class MediaViewer extends StatefulWidget {
 }
 
 class _MediaViewerState extends State<MediaViewer> {
-  VideoPlayerController? _controller;
-
-  bool get _isVideo =>
-      widget.url.toLowerCase().endsWith('.mp4') ||
-      widget.url.toLowerCase().endsWith('.mov');
+  late VideoPlayerController _controller;
 
   @override
   void initState() {
     super.initState();
-
-    if (_isVideo) {
-      _controller = VideoPlayerController.network(widget.url)
-        ..initialize().then((_) {
-          if (mounted) setState(() {});
-          _controller?.setLooping(true);
-          _controller?.play();
-        });
-    }
+    _controller = VideoPlayerController.network(widget.url)
+      ..initialize().then((_) {
+        _controller.setLooping(true);
+        _controller.play();
+        setState(() {});
+      });
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isVideo) {
-      return Image.network(
-        widget.url,
-        fit: BoxFit.cover,
-        width: double.infinity,
-      );
+    if (!_controller.value.isInitialized) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    if (_controller == null || !_controller!.value.isInitialized) {
-      return const AspectRatio(
-        aspectRatio: 1,
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    return AspectRatio(
-      aspectRatio: _controller!.value.aspectRatio,
-      child: VideoPlayer(_controller!),
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: _controller.value.size.width,
+        height: _controller.value.size.height,
+        child: VideoPlayer(_controller),
+      ),
     );
   }
 }
