@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
-import '../../app/app_routes.dart';
 import 'login_controller.dart';
+import '../../app/app_routes.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -26,7 +26,7 @@ class _LoginView extends StatelessWidget {
     final state = controller.state;
 
     return Scaffold(
-      backgroundColor: Colors.black, // ✅ REAL BLACK
+      backgroundColor: Colors.black, // ✅ сиёҳ
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -43,7 +43,7 @@ class _LoginView extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               const Center(
                 child: Text(
@@ -58,12 +58,15 @@ class _LoginView extends StatelessWidget {
 
               const SizedBox(height: 40),
 
+              // EMAIL
               _field(
                 label: 'Email',
                 onChanged: controller.updateEmail,
               ),
-              const SizedBox(height: 16),
 
+              const SizedBox(height: 20),
+
+              // PASSWORD
               _field(
                 label: 'Password',
                 obscure: true,
@@ -72,6 +75,7 @@ class _LoginView extends StatelessWidget {
 
               const SizedBox(height: 24),
 
+              // ERROR
               if (state.error != null)
                 Text(
                   state.error!,
@@ -79,8 +83,9 @@ class _LoginView extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
+              // LOGIN BUTTON
               SizedBox(
                 height: 52,
                 child: ElevatedButton(
@@ -93,11 +98,12 @@ class _LoginView extends StatelessWidget {
                   ),
                   onPressed: state.canSubmit
                       ? () async {
-                          final ok = await controller.login();
+                          await controller.login();
                           if (!context.mounted) return;
 
-                          if (ok) {
-                            context.read<AppState>().login(); // ✅ ONLY HERE
+                          // ✅ агар хато набошад → login
+                          if (controller.state.error == null) {
+                            context.read<AppState>().login();
                           }
                         }
                       : null,
@@ -120,8 +126,9 @@ class _LoginView extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
+              // GO TO REGISTER
               TextButton(
                 onPressed: () {
                   Navigator.pushNamed(context, AppRoutes.register);
@@ -130,6 +137,7 @@ class _LoginView extends StatelessWidget {
                   'Create new account',
                   style: TextStyle(
                     color: Color(0xFF2EFF8A),
+                    fontSize: 16,
                   ),
                 ),
               ),
