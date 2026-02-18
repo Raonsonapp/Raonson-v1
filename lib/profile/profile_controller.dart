@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../core/api/api_client.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/user_model.dart';
@@ -7,7 +7,8 @@ import 'profile_repository.dart';
 
 class ProfileController extends ChangeNotifier {
   final String userId;
-  final ProfileRepository _repo = ProfileRepository();
+  final ProfileRepository _repo =
+      ProfileRepository(ApiClient.instance);
 
   ProfileController({required this.userId});
 
