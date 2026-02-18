@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
-import '../../app/app_state.dart';
 
 /// =======================
 /// STATE
@@ -55,7 +53,7 @@ class LoginController extends ChangeNotifier {
   LoginState _state = LoginState.initial();
   LoginState get state => _state;
 
-  void updateUsername(String value) {
+  void updateEmail(String value) {
     _state = _state.copyWith(email: value);
     notifyListeners();
   }
@@ -65,7 +63,8 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(BuildContext context) async {
+  /// 🔐 LOGIN (NO BuildContext — 100% SAFE)
+  Future<void> login() async {
     if (_state.isLoading) return;
 
     _state = _state.copyWith(isLoading: true, error: null);
@@ -80,20 +79,14 @@ class LoginController extends ChangeNotifier {
         },
       );
 
-      final data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonDecode(response.body);
 
       final token = data['accessToken'];
       if (token == null) {
         throw Exception('Access token missing');
       }
 
-      // 🔐 save token
       ApiClient.instance.setAuthToken(token);
-
-      // ✅ AUTO LOGIN → HOME
-      context.read<AppState>().login();
-
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
     }
