@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'search_controller.dart';
+import 'search_state.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_indicator.dart';
@@ -24,7 +25,7 @@ class _SearchBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<SearchController>();
-    final state = controller.state;
+    final SearchState state = controller.state;
 
     return Column(
       children: [
@@ -80,7 +81,7 @@ class _SearchBody extends StatelessWidget {
           ...state.users.map(
             (u) => ListTile(
               leading: Avatar(
-                imageUrl: u.avatarUrl,
+                imageUrl: u.avatar, // ✅ ИСЛОҲ
                 size: 40,
               ),
               title: Text(u.username),
