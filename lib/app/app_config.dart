@@ -5,6 +5,10 @@ class AppConfig {
   static late String apibaseUrl;
   static late bool enableLogs;
 
+  // ---------- COMPAT ----------
+  static String get apiBaseUrl => apibaseUrl;
+  static String get baseUrl => apibaseUrl;
+
   static Future<void> initialize({
     required String appName,
     required String baseUrl,
