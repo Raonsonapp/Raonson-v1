@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'notifications_repository.dart';
 import 'notification_item.dart';
 import '../models/notification_model.dart';
@@ -14,6 +15,7 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationsRepository _repository = NotificationsRepository();
+
   List<NotificationModel> _notifications = [];
   bool _loading = true;
 
@@ -36,32 +38,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _onNotificationTap(NotificationModel n) async {
-    if (!n.isRead) {
-      await _repository.markAsRead(n.id);
-      setState(() {
-        n.isRead = true;
-      });
-    }
+    if (n.isRead) return;
 
-    // navigation handled by route guards / app routes
+    await _repository.markAsRead(n.id);
+
+    setState(() {
+      _notifications = _notifications.map((e) {
+        if (e.id == n.id) {
+          return e.copyWith(isRead: true);
+        }
+        return e;
+      }).toList();
+    });
+  }
+
+  Future<void> _markAll() async {
+    await _repository.markAllAsRead();
+
+    setState(() {
+      _notifications =
+          _notifications.map((e) => e.copyWith(isRead: true)).toList();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notifications"),
+        title: const Text('Notifications'),
         actions: [
           TextButton(
-            onPressed: () async {
-              await _repository.markAllAsRead();
-              setState(() {
-                for (final n in _notifications) {
-                  n.isRead = true;
-                }
-              });
-            },
-            child: const Text("Mark all"),
+            onPressed: _notifications.isEmpty ? null : _markAll,
+            child: const Text('Mark all'),
           ),
         ],
       ),
@@ -69,8 +77,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ? const LoadingIndicator()
           : _notifications.isEmpty
               ? const EmptyState(
-                  title: "No notifications",
-                  subtitle: "You’re all caught up 🎉",
+                  title: 'No notifications',
+                  subtitle: 'You’re all caught up 🎉',
                 )
               : RefreshIndicator(
                   onRefresh: _load,
