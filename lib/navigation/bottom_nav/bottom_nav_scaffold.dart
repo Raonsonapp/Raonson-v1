@@ -33,11 +33,11 @@ class _BottomNavView extends StatelessWidget {
       body: IndexedStack(
         index: nav.currentIndex,
         children: const [
-          FeedScreen(),              // HOME
-          ReelsScreen(),             // REELS
-          ChatListScreen(),          // CHAT
-          SearchScreen(),            // SEARCH
-          ProfileScreen(userId: 'me')// PROFILE
+          FeedScreen(),               // HOME
+          ReelsScreen(),              // REELS
+          ChatListScreen(),           // CHAT
+          SearchScreen(),             // SEARCH
+          ProfileScreen(userId: 'me') // PROFILE
         ],
       ),
       bottomNavigationBar: BottomNavBar(
