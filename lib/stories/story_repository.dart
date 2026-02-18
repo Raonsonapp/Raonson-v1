@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/story_model.dart';
@@ -9,12 +11,7 @@ class StoryRepository {
   Future<List<StoryModel>> fetchStories() async {
     final response = await ApiClient.get(ApiEndpoints.stories);
 
-    final List list = response.body.isNotEmpty
-        ? List.from(
-            (jsonDecode(response.body) as List),
-          )
-        : [];
-
+    final List list = jsonDecode(response.body) as List;
     return list.map((e) => StoryModel.fromJson(e)).toList();
   }
 
@@ -22,6 +19,8 @@ class StoryRepository {
   /// MARK STORY AS VIEWED
   /// =========================
   Future<void> markStoryViewed(String storyId) async {
-    await ApiClient.post('${ApiEndpoints.stories}/$storyId/view');
+    await ApiClient.post(
+      '${ApiEndpoints.stories}/$storyId/view',
+    );
   }
 }
