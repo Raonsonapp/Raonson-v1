@@ -46,10 +46,7 @@ class SearchController extends ChangeNotifier {
         user: users.first,
         caption: '$query post $i',
         media: const [
-          {
-            'url': '',
-            'type': 'image',
-          }
+          {'url': '', 'type': 'image'}
         ],
         likesCount: 0,
         commentsCount: 0,
