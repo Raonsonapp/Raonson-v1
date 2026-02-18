@@ -58,7 +58,7 @@ class ProfileTabs extends StatelessWidget {
       itemCount: urls.length,
       itemBuilder: (_, i) => MediaViewer(
         url: urls[i],
-        type: 'image',
+        type: 'image', // ✅ STRING
       ),
     );
   }
@@ -75,7 +75,7 @@ class ProfileTabs extends StatelessWidget {
       itemCount: urls.length,
       itemBuilder: (_, i) => MediaViewer(
         url: urls[i],
-        type: 'video',
+        type: 'video', // ✅ STRING
       ),
     );
   }
