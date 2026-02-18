@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api/api_client.dart';
+import '../feed_repository.dart';
 import 'feed_controller.dart';
 import 'feed_state.dart';
 import '../post/post_card.dart';
@@ -17,8 +19,6 @@ import '../../chat/inbox/chat_list_screen.dart';
 import '../../profile/profile_screen.dart';
 
 import '../../app/app_routes.dart';
-import '../../core/api/api_client.dart';
-import '../feed_repository.dart';
 
 class FeedScreen extends StatelessWidget {
   const FeedScreen({super.key});
@@ -29,7 +29,7 @@ class FeedScreen extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (_) => FeedController(
-            FeedRepository(ApiClient.instance),
+            FeedRepository(),
           )..loadInitialFeed(),
         ),
         ChangeNotifierProvider(
@@ -82,12 +82,12 @@ class _FeedShellState extends State<_FeedShell> {
       appBar: _buildAppBar(context),
       body: IndexedStack(
         index: nav.currentIndex,
-        children: [
-          _buildFeed(context),
-          const ReelsScreen(),
-          const ChatListScreen(),
-          const Center(child: Text('Search')),
-          const ProfileScreen(userId: 'me'),
+        children: const [
+          _FeedTab(),
+          ReelsScreen(),
+          ChatListScreen(),
+          Center(child: Text('Search')),
+          ProfileScreen(userId: 'me'),
         ],
       ),
       bottomNavigationBar: BottomNavBar(
@@ -101,7 +101,7 @@ class _FeedShellState extends State<_FeedShell> {
     return AppBar(
       title: const Text(
         'Raonson',
-        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
       ),
       actions: [
         IconButton(
@@ -120,7 +120,18 @@ class _FeedShellState extends State<_FeedShell> {
     );
   }
 
-  Widget _buildFeed(BuildContext context) {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+}
+
+class _FeedTab extends StatelessWidget {
+  const _FeedTab();
+
+  @override
+  Widget build(BuildContext context) {
     return Consumer<FeedController>(
       builder: (_, controller, __) {
         final FeedState state = controller.state;
@@ -139,14 +150,13 @@ class _FeedShellState extends State<_FeedShell> {
           return const EmptyState(
             icon: Icons.image_not_supported,
             title: 'No posts yet',
-            subtitle: 'Follow users to see posts in your feed',
+            subtitle: 'Follow users to see posts',
           );
         }
 
         return RefreshIndicator(
           onRefresh: controller.refresh,
           child: ListView.builder(
-            controller: _scrollController,
             itemCount: state.posts.length + (state.hasMore ? 1 : 0),
             itemBuilder: (context, index) {
               if (index < state.posts.length) {
@@ -161,11 +171,5 @@ class _FeedShellState extends State<_FeedShell> {
         );
       },
     );
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
   }
 }
