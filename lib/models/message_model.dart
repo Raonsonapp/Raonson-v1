@@ -2,21 +2,21 @@ import 'user_model.dart';
 
 class MessageModel {
   final String id;
-  final UserModel from;
-  final UserModel to;
+  final UserModel peer;
   final String text;
   final DateTime createdAt;
+  final bool isMine;
 
   const MessageModel({
     required this.id,
-    required this.from,
-    required this.to,
+    required this.peer,
     required this.text,
     required this.createdAt,
+    required this.isMine,
   });
 
   // ---------- COMPAT ----------
-  bool get isMine => from.isMe;
+  String get lastMessage => text;
 
   String get timeLabel =>
       '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
@@ -24,10 +24,10 @@ class MessageModel {
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
       id: json['_id'],
-      from: UserModel.fromJson(json['from']),
-      to: UserModel.fromJson(json['to']),
-      text: json['text'] ?? '',
+      peer: UserModel.fromJson(json['peer']),
+      text: json['text'] ?? json['message'] ?? '',
       createdAt: DateTime.parse(json['createdAt']),
+      isMine: json['isMine'] ?? false,
     );
   }
 }
