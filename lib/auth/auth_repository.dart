@@ -4,12 +4,14 @@ import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 
 class AuthRepository {
+  final ApiClient _api = ApiClient.instance;
+
   // ================= LOGIN =================
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
-    final response = await ApiClient.post(
+    final response = await _api.postRequest(
       ApiEndpoints.login,
       body: {
         'email': email,
@@ -26,7 +28,7 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final response = await ApiClient.post(
+    final response = await _api.postRequest(
       ApiEndpoints.register,
       body: {
         'username': username,
@@ -40,8 +42,8 @@ class AuthRepository {
 
   // ================= REFRESH TOKEN =================
   Future<Map<String, dynamic>> refreshToken() async {
-    final response = await ApiClient.post(
-      ApiEndpoints.refreshToken,
+    final response = await _api.postRequest(
+      ApiEndpoints.refresh,
     );
 
     return jsonDecode(response.body) as Map<String, dynamic>;
@@ -49,12 +51,12 @@ class AuthRepository {
 
   // ================= LOGOUT =================
   Future<void> logout() async {
-    await ApiClient.post(ApiEndpoints.logout);
+    await _api.postRequest(ApiEndpoints.logout);
   }
 
   // ================= FORGOT PASSWORD =================
   Future<void> forgotPassword(String email) async {
-    await ApiClient.post(
+    await _api.postRequest(
       ApiEndpoints.forgotPassword,
       body: {
         'email': email,
@@ -68,7 +70,7 @@ class AuthRepository {
     required String otp,
     required String newPassword,
   }) async {
-    await ApiClient.post(
+    await _api.postRequest(
       ApiEndpoints.resetPassword,
       body: {
         'email': email,
