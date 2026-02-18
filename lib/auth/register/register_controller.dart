@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
-import '../../app/app_state.dart';
 
 class RegisterState {
   final String username;
@@ -83,14 +81,17 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> register(BuildContext context) async {
-    if (!_state.canSubmit) return;
+  /// ✅ РЕГИСТРАЦИЯИ ВОҚЕӢ
+  /// return true -> SUCCESS
+  /// return false -> ERROR
+  Future<bool> register() async {
+    if (!_state.canSubmit) return false;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
 
     try {
-      final res = await ApiClient.instance.post(
+      final response = await ApiClient.instance.post(
         ApiEndpoints.register,
         body: {
           'username': _state.username.trim(),
@@ -99,24 +100,25 @@ class RegisterController extends ChangeNotifier {
         },
       );
 
-      final data = jsonDecode(res.body);
-
+      final data = jsonDecode(response.body);
       final token = data['accessToken'];
-      if (token == null) {
-        throw Exception('Access token missing');
+
+      if (token == null || token.toString().isEmpty) {
+        throw Exception('Registration failed: token missing');
       }
 
-      // 🔐 set token
       ApiClient.instance.setAuthToken(token);
 
-      // ✅ AUT0 LOGIN
-      context.read<AppState>().login();
-
+      _state = _state.copyWith(isLoading: false);
+      notifyListeners();
+      return true;
     } catch (e) {
-      _state = _state.copyWith(error: e.toString());
+      _state = _state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+      notifyListeners();
+      return false;
     }
-
-    _state = _state.copyWith(isLoading: false);
-    notifyListeners();
   }
 }
