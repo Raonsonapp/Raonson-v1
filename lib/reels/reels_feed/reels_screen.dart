@@ -85,12 +85,13 @@ class _ReelsView extends StatelessWidget {
         return Stack(
           fit: StackFit.expand,
           children: [
+            /// 🎥 VIDEO
             MediaViewer(
               url: reel.videoUrl,
               type: 'video',
             ),
 
-            // ===== Overlay actions =====
+            /// ❤️ ACTIONS
             Positioned(
               right: 16,
               bottom: 80,
@@ -121,22 +122,6 @@ class _ReelsView extends StatelessWidget {
                     size: 28,
                   ),
                 ],
-              ),
-            ),
-
-            // ===== Caption =====
-            Positioned(
-              left: 16,
-              bottom: 40,
-              right: 80,
-              child: Text(
-                reel.caption,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
