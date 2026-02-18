@@ -3,12 +3,10 @@ import 'package:video_player/video_player.dart';
 
 class MediaViewer extends StatefulWidget {
   final String url;
-  final String type; // image | video
 
   const MediaViewer({
     super.key,
     required this.url,
-    required this.type,
   });
 
   @override
@@ -18,14 +16,21 @@ class MediaViewer extends StatefulWidget {
 class _MediaViewerState extends State<MediaViewer> {
   VideoPlayerController? _controller;
 
+  bool get _isVideo =>
+      widget.url.toLowerCase().endsWith('.mp4') ||
+      widget.url.toLowerCase().endsWith('.mov');
+
   @override
   void initState() {
     super.initState();
-    if (widget.type == 'video') {
+
+    if (_isVideo) {
       _controller = VideoPlayerController.network(widget.url)
-        ..initialize().then((_) => setState(() {}))
-        ..setLooping(true)
-        ..play();
+        ..initialize().then((_) {
+          if (mounted) setState(() {});
+          _controller?.setLooping(true);
+          _controller?.play();
+        });
     }
   }
 
@@ -37,12 +42,19 @@ class _MediaViewerState extends State<MediaViewer> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.type == 'image') {
-      return Image.network(widget.url, fit: BoxFit.cover);
+    if (!_isVideo) {
+      return Image.network(
+        widget.url,
+        fit: BoxFit.cover,
+        width: double.infinity,
+      );
     }
 
     if (_controller == null || !_controller!.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
+      return const AspectRatio(
+        aspectRatio: 1,
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return AspectRatio(
