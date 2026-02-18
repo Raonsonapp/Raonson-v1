@@ -6,13 +6,14 @@ import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 
 class FeedRepository {
-  // ================= FEED =================
+  final ApiClient _api = ApiClient.instance;
 
+  // ================= FEED =================
   Future<List<PostModel>> fetchFeed({
     int limit = 20,
     int offset = 0,
   }) async {
-    final response = await ApiClient.get(
+    final response = await _api.getRequest(
       ApiEndpoints.posts,
       query: {
         'limit': '$limit',
@@ -25,24 +26,23 @@ class FeedRepository {
   }
 
   // ================= POST ACTIONS =================
-
   Future<void> likePost(String postId) async {
-    await ApiClient.post('/posts/$postId/like');
+    await _api.postRequest('/posts/$postId/like');
   }
 
   Future<void> savePost(String postId) async {
-    await ApiClient.post('/posts/$postId/save');
+    await _api.postRequest('/posts/$postId/save');
   }
 
   Future<void> deletePost(String postId) async {
-    await ApiClient.delete('/posts/$postId');
+    await _api.deleteRequest('/posts/$postId');
   }
 
   // ================= COMMENTS =================
-
   Future<List<CommentModel>> fetchComments(String postId) async {
-    final response =
-        await ApiClient.get('/posts/$postId/comments');
+    final response = await _api.getRequest(
+      '/posts/$postId/comments',
+    );
 
     final List list = jsonDecode(response.body) as List;
     return list.map((e) => CommentModel.fromJson(e)).toList();
@@ -52,13 +52,13 @@ class FeedRepository {
     required String postId,
     required String text,
   }) async {
-    final response = await ApiClient.post(
+    final response = await _api.postRequest(
       '/posts/$postId/comments',
       body: {'text': text},
     );
 
     return CommentModel.fromJson(
-      jsonDecode(response.body),
+      jsonDecode(response.body) as Map<String, dynamic>,
     );
   }
 
@@ -66,7 +66,7 @@ class FeedRepository {
     required String postId,
     required String commentId,
   }) async {
-    await ApiClient.post(
+    await _api.postRequest(
       '/posts/$postId/comments/$commentId/like',
     );
   }
