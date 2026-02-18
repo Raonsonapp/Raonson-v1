@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../app/app_state.dart';
 import 'register_controller.dart';
 
 class RegisterScreen extends StatelessWidget {
@@ -25,7 +24,7 @@ class _RegisterView extends StatelessWidget {
     final state = controller.state;
 
     return Scaffold(
-      backgroundColor: Colors.black, // ✅ СИЁҲИ ҲАҚИҚӢ
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -108,7 +107,8 @@ class _RegisterView extends StatelessWidget {
                           if (!context.mounted) return;
 
                           if (ok) {
-                            context.read<AppState>().login(); // ✅ ҲАЛИ НИҲОӢ
+                            // ✅ Instagram-style: back to Login
+                            Navigator.pop(context);
                           }
                         }
                       : null,
@@ -167,7 +167,10 @@ class _RegisterView extends StatelessWidget {
           borderSide: BorderSide(color: Colors.white38),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF2EFF8A), width: 2),
+          borderSide: BorderSide(
+            color: Color(0xFF2EFF8A),
+            width: 2,
+          ),
         ),
       ),
     );
