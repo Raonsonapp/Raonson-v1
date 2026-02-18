@@ -18,13 +18,13 @@ class AuthService {
       password: password,
     );
 
-    final token = data['token'];
-    if (token == null) {
-      throw Exception('Token missing');
+    final accessToken = data['accessToken'];
+    if (accessToken == null) {
+      throw Exception('Access token missing');
     }
 
-    await _tokenStorage.saveToken(token);
-    ApiClient.instance.setAuthToken(token);
+    await _tokenStorage.saveToken(accessToken);
+    ApiClient.instance.setAuthToken(accessToken);
   }
 
   // ================= REGISTER =================
@@ -39,10 +39,10 @@ class AuthService {
       password: password,
     );
 
-    final token = data['token'];
-    if (token != null) {
-      await _tokenStorage.saveToken(token);
-      ApiClient.instance.setAuthToken(token);
+    final accessToken = data['accessToken'];
+    if (accessToken != null) {
+      await _tokenStorage.saveToken(accessToken);
+      ApiClient.instance.setAuthToken(accessToken);
     }
   }
 
@@ -65,12 +65,12 @@ class AuthService {
   Future<void> refreshSession() async {
     final data = await _repository.refreshToken();
 
-    final token = data['token'];
-    if (token == null) {
+    final accessToken = data['accessToken'];
+    if (accessToken == null) {
       throw Exception('Refresh failed');
     }
 
-    await _tokenStorage.saveToken(token);
-    ApiClient.instance.setAuthToken(token);
+    await _tokenStorage.saveToken(accessToken);
+    ApiClient.instance.setAuthToken(accessToken);
   }
 }
