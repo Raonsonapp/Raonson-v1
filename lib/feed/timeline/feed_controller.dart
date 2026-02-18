@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
-
-import 'feed_state.dart';
-import '../feed_repository.dart';
 import '../../models/post_model.dart';
+import '../feed_repository.dart';
+import 'feed_state.dart';
 
 class FeedController extends ChangeNotifier {
   final FeedRepository _repository;
@@ -10,28 +9,20 @@ class FeedController extends ChangeNotifier {
   FeedState _state = FeedState.initial();
   FeedState get state => _state;
 
-  int _page = 1;
+  int _offset = 0;
   static const int _limit = 10;
 
   FeedController(this._repository);
 
-  // ================= LOAD FEED =================
-
   Future<void> loadInitialFeed() async {
-    if (_state.isLoading) return;
-
-    _page = 1;
-    _state = _state.copyWith(
-      isLoading: true,
-      hasError: false,
-      errorMessage: null,
-    );
+    _offset = 0;
+    _state = _state.copyWith(isLoading: true);
     notifyListeners();
 
     try {
       final posts = await _repository.fetchFeed(
-        page: _page,
         limit: _limit,
+        offset: _offset,
       );
 
       _state = _state.copyWith(
@@ -50,8 +41,6 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ================= PAGINATION =================
-
   Future<void> loadMore() async {
     if (!_state.hasMore || _state.isLoading) return;
 
@@ -59,10 +48,10 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _page++;
+      _offset += _limit;
       final posts = await _repository.fetchFeed(
-        page: _page,
         limit: _limit,
+        offset: _offset,
       );
 
       _state = _state.copyWith(
@@ -77,30 +66,17 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ================= REFRESH =================
-
   Future<void> refresh() async {
-    if (_state.isRefreshing) return;
+    _offset = 0;
+    final posts = await _repository.fetchFeed(
+      limit: _limit,
+      offset: _offset,
+    );
 
-    _state = _state.copyWith(isRefreshing: true);
-    notifyListeners();
-
-    try {
-      _page = 1;
-      final posts = await _repository.fetchFeed(
-        page: _page,
-        limit: _limit,
-      );
-
-      _state = _state.copyWith(
-        isRefreshing: false,
-        posts: posts,
-        hasMore: posts.length == _limit,
-      );
-    } catch (_) {
-      _state = _state.copyWith(isRefreshing: false);
-    }
-
+    _state = _state.copyWith(
+      posts: posts,
+      hasMore: posts.length == _limit,
+    );
     notifyListeners();
   }
 }
