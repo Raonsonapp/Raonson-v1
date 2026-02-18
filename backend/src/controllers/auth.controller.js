@@ -101,3 +101,32 @@ export async function register(req, res) {
     refreshToken,
   });
     }
+// LOGIN
+export async function login(req, res) {
+  const { username, email, password } = req.body; // ⬅ ИЛОВА
+
+  const user = await User.findOne({
+    $or: [
+      { username },
+      { email }, // ⬅ ИЛОВА
+    ],
+  });
+
+  if (!user) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  const accessToken = signAccessToken({ id: user._id });
+  const refreshToken = signRefreshToken({ id: user._id });
+
+  res.json({
+    user,
+    accessToken,
+    refreshToken,
+  });
+}
