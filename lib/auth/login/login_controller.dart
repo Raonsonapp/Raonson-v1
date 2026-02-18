@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 
+/// =======================
+/// STATE
+/// =======================
 class LoginState {
   final String email;
   final String password;
@@ -43,37 +46,40 @@ class LoginState {
   }
 }
 
+/// =======================
+/// CONTROLLER
+/// =======================
 class LoginController extends ChangeNotifier {
   LoginState _state = LoginState.initial();
   LoginState get state => _state;
 
-  void updateUsername(String v) {
-    _state = _state.copyWith(email: v);
+  void updateUsername(String value) {
+    _state = _state.copyWith(email: value);
     notifyListeners();
   }
 
-  void updatePassword(String v) {
-    _state = _state.copyWith(password: v);
+  void updatePassword(String value) {
+    _state = _state.copyWith(password: value);
     notifyListeners();
   }
 
   Future<void> login() async {
-    if (!_state.canSubmit) return;
+    if (_state.isLoading) return;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
 
     try {
-      final response = await ApiClient.post(
+      final response = await ApiClient.instance.post(
         ApiEndpoints.login,
         body: {
-          'email': _state.email,
+          'email': _state.email.trim(),
           'password': _state.password,
         },
       );
 
-      final Map<String, dynamic> data =
-          jsonDecode(response.body);
+      final data =
+          jsonDecode(response.body) as Map<String, dynamic>;
 
       if (!data.containsKey('token')) {
         throw Exception('Token missing');
