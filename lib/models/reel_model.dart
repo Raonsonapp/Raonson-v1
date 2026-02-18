@@ -19,11 +19,16 @@ class ReelModel {
     required this.saved,
   });
 
+  // ---------- COMPAT GETTERS ----------
+  int get likesCount => likes;
+  bool get isLiked => liked;
+  int get commentsCount => 0;
+
   factory ReelModel.fromJson(Map<String, dynamic> json) {
     return ReelModel(
       id: json['_id'],
       user: UserModel.fromJson(json['user']),
-      videoUrl: json['videoUrl'],
+      videoUrl: json['videoUrl'] ?? '',
       likes: json['likes'] ?? 0,
       views: json['views'] ?? 0,
       liked: json['liked'] ?? false,
