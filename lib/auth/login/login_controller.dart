@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 
-/// ---------------------------
+/// ===========================
 /// STATE
-/// ---------------------------
+/// ===========================
 class LoginState {
   final String email;
   final String password;
@@ -28,6 +28,9 @@ class LoginState {
     );
   }
 
+  bool get canSubmit =>
+      email.isNotEmpty && password.isNotEmpty && !isLoading;
+
   LoginState copyWith({
     String? email,
     String? password,
@@ -43,28 +46,25 @@ class LoginState {
   }
 }
 
-/// ---------------------------
+/// ===========================
 /// CONTROLLER
-/// ---------------------------
+/// ===========================
 class LoginController extends ChangeNotifier {
   LoginState _state = LoginState.initial();
   LoginState get state => _state;
 
-  /// 🔹 update email
   void updateUsername(String value) {
     _state = _state.copyWith(email: value);
     notifyListeners();
   }
 
-  /// 🔹 update password
   void updatePassword(String value) {
     _state = _state.copyWith(password: value);
     notifyListeners();
   }
 
-  /// 🔹 login action
   Future<void> login() async {
-    if (_state.isLoading) return;
+    if (!_state.canSubmit) return;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
@@ -78,14 +78,12 @@ class LoginController extends ChangeNotifier {
         },
       );
 
-      final data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+      final Map<String, dynamic> data =
+          jsonDecode(response.body);
 
       if (!data.containsKey('token')) {
         throw Exception('Token missing');
       }
-
-      // ⛔ token save дар AuthService мешавад
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
     }
