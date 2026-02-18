@@ -98,11 +98,8 @@ class _FeedShellState extends State<_FeedShell> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final theme = Theme.of(context);
-
     return AppBar(
       elevation: 0,
-      backgroundColor: theme.scaffoldBackgroundColor,
       title: const Padding(
         padding: EdgeInsets.only(left: 16),
         child: Text(
@@ -160,6 +157,7 @@ class _FeedShellState extends State<_FeedShell> {
               if (index < state.posts.length) {
                 return PostCard(post: state.posts[index]);
               }
+
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Center(child: LoadingIndicator()),
