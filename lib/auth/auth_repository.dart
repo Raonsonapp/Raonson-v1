@@ -1,68 +1,61 @@
+import 'dart:convert';
+
 import '../core/api/api_client.dart';
+import '../core/api/api_endpoints.dart';
 
 class AuthRepository {
-  final ApiClient _api;
+  final ApiClient _api = ApiClient.instance;
 
-  AuthRepository(this._api);
-
+  // ================= LOGIN =================
   Future<Map<String, dynamic>> login({
-    required String username,
+    required String email,
     required String password,
   }) async {
-    final res = await _api.post(
-      '/auth/login',
+    final response = await _api.post(
+      ApiEndpoints.login,
       body: {
-        'username': username,
+        'email': email,
         'password': password,
       },
     );
-    return res;
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  // ================= REGISTER =================
   Future<Map<String, dynamic>> register({
     required String username,
     required String email,
     required String password,
   }) async {
-    final res = await _api.post(
-      '/auth/register',
+    final response = await _api.post(
+      ApiEndpoints.register,
       body: {
         'username': username,
         'email': email,
         'password': password,
       },
     );
-    return res;
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<void> logout() async {
-    await _api.post('/auth/logout');
-  }
-
-  Future<void> forgotPassword(String email) async {
-    await _api.post(
-      '/auth/forgot-password',
-      body: {'email': email},
-    );
-  }
-
-  Future<void> resetPassword({
-    required String email,
-    required String otp,
-    required String newPassword,
+  // ================= REFRESH TOKEN =================
+  Future<Map<String, dynamic>> refreshToken({
+    required String refreshToken,
   }) async {
-    await _api.post(
-      '/auth/reset-password',
+    final response = await _api.post(
+      ApiEndpoints.refreshToken,
       body: {
-        'email': email,
-        'otp': otp,
-        'newPassword': newPassword,
+        'refreshToken': refreshToken,
       },
     );
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> refreshToken() async {
-    final res = await _api.post('/auth/refresh');
-    return res;
+  // ================= LOGOUT =================
+  Future<void> logout() async {
+    await _api.post(ApiEndpoints.logout);
   }
 }
