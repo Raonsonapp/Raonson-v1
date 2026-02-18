@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'login_controller.dart';
-import 'login_state.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -42,7 +41,7 @@ class _LoginView extends StatelessWidget {
               TextField(
                 onChanged: controller.updateUsername,
                 decoration: const InputDecoration(
-                  labelText: 'Username',
+                  labelText: 'Email',
                 ),
               ),
               const SizedBox(height: 16),
@@ -69,7 +68,7 @@ class _LoginView extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: state.canSubmit
-                      ? () => controller.login(context)
+                      ? () => controller.login()
                       : null,
                   child: state.isLoading
                       ? const SizedBox(
@@ -86,9 +85,8 @@ class _LoginView extends StatelessWidget {
               const SizedBox(height: 16),
 
               TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/register');
-                },
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/register'),
                 child: const Text('Create new account'),
               ),
             ],
