@@ -7,23 +7,22 @@ import '../models/post_model.dart';
 import '../models/reel_model.dart';
 
 class ProfileRepository {
-  /// GET PROFILE
-  Future<UserModel> getProfile(String userId) async {
-    final res = await ApiClient.get(
-      ApiEndpoints.userProfile(userId),
-    );
+  final ApiClient _api;
 
-    return UserModel.fromJson(jsonDecode(res.body));
+  ProfileRepository(this._api);
+
+  Future<UserModel> getProfile(String userId) async {
+    final res = await _api.get(ApiEndpoints.userProfile(userId));
+    return UserModel.fromJson(jsonDecode(res.data));
   }
 
-  /// UPDATE PROFILE
   Future<UserModel> updateProfile({
     required String username,
     String? avatar,
     String? bio,
     bool? isPrivate,
   }) async {
-    final res = await ApiClient.put(
+    final res = await _api.post(
       ApiEndpoints.updateProfile,
       body: {
         'username': username,
@@ -33,53 +32,44 @@ class ProfileRepository {
       },
     );
 
-    return UserModel.fromJson(jsonDecode(res.body));
+    return UserModel.fromJson(jsonDecode(res.data));
   }
 
-  /// FOLLOWERS
   Future<List<UserModel>> getFollowers(String userId) async {
-    final res = await ApiClient.get(
-      ApiEndpoints.followers(userId),
-    );
-
-    final List list = jsonDecode(res.body);
-    return list.map((e) => UserModel.fromJson(e)).toList();
+    final res = await _api.get(ApiEndpoints.followers(userId));
+    return (jsonDecode(res.data) as List)
+        .map((e) => UserModel.fromJson(e))
+        .toList();
   }
 
-  /// FOLLOWING
   Future<List<UserModel>> getFollowing(String userId) async {
-    final res = await ApiClient.get(
-      ApiEndpoints.following(userId),
-    );
-
-    final List list = jsonDecode(res.body);
-    return list.map((e) => UserModel.fromJson(e)).toList();
+    final res = await _api.get(ApiEndpoints.following(userId));
+    return (jsonDecode(res.data) as List)
+        .map((e) => UserModel.fromJson(e))
+        .toList();
   }
 
-  /// USER POSTS
   Future<List<PostModel>> getUserPosts(String userId) async {
-    final res = await ApiClient.get(
+    final res = await _api.get(
       '${ApiEndpoints.posts}?user=$userId',
     );
 
-    final List list = jsonDecode(res.body);
-    return list.map((e) => PostModel.fromJson(e)).toList();
+    return (jsonDecode(res.data) as List)
+        .map((e) => PostModel.fromJson(e))
+        .toList();
   }
 
-  /// USER REELS
   Future<List<ReelModel>> getUserReels(String userId) async {
-    final res = await ApiClient.get(
+    final res = await _api.get(
       '${ApiEndpoints.reels}?user=$userId',
     );
 
-    final List list = jsonDecode(res.body);
-    return list.map((e) => ReelModel.fromJson(e)).toList();
+    return (jsonDecode(res.data) as List)
+        .map((e) => ReelModel.fromJson(e))
+        .toList();
   }
 
-  /// FOLLOW / UNFOLLOW
   Future<void> toggleFollow(String userId) async {
-    await ApiClient.post(
-      ApiEndpoints.toggleFollow(userId),
-    );
+    await _api.post(ApiEndpoints.toggleFollow(userId));
   }
 }
