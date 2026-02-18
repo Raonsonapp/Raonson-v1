@@ -5,19 +5,20 @@ import '../core/api/api_endpoints.dart';
 import '../models/story_model.dart';
 
 class StoryRepository {
-  final ApiClient _api = ApiClient.instance;
-
+  /// GET STORIES
   Future<List<StoryModel>> fetchStories() async {
-    final res = await _api.getRequest(ApiEndpoints.stories);
+    final res = await ApiClient.get(
+      ApiEndpoints.stories,
+    );
 
     final List list = jsonDecode(res.body);
     return list.map((e) => StoryModel.fromJson(e)).toList();
   }
 
-  Future<void> uploadStory(String mediaUrl) async {
-    await _api.postRequest(
-      ApiEndpoints.stories,
-      body: {'media': mediaUrl},
+  /// MARK STORY AS VIEWED ✅
+  Future<void> markStoryViewed(String storyId) async {
+    await ApiClient.post(
+      '${ApiEndpoints.stories}/$storyId/view',
     );
   }
 }
