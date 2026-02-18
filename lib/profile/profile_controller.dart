@@ -43,7 +43,11 @@ class ProfileController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repo.follow(userId);
+      if (wasFollowing) {
+        await _repo.unfollow(userId);
+      } else {
+        await _repo.follow(userId);
+      }
     } catch (_) {
       profile = profile!.copyWith(isFollowing: wasFollowing);
       notifyListeners();
