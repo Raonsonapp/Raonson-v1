@@ -24,6 +24,7 @@ class StoryBar extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final story = stories[index];
+
           return GestureDetector(
             onTap: () => onTap(story),
             child: Column(
