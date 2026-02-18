@@ -9,7 +9,9 @@ class TokenStorage {
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
 
-  // ---------------- STATIC API (қадимӣ) ----------------
+  // =====================================================
+  // STATIC API (қадимӣ – барои backward compatibility)
+  // =====================================================
 
   static Future<void> saveAccessToken(String token) {
     return SecureStorage.write(_accessTokenKey, token);
@@ -32,10 +34,22 @@ class TokenStorage {
     await SecureStorage.delete(_refreshTokenKey);
   }
 
-  // ---------------- INSTANCE WRAPPERS ----------------
-  // ✅ Барои controller-ҳо
+  // =====================================================
+  // INSTANCE API (НАВ – барои AuthService, UploadManager)
+  // =====================================================
 
+  /// 🔹 save access token
   Future<void> saveToken(String token) {
     return saveAccessToken(token);
+  }
+
+  /// 🔹 get access token
+  Future<String?> getToken() {
+    return getAccessToken();
+  }
+
+  /// 🔹 clear all tokens
+  Future<void> clear() {
+    return clearTokens();
   }
 }
