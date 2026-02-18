@@ -17,12 +17,18 @@ class StoryModel {
     required this.expiresAt,
   });
 
+  // ---------- COMPAT GETTERS ----------
+  bool get isVideo => mediaType == 'video';
+  bool get isImage => mediaType == 'image';
+  String get userAvatar => user.avatar;
+  String get username => user.username;
+
   factory StoryModel.fromJson(Map<String, dynamic> json) {
     return StoryModel(
       id: json['_id'],
       user: UserModel.fromJson(json['user']),
-      mediaUrl: json['mediaUrl'],
-      mediaType: json['mediaType'],
+      mediaUrl: json['mediaUrl'] ?? '',
+      mediaType: json['mediaType'] ?? 'image',
       viewed: json['viewed'] ?? false,
       expiresAt: DateTime.parse(json['expiresAt']),
     );
