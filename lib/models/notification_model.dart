@@ -1,3 +1,5 @@
+import 'user_model.dart';
+
 class NotificationModel {
   final String id;
   final String type;
@@ -5,6 +7,7 @@ class NotificationModel {
   final String body;
   final bool read;
   final DateTime createdAt;
+  final UserModel? fromUser;
 
   const NotificationModel({
     required this.id,
@@ -13,7 +16,20 @@ class NotificationModel {
     required this.body,
     required this.read,
     required this.createdAt,
+    this.fromUser,
   });
+
+  // ---------- COMPAT ----------
+  bool get isRead => read;
+  String get message => body;
+
+  String get timeAgo {
+    final diff = DateTime.now().difference(createdAt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
@@ -23,6 +39,8 @@ class NotificationModel {
       body: json['body'] ?? '',
       read: json['read'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
+      fromUser:
+          json['fromUser'] != null ? UserModel.fromJson(json['fromUser']) : null,
     );
   }
 }
