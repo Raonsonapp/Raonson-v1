@@ -35,9 +35,10 @@ class PostCard extends StatelessWidget {
                   children: [
                     Text(
                       post.user.username,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     if (post.user.verified) ...[
                       const SizedBox(width: 4),
@@ -52,9 +53,10 @@ class PostCard extends StatelessWidget {
         ),
 
         // ================= MEDIA =================
-        MediaViewer(
-          mediaUrls: post.media,
-        ),
+        if (post.media.isNotEmpty)
+          MediaViewer(
+            url: post.media.first['url'] ?? '',
+          ),
 
         // ================= ACTIONS =================
         PostActions(post: post),
