@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../models/post_model.dart';
 
 class PostActions extends StatelessWidget {
@@ -26,44 +25,35 @@ class PostActions extends StatelessWidget {
                   post.isLiked ? Icons.favorite : Icons.favorite_border,
                   color: post.isLiked ? Colors.red : iconColor,
                 ),
-                onPressed: () {
-                  // controller → backend
-                },
+                onPressed: () {},
               ),
               IconButton(
                 icon: const Icon(Icons.chat_bubble_outline),
-                onPressed: () {
-                  // open comments screen
-                },
+                onPressed: () {},
               ),
               IconButton(
                 icon: const Icon(Icons.send),
-                onPressed: () {
-                  // share
-                },
+                onPressed: () {},
               ),
               const Spacer(),
               IconButton(
                 icon: Icon(
-                  post.isSaved
+                  post.saved
                       ? Icons.bookmark
                       : Icons.bookmark_border,
                 ),
-                onPressed: () {
-                  // save / unsave
-                },
+                onPressed: () {},
               ),
             ],
           ),
-
-          // ================= COUNTERS =================
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               '${post.likesCount} likes',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
