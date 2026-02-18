@@ -10,7 +10,7 @@ class TokenStorage {
   static const String _refreshTokenKey = 'refresh_token';
 
   // =====================================================
-  // STATIC API (қадимӣ – барои backward compatibility)
+  // STATIC API (backward compatibility)
   // =====================================================
 
   static Future<void> saveAccessToken(String token) {
@@ -35,7 +35,7 @@ class TokenStorage {
   }
 
   // =====================================================
-  // INSTANCE API (НАВ – барои AuthService, UploadManager)
+  // INSTANCE API (НАВ)
   // =====================================================
 
   /// 🔹 save access token
