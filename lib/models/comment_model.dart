@@ -15,7 +15,6 @@ class CommentModel {
     required this.createdAt,
   });
 
-  // ---------- COMPAT ----------
   bool get isLiked => liked;
 
   String get timeAgo {
@@ -24,6 +23,18 @@ class CommentModel {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m';
     if (diff.inHours < 24) return '${diff.inHours}h';
     return '${diff.inDays}d';
+  }
+
+  CommentModel copyWith({
+    bool? liked,
+  }) {
+    return CommentModel(
+      id: id,
+      user: user,
+      text: text,
+      liked: liked ?? this.liked,
+      createdAt: createdAt,
+    );
   }
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
