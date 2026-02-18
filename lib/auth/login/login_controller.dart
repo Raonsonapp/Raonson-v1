@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
+import '../../app/app_state.dart';
 
 /// =======================
 /// STATE
@@ -63,8 +65,8 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login() async {
-    if (!_state.canSubmit) return;
+  Future<void> login(BuildContext context) async {
+    if (_state.isLoading) return;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
@@ -78,16 +80,20 @@ class LoginController extends ChangeNotifier {
         },
       );
 
-      final data = jsonDecode(response.body);
+      final data =
+          jsonDecode(response.body) as Map<String, dynamic>;
 
-      // ✅ ДУРУСТ: backend accessToken мефиристад
       final token = data['accessToken'];
       if (token == null) {
         throw Exception('Access token missing');
       }
 
-      // 🔐 token-ро нигоҳ медорем
+      // 🔐 save token
       ApiClient.instance.setAuthToken(token);
+
+      // ✅ AUTO LOGIN → HOME
+      context.read<AppState>().login();
+
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
     }
