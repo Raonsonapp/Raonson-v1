@@ -20,10 +20,14 @@ class UserModel {
     required this.followingCount,
   });
 
+  // ---------- COMPAT GETTERS ----------
+  String get avatarUrl => avatar;
+  bool get isVerified => verified;
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['_id'] ?? json['id'],
-      username: json['username'],
+      username: json['username'] ?? '',
       avatar: json['avatar'] ?? '',
       verified: json['verified'] ?? false,
       isPrivate: json['isPrivate'] ?? false,
@@ -32,17 +36,6 @@ class UserModel {
       followingCount: json['followingCount'] ?? 0,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'username': username,
-        'avatar': avatar,
-        'verified': verified,
-        'isPrivate': isPrivate,
-        'postsCount': postsCount,
-        'followersCount': followersCount,
-        'followingCount': followingCount,
-      };
 
   UserModel copyWith({
     String? avatar,
