@@ -15,6 +15,17 @@ class CommentModel {
     required this.createdAt,
   });
 
+  // ---------- COMPAT ----------
+  bool get isLiked => liked;
+
+  String get timeAgo {
+    final diff = DateTime.now().difference(createdAt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+
   factory CommentModel.fromJson(Map<String, dynamic> json) {
     return CommentModel(
       id: json['_id'],
