@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../core/api/api_client.dart';
 import '../../models/user_model.dart';
 import '../profile_repository.dart';
 
 class EditProfileController extends ChangeNotifier {
-  final ProfileRepository _repo = ProfileRepository();
+  final ProfileRepository _repo =
+      ProfileRepository(ApiClient.instance);
 
   final usernameController = TextEditingController();
-  final bioController = TextEditingController(); // ✅
+  final bioController = TextEditingController();
 
   bool isPrivate = false;
   bool isLoading = false;
@@ -33,7 +35,7 @@ class EditProfileController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void togglePrivate(bool value) { // ✅
+  void togglePrivate(bool value) {
     isPrivate = value;
     notifyListeners();
   }
