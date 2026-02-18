@@ -36,17 +36,13 @@ class _ReelsView extends StatelessWidget {
 
     if (state.hasError) {
       return const Scaffold(
-        body: Center(
-          child: Text('Failed to load reels'),
-        ),
+        body: Center(child: Text('Failed to load reels')),
       );
     }
 
     if (state.reels.isEmpty) {
       return const Scaffold(
-        body: Center(
-          child: Text('No reels available'),
-        ),
+        body: Center(child: Text('No reels available')),
       );
     }
 
