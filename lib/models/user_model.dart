@@ -27,12 +27,19 @@ class UserModel {
   });
 
   // ---------- COMPAT GETTERS ----------
+
+  /// avatar compatibility (UI / chat / feed)
   String get avatarUrl => avatar;
+
+  /// verified compatibility
   bool get isVerified => verified;
+
+  /// chat compatibility (MessageModel.isMine)
+  bool get isMe => id == 'me';
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['_id'] ?? json['id'],
+      id: json['_id'] ?? json['id'] ?? '',
       username: json['username'] ?? '',
       avatar: json['avatar'] ?? '',
       verified: json['verified'] ?? false,
