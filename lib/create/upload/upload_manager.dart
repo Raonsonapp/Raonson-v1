@@ -1,13 +1,10 @@
 import 'dart:io';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 
-import '../../core/api/api_client.dart';
+import '../../app/app_config.dart';
 import '../../core/storage/token_storage.dart';
 
 class UploadManager {
-  final Dio _dio = ApiClient.instance.dio;
-  final TokenStorage _tokenStorage = TokenStorage();
-
   /// =========================
   /// UPLOAD STORY
   /// =========================
@@ -16,30 +13,27 @@ class UploadManager {
     String caption = '',
     void Function(double progress)? onProgress,
   }) async {
-    final token = await _tokenStorage.getAccessToken();
+    final token = await TokenStorage.getAccessToken();
 
-    final formData = FormData.fromMap({
-      'caption': caption,
-      'media': await MultipartFile.fromFile(
+    final uri = Uri.parse('${AppConfig.apibaseUrl}/stories');
+
+    final request = http.MultipartRequest('POST', uri);
+
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['caption'] = caption;
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'media',
         file.path,
-        filename: file.uri.pathSegments.last,
       ),
-    });
-
-    await _dio.post(
-      '/stories',
-      data: formData,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      ),
-      onSendProgress: (sent, total) {
-        if (total > 0 && onProgress != null) {
-          onProgress(sent / total);
-        }
-      },
     );
+
+    final streamed = await request.send();
+
+    if (streamed.statusCode >= 400) {
+      throw Exception('Story upload failed');
+    }
   }
 
   /// =========================
@@ -50,36 +44,28 @@ class UploadManager {
     required String caption,
     void Function(double progress)? onProgress,
   }) async {
-    final token = await _tokenStorage.getAccessToken();
+    final token = await TokenStorage.getAccessToken();
 
-    final files = <MultipartFile>[];
+    final uri = Uri.parse('${AppConfig.apibaseUrl}/posts');
+
+    final request = http.MultipartRequest('POST', uri);
+
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['caption'] = caption;
+
     for (final file in media) {
-      files.add(
-        await MultipartFile.fromFile(
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'media',
           file.path,
-          filename: file.uri.pathSegments.last,
         ),
       );
     }
 
-    final formData = FormData.fromMap({
-      'caption': caption,
-      'media': files,
-    });
+    final streamed = await request.send();
 
-    await _dio.post(
-      '/posts',
-      data: formData,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      ),
-      onSendProgress: (sent, total) {
-        if (total > 0 && onProgress != null) {
-          onProgress(sent / total);
-        }
-      },
-    );
+    if (streamed.statusCode >= 400) {
+      throw Exception('Post upload failed');
+    }
   }
 }
