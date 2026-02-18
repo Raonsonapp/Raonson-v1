@@ -4,9 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 
-/// ===========================
-/// STATE
-/// ===========================
 class LoginState {
   final String email;
   final String password;
@@ -46,20 +43,17 @@ class LoginState {
   }
 }
 
-/// ===========================
-/// CONTROLLER
-/// ===========================
 class LoginController extends ChangeNotifier {
   LoginState _state = LoginState.initial();
   LoginState get state => _state;
 
-  void updateUsername(String value) {
-    _state = _state.copyWith(email: value);
+  void updateUsername(String v) {
+    _state = _state.copyWith(email: v);
     notifyListeners();
   }
 
-  void updatePassword(String value) {
-    _state = _state.copyWith(password: value);
+  void updatePassword(String v) {
+    _state = _state.copyWith(password: v);
     notifyListeners();
   }
 
@@ -73,7 +67,7 @@ class LoginController extends ChangeNotifier {
       final response = await ApiClient.post(
         ApiEndpoints.login,
         body: {
-          'email': _state.email.trim(),
+          'email': _state.email,
           'password': _state.password,
         },
       );
