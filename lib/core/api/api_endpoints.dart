@@ -1,22 +1,26 @@
 class ApiEndpoints {
-  static const String base = '';
-
   // AUTH
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String refresh = '/auth/refresh';
 
-  // USERS
-  static const String users = '/users';
-  static const String profile = '/profile';
+  // USERS / PROFILE
+  static String userProfile(String userId) => '/users/$userId';
+  static const String updateProfile = '/profile';
 
-  // FEED / POSTS
+  static String followers(String userId) => '/users/$userId/followers';
+  static String following(String userId) => '/users/$userId/following';
+
+  static String toggleFollow(String userId) => '/follow/$userId';
+  static String acceptFollow(String userId) => '/follow/$userId/accept';
+  static String declineFollow(String userId) => '/follow/$userId/decline';
+
+  // POSTS / FEED
   static const String posts = '/posts';
   static const String comments = '/comments';
   static const String likes = '/likes';
 
-  // SOCIAL
-  static const String follow = '/follow';
+  // STORIES / REELS
   static const String stories = '/stories';
   static const String reels = '/reels';
 
