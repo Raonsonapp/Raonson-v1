@@ -15,7 +15,7 @@ class StoryRepository {
     return list.map((e) => StoryModel.fromJson(e)).toList();
   }
 
-  /// MARK STORY AS VIEWED ✅
+  /// MARK STORY AS VIEWED
   Future<void> markStoryViewed(String storyId) async {
     await ApiClient.post(
       '${ApiEndpoints.stories}/$storyId/view',
