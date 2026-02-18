@@ -7,7 +7,6 @@ import '../models/post_model.dart';
 import '../models/reel_model.dart';
 
 class ProfileRepository {
-  /// GET PROFILE
   Future<UserModel> getProfile(String userId) async {
     final response =
         await ApiClient.get(ApiEndpoints.userProfile(userId));
@@ -16,7 +15,6 @@ class ProfileRepository {
     return UserModel.fromJson(data);
   }
 
-  /// UPDATE PROFILE
   Future<UserModel> updateProfile({
     required String username,
     String? avatar,
@@ -37,7 +35,22 @@ class ProfileRepository {
     return UserModel.fromJson(data);
   }
 
-  /// USER POSTS
+  Future<List<UserModel>> getFollowers(String userId) async {
+    final response =
+        await ApiClient.get(ApiEndpoints.followers(userId));
+
+    final List list = jsonDecode(response.body) as List;
+    return list.map((e) => UserModel.fromJson(e)).toList();
+  }
+
+  Future<List<UserModel>> getFollowing(String userId) async {
+    final response =
+        await ApiClient.get(ApiEndpoints.following(userId));
+
+    final List list = jsonDecode(response.body) as List;
+    return list.map((e) => UserModel.fromJson(e)).toList();
+  }
+
   Future<List<PostModel>> getUserPosts(String userId) async {
     final response =
         await ApiClient.get('${ApiEndpoints.posts}?user=$userId');
@@ -46,7 +59,6 @@ class ProfileRepository {
     return list.map((e) => PostModel.fromJson(e)).toList();
   }
 
-  /// USER REELS
   Future<List<ReelModel>> getUserReels(String userId) async {
     final response =
         await ApiClient.get('${ApiEndpoints.reels}?user=$userId');
@@ -55,12 +67,10 @@ class ProfileRepository {
     return list.map((e) => ReelModel.fromJson(e)).toList();
   }
 
-  /// FOLLOW
   Future<void> follow(String userId) async {
     await ApiClient.post(ApiEndpoints.toggleFollow(userId));
   }
 
-  /// UNFOLLOW
   Future<void> unfollow(String userId) async {
     await ApiClient.post(ApiEndpoints.toggleFollow(userId));
   }
