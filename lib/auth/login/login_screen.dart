@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'login_controller.dart';
+import '../../app/app_routes.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -29,6 +31,7 @@ class _LoginView extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // LOGO / TITLE
               const Text(
                 'Raonson',
                 style: TextStyle(
@@ -36,16 +39,20 @@ class _LoginView extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
               const SizedBox(height: 40),
 
+              // EMAIL
               TextField(
-                onChanged: controller.updateUsername,
+                onChanged: controller.updateEmail,
                 decoration: const InputDecoration(
                   labelText: 'Email',
                 ),
               ),
+
               const SizedBox(height: 16),
 
+              // PASSWORD
               TextField(
                 onChanged: controller.updatePassword,
                 obscureText: true,
@@ -53,8 +60,10 @@ class _LoginView extends StatelessWidget {
                   labelText: 'Password',
                 ),
               ),
+
               const SizedBox(height: 24),
 
+              // ERROR
               if (state.error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -64,29 +73,30 @@ class _LoginView extends StatelessWidget {
                   ),
                 ),
 
+              // LOGIN BUTTON
               SizedBox(
                 width: double.infinity,
+                height: 48,
                 child: ElevatedButton(
                   onPressed: state.canSubmit
-                      ? () => controller.login()
+                      ? controller.login
                       : null,
                   child: state.isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                      ? const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         )
                       : const Text('Log In'),
                 ),
               ),
+
               const SizedBox(height: 16),
 
+              // GO TO REGISTER
               TextButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, '/register'),
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRoutes.register);
+                },
                 child: const Text('Create new account'),
               ),
             ],
