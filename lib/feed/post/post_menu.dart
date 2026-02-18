@@ -10,26 +10,12 @@ class PostMenu extends StatelessWidget {
     required this.post,
   });
 
+  bool get isOwner => false; // ⬅ placeholder
+
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert),
-      onSelected: (value) {
-        switch (value) {
-          case 'report':
-            // report post
-            break;
-          case 'block':
-            // block user
-            break;
-          case 'delete':
-            // delete post
-            break;
-          case 'copy':
-            // copy link
-            break;
-        }
-      },
       itemBuilder: (_) => [
         const PopupMenuItem(
           value: 'copy',
@@ -39,11 +25,7 @@ class PostMenu extends StatelessWidget {
           value: 'report',
           child: Text('Report'),
         ),
-        const PopupMenuItem(
-          value: 'block',
-          child: Text('Block user'),
-        ),
-        if (post.isOwner)
+        if (isOwner)
           const PopupMenuItem(
             value: 'delete',
             child: Text(
