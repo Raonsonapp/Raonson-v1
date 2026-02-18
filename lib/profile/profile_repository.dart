@@ -13,7 +13,7 @@ class ProfileRepository {
       ApiEndpoints.userProfile(userId),
     );
 
-    final data = jsonDecode(response.body);
+    final Map<String, dynamic> data = jsonDecode(response.body);
     return UserModel.fromJson(data);
   }
 
@@ -36,7 +36,7 @@ class ProfileRepository {
       },
     );
 
-    final data = jsonDecode(response.body);
+    final Map<String, dynamic> data = jsonDecode(response.body);
     return UserModel.fromJson(data);
   }
 
@@ -48,7 +48,7 @@ class ProfileRepository {
       ApiEndpoints.followers(userId),
     );
 
-    final List list = jsonDecode(response.body);
+    final List list = jsonDecode(response.body) as List;
     return list.map((e) => UserModel.fromJson(e)).toList();
   }
 
@@ -60,7 +60,7 @@ class ProfileRepository {
       ApiEndpoints.following(userId),
     );
 
-    final List list = jsonDecode(response.body);
+    final List list = jsonDecode(response.body) as List;
     return list.map((e) => UserModel.fromJson(e)).toList();
   }
 
