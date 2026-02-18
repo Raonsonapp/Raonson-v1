@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../widgets/media_viewer.dart';
@@ -28,8 +29,15 @@ class ProfileTabs extends StatelessWidget {
           Expanded(
             child: TabBarView(
               children: [
-                _grid(posts.map((p) => p.mediaUrl).toList()),
-                _grid(reels.map((r) => r.videoUrl).toList()),
+                _grid(
+                  posts
+                      .where((p) => p.media.isNotEmpty)
+                      .map((p) => p.media.first['url'] ?? '')
+                      .toList(),
+                ),
+                _grid(
+                  reels.map((r) => r.videoUrl).toList(),
+                ),
               ],
             ),
           ),
