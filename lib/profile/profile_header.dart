@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/user_model.dart';
 import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
@@ -25,24 +26,17 @@ class ProfileHeader extends StatelessWidget {
               Avatar(imageUrl: profile.avatar, size: 72),
               const SizedBox(width: 16),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          profile.username,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        if (profile.verified)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 6),
-                            child: VerifiedBadge(),
-                          ),
-                      ],
+                    Text(
+                      profile.username,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(height: 8),
-                    Text(profile.bio ?? ''),
+                    if (profile.verified)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 6),
+                        child: VerifiedBadge(),
+                      ),
                   ],
                 ),
               ),
@@ -62,7 +56,7 @@ class ProfileHeader extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: onFollowTap,
-              child: Text(profile.isFollowing ? 'Following' : 'Follow'),
+              child: const Text('Follow'),
             ),
           ),
         ],
