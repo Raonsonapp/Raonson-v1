@@ -1,82 +1,69 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 
-import 'search_controller.dart';
 import 'search_state.dart';
-import '../../widgets/avatar.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/loading_indicator.dart';
+import '../models/user_model.dart';
+import '../models/post_model.dart';
 
-class SearchScreen extends StatelessWidget {
-  const SearchScreen({super.key});
+class SearchController extends ChangeNotifier {
+  SearchState _state = SearchState.initial();
+  SearchState get state => _state;
 
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => RaonsonSearchController(),
-      child: const _SearchBody(),
-    );
-  }
-}
+  void updateQuery(String value) {
+    _state = _state.copyWith(query: value);
+    notifyListeners();
 
-class _SearchBody extends StatelessWidget {
-  const _SearchBody();
-
-  @override
-  Widget build(BuildContext context) {
-    final controller =
-        context.watch<RaonsonSearchController>();
-    final SearchState state = controller.state;
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: TextField(
-            onChanged: controller.updateQuery,
-            decoration: const InputDecoration(
-              hintText: 'Search users or posts',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius:
-                    BorderRadius.all(Radius.circular(14)),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: _buildResults(state),
-        ),
-      ],
-    );
+    if (value.isEmpty) {
+      clearResults();
+    } else {
+      _mockSearch(value);
+    }
   }
 
-  Widget _buildResults(SearchState state) {
-    if (state.isLoading) {
-      return const Center(child: LoadingIndicator());
-    }
+  Future<void> _mockSearch(String query) async {
+    _state = _state.copyWith(isLoading: true);
+    notifyListeners();
 
-    if (state.users.isEmpty && state.posts.isEmpty) {
-      return const EmptyState(
-        title: 'Search Raonson',
-        subtitle: 'Find people and posts',
-      );
-    }
+    await Future.delayed(const Duration(milliseconds: 600));
 
-    return ListView(
-      children: state.users.map(
-        (u) => ListTile(
-          leading: Avatar(imageUrl: u.avatar, size: 40),
-          title: Text(u.username),
-          trailing: u.verified
-              ? const Icon(
-                  Icons.verified,
-                  color: Colors.blue,
-                  size: 18,
-                )
-              : null,
-        ),
-      ).toList(),
+    final users = List.generate(
+      5,
+      (i) => UserModel(
+        id: 'u$i',
+        username: '${query}_user$i',
+        avatar: '',
+        verified: i.isEven,
+        isPrivate: false,
+        postsCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+      ),
     );
+
+    final posts = List.generate(
+      5,
+      (i) => PostModel(
+        id: 'p$i',
+        user: users.first,
+        caption: '$query post $i',
+        media: const [{'url': '', 'type': 'image'}],
+        likesCount: 0,
+        commentsCount: 0,
+        liked: false,
+        saved: false,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    _state = _state.copyWith(
+      isLoading: false,
+      users: users,
+      posts: posts,
+    );
+    notifyListeners();
+  }
+
+  void clearResults() {
+    _state = SearchState.initial();
+    notifyListeners();
   }
 }
