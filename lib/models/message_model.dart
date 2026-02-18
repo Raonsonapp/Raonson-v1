@@ -1,27 +1,27 @@
+import 'user_model.dart';
+
 class MessageModel {
   final String id;
-  final String senderId;
-  final String content;
-  final String type; // text | image | video
+  final UserModel peer;
+  final String lastMessage;
   final DateTime createdAt;
-  final bool read;
 
   const MessageModel({
     required this.id,
-    required this.senderId,
-    required this.content,
-    required this.type,
+    required this.peer,
+    required this.lastMessage,
     required this.createdAt,
-    required this.read,
   });
+
+  // ---------- COMPAT GETTERS ----------
+  String get timeLabel =>
+      '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
       id: json['_id'],
-      senderId: json['sender'],
-      content: json['content'],
-      type: json['type'],
-      read: json['read'] ?? false,
+      peer: UserModel.fromJson(json['peer']),
+      lastMessage: json['lastMessage'] ?? '',
       createdAt: DateTime.parse(json['createdAt']),
     );
   }
