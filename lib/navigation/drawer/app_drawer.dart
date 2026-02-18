@@ -76,9 +76,7 @@ class AppDrawer extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Social Platform',
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: AppTypography.caption,
           ),
         ],
       ),
