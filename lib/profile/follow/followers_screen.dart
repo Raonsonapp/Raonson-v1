@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+
 import '../../models/user_model.dart';
 import '../profile_repository.dart';
 
 class FollowersScreen extends StatefulWidget {
   final String userId;
 
-  const FollowersScreen({super.key, required this.userId});
+  const FollowersScreen({
+    super.key,
+    required this.userId,
+  });
 
   @override
   State<FollowersScreen> createState() => _FollowersScreenState();
@@ -13,6 +17,7 @@ class FollowersScreen extends StatefulWidget {
 
 class _FollowersScreenState extends State<FollowersScreen> {
   final ProfileRepository _repo = ProfileRepository();
+
   bool _loading = true;
   String? _error;
   List<UserModel> _followers = [];
@@ -35,9 +40,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
       _error = e.toString();
     }
 
-    setState(() {
-      _loading = false;
-    });
+    setState(() => _loading = false);
   }
 
   @override
@@ -52,31 +55,25 @@ class _FollowersScreenState extends State<FollowersScreen> {
                   itemCount: _followers.length,
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1),
-                  itemBuilder: (_, index) {
-                    final user = _followers[index];
+                  itemBuilder: (_, i) {
+                    final user = _followers[i];
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: user.avatar != null &&
-                                user.avatar!.isNotEmpty
-                            ? NetworkImage(user.avatar!)
+                        backgroundImage: user.avatar.isNotEmpty
+                            ? NetworkImage(user.avatar)
                             : null,
-                        child: user.avatar == null ||
-                                user.avatar!.isEmpty
+                        child: user.avatar.isEmpty
                             ? const Icon(Icons.person)
                             : null,
                       ),
                       title: Text(user.username),
                       trailing: user.verified
-                          ? const Icon(Icons.verified,
-                              color: Colors.blue, size: 18)
+                          ? const Icon(
+                              Icons.verified,
+                              color: Colors.blue,
+                              size: 18,
+                            )
                           : null,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/profile',
-                          arguments: user.id,
-                        );
-                      },
                     );
                   },
                 ),
