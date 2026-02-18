@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
-import '../../app/app_routes.dart';
+import '../../app/app_state.dart';
 
 class RegisterState {
   final String username;
@@ -99,16 +100,17 @@ class RegisterController extends ChangeNotifier {
       );
 
       final data = jsonDecode(res.body);
-      final token = data['accessToken'];
 
+      final token = data['accessToken'];
       if (token == null) {
         throw Exception('Access token missing');
       }
 
+      // 🔐 set token
       ApiClient.instance.setAuthToken(token);
 
-      // ✅ ИН ҶО РЕГИСТРАЦИЯ “ЗИНДА” МЕШАВАД
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
+      // ✅ AUT0 LOGIN
+      context.read<AppState>().login();
 
     } catch (e) {
       _state = _state.copyWith(error: e.toString());
