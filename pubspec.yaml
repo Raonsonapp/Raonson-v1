@@ -11,43 +11,34 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # ================= STATE =================
   provider: ^6.1.2
 
-  # ================= CORE =================
   http: ^1.2.0
   dio: ^5.4.3
   intl: ^0.19.0
 
-  # ================= STORAGE =================
   flutter_secure_storage: ^9.0.0
   shared_preferences: ^2.2.3
 
-  # ================= MEDIA =================
   video_player: ^2.8.6
   image_picker: ^1.0.7
   flutter_svg: ^2.0.9
   cached_network_image: ^3.3.1
 
-  # ================= UI =================
   cupertino_icons: ^1.0.6
   shimmer: ^3.0.0
 
-  # ================= SHARE / UTIL =================
   share_plus: ^10.0.2
   uuid: ^4.4.0
   connectivity_plus: ^6.0.5
 
-  # ================= FIREBASE (KEEPED) =================
   firebase_core: ^3.6.0
   firebase_auth: ^5.1.0
   firebase_storage: ^12.3.0
 
-  # ================= COUNTRY =================
   country_picker: ^2.0.26
   country_code_picker: ^3.0.0
 
-  # ================= REALTIME =================
   socket_io_client: ^2.0.3+1
 
 dev_dependencies:
@@ -61,9 +52,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/icon/app_icon.png
+    - assets/icon/logo.png
     - assets/icons/
-    - assets/logo.png
     - assets/images/
 
   fonts:
@@ -71,9 +61,12 @@ flutter:
       fonts:
         - asset: assets/fonts/Pacifico-Regular.ttf
 
+# ================= APP ICON =================
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/icon/app_icon.png
+
+  image_path: assets/icon/logo.png
+
   adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: assets/icon/app_icon.png
+  adaptive_icon_foreground: assets/icon/logo.png
