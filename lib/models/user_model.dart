@@ -9,6 +9,10 @@ class UserModel {
   final int followersCount;
   final int followingCount;
 
+  // optional / social
+  final String? bio;
+  final bool isFollowing;
+
   const UserModel({
     required this.id,
     required this.username,
@@ -18,6 +22,8 @@ class UserModel {
     required this.postsCount,
     required this.followersCount,
     required this.followingCount,
+    this.bio,
+    this.isFollowing = false,
   });
 
   // ---------- COMPAT GETTERS ----------
@@ -34,6 +40,8 @@ class UserModel {
       postsCount: json['postsCount'] ?? 0,
       followersCount: json['followersCount'] ?? 0,
       followingCount: json['followingCount'] ?? 0,
+      bio: json['bio'],
+      isFollowing: json['isFollowing'] ?? false,
     );
   }
 
@@ -44,6 +52,8 @@ class UserModel {
     int? postsCount,
     int? followersCount,
     int? followingCount,
+    String? bio,
+    bool? isFollowing,
   }) {
     return UserModel(
       id: id,
@@ -54,6 +64,8 @@ class UserModel {
       postsCount: postsCount ?? this.postsCount,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
+      bio: bio ?? this.bio,
+      isFollowing: isFollowing ?? this.isFollowing,
     );
   }
 }
