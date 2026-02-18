@@ -37,9 +37,10 @@ class _StoryViewerState extends State<StoryViewer> {
   }
 
   void _onVideoEnd() {
-    if (_videoController == null) return;
-    if (_videoController!.value.position >=
-        _videoController!.value.duration) {
+    final controller = _videoController;
+    if (controller == null) return;
+
+    if (controller.value.position >= controller.value.duration) {
       widget.onComplete();
     }
   }
