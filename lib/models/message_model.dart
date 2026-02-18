@@ -13,7 +13,10 @@ class MessageModel {
     required this.createdAt,
   });
 
-  // ---------- COMPAT GETTERS ----------
+  // ---------- COMPAT ----------
+  bool get isMine => false; // UI-safe default
+  String get text => lastMessage;
+
   String get timeLabel =>
       '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
 
