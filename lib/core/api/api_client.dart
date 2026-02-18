@@ -2,64 +2,75 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../app/app_config.dart';
-import 'api_interceptors.dart';
 
 class ApiClient {
   ApiClient._();
 
-  /// Singleton instance
   static final ApiClient instance = ApiClient._();
-
   static final http.Client _client = http.Client();
 
-  // ================= URI =================
+  String? _authToken;
+
+  // ================= AUTH HEADER =================
+  void setAuthToken(String? token) {
+    _authToken = token;
+  }
+
+  Map<String, String> _headers() {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+
+    if (_authToken != null) {
+      headers['Authorization'] = 'Bearer $_authToken';
+    }
+
+    return headers;
+  }
+
   Uri _uri(String path, [Map<String, String>? query]) {
-    return Uri.parse('${AppConfig.apiBaseUrl}$path')
+    return Uri.parse('${AppConfig.apibaseUrl}$path')
         .replace(queryParameters: query);
   }
 
-  // ================= INTERNAL =================
-  Future<http.Response> _send(http.Request request) async {
-    await ApiInterceptors.attachHeaders(request);
-    final streamed = await _client.send(request);
-    final response = await http.Response.fromStream(streamed);
-    return ApiInterceptors.handleResponse(response);
-  }
+  // ================= HTTP METHODS =================
 
-  // ================= PUBLIC INSTANCE API =================
-
-  Future<http.Response> getRequest(
+  Future<http.Response> get(
     String path, {
     Map<String, String>? query,
   }) {
-    final request = http.Request('GET', _uri(path, query));
-    return _send(request);
+    return _client.get(
+      _uri(path, query),
+      headers: _headers(),
+    );
   }
 
-  Future<http.Response> postRequest(
+  Future<http.Response> post(
     String path, {
     Map<String, dynamic>? body,
   }) {
-    final request = http.Request('POST', _uri(path));
-    if (body != null) {
-      request.body = jsonEncode(body);
-    }
-    return _send(request);
+    return _client.post(
+      _uri(path),
+      headers: _headers(),
+      body: body != null ? jsonEncode(body) : null,
+    );
   }
 
-  Future<http.Response> putRequest(
+  Future<http.Response> put(
     String path, {
     Map<String, dynamic>? body,
   }) {
-    final request = http.Request('PUT', _uri(path));
-    if (body != null) {
-      request.body = jsonEncode(body);
-    }
-    return _send(request);
+    return _client.put(
+      _uri(path),
+      headers: _headers(),
+      body: body != null ? jsonEncode(body) : null,
+    );
   }
 
-  Future<http.Response> deleteRequest(String path) {
-    final request = http.Request('DELETE', _uri(path));
-    return _send(request);
+  Future<http.Response> delete(String path) {
+    return _client.delete(
+      _uri(path),
+      headers: _headers(),
+    );
   }
 }
