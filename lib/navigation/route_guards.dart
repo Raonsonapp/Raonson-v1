@@ -7,13 +7,11 @@ abstract class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';
 
-  // Bottom tabs
   static const String home = '/home';
   static const String reels = '/reels';
   static const String chat = '/chat';
   static const String search = '/search';
   static const String profile = '/profile';
 
-  // Actions
   static const String notifications = '/notifications';
 }
