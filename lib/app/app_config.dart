@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 class AppConfig {
   static late String appName;
-  static late String baseUrl;
+  static late String apibaseUrl;
   static late bool enableLogs;
 
   static Future<void> initialize({
@@ -12,7 +12,7 @@ class AppConfig {
   }) async {
     WidgetsFlutterBinding.ensureInitialized();
     AppConfig.appName = appName;
-    AppConfig.baseUrl = baseUrl;
+    AppConfig.apibaseUrl = baseUrl;
     AppConfig.enableLogs = enableLogs;
   }
 }
