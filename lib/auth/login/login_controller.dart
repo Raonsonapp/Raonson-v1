@@ -1,26 +1,80 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 
-class LoginController extends ChangeNotifier {
-  bool isLoading = false;
-  String? error;
+/// ---------------------------
+/// STATE
+/// ---------------------------
+class LoginState {
+  final String email;
+  final String password;
+  final bool isLoading;
+  final String? error;
 
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
-    isLoading = true;
-    error = null;
+  const LoginState({
+    required this.email,
+    required this.password,
+    required this.isLoading,
+    this.error,
+  });
+
+  factory LoginState.initial() {
+    return const LoginState(
+      email: '',
+      password: '',
+      isLoading: false,
+    );
+  }
+
+  LoginState copyWith({
+    String? email,
+    String? password,
+    bool? isLoading,
+    String? error,
+  }) {
+    return LoginState(
+      email: email ?? this.email,
+      password: password ?? this.password,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+    );
+  }
+}
+
+/// ---------------------------
+/// CONTROLLER
+/// ---------------------------
+class LoginController extends ChangeNotifier {
+  LoginState _state = LoginState.initial();
+  LoginState get state => _state;
+
+  /// 🔹 update email
+  void updateUsername(String value) {
+    _state = _state.copyWith(email: value);
+    notifyListeners();
+  }
+
+  /// 🔹 update password
+  void updatePassword(String value) {
+    _state = _state.copyWith(password: value);
+    notifyListeners();
+  }
+
+  /// 🔹 login action
+  Future<void> login() async {
+    if (_state.isLoading) return;
+
+    _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
 
     try {
-      final response = await ApiClient.instance.post(
+      final response = await ApiClient.post(
         ApiEndpoints.login,
         body: {
-          'email': email,
-          'password': password,
+          'email': _state.email.trim(),
+          'password': _state.password,
         },
       );
 
@@ -30,11 +84,13 @@ class LoginController extends ChangeNotifier {
       if (!data.containsKey('token')) {
         throw Exception('Token missing');
       }
+
+      // ⛔ token save дар AuthService мешавад
     } catch (e) {
-      error = e.toString();
+      _state = _state.copyWith(error: e.toString());
     }
 
-    isLoading = false;
+    _state = _state.copyWith(isLoading: false);
     notifyListeners();
   }
 }
