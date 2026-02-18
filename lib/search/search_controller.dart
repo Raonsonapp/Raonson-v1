@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'search_state.dart';
 import '../models/user_model.dart';
 import '../models/post_model.dart';
@@ -24,14 +25,17 @@ class SearchController extends ChangeNotifier {
 
     await Future.delayed(const Duration(milliseconds: 600));
 
-    // ⛔ backend пайваст мешавад баъд
     final users = List.generate(
       5,
       (i) => UserModel(
         id: 'u$i',
-        username: '$query\_user$i',
-        avatarUrl: '',
+        username: '${query}_user$i',
+        avatar: '',
         verified: i.isEven,
+        isPrivate: false,
+        postsCount: 0,
+        followersCount: 0,
+        followingCount: 0,
       ),
     );
 
@@ -41,9 +45,16 @@ class SearchController extends ChangeNotifier {
         id: 'p$i',
         user: users.first,
         caption: '$query post $i',
-        mediaUrl: '',
+        media: const [
+          {
+            'url': '',
+            'type': 'image',
+          }
+        ],
         likesCount: 0,
         commentsCount: 0,
+        liked: false,
+        saved: false,
         createdAt: DateTime.now(),
       ),
     );
