@@ -1,11 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
-/* =========================
-   REGISTER STATE
-========================= */
-@immutable
+import '../../core/api/api_client.dart';
+import '../../core/api/api_endpoints.dart';
+
 class RegisterState {
   final String username;
   final String email;
@@ -15,19 +13,30 @@ class RegisterState {
   final String? error;
 
   const RegisterState({
-    this.username = '',
-    this.email = '',
-    this.password = '',
-    this.confirmPassword = '',
-    this.isLoading = false,
+    required this.username,
+    required this.email,
+    required this.password,
+    required this.confirmPassword,
+    required this.isLoading,
     this.error,
   });
 
+  factory RegisterState.initial() {
+    return const RegisterState(
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      isLoading: false,
+    );
+  }
+
   bool get canSubmit =>
-      username.trim().isNotEmpty &&
-      email.trim().isNotEmpty &&
-      password.length >= 6 &&
-      password == confirmPassword;
+      username.isNotEmpty &&
+      email.isNotEmpty &&
+      password.isNotEmpty &&
+      password == confirmPassword &&
+      !isLoading;
 
   RegisterState copyWith({
     String? username,
@@ -48,18 +57,9 @@ class RegisterState {
   }
 }
 
-/* =========================
-   REGISTER CONTROLLER
-========================= */
 class RegisterController extends ChangeNotifier {
-  RegisterState _state = const RegisterState();
+  RegisterState _state = RegisterState.initial();
   RegisterState get state => _state;
-
-  // 🔧 CHANGE THIS IF NEEDED
-  static const String _baseUrl = 'https://raonson-v1.onrender.com';
-  static const String _registerPath = '/auth/register';
-
-  // ================= FIELD UPDATES =================
 
   void updateUsername(String v) {
     _state = _state.copyWith(username: v);
@@ -81,7 +81,8 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ================= REGISTER =================
+  /// ✅ INSTAGRAM-STYLE REGISTER
+  /// Token интизор НЕ мешавем
   Future<bool> register() async {
     if (!_state.canSubmit) return false;
 
@@ -89,16 +90,13 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl$_registerPath'),
-        headers: const {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        ApiEndpoints.register,
+        body: {
           'username': _state.username.trim(),
           'email': _state.email.trim(),
           'password': _state.password,
-        }),
+        },
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -116,7 +114,7 @@ class RegisterController extends ChangeNotifier {
         );
       }
 
-      // ✅ SUCCESS
+      // ✅ Account created successfully
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;
