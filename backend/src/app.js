@@ -26,10 +26,21 @@ dotenv.config();
 const app = express();
 
 // ================= CORE MIDDLEWARE =================
-app.use(cors());
-app.use(express.json({ limit: "50mb" }));
+
+// ✅ CORS ПУРРА (МАСЪАЛАИ TOKEN ҲАЛ МЕШАВАД)
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
+
+// ✅ BODY 100% КОР МЕКУНАД
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(rateLimitMiddleware());
+
+// ❌ ИН ҶО rateLimit НАБОЯД БОШАД
+// app.use(rateLimitMiddleware());
 
 // ================= HEALTH =================
 app.get("/", (req, res) => {
@@ -41,13 +52,19 @@ app.get("/", (req, res) => {
 });
 
 // ================= ROUTES =================
+
+// ✅ AUTH БЕ RATE LIMIT (АСОСИ LOGIN/REGISTER)
 app.use("/auth", authRoutes);
+
+// 🔒 RATE LIMIT ФАҚАТ БА ROUTE-ҲОИ ВАЗНИН
+app.use("/posts", rateLimitMiddleware(), postRoutes);
+app.use("/comments", rateLimitMiddleware(), commentRoutes);
+app.use("/likes", rateLimitMiddleware(), likeRoutes);
+app.use("/follow", rateLimitMiddleware(), followRoutes);
+
+// ОСТОНАҲОИ ДИГАР
 app.use("/users", userRoutes);
 app.use("/profile", profileRoutes);
-app.use("/posts", postRoutes);
-app.use("/comments", commentRoutes);
-app.use("/likes", likeRoutes);
-app.use("/follow", followRoutes);
 app.use("/reels", reelRoutes);
 app.use("/stories", storyRoutes);
 app.use("/chat", chatRoutes);
