@@ -113,6 +113,11 @@ class _LoginView extends StatelessWidget {
 
                           if (success) {
                             context.read<AppState>().login();
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              AppRoutes.home,
+                              (_) => false,
+                            );
                           }
                         }
                       : null,
