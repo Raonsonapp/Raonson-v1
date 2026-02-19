@@ -1,19 +1,18 @@
-import { verifyAccessToken } from "../config/jwt.config.js";
+import jwt from "jsonwebtoken";
 
-export function authMiddleware(req, res, next) {
-  const header = req.headers.authorization;
+const JWT_SECRET = process.env.JWT_SECRET || "RAONSON_SECRET";
 
-  if (!header || !header.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
+export const authMiddleware = (req, res, next) => {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ message: "No token" });
 
-  const token = header.split(" ")[1];
+  const token = auth.split(" ")[1];
 
   try {
-    const payload = verifyAccessToken(token);
-    req.user = payload;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
     next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
   }
-      }
+};
