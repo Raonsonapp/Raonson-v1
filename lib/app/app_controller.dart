@@ -60,7 +60,7 @@ class AppController {
         return _page(const NotificationsScreen());
 
       default:
-        return _page(const Scaffold(body: SizedBox()));
+        return _page(const LoginScreen());
     }
   }
 
