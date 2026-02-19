@@ -1,12 +1,15 @@
-import mongoose from "mongoose";
+import express from "express";
+import {
+  getUserById,
+  updateUser,
+  deleteUser,
+} from "../controllers/user.controller.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
-const userSchema = new mongoose.Schema(
-  {
-    username: { type: String, unique: true, required: true },
-    email: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-  },
-  { timestamps: true }
-);
+const router = express.Router();
 
-export default mongoose.model("User", userSchema);
+router.get("/:id", authMiddleware, getUserById);
+router.put("/", authMiddleware, updateUser);
+router.delete("/", authMiddleware, deleteUser);
+
+export default router;
