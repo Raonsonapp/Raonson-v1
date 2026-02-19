@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 
@@ -9,20 +10,12 @@ class LoginState {
   final bool isLoading;
   final String? error;
 
-  const LoginState({
-    required this.email,
-    required this.password,
-    required this.isLoading,
+  LoginState({
+    this.email = '',
+    this.password = '',
+    this.isLoading = false,
     this.error,
   });
-
-  factory LoginState.initial() {
-    return const LoginState(
-      email: '',
-      password: '',
-      isLoading: false,
-    );
-  }
 
   bool get canSubmit =>
       email.isNotEmpty && password.isNotEmpty && !isLoading;
@@ -43,7 +36,7 @@ class LoginState {
 }
 
 class LoginController extends ChangeNotifier {
-  LoginState _state = LoginState.initial();
+  LoginState _state = LoginState();
   LoginState get state => _state;
 
   void updateEmail(String v) {
@@ -56,7 +49,7 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔐 LOGIN — 100% SAFE
+  /// ✅ FINAL LOGIN (Instagram-style)
   Future<bool> login() async {
     if (!_state.canSubmit) return false;
 
@@ -64,28 +57,30 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await ApiClient.instance.post(
+      final response = await ApiClient.instance.post(
         ApiEndpoints.login,
         body: {
-          'email': _state.email.trim(),
+          'email': _state.email.trim().toLowerCase(),
           'password': _state.password,
         },
       );
 
-      if (res.statusCode != 200) {
-        final body = jsonDecode(res.body);
-        throw Exception(body['message'] ?? 'Login failed');
+      if (response.statusCode != 200) {
+        dynamic body;
+        try {
+          body = jsonDecode(response.body);
+        } catch (_) {
+          body = null;
+        }
+
+        throw Exception(
+          body is Map<String, dynamic>
+              ? (body['message'] ?? 'Login failed')
+              : 'Login failed',
+        );
       }
 
-      final data = jsonDecode(res.body);
-      final token = data['accessToken'];
-
-      if (token == null || token.toString().isEmpty) {
-        throw Exception('Access token missing');
-      }
-
-      ApiClient.instance.setAuthToken(token);
-
+      // ✅ SUCCESS
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;
