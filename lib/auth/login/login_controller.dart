@@ -30,7 +30,9 @@ class LoginState {
   }
 
   bool get canSubmit =>
-      email.isNotEmpty && password.isNotEmpty && !isLoading;
+      email.trim().isNotEmpty &&
+      password.isNotEmpty &&
+      !isLoading;
 
   LoginState copyWith({
     String? email,
@@ -55,19 +57,30 @@ class LoginController extends ChangeNotifier {
   LoginState get state => _state;
 
   void updateEmail(String value) {
-    _state = _state.copyWith(email: value);
+    _state = _state.copyWith(
+      email: value,
+      error: null,
+    );
     notifyListeners();
   }
 
   void updatePassword(String value) {
-    _state = _state.copyWith(password: value);
+    _state = _state.copyWith(
+      password: value,
+      error: null,
+    );
     notifyListeners();
   }
 
-  /// 🔐 LOGIN – 100% КОР МЕКУНАД
+  /// ==================================================
+  /// 🔐 LOGIN
+  /// return true  -> SUCCESS
+  /// return false -> ERROR (spinner ҲАМЕША қатъ мешавад)
+  /// ==================================================
   Future<bool> login() async {
     if (!_state.canSubmit) return false;
 
+    // START LOADING
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
 
@@ -75,41 +88,38 @@ class LoginController extends ChangeNotifier {
       final response = await ApiClient.instance.post(
         ApiEndpoints.login,
         body: {
-          'email': _state.email.trim(),
+          'email': _state.email.trim().toLowerCase(),
           'password': _state.password,
         },
       );
 
-      // ❗ агар backend статус 400 / 401 баргардонад
-      if (response.statusCode >= 400) {
-        final body = jsonDecode(response.body);
-        throw Exception(
-          body['message'] ?? 'Invalid email or password',
-        );
+      // ❗ Агар backend хато фиристад
+      if (response.statusCode != 200) {
+        throw Exception('Invalid credentials');
       }
 
-      final data = jsonDecode(response.body);
+      final Map<String, dynamic> data = jsonDecode(response.body);
 
-      // ✅ ҲАМА ВАРИАНТҲОИ TOKEN
       final token =
-          data['accessToken'] ??
-          data['access_token'] ??
-          data['token'];
+          data['accessToken'] ?? data['token'] ?? data['access_token'];
 
       if (token == null || token.toString().isEmpty) {
-        throw Exception('Login failed: token missing');
+        throw Exception('Access token missing');
       }
 
-      // 🔐 нигоҳ медорем
-      ApiClient.instance.setAuthToken(token);
+      // SAVE TOKEN IN MEMORY
+      ApiClient.instance.setAuthToken(token.toString());
 
+      // STOP LOADING
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
+
       return true;
     } catch (e) {
+      // ❌ ERROR — ҲЕҶ ГОҲ spinner намемонад
       _state = _state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: 'Invalid email or password',
       );
       notifyListeners();
       return false;
