@@ -44,14 +44,13 @@ export const register = async (req, res) => {
       },
     });
   } catch (e) {
-    // Mongo duplicate index
     if (e?.code === 11000) {
       return res
         .status(409)
         .json({ message: "Username or email already taken" });
     }
 
-    console.error("REGISTER ERROR:", e);
+    console.error(e);
     return res.status(500).json({ message: "Register failed" });
   }
 };
@@ -102,7 +101,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error("LOGIN ERROR:", e);
+    console.error(e);
     return res.status(500).json({ message: "Login failed" });
   }
 };
