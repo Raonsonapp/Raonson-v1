@@ -5,6 +5,8 @@ import 'app_state.dart';
 import 'app_controller.dart';
 import 'app_theme.dart';
 import 'app_config.dart';
+import '../auth/login/login_screen.dart';
+import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
 
 class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
@@ -12,7 +14,7 @@ class RaonsonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AppState()..setInitialized(true),
+      create: (_) => AppState()..initialize(),
       child: Builder(
         builder: (context) {
           final state = context.watch<AppState>();
@@ -23,7 +25,14 @@ class RaonsonApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
-            initialRoute: controller.initialRoute,
+            home: !state.isInitialized
+                ? const Scaffold(
+                    backgroundColor: Colors.black,
+                    body: Center(child: CircularProgressIndicator()),
+                  )
+                : (state.isAuthenticated
+                    ? const BottomNavScaffold()
+                    : const LoginScreen()),
             onGenerateRoute: controller.onGenerateRoute,
           );
         },
