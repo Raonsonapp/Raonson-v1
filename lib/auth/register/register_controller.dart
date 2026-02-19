@@ -1,65 +1,17 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 
-import '../../core/api/api_client.dart';
-import '../../core/api/api_endpoints.dart';
+import 'package:flutter/material.dart';
 
-class RegisterState {
-  final String username;
-  final String email;
-  final String password;
-  final String confirmPassword;
-  final bool isLoading;
-  final String? error;
-
-  const RegisterState({
-    required this.username,
-    required this.email,
-    required this.password,
-    required this.confirmPassword,
-    required this.isLoading,
-    this.error,
-  });
-
-  factory RegisterState.initial() {
-    return const RegisterState(
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      isLoading: false,
-    );
-  }
-
-  bool get canSubmit =>
-      username.isNotEmpty &&
-      email.isNotEmpty &&
-      password.isNotEmpty &&
-      password == confirmPassword &&
-      !isLoading;
-
-  RegisterState copyWith({
-    String? username,
-    String? email,
-    String? password,
-    String? confirmPassword,
-    bool? isLoading,
-    String? error,
-  }) {
-    return RegisterState(
-      username: username ?? this.username,
-      email: email ?? this.email,
-      password: password ?? this.password,
-      confirmPassword: confirmPassword ?? this.confirmPassword,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-    );
-  }
-}
+import '../../core/api_client.dart';
+import '../../core/api_endpoints.dart';
+import 'register_state.dart';
 
 class RegisterController extends ChangeNotifier {
-  RegisterState _state = RegisterState.initial();
+  RegisterState _state = const RegisterState();
+
   RegisterState get state => _state;
+
+  // ================== UPDATE FIELDS ==================
 
   void updateUsername(String v) {
     _state = _state.copyWith(username: v);
@@ -81,8 +33,10 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ INSTAGRAM-STYLE REGISTER
-  /// Token интизор НЕ мешавем
+  // ================== REGISTER ==================
+  /// Instagram-style register
+  /// ❌ Token интизор НЕ мешавем
+  /// ✅ Танҳо success / error
   Future<bool> register() async {
     if (!_state.canSubmit) return false;
 
@@ -99,19 +53,31 @@ class RegisterController extends ChangeNotifier {
         },
       );
 
+      // ❌ Error from backend
       if (response.statusCode != 200 && response.statusCode != 201) {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Registration failed');
+        dynamic body;
+
+        try {
+          body = jsonDecode(response.body);
+        } catch (_) {
+          body = null;
+        }
+
+        throw Exception(
+          body is Map<String, dynamic>
+              ? (body['message'] ?? 'Registration failed')
+              : 'Registration failed',
+        );
       }
 
-      // ✅ Account created successfully
+      // ✅ SUCCESS
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;
     } catch (e) {
       _state = _state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: e.toString().replaceAll('Exception:', '').trim(),
       );
       notifyListeners();
       return false;
