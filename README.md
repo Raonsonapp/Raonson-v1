@@ -1,16 +1,22 @@
 # raonson_v1
 
-A new Flutter project.
+Raonson social app (Flutter + backend).
 
-## Getting Started
+## Required Flutter / Dart versions
 
-This project is a starting point for a Flutter application.
+This project currently targets:
 
-A few resources to get you started if this is your first Flutter project:
+- **Flutter 3.22.x**
+- **Dart 3.4.x**
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Minimum SDK constraint from `pubspec.yaml`:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- `sdk: ">=3.3.0 <4.0.0"`
+
+If your local version is older/newer in an incompatible way, screens or plugins can fail to run correctly.
+
+Check your versions:
+
+```bash
+flutter --version
+dart --version
