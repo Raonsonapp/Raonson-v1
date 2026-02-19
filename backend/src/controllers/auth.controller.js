@@ -17,9 +17,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Missing fields" });
     }
 
-    const exists = await User.findOne({
-      $or: [{ email }, { username }],
-    });
+    const exists = await User.findOne({ $or: [{ email }, { username }] });
 
     if (exists) {
       return res
@@ -109,12 +107,11 @@ export const login = async (req, res) => {
 /* ================= REFRESH ================= */
 export const refreshToken = async (req, res) => {
   try {
-    const token = req.body.refreshToken;
-    if (!token) {
+    const { refreshToken } = req.body;
+    if (!refreshToken)
       return res.status(401).json({ message: "No refresh token" });
-    }
 
-    const payload = jwt.verify(token, JWT_REFRESH_SECRET);
+    const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
 
     const accessToken = jwt.sign(
       { id: payload.id },
@@ -122,9 +119,9 @@ export const refreshToken = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    return res.json({ accessToken });
+    res.json({ accessToken });
   } catch {
-    return res.status(403).json({ message: "Invalid refresh token" });
+    res.status(403).json({ message: "Invalid refresh token" });
   }
 };
 
