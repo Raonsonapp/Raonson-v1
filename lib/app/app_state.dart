@@ -11,15 +11,20 @@ class AppState extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   Future<void> initialize() async {
-    final token = await TokenStorage.getAccessToken();
+    try {
+      final token = await TokenStorage.getAccessToken();
 
-    if (token != null && token.isNotEmpty) {
-      ApiClient.instance.setAuthToken(token);
-      _isAuthenticated = true;
+      if (token != null && token.isNotEmpty) {
+        ApiClient.instance.setAuthToken(token);
+        _isAuthenticated = true;
+      }
+    } catch (_) {
+      _isAuthenticated = false;
+      ApiClient.instance.setAuthToken(null);
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
     }
-
-    _isInitialized = true;
-    notifyListeners();
   }
 
   void login() {
@@ -27,7 +32,9 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void logout() {
+  Future<void> logout() async {
+    await TokenStorage.clearTokens();
+    ApiClient.instance.setAuthToken(null);
     _isAuthenticated = false;
     notifyListeners();
   }
