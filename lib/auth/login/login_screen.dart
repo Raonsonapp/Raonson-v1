@@ -26,7 +26,7 @@ class _LoginView extends StatelessWidget {
     final state = controller.state;
 
     return Scaffold(
-      backgroundColor: Colors.black, // 🔥 Instagram-style dark
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -61,6 +61,9 @@ class _LoginView extends StatelessWidget {
               // EMAIL
               _field(
                 label: 'Email',
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
                 onChanged: controller.updateEmail,
               ),
 
@@ -70,12 +73,15 @@ class _LoginView extends StatelessWidget {
               _field(
                 label: 'Password',
                 obscure: true,
+                keyboardType: TextInputType.visiblePassword,
+                autofillHints: const [AutofillHints.password],
+                textInputAction: TextInputAction.done,
                 onChanged: controller.updatePassword,
               ),
 
               const SizedBox(height: 24),
 
-              // ERROR MESSAGE
+              // ERROR
               if (state.error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -156,11 +162,17 @@ class _LoginView extends StatelessWidget {
   Widget _field({
     required String label,
     required ValueChanged<String> onChanged,
+    TextInputType? keyboardType,
+    List<String>? autofillHints,
+    TextInputAction? textInputAction,
     bool obscure = false,
   }) {
     return TextField(
       obscureText: obscure,
-      onChanged: onChanged,
+      keyboardType: keyboardType,
+      autofillHints: autofillHints,
+      textInputAction: textInputAction,
+      onChanged: (value) => onChanged(value.trim()),
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
