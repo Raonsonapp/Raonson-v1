@@ -25,6 +25,7 @@ class LoginState {
       email: '',
       password: '',
       isLoading: false,
+      error: null,
     );
   }
 
@@ -63,9 +64,9 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 🔐 REAL LOGIN (Instagram-style)
+  /// 🔐 LOGIN – 100% КОР МЕКУНАД
   Future<bool> login() async {
-    if (_state.isLoading) return false;
+    if (!_state.canSubmit) return false;
 
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
@@ -79,14 +80,28 @@ class LoginController extends ChangeNotifier {
         },
       );
 
-      final data = jsonDecode(response.body);
-
-      final accessToken = data['accessToken'];
-      if (accessToken == null || accessToken.toString().isEmpty) {
-        throw Exception('Login failed');
+      // ❗ агар backend статус 400 / 401 баргардонад
+      if (response.statusCode >= 400) {
+        final body = jsonDecode(response.body);
+        throw Exception(
+          body['message'] ?? 'Invalid email or password',
+        );
       }
 
-      ApiClient.instance.setAuthToken(accessToken);
+      final data = jsonDecode(response.body);
+
+      // ✅ ҲАМА ВАРИАНТҲОИ TOKEN
+      final token =
+          data['accessToken'] ??
+          data['access_token'] ??
+          data['token'];
+
+      if (token == null || token.toString().isEmpty) {
+        throw Exception('Login failed: token missing');
+      }
+
+      // 🔐 нигоҳ медорем
+      ApiClient.instance.setAuthToken(token);
 
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
@@ -94,7 +109,7 @@ class LoginController extends ChangeNotifier {
     } catch (e) {
       _state = _state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: e.toString().replaceAll('Exception: ', ''),
       );
       notifyListeners();
       return false;
