@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
-import 'login_controller.dart';
 import '../../app/app_routes.dart';
+import 'login_controller.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -26,7 +26,7 @@ class _LoginView extends StatelessWidget {
     final state = controller.state;
 
     return Scaffold(
-      backgroundColor: Colors.black, // ✅ сиёҳ
+      backgroundColor: Colors.black, // 🔥 Instagram-style dark
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -75,15 +75,19 @@ class _LoginView extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // ERROR
+              // ERROR MESSAGE
               if (state.error != null)
-                Text(
-                  state.error!,
-                  style: const TextStyle(color: Colors.redAccent),
-                  textAlign: TextAlign.center,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    state.error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
-
-              const SizedBox(height: 20),
 
               // LOGIN BUTTON
               SizedBox(
@@ -98,11 +102,10 @@ class _LoginView extends StatelessWidget {
                   ),
                   onPressed: state.canSubmit
                       ? () async {
-                          await controller.login();
+                          final success = await controller.login();
                           if (!context.mounted) return;
 
-                          // ✅ агар хато набошад → login
-                          if (controller.state.error == null) {
+                          if (success) {
                             context.read<AppState>().login();
                           }
                         }
@@ -126,7 +129,7 @@ class _LoginView extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
 
               // GO TO REGISTER
               TextButton(
