@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api/api_client.dart';
 import '../feed_repository.dart';
 import 'feed_controller.dart';
 import 'feed_state.dart';
@@ -10,13 +9,7 @@ import '../post/post_card.dart';
 import '../../widgets/loading_indicator.dart';
 import '../../widgets/empty_state.dart';
 
-import '../../navigation/bottom_nav/bottom_nav_bar.dart';
-import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 import '../../navigation/drawer/app_drawer.dart';
-
-import '../../reels/reels_feed/reels_screen.dart';
-import '../../chat/inbox/chat_list_screen.dart';
-import '../../profile/profile_screen.dart';
 
 import '../../app/app_routes.dart';
 
@@ -25,17 +18,10 @@ class FeedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) => FeedController(
-            FeedRepository(),
-          )..loadInitialFeed(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => BottomNavController(),
-        ),
-      ],
+    return ChangeNotifierProvider(
+      create: (_) => FeedController(
+        FeedRepository(),
+      )..loadInitialFeed(),
       child: const _FeedShell(),
     );
   }
@@ -67,33 +53,18 @@ class _FeedShellState extends State<_FeedShell> {
 
   @override
   Widget build(BuildContext context) {
-    final nav = context.watch<BottomNavController>();
-
     return Scaffold(
       drawer: AppDrawer(
         onProfile: () {
           Navigator.pop(context);
-          nav.setIndex(4);
+          Navigator.pushNamed(context, AppRoutes.profile);
         },
         onSaved: () {},
         onSettings: () {},
         onLogout: () {},
       ),
       appBar: _buildAppBar(context),
-      body: IndexedStack(
-        index: nav.currentIndex,
-        children: const [
-          _FeedTab(),
-          ReelsScreen(),
-          ChatListScreen(),
-          Center(child: Text('Search')),
-          ProfileScreen(userId: 'me'),
-        ],
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: nav.currentIndex,
-        onTap: nav.setIndex,
-      ),
+      body: _FeedTab(scrollController: _scrollController),
     );
   }
 
@@ -128,7 +99,9 @@ class _FeedShellState extends State<_FeedShell> {
 }
 
 class _FeedTab extends StatelessWidget {
-  const _FeedTab();
+  final ScrollController scrollController;
+
+  const _FeedTab({required this.scrollController});
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +130,7 @@ class _FeedTab extends StatelessWidget {
         return RefreshIndicator(
           onRefresh: controller.refresh,
           child: ListView.builder(
+            controller: scrollController,
             itemCount: state.posts.length + (state.hasMore ? 1 : 0),
             itemBuilder: (context, index) {
               if (index < state.posts.length) {
