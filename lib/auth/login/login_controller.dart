@@ -75,11 +75,21 @@ class LoginController extends ChangeNotifier {
       );
 
       if (res.statusCode != 200) {
-        final body = jsonDecode(res.body);
-        throw Exception(body['message'] ?? 'Login failed');
+        dynamic body;
+        try {
+          body = jsonDecode(res.body);
+        } catch (_) {
+          body = null;
+        }
+
+        throw Exception(
+          body is Map<String, dynamic>
+              ? (body['message'] ?? 'Login failed')
+              : 'Login failed',
+        );
       }
 
-      final data = jsonDecode(res.body);
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
       final token = data['accessToken'];
 
       if (token == null || token.toString().isEmpty) {
