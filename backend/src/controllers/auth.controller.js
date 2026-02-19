@@ -9,7 +9,9 @@ const JWT_REFRESH_SECRET =
 /* ================= REGISTER ================= */
 export const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const username = req.body.username?.trim();
+    const email = req.body.email?.trim().toLowerCase();
+    const password = req.body.password;
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: "Missing fields" });
@@ -27,15 +29,29 @@ export const register = async (req, res) => {
 
     const hashed = await bcrypt.hash(password, 10);
 
-    await User.create({
+    const user = await User.create({
       username,
       email,
       password: hashed,
     });
 
-    return res.json({ success: true });
+    return res.status(201).json({
+      success: true,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
   } catch (e) {
-    console.error(e);
+    // Mongo duplicate index
+    if (e?.code === 11000) {
+      return res
+        .status(409)
+        .json({ message: "Username or email already taken" });
+    }
+
+    console.error("REGISTER ERROR:", e);
     return res.status(500).json({ message: "Register failed" });
   }
 };
@@ -43,7 +59,12 @@ export const register = async (req, res) => {
 /* ================= LOGIN ================= */
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = req.body.email?.trim().toLowerCase();
+    const password = req.body.password;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -81,7 +102,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error(e);
+    console.error("LOGIN ERROR:", e);
     return res.status(500).json({ message: "Login failed" });
   }
 };
@@ -89,11 +110,12 @@ export const login = async (req, res) => {
 /* ================= REFRESH ================= */
 export const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
-    if (!refreshToken)
+    const token = req.body.refreshToken;
+    if (!token) {
       return res.status(401).json({ message: "No refresh token" });
+    }
 
-    const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+    const payload = jwt.verify(token, JWT_REFRESH_SECRET);
 
     const accessToken = jwt.sign(
       { id: payload.id },
@@ -101,9 +123,9 @@ export const refreshToken = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.json({ accessToken });
+    return res.json({ accessToken });
   } catch {
-    res.status(403).json({ message: "Invalid refresh token" });
+    return res.status(403).json({ message: "Invalid refresh token" });
   }
 };
 
