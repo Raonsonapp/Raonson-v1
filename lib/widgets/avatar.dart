@@ -35,7 +35,7 @@ class Avatar extends StatelessWidget {
         boxShadow: glowBorder
             ? [
                 BoxShadow(
-                  color: AppColors.neonBlue.withValues(alpha: 0.6),
+                  color: AppColors.neonBlue.withOpacity(0.6),
                   blurRadius: 10,
                   spreadRadius: 1,
                 ),
