@@ -89,11 +89,7 @@ class _FeedShellState extends State<_FeedShell> {
       ),
       actions: [
         IconButton(
-          icon: Stack(
-            children: [
-              const Icon(Icons.notifications_none, color: Colors.white, size: 26),
-            ],
-          ),
+          icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
           onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
         ),
       ],
