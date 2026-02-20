@@ -15,7 +15,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   String? _success;
 
   Future<void> _sendResetCode() async {
-    itextf (_emailController.text.isEmpty) return;
+    if (_emailController.text.isEmpty) return; // ✅ ИСЛОҲ
 
     setState(() {
       _loading = true;
@@ -72,23 +72,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-              ),
+              decoration: const InputDecoration(labelText: 'Email'),
             ),
             const SizedBox(height: 24),
-
             if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
             if (_success != null)
               Text(_success!, style: const TextStyle(color: Colors.green)),
-
             const SizedBox(height: 16),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
