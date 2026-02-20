@@ -126,7 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         boxShadow: _activeCategory == i
                             ? [
                                 BoxShadow(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Colors.white.withValues(alpha: 0.2),
                                   blurRadius: 8,
                                 )
                               ]
