@@ -29,8 +29,8 @@ class ApiClient {
   }
 
   Uri _uri(String path, [Map<String, String>? query]) {
-    return Uri.parse('${AppConfig.apibaseUrl}$path')
-        .replace(queryParameters: query);
+  return Uri.parse('${AppConfig.apiBaseUrl}$path') // ✅ ИСЛОҲ
+      .replace(queryParameters: query);
   }
 
   // ==================================================
