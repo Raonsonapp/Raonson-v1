@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 
+class ChatListController extends ChangeNotifier
+  
 class EmailVerifyScreen extends StatefulWidget {
   const EmailVerifyScreen({super.key});
 
