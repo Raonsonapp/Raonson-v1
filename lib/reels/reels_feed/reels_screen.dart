@@ -114,8 +114,8 @@ class _ReelItemState extends State<_ReelItem> {
         ),
 
         // Gradient overlay
-        DecoratedBox(
-          decoration: const BoxDecoration(
+        const DecoratedBox(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -255,7 +255,7 @@ class _ReelItemState extends State<_ReelItem> {
               size: 32,
               color: color,
               shadows: glow
-                  ? [Shadow(color: AppColors.red.withOpacity(0.8), blurRadius: 12)]
+                  ? [Shadow(color: AppColors.red.withValues(alpha: 0.8), blurRadius: 12)]
                   : null,
             ),
           ),
