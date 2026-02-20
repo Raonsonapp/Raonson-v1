@@ -96,7 +96,7 @@ class _ChatView extends StatelessWidget {
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  Text('Requests',
+                  const Text('Requests',
                       style: TextStyle(
                           color: AppColors.neonBlue,
                           fontWeight: FontWeight.w600,
@@ -137,7 +137,7 @@ class _ChatView extends StatelessWidget {
                   ),
                   // Online contacts
                   ...['Im busy rn', 'Chillin 😆', 'Shohrukh', 'Besst']
-                      .map((name) => Padding(
+                      .map<Widget>((name) => Padding(
                             padding: const EdgeInsets.only(right: 14),
                             child: Column(
                               children: [
@@ -153,7 +153,7 @@ class _ChatView extends StatelessWidget {
                                     boxShadow: [
                                       BoxShadow(
                                         color: AppColors.neonBlue
-                                            .withOpacity(0.35),
+                                            .withValues(alpha: 0.35),
                                         blurRadius: 8,
                                       ),
                                     ],
@@ -175,7 +175,7 @@ class _ChatView extends StatelessWidget {
                               ],
                             ),
                           ))
-                      .toList(),
+                      ,
                 ],
               ),
             ),
@@ -191,7 +191,7 @@ class _ChatView extends StatelessWidget {
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  Text('Requests',
+                  const Text('Requests',
                       style: TextStyle(
                           color: AppColors.neonBlue,
                           fontWeight: FontWeight.w600,
