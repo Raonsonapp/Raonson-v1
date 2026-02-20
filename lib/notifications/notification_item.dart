@@ -22,7 +22,7 @@ class NotificationItem extends StatelessWidget {
       child: Container(
         color: notification.isRead
             ? Colors.transparent
-            : Colors.blue.withValues(alpha: 0.06),
+            : Colors.blue.withOpacity(0.06),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
