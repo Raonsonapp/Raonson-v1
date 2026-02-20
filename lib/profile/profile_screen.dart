@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../app/app_theme.dart';
-import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
 import 'profile_controller.dart';
@@ -167,7 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               boxShadow: !user.isFollowing
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.neonBlue.withOpacity(0.4),
+                                        color: AppColors.neonBlue.withValues(alpha: 0.4),
                                         blurRadius: 10,
                                       )
                                     ]
