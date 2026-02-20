@@ -1,0 +1,72 @@
+name: Flutter Full Build (Analyze + APK)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # =============================
+      # 1. CHECKOUT
+      # =============================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # =============================
+      # 2. SETUP FLUTTER
+      # =============================
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.2'
+          channel: 'stable'
+          cache: true
+
+      # =============================
+      # 3. FLUTTER VERSION
+      # =============================
+      - name: Flutter version
+        run: flutter --version
+
+      # =============================
+      # 4. GET DEPENDENCIES
+      # =============================
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # =============================
+      # 5. ANALYZE (ERRORS ONLY)
+      # =============================
+      - name: Flutter analyze (errors only)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # =============================
+      # 6. RUN TESTS (SKIP IF NONE)
+      # =============================
+      - name: Flutter test
+        run: |
+          if [ -d "test" ]; then
+            flutter test
+          else
+            echo "No tests found, skipping."
+          fi
+
+      # =============================
+      # 7. BUILD APK (RELEASE)
+      # =============================
+      - name: Build APK (release)
+        run: flutter build apk --release
+
+      # =============================
+      # 8. UPLOAD APK ARTIFACT
+      # =============================
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: raonson-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
