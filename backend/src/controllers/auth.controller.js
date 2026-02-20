@@ -1,5 +1,3 @@
-`backend/src/controllers/auth.controller.js`
-```js
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
@@ -20,36 +18,21 @@ export const register = async (req, res) => {
     }
 
     const exists = await User.findOne({ $or: [{ email }, { username }] });
-
     if (exists) {
-      return res
-        .status(409)
-        .json({ message: "Username or email already taken" });
+      return res.status(409).json({ message: "Username or email already taken" });
     }
 
     const hashed = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      username,
-      email,
-      password: hashed,
-    });
+    const user = await User.create({ username, email, password: hashed });
 
     return res.status(201).json({
       success: true,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-      },
+      user: { id: user._id, username: user.username, email: user.email },
     });
   } catch (e) {
     if (e?.code === 11000) {
-      return res
-        .status(409)
-        .json({ message: "Username or email already taken" });
+      return res.status(409).json({ message: "Username or email already taken" });
     }
-
     console.error(e);
     return res.status(500).json({ message: "Register failed" });
   }
@@ -67,38 +50,21 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res
-        .status(401)
-        .json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
-      return res
-        .status(401)
-        .json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const accessToken = jwt.sign(
-      { id: user._id },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    const refreshToken = jwt.sign(
-      { id: user._id },
-      JWT_REFRESH_SECRET,
-      { expiresIn: "30d" }
-    );
+    const accessToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "7d" });
+    const refreshToken = jwt.sign({ id: user._id }, JWT_REFRESH_SECRET, { expiresIn: "30d" });
 
     return res.json({
       accessToken,
       refreshToken,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-      },
+      user: { id: user._id, username: user.username, email: user.email },
     });
   } catch (e) {
     console.error(e);
@@ -110,16 +76,10 @@ export const login = async (req, res) => {
 export const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken)
-      return res.status(401).json({ message: "No refresh token" });
+    if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
 
     const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-
-    const accessToken = jwt.sign(
-      { id: payload.id },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const accessToken = jwt.sign({ id: payload.id }, JWT_SECRET, { expiresIn: "7d" });
 
     res.json({ accessToken });
   } catch {
