@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Raonson Auth Test</title>
+  <style>
+    body { font-family: Arial; padding: 20px; max-width: 400px; }
+    input, button { width: 100%; padding: 10px; margin: 6px 0; }
+    pre { background: #f4f4f4; padding: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>Raonson Auth Test</h2>
+
+<input id="phone" placeholder="Phone (559994751)" />
+<button onclick="sendOtp()">Send OTP</button>
+
+<input id="otp" placeholder="OTP code" />
+<button onclick="verifyOtp()">Verify OTP</button>
+
+<input id="email" placeholder="Email (test@gmail.com)" />
+<button onclick="verifyGmail()">Verify Gmail</button>
+
+<h3>Response:</h3>
+<pre id="res"></pre>
+
+<script>
+const API = "https://raonson-v1.onrender.com";
+let tempToken = "";
+
+function show(data) {
+  document.getElementById("res").textContent =
+    JSON.stringify(data, null, 2);
+}
+
+async function sendOtp() {
+  const phone = phoneEl().value;
+
+  const r = await fetch(API + "/auth/send-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone })
+  });
+
+  show(await r.json());
+}
+
+async function verifyOtp() {
+  const phone = phoneEl().value;
+  const code = otpEl().value;
+
+  const r = await fetch(API + "/auth/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, code })
+  });
+
+  const data = await r.json();
+  tempToken = data.tempToken || "";
+  show(data);
+}
+
+async function verifyGmail() {
+  if (!tempToken) {
+    alert("Аввал Verify OTP кун!");
+    return;
+  }
+
+  const email = emailEl().value;
+
+  const r = await fetch(API + "/auth/verify-gmail", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + tempToken
+    },
+    body: JSON.stringify({ email })
+  });
+
+  show(await r.json());
+}
+
+const phoneEl = () => document.getElementById("phone");
+const otpEl = () => document.getElementById("otp");
+const emailEl = () => document.getElementById("email");
+</script>
+
+</body>
+</html>
