@@ -5,8 +5,7 @@ import 'app/app_config.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Global app configuration (env, baseUrl, flags)
-  await AppConfig.initialize(
+  AppConfig.initialize(
     baseUrl: const String.fromEnvironment(
       'BASE_URL',
       defaultValue: 'https://raonson-v1.onrender.com',
