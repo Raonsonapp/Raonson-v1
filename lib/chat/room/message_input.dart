@@ -58,7 +58,7 @@ class _MessageInputState extends State<MessageInput> {
                   color: AppColors.neonBlue,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.neonBlue.withValues(alpha: 0.4),
+                      color: AppColors.neonBlue.withOpacity(0.4),
                       blurRadius: 10,
                     )
                   ],
