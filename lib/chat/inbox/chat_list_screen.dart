@@ -14,7 +14,7 @@ class ChatListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-  ChatListController    create: (_) => ChatListController(ChatRepository())..loadChats(),
+      create: (_) => ChatListController(ChatRepository())..loadChats(),
       child: const _ChatView(),
     );
   }
