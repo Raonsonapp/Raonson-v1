@@ -26,7 +26,7 @@ class MessageBubble extends StatelessWidget {
             bottomRight: Radius.circular(isMine ? 4 : 18),
           ),
           boxShadow: isMine
-              ? [BoxShadow(color: AppColors.neonBlue.withOpacity(0.25), blurRadius: 8)]
+              ? [BoxShadow(color: AppColors.neonBlue.withValues(alpha: 0.25), blurRadius: 8)]
               : null,
         ),
         child: Text(
