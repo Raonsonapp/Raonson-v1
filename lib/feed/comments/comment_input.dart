@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../app/app_theme.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_endpoints.dart';
 
 class CommentInput extends StatefulWidget {
   final String postId;
+  final VoidCallback? onCommentAdded;
 
   const CommentInput({
     super.key,
     required this.postId,
+    this.onCommentAdded,
   });
 
   @override
@@ -16,18 +21,27 @@ class _CommentInputState extends State<CommentInput> {
   final TextEditingController _controller = TextEditingController();
   bool _sending = false;
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _send() async {
-    if (_controller.text.trim().isEmpty || _sending) return;
+    final content = _controller.text.trim();
+    if (content.isEmpty || _sending) return;
 
     setState(() => _sending = true);
+    _controller.clear();
 
     try {
-      final text = _controller.text.trim();
-      _controller.clear();
-
-      // controller → backend add comment
+      await ApiClient.instance.post(
+        '/posts/${widget.postId}/comments',
+        body: {'text': content},
+      );
+      widget.onCommentAdded?.call();
     } finally {
-      setState(() => _sending = false);
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -37,20 +51,20 @@ class _CommentInputState extends State<CommentInput> {
       top: false,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: Colors.grey.shade300),
-          ),
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.white10)),
         ),
         child: Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _controller,
+                style: const TextStyle(color: Colors.white),
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
                 decoration: const InputDecoration(
                   hintText: 'Add a comment…',
+                  hintStyle: TextStyle(color: AppColors.grey),
                   border: InputBorder.none,
                 ),
               ),
@@ -60,9 +74,12 @@ class _CommentInputState extends State<CommentInput> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.neonBlue,
+                      ),
                     )
-                  : const Icon(Icons.send),
+                  : const Icon(Icons.send, color: AppColors.neonBlue),
               onPressed: _send,
             ),
           ],
