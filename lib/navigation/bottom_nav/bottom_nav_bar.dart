@@ -25,7 +25,7 @@ class BottomNavBar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.neonBlue.withValues(alpha: 0.18),
+            color: AppColors.neonBlue.withOpacity(0.18),
             blurRadius: 24,
             spreadRadius: 0,
             offset: const Offset(0, -4),
@@ -163,7 +163,7 @@ class _NavItem extends StatelessWidget {
             shadows: selected
                 ? [
                     Shadow(
-                      color: AppColors.neonBlue.withValues(alpha: 0.8),
+                      color: AppColors.neonBlue.withOpacity(0.8),
                       blurRadius: 12,
                     )
                   ]
