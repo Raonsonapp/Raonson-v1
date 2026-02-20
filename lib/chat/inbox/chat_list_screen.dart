@@ -14,7 +14,7 @@ class ChatListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ChatListController(ChatRepository())..loadChats(),
+  ChatListController    create: (_) => ChatListController(ChatRepository())..loadChats(),
       child: const _ChatView(),
     );
   }
@@ -153,7 +153,7 @@ class _ChatView extends StatelessWidget {
                                     boxShadow: [
                                       BoxShadow(
                                         color: AppColors.neonBlue
-                                            .withValues(alpha: 0.35),
+                                            .withOpacity(0.35),
                                         blurRadius: 8,
                                       ),
                                     ],
