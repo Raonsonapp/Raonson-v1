@@ -54,7 +54,6 @@ flutter:
   assets:
     - assets/icon/logo.png
     - assets/icons/
-    - assets/images/
 
   fonts:
     - family: RaonsonFont
