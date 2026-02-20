@@ -15,7 +15,7 @@ class UploadProgress extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.75),
+        color: Colors.black.withOpacity(0.75),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
