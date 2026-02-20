@@ -62,7 +62,7 @@ class _MyStoryItem extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.neonBlue.withValues(alpha: 0.5),
+                      color: AppColors.neonBlue.withOpacity(0.5),
                       blurRadius: 12,
                       spreadRadius: 1,
                     ),
