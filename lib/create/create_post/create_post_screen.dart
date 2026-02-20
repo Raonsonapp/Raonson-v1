@@ -33,10 +33,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             onPressed: _controller.isUploading
                 ? null
                 : () async {
+                    final nav = Navigator.of(context);
                     await _controller.publishPost(
                       caption: _captionCtrl.text.trim(),
                     );
-                    if (mounted) Navigator.pop(context, true);
+                    if (mounted) nav.pop(true);
                   },
             child: _controller.isUploading
                 ? const SizedBox(
@@ -53,7 +54,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       ),
       body: Column(
         children: [
-          // MEDIA PREVIEW
           Expanded(
             child: ValueListenableBuilder<List<File>>(
               valueListenable: _controller.media,
@@ -74,20 +74,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
                 return PageView(
                   children: files
-                      .map(
-                        (f) => Image.file(
-                          f,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                        ),
-                      )
+                      .map((f) => Image.file(
+                            f,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ))
                       .toList(),
                 );
               },
             ),
           ),
-
-          // CAPTION
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
