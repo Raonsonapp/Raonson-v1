@@ -42,7 +42,7 @@ class AppTheme {
           fontFamily: 'RaonsonFont',
         ),
       ),
-      tabBarTheme: const TabBarThemeData(
+      tabBarTheme: const TabBarTheme(
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(color: AppColors.neonBlue, width: 2),
         ),
