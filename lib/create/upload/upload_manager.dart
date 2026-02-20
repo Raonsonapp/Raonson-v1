@@ -15,7 +15,7 @@ class UploadManager {
   }) async {
     final token = await TokenStorage.getAccessToken();
 
-    final uri = Uri.parse('${AppConfig.apibaseUrl}/stories');
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/stories');
 
     final request = http.MultipartRequest('POST', uri);
 
@@ -46,7 +46,7 @@ class UploadManager {
   }) async {
     final token = await TokenStorage.getAccessToken();
 
-    final uri = Uri.parse('${AppConfig.apibaseUrl}/posts');
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/posts');
 
     final request = http.MultipartRequest('POST', uri);
 
