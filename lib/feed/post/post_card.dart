@@ -42,7 +42,13 @@ class PostCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.more_horiz, color: Colors.white60, size: 20),
+              GestureDetector(
+                onTap: () => _showPostMenu(context),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.more_horiz, color: Colors.white60, size: 20),
+                ),
+              ),
             ],
           ),
         ),
@@ -97,6 +103,67 @@ class PostCard extends StatelessWidget {
         const SizedBox(height: 12),
         const Divider(color: Colors.white10, height: 1),
       ],
+    );
+  }
+}
+
+void _showPostMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            _MenuItem(
+              icon: Icons.not_interested,
+              label: 'Ба ман нишон надех',
+              color: Colors.white,
+              onTap: () => Navigator.pop(context),
+            ),
+            _MenuItem(
+              icon: Icons.flag_outlined,
+              label: 'Шикоят кардан',
+              color: Colors.redAccent,
+              onTap: () => Navigator.pop(context),
+            ),
+            _MenuItem(
+              icon: Icons.person_off_outlined,
+              label: 'Аз feed пинхон кун',
+              color: Colors.white,
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+class _MenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _MenuItem({required this.icon, required this.label,
+      required this.color, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: color, size: 22),
+      title: Text(label, style: TextStyle(color: color, fontSize: 15)),
+      onTap: onTap,
     );
   }
 }
