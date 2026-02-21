@@ -7,7 +7,7 @@ import '../widgets/verified_badge.dart';
 import 'profile_controller.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
-import '../app/app_routes.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -156,8 +156,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Expanded(
                         child: _ctrl.isOwnProfile
                             ? GestureDetector(
-                                onTap: () => Navigator.pushNamed(
-                                    context, AppRoutes.editProfile),
+                                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Edit Profile coming soon'))),
                                 child: Container(
                                   height: 36,
                                   decoration: BoxDecoration(
