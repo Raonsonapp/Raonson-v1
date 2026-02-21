@@ -4,6 +4,7 @@ import '../models/post_model.dart';
 import '../models/comment_model.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
+import 'timeline/feed_controller.dart';
 
 class FeedRepository {
   final ApiClient _api = ApiClient.instance;
@@ -14,9 +15,7 @@ class FeedRepository {
       query: {'limit': '$limit', 'page': '$page'},
     );
 
-    if (response.statusCode == 401) {
-      throw Exception('Unauthorized – please log in again');
-    }
+    if (response.statusCode == 401) throw UnauthorizedException();
     if (response.statusCode >= 400) {
       throw Exception('Server error ${response.statusCode}');
     }
@@ -58,10 +57,7 @@ class FeedRepository {
     return CommentModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  Future<void> likeComment({
-    required String postId,
-    required String commentId,
-  }) async {
+  Future<void> likeComment({required String postId, required String commentId}) async {
     await _api.postRequest('/posts/$postId/comments/$commentId/like');
   }
 }
