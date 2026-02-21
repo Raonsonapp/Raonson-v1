@@ -7,66 +7,45 @@ import '../models/message_model.dart';
 class ChatRepository {
   final ApiClient _api = ApiClient.instance;
 
-  // =========================
-  // 📥 GET CHAT LIST (INBOX)
-  // =========================
   Future<List<MessageModel>> getInboxChats() async {
-    final response = await _api.getRequest(
-      ApiEndpoints.chat,
-    );
+    final response = await _api.getRequest(ApiEndpoints.chat);
 
-    final List data = jsonDecode(response.body) as List;
-    return data.map((e) => MessageModel.fromJson(e)).toList();
+    if (response.statusCode == 401) throw Exception('Unauthorized');
+    if (response.statusCode >= 400) throw Exception('Server error ${response.statusCode}');
+
+    final body = jsonDecode(response.body);
+    final List data = body is List ? body : (body['chats'] ?? []);
+    return data.map((e) => MessageModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  // =========================
-  // 💬 GET MESSAGES WITH USER
-  // =========================
-  Future<List<MessageModel>> getMessagesWithUser(String userId) async {
-    final response = await _api.getRequest(
-      '${ApiEndpoints.chat}/$userId',
-    );
+  Future<List<MessageModel>> getMessagesWithUser(String chatId) async {
+    final response = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages');
 
-    final List data = jsonDecode(response.body) as List;
-    return data.map((e) => MessageModel.fromJson(e)).toList();
+    if (response.statusCode >= 400) throw Exception('Failed to load messages');
+
+    final body = jsonDecode(response.body);
+    final List data = body is Map ? (body['messages'] ?? []) : body as List;
+    return data.map((e) => MessageModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  // =========================
-  // ✉️ SEND MESSAGE
-  // =========================
   Future<MessageModel> sendMessage({
-    required String toUserId,
+    required String chatId,
+    required String receiverId,
     required String text,
   }) async {
     final response = await _api.postRequest(
-      ApiEndpoints.chat,
-      body: {
-        'to': toUserId,
-        'text': text,
-      },
+      '${ApiEndpoints.chat}/$chatId/messages',
+      body: {'receiverId': receiverId, 'text': text},
     );
-
-    final Map<String, dynamic> data =
-        jsonDecode(response.body) as Map<String, dynamic>;
-
-    return MessageModel.fromJson(data);
+    if (response.statusCode >= 400) throw Exception('Send failed');
+    return MessageModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  // =========================
-  // 👁️ MARK CHAT AS READ
-  // =========================
-  Future<void> markAsRead(String peerId) async {
-    await _api.postRequest(
-      '${ApiEndpoints.chat}/$peerId/read',
-    );
+  Future<void> markAsRead(String chatId) async {
+    await _api.postRequest('${ApiEndpoints.chat}/$chatId/read');
   }
 
-  // =========================
-  // 🧹 DELETE CHAT
-  // =========================
   Future<void> deleteChat(String peerId) async {
-    await _api.deleteRequest(
-      '${ApiEndpoints.chat}/$peerId',
-    );
+    await _api.deleteRequest('${ApiEndpoints.chat}/$peerId');
   }
 }
