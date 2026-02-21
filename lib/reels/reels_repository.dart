@@ -13,9 +13,13 @@ class ReelsRepository {
       ApiEndpoints.reels,
       query: {'page': '$page', 'limit': '$limit'},
     );
+
+    if (res.statusCode == 401) throw Exception('Unauthorized');
+    if (res.statusCode >= 400) throw Exception('Server error ${res.statusCode}');
+
     final body = jsonDecode(res.body);
     final List list = body is Map ? (body['reels'] ?? []) : body as List;
-    return list.map((e) => ReelModel.fromJson(e)).toList();
+    return list.map((e) => ReelModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> likeReel(String reelId) async {
