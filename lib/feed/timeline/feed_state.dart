@@ -19,11 +19,11 @@ class FeedState {
 
   factory FeedState.initial() {
     return const FeedState(
-      isLoading: false,
+      isLoading: true,   // starts loading immediately
       isRefreshing: false,
       hasError: false,
       posts: [],
-      hasMore: true,
+      hasMore: false,    // ← false то посе ки маълумот наояд
     );
   }
 
