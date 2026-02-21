@@ -7,6 +7,7 @@ import '../widgets/verified_badge.dart';
 import 'profile_controller.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
+import '../app/app_routes.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -153,39 +154,62 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Row(
                     children: [
                       Expanded(
-                        child: GestureDetector(
-                          onTap: _ctrl.toggleFollow,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            height: 36,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10),
-                              color: user.isFollowing
-                                  ? AppColors.surface
-                                  : AppColors.neonBlue,
-                              boxShadow: !user.isFollowing
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.neonBlue.withOpacity(0.4),
-                                        blurRadius: 10,
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                            child: Center(
-                              child: Text(
-                                user.isFollowing ? 'Following' : 'Follow',
-                                style: TextStyle(
-                                  color: user.isFollowing
-                                      ? Colors.white70
-                                      : Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                        child: _ctrl.isOwnProfile
+                            ? GestureDetector(
+                                onTap: () => Navigator.pushNamed(
+                                    context, AppRoutes.editProfile),
+                                child: Container(
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: AppColors.surface,
+                                    border: Border.all(
+                                        color: Colors.white24, width: 1),
+                                  ),
+                                  child: const Center(
+                                    child: Text('Edit Profile',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        )),
+                                  ),
+                                ),
+                              )
+                            : GestureDetector(
+                                onTap: _ctrl.toggleFollow,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: user.isFollowing
+                                        ? AppColors.surface
+                                        : AppColors.neonBlue,
+                                    boxShadow: !user.isFollowing
+                                        ? [
+                                            BoxShadow(
+                                              color: AppColors.neonBlue
+                                                  .withOpacity(0.4),
+                                              blurRadius: 10,
+                                            )
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      user.isFollowing ? 'Following' : 'Follow',
+                                      style: TextStyle(
+                                        color: user.isFollowing
+                                            ? Colors.white70
+                                            : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
                       ),
                       const SizedBox(width: 8),
                       Container(
