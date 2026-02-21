@@ -22,7 +22,8 @@ class FeedController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
-    // Try up to 3 times (Render cold start)
+    String lastError = '';
+
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         final posts = await _repository.fetchFeed(
@@ -37,25 +38,31 @@ class FeedController extends ChangeNotifier {
         notifyListeners();
         return;
       } on UnauthorizedException {
-        _state = _state.copyWith(isLoading: false, hasMore: false);
+        _state = _state.copyWith(
+          isLoading: false,
+          hasMore: false,
+          hasError: true,
+          errorMessage: 'Лутфан дубора ворид шавед (401)',
+        );
         notifyListeners();
         onUnauthorized?.call();
         return;
       } catch (e) {
-        if (attempt == 3) {
-          _state = _state.copyWith(
-            isLoading: false,
-            hasError: true,
-            hasMore: false,
-            errorMessage: e.toString(),
-          );
-          notifyListeners();
-        } else {
-          // Wait 5s before retry
+        lastError = e.toString();
+        if (attempt < 3) {
           await Future.delayed(const Duration(seconds: 5));
         }
       }
     }
+
+    _state = _state.copyWith(
+      isLoading: false,
+      hasError: true,
+      hasMore: false,
+      // Show REAL error for debugging
+      errorMessage: lastError,
+    );
+    notifyListeners();
   }
 
   Future<void> loadMore() async {
@@ -93,6 +100,7 @@ class FeedController extends ChangeNotifier {
         isRefreshing: false,
         hasError: true,
         hasMore: false,
+        errorMessage: e.toString(),
       );
     }
     notifyListeners();
