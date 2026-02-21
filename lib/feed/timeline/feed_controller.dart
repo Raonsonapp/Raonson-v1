@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../models/post_model.dart';
 import '../feed_repository.dart';
@@ -21,28 +22,40 @@ class FeedController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
-    try {
-      final posts = await _repository.fetchFeed(limit: _limit, page: _page);
-      _state = _state.copyWith(
-        isLoading: false,
-        posts: posts,
-        hasMore: posts.length == _limit,
-      );
-    } on UnauthorizedException {
-      _state = _state.copyWith(isLoading: false, hasMore: false);
-      notifyListeners();
-      onUnauthorized?.call();
-      return;
-    } catch (e) {
-      _state = _state.copyWith(
-        isLoading: false,
-        hasError: true,
-        hasMore: false,
-        errorMessage: e.toString(),
-      );
+    // Try up to 3 times (Render cold start)
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final posts = await _repository.fetchFeed(
+          limit: _limit,
+          page: _page,
+        );
+        _state = _state.copyWith(
+          isLoading: false,
+          posts: posts,
+          hasMore: posts.length == _limit,
+        );
+        notifyListeners();
+        return;
+      } on UnauthorizedException {
+        _state = _state.copyWith(isLoading: false, hasMore: false);
+        notifyListeners();
+        onUnauthorized?.call();
+        return;
+      } catch (e) {
+        if (attempt == 3) {
+          _state = _state.copyWith(
+            isLoading: false,
+            hasError: true,
+            hasMore: false,
+            errorMessage: e.toString(),
+          );
+          notifyListeners();
+        } else {
+          // Wait 5s before retry
+          await Future.delayed(const Duration(seconds: 5));
+        }
+      }
     }
-
-    notifyListeners();
   }
 
   Future<void> loadMore() async {
