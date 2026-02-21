@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
-import '../../core/api/api_endpoints.dart';
 
 class CommentInput extends StatefulWidget {
   final String postId;
