@@ -5,8 +5,7 @@ import 'feed_state.dart';
 
 class FeedController extends ChangeNotifier {
   final FeedRepository _repository;
-logout
-  // Callback for 401 Unauthorized → logout
+
   VoidCallback? onUnauthorized;
 
   FeedState _state = FeedState.initial();
