@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/app_state.dart';
 import '../feed_repository.dart';
 import 'feed_controller.dart';
 import 'feed_state.dart';
@@ -21,7 +22,15 @@ class FeedScreen extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => FeedController(FeedRepository())..loadInitialFeed(),
+          create: (ctx) {
+            final ctrl = FeedController(FeedRepository());
+            // Агар 401 → logout + login screen
+            ctrl.onUnauthorized = () {
+              ctx.read<AppState>().logout();
+            };
+            ctrl.loadInitialFeed();
+            return ctrl;
+          },
         ),
         ChangeNotifierProvider(
           create: (_) =>
@@ -72,15 +81,9 @@ class _FeedShellState extends State<_FeedShell> {
           icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
           onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
         ),
-        title: const Text(
-          'Raonson',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            fontFamily: 'RaonsonFont',
-          ),
-        ),
+        title: const Text('Raonson',
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
+                color: Colors.white, fontFamily: 'RaonsonFont')),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
@@ -103,90 +106,81 @@ class _FeedBody extends StatelessWidget {
     final storyCtrl = context.watch<StoryController>();
     final FeedState state = feedCtrl.state;
 
-    // ── Initial loading ──
+    // ── Loading ──
     if (state.isLoading && state.posts.isEmpty) {
-      return Column(
-        children: [
-          StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
-          const Divider(color: Colors.white10, height: 1),
-          const Expanded(child: Center(child: LoadingIndicator())),
-        ],
-      );
+      return Column(children: [
+        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+        const Divider(color: Colors.white10, height: 1),
+        const Expanded(child: Center(child: LoadingIndicator())),
+      ]);
     }
 
-    // ── Error state ──
+    // ── Error ──
     if (state.hasError && state.posts.isEmpty) {
-      return Column(
-        children: [
-          StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
-          const Divider(color: Colors.white10, height: 1),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.wifi_off, color: AppColors.grey, size: 52),
-                  const SizedBox(height: 12),
-                  const Text('Пайваст нашуд', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text('Интернет ва serverро тафтиш кунед', style: TextStyle(color: AppColors.grey)),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.neonBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => feedCtrl.loadInitialFeed(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Боз кӯшиш кун'),
-                  ),
-                ],
+      return Column(children: [
+        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+        const Divider(color: Colors.white10, height: 1),
+        Expanded(
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.wifi_off, color: AppColors.grey, size: 52),
+              const SizedBox(height: 12),
+              const Text('Пайваст нашуд',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('Интернет ва serverро тафтиш кунед',
+                  style: TextStyle(color: AppColors.grey)),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.neonBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: feedCtrl.loadInitialFeed,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Боз кӯшиш кун'),
               ),
-            ),
+            ]),
           ),
-        ],
-      );
+        ),
+      ]);
     }
 
-    // ── Empty state ──
+    // ── Empty ──
     if (!state.isLoading && state.posts.isEmpty) {
-      return Column(
-        children: [
-          StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
-          const Divider(color: Colors.white10, height: 1),
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.photo_library_outlined, color: AppColors.grey, size: 64),
-                  const SizedBox(height: 16),
-                  const Text('Постҳо нест', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text('Дӯстонро пайравӣ кунед ё пост гузоред', style: TextStyle(color: AppColors.grey)),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.neonBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
-                    label: const Text('Пост гузор'),
-                  ),
-                ],
+      return Column(children: [
+        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+        const Divider(color: Colors.white10, height: 1),
+        Expanded(
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.photo_library_outlined, color: AppColors.grey, size: 64),
+              const SizedBox(height: 16),
+              const Text('Постҳо нест',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('Аввал пост гузоред', style: TextStyle(color: AppColors.grey)),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.neonBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Пост гузор'),
               ),
-            ),
+            ]),
           ),
-        ],
-      );
+        ),
+      ]);
     }
 
-    // ── Feed list ──
+    // ── List ──
     return RefreshIndicator(
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
@@ -196,20 +190,13 @@ class _FeedBody extends StatelessWidget {
         itemCount: 1 + state.posts.length + (state.hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == 0) {
-            return Column(
-              children: [
-                StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
-                const Divider(color: Colors.white10, height: 1),
-              ],
-            );
+            return Column(children: [
+              StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+              const Divider(color: Colors.white10, height: 1),
+            ]);
           }
-
-          final postIndex = index - 1;
-
-          if (postIndex < state.posts.length) {
-            return PostCard(post: state.posts[postIndex]);
-          }
-
+          final i = index - 1;
+          if (i < state.posts.length) return PostCard(post: state.posts[i]);
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
             child: Center(child: LoadingIndicator()),
