@@ -6,16 +6,23 @@ import '../models/story_model.dart';
 
 class StoryRepository {
   final ApiClient _api;
-
   StoryRepository(this._api);
 
   Future<List<StoryModel>> fetchStories() async {
-    final res = await _api.get(ApiEndpoints.stories);
-    final List list = jsonDecode(res.body);
-    return list.map((e) => StoryModel.fromJson(e)).toList();
+    try {
+      final res = await _api.get(ApiEndpoints.stories);
+      if (res.statusCode >= 400) return [];
+      final body = jsonDecode(res.body);
+      final List list = body is List ? body : (body['stories'] ?? []);
+      return list.map((e) => StoryModel.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<void> markStoryViewed(String storyId) async {
-    await _api.post('${ApiEndpoints.stories}/$storyId/view');
+    try {
+      await _api.post('${ApiEndpoints.stories}/$storyId/view');
+    } catch (_) {}
   }
 }
