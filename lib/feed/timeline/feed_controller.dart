@@ -9,22 +9,18 @@ class FeedController extends ChangeNotifier {
   FeedState _state = FeedState.initial();
   FeedState get state => _state;
 
-  int _offset = 0;
+  int _page = 1;
   static const int _limit = 10;
 
   FeedController(this._repository);
 
   Future<void> loadInitialFeed() async {
-    _offset = 0;
-    _state = _state.copyWith(isLoading: true);
+    _page = 1;
+    _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
     try {
-      final posts = await _repository.fetchFeed(
-        limit: _limit,
-        offset: _offset,
-      );
-
+      final posts = await _repository.fetchFeed(limit: _limit, page: _page);
       _state = _state.copyWith(
         isLoading: false,
         posts: posts,
@@ -34,6 +30,7 @@ class FeedController extends ChangeNotifier {
       _state = _state.copyWith(
         isLoading: false,
         hasError: true,
+        hasMore: false, // ← МУШКИЛИ АСОСӢ: spinner абадӣ намемонад
         errorMessage: e.toString(),
       );
     }
@@ -48,35 +45,41 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _offset += _limit;
-      final posts = await _repository.fetchFeed(
-        limit: _limit,
-        offset: _offset,
-      );
-
+      _page++;
+      final posts = await _repository.fetchFeed(limit: _limit, page: _page);
       _state = _state.copyWith(
         isLoading: false,
         posts: List<PostModel>.from(_state.posts)..addAll(posts),
         hasMore: posts.length == _limit,
       );
     } catch (_) {
-      _state = _state.copyWith(isLoading: false);
+      _page--;
+      _state = _state.copyWith(isLoading: false, hasMore: false);
     }
 
     notifyListeners();
   }
 
   Future<void> refresh() async {
-    _offset = 0;
-    final posts = await _repository.fetchFeed(
-      limit: _limit,
-      offset: _offset,
-    );
+    _page = 1;
+    _state = _state.copyWith(isRefreshing: true, hasError: false);
+    notifyListeners();
 
-    _state = _state.copyWith(
-      posts: posts,
-      hasMore: posts.length == _limit,
-    );
+    try {
+      final posts = await _repository.fetchFeed(limit: _limit, page: _page);
+      _state = _state.copyWith(
+        isRefreshing: false,
+        posts: posts,
+        hasMore: posts.length == _limit,
+      );
+    } catch (e) {
+      _state = _state.copyWith(
+        isRefreshing: false,
+        hasError: true,
+        hasMore: false,
+      );
+    }
+
     notifyListeners();
   }
 }
