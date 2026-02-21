@@ -24,42 +24,68 @@ class _PostActionsState extends State<PostActions> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: Row(
         children: [
-          // Heart
-          IconButton(
-            onPressed: () => setState(() => _liked = !_liked),
-            icon: Icon(
-              _liked ? Icons.favorite : Icons.favorite_border,
-              color: _liked ? AppColors.red : Colors.white,
-              size: 26,
+          // ── Like (Heart outline → filled on tap) ──
+          _ActionBtn(
+            onTap: () => setState(() => _liked = !_liked),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _liked
+                  ? const Icon(Icons.favorite,
+                      key: ValueKey('liked'), color: Colors.red, size: 26)
+                  : const Icon(Icons.favorite_border,
+                      key: ValueKey('unliked'), color: Colors.white, size: 26),
             ),
           ),
-          // Comment
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.chat_bubble_outline,
-                color: Colors.white, size: 24),
+          const SizedBox(width: 4),
+          // ── Comment (speech bubble) ──
+          _ActionBtn(
+            onTap: () {},
+            child: const Icon(Icons.mode_comment_outlined,
+                color: Colors.white, size: 25),
           ),
-          // Share (send)
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.send_rounded,
-                color: Colors.white, size: 24),
+          const SizedBox(width: 4),
+          // ── Share (paper plane / direct) ──
+          _ActionBtn(
+            onTap: () {},
+            child: Transform.rotate(
+              angle: -0.4,
+              child: const Icon(Icons.send_outlined,
+                  color: Colors.white, size: 24),
+            ),
           ),
           const Spacer(),
-          // Bookmark
-          IconButton(
-            onPressed: () => setState(() => _saved = !_saved),
-            icon: Icon(
-              _saved ? Icons.bookmark : Icons.bookmark_border,
-              color: _saved ? AppColors.neonBlue : Colors.white,
-              size: 26,
+          // ── Bookmark ──
+          _ActionBtn(
+            onTap: () => setState(() => _saved = !_saved),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _saved
+                  ? const Icon(Icons.bookmark,
+                      key: ValueKey('saved'), color: Colors.white, size: 26)
+                  : const Icon(Icons.bookmark_border,
+                      key: ValueKey('unsaved'), color: Colors.white, size: 26),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _ActionBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  final Widget child;
+  const _ActionBtn({required this.onTap, required this.child});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: child,
+        ),
+      );
 }
