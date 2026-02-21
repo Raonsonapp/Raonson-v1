@@ -8,19 +8,22 @@ import '../core/api/api_endpoints.dart';
 class FeedRepository {
   final ApiClient _api = ApiClient.instance;
 
-  Future<List<PostModel>> fetchFeed({int limit = 20, int offset = 0}) async {
+  Future<List<PostModel>> fetchFeed({int limit = 20, int page = 1}) async {
     final response = await _api.getRequest(
       ApiEndpoints.posts,
-      query: {
-        'limit': '$limit',
-        'page': '${(offset ~/ limit) + 1}',
-      },
+      query: {'limit': '$limit', 'page': '$page'},
     );
 
+    if (response.statusCode == 401) {
+      throw Exception('Unauthorized – please log in again');
+    }
+    if (response.statusCode >= 400) {
+      throw Exception('Server error ${response.statusCode}');
+    }
+
     final body = jsonDecode(response.body);
-    // Backend returns {posts: [], page, limit} OR a plain list
     final List list = body is Map ? (body['posts'] ?? []) : body as List;
-    return list.map((e) => PostModel.fromJson(e)).toList();
+    return list.map((e) => PostModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> likePost(String postId) async {
@@ -37,9 +40,10 @@ class FeedRepository {
 
   Future<List<CommentModel>> fetchComments(String postId) async {
     final response = await _api.getRequest('/posts/$postId/comments');
+    if (response.statusCode >= 400) throw Exception('Failed to load comments');
     final body = jsonDecode(response.body);
     final List list = body is Map ? (body['comments'] ?? []) : body as List;
-    return list.map((e) => CommentModel.fromJson(e)).toList();
+    return list.map((e) => CommentModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<CommentModel> addComment({
@@ -50,8 +54,8 @@ class FeedRepository {
       '/posts/$postId/comments',
       body: {'text': text},
     );
-    return CommentModel.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>);
+    if (response.statusCode >= 400) throw Exception('Failed to add comment');
+    return CommentModel.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   Future<void> likeComment({
