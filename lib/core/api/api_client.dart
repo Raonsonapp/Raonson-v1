@@ -11,7 +11,6 @@ class ApiClient {
 
   String? _authToken;
 
-  // ================= AUTH =================
   void setAuthToken(String? token) {
     _authToken = token;
   }
@@ -20,88 +19,54 @@ class ApiClient {
     final headers = <String, String>{
       'Content-Type': 'application/json',
     };
-
     if (_authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';
     }
-
     return headers;
   }
 
   Uri _uri(String path, [Map<String, String>? query]) {
-  return Uri.parse('${AppConfig.apiBaseUrl}$path') // ✅ ИСЛОҲ
-      .replace(queryParameters: query);
+    return Uri.parse('${AppConfig.apibaseUrl}$path')
+        .replace(queryParameters: query);
   }
 
-  // ==================================================
-  // 🔹 CORE HTTP (НАВ)
-  // ==================================================
+  static const _timeout = Duration(seconds: 20);
 
-  Future<http.Response> get(
-    String path, {
-    Map<String, String>? query,
-  }) {
-    return _client.get(
-      _uri(path, query),
-      headers: _headers(),
-    );
+  Future<http.Response> get(String path, {Map<String, String>? query}) {
+    return _client
+        .get(_uri(path, query), headers: _headers())
+        .timeout(_timeout);
   }
 
-  Future<http.Response> post(
-    String path, {
-    Map<String, dynamic>? body,
-  }) {
-    return _client.post(
-      _uri(path),
-      headers: _headers(),
-      body: body != null ? jsonEncode(body) : null,
-    );
+  Future<http.Response> post(String path, {Map<String, dynamic>? body}) {
+    return _client
+        .post(_uri(path), headers: _headers(),
+            body: body != null ? jsonEncode(body) : null)
+        .timeout(_timeout);
   }
 
-  Future<http.Response> put(
-    String path, {
-    Map<String, dynamic>? body,
-  }) {
-    return _client.put(
-      _uri(path),
-      headers: _headers(),
-      body: body != null ? jsonEncode(body) : null,
-    );
+  Future<http.Response> put(String path, {Map<String, dynamic>? body}) {
+    return _client
+        .put(_uri(path), headers: _headers(),
+            body: body != null ? jsonEncode(body) : null)
+        .timeout(_timeout);
   }
 
   Future<http.Response> delete(String path) {
-    return _client.delete(
-      _uri(path),
-      headers: _headers(),
-    );
+    return _client
+        .delete(_uri(path), headers: _headers())
+        .timeout(_timeout);
   }
 
-  // ==================================================
-  // 🔹 BACKWARD COMPATIBILITY (КӮҲНА)
-  // ==================================================
-
-  Future<http.Response> getRequest(
-    String path, {
-    Map<String, String>? query,
-  }) {
-    return get(path, query: query);
-  }
-
-  Future<http.Response> postRequest(
-    String path, {
-    Map<String, dynamic>? body,
-  }) {
-    return post(path, body: body);
-  }
-
-  Future<http.Response> putRequest(
-    String path, {
-    Map<String, dynamic>? body,
-  }) {
-    return put(path, body: body);
-  }
-
-  Future<http.Response> deleteRequest(String path) {
-    return delete(path);
-  }
+  // Backward compatibility
+  Future<http.Response> getRequest(String path,
+          {Map<String, String>? query}) =>
+      get(path, query: query);
+  Future<http.Response> postRequest(String path,
+          {Map<String, dynamic>? body}) =>
+      post(path, body: body);
+  Future<http.Response> putRequest(String path,
+          {Map<String, dynamic>? body}) =>
+      put(path, body: body);
+  Future<http.Response> deleteRequest(String path) => delete(path);
 }
