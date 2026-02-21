@@ -65,34 +65,30 @@ class _FeedShellState extends State<_FeedShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _buildAppBar(context),
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
+        ),
+        title: const Text(
+          'Raonson',
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontFamily: 'RaonsonFont',
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+          ),
+        ],
+      ),
       body: _FeedBody(scroll: _scroll),
-    );
-  }
-
-  AppBar _buildAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: AppColors.bg,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
-        onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
-      ),
-      title: const Text(
-        'Raonson',
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          fontFamily: 'RaonsonFont',
-        ),
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
-          onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
-        ),
-      ],
     );
   }
 }
@@ -107,26 +103,102 @@ class _FeedBody extends StatelessWidget {
     final storyCtrl = context.watch<StoryController>();
     final FeedState state = feedCtrl.state;
 
+    // ── Initial loading ──
+    if (state.isLoading && state.posts.isEmpty) {
+      return Column(
+        children: [
+          StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+          const Divider(color: Colors.white10, height: 1),
+          const Expanded(child: Center(child: LoadingIndicator())),
+        ],
+      );
+    }
+
+    // ── Error state ──
+    if (state.hasError && state.posts.isEmpty) {
+      return Column(
+        children: [
+          StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+          const Divider(color: Colors.white10, height: 1),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.wifi_off, color: AppColors.grey, size: 52),
+                  const SizedBox(height: 12),
+                  const Text('Пайваст нашуд', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text('Интернет ва serverро тафтиш кунед', style: TextStyle(color: AppColors.grey)),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neonBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => feedCtrl.loadInitialFeed(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Боз кӯшиш кун'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // ── Empty state ──
+    if (!state.isLoading && state.posts.isEmpty) {
+      return Column(
+        children: [
+          StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+          const Divider(color: Colors.white10, height: 1),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.photo_library_outlined, color: AppColors.grey, size: 64),
+                  const SizedBox(height: 16),
+                  const Text('Постҳо нест', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text('Дӯстонро пайравӣ кунед ё пост гузоред', style: TextStyle(color: AppColors.grey)),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neonBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: const Text('Пост гузор'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // ── Feed list ──
     return RefreshIndicator(
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
       onRefresh: feedCtrl.refresh,
       child: ListView.builder(
         controller: scroll,
-        itemCount: 1 +
-            state.posts.length +
-            (state.hasMore ? 1 : 0),
+        itemCount: 1 + state.posts.length + (state.hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          // Item 0 = Story bar
           if (index == 0) {
             return Column(
               children: [
-                // Stories
-                StoryBar(
-                  stories: storyCtrl.stories,
-                  onTap: (_) {},
-                  onAddStory: () {},
-                ),
+                StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
                 const Divider(color: Colors.white10, height: 1),
               ],
             );
