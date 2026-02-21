@@ -24,7 +24,6 @@ class FeedScreen extends StatelessWidget {
         ChangeNotifierProvider(
           create: (ctx) {
             final ctrl = FeedController(FeedRepository());
-            // Агар 401 → logout + login screen
             ctrl.onUnauthorized = () {
               ctx.read<AppState>().logout();
             };
@@ -82,7 +81,8 @@ class _FeedShellState extends State<_FeedShell> {
           onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
         ),
         title: const Text('Raonson',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
+            style: TextStyle(
+                fontSize: 26, fontWeight: FontWeight.bold,
                 color: Colors.white, fontFamily: 'RaonsonFont')),
         actions: [
           IconButton(
@@ -106,16 +106,31 @@ class _FeedBody extends StatelessWidget {
     final storyCtrl = context.watch<StoryController>();
     final FeedState state = feedCtrl.state;
 
-    // ── Loading ──
+    // Loading
     if (state.isLoading && state.posts.isEmpty) {
       return Column(children: [
         StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
         const Divider(color: Colors.white10, height: 1),
-        const Expanded(child: Center(child: LoadingIndicator())),
+        const Expanded(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LoadingIndicator(),
+                SizedBox(height: 16),
+                Text('Server бедор мешавад...',
+                    style: TextStyle(color: AppColors.grey, fontSize: 13)),
+                SizedBox(height: 4),
+                Text('30-60 сония интизор шавед',
+                    style: TextStyle(color: AppColors.grey, fontSize: 12)),
+              ],
+            ),
+          ),
+        ),
       ]);
     }
 
-    // ── Error ──
+    // Error
     if (state.hasError && state.posts.isEmpty) {
       return Column(children: [
         StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
@@ -126,7 +141,8 @@ class _FeedBody extends StatelessWidget {
               const Icon(Icons.wifi_off, color: AppColors.grey, size: 52),
               const SizedBox(height: 12),
               const Text('Пайваст нашуд',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: Colors.white, fontSize: 18,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               const Text('Интернет ва serverро тафтиш кунед',
                   style: TextStyle(color: AppColors.grey)),
@@ -136,11 +152,12 @@ class _FeedBody extends StatelessWidget {
                   backgroundColor: AppColors.neonBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: feedCtrl.loadInitialFeed,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Боз кӯшиш кун'),
+                label: const Text('Боз кушиш кун'),
               ),
             ]),
           ),
@@ -148,7 +165,7 @@ class _FeedBody extends StatelessWidget {
       ]);
     }
 
-    // ── Empty ──
+    // Empty
     if (!state.isLoading && state.posts.isEmpty) {
       return Column(children: [
         StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
@@ -156,21 +173,26 @@ class _FeedBody extends StatelessWidget {
         Expanded(
           child: Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.photo_library_outlined, color: AppColors.grey, size: 64),
+              const Icon(Icons.photo_library_outlined,
+                  color: AppColors.grey, size: 64),
               const SizedBox(height: 16),
-              const Text('Постҳо нест',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('Постхо нест',
+                  style: TextStyle(color: Colors.white, fontSize: 20,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              const Text('Аввал пост гузоред', style: TextStyle(color: AppColors.grey)),
+              const Text('Аввал пост гузоред',
+                  style: TextStyle(color: AppColors.grey)),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.neonBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.create),
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 label: const Text('Пост гузор'),
               ),
@@ -180,7 +202,7 @@ class _FeedBody extends StatelessWidget {
       ]);
     }
 
-    // ── List ──
+    // List
     return RefreshIndicator(
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
@@ -191,7 +213,10 @@ class _FeedBody extends StatelessWidget {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Column(children: [
-              StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+              StoryBar(
+                  stories: storyCtrl.stories,
+                  onTap: (_) {},
+                  onAddStory: () {}),
               const Divider(color: Colors.white10, height: 1),
             ]);
           }
