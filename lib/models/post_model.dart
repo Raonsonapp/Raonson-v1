@@ -23,10 +23,9 @@ class PostModel {
     required this.createdAt,
   });
 
-  // ---------- COMPAT ----------
   bool get isLiked => liked;
   bool get isSaved => saved;
-  bool get isOwner => false; // backend дертар
+  bool get isOwner => false;
   List get comments => const [];
 
   String get mediaUrl =>
@@ -35,23 +34,28 @@ class PostModel {
       media.isNotEmpty ? media.first['type'] ?? 'image' : 'image';
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
+    // ✅ FIX: Cast each value to String explicitly
+    final rawMedia = (json['media'] ?? []) as List;
+    final media = rawMedia.map((m) {
+      final map = m as Map;
+      return <String, String>{
+        'url': (map['url'] ?? '').toString(),
+        'type': (map['type'] ?? 'image').toString(),
+      };
+    }).toList();
+
     return PostModel(
-      id: json['_id'],
-      user: UserModel.fromJson(json['user']),
-      caption: json['caption'] ?? '',
-      media: List<Map<String, String>>.from(
-        (json['media'] ?? []).map<Map<String, String>>(
-          (m) => {
-            'url': m['url'] ?? '',
-            'type': m['type'] ?? 'image',
-          },
-        ),
-      ),
-      likesCount: json['likesCount'] ?? 0,
+      id: (json['_id'] ?? '').toString(),
+      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
+      caption: (json['caption'] ?? '').toString(),
+      media: media,
+      // Backend has "likes" array, not "likesCount"
+      likesCount: json['likesCount'] ??
+          (json['likes'] is List ? (json['likes'] as List).length : 0),
       commentsCount: json['commentsCount'] ?? 0,
       liked: json['liked'] ?? false,
       saved: json['saved'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
 }
