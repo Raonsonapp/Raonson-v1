@@ -12,3 +12,11 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: MONGO_URI
+        sync: false        # ← Render dashboard-да дастӣ ворид кунед
+      - key: JWT_SECRET
+        sync: false        # ← Render dashboard-да дастӣ ворид кунед
+      - key: JWT_REFRESH_SECRET
+        sync: false        # ← Render dashboard-да дастӣ ворид кунед
+      - key: BASE_URL
+        value: https://raonson-v1.onrender.com
