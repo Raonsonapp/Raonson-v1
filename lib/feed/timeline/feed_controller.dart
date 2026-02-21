@@ -5,6 +5,9 @@ import 'feed_state.dart';
 
 class FeedController extends ChangeNotifier {
   final FeedRepository _repository;
+logout
+  // Callback for 401 Unauthorized → logout
+  VoidCallback? onUnauthorized;
 
   FeedState _state = FeedState.initial();
   FeedState get state => _state;
@@ -26,11 +29,16 @@ class FeedController extends ChangeNotifier {
         posts: posts,
         hasMore: posts.length == _limit,
       );
+    } on UnauthorizedException {
+      _state = _state.copyWith(isLoading: false, hasMore: false);
+      notifyListeners();
+      onUnauthorized?.call();
+      return;
     } catch (e) {
       _state = _state.copyWith(
         isLoading: false,
         hasError: true,
-        hasMore: false, // ← МУШКИЛИ АСОСӢ: spinner абадӣ намемонад
+        hasMore: false,
         errorMessage: e.toString(),
       );
     }
@@ -40,10 +48,8 @@ class FeedController extends ChangeNotifier {
 
   Future<void> loadMore() async {
     if (!_state.hasMore || _state.isLoading) return;
-
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
-
     try {
       _page++;
       final posts = await _repository.fetchFeed(limit: _limit, page: _page);
@@ -56,7 +62,6 @@ class FeedController extends ChangeNotifier {
       _page--;
       _state = _state.copyWith(isLoading: false, hasMore: false);
     }
-
     notifyListeners();
   }
 
@@ -64,7 +69,6 @@ class FeedController extends ChangeNotifier {
     _page = 1;
     _state = _state.copyWith(isRefreshing: true, hasError: false);
     notifyListeners();
-
     try {
       final posts = await _repository.fetchFeed(limit: _limit, page: _page);
       _state = _state.copyWith(
@@ -79,7 +83,8 @@ class FeedController extends ChangeNotifier {
         hasMore: false,
       );
     }
-
     notifyListeners();
   }
 }
+
+class UnauthorizedException implements Exception {}
