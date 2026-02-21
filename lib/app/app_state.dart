@@ -16,11 +16,26 @@ class AppState extends ChangeNotifier {
 
       if (token != null && token.isNotEmpty) {
         ApiClient.instance.setAuthToken(token);
-        _isAuthenticated = true;
+
+        // ✅ Токенро бо backend тафтиш кун
+        final res = await ApiClient.instance.get('/health').timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw Exception('timeout'),
+        );
+
+        if (res.statusCode == 200) {
+          _isAuthenticated = true;
+        } else {
+          // Токен нокор — тоза кун
+          await TokenStorage.clearTokens();
+          ApiClient.instance.setAuthToken(null);
+          _isAuthenticated = false;
+        }
       }
     } catch (_) {
-      _isAuthenticated = false;
-      ApiClient.instance.setAuthToken(null);
+      // Интернет нест — токен бошад ворид кун, набошад login
+      final token = await TokenStorage.getAccessToken();
+      _isAuthenticated = token != null && token.isNotEmpty;
     } finally {
       _isInitialized = true;
       notifyListeners();
