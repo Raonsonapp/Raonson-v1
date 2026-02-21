@@ -11,6 +11,8 @@ class ProfileController extends ChangeNotifier {
 
   ProfileController({required this.userId});
 
+  bool get isOwnProfile => userId == 'me';
+
   UserModel? profile;
   List<PostModel> posts = [];
   List<ReelModel> reels = [];
@@ -35,7 +37,7 @@ class ProfileController extends ChangeNotifier {
   }
 
   Future<void> toggleFollow() async {
-    if (profile == null) return;
+    if (profile == null || isOwnProfile) return;
     final was = profile!.isFollowing;
     profile = profile!.copyWith(isFollowing: !was);
     notifyListeners();
