@@ -20,32 +20,27 @@ class ApiClient {
   Uri _uri(String path, [Map<String, String>? q]) =>
       Uri.parse('${AppConfig.apiBaseUrl}$path').replace(queryParameters: q);
 
-  // 70 seconds - enough for Render free plan cold start (50s)
-  static const _t = Duration(seconds: 70);
+  static const _timeout = Duration(seconds: 90);
 
-  Future<http.Response> get(String p, {Map<String, String>? query}) =>
-      _client.get(_uri(p, query), headers: _headers()).timeout(_t);
+  Future<http.Response> get(String path, {Map<String, String>? query}) =>
+      _client.get(_uri(path, query), headers: _headers()).timeout(_timeout);
 
-  Future<http.Response> post(String p, {Map<String, dynamic>? body}) =>
-      _client
-          .post(_uri(p), headers: _headers(),
-              body: body != null ? jsonEncode(body) : null)
-          .timeout(_t);
+  Future<http.Response> post(String path, {Map<String, dynamic>? body}) =>
+      _client.post(_uri(path), headers: _headers(),
+          body: body != null ? jsonEncode(body) : null).timeout(_timeout);
 
-  Future<http.Response> put(String p, {Map<String, dynamic>? body}) =>
-      _client
-          .put(_uri(p), headers: _headers(),
-              body: body != null ? jsonEncode(body) : null)
-          .timeout(_t);
+  Future<http.Response> put(String path, {Map<String, dynamic>? body}) =>
+      _client.put(_uri(path), headers: _headers(),
+          body: body != null ? jsonEncode(body) : null).timeout(_timeout);
 
-  Future<http.Response> delete(String p) =>
-      _client.delete(_uri(p), headers: _headers()).timeout(_t);
+  Future<http.Response> delete(String path) =>
+      _client.delete(_uri(path), headers: _headers()).timeout(_timeout);
 
-  Future<http.Response> getRequest(String p, {Map<String, String>? query}) =>
-      get(p, query: query);
-  Future<http.Response> postRequest(String p, {Map<String, dynamic>? body}) =>
-      post(p, body: body);
-  Future<http.Response> putRequest(String p, {Map<String, dynamic>? body}) =>
-      put(p, body: body);
-  Future<http.Response> deleteRequest(String p) => delete(p);
+  Future<http.Response> getRequest(String path, {Map<String, String>? query}) =>
+      get(path, query: query);
+  Future<http.Response> postRequest(String path, {Map<String, dynamic>? body}) =>
+      post(path, body: body);
+  Future<http.Response> putRequest(String path, {Map<String, dynamic>? body}) =>
+      put(path, body: body);
+  Future<http.Response> deleteRequest(String path) => delete(path);
 }
