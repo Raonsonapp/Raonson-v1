@@ -6,32 +6,37 @@ import '../../app/app_config.dart';
 import '../../core/storage/token_storage.dart';
 
 class UploadManager {
-  Future<String?> _uploadFile(File file) async {
+  /// Step 1: Upload file to /upload -> returns URL
+  Future<String> _uploadFile(File file) async {
     final token = await TokenStorage.getAccessToken();
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
+
     final request = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
-    final res = await request.send();
-    final body = jsonDecode(await res.stream.bytesToString());
+    final streamed = await request.send();
+    final body = jsonDecode(await streamed.stream.bytesToString());
 
-    if (res.statusCode >= 400) throw Exception('Upload failed: ${body['error']}');
+    if (streamed.statusCode >= 400) {
+      throw Exception('Upload failed: ${body['error'] ?? streamed.statusCode}');
+    }
 
-    // url might be relative like /uploads/xxx.jpg - make it absolute
-    String url = body['url'] as String? ?? '';
+    String url = (body['url'] ?? '') as String;
     if (url.startsWith('/')) {
       url = '${AppConfig.apiBaseUrl}$url';
     }
     return url;
   }
 
-  String _mimeType(File file) {
+  String _mediaType(File file) {
     final ext = file.path.split('.').last.toLowerCase();
-    const videos = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
-    return videos.contains(ext) ? 'video' : 'image';
+    return ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext)
+        ? 'video'
+        : 'image';
   }
 
+  /// Upload post: file(s) -> /upload -> POST /posts JSON
   Future<void> uploadPost({
     required List<File> media,
     required String caption,
@@ -39,17 +44,17 @@ class UploadManager {
   }) async {
     final token = await TokenStorage.getAccessToken();
 
-    // Step 1: upload each file
+    // Upload each file and collect URLs
     final List<Map<String, String>> mediaList = [];
-    for (final file in media) {
-      final url = await _uploadFile(file);
-      if (url != null && url.isNotEmpty) {
-        mediaList.add({'url': url, 'type': _mimeType(file)});
-      }
+    for (int i = 0; i < media.length; i++) {
+      final url = await _uploadFile(media[i]);
+      mediaList.add({'url': url, 'type': _mediaType(media[i])});
+      onProgress?.call((i + 1) / media.length * 0.8);
     }
-    if (mediaList.isEmpty) throw Exception('No media uploaded');
 
-    // Step 2: create post with JSON
+    if (mediaList.isEmpty) throw Exception('Файл upload нашуд');
+
+    // Create post with JSON
     final res = await http.post(
       Uri.parse('${AppConfig.apiBaseUrl}/posts'),
       headers: {
@@ -58,11 +63,16 @@ class UploadManager {
       },
       body: jsonEncode({'caption': caption, 'media': mediaList}),
     );
+
+    onProgress?.call(1.0);
+
     if (res.statusCode >= 400) {
-      throw Exception('Post create failed: ${jsonDecode(res.body)['message']}');
+      final err = jsonDecode(res.body)['message'] ?? 'Post failed';
+      throw Exception(err);
     }
   }
 
+  /// Upload story: file -> /upload -> POST /stories JSON
   Future<void> uploadStory({
     required File file,
     String caption = '',
@@ -70,11 +80,9 @@ class UploadManager {
   }) async {
     final token = await TokenStorage.getAccessToken();
 
-    // Step 1: upload file
     final url = await _uploadFile(file);
-    if (url == null || url.isEmpty) throw Exception('Upload failed');
+    onProgress?.call(0.7);
 
-    // Step 2: create story with JSON
     final res = await http.post(
       Uri.parse('${AppConfig.apiBaseUrl}/stories'),
       headers: {
@@ -83,10 +91,15 @@ class UploadManager {
       },
       body: jsonEncode({
         'mediaUrl': url,
-        'mediaType': _mimeType(file),
+        'mediaType': _mediaType(file),
         'caption': caption,
       }),
     );
-    if (res.statusCode >= 400) throw Exception('Story create failed');
+
+    onProgress?.call(1.0);
+
+    if (res.statusCode >= 400) {
+      throw Exception('Story failed: ${jsonDecode(res.body)['message']}');
+    }
   }
 }
