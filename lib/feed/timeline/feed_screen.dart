@@ -106,7 +106,7 @@ class _FeedBody extends StatelessWidget {
     // Loading
     if (state.isLoading && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () => Navigator.pushNamed(context, '/create-story')),
         const Divider(color: Colors.white10, height: 1),
         const Expanded(
           child: Center(
@@ -127,7 +127,7 @@ class _FeedBody extends StatelessWidget {
     // Error — shows REAL error message for debugging
     if (state.hasError && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () => Navigator.pushNamed(context, '/create-story')),
         const Divider(color: Colors.white10, height: 1),
         Expanded(
           child: Center(
@@ -178,7 +178,7 @@ class _FeedBody extends StatelessWidget {
     // Empty
     if (!state.isLoading && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+        StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () => Navigator.pushNamed(context, '/create-story')),
         const Divider(color: Colors.white10, height: 1),
         Expanded(
           child: Center(
@@ -219,7 +219,7 @@ class _FeedBody extends StatelessWidget {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Column(children: [
-              StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () {}),
+              StoryBar(stories: storyCtrl.stories, onTap: (_) {}, onAddStory: () => Navigator.pushNamed(context, '/create-story')),
               const Divider(color: Colors.white10, height: 1),
             ]);
           }
