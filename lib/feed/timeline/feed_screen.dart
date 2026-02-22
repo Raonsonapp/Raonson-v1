@@ -76,7 +76,10 @@ class _FeedShellState extends State<_FeedShell> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
-          onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
+          onPressed: () async {
+                    await Navigator.pushNamed(context, AppRoutes.create);
+                    if (context.mounted) feedCtrl.refresh();
+                  },
         ),
         title: const Text('Raonson',
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
@@ -198,7 +201,10 @@ class _FeedBody extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: () => Navigator.pushNamed(context, AppRoutes.create),
+                onPressed: () async {
+                    await Navigator.pushNamed(context, AppRoutes.create);
+                    if (context.mounted) feedCtrl.refresh();
+                  },
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 label: const Text('Пост гузор'),
               ),
