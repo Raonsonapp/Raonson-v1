@@ -12,28 +12,44 @@ class CreatePostScreen extends StatefulWidget {
 }
 
 class _CreatePostScreenState extends State<CreatePostScreen> {
-  final _controller = CreatePostController();
+  final _ctrl = CreatePostController();
   final _captionCtrl = TextEditingController();
+  String? _errorMsg;
 
   @override
   void initState() {
     super.initState();
-    // Auto-open gallery when screen opens
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pickMedia());
+    // Auto-open gallery
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pick());
   }
 
-  Future<void> _pickMedia() async {
-    final picked = await MediaPicker.pick();
-    if (picked != null && mounted) {
-      _controller.addMedia(picked);
+  Future<void> _pick() async {
+    final file = await MediaPicker.pick();
+    if (file != null && mounted) {
+      _ctrl.addMedia(file);
       setState(() {});
+    }
+  }
+
+  Future<void> _publish() async {
+    if (_ctrl.media.value.isEmpty) {
+      await _pick();
+      return;
+    }
+    setState(() => _errorMsg = null);
+    final nav = Navigator.of(context);
+    try {
+      await _ctrl.publishPost(caption: _captionCtrl.text.trim());
+      if (mounted) nav.pop(true);
+    } catch (e) {
+      setState(() => _errorMsg = e.toString().replaceAll('Exception: ', ''));
     }
   }
 
   @override
   void dispose() {
     _captionCtrl.dispose();
-    _controller.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
@@ -51,105 +67,98 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           TextButton(
-            onPressed: _controller.isUploading
-                ? null
-                : () async {
-                    if (_controller.media.value.isEmpty) {
-                      await _pickMedia();
-                      return;
-                    }
-                    final nav = Navigator.of(context);
-                    await _controller.publishPost(
-                        caption: _captionCtrl.text.trim());
-                    if (mounted) nav.pop(true);
-                  },
-            child: _controller.isUploading
+            onPressed: _ctrl.isUploading ? null : _publish,
+            child: _ctrl.isUploading
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2,
-                        color: Color(0xFF0095F6)),
-                  )
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Color(0xFF0095F6)))
                 : const Text('Share',
                     style: TextStyle(
-                        color: Color(0xFF0095F6), fontWeight: FontWeight.bold,
+                        color: Color(0xFF0095F6),
+                        fontWeight: FontWeight.bold,
                         fontSize: 16)),
           ),
         ],
       ),
       body: ValueListenableBuilder<List<File>>(
-        valueListenable: _controller.media,
-        builder: (_, files, __) {
-          return Column(
-            children: [
-              // Media preview
-              Expanded(
-                child: files.isEmpty
-                    ? GestureDetector(
-                        onTap: _pickMedia,
-                        child: Container(
-                          color: const Color(0xFF111111),
-                          child: const Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined,
-                                    size: 64, color: Colors.white54),
-                                SizedBox(height: 12),
-                                Text('Расм ё видео интихоб кунед',
-                                    style: TextStyle(color: Colors.white54)),
-                              ],
+        valueListenable: _ctrl.media,
+        builder: (_, files, __) => Column(
+          children: [
+            if (_errorMsg != null)
+              Container(
+                width: double.infinity,
+                color: Colors.red.withOpacity(0.2),
+                padding: const EdgeInsets.all(12),
+                child: Text(_errorMsg!,
+                    style: const TextStyle(color: Colors.redAccent)),
+              ),
+            Expanded(
+              child: files.isEmpty
+                  ? GestureDetector(
+                      onTap: _pick,
+                      child: Container(
+                        color: const Color(0xFF111111),
+                        child: const Center(
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.add_photo_alternate_outlined,
+                                size: 72, color: Colors.white38),
+                            SizedBox(height: 12),
+                            Text('Расм ё видео интихоб кунед',
+                                style: TextStyle(color: Colors.white54, fontSize: 16)),
+                            SizedBox(height: 8),
+                            Text('Зер кунед',
+                                style: TextStyle(color: Colors.white30)),
+                          ]),
+                        ),
+                      ),
+                    )
+                  : Stack(children: [
+                      PageView(
+                        children: files
+                            .map((f) => Image.file(f,
+                                fit: BoxFit.cover,
+                                width: double.infinity))
+                            .toList(),
+                      ),
+                      Positioned(
+                        bottom: 12, right: 12,
+                        child: GestureDetector(
+                          onTap: _pick,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(20),
                             ),
+                            child: const Row(children: [
+                              Icon(Icons.add, color: Colors.white, size: 18),
+                              SizedBox(width: 4),
+                              Text(' Илова',
+                                  style: TextStyle(color: Colors.white)),
+                            ]),
                           ),
                         ),
-                      )
-                    : Stack(
-                        children: [
-                          PageView(
-                            children: files
-                                .map((f) => Image.file(f,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity))
-                                .toList(),
-                          ),
-                          // Add more button
-                          Positioned(
-                            bottom: 12,
-                            right: 12,
-                            child: GestureDetector(
-                              onTap: _pickMedia,
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(Icons.add_photo_alternate,
-                                    color: Colors.white, size: 24),
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
-              ),
-              // Caption
-              Container(
-                color: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: TextField(
-                  controller: _captionCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'Write a caption...',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    border: InputBorder.none,
-                  ),
+                    ]),
+            ),
+            Container(
+              color: const Color(0xFF111111),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: TextField(
+                controller: _captionCtrl,
+                style: const TextStyle(color: Colors.white),
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Тавсиф нависед...',
+                  hintStyle: TextStyle(color: Colors.white38),
+                  border: InputBorder.none,
                 ),
               ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
