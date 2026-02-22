@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 import { errorHandler } from "./core/errorHandler.js";
 import { rateLimitMiddleware } from "./middleware/rateLimit.middleware.js";
@@ -26,12 +29,19 @@ import { authMiddleware } from "./middleware/auth.middleware.js";
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 
 // ================= CORE MIDDLEWARE =================
 app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ================= STATIC FILES =================
+// Serve uploaded files (fallback when Cloudinary not configured)
+app.use("/uploads", express.static(join(__dirname, "../../uploads")));
 
 // ================= HEALTH =================
 app.get("/", (req, res) => {
@@ -51,13 +61,10 @@ app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/profile", profileRoutes);
 app.use("/posts", rateLimitMiddleware(), postRoutes);
-app.use("/comments", commentRoutes);           // backup route
+app.use("/comments", commentRoutes);
 app.use("/likes", rateLimitMiddleware(), likeRoutes);
 app.use("/follow", rateLimitMiddleware(), followRoutes);
-
-// ✅ /unfollow/:id → lib мефиристад (POST /unfollow/$userId)
 app.post("/unfollow/:id", authMiddleware, unfollowUser);
-
 app.use("/reels", reelRoutes);
 app.use("/stories", storyRoutes);
 app.use("/chat", chatRoutes);
