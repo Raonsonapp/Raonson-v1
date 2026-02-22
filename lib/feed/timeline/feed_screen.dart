@@ -77,8 +77,10 @@ class _FeedShellState extends State<_FeedShell> {
         leading: IconButton(
           icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
           onPressed: () async {
-                    await Navigator.pushNamed(context, AppRoutes.create);
-                    if (context.mounted) feedCtrl.refresh();
+                    final refreshed = await Navigator.pushNamed(context, AppRoutes.create);
+                    if (refreshed == true && context.mounted) {
+                      context.read<FeedController>().refresh();
+                    }
                   },
         ),
         title: const Text('Raonson',
@@ -202,8 +204,10 @@ class _FeedBody extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () async {
-                    await Navigator.pushNamed(context, AppRoutes.create);
-                    if (context.mounted) feedCtrl.refresh();
+                    final refreshed = await Navigator.pushNamed(context, AppRoutes.create);
+                    if (refreshed == true && context.mounted) {
+                      context.read<FeedController>().refresh();
+                    }
                   },
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 label: const Text('Пост гузор'),
@@ -218,7 +222,7 @@ class _FeedBody extends StatelessWidget {
     return RefreshIndicator(
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
-      onRefresh: feedCtrl.refresh,
+      onRefresh: () => context.read<FeedController>().refresh(),
       child: ListView.builder(
         controller: scroll,
         itemCount: 1 + state.posts.length + (state.hasMore ? 1 : 0),
