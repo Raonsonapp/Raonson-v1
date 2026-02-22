@@ -8,6 +8,7 @@ import '../chat/inbox/chat_list_screen.dart';
 import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../create/create_post/create_post_screen.dart';
+import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
 
 // AUTH SCREENS
@@ -55,6 +56,12 @@ class AppController {
       // ================= ACTIONS =================
       case AppRoutes.create:
         return _page(const CreatePostScreen());
+
+      case '/create-story':
+        return _page(const CreateStoryScreen());
+
+      case '/edit-profile':
+        return _page(const ProfileScreen(userId: 'me'));
 
       case AppRoutes.notifications:
         return _page(const NotificationsScreen());
