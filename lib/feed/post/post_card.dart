@@ -4,99 +4,204 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/post_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
-import 'post_actions.dart';
+import '../../core/api/api_client.dart';
 import '../../app/app_theme.dart';
 
-class PostCard extends StatelessWidget {
+class PostCard extends StatefulWidget {
   final PostModel post;
-
   const PostCard({super.key, required this.post});
 
   @override
+  State<PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<PostCard> {
+  late bool _liked;
+  late bool _saved;
+  late int _likeCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _liked = widget.post.isLiked;
+    _saved = widget.post.isSaved;
+    _likeCount = widget.post.likesCount;
+  }
+
+  Future<void> _toggleLike() async {
+    final was = _liked;
+    setState(() {
+      _liked = !was;
+      _likeCount += _liked ? 1 : -1;
+    });
+    try {
+      await ApiClient.instance.post('/posts/${widget.post.id}/like');
+    } catch (_) {
+      setState(() {
+        _liked = was;
+        _likeCount += was ? 1 : -1;
+      });
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    final was = _saved;
+    setState(() => _saved = !was);
+    try {
+      await ApiClient.instance.post('/posts/${widget.post.id}/save');
+    } catch (_) {
+      setState(() => _saved = was);
+    }
+  }
+
+  void _showOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.not_interested, color: Colors.white),
+            title: const Text('Ба ман нишон надех',
+                style: TextStyle(color: Colors.white)),
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined, color: Colors.redAccent),
+            title: const Text('Шикоят кардан',
+                style: TextStyle(color: Colors.redAccent)),
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_off_outlined, color: Colors.white70),
+            title: const Text('Аз лента пинхон кун',
+                style: TextStyle(color: Colors.white70)),
+            onTap: () => Navigator.pop(context),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final post = widget.post;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── HEADER ──
+        // HEADER
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Avatar(imageUrl: post.user.avatar, size: 36, glowBorder: false),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      post.user.username,
-                      style: const TextStyle(
+          child: Row(children: [
+            Avatar(imageUrl: post.user.avatar, size: 36, glowBorder: false),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Row(children: [
+                Text(post.user.username,
+                    style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: Colors.white,
-                      ),
-                    ),
-                    if (post.user.verified) ...[
-                      const SizedBox(width: 4),
-                      const VerifiedBadge(size: 14),
-                    ],
-                  ],
-                ),
+                        fontSize: 13, color: Colors.white)),
+                if (post.user.verified) ...[
+                  const SizedBox(width: 4),
+                  const VerifiedBadge(size: 14),
+                ],
+              ]),
+            ),
+            GestureDetector(
+              onTap: _showOptions,
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.more_horiz, color: Colors.white60, size: 20),
               ),
-              GestureDetector(
-                onTap: () => _showPostMenu(context),
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.more_horiz, color: Colors.white60, size: 20),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ]),
         ),
 
-        // ── MEDIA ──
-        if (post.media.isNotEmpty)
-          _PostMediaCarousel(media: post.media),
+        // MEDIA
+        if (post.media.isNotEmpty) _MediaCarousel(media: post.media),
 
-        // ── ACTIONS ──
-        PostActions(post: post),
+        // ACTIONS
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
+          child: Row(children: [
+            // Like
+            _Btn(
+              onTap: _toggleLike,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: _liked
+                    ? const Icon(Icons.favorite,
+                        key: ValueKey(true), color: Colors.red, size: 26)
+                    : const Icon(Icons.favorite_border,
+                        key: ValueKey(false), color: Colors.white, size: 26),
+              ),
+            ),
+            // Comment
+            _Btn(
+              onTap: () {},
+              child: const Icon(Icons.mode_comment_outlined,
+                  color: Colors.white, size: 24),
+            ),
+            // Share
+            _Btn(
+              onTap: () {},
+              child: Transform.rotate(
+                angle: -0.4,
+                child: const Icon(Icons.send_outlined,
+                    color: Colors.white, size: 23),
+              ),
+            ),
+            const Spacer(),
+            // Bookmark
+            _Btn(
+              onTap: _toggleSave,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: _saved
+                    ? const Icon(Icons.bookmark,
+                        key: ValueKey(true), color: Colors.white, size: 26)
+                    : const Icon(Icons.bookmark_border,
+                        key: ValueKey(false), color: Colors.white, size: 26),
+              ),
+            ),
+          ]),
+        ),
 
-        // ── LIKES ──
+        // LIKES COUNT
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text(
-            '${post.likesCount} likes',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: Colors.white,
-            ),
-          ),
+          child: Text('$_likeCount likes',
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13, color: Colors.white)),
         ),
 
-        // ── CAPTION ──
+        // CAPTION
         if (post.caption.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 4, 14, 2),
             child: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
+              text: TextSpan(children: [
+                TextSpan(
                     text: '${post.user.username} ',
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 13,
-                    ),
-                  ),
-                  TextSpan(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white, fontSize: 13)),
+                TextSpan(
                     text: post.caption,
                     style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
+                        color: Colors.white70, fontSize: 13)),
+              ]),
             ),
           ),
 
@@ -107,82 +212,29 @@ class PostCard extends StatelessWidget {
   }
 }
 
-void _showPostMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            _MenuItem(
-              icon: Icons.not_interested,
-              label: 'Ба ман нишон надех',
-              color: Colors.white,
-              onTap: () => Navigator.pop(context),
-            ),
-            _MenuItem(
-              icon: Icons.flag_outlined,
-              label: 'Шикоят кардан',
-              color: Colors.redAccent,
-              onTap: () => Navigator.pop(context),
-            ),
-            _MenuItem(
-              icon: Icons.person_off_outlined,
-              label: 'Аз feed пинхон кун',
-              color: Colors.white,
-              onTap: () => Navigator.pop(context),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-class _MenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
+class _Btn extends StatelessWidget {
   final VoidCallback onTap;
-  const _MenuItem({required this.icon, required this.label,
-      required this.color, required this.onTap});
+  final Widget child;
+  const _Btn({required this.onTap, required this.child});
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: color, size: 22),
-      title: Text(label, style: TextStyle(color: color, fontSize: 15)),
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
-    );
-  }
+      child: Padding(padding: const EdgeInsets.all(6), child: child));
 }
 
-class _PostMediaCarousel extends StatefulWidget {
+class _MediaCarousel extends StatefulWidget {
   final List<Map<String, String>> media;
-  const _PostMediaCarousel({required this.media});
-
+  const _MediaCarousel({required this.media});
   @override
-  State<_PostMediaCarousel> createState() => _PostMediaCarouselState();
+  State<_MediaCarousel> createState() => _MediaCarouselState();
 }
 
-class _PostMediaCarouselState extends State<_PostMediaCarousel> {
+class _MediaCarouselState extends State<_MediaCarousel> {
   int _current = 0;
 
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-
     return Stack(
       alignment: Alignment.bottomCenter,
       children: [
@@ -198,8 +250,7 @@ class _PostMediaCarouselState extends State<_PostMediaCarousel> {
                   : CachedNetworkImage(
                       imageUrl: url,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) =>
-                          Container(color: AppColors.card),
+                      placeholder: (_, __) => Container(color: AppColors.card),
                       errorWidget: (_, __, ___) =>
                           Container(color: AppColors.card),
                     );
