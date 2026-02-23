@@ -2,6 +2,15 @@ import { Post } from "../models/post.model.js";
 import { User } from "../models/user.model.js";
 import { Comment } from "../models/comment.model.js";
 
+// Helper: format post with isLiked/isSaved for current user
+function formatPost(post, userId) {
+  const p = post.toObject();
+  p.likesCount = p.likes?.length ?? 0;
+  p.liked = userId ? p.likes?.some(id => id.toString() === userId.toString()) : false;
+  p.saved = userId ? p.saves?.some(id => id.toString() === userId.toString()) : false;
+  return p;
+}
+
 // CREATE POST
 export async function createPost(req, res) {
   try {
@@ -19,14 +28,15 @@ export async function createPost(req, res) {
 
     await User.findByIdAndUpdate(req.user._id, { $inc: { postsCount: 1 } });
 
-    res.status(201).json(post);
+    const populated = await post.populate("user", "username avatar verified");
+    res.status(201).json(formatPost(populated, req.user._id));
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Create post failed" });
   }
 }
 
-// GET FEED (with pagination)
+// GET FEED - with isLiked/isSaved per user
 export async function getFeed(req, res) {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -39,7 +49,10 @@ export async function getFeed(req, res) {
       .skip(skip)
       .limit(limit);
 
-    res.json({ posts, page, limit });
+    const userId = req.user._id;
+    const formatted = posts.map(p => formatPost(p, userId));
+
+    res.json({ posts: formatted, page, limit });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Get feed failed" });
@@ -54,7 +67,7 @@ export async function getPost(req, res) {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    res.json(post);
+    res.json(formatPost(post, req.user._id));
   } catch (e) {
     res.status(500).json({ message: "Get post failed" });
   }
@@ -71,7 +84,6 @@ export async function deletePost(req, res) {
 
     res.json({ deleted: true });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ message: "Delete post failed" });
   }
 }
@@ -82,14 +94,20 @@ export async function toggleLike(req, res) {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const liked = post.likes.includes(req.user._id);
+    const liked = post.likes.some(id => id.toString() === req.user._id.toString());
 
-    await Post.findByIdAndUpdate(
+    const updated = await Post.findByIdAndUpdate(
       req.params.id,
-      liked ? { $pull: { likes: req.user._id } } : { $addToSet: { likes: req.user._id } }
+      liked
+        ? { $pull: { likes: req.user._id } }
+        : { $addToSet: { likes: req.user._id } },
+      { new: true }
     );
 
-    res.json({ liked: !liked });
+    res.json({
+      liked: !liked,
+      likesCount: updated.likes.length,
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Toggle like failed" });
@@ -102,16 +120,17 @@ export async function toggleSave(req, res) {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    const saved = post.saves.includes(req.user._id);
+    const saved = post.saves?.some(id => id.toString() === req.user._id.toString());
 
     await Post.findByIdAndUpdate(
       req.params.id,
-      saved ? { $pull: { saves: req.user._id } } : { $addToSet: { saves: req.user._id } }
+      saved
+        ? { $pull: { saves: req.user._id } }
+        : { $addToSet: { saves: req.user._id } }
     );
 
     res.json({ saved: !saved });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ message: "Toggle save failed" });
   }
-}
+      }
