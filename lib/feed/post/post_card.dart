@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -19,6 +20,7 @@ class _PostCardState extends State<PostCard> {
   late bool _liked;
   late bool _saved;
   late int _likeCount;
+  bool _likeLoading = false;
 
   @override
   void initState() {
@@ -29,26 +31,39 @@ class _PostCardState extends State<PostCard> {
   }
 
   Future<void> _toggleLike() async {
-    final was = _liked;
+    if (_likeLoading) return;
+    _likeLoading = true;
+    // Optimistic update
+    final wasLiked = _liked;
     setState(() {
-      _liked = !was;
+      _liked = !wasLiked;
       _likeCount += _liked ? 1 : -1;
     });
     try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/like');
+      final res = await ApiClient.instance.post('/posts/${widget.post.id}/like');
+      if (res.statusCode < 400) {
+        final body = jsonDecode(res.body);
+        // Use server's actual count
+        setState(() {
+          _liked = body['liked'] ?? _liked;
+          _likeCount = body['likesCount'] ?? _likeCount;
+        });
+      } else {
+        // Revert
+        setState(() { _liked = wasLiked; _likeCount += wasLiked ? 1 : -1; });
+      }
     } catch (_) {
-      setState(() {
-        _liked = was;
-        _likeCount += was ? 1 : -1;
-      });
+      setState(() { _liked = wasLiked; _likeCount += wasLiked ? 1 : -1; });
     }
+    _likeLoading = false;
   }
 
   Future<void> _toggleSave() async {
     final was = _saved;
     setState(() => _saved = !was);
     try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/save');
+      final res = await ApiClient.instance.post('/posts/${widget.post.id}/save');
+      if (res.statusCode >= 400) setState(() => _saved = was);
     } catch (_) {
       setState(() => _saved = was);
     }
@@ -62,13 +77,10 @@ class _PostCardState extends State<PostCard> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
+          Container(margin: const EdgeInsets.symmetric(vertical: 8),
             width: 36, height: 4,
-            decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2)),
-          ),
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2))),
           ListTile(
             leading: const Icon(Icons.not_interested, color: Colors.white),
             title: const Text('Ба ман нишон надех',
@@ -105,24 +117,18 @@ class _PostCardState extends State<PostCard> {
           child: Row(children: [
             Avatar(imageUrl: post.user.avatar, size: 36, glowBorder: false),
             const SizedBox(width: 10),
-            Expanded(
-              child: Row(children: [
-                Text(post.user.username,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13, color: Colors.white)),
-                if (post.user.verified) ...[
-                  const SizedBox(width: 4),
-                  const VerifiedBadge(size: 14),
-                ],
-              ]),
-            ),
+            Expanded(child: Row(children: [
+              Text(post.user.username, style: const TextStyle(
+                  fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white)),
+              if (post.user.verified) ...[
+                const SizedBox(width: 4),
+                const VerifiedBadge(size: 14),
+              ],
+            ])),
             GestureDetector(
               onTap: _showOptions,
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.more_horiz, color: Colors.white60, size: 20),
-              ),
+              child: const Padding(padding: EdgeInsets.all(4),
+                child: Icon(Icons.more_horiz, color: Colors.white60, size: 20)),
             ),
           ]),
         ),
@@ -134,75 +140,48 @@ class _PostCardState extends State<PostCard> {
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
           child: Row(children: [
-            // Like
-            _Btn(
-              onTap: _toggleLike,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: _liked
-                    ? const Icon(Icons.favorite,
-                        key: ValueKey(true), color: Colors.red, size: 26)
-                    : const Icon(Icons.favorite_border,
-                        key: ValueKey(false), color: Colors.white, size: 26),
-              ),
-            ),
-            // Comment
-            _Btn(
-              onTap: () {},
-              child: const Icon(Icons.mode_comment_outlined,
-                  color: Colors.white, size: 24),
-            ),
-            // Share
-            _Btn(
-              onTap: () {},
-              child: Transform.rotate(
-                angle: -0.4,
-                child: const Icon(Icons.send_outlined,
-                    color: Colors.white, size: 23),
-              ),
-            ),
+            _Btn(onTap: _toggleLike, child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: _liked
+                  ? const Icon(Icons.favorite, key: ValueKey(true),
+                      color: Colors.red, size: 26)
+                  : const Icon(Icons.favorite_border, key: ValueKey(false),
+                      color: Colors.white, size: 26),
+            )),
+            _Btn(onTap: () {}, child: const Icon(
+                Icons.mode_comment_outlined, color: Colors.white, size: 24)),
+            _Btn(onTap: () {}, child: Transform.rotate(angle: -0.4,
+              child: const Icon(Icons.send_outlined, color: Colors.white, size: 23))),
             const Spacer(),
-            // Bookmark
-            _Btn(
-              onTap: _toggleSave,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: _saved
-                    ? const Icon(Icons.bookmark,
-                        key: ValueKey(true), color: Colors.white, size: 26)
-                    : const Icon(Icons.bookmark_border,
-                        key: ValueKey(false), color: Colors.white, size: 26),
-              ),
-            ),
+            _Btn(onTap: _toggleSave, child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: _saved
+                  ? const Icon(Icons.bookmark, key: ValueKey(true),
+                      color: Colors.white, size: 26)
+                  : const Icon(Icons.bookmark_border, key: ValueKey(false),
+                      color: Colors.white, size: 26),
+            )),
           ]),
         ),
 
         // LIKES COUNT
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text('$_likeCount likes',
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13, color: Colors.white)),
+          child: Text('$_likeCount likes', style: const TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
         ),
 
         // CAPTION
         if (post.caption.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 4, 14, 2),
-            child: RichText(
-              text: TextSpan(children: [
-                TextSpan(
-                    text: '${post.user.username} ',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white, fontSize: 13)),
-                TextSpan(
-                    text: post.caption,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 13)),
-              ]),
-            ),
+            child: RichText(text: TextSpan(children: [
+              TextSpan(text: '${post.user.username} ',
+                  style: const TextStyle(fontWeight: FontWeight.bold,
+                      color: Colors.white, fontSize: 13)),
+              TextSpan(text: post.caption,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            ])),
           ),
 
         const SizedBox(height: 12),
@@ -235,51 +214,56 @@ class _MediaCarouselState extends State<_MediaCarousel> {
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      children: [
-        SizedBox(
-          height: w,
-          child: PageView.builder(
-            onPageChanged: (i) => setState(() => _current = i),
-            itemCount: widget.media.length,
-            itemBuilder: (_, i) {
-              final url = widget.media[i]['url'] ?? '';
-              return url.isEmpty
-                  ? Container(color: AppColors.card)
-                  : CachedNetworkImage(
-                      imageUrl: url,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: AppColors.card),
-                      errorWidget: (_, __, ___) =>
-                          Container(color: AppColors.card),
-                    );
-            },
+    return Stack(alignment: Alignment.bottomCenter, children: [
+      SizedBox(
+        height: w,
+        child: PageView.builder(
+          onPageChanged: (i) => setState(() => _current = i),
+          itemCount: widget.media.length,
+          itemBuilder: (_, i) {
+            final url = widget.media[i]['url'] ?? '';
+            if (url.isEmpty) return Container(color: AppColors.card);
+            return CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              placeholder: (_, __) => Container(
+                color: AppColors.card,
+                child: const Center(child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white30))),
+              errorWidget: (_, url, err) => Container(
+                color: AppColors.card,
+                child: Column(mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.broken_image_outlined,
+                        color: Colors.white30, size: 48),
+                    const SizedBox(height: 8),
+                    Text(url.length > 40 ? url.substring(0, 40) : url,
+                        style: const TextStyle(color: Colors.white24, fontSize: 10),
+                        textAlign: TextAlign.center),
+                  ]),
+              ),
+            );
+          },
+        ),
+      ),
+      if (widget.media.length > 1)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.media.length, (i) =>
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: _current == i ? 18 : 6, height: 6,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: _current == i ? AppColors.neonBlue : Colors.white38,
+                ),
+              )),
           ),
         ),
-        if (widget.media.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                widget.media.length,
-                (i) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: _current == i ? 18 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(3),
-                    color: _current == i
-                        ? AppColors.neonBlue
-                        : Colors.white38,
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+    ]);
   }
 }
