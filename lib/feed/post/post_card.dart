@@ -6,6 +6,7 @@ import '../../models/post_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
+import '../comments/comments_screen.dart';
 import '../../app/app_theme.dart';
 
 class PostCard extends StatefulWidget {
@@ -148,8 +149,19 @@ class _PostCardState extends State<PostCard> {
                   : const Icon(Icons.favorite_border, key: ValueKey(false),
                       color: Colors.white, size: 26),
             )),
-            _Btn(onTap: () {}, child: const Icon(
-                Icons.mode_comment_outlined, color: Colors.white, size: 24)),
+            _Btn(onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: const Color(0xFF1C1C1E),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+                builder: (_) => SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.85,
+                  child: CommentsScreen(post: post, comments: const []),
+                ),
+              );
+            }, child: const Icon(Icons.mode_comment_outlined, color: Colors.white, size: 24)),
             _Btn(onTap: () {}, child: Transform.rotate(angle: -0.4,
               child: const Icon(Icons.send_outlined, color: Colors.white, size: 23))),
             const Spacer(),
