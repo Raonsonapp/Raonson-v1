@@ -20,6 +20,18 @@ class StoryRepository {
     }
   }
 
+  Future<List<StoryModel>> fetchMyStories() async {
+    try {
+      final res = await _api.get('${ApiEndpoints.stories}/my');
+      if (res.statusCode >= 400) return [];
+      final body = jsonDecode(res.body);
+      final List list = body is List ? body : [];
+      return list.map((e) => StoryModel.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> markStoryViewed(String storyId) async {
     try {
       await _api.post('${ApiEndpoints.stories}/$storyId/view');
