@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getStories,
+  getMyStories,
   createStory,
   viewStory,
   likeStory,
@@ -11,6 +12,7 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 const router = express.Router();
 
 router.get("/", authMiddleware, getStories);
+router.get("/my", authMiddleware, getMyStories);
 router.post("/", authMiddleware, createStory);
 router.delete("/:id", authMiddleware, deleteStory);
 router.post("/:id/view", authMiddleware, viewStory);
