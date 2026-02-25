@@ -2,6 +2,7 @@ import 'user_model.dart';
 
 class CommentModel {
   final String id;
+  final String postId;
   final UserModel user;
   final String text;
   final bool liked;
@@ -9,6 +10,7 @@ class CommentModel {
 
   const CommentModel({
     required this.id,
+    required this.postId,
     required this.user,
     required this.text,
     required this.liked,
@@ -25,11 +27,10 @@ class CommentModel {
     return '${diff.inDays}d';
   }
 
-  CommentModel copyWith({
-    bool? liked,
-  }) {
+  CommentModel copyWith({bool? liked}) {
     return CommentModel(
       id: id,
+      postId: postId,
       user: user,
       text: text,
       liked: liked ?? this.liked,
@@ -39,11 +40,12 @@ class CommentModel {
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
     return CommentModel(
-      id: json['_id'],
-      user: UserModel.fromJson(json['user']),
+      id: (json['_id'] ?? '').toString(),
+      postId: (json['post'] ?? '').toString(),
+      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
       text: json['text'] ?? '',
       liked: json['liked'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
 }
