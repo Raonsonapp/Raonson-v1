@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/post_model.dart';
@@ -294,7 +295,11 @@ class _MediaCarouselState extends State<_MediaCarousel> {
           itemCount: widget.media.length,
           itemBuilder: (_, i) {
             final url = widget.media[i]['url'] ?? '';
+            final type = widget.media[i]['type'] ?? 'image';
             if (url.isEmpty) return Container(color: AppColors.card);
+            if (type == 'video') {
+              return _VideoItem(url: url);
+            }
             return CachedNetworkImage(
               imageUrl: url,
               fit: BoxFit.cover,
@@ -305,15 +310,8 @@ class _MediaCarouselState extends State<_MediaCarousel> {
                     strokeWidth: 2, color: Colors.white30))),
               errorWidget: (_, url, err) => Container(
                 color: AppColors.card,
-                child: Column(mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.broken_image_outlined,
-                        color: Colors.white30, size: 48),
-                    const SizedBox(height: 8),
-                    Text(url.length > 40 ? url.substring(0, 40) : url,
-                        style: const TextStyle(color: Colors.white24, fontSize: 10),
-                        textAlign: TextAlign.center),
-                  ]),
+                child: const Center(child: Icon(Icons.broken_image_outlined,
+                    color: Colors.white30, size: 48)),
               ),
             );
           },
@@ -336,6 +334,75 @@ class _MediaCarouselState extends State<_MediaCarousel> {
               )),
           ),
         ),
+    ]);
+  }
+}
+
+class _VideoItem extends StatefulWidget {
+  final String url;
+  const _VideoItem({required this.url});
+
+  @override
+  State<_VideoItem> createState() => _VideoItemState();
+}
+
+class _VideoItemState extends State<_VideoItem> {
+  late VideoPlayerController _ctrl;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() => _ready = true);
+          _ctrl.setLooping(true);
+          _ctrl.play();
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2)),
+      );
+    }
+    return Stack(fit: StackFit.expand, children: [
+      FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: _ctrl.value.size.width,
+          height: _ctrl.value.size.height,
+          child: VideoPlayer(_ctrl),
+        ),
+      ),
+      // Play/pause on tap
+      GestureDetector(
+        onTap: () {
+          setState(() {
+            _ctrl.value.isPlaying ? _ctrl.pause() : _ctrl.play();
+          });
+        },
+        child: AnimatedOpacity(
+          opacity: _ctrl.value.isPlaying ? 0 : 1,
+          duration: const Duration(milliseconds: 200),
+          child: const Center(
+            child: Icon(Icons.play_circle_fill,
+                color: Colors.white70, size: 64),
+          ),
+        ),
+      ),
     ]);
   }
 }
