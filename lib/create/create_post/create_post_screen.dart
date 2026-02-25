@@ -55,10 +55,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           const SizedBox(height: 8),
         ]),
       ),
-    ).then((_) {
-      // If nothing picked and no media, go back
-      if (_ctrl.media.value.isEmpty && mounted) Navigator.pop(context);
-    });
+);  // Don't auto-pop - let user pick or press back
   }
 
   Future<void> _pickImage() async {
