@@ -7,37 +7,75 @@ import '../../app/app_config.dart';
 import '../../core/storage/token_storage.dart';
 
 class UploadManager {
-  String _ext(File file) =>
-      file.path.split('.').last.toLowerCase();
+  // Cloudinary direct upload (no backend needed!)
+  static const _cloudName = 'dtp3kzqxi';
+  static const _uploadPreset = 'raonson_preset'; // Create this in Cloudinary!
+
+  String _ext(File file) => file.path.split('.').last.toLowerCase();
+
+  bool _isVideo(File file) {
+    const videos = ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'];
+    return videos.contains(_ext(file));
+  }
+
+  String _typeStr(File file) => _isVideo(file) ? 'video' : 'image';
 
   MediaType _contentType(File file) {
     final ext = _ext(file);
-    const videos = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
+    const videos = ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'];
     if (videos.contains(ext)) return MediaType('video', 'mp4');
     if (ext == 'png') return MediaType('image', 'png');
     return MediaType('image', 'jpeg');
   }
 
-  String _typeStr(File file) {
-    const videos = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
-    return videos.contains(_ext(file)) ? 'video' : 'image';
-  }
+  /// Upload directly to Cloudinary (most reliable!)
+  Future<String> _uploadToCloudinary(File file) async {
+    final resourceType = _isVideo(file) ? 'video' : 'image';
+    final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/$_cloudName/$resourceType/upload');
 
-  Future<String> _uploadFile(File file) async {
-    final token = await TokenStorage.getAccessToken();
-    final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
+    final request = http.MultipartRequest('POST', uri);
+    request.fields['upload_preset'] = _uploadPreset;
+    request.fields['folder'] = 'raonson';
 
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token';
-
-    // Explicit content-type prevents "Unsupported media type" error
     request.files.add(await http.MultipartFile.fromPath(
       'file',
       file.path,
       contentType: _contentType(file),
     ));
 
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    final bodyStr = await streamed.stream.bytesToString();
+
+    if (streamed.statusCode >= 400) {
+      print('Cloudinary error ${streamed.statusCode}: $bodyStr');
+      return await _uploadToBackend(file);
+    }
+
+    final body = jsonDecode(bodyStr);
+    final url = body['secure_url'] as String?;
+    if (url == null || url.isEmpty) {
+      print('Cloudinary: no secure_url in response: $bodyStr');
+      return await _uploadToBackend(file);
+    }
+    print('Cloudinary upload success: $url');
+    return url;
+  }
+
+  /// Fallback: upload via backend
+  Future<String> _uploadToBackend(File file) async {
+    final token = await TokenStorage.getAccessToken();
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token';
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'file', file.path,
+      contentType: _contentType(file),
+    ));
+
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
     final bodyStr = await streamed.stream.bytesToString();
     final body = jsonDecode(bodyStr);
 
@@ -46,6 +84,7 @@ class UploadManager {
     }
 
     String url = (body['url'] ?? '') as String;
+    if (url.isEmpty) throw Exception('Upload returned empty URL');
     if (url.startsWith('/')) url = '${AppConfig.apiBaseUrl}$url';
     return url;
   }
@@ -59,7 +98,7 @@ class UploadManager {
     final List<Map<String, String>> mediaList = [];
 
     for (int i = 0; i < media.length; i++) {
-      final url = await _uploadFile(media[i]);
+      final url = await _uploadToCloudinary(media[i]);
       mediaList.add({'url': url, 'type': _typeStr(media[i])});
       onProgress?.call((i + 1) / media.length * 0.8);
     }
@@ -73,11 +112,12 @@ class UploadManager {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({'caption': caption, 'media': mediaList}),
-    );
+    ).timeout(const Duration(seconds: 60));
 
     onProgress?.call(1.0);
     if (res.statusCode >= 400) {
-      throw Exception(jsonDecode(res.body)['message'] ?? 'Post failed');
+      final err = jsonDecode(res.body);
+      throw Exception(err['message'] ?? 'Post yaratish xato');
     }
   }
 
@@ -87,7 +127,7 @@ class UploadManager {
     void Function(double)? onProgress,
   }) async {
     final token = await TokenStorage.getAccessToken();
-    final url = await _uploadFile(file);
+    final url = await _uploadToCloudinary(file);
     onProgress?.call(0.7);
 
     final res = await http.post(
@@ -101,11 +141,11 @@ class UploadManager {
         'mediaType': _typeStr(file),
         'caption': caption,
       }),
-    );
+    ).timeout(const Duration(seconds: 60));
 
     onProgress?.call(1.0);
     if (res.statusCode >= 400) {
-      throw Exception('Story failed: ${jsonDecode(res.body)['message']}');
+      throw Exception('Story: ${jsonDecode(res.body)['message']}');
     }
   }
 }
