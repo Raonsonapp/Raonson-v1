@@ -4,20 +4,15 @@ import 'package:image_picker/image_picker.dart';
 class MediaPicker {
   static final ImagePicker _picker = ImagePicker();
 
-  /// Pick image OR video from gallery (shows all media)
+  /// Pick image OR video from gallery
   static Future<File?> pick() async {
+    // Try pickMedia first (shows both images and videos)
     try {
-      // pickMedia shows both images and videos
-      final XFile? file = await _picker.pickMedia(
-        mediaOptions: const MediaOptions(
-          allowMultiple: false,
-          imageOptions: ImageOptions(imageQuality: 85),
-        ),
-      );
+      final XFile? file = await _picker.pickMedia();
       if (file == null) return null;
       return File(file.path);
     } catch (_) {
-      // Fallback to image only if pickMedia not supported
+      // Fallback
       final XFile? file = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
