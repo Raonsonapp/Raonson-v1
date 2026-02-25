@@ -21,12 +21,20 @@ class StoryController extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      final all = await _repository.fetchStories();
-      final my = await _repository.fetchMyStories();
+      // Fetch own stories and others in parallel
+      final results = await Future.wait([
+        _repository.fetchStories(),
+        _repository.fetchMyStories(),
+      ]);
+      final all = results[0];
+      final my = results[1];
       _myStories = my;
-      // Filter out own stories from main list
+      // Filter out own stories from main feed
       final myIds = my.map((s) => s.id).toSet();
       _stories = all.where((s) => !myIds.contains(s.id)).toList();
+    } catch (_) {
+      _stories = [];
+      _myStories = [];
     } finally {
       _loading = false;
       notifyListeners();
