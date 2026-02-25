@@ -6,7 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../app/app_config.dart';
 import '../../../models/story_model.dart';
-import '../../create_post/media_picker.dart';
+import '../create_post/media_picker.dart';
 import '../../../core/api/api_endpoints.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
