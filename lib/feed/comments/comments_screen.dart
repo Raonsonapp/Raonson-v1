@@ -11,11 +11,13 @@ import 'comment_item.dart';
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
   final List<CommentModel> comments;
+  final VoidCallback? onCommentAdded;
 
   const CommentsScreen({
     super.key,
     required this.post,
     this.comments = const [],
+    this.onCommentAdded,
   });
 
   @override
@@ -74,6 +76,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
         final newComment = CommentModel.fromJson(
             jsonDecode(res.body) as Map<String, dynamic>);
         setState(() => _comments.insert(0, newComment));
+        widget.onCommentAdded?.call();
       }
     } catch (_) {}
 
