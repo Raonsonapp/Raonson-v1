@@ -21,6 +21,7 @@ class _PostCardState extends State<PostCard> {
   late bool _liked;
   late bool _saved;
   late int _likeCount;
+  late int _commentCount;
   bool _likeLoading = false;
 
   @override
@@ -29,6 +30,7 @@ class _PostCardState extends State<PostCard> {
     _liked = widget.post.isLiked;
     _saved = widget.post.isSaved;
     _likeCount = widget.post.likesCount;
+    _commentCount = widget.post.commentsCount;
   }
 
   Future<void> _toggleLike() async {
@@ -156,7 +158,12 @@ class _PostCardState extends State<PostCard> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.85,
-        child: CommentsScreen(post: widget.post),
+        child: CommentsScreen(
+          post: widget.post,
+          onCommentAdded: () {
+            setState(() => _commentCount++);
+          },
+        ),
       ),
     );
   }
@@ -219,11 +226,21 @@ class _PostCardState extends State<PostCard> {
           ]),
         ),
 
-        // LIKES COUNT
+        // LIKES & COMMENTS COUNT
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text('$_likeCount likes', style: const TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+          child: Row(children: [
+            Text('$_likeCount likes', style: const TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: _openComments,
+              child: Text(
+                '$_commentCount комментария',
+                style: const TextStyle(color: Colors.white38, fontSize: 13),
+              ),
+            ),
+          ]),
         ),
 
         // CAPTION
