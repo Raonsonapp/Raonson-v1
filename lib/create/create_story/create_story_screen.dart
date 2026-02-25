@@ -62,9 +62,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
           const SizedBox(height: 8),
         ]),
       ),
-    ).then((_) {
-      if (_file == null && mounted) Navigator.pop(context);
-    });
+);  // Don't auto-pop
   }
 
   Future<void> _pickImage() async {
