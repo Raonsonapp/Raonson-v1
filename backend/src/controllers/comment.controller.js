@@ -6,9 +6,7 @@ export async function addComment(req, res) {
     const { text } = req.body;
     const postId = req.params.postId;
 
-    if (!text?.trim()) {
-      return res.status(400).json({ message: "Comment text required" });
-    }
+    if (!text?.trim()) return res.status(400).json({ message: "Comment text required" });
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json({ message: "Post not found" });
@@ -20,10 +18,11 @@ export async function addComment(req, res) {
     });
 
     await Post.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
-
     const populated = await comment.populate("user", "username avatar verified");
 
-    res.status(201).json(populated);
+    const obj = populated.toObject();
+    obj.liked = false;
+    res.status(201).json(obj);
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Add comment failed" });
@@ -35,6 +34,7 @@ export async function getComments(req, res) {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
+    const userId = req.user._id;
 
     const comments = await Comment.find({ post: req.params.postId })
       .populate("user", "username avatar verified")
@@ -42,7 +42,14 @@ export async function getComments(req, res) {
       .skip(skip)
       .limit(limit);
 
-    res.json({ comments, page, limit });
+    // Add liked per user
+    const formatted = comments.map(c => {
+      const obj = c.toObject();
+      obj.liked = obj.likes?.some(id => id.toString() === userId.toString()) ?? false;
+      return obj;
+    });
+
+    res.json({ comments: formatted, page, limit });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Get comments failed" });
@@ -55,14 +62,10 @@ export async function deleteComment(req, res) {
       _id: req.params.id,
       user: req.user._id,
     });
-
     if (!comment) return res.status(404).json({ message: "Comment not found" });
-
     await Post.findByIdAndUpdate(comment.post, { $inc: { commentsCount: -1 } });
-
     res.json({ success: true });
   } catch (e) {
-    console.error(e);
     res.status(500).json({ message: "Delete comment failed" });
   }
 }
@@ -72,7 +75,7 @@ export async function toggleCommentLike(req, res) {
     const comment = await Comment.findById(req.params.id);
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
-    const liked = comment.likes.includes(req.user._id);
+    const liked = comment.likes.some(id => id.toString() === req.user._id.toString());
 
     await Comment.findByIdAndUpdate(
       req.params.id,
