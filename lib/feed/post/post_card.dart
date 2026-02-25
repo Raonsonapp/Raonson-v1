@@ -106,6 +106,47 @@ class _PostCardState extends State<PostCard> {
     );
   }
 
+  void _showShare() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(margin: const EdgeInsets.symmetric(vertical: 8),
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2))),
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('Мубодила кардан',
+                style: TextStyle(color: Colors.white,
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.copy, color: Colors.white),
+            title: const Text('Линкро нусха кун',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Линк нусха шуд!')),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.message_outlined, color: Colors.white),
+            title: const Text('Ба дӯст фиристед',
+                style: TextStyle(color: Colors.white)),
+            onTap: () => Navigator.pop(context),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
   void _openComments() {
     showModalBottomSheet(
       context: context,
@@ -164,7 +205,7 @@ class _PostCardState extends State<PostCard> {
                       color: Colors.white, size: 26),
             )),
             _Btn(onTap: () => _openComments(), child: const Icon(Icons.mode_comment_outlined, color: Colors.white, size: 24)),
-            _Btn(onTap: () {}, child: Transform.rotate(angle: -0.4,
+            _Btn(onTap: () => _showShare(), child: Transform.rotate(angle: -0.4,
               child: const Icon(Icons.send_outlined, color: Colors.white, size: 23))),
             const Spacer(),
             _Btn(onTap: _toggleSave, child: AnimatedSwitcher(
