@@ -21,30 +21,73 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pick());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showPickerDialog());
   }
 
-  Future<void> _pick() async {
-    final file = await MediaPicker.pick();
+  void _showPickerDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const Text('Чи интихоб кунед?',
+              style: TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.image_outlined, color: Colors.white),
+            title: const Text('Расм', style: TextStyle(color: Colors.white)),
+            onTap: () { Navigator.pop(context); _pickImage(); },
+          ),
+          ListTile(
+            leading: const Icon(Icons.videocam_outlined, color: Colors.white),
+            title: const Text('Видео', style: TextStyle(color: Colors.white)),
+            onTap: () { Navigator.pop(context); _pickVideo(); },
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    ).then((_) {
+      // If nothing picked and no media, go back
+      if (_ctrl.media.value.isEmpty && mounted) Navigator.pop(context);
+    });
+  }
+
+  Future<void> _pickImage() async {
+    final file = await MediaPicker.pickImageOnly();
     if (file != null && mounted) {
       _videoCtrl?.dispose();
       _videoCtrl = null;
-      _ctrl.addMedia(file);
+      _ctrl.media.value = [file];
       setState(() {});
+    }
+  }
 
-      if (MediaPicker.isVideo(file)) {
-        _videoCtrl = VideoPlayerController.file(file)
-          ..initialize().then((_) {
-            if (mounted) setState(() {});
-            _videoCtrl?.setLooping(true);
-            _videoCtrl?.play();
-          });
-      }
+  Future<void> _pickVideo() async {
+    final file = await MediaPicker.pickVideoOnly();
+    if (file != null && mounted) {
+      _videoCtrl?.dispose();
+      _ctrl.media.value = [file];
+      setState(() {});
+      _videoCtrl = VideoPlayerController.file(file)
+        ..initialize().then((_) {
+          if (mounted) setState(() {});
+          _videoCtrl?.setLooping(true);
+          _videoCtrl?.play();
+        });
     }
   }
 
   Future<void> _publish() async {
-    if (_ctrl.media.value.isEmpty) { await _pick(); return; }
+    if (_ctrl.media.value.isEmpty) { _showPickerDialog(); return; }
     setState(() => _errorMsg = null);
     final nav = Navigator.of(context);
     try {
@@ -76,15 +119,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         title: const Text('Нашри нав',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
-          TextButton(
-            onPressed: _ctrl.isUploading ? null : _publish,
-            child: _ctrl.isUploading
-                ? const SizedBox(width: 18, height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Color(0xFF0095F6)))
-                : const Text('Share',
-                    style: TextStyle(color: Color(0xFF0095F6),
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+          ValueListenableBuilder<List<File>>(
+            valueListenable: _ctrl.media,
+            builder: (_, files, __) => TextButton(
+              onPressed: (_ctrl.isUploading || files.isEmpty) ? null : _publish,
+              child: _ctrl.isUploading
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Color(0xFF0095F6)))
+                  : Text('Нашр кун',
+                      style: TextStyle(
+                          color: files.isEmpty
+                              ? Colors.white30
+                              : const Color(0xFF0095F6),
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
           ),
         ],
       ),
@@ -102,28 +151,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           Expanded(
             child: files.isEmpty
                 ? GestureDetector(
-                    onTap: _pick,
-                    child: Container(
-                      color: const Color(0xFF111111),
-                      child: const Center(
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.add_photo_alternate_outlined,
-                              size: 72, color: Colors.white38),
-                          SizedBox(height: 12),
-                          Text('Расм ё видео интихоб кунед',
-                              style: TextStyle(color: Colors.white54, fontSize: 16)),
-                        ]),
-                      ),
+                    onTap: _showPickerDialog,
+                    child: const Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.add_photo_alternate_outlined,
+                            size: 72, color: Colors.white38),
+                        SizedBox(height: 12),
+                        Text('Расм ё видео интихоб кунед',
+                            style: TextStyle(color: Colors.white54, fontSize: 16)),
+                      ]),
                     ),
                   )
                 : Stack(children: [
-                    // Preview
                     Positioned.fill(child: _buildPreview(files.first)),
-                    // Add more button
                     Positioned(
                       bottom: 12, right: 12,
                       child: GestureDetector(
-                        onTap: _pick,
+                        onTap: _showPickerDialog,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 8),
@@ -132,7 +176,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(children: [
-                            Icon(Icons.add, color: Colors.white, size: 18),
+                            Icon(Icons.swap_horiz, color: Colors.white, size: 18),
                             SizedBox(width: 4),
                             Text('Иваз кун',
                                 style: TextStyle(color: Colors.white)),
