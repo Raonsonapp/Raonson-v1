@@ -5,8 +5,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
+import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -588,6 +590,44 @@ class _MusicPanelState extends State<_MusicPanel> {
   List<_MusicTrack> _tracks = [];
   bool _loading = false;
   String? _error;
+  final _player = AudioPlayer();
+  String? _playingUrl;
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePreview(String url) async {
+    if (_playingUrl == url) {
+      await _player.stop();
+      setState(() => _playingUrl = null);
+    } else {
+      setState(() => _playingUrl = url);
+      await _player.play(UrlSource(url));
+    }
+  }
+  final _player = AudioPlayer();
+  String? _playingUrl;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlay(String url) async {
+    if (_playingUrl == url) {
+      await _player.stop();
+      setState(() => _playingUrl = null);
+    } else {
+      await _player.stop();
+      await _player.play(UrlSource(url));
+      setState(() => _playingUrl = url);
+    }
+  }
 
   Future<void> _search(String q) async {
     if (q.trim().isEmpty) return;
@@ -653,8 +693,17 @@ class _MusicPanelState extends State<_MusicPanel> {
                   style: const TextStyle(color: Colors.redAccent))),
         if (!_loading && _tracks.isEmpty && _error == null)
           const Expanded(child: Center(
-              child: Text('Суруд ёбед 🎵',
-                  style: TextStyle(color: Colors.white38, fontSize: 16)))),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.music_note, color: Colors.white24, size: 48),
+              SizedBox(height: 12),
+              Text('Суруд ёбед',
+                  style: TextStyle(color: Colors.white54, fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              SizedBox(height: 4),
+              Text('Масалан: Coldplay, Тарона...',
+                  style: TextStyle(color: Colors.white24, fontSize: 12)),
+            ]),
+          )),
         if (!_loading && _tracks.isNotEmpty)
           Expanded(
             child: ListView.builder(
@@ -675,12 +724,30 @@ class _MusicPanelState extends State<_MusicPanel> {
                   subtitle: Text(t.artist,
                       style: const TextStyle(color: Colors.white54),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: const Icon(Icons.add_circle_outline,
-                      color: Color(0xFF0095F6)),
-                  onTap: () {
-                    widget.onSelected(t);
-                    Navigator.pop(context);
-                  },
+                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                    // Play preview
+                    if (t.previewUrl.isNotEmpty)
+                      GestureDetector(
+                        onTap: () => _togglePlay(t.previewUrl),
+                        child: Icon(
+                          _playingUrl == t.previewUrl
+                              ? Icons.stop_circle
+                              : Icons.play_circle_outline,
+                          color: Colors.white54, size: 28,
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _player.stop();
+                        widget.onSelected(t);
+                        Navigator.pop(context);
+                      },
+                      child: const Icon(Icons.add_circle_outline,
+                          color: Color(0xFF0095F6), size: 28),
+                    ),
+                  ]),
+                  onTap: () => _togglePlay(t.previewUrl),
                 );
               },
             ),
