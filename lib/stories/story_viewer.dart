@@ -434,7 +434,7 @@ class _StoryViewerState extends State<StoryViewer>
               borderRadius: BorderRadius.circular(24),
             ),
             child: Text(
-              'Жавоб бериш...',
+              'Ҷавоб нависед...',
               style: TextStyle(color: Colors.white.withOpacity(0.7),
                   fontSize: 14),
             ),
@@ -478,7 +478,7 @@ class _StoryViewerState extends State<StoryViewer>
           onSubmitted: (_) => _sendReply(),
           onEditingComplete: () {},
           decoration: InputDecoration(
-            hintText: '${widget.story.username}-га жавоб бериш...',
+            hintText: '${widget.story.username}-га Ҷавоб нависед...',
             hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
             filled: true,
             fillColor: Colors.white12,
