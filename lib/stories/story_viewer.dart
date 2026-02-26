@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:video_player/video_player.dart';
 
 import '../models/story_model.dart';
 import '../app/app_theme.dart';
@@ -23,16 +24,39 @@ class _StoryViewerState extends State<StoryViewer>
     with SingleTickerProviderStateMixin {
   late AnimationController _progressCtrl;
   Timer? _timer;
+  VideoPlayerController? _videoCtrl;
+  bool _videoReady = false;
+
+  bool get _isVideo => widget.story.mediaType == 'video';
 
   @override
   void initState() {
     super.initState();
-    _progressCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 5),
-    )..forward();
 
-    _timer = Timer(const Duration(seconds: 5), _close);
+    if (_isVideo) {
+      _initVideo();
+    } else {
+      _startProgress(const Duration(seconds: 5));
+    }
+  }
+
+  void _initVideo() {
+    _videoCtrl = VideoPlayerController.networkUrl(
+        Uri.parse(widget.story.mediaUrl))
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() => _videoReady = true);
+        _videoCtrl!.play();
+        // Progress bar matches video duration
+        final dur = _videoCtrl!.value.duration;
+        _startProgress(dur.inSeconds > 0 ? dur : const Duration(seconds: 5));
+      });
+  }
+
+  void _startProgress(Duration duration) {
+    _progressCtrl = AnimationController(vsync: this, duration: duration)
+      ..forward();
+    _timer = Timer(duration, _close);
   }
 
   void _close() {
@@ -44,6 +68,7 @@ class _StoryViewerState extends State<StoryViewer>
   void dispose() {
     _progressCtrl.dispose();
     _timer?.cancel();
+    _videoCtrl?.dispose();
     super.dispose();
   }
 
@@ -55,45 +80,28 @@ class _StoryViewerState extends State<StoryViewer>
         onTap: _close,
         child: Stack(fit: StackFit.expand, children: [
           // Media
-          CachedNetworkImage(
-            imageUrl: widget.story.mediaUrl,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => Container(
-              color: Colors.black,
-              child: const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-            ),
-            errorWidget: (_, __, ___) => Container(
-              color: Colors.black26,
-              child: const Center(
-                child: Icon(Icons.broken_image, color: Colors.white38, size: 72),
-              ),
-            ),
+          _isVideo ? _buildVideo() : _buildImage(),
+
+          // Progress bar
+          Positioned(
+            top: 48, left: 8, right: 8,
+            child: _isVideo && !_videoReady
+                ? const SizedBox()
+                : AnimatedBuilder(
+                    animation: _progressCtrl,
+                    builder: (_, __) => LinearProgressIndicator(
+                      value: _progressCtrl.value,
+                      backgroundColor: Colors.white30,
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                      minHeight: 3,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
           ),
 
-          // Progress bar on top
+          // Header
           Positioned(
-            top: 48,
-            left: 8,
-            right: 8,
-            child: AnimatedBuilder(
-              animation: _progressCtrl,
-              builder: (_, __) => LinearProgressIndicator(
-                value: _progressCtrl.value,
-                backgroundColor: Colors.white30,
-                valueColor: const AlwaysStoppedAnimation(Colors.white),
-                minHeight: 3,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-
-          // Header: avatar + username + close
-          Positioned(
-            top: 60,
-            left: 12,
-            right: 12,
+            top: 60, left: 12, right: 12,
             child: Row(children: [
               CircleAvatar(
                 radius: 18,
@@ -120,6 +128,32 @@ class _StoryViewerState extends State<StoryViewer>
             ]),
           ),
         ]),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    return CachedNetworkImage(
+      imageUrl: widget.story.mediaUrl,
+      fit: BoxFit.cover,
+      placeholder: (_, __) => const Center(
+          child: CircularProgressIndicator(color: Colors.white)),
+      errorWidget: (_, __, ___) => const Center(
+          child: Icon(Icons.broken_image, color: Colors.white38, size: 72)),
+    );
+  }
+
+  Widget _buildVideo() {
+    if (!_videoReady) {
+      return const Center(
+          child: CircularProgressIndicator(color: Colors.white));
+    }
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: _videoCtrl!.value.size.width,
+        height: _videoCtrl!.value.size.height,
+        child: VideoPlayer(_videoCtrl!),
       ),
     );
   }
