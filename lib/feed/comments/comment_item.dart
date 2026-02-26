@@ -111,16 +111,16 @@ class _CommentItemState extends State<CommentItem> {
             ]),
           ]),
         ),
-        // Like button
+        // Like icon + count next to it
         GestureDetector(
           onTap: _toggleLike,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, anim) => ScaleTransition(
-                    scale: anim, child: child),
+                transitionBuilder: (child, anim) =>
+                    ScaleTransition(scale: anim, child: child),
                 child: Icon(
                   _liked ? Icons.favorite : Icons.favorite_border,
                   key: ValueKey(_liked),
@@ -128,6 +128,14 @@ class _CommentItemState extends State<CommentItem> {
                   color: _liked ? Colors.red : Colors.white38,
                 ),
               ),
+              if (_likesCount > 0) ...[
+                const SizedBox(width: 3),
+                Text('$_likesCount',
+                    style: TextStyle(
+                        color: _liked ? Colors.red : Colors.white38,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              ],
             ]),
           ),
         ),
