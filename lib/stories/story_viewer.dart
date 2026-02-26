@@ -40,6 +40,13 @@ class _StoryViewerState extends State<StoryViewer>
 
   bool get _isVideo => widget.story.mediaType == 'video';
 
+  // Viewers data (for owner)
+  int _viewsCount = 0;
+  int _likesCount = 0;
+  List _viewers = [];
+  List _likers = [];
+  bool _isOwner = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +55,14 @@ class _StoryViewerState extends State<StoryViewer>
     } else {
       _startProgress(const Duration(seconds: 5));
     }
+    // Mark as viewed
+    _markViewed();
+  }
+
+  Future<void> _markViewed() async {
+    try {
+      await ApiClient.instance.post('/stories/\${widget.story.id}/view');
+    } catch (_) {}
   }
 
   void _initVideo() {
@@ -89,10 +104,46 @@ class _StoryViewerState extends State<StoryViewer>
     widget.onComplete();
   }
 
-  void _toggleLike() {
+  Future<void> _showViewersPanel() async {
+    _pause();
+    // Load viewers from API
+    try {
+      final res = await ApiClient.instance.get(
+          '/stories/\${widget.story.id}/viewers');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        _viewsCount = data['viewsCount'] ?? 0;
+        _likesCount = data['likesCount'] ?? 0;
+        _viewers = data['viewers'] ?? [];
+        _likers = data['likers'] ?? [];
+        _isOwner = true;
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _ViewersPanel(
+        viewsCount: _viewsCount,
+        likesCount: _likesCount,
+        viewers: _viewers,
+        likers: _likers,
+        isOwner: _isOwner,
+      ),
+    ).then((_) => _resume());
+  }
+
+  void _toggleLike() async {
     setState(() => _liked = !_liked);
-    // Animate heart
     if (_liked) _showHeartAnim();
+    try {
+      await ApiClient.instance.post('/stories/\${widget.story.id}/like');
+    } catch (_) {}
   }
 
   void _showHeartAnim() {
@@ -182,6 +233,12 @@ class _StoryViewerState extends State<StoryViewer>
       backgroundColor: Colors.black,
       resizeToAvoidBottomInset: true,
       body: GestureDetector(
+        // Swipe UP = show viewers (owner only)
+        onVerticalDragEnd: (d) {
+          if (d.primaryVelocity != null && d.primaryVelocity! < -300) {
+            _showViewersPanel();
+          }
+        },
         // Tap left/right to skip or close
         onTapUp: (d) {
           if (_showReply) return;
@@ -316,6 +373,35 @@ class _StoryViewerState extends State<StoryViewer>
           ),
 
           // ── Bottom actions ──
+          // Swipe up hint + viewers count
+          Positioned(
+            bottom: MediaQuery.of(context).padding.bottom + 80,
+            left: 0, right: 0,
+            child: GestureDetector(
+              onTap: _showViewersPanel,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.keyboard_arrow_up,
+                    color: Colors.white60, size: 20),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.remove_red_eye_outlined,
+                      color: Colors.white60, size: 14),
+                  const SizedBox(width: 4),
+                  Text('\$_viewsCount кас дид',
+                      style: const TextStyle(
+                          color: Colors.white60, fontSize: 12)),
+                  if (_likesCount > 0) ...[
+                    const SizedBox(width: 12),
+                    const Icon(Icons.favorite,
+                        color: Colors.red, size: 14),
+                    const SizedBox(width: 4),
+                    Text('\$_likesCount',
+                        style: const TextStyle(
+                            color: Colors.white60, fontSize: 12)),
+                  ],
+                ]),
+              ]),
+            ),
+          ),
           Positioned(
             bottom: MediaQuery.of(context).padding.bottom + 16,
             left: 16, right: 16,
@@ -511,6 +597,174 @@ class _HeartOverlayState extends State<_HeartOverlay>
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// VIEWERS PANEL - Instagram style
+// ─────────────────────────────────────────────
+class _ViewersPanel extends StatefulWidget {
+  final int viewsCount;
+  final int likesCount;
+  final List viewers;
+  final List likers;
+  final bool isOwner;
+
+  const _ViewersPanel({
+    required this.viewsCount,
+    required this.likesCount,
+    required this.viewers,
+    required this.likers,
+    required this.isOwner,
+  });
+
+  @override
+  State<_ViewersPanel> createState() => _ViewersPanelState();
+}
+
+class _ViewersPanelState extends State<_ViewersPanel>
+    with SingleTickerProviderStateMixin {
+  late TabController _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.65,
+      child: Column(children: [
+        // Handle
+        Container(margin: const EdgeInsets.symmetric(vertical: 8),
+          width: 36, height: 4,
+          decoration: BoxDecoration(color: Colors.white24,
+              borderRadius: BorderRadius.circular(2))),
+
+        if (!widget.isOwner)
+          const Expanded(
+            child: Center(
+              child: Text('Танҳо соҳиби сторис метавонад бинад',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+          )
+        else ...[
+          // Stats row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(children: [
+              _StatBadge(
+                icon: Icons.remove_red_eye_outlined,
+                count: widget.viewsCount,
+                label: 'кас дид',
+                color: Colors.white,
+              ),
+              const SizedBox(width: 24),
+              _StatBadge(
+                icon: Icons.favorite,
+                count: widget.likesCount,
+                label: 'лайк',
+                color: Colors.red,
+              ),
+            ]),
+          ),
+
+          // Tabs
+          TabBar(
+            controller: _tab,
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white38,
+            tabs: [
+              Tab(text: 'Дидагон (${widget.viewsCount})'),
+              Tab(text: 'Лайкҳо (${widget.likesCount})'),
+            ],
+          ),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tab,
+              children: [
+                _UserList(users: widget.viewers),
+                _UserList(users: widget.likers),
+              ],
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
+}
+
+class _StatBadge extends StatelessWidget {
+  final IconData icon;
+  final int count;
+  final String label;
+  final Color color;
+
+  const _StatBadge({
+    required this.icon, required this.count,
+    required this.label, required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Icon(icon, color: color, size: 22),
+      const SizedBox(width: 8),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('$count', style: const TextStyle(
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        Text(label, style: const TextStyle(
+            color: Colors.white54, fontSize: 12)),
+      ]),
+    ]);
+  }
+}
+
+class _UserList extends StatelessWidget {
+  final List users;
+  const _UserList({required this.users});
+
+  @override
+  Widget build(BuildContext context) {
+    if (users.isEmpty) {
+      return const Center(
+        child: Text('Ҳоло ҳеч кас нест',
+            style: TextStyle(color: Colors.white38, fontSize: 15)),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: users.length,
+      itemBuilder: (_, i) {
+        final u = users[i] as Map<String, dynamic>;
+        final avatar = u['avatar'] as String? ?? '';
+        final username = u['username'] as String? ?? '';
+        return ListTile(
+          leading: CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.white12,
+            backgroundImage: avatar.isNotEmpty
+                ? NetworkImage(avatar) : null,
+            child: avatar.isEmpty
+                ? const Icon(Icons.person, color: Colors.white54, size: 20)
+                : null,
+          ),
+          title: Text(username,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w600)),
+        );
+      },
     );
   }
 }
