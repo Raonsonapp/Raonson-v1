@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -111,11 +112,52 @@ class _PostCardState extends State<PostCard> {
   }
 
   void _showShare() {
-    final postUrl = 'https://raonson.app/post/\${widget.post.id}';
-    final text = widget.post.caption.isNotEmpty
-        ? '\${widget.post.caption}\n\$postUrl'
-        : postUrl;
-    Share.share(text, subject: 'Raonson пост');
+    final postUrl = 'https://raonson.app/post/${widget.post.id}';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(margin: const EdgeInsets.symmetric(vertical: 8),
+            width: 36, height: 4,
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2))),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Мубодила', style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          ListTile(
+            leading: const CircleAvatar(backgroundColor: Colors.white12,
+                child: Icon(Icons.link, color: Colors.white, size: 20)),
+            title: const Text('Линкро нусха кун',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: postUrl));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Линк нусха шуд ✓'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2)),
+              );
+            },
+          ),
+          ListTile(
+            leading: const CircleAvatar(backgroundColor: Colors.white12,
+                child: Icon(Icons.share_outlined, color: Colors.white, size: 20)),
+            title: const Text('Дигар барномаҳо',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Share.share(postUrl, subject: 'Raonson');
+            },
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
   }
 
   void _openComments() {
@@ -168,65 +210,81 @@ class _PostCardState extends State<PostCard> {
         // MEDIA
         if (post.media.isNotEmpty) _MediaCarousel(media: post.media),
 
-        // ACTIONS
+        // ACTIONS — icon + count next to each icon
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
+          padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
           child: Row(children: [
-            _Btn(onTap: _toggleLike, child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: _liked
-                  ? const Icon(Icons.favorite, key: ValueKey(true),
-                      color: Colors.red, size: 26)
-                  : const Icon(Icons.favorite_border, key: ValueKey(false),
-                      color: Colors.white, size: 26),
-            )),
-            _Btn(onTap: () => _openComments(), child: const Icon(Icons.mode_comment_outlined, color: Colors.white, size: 24)),
-            _Btn(onTap: () => _showShare(), child: Transform.rotate(angle: -0.4,
-              child: const Icon(Icons.send_outlined, color: Colors.white, size: 23))),
-            const Spacer(),
-            _Btn(onTap: _toggleSave, child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: _saved
-                  ? const Icon(Icons.bookmark, key: ValueKey(true),
-                      color: Colors.white, size: 26)
-                  : const Icon(Icons.bookmark_border, key: ValueKey(false),
-                      color: Colors.white, size: 26),
-            )),
-          ]),
-        ),
-
-        // LIKES & COMMENTS COUNT - Instagram style
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 6, 14, 2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Likes
-              if (_likeCount > 0)
-                Text(
-                  _likeCount == 1 ? '1 нафар писанд кард' : '$_likeCount нафар писанд карданд',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: Colors.white),
-                ),
-              // Comments
-              if (_commentCount > 0)
-                GestureDetector(
-                  onTap: _openComments,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      _commentCount == 1
-                          ? 'Нишон додани 1 комментария'
-                          : 'Нишон додани ҳамаи $_commentCount комментария',
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 12),
-                    ),
+            // Like icon + count
+            GestureDetector(
+              onTap: _toggleLike,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: _liked
+                        ? const Icon(Icons.favorite, key: ValueKey(true),
+                            color: Colors.red, size: 24)
+                        : const Icon(Icons.favorite_border, key: ValueKey(false),
+                            color: Colors.white, size: 24),
                   ),
+                  if (_likeCount > 0) ...[
+                    const SizedBox(width: 4),
+                    Text('$_likeCount',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ]),
+              ),
+            ),
+            const SizedBox(width: 4),
+            // Comment icon + count
+            GestureDetector(
+              onTap: _openComments,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.mode_comment_outlined,
+                      color: Colors.white, size: 23),
+                  if (_commentCount > 0) ...[
+                    const SizedBox(width: 4),
+                    Text('$_commentCount',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ]),
+              ),
+            ),
+            const SizedBox(width: 4),
+            // Share icon
+            GestureDetector(
+              onTap: _showShare,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Transform.rotate(angle: -0.4,
+                    child: const Icon(Icons.send_outlined,
+                        color: Colors.white, size: 23)),
+              ),
+            ),
+            const Spacer(),
+            // Save icon
+            GestureDetector(
+              onTap: _toggleSave,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: _saved
+                      ? const Icon(Icons.bookmark, key: ValueKey(true),
+                          color: Colors.white, size: 24)
+                      : const Icon(Icons.bookmark_border, key: ValueKey(false),
+                          color: Colors.white, size: 24),
                 ),
-            ],
-          ),
+              ),
+            ),
+          ]),
         ),
 
         // CAPTION
