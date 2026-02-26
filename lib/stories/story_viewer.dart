@@ -35,14 +35,13 @@ class _StoryViewerState extends State<StoryViewer>
   bool _showReply = false;
   bool _sendingReply = false;
 
-  // Like
   bool _liked = false;
 
   bool get _isVideo => widget.story.mediaType == 'video';
 
-  // Viewers data (for owner)
-  int _viewsCount = 0;
-  int _likesCount = 0;
+  // Viewers data
+  late int _viewsCount;
+  late int _likesCount;
   List _viewers = [];
   List _likers = [];
   bool _isOwner = false;
@@ -55,13 +54,17 @@ class _StoryViewerState extends State<StoryViewer>
     } else {
       _startProgress(const Duration(seconds: 5));
     }
+    // Init counts from model
+    _viewsCount = widget.story.viewsCount;
+    _likesCount = widget.story.likesCount;
+    _liked = widget.story.isLiked;
     // Mark as viewed
     _markViewed();
   }
 
   Future<void> _markViewed() async {
     try {
-      await ApiClient.instance.post('/stories/\${widget.story.id}/view');
+      await ApiClient.instance.post('/stories/${widget.story.id}/view');
     } catch (_) {}
   }
 
@@ -109,7 +112,7 @@ class _StoryViewerState extends State<StoryViewer>
     // Load viewers from API
     try {
       final res = await ApiClient.instance.get(
-          '/stories/\${widget.story.id}/viewers');
+          '/stories/${widget.story.id}/viewers');
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         _viewsCount = data['viewsCount'] ?? 0;
@@ -142,7 +145,7 @@ class _StoryViewerState extends State<StoryViewer>
     setState(() => _liked = !_liked);
     if (_liked) _showHeartAnim();
     try {
-      await ApiClient.instance.post('/stories/\${widget.story.id}/like');
+      await ApiClient.instance.post('/stories/${widget.story.id}/like');
     } catch (_) {}
   }
 
