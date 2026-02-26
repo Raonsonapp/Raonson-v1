@@ -71,12 +71,12 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     if (f != null && mounted) setState(() { _file = f; _isVideo = true; });
   }
 
-  Future<void> _publish(String caption) async {
+  Future<void> _publish(File capturedFile, String caption) async {
     if (_file == null || _uploading) return;
     setState(() { _uploading = true; _error = null; });
     try {
       // 1) Upload to Cloudinary
-      final ext = _file!.path.split('.').last.toLowerCase();
+      final ext = capturedFile.path.split('.').last.toLowerCase();
       final isVid = _isVideo;
       final mimeType = isVid ? 'video' : 'image';
       final mimeSubtype = isVid
@@ -94,7 +94,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       final cloudReq = http.MultipartRequest('POST', cloudUri);
       cloudReq.fields['upload_preset'] = preset;
       cloudReq.files.add(await http.MultipartFile.fromPath(
-        'file', _file!.path,
+        'file', capturedFile.path,
         contentType: MediaType(mimeType, mimeSubtype),
       ));
       final cloudRes = await cloudReq.send()
@@ -109,7 +109,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
           'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'));
         backReq.headers['Authorization'] = 'Bearer $token';
         backReq.files.add(await http.MultipartFile.fromPath(
-          'file', _file!.path,
+          'file', capturedFile.path,
           contentType: MediaType(mimeType, mimeSubtype),
         ));
         final backRes = await backReq.send()
@@ -161,7 +161,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         media: _file!,
         isVideo: _isVideo,
         isUploading: _uploading,
-        onPublish: _publish,
+        onPublish: (capturedFile, caption) => _publish(capturedFile, caption),
         onCancel: () => Navigator.pop(context),
       ),
       if (_error != null)
