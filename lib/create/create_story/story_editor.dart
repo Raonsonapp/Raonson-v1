@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 
 // ─────────────────────────────────────────────
@@ -12,9 +16,8 @@ class _TextItem {
   Offset position;
   Color color;
   double fontSize;
-  bool bold;
   _TextItem({required this.text, required this.position,
-    this.color = Colors.white, this.fontSize = 28, this.bold = true});
+    this.color = Colors.white, this.fontSize = 28});
 }
 
 class _StickerItem {
@@ -54,7 +57,7 @@ class StoryEditor extends StatefulWidget {
   final File media;
   final bool isVideo;
   final bool isUploading;
-  final void Function(String caption) onPublish;
+  final void Function(File capturedFile, String caption) onPublish;
   final VoidCallback onCancel;
 
   const StoryEditor({
@@ -73,6 +76,9 @@ class StoryEditor extends StatefulWidget {
 enum _Tool { none, text, draw, sticker, music }
 
 class _StoryEditorState extends State<StoryEditor> {
+  // Key for capturing canvas
+  final _canvasKey = GlobalKey();
+
   _Tool _tool = _Tool.none;
 
   // Text
@@ -83,7 +89,7 @@ class _StoryEditorState extends State<StoryEditor> {
   // Draw
   final List<_DrawPoint> _drawPoints = [];
   Color _drawColor = Colors.white;
-  double _drawWidth = 4;
+  final double _drawWidth = 4;
   bool _isDrawing = false;
 
   // Stickers
@@ -119,6 +125,38 @@ class _StoryEditorState extends State<StoryEditor> {
     super.dispose();
   }
 
+  // ── CAPTURE CANVAS ───────────────────────────
+  // Captures the visual canvas (media + text + stickers + drawings) as PNG
+  Future<File> _captureCanvas() async {
+    // Stop drawing mode so toolbar doesn't show in capture
+    setState(() => _tool = _Tool.none);
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    final boundary = _canvasKey.currentContext!.findRenderObject()
+        as RenderRepaintBoundary;
+    final image = await boundary.toImage(pixelRatio: 2.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final bytes = byteData!.buffer.asUint8List();
+
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/story_${DateTime.now().millisecondsSinceEpoch}.png');
+    await file.writeAsBytes(bytes);
+    return file;
+  }
+
+  Future<void> _onPublish() async {
+    if (widget.isVideo) {
+      // For video: upload original video file (can't composite video easily)
+      widget.onPublish(widget.media, _selectedTrack != null
+          ? '🎵 ${_selectedTrack!.title}' : '');
+    } else {
+      // For image: capture canvas with all overlays
+      final captured = await _captureCanvas();
+      widget.onPublish(captured, _selectedTrack != null
+          ? '🎵 ${_selectedTrack!.title}' : '');
+    }
+  }
+
   // ── TOOLBAR ──────────────────────────────────
   static const List<Map<String, dynamic>> _tools = [
     {'icon': Icons.text_fields, 'label': 'Текст', 'tool': _Tool.text},
@@ -133,73 +171,75 @@ class _StoryEditorState extends State<StoryEditor> {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Матн илова кунед',
-            style: TextStyle(color: Colors.white)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(
-            controller: ctrl,
-            autofocus: true,
-            style: const TextStyle(color: Colors.white, fontSize: 18),
-            decoration: const InputDecoration(
-              hintText: 'Матн нависед...',
-              hintStyle: TextStyle(color: Colors.white38),
-              border: InputBorder.none,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          backgroundColor: const Color(0xFF1C1C1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Матн илова кунед',
+              style: TextStyle(color: Colors.white)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              style: TextStyle(color: _textColor, fontSize: _fontSize,
+                  fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                hintText: 'Матн нависед...',
+                hintStyle: TextStyle(color: Colors.white38),
+                border: InputBorder.none,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          // Color picker row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [Colors.white, Colors.yellow, Colors.red,
-              Colors.cyan, Colors.green, Colors.orange].map((c) =>
-              GestureDetector(
-                onTap: () => setState(() => _textColor = c),
-                child: Container(
-                  width: 28, height: 28,
-                  decoration: BoxDecoration(
-                    color: c,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _textColor == c ? Colors.white : Colors.transparent,
-                      width: 2),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [Colors.white, Colors.yellow, Colors.red,
+                Colors.cyan, Colors.green, Colors.orange].map((c) =>
+                GestureDetector(
+                  onTap: () { setDlg(() {}); setState(() => _textColor = c); },
+                  child: Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(
+                      color: c, shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _textColor == c ? Colors.white : Colors.transparent,
+                        width: 2),
+                    ),
                   ),
-                ),
-              )).toList(),
-          ),
-          const SizedBox(height: 8),
-          // Font size slider
-          Slider(
-            value: _fontSize,
-            min: 16, max: 60,
-            activeColor: Colors.white,
-            inactiveColor: Colors.white24,
-            onChanged: (v) => setState(() => _fontSize = v),
-          ),
-        ]),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            onPressed: () {
-              if (ctrl.text.trim().isNotEmpty) {
-                setState(() => _texts.add(_TextItem(
-                  text: ctrl.text.trim(),
-                  position: const Offset(100, 300),
-                  color: _textColor,
-                  fontSize: _fontSize,
-                )));
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Илова', style: TextStyle(color: Colors.black)),
-          ),
-        ],
+                )).toList(),
+            ),
+            const SizedBox(height: 8),
+            Slider(
+              value: _fontSize, min: 16, max: 60,
+              activeColor: Colors.white,
+              inactiveColor: Colors.white24,
+              onChanged: (v) { setDlg(() {}); setState(() => _fontSize = v); },
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Бекор', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+              onPressed: () {
+                if (ctrl.text.trim().isNotEmpty) {
+                  setState(() => _texts.add(_TextItem(
+                    text: ctrl.text.trim(),
+                    position: Offset(
+                      MediaQuery.of(context).size.width / 2 - 60,
+                      MediaQuery.of(context).size.height / 2 - 20,
+                    ),
+                    color: _textColor,
+                    fontSize: _fontSize,
+                  )));
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Илова', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -231,7 +271,7 @@ class _StoryEditorState extends State<StoryEditor> {
                   emoji: e,
                   position: Offset(
                     MediaQuery.of(context).size.width / 2 - 24,
-                    MediaQuery.of(context).size.height / 2 - 24,
+                    MediaQuery.of(context).size.height / 2 - 80,
                   ),
                 )));
                 Navigator.pop(context);
@@ -257,11 +297,8 @@ class _StoryEditorState extends State<StoryEditor> {
       backgroundColor: const Color(0xFF1C1C1E),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _MusicPanel(
-        onSelected: (track) {
-          setState(() => _selectedTrack = track);
-        },
-      ),
+      builder: (_) => _MusicPanel(onSelected: (t) =>
+          setState(() => _selectedTrack = t)),
     );
   }
 
@@ -289,55 +326,59 @@ class _StoryEditorState extends State<StoryEditor> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
-        onPanStart: _onDrawStart,
-        onPanUpdate: _onDrawUpdate,
-        onPanEnd: _onDrawEnd,
+        onPanStart: _tool == _Tool.draw ? _onDrawStart : null,
+        onPanUpdate: _tool == _Tool.draw ? _onDrawUpdate : null,
+        onPanEnd: _tool == _Tool.draw ? _onDrawEnd : null,
         child: Stack(fit: StackFit.expand, children: [
 
-          // ── Background media ──
-          _buildMedia(),
-
-          // ── Drawing layer ──
-          CustomPaint(painter: _DrawPainter(_drawPoints)),
-
-          // ── Text overlays ──
-          ..._texts.map((t) => Positioned(
-            left: t.position.dx,
-            top: t.position.dy,
-            child: GestureDetector(
-              onPanUpdate: (d) => setState(() =>
-                  t.position = t.position + d.delta),
-              onDoubleTap: () => setState(() => _texts.remove(t)),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(6),
+          // ── CANVAS (captured for upload) ──
+          RepaintBoundary(
+            key: _canvasKey,
+            child: Stack(fit: StackFit.expand, children: [
+              // Background media
+              _buildMedia(),
+              // Drawing layer
+              CustomPaint(painter: _DrawPainter(_drawPoints)),
+              // Text overlays
+              ..._texts.map((t) => Positioned(
+                left: t.position.dx,
+                top: t.position.dy,
+                child: GestureDetector(
+                  onPanUpdate: (d) =>
+                      setState(() => t.position = t.position + d.delta),
+                  onDoubleTap: () => setState(() => _texts.remove(t)),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(t.text, style: TextStyle(
+                      color: t.color, fontSize: t.fontSize,
+                      fontWeight: FontWeight.bold,
+                      shadows: const [
+                        Shadow(blurRadius: 4, color: Colors.black54)],
+                    )),
+                  ),
                 ),
-                child: Text(t.text,
-                  style: TextStyle(
-                    color: t.color,
-                    fontSize: t.fontSize,
-                    fontWeight: t.bold ? FontWeight.bold : FontWeight.normal,
-                    shadows: const [Shadow(blurRadius: 4, color: Colors.black54)],
-                  )),
-              ),
-            ),
-          )),
+              )),
+              // Stickers
+              ..._stickers.map((s) => Positioned(
+                left: s.position.dx,
+                top: s.position.dy,
+                child: GestureDetector(
+                  onPanUpdate: (d) =>
+                      setState(() => s.position = s.position + d.delta),
+                  onDoubleTap: () => setState(() => _stickers.remove(s)),
+                  child: Text(s.emoji,
+                      style: TextStyle(fontSize: s.size)),
+                ),
+              )),
+            ]),
+          ),
 
-          // ── Stickers ──
-          ..._stickers.map((s) => Positioned(
-            left: s.position.dx,
-            top: s.position.dy,
-            child: GestureDetector(
-              onPanUpdate: (d) => setState(() =>
-                  s.position = s.position + d.delta),
-              onDoubleTap: () => setState(() => _stickers.remove(s)),
-              child: Text(s.emoji, style: TextStyle(fontSize: s.size)),
-            ),
-          )),
-
-          // ── Music badge ──
+          // ── Music badge (outside canvas so not captured) ──
           if (_selectedTrack != null)
             Positioned(
               bottom: 120, left: 16, right: 16,
@@ -358,13 +399,17 @@ class _StoryEditorState extends State<StoryEditor> {
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       overflow: TextOverflow.ellipsis,
                     )),
-                    const Icon(Icons.close, color: Colors.white54, size: 16),
+                    GestureDetector(
+                      onTap: () => setState(() => _selectedTrack = null),
+                      child: const Icon(Icons.close,
+                          color: Colors.white54, size: 16),
+                    ),
                   ]),
                 ),
               ),
             ),
 
-          // ── Draw color bar (shown when draw mode) ──
+          // ── Draw color bar ──
           if (_tool == _Tool.draw)
             Positioned(
               right: 12, top: 120,
@@ -380,8 +425,7 @@ class _StoryEditorState extends State<StoryEditor> {
                         color: c, shape: BoxShape.circle,
                         border: Border.all(
                           color: _drawColor == c
-                              ? Colors.white : Colors.white24,
-                          width: 2),
+                              ? Colors.white : Colors.white24, width: 2),
                       ),
                     ),
                   )).toList(),
@@ -398,21 +442,17 @@ class _StoryEditorState extends State<StoryEditor> {
                   onPressed: widget.isUploading ? null : widget.onCancel,
                 ),
                 const Spacer(),
-                // Undo draw
                 if (_tool == _Tool.draw && _drawPoints.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.undo, color: Colors.white),
                     onPressed: () => setState(() {
-                      // Remove last stroke
                       int i = _drawPoints.length - 1;
                       while (i > 0 && !_drawPoints[i].isStart) { i--; }
                       _drawPoints.removeRange(i, _drawPoints.length);
                     }),
                   ),
                 TextButton(
-                  onPressed: widget.isUploading ? null : () =>
-                      widget.onPublish(_selectedTrack != null
-                          ? '🎵 ${_selectedTrack!.title}' : ''),
+                  onPressed: widget.isUploading ? null : _onPublish,
                   style: TextButton.styleFrom(
                     backgroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -437,7 +477,7 @@ class _StoryEditorState extends State<StoryEditor> {
             bottom: 0, left: 0, right: 0,
             child: SafeArea(
               child: Container(
-                color: Colors.black38,
+                color: Colors.black45,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -462,7 +502,7 @@ class _StoryEditorState extends State<StoryEditor> {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                            horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: isActive
                               ? Colors.white24 : Colors.transparent,
@@ -503,7 +543,8 @@ class _StoryEditorState extends State<StoryEditor> {
       return const Center(
           child: CircularProgressIndicator(color: Colors.white30));
     }
-    return Image.file(widget.media, fit: BoxFit.cover);
+    return Image.file(widget.media, fit: BoxFit.cover,
+        width: double.infinity, height: double.infinity);
   }
 }
 
@@ -516,8 +557,8 @@ class _DrawPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (int i = 0; i < points.length; i++) {
-      if (points[i].isStart || i == 0) continue;
+    for (int i = 1; i < points.length; i++) {
+      if (points[i].isStart) continue;
       final paint = Paint()
         ..color = points[i].color
         ..strokeWidth = points[i].width
@@ -532,7 +573,7 @@ class _DrawPainter extends CustomPainter {
 }
 
 // ─────────────────────────────────────────────
-// MUSIC PANEL (iTunes API - бесплатно!)
+// MUSIC PANEL
 // ─────────────────────────────────────────────
 class _MusicPanel extends StatefulWidget {
   final void Function(_MusicTrack) onSelected;
@@ -575,10 +616,9 @@ class _MusicPanelState extends State<_MusicPanel> {
           width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24,
               borderRadius: BorderRadius.circular(2))),
-        const Text('Мусиқӣ', style: TextStyle(color: Colors.white,
+        const Text('Мусиқӣ 🎵', style: TextStyle(color: Colors.white,
             fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
-        // Search
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(
@@ -609,11 +649,12 @@ class _MusicPanelState extends State<_MusicPanel> {
               child: CircularProgressIndicator(color: Colors.white30))),
         if (_error != null)
           Padding(padding: const EdgeInsets.all(16),
-            child: Text(_error!, style: const TextStyle(color: Colors.red))),
+              child: Text(_error!,
+                  style: const TextStyle(color: Colors.redAccent))),
         if (!_loading && _tracks.isEmpty && _error == null)
           const Expanded(child: Center(
-            child: Text('Суруд ёбед 🎵',
-                style: TextStyle(color: Colors.white38, fontSize: 16)))),
+              child: Text('Суруд ёбед 🎵',
+                  style: TextStyle(color: Colors.white38, fontSize: 16)))),
         if (!_loading && _tracks.isNotEmpty)
           Expanded(
             child: ListView.builder(
