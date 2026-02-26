@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -110,44 +111,11 @@ class _PostCardState extends State<PostCard> {
   }
 
   void _showShare() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(margin: const EdgeInsets.symmetric(vertical: 8),
-            width: 36, height: 4,
-            decoration: BoxDecoration(color: Colors.white24,
-                borderRadius: BorderRadius.circular(2))),
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('Мубодила кардан',
-                style: TextStyle(color: Colors.white,
-                    fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.copy, color: Colors.white),
-            title: const Text('Линкро нусха кун',
-                style: TextStyle(color: Colors.white)),
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Линк нусха шуд!')),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.message_outlined, color: Colors.white),
-            title: const Text('Ба дӯст фиристед',
-                style: TextStyle(color: Colors.white)),
-            onTap: () => Navigator.pop(context),
-          ),
-          const SizedBox(height: 8),
-        ]),
-      ),
-    );
+    final postUrl = 'https://raonson.app/post/\${widget.post.id}';
+    final text = widget.post.caption.isNotEmpty
+        ? '\${widget.post.caption}\n\$postUrl'
+        : postUrl;
+    Share.share(text, subject: 'Raonson пост');
   }
 
   void _openComments() {
@@ -227,21 +195,38 @@ class _PostCardState extends State<PostCard> {
           ]),
         ),
 
-        // LIKES & COMMENTS COUNT
+        // LIKES & COMMENTS COUNT - Instagram style
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(children: [
-            Text('$_likeCount likes', style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
-            const SizedBox(width: 12),
-            GestureDetector(
-              onTap: _openComments,
-              child: Text(
-                '$_commentCount комментария',
-                style: const TextStyle(color: Colors.white38, fontSize: 13),
-              ),
-            ),
-          ]),
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Likes
+              if (_likeCount > 0)
+                Text(
+                  _likeCount == 1 ? '1 нафар писанд кард' : '$_likeCount нафар писанд карданд',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Colors.white),
+                ),
+              // Comments
+              if (_commentCount > 0)
+                GestureDetector(
+                  onTap: _openComments,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      _commentCount == 1
+                          ? 'Нишон додани 1 комментария'
+                          : 'Нишон додани ҳамаи $_commentCount комментария',
+                      style: const TextStyle(
+                          color: Colors.white38, fontSize: 12),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
 
         // CAPTION
