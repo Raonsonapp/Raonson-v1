@@ -7,7 +7,7 @@ import 'dart:convert';
 import '../../../app/app_config.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/api/api_client.dart';
-import '../../create_post/media_picker.dart';
+import '../create_post/media_picker.dart';
 import 'story_editor.dart';
 
 class CreateStoryScreen extends StatefulWidget {
