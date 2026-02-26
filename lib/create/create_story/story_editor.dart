@@ -593,23 +593,6 @@ class _MusicPanelState extends State<_MusicPanel> {
   final _player = AudioPlayer();
   String? _playingUrl;
 
-  @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
-  }
-
-  Future<void> _togglePreview(String url) async {
-    if (_playingUrl == url) {
-      await _player.stop();
-      setState(() => _playingUrl = null);
-    } else {
-      setState(() => _playingUrl = url);
-      await _player.play(UrlSource(url));
-    }
-  }
-  final _player = AudioPlayer();
-  String? _playingUrl;
 
   @override
   void dispose() {
