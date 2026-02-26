@@ -6,6 +6,7 @@ class CommentModel {
   final UserModel user;
   final String text;
   final bool liked;
+  final int likesCount;
   final DateTime createdAt;
 
   const CommentModel({
@@ -14,6 +15,7 @@ class CommentModel {
     required this.user,
     required this.text,
     required this.liked,
+    this.likesCount = 0,
     required this.createdAt,
   });
 
@@ -27,13 +29,14 @@ class CommentModel {
     return '${diff.inDays}d';
   }
 
-  CommentModel copyWith({bool? liked}) {
+  CommentModel copyWith({bool? liked, int? likesCount}) {
     return CommentModel(
       id: id,
       postId: postId,
       user: user,
       text: text,
       liked: liked ?? this.liked,
+      likesCount: likesCount ?? this.likesCount,
       createdAt: createdAt,
     );
   }
@@ -45,6 +48,9 @@ class CommentModel {
       user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
       text: json['text'] ?? '',
       liked: json['liked'] ?? false,
+      likesCount: (json['likes'] is List)
+          ? (json['likes'] as List).length
+          : (json['likesCount'] ?? 0),
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
