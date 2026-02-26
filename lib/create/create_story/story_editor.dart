@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
@@ -78,7 +77,6 @@ class _StoryEditorState extends State<StoryEditor> {
 
   // Text
   final List<_TextItem> _texts = [];
-  _TextItem? _selectedText;
   Color _textColor = Colors.white;
   double _fontSize = 28;
 
@@ -407,7 +405,7 @@ class _StoryEditorState extends State<StoryEditor> {
                     onPressed: () => setState(() {
                       // Remove last stroke
                       int i = _drawPoints.length - 1;
-                      while (i > 0 && !_drawPoints[i].isStart) i--;
+                      while (i > 0 && !_drawPoints[i].isStart) { i--; }
                       _drawPoints.removeRange(i, _drawPoints.length);
                     }),
                   ),
