@@ -1,35 +1,27 @@
 import 'dart:convert';
-
 import '../core/api/api_client.dart';
-import '../core/api/api_endpoints.dart';
 import '../models/notification_model.dart';
 
 class NotificationsRepository {
   final ApiClient _api = ApiClient.instance;
 
-  // ================= GET NOTIFICATIONS =================
-  Future<List<NotificationModel>> fetchNotifications() async {
-    final response = await _api.getRequest(
-      ApiEndpoints.notifications,
-    );
-
-    final List list = jsonDecode(response.body) as List;
-    return list
-        .map((e) => NotificationModel.fromJson(e))
+  Future<Map<String, dynamic>> fetchNotifications() async {
+    final res = await _api.get('/notifications');
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    final list = (data['notifications'] as List? ?? [])
+        .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
         .toList();
+    return {
+      'notifications': list,
+      'unreadCount': data['unreadCount'] ?? 0,
+    };
   }
 
-  // ================= MARK ONE AS READ =================
-  Future<void> markAsRead(String notificationId) async {
-    await _api.postRequest(
-      '${ApiEndpoints.notifications}/$notificationId/read',
-    );
+  Future<void> markAsRead(String id) async {
+    await _api.post('/notifications/$id/read');
   }
 
-  // ================= MARK ALL AS READ =================
   Future<void> markAllAsRead() async {
-    await _api.postRequest(
-      '${ApiEndpoints.notifications}/read-all',
-    );
+    await _api.post('/notifications/read-all');
   }
 }
