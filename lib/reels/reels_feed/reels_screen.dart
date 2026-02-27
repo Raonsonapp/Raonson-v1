@@ -39,13 +39,18 @@ class _ReelsVM extends ChangeNotifier {
   bool loadingMore = false;
   int _page = 1;
 
+  String? error;
+
   Future<void> load() async {
     loading = true;
+    error = null;
     notifyListeners();
     try {
       reels = await _repo.fetchReels(page: 1);
       _page = 1;
-    } catch (_) {}
+    } catch (e) {
+      error = e.toString();
+    }
     loading = false;
     notifyListeners();
   }
@@ -129,17 +134,56 @@ class _ReelsViewState extends State<_ReelsView> {
     if (vm.reels.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black, elevation: 0,
+          title: const Text('Reels',
+              style: TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.bold)),
+          centerTitle: true,
+        ),
         body: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.videocam_off_outlined,
+            const Icon(Icons.video_collection_outlined,
                 color: Colors.white24, size: 72),
             const SizedBox(height: 16),
             const Text('Reels нест',
                 style: TextStyle(color: Colors.white,
                     fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text('Аввалин Reel-ро шумо гузоред!',
-                style: TextStyle(color: Colors.white38)),
+            if (vm.error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(vm.error!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                    textAlign: TextAlign.center),
+              )
+            else
+              const Text('Аввалин Reel-ро шумо гузоред!',
+                  style: TextStyle(color: Colors.white38)),
+            const SizedBox(height: 24),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/create-reel'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 28, vertical: 13),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF833AB4), Color(0xFFE1306C),
+                      Color(0xFFF77737)],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text('+ Reel гузоред',
+                    style: TextStyle(color: Colors.white,
+                        fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: vm.load,
+              child: const Text('Боз кӯшиш кунед',
+                  style: TextStyle(color: Colors.white38)),
+            ),
           ]),
         ),
       );
