@@ -18,4 +18,5 @@ abstract class AppRoutes {
   // home actions
   static const String create = '/create';
   static const String notifications = '/notifications';
+  static const String createReel = '/create-reel';
 }
