@@ -19,7 +19,6 @@ class NotificationModel {
 
   bool get isRead => read;
 
-  // Human-readable message based on type
   String get message {
     switch (type) {
       case 'like': return 'постатро писанд кард';
@@ -33,18 +32,6 @@ class NotificationModel {
     }
   }
 
-  IconData get icon {
-    switch (type) {
-      case 'like': return const _IconData(0xe25a); // favorite
-      case 'comment': return const _IconData(0xe0b7); // chat_bubble
-      case 'follow':
-      case 'follow_request': return const _IconData(0xe7fb); // person_add
-      case 'story_view': return const _IconData(0xe8f4); // visibility
-      case 'message': return const _IconData(0xe0be); // message
-      default: return const _IconData(0xe7f4); // notifications
-    }
-  }
-
   String get timeAgo {
     final diff = DateTime.now().difference(createdAt);
     if (diff.inMinutes < 1) return 'ҳозир';
@@ -54,7 +41,8 @@ class NotificationModel {
   }
 
   NotificationModel copyWith({bool? read}) => NotificationModel(
-    id: id, type: type,
+    id: id,
+    type: type,
     read: read ?? this.read,
     createdAt: createdAt,
     fromUser: fromUser,
@@ -73,14 +61,4 @@ class NotificationModel {
       targetId: json['targetId']?.toString(),
     );
   }
-}
-
-// Helper - we use IconData from Flutter
-class _IconData implements IconData {
-  const _IconData(this.codePoint);
-  @override final int codePoint;
-  @override String get fontFamily => 'MaterialIcons';
-  @override String? get fontPackage => null;
-  @override bool get matchTextDirection => false;
-  @override List<String>? get fontFamilyFallback => null;
 }
