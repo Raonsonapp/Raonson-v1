@@ -15,31 +15,18 @@ List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
 class StoryBar extends StatelessWidget {
   final List<StoryModel> stories;
   final VoidCallback? onAddStory;
-  final void Function(List<StoryModel> userStories, int index) onTapGroup;
+  final void Function(List<StoryModel> userStories, int index)? onTapGroup;
+  final void Function(StoryModel story)? onTap;
   final String? myAvatar;
 
   const StoryBar({
     super.key,
     required this.stories,
     this.onAddStory,
-    required this.onTapGroup,
+    this.onTapGroup,
+    this.onTap,
     this.myAvatar,
   });
-
-  // Keep backward compat
-  factory StoryBar.simple({
-    required List<StoryModel> stories,
-    required void Function(StoryModel) onTap,
-    VoidCallback? onAddStory,
-    String? myAvatar,
-  }) {
-    return StoryBar(
-      stories: stories,
-      onAddStory: onAddStory,
-      myAvatar: myAvatar,
-      onTapGroup: (group, _) => onTap(group.first),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +44,10 @@ class StoryBar extends StatelessWidget {
             padding: const EdgeInsets.only(right: 10),
             child: _StoryGroupItem(
               stories: group,
-              onTap: () => onTapGroup(group, 0),
+              onTap: () {
+                if (onTapGroup != null) onTapGroup!(group, 0);
+                else if (onTap != null) onTap!(group.first);
+              },
             ),
           )),
         ],
