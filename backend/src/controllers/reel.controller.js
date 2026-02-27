@@ -96,3 +96,31 @@ export async function deleteReel(req, res) {
     res.status(500).json({ message: "Delete failed" });
   }
 }
+
+// GET REEL COMMENTS
+export async function getReelComments(req, res) {
+  try {
+    const reel = await Reel.findById(req.params.id)
+      .populate({ path: "comments.user", select: "username avatar verified" });
+    if (!reel) return res.status(404).json({ message: "Reel not found" });
+    res.json({ comments: reel.comments || [] });
+  } catch (e) {
+    res.status(500).json({ message: "Get comments failed" });
+  }
+}
+
+// ADD REEL COMMENT
+export async function addReelComment(req, res) {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ message: "text required" });
+    const reel = await Reel.findByIdAndUpdate(
+      req.params.id,
+      { $push: { comments: { user: req.user._id, text, createdAt: new Date() } } },
+      { new: true }
+    ).populate({ path: "comments.user", select: "username avatar verified" });
+    res.json({ comments: reel.comments });
+  } catch (e) {
+    res.status(500).json({ message: "Add comment failed" });
+  }
+}
