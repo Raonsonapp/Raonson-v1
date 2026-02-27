@@ -7,7 +7,7 @@ import 'package:http_parser/http_parser.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
-import '../../create/create_post/media_picker.dart';
+import '../create_post/media_picker.dart';
 
 class CreateReelScreen extends StatefulWidget {
   const CreateReelScreen({super.key});
