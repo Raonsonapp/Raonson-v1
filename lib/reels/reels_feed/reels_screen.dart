@@ -433,7 +433,7 @@ class _ReelItemState extends State<_ReelItem>
             const Spacer(),
             GestureDetector(
               onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const CreateReelScreen()))
+              MaterialPageRoute(builder: (_) => const CreateReelScreen())),
               child: const Icon(Icons.add_box_outlined,
                   color: Colors.white, size: 26),
             ),
