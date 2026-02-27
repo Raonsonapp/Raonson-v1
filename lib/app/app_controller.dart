@@ -1,4 +1,4 @@
-import '../reels/create_reel/create_reel_screen.dart';
+import '../create/create_reel/create_reel_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'app_state.dart';
