@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
-import '../../core/storage/token_storage.dart';
 import '../../core/api/api_client.dart';
-import '../../app/app_config.dart';
 import '../create_post/media_picker.dart';
 
 class CreateReelScreen extends StatefulWidget {
@@ -60,7 +58,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         'caption': _captionCtrl.text.trim(),
       });
       if (res.statusCode >= 400) throw Exception('Reel сохта нашуд');
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) Navigator.pop(context, true); // true = refresh
     } catch (e) {
       setState(() {
         _uploading = false;
