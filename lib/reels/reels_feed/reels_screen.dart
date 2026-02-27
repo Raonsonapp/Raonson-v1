@@ -11,6 +11,7 @@ import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
 import '../reels_repository.dart';
 import '../../feed/comments/comments_screen.dart';
+import '../../create/create_reel/create_reel_screen.dart';
 
 // ─────────────────────────────────────────────
 // REELS SCREEN
@@ -164,7 +165,14 @@ class _ReelsViewState extends State<_ReelsView> {
                   style: TextStyle(color: Colors.white38)),
             const SizedBox(height: 24),
             GestureDetector(
-              onTap: () => Navigator.pushNamed(context, '/create-reel'),
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(
+                      builder: (_) => const CreateReelScreen()))
+              .then((created) {
+                if (created == true) {
+                  context.read<_ReelsVM>().load();
+                }
+              }),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 28, vertical: 13),
@@ -424,7 +432,8 @@ class _ReelItemState extends State<_ReelItem>
                     letterSpacing: -0.5)),
             const Spacer(),
             GestureDetector(
-              onTap: () {}, // open camera / create
+              onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CreateReelScreen()))
               child: const Icon(Icons.add_box_outlined,
                   color: Colors.white, size: 26),
             ),
