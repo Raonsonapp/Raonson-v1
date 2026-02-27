@@ -449,3 +449,227 @@ class _VideoItemState extends State<_VideoItem> {
     ]);
   }
 }
+
+
+// ─────────────────────────────────────────────
+// Instagram 2026 Style Action Button
+// ─────────────────────────────────────────────
+class _ActionBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  final Widget icon;
+  final int count;
+  final Color activeColor;
+  final bool isActive;
+
+  const _ActionBtn({
+    required this.onTap,
+    required this.icon,
+    this.count = 0,
+    this.activeColor = Colors.white,
+    this.isActive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          icon,
+          if (count > 0) ...[
+            const SizedBox(width: 5),
+            Text(
+              count >= 1000
+                  ? '${(count / 1000).toStringAsFixed(1)}K'
+                  : '$count',
+              style: TextStyle(
+                color: isActive ? activeColor : Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Instagram 2026 Icon Painter
+// ─────────────────────────────────────────────
+class _IgIcon extends StatelessWidget {
+  final _IgIconType type;
+  final bool filled;
+  final Color color;
+  final double size;
+
+  const _IgIcon._({
+    required this.type,
+    this.filled = false,
+    this.color = Colors.white,
+    this.size = 25,
+  });
+
+  factory _IgIcon.heart({bool filled = false}) => _IgIcon._(
+      type: _IgIconType.heart,
+      filled: filled,
+      color: filled ? const Color(0xFFFF3040) : Colors.white);
+
+  factory _IgIcon.comment() =>
+      const _IgIcon._(type: _IgIconType.comment);
+
+  factory _IgIcon.share() =>
+      const _IgIcon._(type: _IgIconType.share);
+
+  factory _IgIcon.save({bool filled = false}) =>
+      _IgIcon._(type: _IgIconType.save, filled: filled);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      transitionBuilder: (child, anim) => ScaleTransition(
+        scale: Tween(begin: 0.7, end: 1.0).animate(
+            CurvedAnimation(parent: anim, curve: Curves.elasticOut)),
+        child: child,
+      ),
+      child: CustomPaint(
+        key: ValueKey('${type.name}_$filled'),
+        size: Size(size, size),
+        painter: _IgIconPainter(type: type, filled: filled, color: color),
+      ),
+    );
+  }
+}
+
+enum _IgIconType { heart, comment, share, save }
+
+class _IgIconPainter extends CustomPainter {
+  final _IgIconType type;
+  final bool filled;
+  final Color color;
+
+  const _IgIconPainter({
+    required this.type,
+    required this.filled,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    switch (type) {
+      case _IgIconType.heart:
+        _drawHeart(canvas, size);
+        break;
+      case _IgIconType.comment:
+        _drawComment(canvas, size);
+        break;
+      case _IgIconType.share:
+        _drawShare(canvas, size);
+        break;
+      case _IgIconType.save:
+        _drawSave(canvas, size);
+        break;
+    }
+  }
+
+  Paint _paint({bool stroke = true}) => Paint()
+    ..color = color
+    ..strokeWidth = 1.9
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..style = stroke && !filled ? PaintingStyle.stroke : PaintingStyle.fill
+    ..isAntiAlias = true;
+
+  // ── HEART ──────────────────────────────────
+  void _drawHeart(Canvas canvas, Size s) {
+    final w = s.width;
+    final h = s.height;
+    final path = Path();
+    // Instagram-style heart shape
+    path.moveTo(w * 0.5, h * 0.82);
+    path.cubicTo(w * 0.1, h * 0.55, w * -0.05, h * 0.35,
+        w * 0.15, h * 0.2);
+    path.cubicTo(w * 0.28, h * 0.08, w * 0.42, h * 0.1,
+        w * 0.5, h * 0.22);
+    path.cubicTo(w * 0.58, h * 0.1, w * 0.72, h * 0.08,
+        w * 0.85, h * 0.2);
+    path.cubicTo(w * 1.05, h * 0.35, w * 0.9, h * 0.55,
+        w * 0.5, h * 0.82);
+    path.close();
+    canvas.drawPath(path, _paint(stroke: true));
+  }
+
+  // ── COMMENT BUBBLE ──────────────────────────
+  void _drawComment(Canvas canvas, Size s) {
+    final w = s.width;
+    final h = s.height;
+    final r = w * 0.14;
+    final paint = _paint(stroke: true)
+      ..style = PaintingStyle.stroke;
+
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.04, h * 0.06, w * 0.92, h * 0.72),
+      Radius.circular(r),
+    );
+    canvas.drawRRect(rect, paint);
+
+    // Tail at bottom left
+    final tail = Path()
+      ..moveTo(w * 0.18, h * 0.78)
+      ..lineTo(w * 0.08, h * 0.94)
+      ..lineTo(w * 0.34, h * 0.78);
+    canvas.drawPath(tail, paint);
+  }
+
+  // ── SHARE (Paper plane) ─────────────────────
+  void _drawShare(Canvas canvas, Size s) {
+    final w = s.width;
+    final h = s.height;
+    final paint = _paint(stroke: true)
+      ..style = PaintingStyle.stroke;
+
+    // Paper plane Instagram style
+    final body = Path()
+      ..moveTo(w * 0.95, h * 0.05)
+      ..lineTo(w * 0.05, h * 0.48)
+      ..lineTo(w * 0.38, h * 0.58)
+      ..lineTo(w * 0.95, h * 0.05);
+    canvas.drawPath(body, paint);
+
+    final tail = Path()
+      ..moveTo(w * 0.38, h * 0.58)
+      ..lineTo(w * 0.42, h * 0.92)
+      ..lineTo(w * 0.62, h * 0.72)
+      ..lineTo(w * 0.95, h * 0.05);
+    canvas.drawPath(tail, paint);
+
+    // Center fold line
+    final fold = Path()
+      ..moveTo(w * 0.38, h * 0.58)
+      ..lineTo(w * 0.65, h * 0.33);
+    canvas.drawPath(fold, paint);
+  }
+
+  // ── SAVE / BOOKMARK ─────────────────────────
+  void _drawSave(Canvas canvas, Size s) {
+    final w = s.width;
+    final h = s.height;
+    final path = Path()
+      ..moveTo(w * 0.18, h * 0.06)
+      ..lineTo(w * 0.82, h * 0.06)
+      ..lineTo(w * 0.82, h * 0.94)
+      ..lineTo(w * 0.5, h * 0.72)
+      ..lineTo(w * 0.18, h * 0.94)
+      ..close();
+    canvas.drawPath(path, _paint(stroke: true));
+  }
+
+  @override
+  bool shouldRepaint(_IgIconPainter old) =>
+      old.filled != filled || old.color != color;
+}
