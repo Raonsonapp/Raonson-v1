@@ -20,6 +20,7 @@ export async function getReels(req, res) {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
+    const userId = req.user._id;
 
     const reels = await Reel.find()
       .populate("user", "username avatar verified")
@@ -27,7 +28,20 @@ export async function getReels(req, res) {
       .skip(skip)
       .limit(limit);
 
-    res.json({ reels, page, limit });
+    const mapped = reels.map(r => ({
+      _id: r._id,
+      videoUrl: r.videoUrl,
+      caption: r.caption,
+      user: r.user,
+      likesCount: r.likes.length,
+      commentsCount: (r.comments || []).length,
+      viewsCount: r.views || 0,
+      isLiked: r.likes.some(id => id.toString() === userId.toString()),
+      isSaved: r.saves.some(id => id.toString() === userId.toString()),
+      createdAt: r.createdAt,
+    }));
+
+    res.json({ reels: mapped, page, limit });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Get reels failed" });
@@ -123,4 +137,4 @@ export async function addReelComment(req, res) {
   } catch (e) {
     res.status(500).json({ message: "Add comment failed" });
   }
-}
+      }
