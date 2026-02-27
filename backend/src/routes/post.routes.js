@@ -1,4 +1,5 @@
 import express from "express";
+import { postPreview } from "../controllers/post_preview.js";
 import {
   createPost,
   getFeed,
@@ -18,6 +19,9 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 const router = express.Router();
 
 // ✅ GET /posts      → lib мефиристад (fetchFeed)
+// Public preview (no auth)
+router.get("/preview/:id", postPreview);
+
 router.get("/", authMiddleware, getFeed);
 // ✅ GET /posts/feed → ҳам кор мекунад (backward compat)
 router.get("/feed", authMiddleware, getFeed);
