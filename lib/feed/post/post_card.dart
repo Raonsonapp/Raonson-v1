@@ -112,7 +112,7 @@ class _PostCardState extends State<PostCard> {
   }
 
   void _showShare() {
-    final postUrl = 'https://raonson-v1.onrender.com/posts/${widget.post.id}';
+    final postUrl = 'https://raonson-v1.onrender.com/posts/preview/${widget.post.id}';
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1C1C1E),
