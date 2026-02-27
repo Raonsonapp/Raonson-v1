@@ -18,7 +18,9 @@ class StoryBar extends StatelessWidget {
   final void Function(List<StoryModel> userStories, int index)? onTapGroup;
   final void Function(StoryModel story)? onTap;
   final String? myAvatar;
+  final List<StoryModel>? myStories;
 
+  // myStories ignored - stories already filtered by controller
   const StoryBar({
     super.key,
     required this.stories,
@@ -26,6 +28,7 @@ class StoryBar extends StatelessWidget {
     this.onTapGroup,
     this.onTap,
     this.myAvatar,
+    this.myStories,
   });
 
   @override
