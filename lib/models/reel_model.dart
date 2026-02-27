@@ -8,6 +8,7 @@ class ReelModel {
   final int likesCount;
   final int commentsCount;
   final bool isLiked;
+  final bool isSaved;
 
   const ReelModel({
     required this.id,
@@ -17,6 +18,7 @@ class ReelModel {
     required this.likesCount,
     required this.commentsCount,
     required this.isLiked,
+    this.isSaved = false,
   });
 
   factory ReelModel.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class ReelModel {
       likesCount: json['likesCount'] ?? 0,
       commentsCount: json['commentsCount'] ?? 0,
       isLiked: json['isLiked'] ?? false,
+      isSaved: json['isSaved'] ?? false,
     );
   }
 }
