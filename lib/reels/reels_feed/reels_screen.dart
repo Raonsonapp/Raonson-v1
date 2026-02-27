@@ -48,8 +48,10 @@ class _ReelsVM extends ChangeNotifier {
     try {
       reels = await _repo.fetchReels(page: 1);
       _page = 1;
+      debugPrint('✅ Reels loaded: \${reels.length}');
     } catch (e) {
       error = e.toString();
+      debugPrint('❌ Reels error: \$e');
     }
     loading = false;
     notifyListeners();
