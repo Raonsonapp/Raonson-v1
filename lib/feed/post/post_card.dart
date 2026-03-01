@@ -414,18 +414,21 @@ class _VideoItemState extends State<_VideoItem> {
     super.dispose();
   }
 
-  // Вақте tab иваз шавад пауза
+  // Вақте widget аз экран мебарояд - пауза
   @override
   void deactivate() {
     if (_ready) _ctrl.pause();
     super.deactivate();
   }
 
-  // Вақте tab баргардад — агар экранда бошад, бозад
+  // Вақте widget ба экран бармегардад
   @override
   void activate() {
     super.activate();
-    if (_ready) _checkVisibilityAndPlay();
+    if (_ready) {
+      _ctrl.setVolume(1.0);
+      _checkVisibilityAndPlay();
+    }
   }
 
   void _checkVisibilityAndPlay() {
