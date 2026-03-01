@@ -392,6 +392,7 @@ class _VideoItem extends StatefulWidget {
 class _VideoItemState extends State<_VideoItem> {
   late VideoPlayerController _ctrl;
   bool _ready = false;
+  final _key = GlobalKey();
 
   @override
   void initState() {
@@ -401,23 +402,51 @@ class _VideoItemState extends State<_VideoItem> {
         if (mounted) {
           setState(() => _ready = true);
           _ctrl.setLooping(true);
-          _ctrl.play();
+          _ctrl.setVolume(1.0); // овоз фаъол
+          _checkVisibilityAndPlay();
         }
       });
   }
 
   @override
   void dispose() {
-    _ctrl.pause(); // ← овоз банд кун пеш аз dispose
     _ctrl.dispose();
     super.dispose();
   }
 
-  // Вақте widget scroll шуда аз экран мебарояд
+  // Вақте tab иваз шавад пауза
   @override
   void deactivate() {
-    _ctrl.pause();
+    if (_ready) _ctrl.pause();
     super.deactivate();
+  }
+
+  // Вақте tab баргардад — агар экранда бошад, бозад
+  @override
+  void activate() {
+    super.activate();
+    if (_ready) _checkVisibilityAndPlay();
+  }
+
+  void _checkVisibilityAndPlay() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_ready) return;
+      final ctx = _key.currentContext;
+      if (ctx == null) return;
+      final box = ctx.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final pos = box.localToGlobal(Offset.zero);
+      final screenH = MediaQuery.of(ctx).size.height;
+      // Агар видео дар экран бошад (50%+), бозад
+      final visibleTop = pos.dy;
+      final visibleBottom = pos.dy + box.size.height;
+      final isVisible = visibleBottom > screenH * 0.1 && visibleTop < screenH * 0.9;
+      if (isVisible) {
+        _ctrl.play();
+      } else {
+        _ctrl.pause();
+      }
+    });
   }
 
   @override
@@ -429,7 +458,7 @@ class _VideoItemState extends State<_VideoItem> {
           child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2)),
       );
     }
-    return Stack(fit: StackFit.expand, children: [
+    return Stack(key: _key, fit: StackFit.expand, children: [
       FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
