@@ -104,19 +104,58 @@ class _ReelsView extends StatefulWidget {
   State<_ReelsView> createState() => _ReelsViewState();
 }
 
-class _ReelsViewState extends State<_ReelsView> {
+class _ReelsViewState extends State<_ReelsView>
+    with WidgetsBindingObserver {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
+  bool _isVisible = true;
 
   @override
   void initState() {
     super.initState();
-    // Fullscreen immersive
+    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pause when route is not active
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _isVisible = route.isCurrent;
+      _updatePlayback();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _pauseAll();
+    } else if (state == AppLifecycleState.resumed && _isVisible) {
+      _resumeCurrent();
+    }
+  }
+
+  void _pauseAll() {
+    // Signal current item to pause
+    _isVisible = false;
+    setState(() {});
+  }
+
+  void _resumeCurrent() {
+    _isVisible = true;
+    setState(() {});
+  }
+
+  void _updatePlayback() {
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageCtrl.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -212,7 +251,7 @@ class _ReelsViewState extends State<_ReelsView> {
         },
         itemBuilder: (_, i) => _ReelItem(
           reel: vm.reels[i],
-          isActive: i == _currentPage,
+          isActive: i == _currentPage && _isVisible,
           onLike: () => vm.toggleLike(vm.reels[i].id),
           onSave: () => vm.toggleSave(vm.reels[i].id),
         ),
