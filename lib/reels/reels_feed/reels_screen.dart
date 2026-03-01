@@ -298,12 +298,28 @@ class _ReelItemState extends State<_ReelItem>
     _initVideo();
   }
 
+  // Tab иваз шавад - МУСТАҚИМ пауза
+  @override
+  void deactivate() {
+    _ctrl?.pause();
+    super.deactivate();
+  }
+
+  // Tab баргардад - агар active бошад, бозад  
+  @override
+  void activate() {
+    super.activate();
+    if (widget.isActive && _initialized) {
+      _ctrl?.play();
+    }
+  }
+
   @override
   void didUpdateWidget(_ReelItem old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
       _ctrl?.play();
-      // Mark view
+      _ctrl?.setVolume(1.0);
       ApiClient.instance.post('/reels/${widget.reel.id}/view');
     } else if (!widget.isActive && old.isActive) {
       _ctrl?.pause();
