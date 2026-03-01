@@ -108,7 +108,7 @@ class _ReelsViewState extends State<_ReelsView>
     with WidgetsBindingObserver {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
-  bool _isVisible = true;
+  bool _isActive = true;
 
   @override
   void initState() {
@@ -117,40 +117,40 @@ class _ReelsViewState extends State<_ReelsView>
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
+  // Tab иваз шавад — ин метод занг мезанад
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Pause when route is not active
-    final route = ModalRoute.of(context);
-    if (route != null) {
-      _isVisible = route.isCurrent;
-      _updatePlayback();
+    final isNowActive = ModalRoute.of(context)?.isCurrent ?? true;
+    if (isNowActive != _isActive) {
+      setState(() => _isActive = isNowActive);
     }
+  }
+
+  // App background/foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final wasActive = _isActive;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      if (_isActive) setState(() => _isActive = false);
+    } else if (state == AppLifecycleState.resumed) {
+      if (!_isActive) setState(() => _isActive = true);
+    }
+  }
+
+  // Widget аз дарахт хориҷ шавад (tab switch)
+  @override
+  void deactivate() {
+    setState(() => _isActive = false);
+    super.deactivate();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      _pauseAll();
-    } else if (state == AppLifecycleState.resumed && _isVisible) {
-      _resumeCurrent();
-    }
-  }
-
-  void _pauseAll() {
-    // Signal current item to pause
-    _isVisible = false;
-    setState(() {});
-  }
-
-  void _resumeCurrent() {
-    _isVisible = true;
-    setState(() {});
-  }
-
-  void _updatePlayback() {
-    setState(() {});
+  void activate() {
+    super.activate();
+    setState(() => _isActive = true);
   }
 
   @override
@@ -251,7 +251,7 @@ class _ReelsViewState extends State<_ReelsView>
         },
         itemBuilder: (_, i) => _ReelItem(
           reel: vm.reels[i],
-          isActive: i == _currentPage && _isVisible,
+          isActive: i == _currentPage && _isActive,
           onLike: () => vm.toggleLike(vm.reels[i].id),
           onSave: () => vm.toggleSave(vm.reels[i].id),
         ),
@@ -318,6 +318,7 @@ class _ReelItemState extends State<_ReelItem>
         if (!mounted) return;
         _ctrl!.setLooping(true);
         if (widget.isActive) _ctrl!.play();
+        _ctrl!.setVolume(1.0); // овоз фаъол
         setState(() => _initialized = true);
       });
   }
