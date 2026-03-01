@@ -408,8 +408,16 @@ class _VideoItemState extends State<_VideoItem> {
 
   @override
   void dispose() {
+    _ctrl.pause(); // ← овоз банд кун пеш аз dispose
     _ctrl.dispose();
     super.dispose();
+  }
+
+  // Вақте widget scroll шуда аз экран мебарояд
+  @override
+  void deactivate() {
+    _ctrl.pause();
+    super.deactivate();
   }
 
   @override
