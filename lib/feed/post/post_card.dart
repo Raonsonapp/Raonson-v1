@@ -389,67 +389,61 @@ class _VideoItem extends StatefulWidget {
   State<_VideoItem> createState() => _VideoItemState();
 }
 
-class _VideoItemState extends State<_VideoItem> {
+class _VideoItemState extends State<_VideoItem>
+    with WidgetsBindingObserver {
   late VideoPlayerController _ctrl;
   bool _ready = false;
-  final _key = GlobalKey();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..initialize().then((_) {
-        if (mounted) {
-          setState(() => _ready = true);
-          _ctrl.setLooping(true);
-          _ctrl.setVolume(1.0); // овоз фаъол
-          _checkVisibilityAndPlay();
-        }
+        if (!mounted) return;
+        _ctrl.setLooping(true);
+        _ctrl.setVolume(1.0);
+        _ctrl.play();
+        setState(() => _ready = true);
       });
   }
 
+  // App background → пауза, foreground → бозад
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_ready) return;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _ctrl.pause();
+    } else if (state == AppLifecycleState.resumed) {
+      _ctrl.setVolume(1.0);
+      _ctrl.play();
+    }
   }
 
-  // Вақте widget аз экран мебарояд - пауза
+  // Tab иваз шавад → пауза
   @override
   void deactivate() {
     if (_ready) _ctrl.pause();
     super.deactivate();
   }
 
-  // Вақте widget ба экран бармегардад
+  // Tab баргардад → бозад
   @override
   void activate() {
     super.activate();
     if (_ready) {
       _ctrl.setVolume(1.0);
-      _checkVisibilityAndPlay();
+      _ctrl.play();
     }
   }
 
-  void _checkVisibilityAndPlay() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_ready) return;
-      final ctx = _key.currentContext;
-      if (ctx == null) return;
-      final box = ctx.findRenderObject() as RenderBox?;
-      if (box == null || !box.hasSize) return;
-      final pos = box.localToGlobal(Offset.zero);
-      final screenH = MediaQuery.of(ctx).size.height;
-      // Агар видео дар экран бошад (50%+), бозад
-      final visibleTop = pos.dy;
-      final visibleBottom = pos.dy + box.size.height;
-      final isVisible = visibleBottom > screenH * 0.1 && visibleTop < screenH * 0.9;
-      if (isVisible) {
-        _ctrl.play();
-      } else {
-        _ctrl.pause();
-      }
-    });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _ctrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -461,7 +455,7 @@ class _VideoItemState extends State<_VideoItem> {
           child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2)),
       );
     }
-    return Stack(key: _key, fit: StackFit.expand, children: [
+    return Stack(fit: StackFit.expand, children: [
       FittedBox(
         fit: BoxFit.cover,
         child: SizedBox(
