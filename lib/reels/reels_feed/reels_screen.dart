@@ -318,10 +318,13 @@ class _ReelItemState extends State<_ReelItem>
   void didUpdateWidget(_ReelItem old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
-      _ctrl?.play();
+      // Бозад + овоз фаъол
       _ctrl?.setVolume(1.0);
+      _ctrl?.play();
       ApiClient.instance.post('/reels/${widget.reel.id}/view');
-    } else if (!widget.isActive && old.isActive) {
+    } else if (!widget.isActive) {
+      // Ҳамеша пауза + овоз хомӯш кун
+      _ctrl?.setVolume(0.0);
       _ctrl?.pause();
     }
   }
@@ -333,8 +336,12 @@ class _ReelItemState extends State<_ReelItem>
       ..initialize().then((_) {
         if (!mounted) return;
         _ctrl!.setLooping(true);
-        if (widget.isActive) _ctrl!.play();
-        _ctrl!.setVolume(1.0); // овоз фаъол
+        if (widget.isActive) {
+          _ctrl!.setVolume(1.0);
+          _ctrl!.play();
+        } else {
+          _ctrl!.setVolume(0.0);
+        }
         setState(() => _initialized = true);
       });
   }
