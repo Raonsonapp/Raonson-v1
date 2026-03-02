@@ -389,15 +389,13 @@ class _VideoItem extends StatefulWidget {
   State<_VideoItem> createState() => _VideoItemState();
 }
 
-class _VideoItemState extends State<_VideoItem>
-    with WidgetsBindingObserver {
+class _VideoItemState extends State<_VideoItem> {
   late VideoPlayerController _ctrl;
   bool _ready = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..initialize().then((_) {
         if (!mounted) return;
@@ -408,24 +406,10 @@ class _VideoItemState extends State<_VideoItem>
       });
   }
 
-  // App background → пауза, foreground → бозад
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_ready) return;
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
-      _ctrl.pause();
-    } else if (state == AppLifecycleState.resumed) {
-      _ctrl.setVolume(1.0);
-      _ctrl.play();
-    }
-  }
-
   // Tab иваз шавад → пауза
   @override
   void deactivate() {
-    if (_ready) _ctrl.pause();
+    _ctrl.pause();
     super.deactivate();
   }
 
@@ -433,15 +417,12 @@ class _VideoItemState extends State<_VideoItem>
   @override
   void activate() {
     super.activate();
-    if (_ready) {
-      _ctrl.setVolume(1.0);
-      _ctrl.play();
-    }
+    _ctrl.setVolume(1.0);
+    _ctrl.play();
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _ctrl.dispose();
     super.dispose();
   }
