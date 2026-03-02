@@ -280,17 +280,13 @@ class _ReelItem extends StatefulWidget {
   State<_ReelItem> createState() => _ReelItemState();
 }
 
-class _ReelItemState extends State<_ReelItem>
-    with AutomaticKeepAliveClientMixin {
+class _ReelItemState extends State<_ReelItem> {
   VideoPlayerController? _ctrl;
   bool _initialized = false;
   bool _paused = false;
   bool _showHeart = false;
   bool _saved = false;
   bool _following = false;
-
-  @override
-  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -318,13 +314,10 @@ class _ReelItemState extends State<_ReelItem>
   void didUpdateWidget(_ReelItem old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !old.isActive) {
-      // Бозад + овоз фаъол
       _ctrl?.setVolume(1.0);
       _ctrl?.play();
       ApiClient.instance.post('/reels/${widget.reel.id}/view');
-    } else if (!widget.isActive) {
-      // Ҳамеша пауза + овоз хомӯш кун
-      _ctrl?.setVolume(0.0);
+    } else if (!widget.isActive && old.isActive) {
       _ctrl?.pause();
     }
   }
@@ -339,8 +332,6 @@ class _ReelItemState extends State<_ReelItem>
         if (widget.isActive) {
           _ctrl!.setVolume(1.0);
           _ctrl!.play();
-        } else {
-          _ctrl!.setVolume(0.0);
         }
         setState(() => _initialized = true);
       });
@@ -419,7 +410,6 @@ class _ReelItemState extends State<_ReelItem>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     final reel = widget.reel;
     final size = MediaQuery.of(context).size;
 
