@@ -208,7 +208,7 @@ class _PostCardState extends State<PostCard> {
         ),
 
         // MEDIA
-        if (post.media.isNotEmpty) _MediaCarousel(media: post.media),
+        if (post.media.isNotEmpty) _MediaCarousel(media: post.media, isActive: widget.isActive),
 
         // ACTIONS - icon + count next to each icon
         Padding(
@@ -341,7 +341,7 @@ class _MediaCarouselState extends State<_MediaCarousel> {
             final type = widget.media[i]['type'] ?? 'image';
             if (url.isEmpty) return Container(color: AppColors.card);
             if (type == 'video') {
-              return _VideoItem(url: url);
+              return _VideoItem(url: url, isActive: widget.isActive);
             }
             return CachedNetworkImage(
               imageUrl: url,
@@ -383,7 +383,8 @@ class _MediaCarouselState extends State<_MediaCarousel> {
 
 class _VideoItem extends StatefulWidget {
   final String url;
-  const _VideoItem({required this.url});
+  final bool isActive;
+  const _VideoItem({required this.url, this.isActive = true});
 
   @override
   State<_VideoItem> createState() => _VideoItemState();
@@ -401,15 +402,21 @@ class _VideoItemState extends State<_VideoItem> {
         if (!mounted) return;
         _ctrl.setLooping(true);
         _ctrl.setVolume(1.0);
-        _ctrl.play();
+        if (widget.isActive) _ctrl.play();
         setState(() => _ready = true);
       });
   }
 
   @override
-  void deactivate() {
-    _ctrl.pause();
-    super.deactivate();
+  void didUpdateWidget(_VideoItem old) {
+    super.didUpdateWidget(old);
+    if (!_ready) return;
+    if (widget.isActive && !old.isActive) {
+      _ctrl.setVolume(1.0);
+      _ctrl.play();
+    } else if (!widget.isActive && old.isActive) {
+      _ctrl.pause();
+    }
   }
 
   @override
