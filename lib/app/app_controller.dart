@@ -10,6 +10,8 @@ import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../create/create_post/create_post_screen.dart';
 import '../stories/story_viewer.dart';
+import '../models/story_model.dart';
+import '../models/story_model.dart';
 import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
 
