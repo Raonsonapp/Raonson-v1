@@ -30,14 +30,13 @@ class _BottomNavView extends StatelessWidget {
     final nav = context.watch<BottomNavController>();
 
     return Scaffold(
-      body: IndexedStack(
-        index: nav.currentIndex,
-        children: const [
-          FeedScreen(),
-          ReelsScreen(),
-          ChatListScreen(),
-          SearchScreen(),
-          ProfileScreen(userId: 'me'),
+      body: Stack(
+        children: [
+          _Tab(active: nav.currentIndex == 0, child: const FeedScreen()),
+          _Tab(active: nav.currentIndex == 1, child: const ReelsScreen()),
+          _Tab(active: nav.currentIndex == 2, child: const ChatListScreen()),
+          _Tab(active: nav.currentIndex == 3, child: const SearchScreen()),
+          _Tab(active: nav.currentIndex == 4, child: const ProfileScreen(userId: 'me')),
         ],
       ),
       bottomNavigationBar: BottomNavBar(
@@ -46,5 +45,18 @@ class _BottomNavView extends StatelessWidget {
         notifCount: 6,
       ),
     );
+  }
+}
+
+// Offstage wrapper - widget зинда аст аммо RENDER намешавад
+// => видео pause мешавад вақте tab иваз шавад
+class _Tab extends StatelessWidget {
+  final bool active;
+  final Widget child;
+  const _Tab({required this.active, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Offstage(offstage: !active, child: child);
   }
 }
