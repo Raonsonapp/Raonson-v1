@@ -13,9 +13,9 @@ import '../reels_repository.dart';
 import '../../feed/comments/comments_screen.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // REELS SCREEN
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class ReelsScreen extends StatelessWidget {
   const ReelsScreen({super.key});
 
@@ -28,9 +28,9 @@ class ReelsScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // VIEW MODEL
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class _ReelsVM extends ChangeNotifier {
   final ReelsRepository _repo;
   _ReelsVM(this._repo);
@@ -94,9 +94,9 @@ class _ReelsVM extends ChangeNotifier {
   }
 }
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // REELS VIEW
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class _ReelsView extends StatefulWidget {
   const _ReelsView();
 
@@ -117,7 +117,7 @@ class _ReelsViewState extends State<_ReelsView>
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
-  // Tab иваз шавад — ин метод занг мезанад
+  // Tab иваз шавад - ин метод занг мезанад
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -143,16 +143,14 @@ class _ReelsViewState extends State<_ReelsView>
   // Widget аз дарахт хориҷ шавад (tab switch)
   @override
   void deactivate() {
-    _isActive = false; // setState нест - unsafe дар deactivate
+    setState(() => _isActive = false);
     super.deactivate();
   }
 
   @override
   void activate() {
     super.activate();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _isActive = true);
-    });
+    setState(() => _isActive = true);
   }
 
   @override
@@ -253,7 +251,7 @@ class _ReelsViewState extends State<_ReelsView>
         },
         itemBuilder: (_, i) => _ReelItem(
           reel: vm.reels[i],
-          isActive: i == _currentPage && _isActive,
+          isActive: i == _currentPage,
           onLike: () => vm.toggleLike(vm.reels[i].id),
           onSave: () => vm.toggleSave(vm.reels[i].id),
         ),
@@ -262,9 +260,9 @@ class _ReelsViewState extends State<_ReelsView>
   }
 }
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // SINGLE REEL ITEM
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class _ReelItem extends StatefulWidget {
   final ReelModel reel;
   final bool isActive;
@@ -303,7 +301,14 @@ class _ReelItemState extends State<_ReelItem> {
     super.deactivate();
   }
 
-  // activate - didUpdateWidget handles play via isActive flag
+  // Tab баргардад - агар active бошад, бозад  
+  @override
+  void activate() {
+    super.activate();
+    if (widget.isActive && _initialized) {
+      _ctrl?.play();
+    }
+  }
 
   @override
   void didUpdateWidget(_ReelItem old) {
@@ -391,7 +396,7 @@ class _ReelItemState extends State<_ReelItem> {
               Clipboard.setData(ClipboardData(text: url));
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Линк нусха шуд ✓'),
+                const SnackBar(content: Text('Линк нусха шуд v'),
                     backgroundColor: Colors.green,
                     duration: Duration(seconds: 2)),
               );
@@ -413,7 +418,7 @@ class _ReelItemState extends State<_ReelItem> {
       onDoubleTap: _doubleTapLike,
       child: Stack(fit: StackFit.expand, children: [
 
-        // ── VIDEO ──
+        // -- VIDEO --
         if (_initialized && _ctrl != null)
           FittedBox(fit: BoxFit.cover,
             child: SizedBox(
@@ -426,7 +431,7 @@ class _ReelItemState extends State<_ReelItem> {
             child: const Center(child: CircularProgressIndicator(
                 color: Colors.white30, strokeWidth: 2))),
 
-        // ── GRADIENT OVERLAY ──
+        // -- GRADIENT OVERLAY --
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -438,20 +443,20 @@ class _ReelItemState extends State<_ReelItem> {
           ),
         ),
 
-        // ── PAUSE ICON ──
+        // -- PAUSE ICON --
         if (_paused)
           const Center(
             child: Icon(Icons.play_arrow_rounded,
                 color: Colors.white60, size: 80),
           ),
 
-        // ── DOUBLE TAP HEART ──
+        // -- DOUBLE TAP HEART --
         if (_showHeart)
           const Center(
             child: _HeartBurst(),
           ),
 
-        // ── VIDEO PROGRESS ──
+        // -- VIDEO PROGRESS --
         if (_initialized && _ctrl != null)
           Positioned(top: 0, left: 0, right: 0,
             child: ValueListenableBuilder(
@@ -469,7 +474,7 @@ class _ReelItemState extends State<_ReelItem> {
             ),
           ),
 
-        // ── TOP BAR ──
+        // -- TOP BAR --
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
           left: 16, right: 16,
@@ -488,7 +493,7 @@ class _ReelItemState extends State<_ReelItem> {
           ]),
         ),
 
-        // ── RIGHT ACTIONS ──
+        // -- RIGHT ACTIONS --
         Positioned(
           right: 12,
           bottom: size.height * 0.12,
@@ -535,7 +540,7 @@ class _ReelItemState extends State<_ReelItem> {
           ]),
         ),
 
-        // ── BOTTOM INFO ──
+        // -- BOTTOM INFO --
         Positioned(
           left: 14, right: 80,
           bottom: MediaQuery.of(context).padding.bottom + 24,
@@ -608,9 +613,9 @@ class _ReelItemState extends State<_ReelItem> {
   }
 }
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // RIGHT BUTTON
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class _RightBtn extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
@@ -648,9 +653,9 @@ class _RightBtn extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // SPINNING DISC (music)
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class _SpinningDisc extends StatefulWidget {
   final String avatar;
   const _SpinningDisc({required this.avatar});
@@ -698,9 +703,9 @@ class _SpinningDiscState extends State<_SpinningDisc>
   }
 }
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // HEART BURST ANIMATION
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class _HeartBurst extends StatefulWidget {
   const _HeartBurst();
 
@@ -747,9 +752,9 @@ class _HeartBurstState extends State<_HeartBurst>
   }
 }
 
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 // REEL COMMENTS SHEET
-// ─────────────────────────────────────────────
+// ---------------------------------------------
 class _ReelComments extends StatefulWidget {
   final String reelId;
   const _ReelComments({required this.reelId});
