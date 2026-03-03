@@ -14,7 +14,8 @@ import '../../app/app_theme.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
-  const PostCard({super.key, required this.post});
+  final bool isActive;
+  const PostCard({super.key, required this.post, this.isActive = true});
 
   @override
   State<PostCard> createState() => _PostCardState();
@@ -138,7 +139,7 @@ class _PostCardState extends State<PostCard> {
               Clipboard.setData(ClipboardData(text: postUrl));
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Линк нусха шуд v'),
+                const SnackBar(content: Text('Линк нусха шуд ✓'),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2)),
               );
@@ -210,7 +211,7 @@ class _PostCardState extends State<PostCard> {
         // MEDIA
         if (post.media.isNotEmpty) _MediaCarousel(media: post.media, isActive: widget.isActive),
 
-        // ACTIONS - icon + count next to each icon
+        // ACTIONS — icon + count next to each icon
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
           child: Row(children: [
@@ -319,7 +320,8 @@ class _Btn extends StatelessWidget {
 
 class _MediaCarousel extends StatefulWidget {
   final List<Map<String, String>> media;
-  const _MediaCarousel({required this.media});
+  final bool isActive;
+  const _MediaCarousel({required this.media, this.isActive = true});
   @override
   State<_MediaCarousel> createState() => _MediaCarouselState();
 }
@@ -419,6 +421,13 @@ class _VideoItemState extends State<_VideoItem> {
     }
   }
 
+  // Tab иваз шавад - пауза
+  @override
+  void deactivate() {
+    _ctrl.pause();
+    super.deactivate();
+  }
+
   @override
   void dispose() {
     _ctrl.dispose();
@@ -464,9 +473,9 @@ class _VideoItemState extends State<_VideoItem> {
 }
 
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // Instagram 2026 Style Action Button
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 class _ActionBtn extends StatelessWidget {
   final VoidCallback onTap;
   final Widget icon;
@@ -511,9 +520,9 @@ class _ActionBtn extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 // Instagram 2026 Icon Painter
-// ---------------------------------------------
+// ─────────────────────────────────────────────
 class _IgIcon extends StatelessWidget {
   final _IgIconType type;
   final bool filled;
@@ -598,7 +607,7 @@ class _IgIconPainter extends CustomPainter {
     ..style = stroke && !filled ? PaintingStyle.stroke : PaintingStyle.fill
     ..isAntiAlias = true;
 
-  // -- HEART ----------------------------------
+  // ── HEART ──────────────────────────────────
   void _drawHeart(Canvas canvas, Size s) {
     final w = s.width;
     final h = s.height;
@@ -617,7 +626,7 @@ class _IgIconPainter extends CustomPainter {
     canvas.drawPath(path, _paint(stroke: true));
   }
 
-  // -- COMMENT BUBBLE --------------------------
+  // ── COMMENT BUBBLE ──────────────────────────
   void _drawComment(Canvas canvas, Size s) {
     final w = s.width;
     final h = s.height;
@@ -639,7 +648,7 @@ class _IgIconPainter extends CustomPainter {
     canvas.drawPath(tail, paint);
   }
 
-  // -- SHARE (Paper plane) ---------------------
+  // ── SHARE (Paper plane) ─────────────────────
   void _drawShare(Canvas canvas, Size s) {
     final w = s.width;
     final h = s.height;
@@ -668,7 +677,7 @@ class _IgIconPainter extends CustomPainter {
     canvas.drawPath(fold, paint);
   }
 
-  // -- SAVE / BOOKMARK -------------------------
+  // ── SAVE / BOOKMARK ─────────────────────────
   void _drawSave(Canvas canvas, Size s) {
     final w = s.width;
     final h = s.height;
