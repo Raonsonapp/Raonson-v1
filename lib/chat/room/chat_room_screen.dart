@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
 import '../chat_repository.dart';
+import '../../core/services/user_session.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
-import '../../core/services/socket_service.dart'; // put in lib/core/services/
+import '../../core/services/socket_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 
