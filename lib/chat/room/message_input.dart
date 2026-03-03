@@ -3,7 +3,8 @@ import '../../app/app_theme.dart';
 
 class MessageInput extends StatefulWidget {
   final void Function(String) onSend;
-  const MessageInput({super.key, required this.onSend});
+  final VoidCallback? onTyping;
+  const MessageInput({super.key, required this.onSend, this.onTyping});
 
   @override
   State<MessageInput> createState() => _MessageInputState();
@@ -43,6 +44,7 @@ class _MessageInputState extends State<MessageInput> {
                         EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     border: InputBorder.none,
                   ),
+                  onChanged: (_) => widget.onTyping?.call(),
                   onSubmitted: (_) => _send(),
                 ),
               ),
