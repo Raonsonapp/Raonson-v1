@@ -16,7 +16,8 @@ import '../../app/app_theme.dart';
 import '../../widgets/loading_indicator.dart';
 
 class FeedScreen extends StatelessWidget {
-  const FeedScreen({super.key});
+  final bool isActive;
+  const FeedScreen({super.key, this.isActive = true});
 
   @override
   Widget build(BuildContext context) {
@@ -36,13 +37,14 @@ class FeedScreen extends StatelessWidget {
                 ..loadStories(),
         ),
       ],
-      child: const _FeedShell(),
+      child: _FeedShell(isActive: isActive),
     );
   }
 }
 
 class _FeedShell extends StatefulWidget {
-  const _FeedShell();
+  final bool isActive;
+  const _FeedShell({this.isActive = true});
   @override
   State<_FeedShell> createState() => _FeedShellState();
 }
@@ -89,14 +91,15 @@ class _FeedShellState extends State<_FeedShell> {
           ),
         ],
       ),
-      body: _FeedBody(scroll: _scroll),
+      body: _FeedBody(scroll: _scroll, isActive: widget.isActive),
     );
   }
 }
 
 class _FeedBody extends StatelessWidget {
+  final bool isActive;
   final ScrollController scroll;
-  const _FeedBody({required this.scroll});
+  const _FeedBody({this.isActive = true, required this.scroll});
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +228,7 @@ class _FeedBody extends StatelessWidget {
             ]);
           }
           final i = index - 1;
-          if (i < state.posts.length) return PostCard(post: state.posts[i]);
+          if (i < state.posts.length) return PostCard(post: state.posts[i], isActive: isActive);
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
             child: Center(child: LoadingIndicator()),
