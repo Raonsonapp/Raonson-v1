@@ -32,7 +32,7 @@ class _BottomNavView extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          _Tab(active: nav.currentIndex == 0, child: const FeedScreen()),
+          _Tab(active: nav.currentIndex == 0, child: FeedScreen(isActive: nav.currentIndex == 0)),
           _Tab(active: nav.currentIndex == 1, child: ReelsScreen(isActive: nav.currentIndex == 1)),
           _Tab(active: nav.currentIndex == 2, child: const ChatListScreen()),
           _Tab(active: nav.currentIndex == 3, child: const SearchScreen()),
