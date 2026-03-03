@@ -17,13 +17,14 @@ import '../../create/create_reel/create_reel_screen.dart';
 // REELS SCREEN
 // ---------------------------------------------
 class ReelsScreen extends StatelessWidget {
-  const ReelsScreen({super.key});
+  final bool isActive;
+  const ReelsScreen({super.key, this.isActive = true});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => _ReelsVM(ReelsRepository(ApiClient.instance))..load(),
-      child: const _ReelsView(),
+      child: _ReelsView(isActive: isActive),
     );
   }
 }
@@ -98,70 +99,37 @@ class _ReelsVM extends ChangeNotifier {
 // REELS VIEW
 // ---------------------------------------------
 class _ReelsView extends StatefulWidget {
-  const _ReelsView();
+  final bool isActive;
+  const _ReelsView({this.isActive = true});
 
   @override
   State<_ReelsView> createState() => _ReelsViewState();
 }
 
-class _ReelsViewState extends State<_ReelsView>
-    with WidgetsBindingObserver {
+class _ReelsViewState extends State<_ReelsView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
-  bool _isActive = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
-  // Tab иваз шавад - ин метод занг мезанад
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final isNowActive = ModalRoute.of(context)?.isCurrent ?? true;
-    if (isNowActive != _isActive) {
-      setState(() => _isActive = isNowActive);
-    }
-  }
-
-  // App background/foreground
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final wasActive = _isActive;
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
-      if (_isActive) setState(() => _isActive = false);
-    } else if (state == AppLifecycleState.resumed) {
-      if (!_isActive) setState(() => _isActive = true);
-    }
-  }
-
-  // Widget аз дарахт хориҷ шавад (tab switch)
-  @override
-  void deactivate() {
-    setState(() => _isActive = false);
-    super.deactivate();
-  }
-
-  @override
-  void activate() {
-    super.activate();
-    setState(() => _isActive = true);
+  void didUpdateWidget(_ReelsView old) {
+    super.didUpdateWidget(old);
+    if (old.isActive != widget.isActive) setState(() {});
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _pageCtrl.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final vm = context.watch<_ReelsVM>();
 
@@ -251,7 +219,7 @@ class _ReelsViewState extends State<_ReelsView>
         },
         itemBuilder: (_, i) => _ReelItem(
           reel: vm.reels[i],
-          isActive: i == _currentPage,
+          isActive: i == _currentPage && widget.isActive,
           onLike: () => vm.toggleLike(vm.reels[i].id),
           onSave: () => vm.toggleSave(vm.reels[i].id),
         ),
