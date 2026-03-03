@@ -269,7 +269,7 @@ class _ChatTile extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => ChatRoomScreen(peer: chat.peer),
         ),
-      ),
+      ).then((_) => context.read<ChatListController>().loadChats()),
     );
   }
 }
