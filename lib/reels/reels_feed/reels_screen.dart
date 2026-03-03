@@ -143,14 +143,16 @@ class _ReelsViewState extends State<_ReelsView>
   // Widget аз дарахт хориҷ шавад (tab switch)
   @override
   void deactivate() {
-    setState(() => _isActive = false);
+    _isActive = false; // setState нест - unsafe дар deactivate
     super.deactivate();
   }
 
   @override
   void activate() {
     super.activate();
-    setState(() => _isActive = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _isActive = true);
+    });
   }
 
   @override
@@ -301,14 +303,7 @@ class _ReelItemState extends State<_ReelItem> {
     super.deactivate();
   }
 
-  // Tab баргардад - агар active бошад, бозад  
-  @override
-  void activate() {
-    super.activate();
-    if (widget.isActive && _initialized) {
-      _ctrl?.play();
-    }
-  }
+  // activate - didUpdateWidget handles play via isActive flag
 
   @override
   void didUpdateWidget(_ReelItem old) {
