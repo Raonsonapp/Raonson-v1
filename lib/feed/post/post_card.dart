@@ -406,7 +406,6 @@ class _VideoItemState extends State<_VideoItem> {
       });
   }
 
-  // Tab/scroll away - pause
   @override
   void deactivate() {
     _ctrl.pause();
