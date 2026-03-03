@@ -21,9 +21,7 @@ export async function getOrCreateChat(req, res) {
 // GET USER CHATS (list of recent conversations)
 export async function getChats(req, res) {
   try {
-    const userId = req.user._id.toString();
-
-    // Find unique chatIds where user is sender or receiver
+    // Find latest message per chatId for this user
     const messages = await Message.aggregate([
       {
         $match: {
@@ -33,9 +31,7 @@ export async function getChats(req, res) {
           ],
         },
       },
-      {
-        $sort: { createdAt: -1 },
-      },
+      { $sort: { createdAt: -1 } },
       {
         $group: {
           _id: "$chatId",
@@ -45,7 +41,16 @@ export async function getChats(req, res) {
       { $limit: 50 },
     ]);
 
-    res.json(messages);
+    // Populate sender and receiver for each lastMessage
+    const populated = await Message.populate(
+      messages.map(m => m.lastMessage),
+      [
+        { path: "sender", select: "username avatar verified" },
+        { path: "receiver", select: "username avatar verified" },
+      ]
+    );
+
+    res.json(populated);
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Get chats failed" });
@@ -122,4 +127,4 @@ export async function deleteMessage(req, res) {
   } catch (e) {
     res.status(500).json({ message: "Delete failed" });
   }
-}
+      }
