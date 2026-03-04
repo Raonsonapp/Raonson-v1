@@ -11,22 +11,25 @@ export default function chatSocket(io, socket) {
   });
 
   socket.on("chat:send", async (payload) => {
-    const { conversationId, sender, receiver, text } = payload;
-    if (!conversationId || !sender || !receiver || !text) return;
+    const { conversationId, chatId, sender, receiver, text } = payload;
+    const roomId = chatId || conversationId;
+    if (!roomId || !sender || !receiver || !text) return;
 
     const message = await Message.create({
-      conversationId,
+      chatId: roomId,
       sender,
       receiver,
       text,
       read: false,
     });
 
-    io.to(conversationId).emit("chat:new", message);
+    // Populate sender for the response
+    await message.populate("sender", "username avatar verified");
+    io.to(roomId).emit("chat:new", message);
   });
 
   socket.on("chat:read", async ({ messageId }) => {
     if (!messageId) return;
     await Message.findByIdAndUpdate(messageId, { read: true });
   });
-}
+            }
