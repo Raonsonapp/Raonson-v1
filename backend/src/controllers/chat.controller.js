@@ -90,7 +90,10 @@ export async function sendMessage(req, res) {
       mediaUrl: mediaUrl || "",
     });
 
-    await message.populate("sender", "username avatar verified");
+    await message.populate([
+      { path: "sender", select: "username avatar verified" },
+      { path: "receiver", select: "username avatar verified" },
+    ]);
     res.status(201).json(message);
   } catch (e) {
     console.error(e);
