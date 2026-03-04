@@ -65,7 +65,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
   }
 
   void _openChat(UserModel user) {
-    Navigator.pushReplacement(
+    Navigator.pop(context); // close NewChatScreen first
+    Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: user)),
     );
