@@ -7,6 +7,7 @@ import '../../models/message_model.dart';
 import '../../widgets/avatar.dart';
 import '../../app/app_theme.dart';
 import '../room/chat_room_screen.dart';
+import '../room/new_chat_screen.dart';
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
@@ -57,7 +58,11 @@ class _ChatView extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                    onPressed: () {},
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const NewChatScreen()),
+                    ).then((_) => context.read<ChatListController>().loadChats()),
                   ),
                 ],
               ),
@@ -204,15 +209,31 @@ class _ChatView extends StatelessWidget {
             Expanded(
               child: ctrl.isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.neonBlue))
-                  : ctrl.chats.isEmpty
-                      ? _EmptyChats()
-                      : ListView.builder(
-                          itemCount: ctrl.chats.length,
-                          itemBuilder: (_, i) =>
-                              _ChatTile(chat: ctrl.chats[i]),
-                        ),
+                      child: CircularProgressIndicator(color: AppColors.neonBlue))
+                  : ctrl.error != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                              const SizedBox(height: 8),
+                              Text(ctrl.error!,
+                                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                                  textAlign: TextAlign.center),
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: ctrl.loadChats,
+                                child: const Text('Retry', style: TextStyle(color: AppColors.neonBlue)),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ctrl.chats.isEmpty
+                          ? const _EmptyChats()
+                          : ListView.builder(
+                              itemCount: ctrl.chats.length,
+                              itemBuilder: (_, i) => _ChatTile(chat: ctrl.chats[i]),
+                            ),
             ),
           ],
         ),
@@ -222,6 +243,7 @@ class _ChatView extends StatelessWidget {
 }
 
 class _EmptyChats extends StatelessWidget {
+  const _EmptyChats();
   @override
   Widget build(BuildContext context) {
     return const Center(
@@ -269,7 +291,7 @@ class _ChatTile extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => ChatRoomScreen(peer: chat.peer),
         ),
-      ).then((_) => context.read<ChatListController>().loadChats()),
+      ),
     );
   }
 }
