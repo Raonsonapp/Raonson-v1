@@ -21,8 +21,7 @@ export async function getOrCreateChat(req, res) {
 // GET USER CHATS (list of recent conversations)
 export async function getChats(req, res) {
   try {
-    // Find latest message per chatId for this user
-    const messages = await Message.aggregate([
+    const chats = await Message.aggregate([
       {
         $match: {
           $or: [
@@ -39,18 +38,30 @@ export async function getChats(req, res) {
         },
       },
       { $limit: 50 },
+      { $replaceRoot: { newRoot: "$lastMessage" } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "sender",
+          foreignField: "_id",
+          pipeline: [{ $project: { username: 1, avatar: 1, verified: 1 } }],
+          as: "sender",
+        },
+      },
+      { $unwind: { path: "$sender", preserveNullAndEmpty: true } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "receiver",
+          foreignField: "_id",
+          pipeline: [{ $project: { username: 1, avatar: 1, verified: 1 } }],
+          as: "receiver",
+        },
+      },
+      { $unwind: { path: "$receiver", preserveNullAndEmpty: true } },
     ]);
 
-    // Populate sender and receiver for each lastMessage
-    const populated = await Message.populate(
-      messages.map(m => m.lastMessage),
-      [
-        { path: "sender", select: "username avatar verified" },
-        { path: "receiver", select: "username avatar verified" },
-      ]
-    );
-
-    res.json(populated);
+    res.json(chats);
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Get chats failed" });
@@ -127,4 +138,4 @@ export async function deleteMessage(req, res) {
   } catch (e) {
     res.status(500).json({ message: "Delete failed" });
   }
-      }
+        }
