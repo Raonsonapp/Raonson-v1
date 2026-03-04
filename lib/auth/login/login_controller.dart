@@ -99,9 +99,10 @@ class LoginController extends ChangeNotifier {
 
       await TokenStorage.saveAccessToken(token.toString());
       ApiClient.instance.setAuthToken(token);
+      // Set UserSession so isMine works in chat
       final user = data['user'] as Map<String, dynamic>?;
       if (user != null) {
-        UserSession.userId = user['id']?.toString() ?? user['_id']?.toString();
+        UserSession.userId = (user['id'] ?? user['_id'])?.toString();
         UserSession.username = user['username']?.toString();
       }
 
