@@ -101,6 +101,30 @@ class _LoginView extends StatelessWidget {
                   ),
                 ),
 
+              // Waking server banner
+              if (state.isWakingServer)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.neonBlue,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Text(
+                        'Starting server, please wait...',
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Login button
               _NeonButton(
                 label: 'Log In',
