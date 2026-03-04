@@ -12,9 +12,23 @@ class ChatRepository {
     if (res.statusCode == 401) throw Exception('Unauthorized');
     if (res.statusCode >= 400) throw Exception('Server error');
     final body = jsonDecode(res.body);
-    final List data = body is List ? body : (body['chats'] ?? []);
+    final List raw = body is List ? body : (body['chats'] ?? []);
+    // Backend may return [{_id: chatId, lastMessage: {...}}] (old)
+    // or flat message list (new). Normalize to flat messages.
+    final List data = raw.map((e) {
+      final map = e as Map<String, dynamic>;
+      // Old format: has 'lastMessage' key
+      if (map.containsKey('lastMessage') && map['lastMessage'] is Map) {
+        final msg = Map<String, dynamic>.from(map['lastMessage'] as Map);
+        // chatId may be in _id of wrapper
+        if (msg['chatId'] == null) msg['chatId'] = map['_id']?.toString();
+        return msg;
+      }
+      return map;
+    }).toList();
     return data
         .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+        .where((m) => m.chatId.isNotEmpty)
         .toList();
   }
 
