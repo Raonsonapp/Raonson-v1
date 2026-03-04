@@ -1,16 +1,12 @@
 import { Message } from "../models/message.model.js";
-import { v4 as uuidv4 } from "uuid";
+import { User } from "../models/user.model.js";
 
-// CREATE OR GET CHAT (by participants)
+// CREATE OR GET CHAT (stable chatId for 1-on-1)
 export async function getOrCreateChat(req, res) {
   try {
-    const { userId } = req.params; // other user
     const myId = req.user._id.toString();
-    const otherId = userId;
-
-    // Stable chatId for 1-on-1 chat
+    const otherId = req.params.userId;
     const chatId = [myId, otherId].sort().join("_");
-
     res.json({ chatId });
   } catch (e) {
     console.error(e);
@@ -18,10 +14,11 @@ export async function getOrCreateChat(req, res) {
   }
 }
 
-// GET USER CHATS (list of recent conversations)
+// GET USER CHATS - inbox list with populated sender/receiver
 export async function getChats(req, res) {
   try {
-    const chats = await Message.aggregate([
+    // Step 1: get last message per chat using simple find + group
+    const messages = await Message.aggregate([
       {
         $match: {
           $or: [
@@ -39,31 +36,17 @@ export async function getChats(req, res) {
       },
       { $limit: 50 },
       { $replaceRoot: { newRoot: "$lastMessage" } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "sender",
-          foreignField: "_id",
-          pipeline: [{ $project: { username: 1, avatar: 1, verified: 1 } }],
-          as: "sender",
-        },
-      },
-      { $unwind: { path: "$sender", preserveNullAndEmpty: true } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "receiver",
-          foreignField: "_id",
-          pipeline: [{ $project: { username: 1, avatar: 1, verified: 1 } }],
-          as: "receiver",
-        },
-      },
-      { $unwind: { path: "$receiver", preserveNullAndEmpty: true } },
     ]);
 
-    res.json(chats);
+    // Step 2: populate sender and receiver using Mongoose
+    const populated = await Message.populate(messages, [
+      { path: "sender", select: "username avatar verified", model: User },
+      { path: "receiver", select: "username avatar verified", model: User },
+    ]);
+
+    res.json(populated);
   } catch (e) {
-    console.error(e);
+    console.error("getChats error:", e);
     res.status(500).json({ message: "Get chats failed" });
   }
 }
@@ -73,11 +56,11 @@ export async function getMessages(req, res) {
   try {
     const { chatId } = req.params;
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 30;
+    const limit = parseInt(req.query.limit) || 40;
     const skip = (page - 1) * limit;
 
     const messages = await Message.find({ chatId })
-      .populate("sender", "username avatar")
+      .populate("sender", "username avatar verified")
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
@@ -107,6 +90,7 @@ export async function sendMessage(req, res) {
       mediaUrl: mediaUrl || "",
     });
 
+    await message.populate("sender", "username avatar verified");
     res.status(201).json(message);
   } catch (e) {
     console.error(e);
@@ -118,12 +102,10 @@ export async function sendMessage(req, res) {
 export async function markAsRead(req, res) {
   try {
     const { chatId } = req.params;
-
     await Message.updateMany(
       { chatId, receiver: req.user._id, read: false },
       { $set: { read: true } }
     );
-
     res.json({ read: true });
   } catch (e) {
     res.status(500).json({ message: "Mark read failed" });
@@ -138,4 +120,4 @@ export async function deleteMessage(req, res) {
   } catch (e) {
     res.status(500).json({ message: "Delete failed" });
   }
-        }
+      }
