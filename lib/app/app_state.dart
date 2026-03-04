@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
 import '../core/storage/token_storage.dart';
+import '../core/services/user_session.dart';
 
 class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -25,6 +27,8 @@ class AppState extends ChangeNotifier {
 
         if (res.statusCode == 200) {
           _isAuthenticated = true;
+          // Load current user id for chat
+          await _loadMe();
         } else {
           // Токен нокор — тоза кун
           await TokenStorage.clearTokens();
@@ -42,9 +46,27 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadMe() async {
+    try {
+      final res = await ApiClient.instance.getRequest('/profile/me');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final user = data['user'] ?? data;
+        UserSession.userId = user['_id']?.toString() ?? user['id']?.toString();
+        UserSession.username = user['username']?.toString();
+        UserSession.avatar = user['avatar']?.toString();
+        debugPrint('[AppState] userId loaded: ${UserSession.userId}');
+      }
+    } catch (e) {
+      debugPrint('[AppState] _loadMe error: $e');
+    }
+  }
+
   void login() {
     _isAuthenticated = true;
     notifyListeners();
+    // userId already set by login_controller, but reload to be sure
+    _loadMe();
   }
 
   Future<void> logout() async {
