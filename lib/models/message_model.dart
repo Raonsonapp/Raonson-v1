@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'user_model.dart';
+import '../core/services/user_session.dart';
 class MessageModel {
   final String id;
   final String chatId;
@@ -111,6 +112,7 @@ class MessageModel {
     );
   }
 
-  factory MessageModel.fromJson(Map<String, dynamic> json) =>
-      MessageModel.fromRoomJson(json, '');
+  factory MessageModel.fromJson(Map<String, dynamic> json) {
+    return MessageModel.fromRoomJson(json, UserSession.userId ?? '');
+  }
 }
