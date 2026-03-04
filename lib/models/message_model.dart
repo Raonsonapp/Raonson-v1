@@ -95,8 +95,21 @@ class MessageModel {
       mine = (senderRaw['_id']?.toString() ?? '') == myId;
       senderModel = UserModel.fromMinJson(senderRaw);
     } else {
-      mine = (senderRaw?.toString() ?? '') == myId;
-      senderModel = UserModel.empty();
+      final senderId = senderRaw?.toString() ?? '';
+      mine = senderId.isNotEmpty && myId.isNotEmpty && senderId == myId;
+      // Sender not populated - create placeholder with ID so navigation works
+      senderModel = senderId.isNotEmpty
+          ? UserModel(
+              id: senderId,
+              username: 'Chat',
+              avatar: '',
+              verified: false,
+              isPrivate: false,
+              postsCount: 0,
+              followersCount: 0,
+              followingCount: 0,
+            )
+          : UserModel.empty();
     }
     // peer = the OTHER person (receiver if mine, sender if not)
     UserModel peerModel = senderModel;
@@ -104,11 +117,9 @@ class MessageModel {
       if (receiverRaw is Map<String, dynamic>) {
         peerModel = UserModel.fromMinJson(receiverRaw);
       } else if (receiverRaw != null) {
-        // receiver is ObjectId string - create placeholder
-        // peer will have correct info when chat room loads messages
         peerModel = UserModel(
           id: receiverRaw.toString(),
-          username: 'User',
+          username: 'Chat',
           avatar: '',
           verified: false,
           isPrivate: false,
@@ -116,6 +127,22 @@ class MessageModel {
           followersCount: 0,
           followingCount: 0,
         );
+      } else if (json['chatId'] != null && myId.isNotEmpty) {
+        // Extract peer ID from chatId = "id1_id2"
+        final parts = (json['chatId'] as String).split('_');
+        final peerId = parts.firstWhere((p) => p != myId, orElse: () => '');
+        if (peerId.isNotEmpty) {
+          peerModel = UserModel(
+            id: peerId,
+            username: 'Chat',
+            avatar: '',
+            verified: false,
+            isPrivate: false,
+            postsCount: 0,
+            followersCount: 0,
+            followingCount: 0,
+          );
+        }
       }
     }
     return MessageModel(
