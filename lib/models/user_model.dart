@@ -52,33 +52,6 @@ class UserModel {
     );
   }
 
-  // Minimal JSON (sender/receiver in messages)
-  factory UserModel.fromMinJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
-      username: json['username']?.toString() ?? '',
-      avatar: json['avatar']?.toString() ?? '',
-      verified: json['verified'] == true,
-      isPrivate: false,
-      postsCount: 0,
-      followersCount: 0,
-      followingCount: 0,
-    );
-  }
-
-  factory UserModel.empty() {
-    return const UserModel(
-      id: '',
-      username: 'Unknown',
-      avatar: '',
-      verified: false,
-      isPrivate: false,
-      postsCount: 0,
-      followersCount: 0,
-      followingCount: 0,
-    );
-  }
-
   UserModel copyWith({
     String? avatar,
     bool? verified,
@@ -100,6 +73,20 @@ class UserModel {
       followingCount: followingCount ?? this.followingCount,
       bio: bio ?? this.bio,
       isFollowing: isFollowing ?? this.isFollowing,
+    );
+  }
+
+  factory UserModel.fromMinJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      username: json['username']?.toString() ?? '',
+      avatar: json['avatar']?.toString() ?? '',
+      verified: json['verified'] == true,
+      isPrivate: false,
+      postsCount: 0,
+      followersCount: 0,
+      followingCount: 0,
+      bio: json['bio']?.toString(),
     );
   }
 }
