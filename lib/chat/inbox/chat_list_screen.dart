@@ -21,8 +21,31 @@ class ChatListScreen extends StatelessWidget {
   }
 }
 
-class _ChatView extends StatelessWidget {
+class _ChatView extends StatefulWidget {
   const _ChatView();
+  @override
+  State<_ChatView> createState() => _ChatViewState();
+}
+
+class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<ChatListController>().loadChats();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +234,14 @@ class _ChatView extends StatelessWidget {
                   ? const Center(
                       child: CircularProgressIndicator(color: AppColors.neonBlue))
                   : ctrl.chats.isEmpty
-                      ? const _EmptyChats()
+                      ? RefreshIndicator(
+                          color: AppColors.neonBlue,
+                          onRefresh: ctrl.loadChats,
+                          child: const SingleChildScrollView(
+                            physics: AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(height: 300, child: _EmptyChats()),
+                          ),
+                        )
                       : ListView.builder(
                           itemCount: ctrl.chats.length,
                           itemBuilder: (_, i) => _ChatTile(chat: ctrl.chats[i]),
@@ -273,7 +303,7 @@ class _ChatTile extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => ChatRoomScreen(peer: chat.peer),
         ),
-      ),
+      ).then((_) => context.read<ChatListController>().loadChats()),
     );
   }
 }
