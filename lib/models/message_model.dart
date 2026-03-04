@@ -1,125 +1,75 @@
 import 'package:flutter/foundation.dart';
 import 'user_model.dart';
 import '../core/services/user_session.dart';
+
 class MessageModel {
   final String id;
   final String chatId;
   final UserModel peer;
-  final UserModel? sender;
   final String text;
-  final String? mediaUrl;
   final DateTime createdAt;
   final bool isMine;
-  final bool read;
 
   const MessageModel({
     required this.id,
     required this.chatId,
     required this.peer,
-    this.sender,
     required this.text,
-    this.mediaUrl,
     required this.createdAt,
     required this.isMine,
-    this.read = false,
   });
 
-  String get lastMessage =>
-      text.isNotEmpty ? text : (mediaUrl != null ? 'Media' : '');
+  String get lastMessage => text;
 
   String get timeLabel {
     final now = DateTime.now();
     final diff = now.difference(createdAt);
-    if (diff.inDays >= 7) return '${createdAt.day}/${createdAt.month}';
     if (diff.inDays >= 1) {
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       return days[createdAt.weekday - 1];
     }
-    return '${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';
+    return '\${createdAt.hour.toString().padLeft(2, '0')}:\${createdAt.minute.toString().padLeft(2, '0')}';
   }
 
-  factory MessageModel.fromInboxJson(Map<String, dynamic> json, String myId) {
-    try {
-      // Backend may send message directly or wrapped in lastMessage
-      final lastMsg = json['lastMessage'] as Map<String, dynamic>? ?? json;
-      
-      // Backend adds peer field directly
-      final peerRaw = lastMsg['peer'] ?? lastMsg['sender'];
-      final senderRaw = lastMsg['sender'];
-      final receiverRaw = lastMsg['receiver'];
-      
-      bool mine = lastMsg['isMine'] == true;
-      
-      // Determine mine by comparing sender id if isMine not set
-      if (!mine && myId.isNotEmpty && senderRaw is Map<String, dynamic>) {
-        mine = (senderRaw['_id']?.toString() ?? '') == myId;
-      }
-      
-      UserModel peerUser;
-      if (peerRaw is Map<String, dynamic>) {
-        peerUser = UserModel.fromMinJson(peerRaw);
-      } else if (!mine && senderRaw is Map<String, dynamic>) {
-        peerUser = UserModel.fromMinJson(senderRaw);
-      } else if (mine && receiverRaw is Map<String, dynamic>) {
-        peerUser = UserModel.fromMinJson(receiverRaw);
-      } else {
-        peerUser = UserModel.empty();
-      }
+  factory MessageModel.fromJson(Map<String, dynamic> json) {
+    final myId = UserSession.userId ?? '';
 
-      debugPrint('[Chat] inbox item peer=${peerUser.username} mine=$mine text=${lastMsg["text"]}');
-      
-      return MessageModel(
-        id: lastMsg['_id']?.toString() ?? '',
-        chatId: lastMsg['chatId']?.toString() ?? json['_id']?.toString() ?? '',
-        peer: peerUser,
-        text: lastMsg['text']?.toString() ?? '',
-        mediaUrl: lastMsg['mediaUrl']?.toString(),
-        createdAt: lastMsg['createdAt'] != null
-            ? DateTime.tryParse(lastMsg['createdAt'].toString()) ?? DateTime.now()
-            : DateTime.now(),
-        isMine: mine,
-        read: lastMsg['read'] == true,
-      );
-    } catch (e) {
-      debugPrint('[Chat] fromInboxJson error: $e  json: $json');
-      rethrow;
+    // Unwrap old backend format: {_id: chatId, lastMessage: {...}}
+    Map<String, dynamic> msg = json;
+    if (json['lastMessage'] is Map) {
+      msg = Map<String, dynamic>.from(json['lastMessage'] as Map);
+      msg['chatId'] ??= json['_id']?.toString();
     }
-  }
 
-  factory MessageModel.fromRoomJson(Map<String, dynamic> json, String myId) {
-    final senderRaw = json['sender'];
-    final receiverRaw = json['receiver'];
-    UserModel senderModel;
+    // Determine isMine
+    final senderRaw = msg['sender'];
+    final receiverRaw = msg['receiver'];
     bool mine = false;
+    String senderId = '';
+
     if (senderRaw is Map<String, dynamic>) {
-      mine = (senderRaw['_id']?.toString() ?? '') == myId;
-      senderModel = UserModel.fromMinJson(senderRaw);
+      senderId = (senderRaw['_id'] ?? senderRaw['id'])?.toString() ?? '';
     } else {
-      final senderId = senderRaw?.toString() ?? '';
-      mine = senderId.isNotEmpty && myId.isNotEmpty && senderId == myId;
-      // Sender not populated - create placeholder with ID so navigation works
-      senderModel = senderId.isNotEmpty
-          ? UserModel(
-              id: senderId,
-              username: 'Chat',
-              avatar: '',
-              verified: false,
-              isPrivate: false,
-              postsCount: 0,
-              followersCount: 0,
-              followingCount: 0,
-            )
-          : UserModel.empty();
+      senderId = senderRaw?.toString() ?? '';
     }
-    // peer = the OTHER person (receiver if mine, sender if not)
-    UserModel peerModel = senderModel;
+    mine = senderId.isNotEmpty && myId.isNotEmpty && senderId == myId;
+
+    // Build peer (the OTHER person)
+    UserModel peer;
     if (mine) {
+      // I sent it — peer is receiver
       if (receiverRaw is Map<String, dynamic>) {
-        peerModel = UserModel.fromMinJson(receiverRaw);
-      } else if (receiverRaw != null) {
-        peerModel = UserModel(
-          id: receiverRaw.toString(),
-          username: 'Chat',
+        peer = UserModel.fromMinJson(receiverRaw);
+      } else {
+        final rid = receiverRaw?.toString() ?? '';
+        final parts = (msg['chatId']?.toString() ?? '').split('_');
+        final peerId = parts.firstWhere(
+          (p) => p != myId && p.isNotEmpty,
+          orElse: () => rid,
+        );
+        peer = UserModel(
+          id: peerId,
+          username: '',
           avatar: '',
           verified: false,
           isPrivate: false,
@@ -127,40 +77,39 @@ class MessageModel {
           followersCount: 0,
           followingCount: 0,
         );
-      } else if (json['chatId'] != null && myId.isNotEmpty) {
-        // Extract peer ID from chatId = "id1_id2"
-        final parts = (json['chatId'] as String).split('_');
-        final peerId = parts.firstWhere((p) => p != myId, orElse: () => '');
-        if (peerId.isNotEmpty) {
-          peerModel = UserModel(
-            id: peerId,
-            username: 'Chat',
-            avatar: '',
-            verified: false,
-            isPrivate: false,
-            postsCount: 0,
-            followersCount: 0,
-            followingCount: 0,
-          );
-        }
+      }
+    } else {
+      // Someone sent it to me — peer is sender
+      if (senderRaw is Map<String, dynamic>) {
+        peer = UserModel.fromMinJson(senderRaw);
+      } else {
+        peer = UserModel(
+          id: senderId,
+          username: '',
+          avatar: '',
+          verified: false,
+          isPrivate: false,
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+        );
       }
     }
-    return MessageModel(
-      id: json['_id']?.toString() ?? '',
-      chatId: json['chatId']?.toString() ?? '',
-      peer: peerModel,
-      sender: senderModel,
-      text: json['text']?.toString() ?? '',
-      mediaUrl: json['mediaUrl']?.toString(),
-      createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
-          : DateTime.now(),
-      isMine: mine,
-      read: json['read'] == true,
-    );
-  }
 
-  factory MessageModel.fromJson(Map<String, dynamic> json) {
-    return MessageModel.fromRoomJson(json, UserSession.userId ?? '');
+    DateTime created;
+    try {
+      created = DateTime.parse(msg['createdAt'].toString());
+    } catch (_) {
+      created = DateTime.now();
+    }
+
+    return MessageModel(
+      id: msg['_id']?.toString() ?? '',
+      chatId: msg['chatId']?.toString() ?? '',
+      peer: peer,
+      text: msg['text']?.toString() ?? '',
+      createdAt: created,
+      isMine: mine,
+    );
   }
 }
