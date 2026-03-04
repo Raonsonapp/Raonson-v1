@@ -36,15 +36,14 @@ class LoginState {
     bool? isLoading,
     bool? isWakingServer,
     String? error,
-  }) {
-    return LoginState(
-      email: email ?? this.email,
-      password: password ?? this.password,
-      isLoading: isLoading ?? this.isLoading,
-      isWakingServer: isWakingServer ?? this.isWakingServer,
-      error: error,
-    );
-  }
+  }) =>
+      LoginState(
+        email: email ?? this.email,
+        password: password ?? this.password,
+        isLoading: isLoading ?? this.isLoading,
+        isWakingServer: isWakingServer ?? this.isWakingServer,
+        error: error,
+      );
 }
 
 class LoginController extends ChangeNotifier {
@@ -61,20 +60,26 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Wake up Render server before login (cold start can take 50-60s)
-  Future<void> _wakeServer() async {
-    try {
-      _state = _state.copyWith(isWakingServer: true);
-      notifyListeners();
-      await ApiClient.instance
-          .get('/health')
-          .timeout(const Duration(seconds: 90));
-    } catch (_) {
-      // ignore - server may already be awake or timeout is fine
-    } finally {
-      _state = _state.copyWith(isWakingServer: false);
-      notifyListeners();
+  // Try to POST login. Returns response or throws.
+  Future<Map<String, dynamic>> _attemptLogin() async {
+    final res = await ApiClient.instance
+        .post(
+          ApiEndpoints.login,
+          body: {
+            'email': _state.email.trim(),
+            'password': _state.password,
+          },
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (res.statusCode != 200) {
+      dynamic body;
+      try { body = jsonDecode(res.body); } catch (_) {}
+      throw Exception(
+        body is Map ? (body['message'] ?? 'Login failed') : 'Login failed',
+      );
     }
+    return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   Future<bool> login() async {
@@ -84,31 +89,37 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step 1: ping server to wake it up on Render free tier
-      await _wakeServer();
+      Map<String, dynamic> data;
 
-      // Step 2: actual login
-      final res = await ApiClient.instance
-          .post(
-            ApiEndpoints.login,
-            body: {
-              'email': _state.email.trim(),
-              'password': _state.password,
-            },
-          )
-          .timeout(const Duration(seconds: 30));
+      try {
+        // First attempt - may fail if server is cold
+        data = await _attemptLogin();
+      } catch (e) {
+        // If timeout or connection error, wake server and retry
+        final isConnErr = e.toString().contains('Timeout') ||
+            e.toString().contains('timeout') ||
+            e.toString().contains('SocketException') ||
+            e.toString().contains('Connection');
 
-      if (res.statusCode != 200) {
-        dynamic body;
-        try { body = jsonDecode(res.body); } catch (_) {}
-        throw Exception(
-          body is Map<String, dynamic>
-              ? (body['message'] ?? 'Login failed')
-              : 'Login failed',
-        );
+        if (!isConnErr) rethrow; // wrong password etc - don't retry
+
+        // Show waking banner and wait for server
+        _state = _state.copyWith(isWakingServer: true);
+        notifyListeners();
+
+        try {
+          await ApiClient.instance
+              .get('/health')
+              .timeout(const Duration(seconds: 90));
+        } catch (_) {}
+
+        _state = _state.copyWith(isWakingServer: false);
+        notifyListeners();
+
+        // Second attempt after wake
+        data = await _attemptLogin();
       }
 
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
       final token = data['accessToken'];
       if (token == null || token.toString().isEmpty) {
         throw Exception('Access token missing');
@@ -117,24 +128,21 @@ class LoginController extends ChangeNotifier {
       await TokenStorage.saveAccessToken(token.toString());
       ApiClient.instance.setAuthToken(token);
 
-      // Set UserSession for isMine logic in chat
       final user = data['user'] as Map<String, dynamic>?;
       if (user != null) {
         UserSession.userId = (user['id'] ?? user['_id'])?.toString();
         UserSession.username = user['username']?.toString();
       }
 
-      _state = _state.copyWith(isLoading: false);
+      _state = _state.copyWith(isLoading: false, isWakingServer: false);
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('[Login] error: $e');
+      debugPrint('[Login] error: \$e');
       _state = _state.copyWith(
         isLoading: false,
         isWakingServer: false,
-        error: e.toString().contains('TimeoutException')
-            ? 'Server is starting up, please try again'
-            : e.toString().replaceAll('Exception:', '').trim(),
+        error: e.toString().replaceAll('Exception:', '').trim(),
       );
       notifyListeners();
       return false;
