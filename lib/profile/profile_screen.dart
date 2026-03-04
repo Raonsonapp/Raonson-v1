@@ -5,6 +5,7 @@ import '../app/app_theme.dart';
 import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
 import 'profile_controller.dart';
+import '../chat/room/chat_room_screen.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 
@@ -212,16 +213,37 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                       ),
                       const SizedBox(width: 8),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(10),
+                      if (!_ctrl.isOwnProfile)
+                        GestureDetector(
+                          onTap: () {
+                            final u = _ctrl.profile;
+                            if (u == null) return;
+                            Navigator.push(context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatRoomScreen(peer: u)));
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.chat_bubble_outline,
+                                color: Colors.white70, size: 18),
+                          ),
                         ),
-                        child: const Icon(Icons.person_add_outlined,
-                            color: Colors.white70, size: 18),
-                      ),
+                      if (_ctrl.isOwnProfile)
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.person_add_outlined,
+                              color: Colors.white70, size: 18),
+                        ),
                       const SizedBox(width: 8),
                       Container(
                         width: 36,
