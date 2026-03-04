@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -81,17 +82,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   void _onSend(String text) async {
-    if (text.trim().isEmpty || _sending || _chatId == null) return;
+    if (text.trim().isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
+      // Ensure chatId is loaded
+      if (_chatId == null) {
+        _chatId = await _repo.getOrCreateChatId(widget.peer.id);
+      }
       final msg = await _repo.sendMessage(
         chatId: _chatId!,
         toUserId: widget.peer.id,
         text: text,
       );
+      if (!mounted) return;
       setState(() => _messages.add(msg));
       _scrollBottom();
-    } catch (_) {} finally {
+    } catch (e) {
+      debugPrint('[Chat] send error: $e');
+    } finally {
       if (mounted) setState(() => _sending = false);
     }
   }
