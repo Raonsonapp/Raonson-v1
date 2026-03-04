@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../app/app_theme.dart';
@@ -21,6 +22,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
   List<UserModel> _results = [];
   bool _loading = false;
   String _lastQuery = '';
+  String? _debounceQuery;
 
   @override
   void dispose() {
@@ -34,25 +36,30 @@ class _NewChatScreenState extends State<NewChatScreen> {
     _lastQuery = query;
 
     if (query.isEmpty) {
-      setState(() => _results = []);
+      setState(() { _results = []; _loading = false; });
       return;
     }
 
     setState(() => _loading = true);
     try {
       final res = await ApiClient.instance
-          .getRequest('/search/users?q=${Uri.encodeComponent(query)}&limit=20');
+          .getRequest('/search/users?q=${Uri.encodeComponent(query)}');
+      if (!mounted) return;
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
-        final List list = body is List ? body : (body['users'] ?? body['results'] ?? []);
-        if (!mounted) return;
+        // backend returns array directly OR {users: [...]}
+        final List list = body is List
+            ? body
+            : (body['users'] ?? body['results'] ?? []);
         setState(() {
           _results = list
               .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
               .toList();
         });
       }
-    } catch (_) {} finally {
+    } catch (e) {
+      debugPrint('[NewChat] search error: $e');
+    } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -102,8 +109,10 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
                 onChanged: (v) {
-                  Future.delayed(const Duration(milliseconds: 350), () {
-                    if (_ctrl.text == v) _search(v);
+                  // Reset so same query can re-fire after clear
+                  if (v.trim() != _lastQuery) _lastQuery = '';
+                  Future.delayed(const Duration(milliseconds: 400), () {
+                    if (mounted && _ctrl.text == v) _search(v);
                   });
                 },
               ),
