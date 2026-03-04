@@ -28,7 +28,9 @@ class MessageModel {
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       return days[createdAt.weekday - 1];
     }
-    return '\${createdAt.hour.toString().padLeft(2, '0')}:\${createdAt.minute.toString().padLeft(2, '0')}';
+    final h = createdAt.hour.toString().padLeft(2, '0');
+    final m = createdAt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
