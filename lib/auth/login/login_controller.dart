@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
+import '../../core/services/user_session.dart';
 
 class LoginState {
   final String email;
@@ -98,6 +99,11 @@ class LoginController extends ChangeNotifier {
 
       await TokenStorage.saveAccessToken(token.toString());
       ApiClient.instance.setAuthToken(token);
+      final user = data['user'] as Map<String, dynamic>?;
+      if (user != null) {
+        UserSession.userId = user['id']?.toString() ?? user['_id']?.toString();
+        UserSession.username = user['username']?.toString();
+      }
 
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
