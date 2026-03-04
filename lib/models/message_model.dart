@@ -88,6 +88,7 @@ class MessageModel {
 
   factory MessageModel.fromRoomJson(Map<String, dynamic> json, String myId) {
     final senderRaw = json['sender'];
+    final receiverRaw = json['receiver'];
     UserModel senderModel;
     bool mine = false;
     if (senderRaw is Map<String, dynamic>) {
@@ -97,10 +98,30 @@ class MessageModel {
       mine = (senderRaw?.toString() ?? '') == myId;
       senderModel = UserModel.empty();
     }
+    // peer = the OTHER person (receiver if mine, sender if not)
+    UserModel peerModel = senderModel;
+    if (mine) {
+      if (receiverRaw is Map<String, dynamic>) {
+        peerModel = UserModel.fromMinJson(receiverRaw);
+      } else if (receiverRaw != null) {
+        // receiver is ObjectId string - create placeholder
+        // peer will have correct info when chat room loads messages
+        peerModel = UserModel(
+          id: receiverRaw.toString(),
+          username: 'User',
+          avatar: '',
+          verified: false,
+          isPrivate: false,
+          postsCount: 0,
+          followersCount: 0,
+          followingCount: 0,
+        );
+      }
+    }
     return MessageModel(
       id: json['_id']?.toString() ?? '',
       chatId: json['chatId']?.toString() ?? '',
-      peer: senderModel,
+      peer: peerModel,
       sender: senderModel,
       text: json['text']?.toString() ?? '',
       mediaUrl: json['mediaUrl']?.toString(),
