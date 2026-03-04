@@ -281,7 +281,7 @@ class _ChatTile extends StatelessWidget {
         glowBorder: true,
       ),
       title: Text(
-        chat.peer.username,
+        chat.peer.username.isNotEmpty ? chat.peer.username : 'User',
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
