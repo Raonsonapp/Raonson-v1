@@ -233,7 +233,18 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
               child: ctrl.isLoading
                   ? const Center(
                       child: CircularProgressIndicator(color: AppColors.neonBlue))
-                  : ctrl.chats.isEmpty
+                  : ctrl.error != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            ctrl.error!,
+                            style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    : ctrl.chats.isEmpty
                       ? RefreshIndicator(
                           color: AppColors.neonBlue,
                           onRefresh: ctrl.loadChats,
