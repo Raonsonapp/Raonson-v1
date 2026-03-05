@@ -20,51 +20,44 @@ class MessageModel {
   String get lastMessage => text;
 
   String get timeLabel {
-    final now = DateTime.now();
-    final diff = now.difference(createdAt);
+    final diff = DateTime.now().difference(createdAt);
     if (diff.inDays >= 1) {
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      return days[createdAt.weekday - 1];
+      const d = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      return d[createdAt.weekday - 1];
     }
     final h = createdAt.hour.toString().padLeft(2, '0');
     final m = createdAt.minute.toString().padLeft(2, '0');
     return '$h:$m';
   }
 
-  // For inbox list — expects {peer, isMine, text, createdAt} from new backend
+  static UserModel _emptyUser() => const UserModel(
+    id: '', username: 'User', avatar: '',
+    verified: false, isPrivate: false,
+    postsCount: 0, followersCount: 0, followingCount: 0,
+  );
+
+  // For inbox — backend sends {_id, chatId, peer:{...}, isMine, text, createdAt}
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     final peerRaw = json['peer'];
     final peer = peerRaw is Map<String, dynamic>
         ? UserModel.fromJson(peerRaw)
-        : const UserModel(
-            id: '',
-            username: '',
-            avatar: '',
-            verified: false,
-            isPrivate: false,
-            postsCount: 0,
-            followersCount: 0,
-            followingCount: 0,
-          );
+        : _emptyUser();
 
     DateTime createdAt;
-    try {
-      createdAt = DateTime.parse(json['createdAt'].toString());
-    } catch (_) {
-      createdAt = DateTime.now();
-    }
+    try { createdAt = DateTime.parse(json['createdAt'].toString()); }
+    catch (_) { createdAt = DateTime.now(); }
 
     return MessageModel(
-      id: json['_id']?.toString() ?? '',
-      chatId: json['chatId']?.toString() ?? '',
-      peer: peer,
-      text: json['text']?.toString() ?? '',
+      id:        json['_id']?.toString() ?? '',
+      chatId:    json['chatId']?.toString() ?? '',
+      peer:      peer,
+      text:      json['text']?.toString() ?? '',
       createdAt: createdAt,
-      isMine: json['isMine'] == true,
+      isMine:    json['isMine'] == true,
     );
   }
 
-  // For chat room messages — isMine based on sender._id vs myId
+  // For chat room messages — isMine by sender._id
   factory MessageModel.fromRoomJson(Map<String, dynamic> json, String myId) {
     final senderRaw = json['sender'];
     String senderId = '';
@@ -75,32 +68,20 @@ class MessageModel {
       peer = UserModel.fromJson(senderRaw);
     } else {
       senderId = senderRaw?.toString() ?? '';
-      peer = const UserModel(
-        id: '',
-        username: 'User',
-        avatar: '',
-        verified: false,
-        isPrivate: false,
-        postsCount: 0,
-        followersCount: 0,
-        followingCount: 0,
-      );
+      peer = _emptyUser();
     }
 
     DateTime createdAt;
-    try {
-      createdAt = DateTime.parse(json['createdAt'].toString());
-    } catch (_) {
-      createdAt = DateTime.now();
-    }
+    try { createdAt = DateTime.parse(json['createdAt'].toString()); }
+    catch (_) { createdAt = DateTime.now(); }
 
     return MessageModel(
-      id: json['_id']?.toString() ?? '',
-      chatId: json['chatId']?.toString() ?? '',
-      peer: peer,
-      text: json['text']?.toString() ?? '',
+      id:        json['_id']?.toString() ?? '',
+      chatId:    json['chatId']?.toString() ?? '',
+      peer:      peer,
+      text:      json['text']?.toString() ?? '',
       createdAt: createdAt,
-      isMine: myId.isNotEmpty && senderId.isNotEmpty && senderId == myId,
+      isMine:    myId.isNotEmpty && senderId.isNotEmpty && senderId == myId,
     );
   }
 }
