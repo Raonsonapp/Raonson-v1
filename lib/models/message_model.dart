@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'user_model.dart';
-import '../core/services/user_session.dart';
 
 class MessageModel {
   final String id;
@@ -34,72 +33,70 @@ class MessageModel {
   }
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
-    final myId = UserSession.userId ?? '';
-
-    // --- Unwrap old backend format: {_id: chatId, lastMessage: {...}} ---
-    Map<String, dynamic> msg = json;
-    if (json['lastMessage'] is Map) {
-      msg = Map<String, dynamic>.from(json['lastMessage'] as Map);
-      msg['chatId'] ??= json['_id']?.toString();
-    }
-
-    // --- isMine ---
-    bool isMine = msg['isMine'] == true;
-    if (!isMine && myId.isNotEmpty) {
-      final senderRaw = msg['sender'];
-      final senderId = senderRaw is Map
-          ? (senderRaw['_id'] ?? senderRaw['id'])?.toString() ?? ''
-          : senderRaw?.toString() ?? '';
-      isMine = senderId.isNotEmpty && senderId == myId;
-    }
-
-    // --- peer ---
-    UserModel peer;
-    final peerRaw = msg['peer'];
-    if (peerRaw is Map<String, dynamic>) {
-      peer = UserModel.fromJson(peerRaw);
-    } else {
-      // peer not provided - derive from sender/receiver
-      final senderRaw = msg['sender'];
-      final receiverRaw = msg['receiver'];
-      final otherRaw = isMine ? receiverRaw : senderRaw;
-      if (otherRaw is Map<String, dynamic>) {
-        peer = UserModel.fromJson(otherRaw);
-      } else {
-        // plain ObjectId string - extract from chatId
-        final chatId = msg['chatId']?.toString() ?? '';
-        final parts = chatId.split('_');
-        final peerId = parts.firstWhere(
-          (p) => p.isNotEmpty && p != myId,
-          orElse: () => otherRaw?.toString() ?? '',
-        );
-        peer = UserModel(
-          id: peerId,
-          username: '',
-          avatar: '',
-          verified: false,
-          isPrivate: false,
-          postsCount: 0,
-          followersCount: 0,
-          followingCount: 0,
-        );
-      }
-    }
+    // peer field comes directly from backend (after our backend fix)
+    final peerRaw = json['peer'];
+    final peer = peerRaw is Map<String, dynamic>
+        ? UserModel.fromJson(peerRaw)
+        : const UserModel(
+            id: '',
+            username: 'User',
+            avatar: '',
+            verified: false,
+            isPrivate: false,
+            postsCount: 0,
+            followersCount: 0,
+            followingCount: 0,
+          );
 
     DateTime createdAt;
     try {
-      createdAt = DateTime.parse(msg['createdAt'].toString());
+      createdAt = DateTime.parse(json['createdAt'].toString());
     } catch (_) {
       createdAt = DateTime.now();
     }
 
     return MessageModel(
-      id: msg['_id']?.toString() ?? '',
-      chatId: msg['chatId']?.toString() ?? '',
+      id: json['_id']?.toString() ?? '',
+      chatId: json['chatId']?.toString() ?? '',
       peer: peer,
-      text: msg['text']?.toString() ?? '',
+      text: json['text']?.toString() ?? '',
       createdAt: createdAt,
-      isMine: isMine,
+      isMine: json['isMine'] == true,
+    );
+  }
+
+  // For messages inside a chat room - isMine based on sender._id
+  factory MessageModel.fromRoomJson(Map<String, dynamic> json, String myId) {
+    final senderRaw = json['sender'];
+    String senderId = '';
+    UserModel peer;
+
+    if (senderRaw is Map<String, dynamic>) {
+      senderId = (senderRaw['_id'] ?? senderRaw['id'])?.toString() ?? '';
+      peer = UserModel.fromJson(senderRaw);
+    } else {
+      senderId = senderRaw?.toString() ?? '';
+      peer = const UserModel(
+        id: '', username: 'User', avatar: '',
+        verified: false, isPrivate: false,
+        postsCount: 0, followersCount: 0, followingCount: 0,
+      );
+    }
+
+    DateTime createdAt;
+    try {
+      createdAt = DateTime.parse(json['createdAt'].toString());
+    } catch (_) {
+      createdAt = DateTime.now();
+    }
+
+    return MessageModel(
+      id: json['_id']?.toString() ?? '',
+      chatId: json['chatId']?.toString() ?? '',
+      peer: peer,
+      text: json['text']?.toString() ?? '',
+      createdAt: createdAt,
+      isMine: myId.isNotEmpty && senderId == myId,
     );
   }
 }
