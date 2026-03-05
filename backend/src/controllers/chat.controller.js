@@ -1,7 +1,7 @@
 import { Message } from "../models/message.model.js";
 import { User } from "../models/user.model.js";
 
-// CREATE OR GET CHAT
+// GET OR CREATE CHAT ID
 export async function getOrCreateChat(req, res) {
   try {
     const myId = req.user._id.toString();
@@ -9,16 +9,17 @@ export async function getOrCreateChat(req, res) {
     const chatId = [myId, otherId].sort().join("_");
     res.json({ chatId });
   } catch (e) {
-    res.status(500).json({ message: "Get chat failed" });
+    console.error("getOrCreateChat error:", e);
+    res.status(500).json({ message: "Failed" });
   }
 }
 
-// GET USER CHATS — returns exactly what Flutter expects
-// Shape: [{_id, peer: {_id, username, avatar, verified}, isMine, text, createdAt}]
+// GET INBOX — returns [{_id, chatId, peer, isMine, text, createdAt}]
 export async function getChats(req, res) {
   try {
     const myId = req.user._id.toString();
 
+    // Get last message per chatId
     const raw = await Message.aggregate([
       {
         $match: {
@@ -39,35 +40,37 @@ export async function getChats(req, res) {
       { $replaceRoot: { newRoot: "$lastMessage" } },
     ]);
 
-    // Populate both sender and receiver
+    // Populate sender and receiver
     await Message.populate(raw, [
       { path: "sender", select: "_id username avatar verified", model: "User" },
       { path: "receiver", select: "_id username avatar verified", model: "User" },
     ]);
 
-    // Shape to Flutter format
-    const result = raw
-      .map((msg) => {
-        const senderId = msg.sender?._id?.toString() ?? "";
-        const isMine = senderId === myId;
-        const peer = isMine ? msg.receiver : msg.sender;
-        if (!peer || !peer.username) return null; // skip if peer missing
-        return {
-          _id: msg._id,
-          chatId: msg.chatId,
-          isMine,
-          text: msg.text || "",
-          createdAt: msg.createdAt,
-          read: msg.read,
-          peer: {
-            _id: peer._id,
-            username: peer.username,
-            avatar: peer.avatar || "",
-            verified: peer.verified || false,
-          },
-        };
-      })
-      .filter(Boolean);
+    // Build Flutter-ready response
+    const result = [];
+    for (const msg of raw) {
+      const senderId = msg.sender?._id?.toString() ?? msg.sender?.toString() ?? "";
+      const isMine = senderId === myId;
+      const peer = isMine ? msg.receiver : msg.sender;
+
+      // Skip if peer not populated
+      if (!peer || typeof peer !== "object" || !peer.username) continue;
+
+      result.push({
+        _id: msg._id,
+        chatId: msg.chatId,
+        isMine,
+        text: msg.text || "",
+        createdAt: msg.createdAt,
+        read: msg.read,
+        peer: {
+          _id: peer._id,
+          username: peer.username,
+          avatar: peer.avatar || "",
+          verified: peer.verified || false,
+        },
+      });
+    }
 
     res.json(result);
   } catch (e) {
@@ -85,15 +88,15 @@ export async function getMessages(req, res) {
     const skip = (page - 1) * limit;
 
     const messages = await Message.find({ chatId })
-      .populate("sender", "username avatar verified")
+      .populate("sender", "_id username avatar verified")
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
 
     res.json({ messages, page, limit });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: "Get messages failed" });
+    console.error("getMessages error:", e);
+    res.status(500).json({ message: "Failed" });
   }
 }
 
@@ -104,7 +107,7 @@ export async function sendMessage(req, res) {
     const { text, mediaUrl, receiverId } = req.body;
 
     if (!text && !mediaUrl) {
-      return res.status(400).json({ message: "Message must have text or media" });
+      return res.status(400).json({ message: "Empty message" });
     }
 
     const message = await Message.create({
@@ -122,8 +125,8 @@ export async function sendMessage(req, res) {
 
     res.status(201).json(message);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: "Send message failed" });
+    console.error("sendMessage error:", e);
+    res.status(500).json({ message: "Send failed" });
   }
 }
 
@@ -135,9 +138,9 @@ export async function markAsRead(req, res) {
       { chatId, receiver: req.user._id, read: false },
       { $set: { read: true } }
     );
-    res.json({ read: true });
+    res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ message: "Mark read failed" });
+    res.status(500).json({ message: "Failed" });
   }
 }
 
@@ -147,6 +150,6 @@ export async function deleteMessage(req, res) {
     await Message.findOneAndDelete({ _id: req.params.id, sender: req.user._id });
     res.json({ deleted: true });
   } catch (e) {
-    res.status(500).json({ message: "Delete failed" });
+    res.status(500).json({ message: "Failed" });
   }
-}
+                  }
