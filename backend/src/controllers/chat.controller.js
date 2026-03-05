@@ -1,150 +1,93 @@
 import { Message } from "../models/message.model.js";
-import { User } from "../models/user.model.js";
 
-// GET OR CREATE CHAT ID
 export async function getOrCreateChat(req, res) {
   try {
-    const myId = req.user._id.toString();
-    const otherId = req.params.userId;
-    const chatId = [myId, otherId].sort().join("_");
+    const chatId = [req.user._id.toString(), req.params.userId].sort().join("_");
     res.json({ chatId });
   } catch (e) {
-    console.error("getOrCreateChat error:", e);
     res.status(500).json({ message: "Failed" });
   }
 }
 
-// GET INBOX — returns [{_id, chatId, peer, isMine, text, createdAt}]
 export async function getChats(req, res) {
   try {
     const myId = req.user._id.toString();
 
-    // Get last message per chatId
+    // Get last message per conversation
     const raw = await Message.aggregate([
-      {
-        $match: {
-          $or: [
-            { sender: req.user._id },
-            { receiver: req.user._id },
-          ],
-        },
-      },
+      { $match: { $or: [{ sender: req.user._id }, { receiver: req.user._id }] } },
       { $sort: { createdAt: -1 } },
-      {
-        $group: {
-          _id: "$chatId",
-          lastMessage: { $first: "$$ROOT" },
-        },
-      },
+      { $group: { _id: "$chatId", msg: { $first: "$$ROOT" } } },
+      { $replaceRoot: { newRoot: "$msg" } },
       { $limit: 50 },
-      { $replaceRoot: { newRoot: "$lastMessage" } },
     ]);
 
-    // Populate sender and receiver
+    // Populate sender + receiver
     await Message.populate(raw, [
-      { path: "sender", select: "_id username avatar verified", model: "User" },
-      { path: "receiver", select: "_id username avatar verified", model: "User" },
+      { path: "sender",   select: "_id username avatar verified" },
+      { path: "receiver", select: "_id username avatar verified" },
     ]);
 
-    // Build Flutter-ready response
-    const result = [];
-    for (const msg of raw) {
-      const senderId = msg.sender?._id?.toString() ?? msg.sender?.toString() ?? "";
-      const isMine = senderId === myId;
-      const peer = isMine ? msg.receiver : msg.sender;
-
-      // Skip if peer not populated
-      if (!peer || typeof peer !== "object" || !peer.username) continue;
-
-      result.push({
-        _id: msg._id,
-        chatId: msg.chatId,
+    const result = raw.map((m) => {
+      const senderId = (m.sender?._id ?? m.sender)?.toString() ?? "";
+      const isMine   = senderId === myId;
+      const peer     = isMine ? m.receiver : m.sender;
+      if (!peer || !peer.username) return null;
+      return {
+        _id:       m._id,
+        chatId:    m.chatId,
         isMine,
-        text: msg.text || "",
-        createdAt: msg.createdAt,
-        read: msg.read,
-        peer: {
-          _id: peer._id,
-          username: peer.username,
-          avatar: peer.avatar || "",
-          verified: peer.verified || false,
-        },
-      });
-    }
+        text:      m.text ?? "",
+        createdAt: m.createdAt,
+        peer: { _id: peer._id, username: peer.username, avatar: peer.avatar ?? "", verified: !!peer.verified },
+      };
+    }).filter(Boolean);
 
     res.json(result);
   } catch (e) {
-    console.error("getChats error:", e);
+    console.error("getChats:", e);
     res.status(500).json({ message: "Get chats failed" });
   }
 }
 
-// GET MESSAGES IN CHAT
 export async function getMessages(req, res) {
   try {
-    const { chatId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 40;
-    const skip = (page - 1) * limit;
-
-    const messages = await Message.find({ chatId })
+    const msgs = await Message.find({ chatId: req.params.chatId })
       .populate("sender", "_id username avatar verified")
       .sort({ createdAt: 1 })
-      .skip(skip)
-      .limit(limit);
-
-    res.json({ messages, page, limit });
+      .limit(50);
+    res.json({ messages: msgs });
   } catch (e) {
-    console.error("getMessages error:", e);
     res.status(500).json({ message: "Failed" });
   }
 }
 
-// SEND MESSAGE
 export async function sendMessage(req, res) {
   try {
-    const { chatId } = req.params;
-    const { text, mediaUrl, receiverId } = req.body;
-
-    if (!text && !mediaUrl) {
-      return res.status(400).json({ message: "Empty message" });
-    }
-
-    const message = await Message.create({
-      chatId,
-      sender: req.user._id,
+    const { text, receiverId } = req.body;
+    const msg = await Message.create({
+      chatId:   req.params.chatId,
+      sender:   req.user._id,
       receiver: receiverId,
-      text: text || "",
-      mediaUrl: mediaUrl || "",
+      text:     text ?? "",
     });
-
-    await message.populate([
-      { path: "sender", select: "_id username avatar verified" },
-      { path: "receiver", select: "_id username avatar verified" },
-    ]);
-
-    res.status(201).json(message);
+    await msg.populate("sender", "_id username avatar verified");
+    res.status(201).json(msg);
   } catch (e) {
-    console.error("sendMessage error:", e);
+    console.error("sendMessage:", e);
     res.status(500).json({ message: "Send failed" });
   }
 }
 
-// MARK AS READ
 export async function markAsRead(req, res) {
   try {
-    const { chatId } = req.params;
-    await Message.updateMany(
-      { chatId, receiver: req.user._id, read: false },
-      { $set: { read: true } }
-    );
-    res.json({ success: true });
+    await Message.updateMany({ chatId: req.params.chatId, receiver: req.user._id }, { read: true });
+    res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ message: "Failed" });
   }
 }
 
-// DELETE MESSAGE
 export async function deleteMessage(req, res) {
   try {
     await Message.findOneAndDelete({ _id: req.params.id, sender: req.user._id });
@@ -152,4 +95,4 @@ export async function deleteMessage(req, res) {
   } catch (e) {
     res.status(500).json({ message: "Failed" });
   }
-                  }
+        }
