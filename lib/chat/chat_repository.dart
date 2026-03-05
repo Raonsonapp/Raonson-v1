@@ -2,49 +2,37 @@ import 'dart:convert';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/message_model.dart';
+import '../core/services/user_session.dart';
 
 class ChatRepository {
   final ApiClient _api = ApiClient.instance;
+  String get _myId => UserSession.userId ?? '';
 
-  // GET INBOX CHATS
+  // GET INBOX - backend returns [{_id, peer:{...}, isMine, text, createdAt}]
   Future<List<MessageModel>> getInboxChats() async {
     final res = await _api.getRequest(ApiEndpoints.chat);
     if (res.statusCode == 401) throw Exception('Unauthorized');
     if (res.statusCode >= 400) throw Exception('Server error');
     final body = jsonDecode(res.body);
-    final List raw = body is List ? body : (body['chats'] ?? []);
-    // Backend may return [{_id: chatId, lastMessage: {...}}] (old)
-    // or flat message list (new). Normalize to flat messages.
-    final List data = raw.map((e) {
-      final map = e as Map<String, dynamic>;
-      // Old format: has 'lastMessage' key
-      if (map.containsKey('lastMessage') && map['lastMessage'] is Map) {
-        final msg = Map<String, dynamic>.from(map['lastMessage'] as Map);
-        // chatId may be in _id of wrapper
-        if (msg['chatId'] == null) msg['chatId'] = map['_id']?.toString();
-        return msg;
-      }
-      return map;
-    }).toList();
+    final List data = body is List ? body : (body['chats'] ?? []);
     return data
         .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
-        .where((m) => m.chatId.isNotEmpty)
+        .where((m) => m.peer.username.isNotEmpty)
         .toList();
   }
 
-  // GET MESSAGES WITH USER
+  // GET MESSAGES IN ROOM
   Future<List<MessageModel>> getMessagesWithUser(String peerId) async {
     final chatRes = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId');
     if (chatRes.statusCode >= 400) throw Exception('Failed to get chat');
     final chatId = (jsonDecode(chatRes.body) as Map)['chatId'] as String;
 
-    final msgRes =
-        await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages');
+    final msgRes = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages');
     if (msgRes.statusCode >= 400) throw Exception('Failed to load messages');
     final body = jsonDecode(msgRes.body);
     final List data = body is Map ? (body['messages'] ?? []) : body as List;
     return data
-        .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+        .map((e) => MessageModel.fromRoomJson(e as Map<String, dynamic>, _myId))
         .toList();
   }
 
@@ -62,10 +50,10 @@ class ChatRepository {
       body: {'receiverId': toUserId, 'text': text},
     );
     if (res.statusCode >= 400) throw Exception('Send failed');
-    return MessageModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    return MessageModel.fromRoomJson(
+        jsonDecode(res.body) as Map<String, dynamic>, _myId);
   }
 
-  // MARK AS READ
   Future<void> markAsRead(String chatId) async {
     await _api.postRequest('${ApiEndpoints.chat}/$chatId/read');
   }
