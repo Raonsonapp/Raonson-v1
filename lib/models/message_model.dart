@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'user_model.dart';
+import '../core/services/user_session.dart';
 
 class MessageModel {
   final String id;
@@ -32,28 +33,18 @@ class MessageModel {
     return '$h:$m';
   }
 
+  // For inbox (new backend format with peer + isMine)
   factory MessageModel.fromJson(Map<String, dynamic> json) {
-    // peer field comes directly from backend (after our backend fix)
     final peerRaw = json['peer'];
     final peer = peerRaw is Map<String, dynamic>
         ? UserModel.fromJson(peerRaw)
         : const UserModel(
-            id: '',
-            username: 'User',
-            avatar: '',
-            verified: false,
-            isPrivate: false,
-            postsCount: 0,
-            followersCount: 0,
-            followingCount: 0,
-          );
+            id: '', username: '', avatar: '', verified: false,
+            isPrivate: false, postsCount: 0, followersCount: 0, followingCount: 0);
 
     DateTime createdAt;
-    try {
-      createdAt = DateTime.parse(json['createdAt'].toString());
-    } catch (_) {
-      createdAt = DateTime.now();
-    }
+    try { createdAt = DateTime.parse(json['createdAt'].toString()); }
+    catch (_) { createdAt = DateTime.now(); }
 
     return MessageModel(
       id: json['_id']?.toString() ?? '',
@@ -65,7 +56,7 @@ class MessageModel {
     );
   }
 
-  // For messages inside a chat room - isMine based on sender._id
+  // For chat room messages (sender-based isMine)
   factory MessageModel.fromRoomJson(Map<String, dynamic> json, String myId) {
     final senderRaw = json['sender'];
     String senderId = '';
@@ -77,18 +68,13 @@ class MessageModel {
     } else {
       senderId = senderRaw?.toString() ?? '';
       peer = const UserModel(
-        id: '', username: 'User', avatar: '',
-        verified: false, isPrivate: false,
-        postsCount: 0, followersCount: 0, followingCount: 0,
-      );
+        id: '', username: 'User', avatar: '', verified: false,
+        isPrivate: false, postsCount: 0, followersCount: 0, followingCount: 0);
     }
 
     DateTime createdAt;
-    try {
-      createdAt = DateTime.parse(json['createdAt'].toString());
-    } catch (_) {
-      createdAt = DateTime.now();
-    }
+    try { createdAt = DateTime.parse(json['createdAt'].toString()); }
+    catch (_) { createdAt = DateTime.now(); }
 
     return MessageModel(
       id: json['_id']?.toString() ?? '',
@@ -96,7 +82,7 @@ class MessageModel {
       peer: peer,
       text: json['text']?.toString() ?? '',
       createdAt: createdAt,
-      isMine: myId.isNotEmpty && senderId == myId,
+      isMine: myId.isNotEmpty && senderId.isNotEmpty && senderId == myId,
     );
   }
 }
