@@ -4,28 +4,27 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
-import '../../core/services/user_session.dart';
 
 class LoginState {
   final String email;
   final String password;
   final bool isLoading;
-  final bool isWakingServer;
   final String? error;
 
   const LoginState({
     required this.email,
     required this.password,
     required this.isLoading,
-    this.isWakingServer = false,
     this.error,
   });
 
-  factory LoginState.initial() => const LoginState(
-        email: '',
-        password: '',
-        isLoading: false,
-      );
+  factory LoginState.initial() {
+    return const LoginState(
+      email: '',
+      password: '',
+      isLoading: false,
+    );
+  }
 
   bool get canSubmit =>
       email.isNotEmpty && password.isNotEmpty && !isLoading;
@@ -34,16 +33,15 @@ class LoginState {
     String? email,
     String? password,
     bool? isLoading,
-    bool? isWakingServer,
     String? error,
-  }) =>
-      LoginState(
-        email: email ?? this.email,
-        password: password ?? this.password,
-        isLoading: isLoading ?? this.isLoading,
-        isWakingServer: isWakingServer ?? this.isWakingServer,
-        error: error,
-      );
+  }) {
+    return LoginState(
+      email: email ?? this.email,
+      password: password ?? this.password,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+    );
+  }
 }
 
 class LoginController extends ChangeNotifier {
@@ -60,28 +58,7 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Try to POST login. Returns response or throws.
-  Future<Map<String, dynamic>> _attemptLogin() async {
-    final res = await ApiClient.instance
-        .post(
-          ApiEndpoints.login,
-          body: {
-            'email': _state.email.trim(),
-            'password': _state.password,
-          },
-        )
-        .timeout(const Duration(seconds: 30));
-
-    if (res.statusCode != 200) {
-      dynamic body;
-      try { body = jsonDecode(res.body); } catch (_) {}
-      throw Exception(
-        body is Map ? (body['message'] ?? 'Login failed') : 'Login failed',
-      );
-    }
-    return jsonDecode(res.body) as Map<String, dynamic>;
-  }
-
+  /// 🔐 LOGIN — 100% SAFE
   Future<bool> login() async {
     if (!_state.canSubmit) return false;
 
@@ -89,38 +66,32 @@ class LoginController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      Map<String, dynamic> data;
+      final res = await ApiClient.instance.post(
+        ApiEndpoints.login,
+        body: {
+          'email': _state.email.trim(),
+          'password': _state.password,
+        },
+      );
 
-      try {
-        // First attempt - may fail if server is cold
-        data = await _attemptLogin();
-      } catch (e) {
-        // If timeout or connection error, wake server and retry
-        final isConnErr = e.toString().contains('Timeout') ||
-            e.toString().contains('timeout') ||
-            e.toString().contains('SocketException') ||
-            e.toString().contains('Connection');
-
-        if (!isConnErr) rethrow; // wrong password etc - don't retry
-
-        // Show waking banner and wait for server
-        _state = _state.copyWith(isWakingServer: true);
-        notifyListeners();
-
+      if (res.statusCode != 200) {
+        dynamic body;
         try {
-          await ApiClient.instance
-              .get('/health')
-              .timeout(const Duration(seconds: 90));
-        } catch (_) {}
+          body = jsonDecode(res.body);
+        } catch (_) {
+          body = null;
+        }
 
-        _state = _state.copyWith(isWakingServer: false);
-        notifyListeners();
-
-        // Second attempt after wake
-        data = await _attemptLogin();
+        throw Exception(
+          body is Map<String, dynamic>
+              ? (body['message'] ?? 'Login failed')
+              : 'Login failed',
+        );
       }
 
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
       final token = data['accessToken'];
+
       if (token == null || token.toString().isEmpty) {
         throw Exception('Access token missing');
       }
@@ -128,20 +99,19 @@ class LoginController extends ChangeNotifier {
       await TokenStorage.saveAccessToken(token.toString());
       ApiClient.instance.setAuthToken(token);
 
-      final user = data['user'] as Map<String, dynamic>?;
-      if (user != null) {
-        UserSession.userId = (user['id'] ?? user['_id'])?.toString();
-        UserSession.username = user['username']?.toString();
+      // Save userId for chat isMine detection
+      final userData = data['user'] as Map<String, dynamic>?;
+      if (userData != null) {
+        final uid = (userData['id'] ?? userData['_id'])?.toString() ?? '';
+        if (uid.isNotEmpty) await TokenStorage.saveUserId(uid);
       }
 
-      _state = _state.copyWith(isLoading: false, isWakingServer: false);
+      _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('[Login] error: \$e');
       _state = _state.copyWith(
         isLoading: false,
-        isWakingServer: false,
         error: e.toString().replaceAll('Exception:', '').trim(),
       );
       notifyListeners();
