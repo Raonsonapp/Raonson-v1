@@ -21,31 +21,8 @@ class ChatListScreen extends StatelessWidget {
   }
 }
 
-class _ChatView extends StatefulWidget {
+class _ChatView extends StatelessWidget {
   const _ChatView();
-  @override
-  State<_ChatView> createState() => _ChatViewState();
-}
-
-class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      context.read<ChatListController>().loadChats();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,8 +60,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                     icon: const Icon(Icons.edit_outlined, color: Colors.white),
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (_) => const NewChatScreen()),
+                      MaterialPageRoute(builder: (_) => const NewChatScreen()),
                     ).then((_) => context.read<ChatListController>().loadChats()),
                   ),
                 ],
@@ -232,30 +208,14 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
             Expanded(
               child: ctrl.isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: AppColors.neonBlue))
-                  : ctrl.error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            ctrl.error!,
-                            style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      )
-                    : ctrl.chats.isEmpty
-                      ? RefreshIndicator(
-                          color: AppColors.neonBlue,
-                          onRefresh: ctrl.loadChats,
-                          child: const SingleChildScrollView(
-                            physics: AlwaysScrollableScrollPhysics(),
-                            child: SizedBox(height: 300, child: _EmptyChats()),
-                          ),
-                        )
+                      child: CircularProgressIndicator(
+                          color: AppColors.neonBlue))
+                  : ctrl.chats.isEmpty
+                      ? _EmptyChats()
                       : ListView.builder(
                           itemCount: ctrl.chats.length,
-                          itemBuilder: (_, i) => _ChatTile(chat: ctrl.chats[i]),
+                          itemBuilder: (_, i) =>
+                              _ChatTile(chat: ctrl.chats[i]),
                         ),
             ),
           ],
@@ -266,7 +226,6 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
 }
 
 class _EmptyChats extends StatelessWidget {
-  const _EmptyChats();
   @override
   Widget build(BuildContext context) {
     return const Center(
@@ -292,7 +251,7 @@ class _ChatTile extends StatelessWidget {
         glowBorder: true,
       ),
       title: Text(
-        chat.peer.username.isNotEmpty ? chat.peer.username : 'User',
+        chat.peer.username,
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
@@ -311,9 +270,7 @@ class _ChatTile extends StatelessWidget {
       ),
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => ChatRoomScreen(peer: chat.peer),
-        ),
+        MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: chat.peer)),
       ).then((_) => context.read<ChatListController>().loadChats()),
     );
   }
