@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const JWT_SECRET = process.env.JWT_SECRET || "RAONSON_SECRET";
 
@@ -12,11 +13,13 @@ export const authMiddleware = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // ✅ Backward + forward compatibility across controllers
+    // Convert string id to ObjectId so DB queries work correctly
+    const objectId = new mongoose.Types.ObjectId(decoded.id);
+
     req.userId = decoded.id;
     req.user = {
-      id: decoded.id,
-      _id: decoded.id,
+      id:   decoded.id,
+      _id:  objectId,   // ← ObjectId, not string
       role: decoded.role,
     };
 
