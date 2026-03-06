@@ -30,7 +30,7 @@ class MessageModel {
     return '$h:$m';
   }
 
-  static UserModel _emptyUser() => const UserModel(
+  static const _empty = UserModel(
     id: '', username: 'User', avatar: '',
     verified: false, isPrivate: false,
     postsCount: 0, followersCount: 0, followingCount: 0,
@@ -41,7 +41,7 @@ class MessageModel {
     final peerRaw = json['peer'];
     final peer = peerRaw is Map<String, dynamic>
         ? UserModel.fromJson(peerRaw)
-        : _emptyUser();
+        : _empty;
 
     DateTime createdAt;
     try { createdAt = DateTime.parse(json['createdAt'].toString()); }
@@ -68,7 +68,7 @@ class MessageModel {
       peer = UserModel.fromJson(senderRaw);
     } else {
       senderId = senderRaw?.toString() ?? '';
-      peer = _emptyUser();
+      peer = _empty;
     }
 
     DateTime createdAt;
