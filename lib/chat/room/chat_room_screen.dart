@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -7,6 +6,7 @@ import '../chat_repository.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
 import '../../core/storage/token_storage.dart';
+import '../../core/webrtc_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
@@ -21,77 +21,52 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
-  final _repo   = ChatRepository();
-  final _scroll = ScrollController();
+  final _repo    = ChatRepository();
+  final _scroll  = ScrollController();
+  final _signal  = WebRTCService();  // singleton
+
   List<MessageModel> _messages = [];
   bool _loading = true;
-
-  io.Socket? _socket;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _connectSocket();
+    _setupSignaling();
   }
 
   @override
   void dispose() {
     _scroll.dispose();
-    _socket?.disconnect();
+    // Clear callbacks so they don't fire after screen is gone
+    _signal.onIncomingCall = null;
     super.dispose();
   }
 
-  // ── Connect socket and listen for incoming calls ──
-  Future<void> _connectSocket() async {
-    final myId = await TokenStorage.getUserId() ?? '';
-    if (myId.isEmpty) return;
+  Future<void> _setupSignaling() async {
+    await _signal.connect();
 
-    _socket = io.io(
-      'https://raonson-v1.onrender.com',
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .build(),
-    );
-    _socket!.connect();
-    _socket!.onConnect((_) => _socket!.emit('user:register', myId));
-
-    _socket!.on('call:incoming', (data) {
+    // Listen for incoming calls while in chat
+    _signal.onIncomingCall = (from, fromUsername, fromAvatar, callType) {
       if (!mounted) return;
-      final callType = data['callType'] == 'video' ? CallType.video : CallType.voice;
-
+      final ct = callType == 'video' ? CallType.video : CallType.voice;
       final caller = UserModel(
-        id:             data['from'] ?? widget.peer.id,
-        username:       data['fromUsername'] ?? widget.peer.username,
-        avatar:         data['fromAvatar'] ?? widget.peer.avatar,
-        verified:       false,
-        isPrivate:      false,
-        postsCount:     0,
-        followersCount: 0,
-        followingCount: 0,
+        id:             from,
+        username:       fromUsername.isNotEmpty ? fromUsername : widget.peer.username,
+        avatar:         fromAvatar.isNotEmpty   ? fromAvatar   : widget.peer.avatar,
+        verified:       false, isPrivate: false,
+        postsCount: 0, followersCount: 0, followingCount: 0,
       );
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => IncomingCallScreen(
-            caller:    caller,
-            offerData: Map<String, dynamic>.from(data['offer'] ?? {}),
-            callType:  callType,
-          ),
-        ),
-      );
-    });
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => IncomingCallScreen(caller: caller, callType: ct),
+      ));
+    };
   }
 
   Future<void> _load() async {
     try {
       final msgs = await _repo.getMessagesWithUser(widget.peer.id);
-      setState(() {
-        _messages = msgs;
-        _loading  = false;
-      });
+      setState(() { _messages = msgs; _loading = false; });
       _scrollBottom();
     } catch (_) {
       setState(() => _loading = false);
@@ -119,23 +94,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
-  void _startVoiceCall() => Navigator.push(
-    context,
-    PageRouteBuilder(
-      pageBuilder: (_, __, ___) => CallScreen(peer: widget.peer, callType: CallType.voice),
-      transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
-      transitionDuration: const Duration(milliseconds: 400),
-    ),
-  );
+  Future<void> _startCall(CallType type) async {
+    final myId   = await TokenStorage.getUserId() ?? '';
+    final myData = await _repo.getMyProfile();
 
-  void _startVideoCall() => Navigator.push(
-    context,
-    PageRouteBuilder(
-      pageBuilder: (_, __, ___) => CallScreen(peer: widget.peer, callType: CallType.video),
+    // Notify peer via socket
+    _signal.notifyIncoming(
+      toUserId:     widget.peer.id,
+      fromUserId:   myId,
+      fromUsername: myData?['username'] ?? '',
+      fromAvatar:   myData?['avatar']   ?? '',
+      isVideo:      type == CallType.video,
+    );
+
+    if (!mounted) return;
+    Navigator.push(context, PageRouteBuilder(
+      pageBuilder:      (_, __, ___) => CallScreen(peer: widget.peer, callType: type),
       transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
-      transitionDuration: const Duration(milliseconds: 400),
-    ),
-  );
+      transitionDuration: const Duration(milliseconds: 350),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,22 +142,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.videocam_rounded, color: Colors.white, size: 20),
-            ),
-            onPressed: _startVideoCall,
-          ),
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.call_rounded, color: Colors.white, size: 20),
-            ),
-            onPressed: _startVoiceCall,
-          ),
+          _AppBarBtn(icon: Icons.videocam_rounded, onTap: () => _startCall(CallType.video)),
+          _AppBarBtn(icon: Icons.call_rounded,     onTap: () => _startCall(CallType.voice)),
           const SizedBox(width: 4),
         ],
       ),
@@ -218,9 +182,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _QuickBtn(icon: Icons.call_rounded, label: 'Voice call', onTap: _startVoiceCall),
+              _QuickBtn(icon: Icons.call_rounded,     label: 'Voice call', onTap: () => _startCall(CallType.voice)),
               const SizedBox(width: 16),
-              _QuickBtn(icon: Icons.videocam_rounded, label: 'Video call', onTap: _startVideoCall),
+              _QuickBtn(icon: Icons.videocam_rounded, label: 'Video call', onTap: () => _startCall(CallType.video)),
             ],
           ),
         ],
@@ -229,31 +193,41 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 }
 
-class _QuickBtn extends StatelessWidget {
+class _AppBarBtn extends StatelessWidget {
   final IconData icon;
-  final String label;
   final VoidCallback onTap;
+  const _AppBarBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    icon: Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+      child: Icon(icon, color: Colors.white, size: 20),
+    ),
+    onPressed: onTap,
+  );
+}
+
+class _QuickBtn extends StatelessWidget {
+  final IconData icon; final String label; final VoidCallback onTap;
   const _QuickBtn({required this.icon, required this.label, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.neonBlue, size: 18),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-          ],
-        ),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
       ),
-    );
-  }
+      child: Row(children: [
+        Icon(icon, color: AppColors.neonBlue, size: 18),
+        const SizedBox(width: 8),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+      ]),
+    ),
+  );
 }
