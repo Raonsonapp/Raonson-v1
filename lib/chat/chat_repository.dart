@@ -65,6 +65,15 @@ class ChatRepository {
         jsonDecode(res.body) as Map<String, dynamic>, myId);
   }
 
+  Future<Map<String, dynamic>?> getMyProfile() async {
+    try {
+      final r = await _api.get('/profile/me');
+      if (r.statusCode != 200) return null;
+      final b = jsonDecode(r.body) as Map<String, dynamic>;
+      return (b['user'] ?? b) as Map<String, dynamic>;
+    } catch (_) { return null; }
+  }
+
   Future<void> markAsRead(String chatId) async {
     await _api.postRequest('${ApiEndpoints.chat}/$chatId/read');
   }
