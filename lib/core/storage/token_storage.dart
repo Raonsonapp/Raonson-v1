@@ -32,6 +32,18 @@ class TokenStorage {
   static Future<void> clearTokens() async {
     await SecureStorage.delete(_accessTokenKey);
     await SecureStorage.delete(_refreshTokenKey);
+    await SecureStorage.delete(_userIdKey);
+  }
+
+
+  static const String _userIdKey = 'user_id';
+
+  static Future<void> saveUserId(String id) {
+    return SecureStorage.write(_userIdKey, id);
+  }
+
+  static Future<String?> getUserId() {
+    return SecureStorage.read(_userIdKey);
   }
 
   // =====================================================
