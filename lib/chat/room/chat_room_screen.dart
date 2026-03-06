@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -8,6 +7,7 @@ import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
+import 'call_screen.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final UserModel peer;
@@ -22,7 +22,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _scroll = ScrollController();
   List<MessageModel> _messages = [];
   bool _loading = true;
-  bool _sending = false;
 
   @override
   void initState() {
@@ -39,34 +38,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _load() async {
     try {
       final msgs = await _repo.getMessagesWithUser(widget.peer.id);
-      if (!mounted) return;
       setState(() {
         _messages = msgs;
         _loading = false;
       });
       _scrollBottom();
-    } catch (e) {
-      debugPrint('[Chat] load error: $e');
-      if (mounted) setState(() => _loading = false);
+    } catch (_) {
+      setState(() => _loading = false);
     }
   }
 
   void _onSend(String text) async {
-    if (text.trim().isEmpty || _sending) return;
-    setState(() => _sending = true);
+    if (text.trim().isEmpty) return;
     try {
       final msg = await _repo.sendMessage(
         toUserId: widget.peer.id,
-        text: text.trim(),
+        text: text,
       );
-      if (!mounted) return;
       setState(() => _messages.add(msg));
       _scrollBottom();
-    } catch (e) {
-      debugPrint('[Chat] send error: \$e');
-    } finally {
-      if (mounted) setState(() => _sending = false);
-    }
+    } catch (_) {}
   }
 
   void _scrollBottom() {
@@ -79,6 +70,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         );
       }
     });
+  }
+
+  void _startVoiceCall() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => CallScreen(
+          peer: widget.peer,
+          callType: CallType.voice,
+        ),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
+  }
+
+  void _startVideoCall() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => CallScreen(
+          peer: widget.peer,
+          callType: CallType.video,
+        ),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
   }
 
   @override
@@ -96,24 +117,53 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           children: [
             Avatar(imageUrl: widget.peer.avatar, size: 36, glowBorder: true),
             const SizedBox(width: 10),
-            Text(
-              widget.peer.username,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.peer.username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const Text(
+                  'tap to view profile',
+                  style: TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+              ],
             ),
           ],
         ),
         actions: [
+          // Video call button
           IconButton(
-            icon: const Icon(Icons.videocam_outlined, color: Colors.white),
-            onPressed: () {},
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.videocam_rounded, color: Colors.white, size: 20),
+            ),
+            onPressed: _startVideoCall,
+            tooltip: 'Video call',
           ),
+          // Voice call button
           IconButton(
-            icon: const Icon(Icons.phone_outlined, color: Colors.white),
-            onPressed: () {},
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.call_rounded, color: Colors.white, size: 20),
+            ),
+            onPressed: _startVoiceCall,
+            tooltip: 'Voice call',
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
@@ -123,31 +173,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: AppColors.neonBlue))
                 : _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Avatar(
-                                imageUrl: widget.peer.avatar,
-                                size: 72,
-                                glowBorder: true),
-                            const SizedBox(height: 12),
-                            Text(
-                              widget.peer.username,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Say something! 👋',
-                              style: TextStyle(
-                                  color: Colors.white38, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      )
+                    ? _emptyState()
                     : ListView.builder(
                         controller: _scroll,
                         padding: const EdgeInsets.symmetric(
@@ -157,14 +183,84 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                             MessageBubble(message: _messages[i]),
                       ),
           ),
-          if (_sending)
-            const LinearProgressIndicator(
-              color: AppColors.neonBlue,
-              backgroundColor: Colors.transparent,
-              minHeight: 2,
-            ),
           MessageInput(onSend: _onSend),
         ],
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Avatar(imageUrl: widget.peer.avatar, size: 80, glowBorder: true),
+          const SizedBox(height: 16),
+          Text(
+            widget.peer.username,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Say something! 👋',
+            style: TextStyle(color: Colors.white38, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _QuickCallBtn(
+                icon: Icons.call_rounded,
+                label: 'Voice call',
+                onTap: _startVoiceCall,
+              ),
+              const SizedBox(width: 16),
+              _QuickCallBtn(
+                icon: Icons.videocam_rounded,
+                label: 'Video call',
+                onTap: _startVideoCall,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickCallBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickCallBtn({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.neonBlue, size: 18),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          ],
+        ),
       ),
     );
   }
