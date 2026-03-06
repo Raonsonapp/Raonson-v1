@@ -13,7 +13,6 @@ export async function getChats(req, res) {
   try {
     const myId = req.user._id.toString();
 
-    // Get last message per conversation
     const raw = await Message.aggregate([
       { $match: { $or: [{ sender: req.user._id }, { receiver: req.user._id }] } },
       { $sort: { createdAt: -1 } },
@@ -22,26 +21,31 @@ export async function getChats(req, res) {
       { $limit: 50 },
     ]);
 
-    // Populate sender + receiver
     await Message.populate(raw, [
       { path: "sender",   select: "_id username avatar verified" },
       { path: "receiver", select: "_id username avatar verified" },
     ]);
 
-    const result = raw.map((m) => {
+    const result = [];
+    for (const m of raw) {
       const senderId = (m.sender?._id ?? m.sender)?.toString() ?? "";
       const isMine   = senderId === myId;
       const peer     = isMine ? m.receiver : m.sender;
-      if (!peer || !peer.username) return null;
-      return {
+      if (!peer || !peer.username) continue;
+      result.push({
         _id:       m._id,
         chatId:    m.chatId,
         isMine,
         text:      m.text ?? "",
         createdAt: m.createdAt,
-        peer: { _id: peer._id, username: peer.username, avatar: peer.avatar ?? "", verified: !!peer.verified },
-      };
-    }).filter(Boolean);
+        peer: {
+          _id:      peer._id,
+          username: peer.username,
+          avatar:   peer.avatar ?? "",
+          verified: !!peer.verified,
+        },
+      });
+    }
 
     res.json(result);
   } catch (e) {
@@ -81,7 +85,10 @@ export async function sendMessage(req, res) {
 
 export async function markAsRead(req, res) {
   try {
-    await Message.updateMany({ chatId: req.params.chatId, receiver: req.user._id }, { read: true });
+    await Message.updateMany(
+      { chatId: req.params.chatId, receiver: req.user._id },
+      { read: true }
+    );
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ message: "Failed" });
@@ -95,4 +102,4 @@ export async function deleteMessage(req, res) {
   } catch (e) {
     res.status(500).json({ message: "Failed" });
   }
-        }
+}
