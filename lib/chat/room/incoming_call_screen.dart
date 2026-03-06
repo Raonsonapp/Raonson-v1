@@ -133,7 +133,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
-                const Text('is calling you...', style: TextStyle(color: Colors.white45, fontSize: 16)),
+                const Text('is calling you...', style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 16)),
               ]),
 
               // ── Buttons ──
