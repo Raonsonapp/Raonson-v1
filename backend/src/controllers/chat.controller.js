@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Message } from "../models/message.model.js";
 
 export async function getOrCreateChat(req, res) {
@@ -72,7 +73,7 @@ export async function sendMessage(req, res) {
     const msg = await Message.create({
       chatId:   req.params.chatId,
       sender:   req.user._id,
-      receiver: receiverId,
+      receiver: new mongoose.Types.ObjectId(receiverId),
       text:     text ?? "",
     });
     await msg.populate("sender", "_id username avatar verified");
@@ -102,4 +103,4 @@ export async function deleteMessage(req, res) {
   } catch (e) {
     res.status(500).json({ message: "Failed" });
   }
-          }
+      }
