@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import chatSocket from "./chat.socket.js";
 import notificationSocket from "./notification.socket.js";
 import presenceSocket from "./presence.socket.js";
+import callSocket from "./call.socket.js";
 
 let io;
 
@@ -17,14 +18,13 @@ export function initSocket(httpServer) {
     presenceSocket(io, socket);
     chatSocket(io, socket);
     notificationSocket(io, socket);
+    callSocket(io, socket);
   });
 
   return io;
 }
 
 export function getIO() {
-  if (!io) {
-    throw new Error("Socket.io not initialized");
-  }
+  if (!io) throw new Error("Socket.io not initialized");
   return io;
 }
