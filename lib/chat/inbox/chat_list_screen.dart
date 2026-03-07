@@ -6,6 +6,7 @@ import '../chat_repository.dart';
 import '../../models/message_model.dart';
 import '../../widgets/avatar.dart';
 import '../../app/app_theme.dart';
+import '../../core/presence_service.dart';
 import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 
@@ -14,8 +15,12 @@ class ChatListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ChatListController(ChatRepository())..loadChats(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+            create: (_) => ChatListController(ChatRepository())..loadChats()),
+        ChangeNotifierProvider.value(value: PresenceService()..connect()),
+      ],
       child: const _ChatView(),
     );
   }
@@ -94,13 +99,13 @@ class _ChatView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Messages',
+                children: const [
+                  Text('Messages',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  const Text('Requests',
+                  Text('Requests',
                       style: TextStyle(
                           color: AppColors.neonBlue,
                           fontWeight: FontWeight.w600,
@@ -109,93 +114,70 @@ class _ChatView extends StatelessWidget {
               ),
             ),
 
-            // ── Active story bubbles ──
+            // ── Story bubbles ──
             SizedBox(
               height: 86,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
-                  // "Your note" button
                   Padding(
                     padding: const EdgeInsets.only(right: 14),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 54,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: Colors.white24, width: 1.5),
-                          ),
-                          child: const Icon(Icons.add,
-                              color: Colors.white, size: 22),
+                    child: Column(children: [
+                      Container(
+                        width: 54, height: 54,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24, width: 1.5),
                         ),
-                        const SizedBox(height: 4),
-                        const Text('Your note',
-                            style: TextStyle(
-                                fontSize: 10, color: Colors.white54)),
-                      ],
-                    ),
+                        child: const Icon(Icons.add, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Your note',
+                          style: TextStyle(fontSize: 10, color: Colors.white54)),
+                    ]),
                   ),
-                  // Online contacts
                   ...['Im busy rn', 'Chillin 😆', 'Shohrukh', 'Besst']
                       .map<Widget>((name) => Padding(
                             padding: const EdgeInsets.only(right: 14),
-                            child: Column(
-                              children: [
-                                Container(
-                                  width: 54,
-                                  height: 54,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.neonBlue,
-                                      width: 2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.neonBlue
-                                            .withOpacity(0.35),
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const CircleAvatar(
-                                    backgroundColor: AppColors.card,
-                                    child: Icon(Icons.person,
-                                        color: Colors.white38, size: 22),
-                                  ),
+                            child: Column(children: [
+                              Container(
+                                width: 54, height: 54,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.neonBlue, width: 2),
+                                  boxShadow: [BoxShadow(
+                                      color: AppColors.neonBlue.withOpacity(0.35),
+                                      blurRadius: 8)],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  name.length > 8
-                                      ? '${name.substring(0, 8)}..'
-                                      : name,
-                                  style: const TextStyle(
-                                      fontSize: 10, color: Colors.white54),
+                                child: const CircleAvatar(
+                                  backgroundColor: AppColors.card,
+                                  child: Icon(Icons.person, color: Colors.white38, size: 22),
                                 ),
-                              ],
-                            ),
-                          ))
-                      ,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                name.length > 8 ? '${name.substring(0, 8)}..' : name,
+                                style: const TextStyle(fontSize: 10, color: Colors.white54),
+                              ),
+                            ]),
+                          )),
                 ],
               ),
             ),
 
-            // ── Messages + Requests header 2 ──
+            // ── Messages header 2 ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Messages',
+                children: const [
+                  Text('Messages',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  const Text('Requests',
+                  Text('Requests',
                       style: TextStyle(
                           color: AppColors.neonBlue,
                           fontWeight: FontWeight.w600,
@@ -208,30 +190,18 @@ class _ChatView extends StatelessWidget {
             Expanded(
               child: ctrl.isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.neonBlue))
+                      child: CircularProgressIndicator(color: AppColors.neonBlue))
                   : ctrl.chats.isEmpty
-                      ? _EmptyChats()
+                      ? const Center(
+                          child: Text('No messages yet',
+                              style: TextStyle(color: Colors.white38)))
                       : ListView.builder(
                           itemCount: ctrl.chats.length,
-                          itemBuilder: (_, i) =>
-                              _ChatTile(chat: ctrl.chats[i]),
+                          itemBuilder: (_, i) => _ChatTile(chat: ctrl.chats[i]),
                         ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EmptyChats extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        'No messages yet',
-        style: TextStyle(color: Colors.white38),
       ),
     );
   }
@@ -243,26 +213,55 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Watch presence so tile rebuilds when status changes
+    final presence = context.watch<PresenceService>();
+    final online   = presence.isOnline(chat.peer.id);
+    final lastSeen = presence.lastSeenLabel(chat.peer.id);
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Avatar(
-        imageUrl: chat.peer.avatar,
-        size: 52,
-        glowBorder: true,
-      ),
+      leading: Stack(clipBehavior: Clip.none, children: [
+        Avatar(imageUrl: chat.peer.avatar, size: 52, glowBorder: true),
+        // Online green dot
+        if (online)
+          Positioned(
+            bottom: 0, right: 0,
+            child: Container(
+              width: 13, height: 13,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C853),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.bg, width: 2),
+              ),
+            ),
+          ),
+      ]),
       title: Text(
         chat.peer.username,
         style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-        ),
+            color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
       ),
-      subtitle: Text(
-        chat.lastMessage,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: Colors.white38, fontSize: 13),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Online status OR last message
+          if (lastSeen.isNotEmpty)
+            Text(
+              lastSeen,
+              style: TextStyle(
+                color: online ? const Color(0xFF00C853) : Colors.white38,
+                fontSize: 11,
+                fontWeight: online ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
+          Text(
+            chat.lastMessage,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white38, fontSize: 13),
+          ),
+        ],
       ),
       trailing: Text(
         chat.timeLabel,
