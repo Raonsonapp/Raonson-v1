@@ -218,7 +218,7 @@ class _CallScreenState extends State<CallScreen>
           ? AgoraVideoView(
               controller: VideoViewController.remote(
                 rtcEngine:  _agora.engine!,
-                canvas:     AgoraVideoCanvas(uid: _agora.remoteUid!),
+                canvas:     VideoCanvas(uid: _agora.remoteUid!),
                 connection: RtcConnection(channelId: _agora.channelId),
               ),
             )
@@ -261,7 +261,7 @@ class _CallScreenState extends State<CallScreen>
             child: AgoraVideoView(
               controller: VideoViewController(
                 rtcEngine: _agora.engine!,
-                canvas: const AgoraVideoCanvas(uid: 0),
+                canvas: const VideoCanvas(uid: 0),
               ),
             ),
           ),
