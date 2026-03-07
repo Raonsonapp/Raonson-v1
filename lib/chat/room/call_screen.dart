@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../app/app_theme.dart';
@@ -34,7 +33,6 @@ class _CallScreenState extends State<CallScreen>
     with TickerProviderStateMixin {
   final _agora  = AgoraService();
   final _signal = WebRTCService();
-  final _player = AudioPlayer();
 
   int    _seconds = 0;
   Timer? _timer;
@@ -68,22 +66,8 @@ class _CallScreenState extends State<CallScreen>
     _joinAgora();
   }
 
-  // ── Play outgoing ring/connecting sound ──
-  Future<void> _playOutgoingRing() async {
-    if (widget.isIncoming) return; // Incoming plays its own ring
-    try {
-      await _player.setReleaseMode(ReleaseMode.loop);
-      // "Ringing" if peer offline, "Connecting" beep if online
-      final url = widget.peerIsOnline
-          ? 'https://www.soundjay.com/phone/sounds/phone-calling-1.mp3'
-          : 'https://www.soundjay.com/phone/sounds/phone-calling-3.mp3';
-      await _player.play(UrlSource(url));
-    } catch (_) {}
-  }
-
-  void _stopRing() {
-    _player.stop();
-  }
+  void _playOutgoingRing() {}
+  void _stopRing() {}
 
   void _onAgoraChange() {
     if (!mounted) return;
@@ -150,7 +134,6 @@ class _CallScreenState extends State<CallScreen>
     _agora.removeListener(_onAgoraChange);
     _signal.onCallEnded    = null;
     _signal.onCallDeclined = null;
-    _player.dispose();
     _timer?.cancel();
     _pulseCtrl.dispose();
     _fadeCtrl.dispose();
