@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../app/app_theme.dart';
@@ -24,26 +25,42 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     with TickerProviderStateMixin {
   late AnimationController _ringCtrl;
   late Animation<double>   _ringAnim;
+  final _player = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     _ringCtrl = AnimationController(
         vsync: this, duration: const Duration(seconds: 2))
       ..repeat(reverse: true);
     _ringAnim = Tween<double>(begin: 0.88, end: 1.12)
         .animate(CurvedAnimation(parent: _ringCtrl, curve: Curves.easeInOut));
+
+    _playRingtone();
   }
+
+  Future<void> _playRingtone() async {
+    try {
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.play(UrlSource(
+          'https://www.soundjay.com/phone/sounds/phone-calling-2.mp3'));
+    } catch (_) {}
+  }
+
+  void _stopRingtone() => _player.stop();
 
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _ringCtrl.dispose();
+    _player.dispose();
     super.dispose();
   }
 
   void _accept() {
+    _stopRingtone();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -57,7 +74,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   }
 
   void _decline() {
-    WebRTCService().sendDecline(widget.caller.id); // ← sendDecline
+    _stopRingtone();
+    WebRTCService().sendDecline(widget.caller.id);
     Navigator.pop(context);
   }
 
@@ -80,7 +98,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
               // ── Top ──
               Column(children: [
                 const SizedBox(height: 40),
-                // Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
@@ -105,7 +122,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   ]),
                 ),
                 const SizedBox(height: 44),
-                // Avatar + rings
                 ScaleTransition(
                   scale: _ringAnim,
                   child: Stack(alignment: Alignment.center, children: [
@@ -130,10 +146,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 const SizedBox(height: 28),
                 Text(
                   widget.caller.username,
-                  style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
-                Text('is calling you...', style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 16)),
+                Text(
+                  'is calling you...',
+                  style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 16),
+                ),
               ]),
 
               // ── Buttons ──
@@ -146,7 +166,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                         color: const Color(0xFFFF3B55), onTap: _decline),
                     _actionBtn(
                         icon: widget.callType == CallType.video
-                            ? Icons.videocam_rounded : Icons.call_rounded,
+                            ? Icons.videocam_rounded
+                            : Icons.call_rounded,
                         label: 'Accept', color: Colors.green, onTap: _accept),
                   ],
                 ),
@@ -180,7 +201,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: color,
-              boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 28, spreadRadius: 3)],
+              boxShadow: [BoxShadow(
+                  color: color.withOpacity(0.5), blurRadius: 28, spreadRadius: 3)],
             ),
             child: Icon(icon, color: Colors.white, size: 32),
           ),
