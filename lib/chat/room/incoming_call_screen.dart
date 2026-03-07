@@ -1,4 +1,3 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../app/app_theme.dart';
@@ -25,7 +24,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     with TickerProviderStateMixin {
   late AnimationController _ringCtrl;
   late Animation<double>   _ringAnim;
-  final _player = AudioPlayer();
 
   @override
   void initState() {
@@ -38,24 +36,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     _ringAnim = Tween<double>(begin: 0.88, end: 1.12)
         .animate(CurvedAnimation(parent: _ringCtrl, curve: Curves.easeInOut));
 
-    _playRingtone();
   }
 
-  Future<void> _playRingtone() async {
-    try {
-      await _player.setReleaseMode(ReleaseMode.loop);
-      await _player.play(UrlSource(
-          'https://www.soundjay.com/phone/sounds/phone-calling-2.mp3'));
-    } catch (_) {}
-  }
-
-  void _stopRingtone() => _player.stop();
+  void _stopRingtone() {}
 
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _ringCtrl.dispose();
-    _player.dispose();
     super.dispose();
   }
 
