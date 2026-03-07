@@ -7,6 +7,7 @@ import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/webrtc_service.dart';
+import '../../core/presence_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
@@ -21,9 +22,10 @@ class ChatRoomScreen extends StatefulWidget {
 }
 
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
-  final _repo    = ChatRepository();
-  final _scroll  = ScrollController();
-  final _signal  = WebRTCService();  // singleton
+  final _repo     = ChatRepository();
+  final _scroll   = ScrollController();
+  final _signal   = WebRTCService();
+  final _presence = PresenceService();
 
   List<MessageModel> _messages = [];
   bool _loading = true;
@@ -32,29 +34,41 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void initState() {
     super.initState();
     _load();
-    _setupSignaling();
+    _setup();
   }
 
   @override
   void dispose() {
     _scroll.dispose();
-    // Clear callbacks so they don't fire after screen is gone
     _signal.onIncomingCall = null;
+    _presence.removeListener(_onPresence);
     super.dispose();
   }
 
-  Future<void> _setupSignaling() async {
-    await _signal.connect();
+  void _onPresence() {
+    if (mounted) setState(() {});
+  }
 
-    // Listen for incoming calls while in chat
+  Future<void> _setup() async {
+    // Connect signaling + presence
+    await _signal.connect();
+    await _presence.connect();
+
+    // Ask server about peer's current status
+    _presence.checkUser(widget.peer.id);
+
+    // Rebuild when presence changes
+    _presence.addListener(_onPresence);
+
+    // Incoming call listener
     _signal.onIncomingCall = (from, fromUsername, fromAvatar, callType) {
       if (!mounted) return;
       final ct = callType == 'video' ? CallType.video : CallType.voice;
       final caller = UserModel(
-        id:             from,
-        username:       fromUsername.isNotEmpty ? fromUsername : widget.peer.username,
-        avatar:         fromAvatar.isNotEmpty   ? fromAvatar   : widget.peer.avatar,
-        verified:       false, isPrivate: false,
+        id: from,
+        username: fromUsername.isNotEmpty ? fromUsername : widget.peer.username,
+        avatar:   fromAvatar.isNotEmpty   ? fromAvatar   : widget.peer.avatar,
+        verified: false, isPrivate: false,
         postsCount: 0, followersCount: 0, followingCount: 0,
       );
       Navigator.push(context, MaterialPageRoute(
@@ -98,7 +112,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final myId   = await TokenStorage.getUserId() ?? '';
     final myData = await _repo.getMyProfile();
 
-    // Notify peer via socket
     _signal.notifyIncoming(
       toUserId:     widget.peer.id,
       fromUserId:   myId,
@@ -109,11 +122,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     if (!mounted) return;
     Navigator.push(context, PageRouteBuilder(
-      pageBuilder:      (_, __, ___) => CallScreen(peer: widget.peer, callType: type),
+      pageBuilder: (_, __, ___) => CallScreen(
+        peer:         widget.peer,
+        callType:     type,
+        peerIsOnline: _presence.isOnline(widget.peer.id),
+      ),
       transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
       transitionDuration: const Duration(milliseconds: 350),
     ));
   }
+
+  bool get _online => _presence.isOnline(widget.peer.id);
+  String get _presenceLabel => _presence.lastSeenLabel(widget.peer.id);
 
   @override
   Widget build(BuildContext context) {
@@ -134,9 +154,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.peer.username,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                const Text('tap to view profile',
-                    style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                // ── Online status ──
+                Row(children: [
+                  if (_online)
+                    Container(
+                      width: 6, height: 6,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF00C853), shape: BoxShape.circle),
+                    ),
+                  Text(
+                    _presenceLabel.isNotEmpty ? _presenceLabel : 'tap to view profile',
+                    style: TextStyle(
+                      color: _online ? const Color(0xFF00C853) : Colors.white38,
+                      fontSize: 11,
+                    ),
+                  ),
+                ]),
               ],
             ),
           ],
@@ -176,15 +212,34 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           const SizedBox(height: 16),
           Text(widget.peer.username,
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-          const SizedBox(height: 8),
-          const Text('Say something! 👋', style: TextStyle(color: Colors.white38, fontSize: 14)),
+          const SizedBox(height: 4),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            if (_online)
+              Container(
+                width: 7, height: 7,
+                margin: const EdgeInsets.only(right: 5),
+                decoration: const BoxDecoration(
+                    color: Color(0xFF00C853), shape: BoxShape.circle),
+              ),
+            Text(
+              _presenceLabel.isNotEmpty ? _presenceLabel : '',
+              style: TextStyle(
+                  color: _online ? const Color(0xFF00C853) : Colors.white38,
+                  fontSize: 12),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          const Text('Say something! 👋',
+              style: TextStyle(color: Colors.white38, fontSize: 14)),
           const SizedBox(height: 24),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _QuickBtn(icon: Icons.call_rounded,     label: 'Voice call', onTap: () => _startCall(CallType.voice)),
+              _QuickBtn(icon: Icons.call_rounded,     label: 'Voice call',
+                  onTap: () => _startCall(CallType.voice)),
               const SizedBox(width: 16),
-              _QuickBtn(icon: Icons.videocam_rounded, label: 'Video call', onTap: () => _startCall(CallType.video)),
+              _QuickBtn(icon: Icons.videocam_rounded, label: 'Video call',
+                  onTap: () => _startCall(CallType.video)),
             ],
           ),
         ],
@@ -194,15 +249,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 }
 
 class _AppBarBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
+  final IconData icon; final VoidCallback onTap;
   const _AppBarBtn({required this.icon, required this.onTap});
-
   @override
   Widget build(BuildContext context) => IconButton(
     icon: Container(
       padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+          color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
       child: Icon(icon, color: Colors.white, size: 20),
     ),
     onPressed: onTap,
@@ -212,7 +266,6 @@ class _AppBarBtn extends StatelessWidget {
 class _QuickBtn extends StatelessWidget {
   final IconData icon; final String label; final VoidCallback onTap;
   const _QuickBtn({required this.icon, required this.label, required this.onTap});
-
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
