@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../app/app_theme.dart';
@@ -24,47 +25,68 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     with TickerProviderStateMixin {
   late AnimationController _ringCtrl;
   late Animation<double>   _ringAnim;
+  final _player = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
+    // Ring animation
     _ringCtrl = AnimationController(
         vsync: this, duration: const Duration(seconds: 2))
       ..repeat(reverse: true);
     _ringAnim = Tween<double>(begin: 0.88, end: 1.12)
         .animate(CurvedAnimation(parent: _ringCtrl, curve: Curves.easeInOut));
 
+    // Play ringtone from asset
+    _playRingtone();
   }
 
-  void _stopRingtone() {}
+  Future<void> _playRingtone() async {
+    try {
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.setVolume(1.0);
+      // ringtone.wav — loops until accepted or declined
+      await _player.play(AssetSource('sounds/ringtone.wav'));
+    } catch (e) {
+      debugPrint('[IncomingCall] ringtone error: $e');
+    }
+  }
+
+  Future<void> _stopRingtone() async {
+    try { await _player.stop(); } catch (_) {}
+  }
 
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _ringCtrl.dispose();
+    _player.dispose();
     super.dispose();
   }
 
   void _accept() {
-    _stopRingtone();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CallScreen(
-          peer:       widget.caller,
-          callType:   widget.callType,
-          isIncoming: true,
+    _stopRingtone().then((_) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CallScreen(
+            peer:       widget.caller,
+            callType:   widget.callType,
+            isIncoming: true,
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   void _decline() {
-    _stopRingtone();
-    WebRTCService().sendDecline(widget.caller.id);
-    Navigator.pop(context);
+    _stopRingtone().then((_) {
+      WebRTCService().sendDecline(widget.caller.id);
+      if (mounted) Navigator.pop(context);
+    });
   }
 
   @override
@@ -83,9 +105,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // ── Top ──
+              // ── Top section ──
               Column(children: [
                 const SizedBox(height: 40),
+
+                // Call type badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
@@ -103,13 +127,15 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                     const SizedBox(width: 6),
                     Text(
                       widget.callType == CallType.video
-                          ? 'Incoming video call'
-                          : 'Incoming voice call',
+                          ? 'Занги видео'
+                          : 'Занги овозӣ',
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ]),
                 ),
                 const SizedBox(height: 44),
+
+                // Avatar + animated rings
                 ScaleTransition(
                   scale: _ringAnim,
                   child: Stack(alignment: Alignment.center, children: [
@@ -126,37 +152,48 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                         )],
                       ),
                       child: ClipOval(
-                        child: Avatar(imageUrl: widget.caller.avatar, size: 112, glowBorder: false),
+                        child: Avatar(
+                            imageUrl: widget.caller.avatar,
+                            size: 112, glowBorder: false),
                       ),
                     ),
                   ]),
                 ),
                 const SizedBox(height: 28),
-                Text(
-                  widget.caller.username,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700),
-                ),
+
+                Text(widget.caller.username,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text(
-                  'is calling you...',
-                  style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 16),
+                  'занг мезанад...',
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.45), fontSize: 16),
                 ),
               ]),
 
-              // ── Buttons ──
+              // ── Action buttons ──
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 64),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _actionBtn(icon: Icons.call_end_rounded, label: 'Decline',
-                        color: const Color(0xFFFF3B55), onTap: _decline),
                     _actionBtn(
-                        icon: widget.callType == CallType.video
-                            ? Icons.videocam_rounded
-                            : Icons.call_rounded,
-                        label: 'Accept', color: Colors.green, onTap: _accept),
+                      icon:  Icons.call_end_rounded,
+                      label: 'Рад кун',
+                      color: const Color(0xFFFF3B55),
+                      onTap: _decline,
+                    ),
+                    _actionBtn(
+                      icon:  widget.callType == CallType.video
+                          ? Icons.videocam_rounded
+                          : Icons.call_rounded,
+                      label: 'Қабул',
+                      color: const Color(0xFF00C853),
+                      onTap: _accept,
+                    ),
                   ],
                 ),
               ),
@@ -171,7 +208,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     width: s, height: s,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      border: Border.all(color: AppColors.neonBlue.withOpacity(o), width: 1.5),
+      border: Border.all(
+          color: AppColors.neonBlue.withOpacity(o), width: 1.5),
     ),
   );
 
@@ -190,12 +228,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
               shape: BoxShape.circle,
               color: color,
               boxShadow: [BoxShadow(
-                  color: color.withOpacity(0.5), blurRadius: 28, spreadRadius: 3)],
+                  color: color.withOpacity(0.5),
+                  blurRadius: 28, spreadRadius: 3)],
             ),
             child: Icon(icon, color: Colors.white, size: 32),
           ),
           const SizedBox(height: 10),
-          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 13)),
+          Text(label,
+              style: const TextStyle(color: Colors.white60, fontSize: 13)),
         ]),
       );
 }
