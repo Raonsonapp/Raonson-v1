@@ -10,7 +10,6 @@ import '../../widgets/avatar.dart';
 import '../../app/app_theme.dart';
 import '../../core/presence_service.dart';
 import '../../core/note_service.dart';
-import '../../core/storage/token_storage.dart';
 import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 
