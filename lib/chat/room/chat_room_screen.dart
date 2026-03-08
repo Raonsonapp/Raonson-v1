@@ -50,17 +50,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   Future<void> _setup() async {
-    // Connect signaling + presence
     await _signal.connect();
     await _presence.connect();
 
-    // Ask server about peer's current status
+    _presence.addListener(_onPresence);
     _presence.checkUser(widget.peer.id);
 
-    // Rebuild when presence changes
-    _presence.addListener(_onPresence);
-
-    // Incoming call listener
     _signal.onIncomingCall = (from, fromUsername, fromAvatar, callType) {
       if (!mounted) return;
       final ct = callType == 'video' ? CallType.video : CallType.voice;
@@ -132,8 +127,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     ));
   }
 
-  bool get _online => _presence.isOnline(widget.peer.id);
-  String get _presenceLabel => _presence.lastSeenLabel(widget.peer.id);
+  bool   get _online => _presence.isOnline(widget.peer.id);
+  String get _label  => _presence.lastSeenLabel(widget.peer.id);
 
   @override
   Widget build(BuildContext context) {
@@ -146,37 +141,46 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
-          children: [
-            Avatar(imageUrl: widget.peer.avatar, size: 36, glowBorder: true),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.peer.username,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                // ── Online status ──
-                Row(children: [
-                  if (_online)
-                    Container(
-                      width: 6, height: 6,
-                      margin: const EdgeInsets.only(right: 4),
-                      decoration: const BoxDecoration(
-                          color: Color(0xFF00C853), shape: BoxShape.circle),
-                    ),
-                  Text(
-                    _presenceLabel.isNotEmpty ? _presenceLabel : 'tap to view profile',
-                    style: TextStyle(
-                      color: _online ? const Color(0xFF00C853) : Colors.white38,
-                      fontSize: 11,
-                    ),
+        title: Row(children: [
+          // Avatar with online dot
+          Stack(clipBehavior: Clip.none, children: [
+            Avatar(imageUrl: widget.peer.avatar, size: 38, glowBorder: false),
+            if (_online)
+              Positioned(
+                bottom: 0, right: 0,
+                child: Container(
+                  width: 11, height: 11,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.bg, width: 2),
                   ),
-                ]),
-              ],
-            ),
-          ],
-        ),
+                ),
+              ),
+          ]),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.peer.username,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
+              // Presence label
+              Text(
+                _label.isNotEmpty ? _label : 'профилро бинед',
+                style: TextStyle(
+                  color: _online
+                      ? const Color(0xFF00E676)
+                      : Colors.white38,
+                  fontSize: 11,
+                  fontWeight: _online ? FontWeight.w500 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ]),
         actions: [
           _AppBarBtn(icon: Icons.videocam_rounded, onTap: () => _startCall(CallType.video)),
           _AppBarBtn(icon: Icons.call_rounded,     onTap: () => _startCall(CallType.voice)),
@@ -187,12 +191,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         children: [
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.neonBlue))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.neonBlue))
                 : _messages.isEmpty
                     ? _emptyState()
                     : ListView.builder(
                         controller: _scroll,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         itemCount: _messages.length,
                         itemBuilder: (_, i) => MessageBubble(message: _messages[i]),
                       ),
@@ -208,37 +214,47 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Avatar(imageUrl: widget.peer.avatar, size: 80, glowBorder: true),
-          const SizedBox(height: 16),
-          Text(widget.peer.username,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-          const SizedBox(height: 4),
-          Row(mainAxisSize: MainAxisSize.min, children: [
+          Stack(clipBehavior: Clip.none, children: [
+            Avatar(imageUrl: widget.peer.avatar, size: 80, glowBorder: true),
             if (_online)
-              Container(
-                width: 7, height: 7,
-                margin: const EdgeInsets.only(right: 5),
-                decoration: const BoxDecoration(
-                    color: Color(0xFF00C853), shape: BoxShape.circle),
+              Positioned(
+                bottom: 3, right: 3,
+                child: Container(
+                  width: 18, height: 18,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.bg, width: 3),
+                  ),
+                ),
               ),
-            Text(
-              _presenceLabel.isNotEmpty ? _presenceLabel : '',
-              style: TextStyle(
-                  color: _online ? const Color(0xFF00C853) : Colors.white38,
-                  fontSize: 12),
-            ),
           ]),
+          const SizedBox(height: 14),
+          Text(widget.peer.username,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20)),
+          const SizedBox(height: 4),
+          Text(
+            _label.isNotEmpty ? _label : '',
+            style: TextStyle(
+              color: _online ? const Color(0xFF00E676) : Colors.white38,
+              fontSize: 13,
+              fontWeight: _online ? FontWeight.w500 : FontWeight.normal,
+            ),
+          ),
           const SizedBox(height: 20),
-          const Text('Say something! 👋',
+          const Text('Чизе гӯед! 👋',
               style: TextStyle(color: Colors.white38, fontSize: 14)),
           const SizedBox(height: 24),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _QuickBtn(icon: Icons.call_rounded,     label: 'Voice call',
+              _QuickBtn(icon: Icons.call_rounded, label: 'Зангӣ овозӣ',
                   onTap: () => _startCall(CallType.voice)),
               const SizedBox(width: 16),
-              _QuickBtn(icon: Icons.videocam_rounded, label: 'Video call',
+              _QuickBtn(icon: Icons.videocam_rounded, label: 'Зангӣ видео',
                   onTap: () => _startCall(CallType.video)),
             ],
           ),
@@ -279,7 +295,8 @@ class _QuickBtn extends StatelessWidget {
       child: Row(children: [
         Icon(icon, color: AppColors.neonBlue, size: 18),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 13)),
       ]),
     ),
   );
