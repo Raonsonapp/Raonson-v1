@@ -50,4 +50,4 @@ export default function presenceSocket(io, socket) {
 
     socket.emit("presence:checked", { userId, isOnline, lastSeen });
   });
-  }
+}
