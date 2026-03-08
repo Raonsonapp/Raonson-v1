@@ -10,16 +10,47 @@ import '../../core/presence_service.dart';
 import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 
-class ChatListScreen extends StatelessWidget {
+class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
+
+  @override
+  State<ChatListScreen> createState() => _ChatListScreenState();
+}
+
+class _ChatListScreenState extends State<ChatListScreen> {
+  late ChatListController _ctrl;
+  final _presence = PresenceService();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = ChatListController(ChatRepository());
+    _ctrl.addListener(_onChatsLoaded);
+    _ctrl.loadChats();
+    _presence.connect();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.removeListener(_onChatsLoaded);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  // When chats finish loading, check presence for every peer
+  void _onChatsLoaded() {
+    if (!_ctrl.isLoading && _ctrl.chats.isNotEmpty) {
+      final ids = _ctrl.chats.map((c) => c.peer.id).toList();
+      _presence.checkUsers(ids);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-            create: (_) => ChatListController(ChatRepository())..loadChats()),
-        ChangeNotifierProvider.value(value: PresenceService()..connect()),
+        ChangeNotifierProvider.value(value: _ctrl),
+        ChangeNotifierProvider.value(value: _presence),
       ],
       child: const _ChatView(),
     );
@@ -50,15 +81,13 @@ class _ChatView extends StatelessWidget {
                   ),
                   const Expanded(
                     child: Center(
-                      child: Text(
-                        'Raonson',
-                        style: TextStyle(
-                          fontFamily: 'RaonsonFont',
-                          fontSize: 24,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: Text('Raonson',
+                          style: TextStyle(
+                            fontFamily: 'RaonsonFont',
+                            fontSize: 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          )),
                     ),
                   ),
                   IconButton(
@@ -72,19 +101,18 @@ class _ChatView extends StatelessWidget {
               ),
             ),
 
-            // ── Search bar ──
+            // ── Search ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Container(
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12)),
                 child: const TextField(
                   style: TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'Search',
+                    hintText: 'Ҷустуҷӯ',
                     hintStyle: TextStyle(color: Colors.white38),
                     prefixIcon: Icon(Icons.search, color: Colors.white38, size: 20),
                     border: InputBorder.none,
@@ -94,18 +122,18 @@ class _ChatView extends StatelessWidget {
               ),
             ),
 
-            // ── Messages + Requests header ──
+            // ── Header ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text('Messages',
+                  Text('Паёмҳо',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  Text('Requests',
+                  Text('Дархостҳо',
                       style: TextStyle(
                           color: AppColors.neonBlue,
                           fontWeight: FontWeight.w600,
@@ -133,51 +161,26 @@ class _ChatView extends StatelessWidget {
                         child: const Icon(Icons.add, color: Colors.white, size: 22),
                       ),
                       const SizedBox(height: 4),
-                      const Text('Your note',
+                      const Text('Ёддошт',
                           style: TextStyle(fontSize: 10, color: Colors.white54)),
                     ]),
                   ),
-                  ...['Im busy rn', 'Chillin 😆', 'Shohrukh', 'Besst']
-                      .map<Widget>((name) => Padding(
-                            padding: const EdgeInsets.only(right: 14),
-                            child: Column(children: [
-                              Container(
-                                width: 54, height: 54,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.neonBlue, width: 2),
-                                  boxShadow: [BoxShadow(
-                                      color: AppColors.neonBlue.withOpacity(0.35),
-                                      blurRadius: 8)],
-                                ),
-                                child: const CircleAvatar(
-                                  backgroundColor: AppColors.card,
-                                  child: Icon(Icons.person, color: Colors.white38, size: 22),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                name.length > 8 ? '${name.substring(0, 8)}..' : name,
-                                style: const TextStyle(fontSize: 10, color: Colors.white54),
-                              ),
-                            ]),
-                          )),
                 ],
               ),
             ),
 
-            // ── Messages header 2 ──
+            // ── Messages label ──
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text('Messages',
+                  Text('Паёмҳо',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  Text('Requests',
+                  Text('Дархостҳо',
                       style: TextStyle(
                           color: AppColors.neonBlue,
                           fontWeight: FontWeight.w600,
@@ -193,7 +196,7 @@ class _ChatView extends StatelessWidget {
                       child: CircularProgressIndicator(color: AppColors.neonBlue))
                   : ctrl.chats.isEmpty
                       ? const Center(
-                          child: Text('No messages yet',
+                          child: Text('Паёме нест',
                               style: TextStyle(color: Colors.white38)))
                       : ListView.builder(
                           itemCount: ctrl.chats.length,
@@ -213,64 +216,85 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Watch presence so tile rebuilds when status changes
     final presence = context.watch<PresenceService>();
     final online   = presence.isOnline(chat.peer.id);
-    final lastSeen = presence.lastSeenLabel(chat.peer.id);
+    final label    = presence.lastSeenLabel(chat.peer.id);
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Stack(clipBehavior: Clip.none, children: [
-        Avatar(imageUrl: chat.peer.avatar, size: 52, glowBorder: true),
-        // Online green dot
-        if (online)
-          Positioned(
-            bottom: 0, right: 0,
-            child: Container(
-              width: 13, height: 13,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00C853),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.bg, width: 2),
-              ),
-            ),
-          ),
-      ]),
-      title: Text(
-        chat.peer.username,
-        style: const TextStyle(
-            color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Online status OR last message
-          if (lastSeen.isNotEmpty)
-            Text(
-              lastSeen,
-              style: TextStyle(
-                color: online ? const Color(0xFF00C853) : Colors.white38,
-                fontSize: 11,
-                fontWeight: online ? FontWeight.w500 : FontWeight.normal,
-              ),
-            ),
-          Text(
-            chat.lastMessage,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white38, fontSize: 13),
-          ),
-        ],
-      ),
-      trailing: Text(
-        chat.timeLabel,
-        style: const TextStyle(color: Colors.white38, fontSize: 12),
-      ),
+    return InkWell(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: chat.peer)),
-      ).then((_) => context.read<ChatListController>().loadChats()),
+      ).then((_) {
+        context.read<ChatListController>().loadChats();
+        // Re-check presence after returning
+        presence.checkUser(chat.peer.id);
+      }),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            // Avatar + online dot
+            Stack(clipBehavior: Clip.none, children: [
+              Avatar(imageUrl: chat.peer.avatar, size: 52, glowBorder: false),
+              if (online)
+                Positioned(
+                  bottom: 1, right: 1,
+                  child: Container(
+                    width: 14, height: 14,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E676),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.bg, width: 2.5),
+                    ),
+                  ),
+                ),
+            ]),
+            const SizedBox(width: 12),
+            // Name + status + last message
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(chat.peer.username,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15)),
+                      Text(chat.timeLabel,
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  // Presence label
+                  if (label.isNotEmpty)
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: online
+                            ? const Color(0xFF00E676)
+                            : Colors.white38,
+                        fontSize: 11,
+                        fontWeight:
+                            online ? FontWeight.w500 : FontWeight.normal,
+                      ),
+                    ),
+                  const SizedBox(height: 1),
+                  Text(
+                    chat.lastMessage,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white38, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
