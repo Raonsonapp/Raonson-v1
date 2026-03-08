@@ -101,4 +101,4 @@ export async function getFriendsNotes(req, res) {
     console.error(e);
     res.status(500).json({ message: 'Get notes failed' });
   }
-}
+                              }
