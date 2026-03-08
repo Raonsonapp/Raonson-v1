@@ -60,3 +60,45 @@ export async function updateProfile(req, res) {
     res.status(500).json({ message: "Update profile failed" });
   }
 }
+
+// ── Ёддошт гузоштан ──
+export async function setNote(req, res) {
+  try {
+    const { note } = req.body;
+    const text = (note || '').trim().slice(0, 60);
+
+    // Note expires after 24 hours
+    const noteExpiresAt = text ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { note: text, noteExpiresAt },
+      { new: true }
+    ).select('note noteExpiresAt');
+
+    res.json({ note: user.note, noteExpiresAt: user.noteExpiresAt });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Set note failed' });
+  }
+}
+
+// ── Ёддоштҳои дӯстон (барои chat list) ──
+export async function getFriendsNotes(req, res) {
+  try {
+    const me = await User.findById(req.user._id).select('following');
+    const friendIds = me.following || [];
+
+    const now = new Date();
+    const friends = await User.find({
+      _id: { $in: friendIds },
+      note: { $ne: '' },
+      noteExpiresAt: { $gt: now },
+    }).select('_id username avatar note noteExpiresAt verified');
+
+    res.json({ notes: friends });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Get notes failed' });
+  }
+}
