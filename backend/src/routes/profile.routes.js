@@ -10,12 +10,13 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
+// ── FIXED: specific routes MUST come before /:username ──
 router.get("/me", authMiddleware, getMyProfile);
-router.get("/:username", authMiddleware, getProfile);
+router.get("/notes/friends", authMiddleware, getFriendsNotes);  // ← пеш аз /:username
+router.post("/note", authMiddleware, setNote);
 router.put("/", authMiddleware, updateProfile);
 
-// ── Notes ──
-router.post("/note", authMiddleware, setNote);
-router.get("/notes/friends", authMiddleware, getFriendsNotes);
+// ── Dynamic route ─────────────────────────────────────────
+router.get("/:username", authMiddleware, getProfile);           // ← охир
 
 export default router;
