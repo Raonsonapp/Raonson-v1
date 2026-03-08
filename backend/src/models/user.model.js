@@ -16,6 +16,10 @@ const UserSchema = new mongoose.Schema(
 
     lastSeen: { type: Date, default: null },
 
+    // ── Ёддошт (мисли Instagram Notes) ──
+    note:          { type: String, default: "", maxlength: 60 },
+    noteExpiresAt: { type: Date, default: null },
+
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     followRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
