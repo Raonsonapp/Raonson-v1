@@ -61,22 +61,28 @@ export async function updateProfile(req, res) {
   }
 }
 
-// ── Ёддошт гузоштан ──
+// ── Ёддошт гузоштан (матн + мусиқӣ) ──
 export async function setNote(req, res) {
   try {
-    const { note } = req.body;
+    const { note, song } = req.body;
     const text = (note || '').trim().slice(0, 60);
 
-    // Note expires after 24 hours
-    const noteExpiresAt = text ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
+    // song = { title, artist, artUrl } or null
+    const noteSong = song && (song.title || song.artist)
+      ? { title: song.title || '', artist: song.artist || '', artUrl: song.artUrl || '' }
+      : { title: '', artist: '', artUrl: '' };
+
+    // Expires only if there's content
+    const hasContent = text || noteSong.title;
+    const noteExpiresAt = hasContent ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null;
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { note: text, noteExpiresAt },
+      { note: text, noteSong, noteExpiresAt },
       { new: true }
-    ).select('note noteExpiresAt');
+    ).select('note noteSong noteExpiresAt');
 
-    res.json({ note: user.note, noteExpiresAt: user.noteExpiresAt });
+    res.json({ note: user.note, noteSong: user.noteSong, noteExpiresAt: user.noteExpiresAt });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Set note failed' });
@@ -92,13 +98,16 @@ export async function getFriendsNotes(req, res) {
     const now = new Date();
     const friends = await User.find({
       _id: { $in: friendIds },
-      note: { $ne: '' },
       noteExpiresAt: { $gt: now },
-    }).select('_id username avatar note noteExpiresAt verified');
+      $or: [
+        { note: { $ne: '' } },
+        { 'noteSong.title': { $ne: '' } },
+      ],
+    }).select('_id username avatar note noteSong noteExpiresAt verified');
 
     res.json({ notes: friends });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Get notes failed' });
   }
-                              }
+                 }
