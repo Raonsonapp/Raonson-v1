@@ -19,6 +19,11 @@ const UserSchema = new mongoose.Schema(
     // ── Ёддошт (мисли Instagram Notes) ──
     note:          { type: String, default: "", maxlength: 60 },
     noteExpiresAt: { type: Date, default: null },
+    noteSong: {
+      title:    { type: String, default: "" },
+      artist:   { type: String, default: "" },
+      artUrl:   { type: String, default: "" },
+    },
 
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
