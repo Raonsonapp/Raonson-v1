@@ -2,11 +2,13 @@ class SongInfo {
   final String title;
   final String artist;
   final String artUrl;
+  final String previewUrl; // 30-сония аз iTunes
 
   const SongInfo({
     required this.title,
     required this.artist,
     required this.artUrl,
+    this.previewUrl = '',
   });
 
   bool get isEmpty => title.isEmpty && artist.isEmpty;
@@ -14,16 +16,18 @@ class SongInfo {
   factory SongInfo.fromJson(Map<String, dynamic>? j) {
     if (j == null) return const SongInfo(title: '', artist: '', artUrl: '');
     return SongInfo(
-      title:  j['title']  ?? '',
-      artist: j['artist'] ?? '',
-      artUrl: j['artUrl'] ?? '',
+      title:      j['title']      ?? '',
+      artist:     j['artist']     ?? '',
+      artUrl:     j['artUrl']     ?? '',
+      previewUrl: j['previewUrl'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'title':  title,
-    'artist': artist,
-    'artUrl': artUrl,
+    'title':      title,
+    'artist':     artist,
+    'artUrl':     artUrl,
+    'previewUrl': previewUrl,
   };
 }
 
@@ -46,13 +50,9 @@ class NoteModel {
     this.expiresAt,
   });
 
-  bool get isExpired {
-    if (expiresAt == null) return true;
-    return DateTime.now().isAfter(expiresAt!);
-  }
-
-  bool get hasText => text.isNotEmpty;
-  bool get hasSong => !song.isEmpty;
+  bool get isExpired => expiresAt == null || DateTime.now().isAfter(expiresAt!);
+  bool get hasText   => text.isNotEmpty;
+  bool get hasSong   => !song.isEmpty;
 
   factory NoteModel.fromJson(Map<String, dynamic> j) => NoteModel(
     userId:   j['_id']      ?? j['id'] ?? '',
@@ -62,7 +62,6 @@ class NoteModel {
     text:     j['note']     ?? '',
     song:     SongInfo.fromJson(j['noteSong'] as Map<String, dynamic>?),
     expiresAt: j['noteExpiresAt'] != null
-        ? DateTime.tryParse(j['noteExpiresAt'].toString())
-        : null,
+        ? DateTime.tryParse(j['noteExpiresAt'].toString()) : null,
   );
 }
