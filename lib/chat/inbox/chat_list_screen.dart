@@ -65,7 +65,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => NoteBottomSheet(initialNote: _notes.myNote),
+      builder: (_) => NoteBottomSheet(initialNote: _notes.myNote, initialSong: _notes.mySong),
     );
     // reload notes after editing
     _notes.load();
@@ -160,6 +160,7 @@ class _ChatView extends StatelessWidget {
             _NotesRow(
               myAvatar:   myAvatar,
               myNote:     notes.myNote,
+              mySong:     notes.mySong,
               friends:    notes.friends,
               onMyTap:    onMyNoteTap,
             ),
@@ -218,12 +219,14 @@ class _ChatView extends StatelessWidget {
 class _NotesRow extends StatelessWidget {
   final String         myAvatar;
   final String         myNote;
+  final SongInfo       mySong;
   final List<NoteModel> friends;
   final VoidCallback   onMyTap;
 
   const _NotesRow({
     required this.myAvatar,
     required this.myNote,
+    required this.mySong,
     required this.friends,
     required this.onMyTap,
   });
@@ -239,7 +242,8 @@ class _NotesRow extends StatelessWidget {
           // ── My note bubble ──
           _MyNoteBubble(
             avatar: myAvatar,
-            note:   myNote,
+            myNote: myNote,
+            mySong: mySong,
             onTap:  onMyTap,
           ),
           // ── Friends' note bubbles ──
@@ -255,18 +259,22 @@ class _NotesRow extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 class _MyNoteBubble extends StatelessWidget {
   final String       avatar;
-  final String       note;
+  final String       myNote;
+  final SongInfo     mySong;
   final VoidCallback onTap;
 
   const _MyNoteBubble({
     required this.avatar,
-    required this.note,
+    required this.myNote,
+    required this.mySong,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasNote = note.isNotEmpty;
+    final hasNote = myNote.isNotEmpty || !mySong.isEmpty;
+    final note    = myNote;
+    final song    = mySong;
 
     return GestureDetector(
       onTap: onTap,
@@ -279,7 +287,7 @@ class _MyNoteBubble extends StatelessWidget {
             children: [
               // Speech bubble with note text (ё иконаи +)
               if (hasNote) ...[
-                _SpeechBubble(text: note, isMine: true),
+                _SpeechBubble(text: note, song: song.isEmpty ? null : song, isMine: true),
                 const SizedBox(height: 5),
               ] else
                 const SizedBox(height: 30),
@@ -360,7 +368,7 @@ class _FriendNoteBubble extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            _SpeechBubble(text: note.text, isMine: false),
+            _SpeechBubble(text: note.text, song: note.hasSong ? note.song : null, isMine: false),
             const SizedBox(height: 5),
             Container(
               width: 54, height: 54,
@@ -396,46 +404,75 @@ class _FriendNoteBubble extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Speech bubble widget
+//  Speech bubble — матн ё мусиқӣ ё ҳарду
 // ─────────────────────────────────────────────────────────────────
 class _SpeechBubble extends StatelessWidget {
-  final String text;
-  final bool   isMine;
-  const _SpeechBubble({required this.text, required this.isMine});
+  final String    text;
+  final SongInfo? song;
+  final bool isMine;
+  const _SpeechBubble({required this.text, this.song, required this.isMine});
 
   @override
   Widget build(BuildContext context) {
+    final bubbleColor  = isMine ? AppColors.neonBlue.withOpacity(0.18) : const Color(0xFF1C2333);
+    final borderColor  = isMine ? AppColors.neonBlue.withOpacity(0.45) : Colors.white12;
+    final hasSong      = song != null && !song!.isEmpty;
+    final hasText      = text.isNotEmpty;
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Container(
-          constraints: const BoxConstraints(maxWidth: 90, minWidth: 50),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          constraints: const BoxConstraints(maxWidth: 96, minWidth: 54),
+          padding: EdgeInsets.fromLTRB(7, 6, 7, hasSong ? 4 : 6),
           decoration: BoxDecoration(
-            color: isMine
-                ? AppColors.neonBlue.withOpacity(0.18)
-                : const Color(0xFF1C2333),
+            color: bubbleColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isMine
-                  ? AppColors.neonBlue.withOpacity(0.45)
-                  : Colors.white12,
-              width: 1,
-            ),
+            border: Border.all(color: borderColor, width: 1),
           ),
-          child: Text(
-            text,
-            style: TextStyle(
-              color: isMine ? Colors.white : Colors.white70,
-              fontSize: 10.5,
-              height: 1.3,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Text line
+              if (hasText)
+                Text(text,
+                  style: TextStyle(
+                    color: isMine ? Colors.white : Colors.white70,
+                    fontSize: 10.5, height: 1.3),
+                  maxLines: 2, overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              if (hasText && hasSong) const SizedBox(height: 4),
+              // Music line
+              if (hasSong) ...[
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  // Mini album art
+                  if (song!.artUrl.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: Image.network(song!.artUrl,
+                        width: 16, height: 16, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 12),
+                      ),
+                    )
+                  else
+                    const Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 12),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      song!.title.isNotEmpty ? song!.title : song!.artist,
+                      style: const TextStyle(
+                        color: AppColors.neonBlue, fontSize: 9.5, fontWeight: FontWeight.w500),
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ]),
+              ],
+            ],
           ),
         ),
-        // tail of the bubble (pointing down)
+        // Bubble tail
         Positioned(
           bottom: -6, left: 0, right: 0,
           child: Center(
