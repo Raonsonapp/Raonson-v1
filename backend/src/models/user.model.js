@@ -20,9 +20,10 @@ const UserSchema = new mongoose.Schema(
     note:          { type: String, default: "", maxlength: 60 },
     noteExpiresAt: { type: Date, default: null },
     noteSong: {
-      title:    { type: String, default: "" },
-      artist:   { type: String, default: "" },
-      artUrl:   { type: String, default: "" },
+      title:      { type: String, default: "" },
+      artist:     { type: String, default: "" },
+      artUrl:     { type: String, default: "" },
+      previewUrl: { type: String, default: "" },
     },
 
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
