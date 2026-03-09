@@ -69,7 +69,7 @@ export async function setNote(req, res) {
 
     // song = { title, artist, artUrl } or null
     const noteSong = song && (song.title || song.artist)
-      ? { title: song.title || '', artist: song.artist || '', artUrl: song.artUrl || '' }
+      ? { title: song.title || '', artist: song.artist || '', artUrl: song.artUrl || '', previewUrl: song.previewUrl || '' }
       : { title: '', artist: '', artUrl: '' };
 
     // Expires only if there's content
@@ -110,4 +110,4 @@ export async function getFriendsNotes(req, res) {
     console.error(e);
     res.status(500).json({ message: 'Get notes failed' });
   }
-                 }
+      }
