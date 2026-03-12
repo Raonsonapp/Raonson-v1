@@ -7,8 +7,9 @@ import '../../app/app_theme.dart';
 import '../../models/note_model.dart';
 
 // ─────────────────────────────────────────────────────────────────
-//  MusicPickerSheet — мисли Instagram music picker
-//  Бармегардонад SongInfo бо startMs/endMs
+//  MusicPickerSheet — Instagram-style bottom sheet
+//  • Ҷустуҷӯ → рӯйхат → занед → inline player + slider
+//  • Тасдиқ → баргашт ба ёддошт (SongInfo)
 // ─────────────────────────────────────────────────────────────────
 class MusicPickerSheet extends StatefulWidget {
   final SongInfo? initial;
@@ -22,30 +23,46 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
   final _searchCtrl = TextEditingController();
   final _player     = AudioPlayer();
 
-  List<_Track>  _results    = [];
-  _Track?       _selected;
-  bool          _searching  = false;
+  List<_Track> _results   = [];
+  _Track?      _active;       // суруде ки inline player нишон медиҳад
+  bool         _searching = false;
+  bool         _playing   = false;
 
-  // Playback state
-  bool          _isPlaying  = false;
-  Duration      _position   = Duration.zero;
-  Duration      _duration   = Duration(milliseconds: 30000);
-  Timer?        _posTimer;
+  // Playback
+  Duration _pos      = Duration.zero;
+  Duration _dur      = const Duration(milliseconds: 30000);
 
-  // Segment slider (30s window within full preview)
-  double        _segStart   = 0.0;   // 0.0 – 1.0 of previewDuration
-  final double  _segLen     = 30000; // ms — fixed 30s window
+  // Segment — 0.0..1.0 аз дарозии preview
+  double   _segFrac  = 0.0;
+  static const int _segMs = 30000; // 30 сония
 
-  // Subscriptions
-  StreamSubscription? _completeSub;
-  StreamSubscription? _durationSub;
   StreamSubscription? _posSub;
+  StreamSubscription? _durSub;
+  StreamSubscription? _doneSub;
 
   @override
   void initState() {
     super.initState();
+    _durSub  = _player.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _dur = d);
+    });
+    _posSub  = _player.onPositionChanged.listen((p) {
+      if (!mounted) return;
+      setState(() => _pos = p);
+      // Сегмент тамом шуд → қатъ
+      if (_playing && p.inMilliseconds >= _startMs + _segMs) {
+        _player.pause();
+        _player.seek(Duration(milliseconds: _startMs));
+        setState(() { _playing = false; _pos = Duration(milliseconds: _startMs); });
+      }
+    });
+    _doneSub = _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() { _playing = false; _pos = Duration.zero; });
+    });
+
+    // Restore previous selection
     if (widget.initial != null && !widget.initial!.isEmpty) {
-      _selected = _Track(
+      _active = _Track(
         id:         '',
         title:      widget.initial!.title,
         artist:     widget.initial!.artist,
@@ -53,54 +70,31 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
         previewUrl: widget.initial!.previewUrl,
         trackMs:    widget.initial!.trackMs,
       );
-      _segStart = widget.initial!.startMs / 
-          (widget.initial!.trackMs > 0 ? widget.initial!.trackMs : 30000).toDouble();
-      _segStart = _segStart.clamp(0.0, 0.999);
+      final total = widget.initial!.trackMs > 0 ? widget.initial!.trackMs : _segMs;
+      _segFrac = (widget.initial!.startMs / total).clamp(0.0, 1.0);
     }
-    _setupPlayer();
   }
-
-  void _setupPlayer() {
-    _durationSub = _player.onDurationChanged.listen((d) {
-      if (mounted) setState(() => _duration = d);
-    });
-    _posSub = _player.onPositionChanged.listen((p) {
-      if (!mounted) return;
-      setState(() => _position = p);
-      // Stop when segment ends
-      if (_selected != null && _isPlaying) {
-        final endMs = _startMs + _segLen.toInt();
-        if (p.inMilliseconds >= endMs) {
-          _player.pause();
-          _player.seek(Duration(milliseconds: _startMs));
-          setState(() { _isPlaying = false; _position = Duration(milliseconds: _startMs); });
-        }
-      }
-    });
-    _completeSub = _player.onPlayerComplete.listen((_) {
-      if (mounted) setState(() { _isPlaying = false; _position = Duration.zero; });
-    });
-  }
-
-  int get _startMs => (_segStart * (_selected?.trackMs ?? 30000)).round();
-  int get _endMs   => (_startMs + _segLen).round()
-      .clamp(0, (_selected?.trackMs ?? 30000)).toInt();
 
   @override
   void dispose() {
-    _posTimer?.cancel();
-    _completeSub?.cancel();
-    _durationSub?.cancel();
     _posSub?.cancel();
+    _durSub?.cancel();
+    _doneSub?.cancel();
     _player.stop();
     _player.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
 
-  // ── iTunes Search ──
+  // ── computed ──
+  int get _totalMs => _active != null && _active!.trackMs > 0
+      ? _active!.trackMs : _dur.inMilliseconds.clamp(1000, 600000);
+  int get _startMs => (_segFrac * _totalMs).round();
+  int get _endMs   => (_startMs + _segMs).clamp(0, _totalMs);
+
+  // ── iTunes ──
   Future<void> _search(String q) async {
-    if (q.trim().isEmpty) { setState(() => _results = []); return; }
+    if (q.trim().length < 2) { setState(() => _results = []); return; }
     setState(() => _searching = true);
     try {
       final uri = Uri.parse(
@@ -109,420 +103,511 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
       );
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
-        final j      = jsonDecode(res.body);
-        final List r = j['results'] ?? [];
+        final j = jsonDecode(res.body);
         setState(() {
-          _results = r.map((e) => _Track(
-            id:         e['trackId']?.toString()  ?? '',
-            title:      e['trackName']            ?? '',
-            artist:     e['artistName']           ?? '',
-            artUrl:     e['artworkUrl100']        ?? '',
-            previewUrl: e['previewUrl']           ?? '',
-            trackMs:    ((e['trackTimeMillis'] as num?) ?? 30000).toInt(),
-          )).where((t) => t.previewUrl.isNotEmpty).toList();
+          _results = (j['results'] as List? ?? [])
+              .where((e) => (e['previewUrl'] ?? '').isNotEmpty)
+              .map((e) => _Track(
+                    id:         '${e['trackId'] ?? ''}',
+                    title:      e['trackName']    ?? '',
+                    artist:     e['artistName']   ?? '',
+                    artUrl:     e['artworkUrl100']?? '',
+                    previewUrl: e['previewUrl']   ?? '',
+                    trackMs:    ((e['trackTimeMillis'] as num?) ?? _segMs).toInt(),
+                  ))
+              .toList();
         });
       }
-    } catch (e) {
-      debugPrint('[MusicPicker] search: $e');
-    } finally {
+    } catch (_) {} finally {
       if (mounted) setState(() => _searching = false);
     }
   }
 
-  // ── Select track ──
-  Future<void> _selectTrack(_Track t) async {
+  // ── Tap song row → expand inline player ──
+  Future<void> _tap(_Track t) async {
+    if (_active?.id == t.id) {
+      // уже интихобшуда → toggle play
+      _togglePlay();
+      return;
+    }
     await _player.stop();
     setState(() {
-      _selected  = t;
-      _isPlaying = false;
-      _position  = Duration.zero;
-      _segStart  = 0.0;
-      _duration  = Duration(milliseconds: t.trackMs > 0 ? t.trackMs : 30000);
+      _active  = t;
+      _playing = false;
+      _pos     = Duration.zero;
+      _segFrac = 0.0;
+      _dur     = Duration(milliseconds: t.trackMs > 0 ? t.trackMs : _segMs);
     });
+    // Autoplay preview from start
+    await _startPlay();
   }
 
-  // ── Play/Pause from segment start ──
+  Future<void> _startPlay() async {
+    if (_active == null || _active!.previewUrl.isEmpty) return;
+    await _player.play(UrlSource(_active!.previewUrl));
+    await _player.seek(Duration(milliseconds: _startMs));
+    setState(() { _playing = true; _pos = Duration(milliseconds: _startMs); });
+  }
+
   Future<void> _togglePlay() async {
-    if (_selected == null || _selected!.previewUrl.isEmpty) return;
-    if (_isPlaying) {
+    if (_playing) {
       await _player.pause();
-      setState(() => _isPlaying = false);
+      setState(() => _playing = false);
     } else {
-      final startPos = Duration(milliseconds: _startMs);
-      if (_player.source == null || 
-          (_player.source is UrlSource && 
-           (_player.source as UrlSource).url != _selected!.previewUrl)) {
-        await _player.play(UrlSource(_selected!.previewUrl));
-      } else {
-        await _player.resume();
-      }
-      await _player.seek(startPos);
-      setState(() { _isPlaying = true; _position = startPos; });
+      await _startPlay();
     }
   }
 
-  // ── Confirm selection ──
+  // ── Seek segment ──
+  Future<void> _onSlider(double v) async {
+    final maxFrac = 1.0 - _segMs / _totalMs;
+    setState(() => _segFrac = v.clamp(0.0, maxFrac > 0 ? maxFrac : 0.0));
+    if (_playing) {
+      await _player.seek(Duration(milliseconds: _startMs));
+    }
+  }
+
+  // ── Confirm ──
   void _confirm() {
-    if (_selected == null) return;
-    final song = SongInfo(
-      title:      _selected!.title,
-      artist:     _selected!.artist,
-      artUrl:     _selected!.artUrl,
-      previewUrl: _selected!.previewUrl,
-      trackMs:    _selected!.trackMs,
+    if (_active == null) return;
+    Navigator.pop(context, SongInfo(
+      title:      _active!.title,
+      artist:     _active!.artist,
+      artUrl:     _active!.artUrl,
+      previewUrl: _active!.previewUrl,
+      trackMs:    _totalMs,
       startMs:    _startMs,
       endMs:      _endMs,
-    );
-    Navigator.pop(context, song);
+    ));
   }
 
   String _fmt(int ms) {
     final s = ms ~/ 1000;
-    return '${(s ~/ 60).toString().padLeft(2,'0')}:${(s % 60).toString().padLeft(2,'0')}';
+    return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
   }
 
-  // ─── BUILD ───────────────────────────────────────────────────────
+  // ═══════════════════════════════ BUILD ═══════════════════════════
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
-      padding: EdgeInsets.only(bottom: bottom),
+      height: MediaQuery.of(context).size.height * 0.80,
       decoration: const BoxDecoration(
         color: Color(0xFF0D1117),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       child: Column(children: [
+        // Handle + header
         const SizedBox(height: 10),
         Container(width: 40, height: 4,
             decoration: BoxDecoration(color: Colors.white24,
                 borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 14),
-
-        // Title
-        const Text('Мусиқӣ интихоб кун',
-            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(children: [
+            // Close
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 34, height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle, color: Colors.white.withOpacity(0.08)),
+                child: const Icon(Icons.close_rounded, color: Colors.white60, size: 18),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Мусиқӣ',
+                  style: TextStyle(color: Colors.white,
+                      fontSize: 17, fontWeight: FontWeight.bold)),
+            ),
+            // Confirm ✓ — танҳо вақте суруд интихобшудааст
+            if (_active != null)
+              GestureDetector(
+                onTap: _confirm,
+                child: Container(
+                  width: 34, height: 34,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: AppColors.neonBlue),
+                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                ),
+              ),
+          ]),
+        ),
+        const SizedBox(height: 12),
 
         // Search bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1C2333),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: TextField(
-              controller: _searchCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Суруд ё хонанда ҷустуҷӯ кун...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38, size: 20),
-                suffixIcon: _searching
-                    ? const Padding(padding: EdgeInsets.all(12),
-                        child: SizedBox(width: 14, height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.neonBlue)))
-                    : _searchCtrl.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white38, size: 18),
-                            onPressed: () { _searchCtrl.clear(); setState(() => _results = []); })
-                        : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              onChanged: (v) { if (v.length >= 2) _search(v); if (v.isEmpty) setState(() => _results = []); },
-              onSubmitted: _search,
-            ),
+          child: _SearchBar(
+            ctrl:      _searchCtrl,
+            searching: _searching,
+            onChanged: (v) {
+              setState(() {});
+              if (v.length >= 2) _search(v);
+              if (v.isEmpty)    setState(() => _results = []);
+            },
+            onSubmit: _search,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        const Divider(color: Colors.white10, height: 1),
 
-        // ── Selected track player ──
-        if (_selected != null) ...[
-          _PlayerCard(
-            track:     _selected!,
-            isPlaying: _isPlaying,
-            position:  _position,
-            duration:  _duration,
-            segStart:  _segStart,
-            startMs:   _startMs,
-            endMs:     _endMs,
-            onToggle:  _togglePlay,
-            onSegmentChanged: (v) async {
-              final maxStart = 1.0 - (_segLen / (_selected!.trackMs > 0 ? _selected!.trackMs : 30000));
-              setState(() => _segStart = v.clamp(0.0, maxStart > 0 ? maxStart : 0.0));
-              // Seek player to new segment start
-              if (_isPlaying) {
-                await _player.seek(Duration(milliseconds: _startMs));
-              }
-            },
-            fmt: _fmt,
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ElevatedButton(
-              onPressed: _confirm,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.neonBlue,
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('Интихоб кун', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Divider(color: Colors.white12, height: 1),
-          const SizedBox(height: 4),
-        ],
-
-        // ── Results list ──
+        // List
         Expanded(
-          child: _results.isEmpty && _searchCtrl.text.isEmpty
-              ? _emptyHint()
-              : _results.isEmpty
-                  ? const Center(child: Text('Ёфт нашуд', style: TextStyle(color: Colors.white38)))
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: _results.length,
-                      itemBuilder: (_, i) {
-                        final t = _results[i];
-                        final sel = _selected?.id == t.id;
-                        return _TrackRow(
-                          track:      t,
-                          isSelected: sel,
-                          onTap:      () => _selectTrack(t),
-                        );
-                      },
-                    ),
+          child: _results.isEmpty
+              ? _emptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  itemCount: _results.length,
+                  itemBuilder: (_, i) {
+                    final t      = _results[i];
+                    final isOpen = _active?.id == t.id;
+                    return _SongRow(
+                      track:    t,
+                      isOpen:   isOpen,
+                      playing:  isOpen && _playing,
+                      pos:      isOpen ? _pos     : Duration.zero,
+                      dur:      isOpen ? _dur     : Duration(milliseconds: t.trackMs),
+                      segFrac:  isOpen ? _segFrac : 0.0,
+                      segMs:    _segMs,
+                      startMs:  isOpen ? _startMs : 0,
+                      endMs:    isOpen ? _endMs   : _segMs,
+                      onTap:        () => _tap(t),
+                      onToggle:     () => _togglePlay(),
+                      onSlider:     _onSlider,
+                      fmt:          _fmt,
+                    );
+                  },
+                ),
         ),
       ]),
     );
   }
 
-  Widget _emptyHint() => Center(
+  Widget _emptyState() => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.music_note_rounded, size: 60, color: Colors.white.withOpacity(0.1)),
+      Icon(Icons.music_note_rounded, size: 56, color: Colors.white.withOpacity(0.1)),
       const SizedBox(height: 12),
-      Text('Сурудро ҷустуҷӯ кун', style: TextStyle(color: Colors.white.withOpacity(0.35))),
-      const SizedBox(height: 6),
-      Text('Пешнамоиши 30-сония мавҷуд', style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 12)),
+      Text('Номи суруд ё хонандаро ворид кун',
+          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13)),
     ]),
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Player Card — album art, play/pause, timeline + segment slider
+//  Search Bar
 // ─────────────────────────────────────────────────────────────────
-class _PlayerCard extends StatelessWidget {
+class _SearchBar extends StatelessWidget {
+  final TextEditingController ctrl;
+  final bool       searching;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmit;
+  const _SearchBar({required this.ctrl, required this.searching,
+      required this.onChanged, required this.onSubmit});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFF1C2333),
+      borderRadius: BorderRadius.circular(13),
+    ),
+    child: TextField(
+      controller: ctrl,
+      style: const TextStyle(color: Colors.white, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: 'Ҷустуҷӯи суруд...',
+        hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38, size: 20),
+        suffixIcon: searching
+            ? const Padding(padding: EdgeInsets.all(12),
+                child: SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.neonBlue)))
+            : ctrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded, color: Colors.white30, size: 18),
+                    onPressed: () { ctrl.clear(); onChanged(''); })
+                : null,
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      ),
+      onChanged: onChanged,
+      onSubmitted: onSubmit,
+    ),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Song Row — пӯшида ё кушода (inline player)
+// ─────────────────────────────────────────────────────────────────
+class _SongRow extends StatelessWidget {
   final _Track    track;
-  final bool      isPlaying;
-  final Duration  position;
-  final Duration  duration;
-  final double    segStart;
+  final bool      isOpen;
+  final bool      playing;
+  final Duration  pos;
+  final Duration  dur;
+  final double    segFrac;
+  final int       segMs;
   final int       startMs;
   final int       endMs;
+  final VoidCallback onTap;
   final VoidCallback onToggle;
-  final ValueChanged<double> onSegmentChanged;
+  final ValueChanged<double> onSlider;
   final String Function(int) fmt;
 
-  const _PlayerCard({
-    required this.track,
-    required this.isPlaying,
-    required this.position,
-    required this.duration,
-    required this.segStart,
-    required this.startMs,
-    required this.endMs,
-    required this.onToggle,
-    required this.onSegmentChanged,
+  const _SongRow({
+    required this.track, required this.isOpen, required this.playing,
+    required this.pos,   required this.dur,    required this.segFrac,
+    required this.segMs, required this.startMs, required this.endMs,
+    required this.onTap, required this.onToggle, required this.onSlider,
     required this.fmt,
   });
 
   @override
   Widget build(BuildContext context) {
-    final totalMs  = duration.inMilliseconds > 0 ? duration.inMilliseconds : 30000;
-    final segFrac  = 30000.0 / totalMs; // fraction of bar that is 30s
-    final maxStart = (1.0 - segFrac).clamp(0.0, 1.0);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color: const Color(0xFF161B27),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
+        color: isOpen ? Colors.white.withOpacity(0.04) : Colors.transparent,
+        border: isOpen
+            ? Border(
+                left: BorderSide(color: AppColors.neonBlue.withOpacity(0.7), width: 3))
+            : null,
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Top row: art + info + play
-        Row(children: [
-          // Album art
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: track.artUrl.isNotEmpty
-                ? Image.network(track.artUrl, width: 58, height: 58, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _artBox(58))
-                : _artBox(58),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(track.title,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 3),
-            Text(track.artist,
-                style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 6),
-            // Time labels
-            Text('${fmt(startMs)} – ${fmt(endMs)}',
-                style: const TextStyle(color: AppColors.neonBlue, fontSize: 11, fontWeight: FontWeight.w500)),
-          ])),
-          // Play / Pause button
-          GestureDetector(
-            onTap: onToggle,
-            child: Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.neonBlue,
-                boxShadow: [BoxShadow(color: AppColors.neonBlue.withOpacity(0.4), blurRadius: 12)],
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        // ── Basic row ──
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(children: [
+              // Art
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: track.artUrl.isNotEmpty
+                    ? Image.network(track.artUrl, width: 46, height: 46,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _artBox(46))
+                    : _artBox(46),
               ),
-              child: Icon(isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: Colors.white, size: 26),
-            ),
-          ),
-        ]),
-        const SizedBox(height: 14),
-
-        // ── Segment Selector ──
-        Text('Қисмати 30-сония интихоб кун',
-            style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 11)),
-        const SizedBox(height: 6),
-
-        // Custom segment track
-        LayoutBuilder(builder: (_, constraints) {
-          final w = constraints.maxWidth;
-          return Column(children: [
-            SizedBox(
-              height: 36,
-              child: Stack(alignment: Alignment.center, children: [
-                // Full track bar
-                Container(
-                  height: 4,
-                  width: w,
-                  decoration: BoxDecoration(
-                    color: Colors.white12,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                // Segment highlight
-                Positioned(
-                  left: segStart * w,
+              const SizedBox(width: 12),
+              // Title + artist
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(track.title,
+                      style: TextStyle(
+                        color: isOpen ? Colors.white : Colors.white.withOpacity(0.88),
+                        fontWeight: isOpen ? FontWeight.w600 : FontWeight.w400,
+                        fontSize: 13.5),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(track.artist,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.45), fontSize: 11.5),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+              // Play/pause — танҳо вақте кушода аст
+              if (isOpen)
+                GestureDetector(
+                  onTap: onToggle,
                   child: Container(
-                    width: (segFrac * w).clamp(0, w - segStart * w),
-                    height: 6,
+                    width: 38, height: 38,
                     decoration: BoxDecoration(
+                      shape: BoxShape.circle,
                       color: AppColors.neonBlue,
-                      borderRadius: BorderRadius.circular(3),
                     ),
+                    child: Icon(
+                      playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      color: Colors.white, size: 20),
                   ),
-                ),
-                // Playhead
-                Positioned(
-                  left: (position.inMilliseconds / totalMs * w).clamp(0, w - 12).toDouble(),
-                  child: Container(
-                    width: 12, height: 12,
-                    decoration: const BoxDecoration(
-                      color: Colors.white, shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                // Invisible slider for interaction
-                Positioned.fill(
-                  child: Slider(
-                    value:    segStart.clamp(0.0, maxStart > 0 ? maxStart : 0.001),
-                    min:      0.0,
-                    max:      maxStart > 0 ? maxStart : 0.001,
-                    onChanged: onSegmentChanged,
-                    activeColor:   Colors.transparent,
-                    inactiveColor: Colors.transparent,
-                    thumbColor:    Colors.transparent,
-                  ),
-                ),
-              ]),
-            ),
-            // Time labels below
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('0:00', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 10)),
-              Text(fmt(totalMs), style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 10)),
+                )
+              else
+                Icon(Icons.play_arrow_rounded,
+                    color: Colors.white.withOpacity(0.2), size: 22),
             ]),
-          ]);
-        }),
+          ),
+        ),
+
+        // ── Inline player — segment slider ──
+        if (isOpen) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+            child: Column(children: [
+              // Time: selected segment
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(fmt(startMs),
+                    style: const TextStyle(
+                        color: AppColors.neonBlue, fontSize: 11, fontWeight: FontWeight.w600)),
+                Text('30 сония',
+                    style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 11)),
+                Text(fmt(endMs),
+                    style: const TextStyle(
+                        color: AppColors.neonBlue, fontSize: 11, fontWeight: FontWeight.w600)),
+              ]),
+              const SizedBox(height: 6),
+
+              // ── Waveform-style segment bar ──
+              _SegmentBar(
+                totalMs: dur.inMilliseconds > 0 ? dur.inMilliseconds : 30000,
+                startMs: startMs,
+                segMs:   segMs,
+                posMs:   pos.inMilliseconds,
+                segFrac: segFrac,
+                onSlider: onSlider,
+              ),
+              const SizedBox(height: 4),
+
+              // Full duration label
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('0:00',
+                    style: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 10)),
+                Text(fmt(dur.inMilliseconds > 0 ? dur.inMilliseconds : 30000),
+                    style: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 10)),
+              ]),
+            ]),
+          ),
+        ],
       ]),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Track Row in search results
+//  Segment Bar — like Instagram waveform picker
 // ─────────────────────────────────────────────────────────────────
-class _TrackRow extends StatelessWidget {
-  final _Track      track;
-  final bool        isSelected;
-  final VoidCallback onTap;
-  const _TrackRow({required this.track, required this.isSelected, required this.onTap});
+class _SegmentBar extends StatelessWidget {
+  final int    totalMs;
+  final int    startMs;
+  final int    segMs;
+  final int    posMs;
+  final double segFrac;
+  final ValueChanged<double> onSlider;
+  const _SegmentBar({
+    required this.totalMs, required this.startMs, required this.segMs,
+    required this.posMs,   required this.segFrac, required this.onSlider,
+  });
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: isSelected ? BoxDecoration(
-        color: AppColors.neonBlue.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.neonBlue.withOpacity(0.4)),
-      ) : null,
-      child: Row(children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: track.artUrl.isNotEmpty
-              ? Image.network(track.artUrl, width: 46, height: 46, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _artBox(46))
-              : _artBox(46),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(track.title,
-              style: TextStyle(
-                color: isSelected ? AppColors.neonBlue : Colors.white,
-                fontWeight: FontWeight.w500, fontSize: 13),
-              maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 2),
-          Text(track.artist,
-              style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 11),
-              maxLines: 1, overflow: TextOverflow.ellipsis),
-        ])),
-        if (isSelected)
-          const Icon(Icons.check_circle_rounded, color: AppColors.neonBlue, size: 20),
-      ]),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final segWidth = segMs / totalMs; // fraction of bar that is 30s
+    final maxFrac  = (1.0 - segWidth).clamp(0.0, 1.0);
+
+    return LayoutBuilder(builder: (_, c) {
+      final w = c.maxWidth;
+      return SizedBox(
+        height: 44,
+        child: Stack(alignment: Alignment.center, children: [
+          // Full track bar — fake waveform bars
+          _WaveformBar(width: w),
+
+          // Dark overlay outside segment
+          // Left dim
+          Positioned(left: 0, child: Container(
+            width: (segFrac * w).clamp(0, w),
+            height: 44,
+            color: Colors.black.withOpacity(0.55),
+          )),
+          // Right dim
+          Positioned(
+            left: ((segFrac + segWidth) * w).clamp(0, w),
+            child: Container(
+              width: (w - (segFrac + segWidth) * w).clamp(0, w),
+              height: 44,
+              color: Colors.black.withOpacity(0.55),
+            ),
+          ),
+
+          // Segment border highlight
+          Positioned(
+            left: (segFrac * w).clamp(0, w - 4),
+            child: Container(
+              width: (segWidth * w).clamp(4, w),
+              height: 44,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+
+          // Playhead
+          Positioned(
+            left: (posMs / totalMs * w).clamp(2, w - 4).toDouble(),
+            child: Container(
+              width: 3, height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Transparent slider for dragging
+          Positioned.fill(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight:       0,
+                thumbShape:        const RoundSliderThumbShape(enabledThumbRadius: 0),
+                overlayShape:      SliderComponentShape.noOverlay,
+                activeTrackColor:  Colors.transparent,
+                inactiveTrackColor: Colors.transparent,
+              ),
+              child: Slider(
+                value:    segFrac.clamp(0.0, maxFrac > 0 ? maxFrac : 0.001),
+                min:      0.0,
+                max:      maxFrac > 0 ? maxFrac : 0.001,
+                onChanged: onSlider,
+              ),
+            ),
+          ),
+        ]),
+      );
+    });
+  }
 }
 
-Widget _artBox(double s) => Container(
-  width: s, height: s,
-  decoration: BoxDecoration(color: const Color(0xFF1C2333),
-      borderRadius: BorderRadius.circular(8)),
-  child: Icon(Icons.music_note_rounded, color: Colors.white24, size: s * 0.45),
-);
+// ─────────────────────────────────────────────────────────────────
+//  Fake waveform bars
+// ─────────────────────────────────────────────────────────────────
+class _WaveformBar extends StatelessWidget {
+  final double width;
+  const _WaveformBar({required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    const barW    = 3.0;
+    const gap     = 2.0;
+    final count   = (width / (barW + gap)).floor();
+    // Pseudo-random heights using index
+    return SizedBox(
+      width: width,
+      height: 44,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: List.generate(count, (i) {
+          final seed   = (i * 7 + 13) % 23;
+          final hFrac  = 0.25 + (seed % 10) / 10.0 * 0.75;
+          return Container(
+            width:  barW,
+            height: 44 * hFrac,
+            margin: const EdgeInsets.only(right: gap),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.55),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────
-//  Local track model
+//  Track model
 // ─────────────────────────────────────────────────────────────────
 class _Track {
   final String id;
@@ -532,11 +617,14 @@ class _Track {
   final String previewUrl;
   final int    trackMs;
   const _Track({
-    required this.id,
-    required this.title,
-    required this.artist,
-    required this.artUrl,
-    required this.previewUrl,
-    required this.trackMs,
+    required this.id, required this.title, required this.artist,
+    required this.artUrl, required this.previewUrl, required this.trackMs,
   });
 }
+
+Widget _artBox(double s) => Container(
+  width: s, height: s,
+  decoration: BoxDecoration(
+      color: const Color(0xFF1C2333), borderRadius: BorderRadius.circular(8)),
+  child: Icon(Icons.music_note_rounded, color: Colors.white24, size: s * 0.45),
+);
