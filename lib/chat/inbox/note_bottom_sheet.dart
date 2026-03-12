@@ -8,6 +8,10 @@ import 'music_picker_sheet.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  NoteBottomSheet — як экран, мисли Instagram Notes
+//  1. Avatar + bubble preview
+//  2. Text input (60)
+//  3. Add Music button  → bottom sheet болои ин
+//  4. Share button
 // ─────────────────────────────────────────────────────────────────
 class NoteBottomSheet extends StatefulWidget {
   final String   initialNote;
@@ -23,73 +27,74 @@ class NoteBottomSheet extends StatefulWidget {
 }
 
 class _NoteBottomSheetState extends State<NoteBottomSheet> {
-  final _textCtrl    = TextEditingController();
-  final _noteService = NoteService();
-  final _player      = AudioPlayer();
+  final _txt     = TextEditingController();
+  final _service = NoteService();
+  final _player  = AudioPlayer();
 
   SongInfo? _song;
   bool      _saving    = false;
-  bool      _isPlaying = false;
-
-  StreamSubscription? _completeSub;
+  bool      _playing   = false;
+  StreamSubscription? _doneSub;
 
   @override
   void initState() {
     super.initState();
-    _textCtrl.text = widget.initialNote;
-    _song          = widget.initialSong.isEmpty ? null : widget.initialSong;
-    _textCtrl.addListener(() => setState(() {}));
-    _completeSub = _player.onPlayerComplete.listen((_) {
-      if (mounted) setState(() => _isPlaying = false);
+    _txt.text = widget.initialNote;
+    _song     = widget.initialSong.isEmpty ? null : widget.initialSong;
+    _txt.addListener(() => setState(() {}));
+    _doneSub = _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playing = false);
     });
   }
 
   @override
   void dispose() {
-    _completeSub?.cancel();
+    _doneSub?.cancel();
     _player.stop();
     _player.dispose();
-    _textCtrl.dispose();
+    _txt.dispose();
     super.dispose();
   }
 
-  // ── Мусиқиро кушо ──
-  Future<void> _openMusicPicker() async {
+  // ── Мусиқӣ кушо ──
+  Future<void> _openMusic() async {
     await _player.stop();
-    setState(() => _isPlaying = false);
+    setState(() => _playing = false);
+    if (!mounted) return;
     final result = await showModalBottomSheet<SongInfo>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useRootNavigator: true,
       builder: (_) => MusicPickerSheet(initial: _song),
     );
-    if (result != null && mounted) {
-      setState(() => _song = result);
-    }
+    if (result != null && mounted) setState(() => _song = result);
   }
 
   // ── Пешнамоиш ──
-  Future<void> _togglePreview() async {
+  Future<void> _togglePlay() async {
     if (_song == null || _song!.previewUrl.isEmpty) return;
-    if (_isPlaying) {
+    if (_playing) {
       await _player.pause();
-      setState(() => _isPlaying = false);
+      setState(() => _playing = false);
     } else {
       await _player.play(UrlSource(_song!.previewUrl));
       await _player.seek(Duration(milliseconds: _song!.startMs));
-      setState(() => _isPlaying = true);
+      setState(() => _playing = true);
+      // Auto-stop at segment end
+      final segLen = _song!.endMs - _song!.startMs;
+      Future.delayed(Duration(milliseconds: segLen), () {
+        if (mounted && _playing) {
+          _player.stop();
+          setState(() => _playing = false);
+        }
+      });
     }
-  }
-
-  // ── Мусиқиро нест кун ──
-  void _removeSong() {
-    _player.stop();
-    setState(() { _song = null; _isPlaying = false; });
   }
 
   // ── Нашр кун ──
   Future<void> _save() async {
-    final text = _textCtrl.text.trim();
+    final text = _txt.text.trim();
     if (text.isEmpty && (_song == null || _song!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Матн ё мусиқӣ иловакунед')));
@@ -97,7 +102,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
     }
     await _player.stop();
     setState(() => _saving = true);
-    final ok = await _noteService.setNote(text, song: _song);
+    final ok = await _service.setNote(text, song: _song);
     if (mounted) {
       setState(() => _saving = false);
       Navigator.pop(context, ok);
@@ -108,105 +113,112 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
   Future<void> _delete() async {
     await _player.stop();
     setState(() => _saving = true);
-    await _noteService.clearNote();
+    await _service.clearNote();
     if (mounted) {
       setState(() => _saving = false);
       Navigator.pop(context, true);
     }
   }
 
-  bool get _hasOld => widget.initialNote.isNotEmpty || !widget.initialSong.isEmpty;
-  bool get _hasContent => _textCtrl.text.trim().isNotEmpty || (_song != null && !_song!.isEmpty);
+  bool get _hasOld     => widget.initialNote.isNotEmpty || !widget.initialSong.isEmpty;
+  bool get _hasContent => _txt.text.trim().isNotEmpty || (_song != null && !_song!.isEmpty);
 
-  // ─── BUILD ────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════ BUILD ═══════════════
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
       padding: EdgeInsets.only(bottom: bottom),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.90),
       decoration: const BoxDecoration(
         color: Color(0xFF0D1117),
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // ── Handle ──
+          // Handle
           const SizedBox(height: 10),
           Container(width: 40, height: 4,
               decoration: BoxDecoration(color: Colors.white24,
                   borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
-          // ── Top: PREVIEW of note bubble + avatar ──
-          _NotePreview(
-            text:      _textCtrl.text.trim(),
+          // ── 1. BUBBLE PREVIEW + AVATAR ──
+          _BubblePreview(
+            text:      _txt.text.trim(),
             song:      _song,
-            isPlaying: _isPlaying,
-            onPlay:    _song != null ? _togglePreview : null,
+            isPlaying: _playing,
+            onPlay:    _song != null ? _togglePlay : null,
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
-          // ── Text input ──
+          // ── 2. TEXT INPUT ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Ёддошт бинавис',
-                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+              Text('Ёддошт',
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.45), fontSize: 12,
+                      fontWeight: FontWeight.w500)),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF161B27),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
                 ),
                 child: TextField(
-                  controller: _textCtrl,
+                  controller: _txt,
                   maxLength: 60,
                   maxLines: 3,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
                   decoration: InputDecoration(
                     hintText: 'Чӣ дар зеҳнатон аст?',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.25)),
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.22)),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-                    counterStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 11),
+                    counterStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.2), fontSize: 11),
                   ),
                 ),
               ),
             ]),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // ── Music selector ──
+          // ── 3. MUSIC ──
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: _song == null || _song!.isEmpty
-                ? _MusicButton(onTap: _openMusicPicker)
-                : _MusicCard(
+                ? _AddMusicBtn(onTap: _openMusic)
+                : _AttachedMusic(
                     song:      _song!,
-                    isPlaying: _isPlaying,
-                    onPlay:    _togglePreview,
-                    onChange:  _openMusicPicker,
-                    onRemove:  _removeSong,
+                    isPlaying: _playing,
+                    onPlay:    _togglePlay,
+                    onChange:  _openMusic,
+                    onRemove:  () {
+                      _player.stop();
+                      setState(() { _song = null; _playing = false; });
+                    },
                   ),
           ),
           const SizedBox(height: 24),
 
-          // ── Buttons ──
+          // ── 4. BUTTONS ──
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: Row(children: [
               if (_hasOld) ...[
                 SizedBox(
-                  width: 90,
+                  width: 88,
                   child: OutlinedButton(
                     onPressed: _saving ? null : _delete,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.redAccent,
                       side: const BorderSide(color: Colors.redAccent),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Ҳазф'),
@@ -219,16 +231,19 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
                   onPressed: (_saving || !_hasContent) ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.neonBlue,
-                    disabledBackgroundColor: AppColors.neonBlue.withOpacity(0.3),
+                    disabledBackgroundColor: AppColors.neonBlue.withOpacity(0.25),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
                   child: _saving
                       ? const SizedBox(width: 20, height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
                       : const Text('Нашр кун',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ]),
@@ -240,187 +255,189 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Note Preview — аватар + пуфак болои он (мисли Instagram)
+//  Bubble Preview — аватар + пуфак болои он
 // ─────────────────────────────────────────────────────────────────
-class _NotePreview extends StatelessWidget {
+class _BubblePreview extends StatelessWidget {
   final String    text;
   final SongInfo? song;
   final bool      isPlaying;
   final VoidCallback? onPlay;
-  const _NotePreview({
-    required this.text,
-    required this.song,
-    required this.isPlaying,
-    this.onPlay,
+  const _BubblePreview({
+    required this.text, required this.song,
+    required this.isPlaying, this.onPlay,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasSong = song != null && !song!.isEmpty;
     final hasText = text.isNotEmpty;
+    final hasSong = song != null && !song!.isEmpty;
     final hasAny  = hasText || hasSong;
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      // Bubble preview
-      if (hasAny)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: GestureDetector(
-            onTap: onPlay,
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 220),
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      // Bubble
+      hasAny
+          ? GestureDetector(
+              onTap: onPlay,
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 230),
+                padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C2333),
+                  borderRadius: const BorderRadius.only(
+                    topLeft:     Radius.circular(18),
+                    topRight:    Radius.circular(18),
+                    bottomRight: Radius.circular(18),
+                    bottomLeft:  Radius.circular(5),
+                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  if (hasText)
+                    Text(text,
+                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        textAlign: TextAlign.center,
+                        maxLines: 3, overflow: TextOverflow.ellipsis),
+                  if (hasText && hasSong) const SizedBox(height: 8),
+                  if (hasSong)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (song!.artUrl.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(song!.artUrl,
+                                width: 26, height: 26, fit: BoxFit.cover),
+                          )
+                        else
+                          Container(
+                            width: 26, height: 26,
+                            decoration: BoxDecoration(
+                                color: const Color(0xFF1C2333),
+                                borderRadius: BorderRadius.circular(4)),
+                            child: const Icon(Icons.music_note_rounded,
+                                color: AppColors.neonBlue, size: 14)),
+                        const SizedBox(width: 7),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(song!.title,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 11,
+                                      fontWeight: FontWeight.w600),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(song!.artist,
+                                  style: TextStyle(
+                                      color: Colors.white.withOpacity(0.45),
+                                      fontSize: 10),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 7),
+                        Icon(
+                          isPlaying
+                              ? Icons.pause_circle_filled_rounded
+                              : Icons.play_circle_filled_rounded,
+                          color: AppColors.neonBlue, size: 20),
+                      ]),
+                    ),
+                ]),
+              ),
+            )
+          : Container(
+              constraints: const BoxConstraints(maxWidth: 190),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               decoration: BoxDecoration(
                 color: const Color(0xFF1C2333),
                 borderRadius: const BorderRadius.only(
-                  topLeft:     Radius.circular(18),
-                  topRight:    Radius.circular(18),
-                  bottomRight: Radius.circular(18),
-                  bottomLeft:  Radius.circular(4),
+                  topLeft:     Radius.circular(16),
+                  topRight:    Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                  bottomLeft:  Radius.circular(5),
                 ),
-                border: Border.all(color: Colors.white12),
+                border: Border.all(color: Colors.white.withOpacity(0.08)),
               ),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                if (hasText)
-                  Text(text,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
-                      textAlign: TextAlign.center,
-                      maxLines: 3, overflow: TextOverflow.ellipsis),
-                if (hasText && hasSong) const SizedBox(height: 8),
-                if (hasSong) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (song!.artUrl.isNotEmpty)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(song!.artUrl,
-                              width: 28, height: 28, fit: BoxFit.cover),
-                        )
-                      else
-                        Container(width: 28, height: 28,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1C2333),
-                            borderRadius: BorderRadius.circular(4)),
-                          child: const Icon(Icons.music_note_rounded,
-                              color: AppColors.neonBlue, size: 16)),
-                      const SizedBox(width: 8),
-                      Flexible(child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(song!.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                          Text(song!.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10)),
-                        ],
-                      )),
-                      const SizedBox(width: 8),
-                      Icon(
-                        isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
-                        color: AppColors.neonBlue, size: 22),
-                    ]),
-                  ),
-                ],
-              ]),
+              child: Text('Ёддошт иловакун...',
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.18), fontSize: 13),
+                  textAlign: TextAlign.center),
             ),
-          ),
-        )
-      else
-        Container(
-          constraints: const BoxConstraints(maxWidth: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C2333),
-            borderRadius: const BorderRadius.only(
-              topLeft:     Radius.circular(16),
-              topRight:    Radius.circular(16),
-              bottomRight: Radius.circular(16),
-              bottomLeft:  Radius.circular(4),
-            ),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: Text('Матн ё мусиқӣ иловакун...',
-              style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 13),
-              textAlign: TextAlign.center),
-        ),
 
       // Avatar
       const SizedBox(height: 6),
       Container(
-        width: 52, height: 52,
+        width: 50, height: 50,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: const Color(0xFF1C2333),
-          border: Border.all(color: Colors.white24, width: 1.5),
+          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
         ),
-        child: const Icon(Icons.person_rounded, color: Colors.white38, size: 28),
+        child: const Icon(Icons.person_rounded, color: Colors.white38, size: 26),
       ),
     ]);
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Music Button — вақте мусиқӣ интихоб нашудааст
+//  Add Music Button
 // ─────────────────────────────────────────────────────────────────
-class _MusicButton extends StatelessWidget {
+class _AddMusicBtn extends StatelessWidget {
   final VoidCallback onTap;
-  const _MusicButton({required this.onTap});
+  const _AddMusicBtn({required this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
         color: const Color(0xFF161B27),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: Row(children: [
         Container(
-          width: 36, height: 36,
+          width: 34, height: 34,
           decoration: BoxDecoration(
-            color: AppColors.neonBlue.withOpacity(0.15),
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.neonBlue.withOpacity(0.4)),
+            color: AppColors.neonBlue.withOpacity(0.12),
+            border: Border.all(color: AppColors.neonBlue.withOpacity(0.35)),
           ),
-          child: const Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 18),
+          child: const Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 17),
         ),
         const SizedBox(width: 12),
         Text('Мусиқӣ илова кун',
-            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14)),
+            style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 14)),
         const Spacer(),
-        const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+        Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.2)),
       ]),
     ),
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Music Card — вақте мусиқӣ интихоб шудааст
+//  Attached Music Card
 // ─────────────────────────────────────────────────────────────────
-class _MusicCard extends StatelessWidget {
+class _AttachedMusic extends StatelessWidget {
   final SongInfo     song;
   final bool         isPlaying;
   final VoidCallback onPlay;
   final VoidCallback onChange;
   final VoidCallback onRemove;
-  const _MusicCard({
-    required this.song,
-    required this.isPlaying,
-    required this.onPlay,
-    required this.onChange,
-    required this.onRemove,
+  const _AttachedMusic({
+    required this.song, required this.isPlaying,
+    required this.onPlay, required this.onChange, required this.onRemove,
   });
 
-  String _fmt(int ms) {
+  String _t(int ms) {
     final s = ms ~/ 1000;
-    return '${s ~/ 60}:${(s % 60).toString().padLeft(2,'0')}';
+    return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
   }
 
   @override
@@ -429,64 +446,71 @@ class _MusicCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: const Color(0xFF161B27),
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: AppColors.neonBlue.withOpacity(0.35)),
+      border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
     ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        // Art
-        GestureDetector(
-          onTap: onPlay,
-          child: Stack(alignment: Alignment.center, children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: song.artUrl.isNotEmpty
-                  ? Image.network(song.artUrl, width: 48, height: 48, fit: BoxFit.cover)
-                  : Container(width: 48, height: 48,
-                      decoration: BoxDecoration(color: const Color(0xFF1C2333),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.music_note_rounded, color: AppColors.neonBlue)),
-            ),
-            Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(
-                  color: Colors.black38, borderRadius: BorderRadius.circular(8)),
-              child: Icon(isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: Colors.white, size: 22),
-            ),
-          ]),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(song.title,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-              maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 2),
-          Text(song.artist,
-              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
-              maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
-          Text('${_fmt(song.startMs)} – ${_fmt(song.endMs)}',
-              style: const TextStyle(color: AppColors.neonBlue, fontSize: 11, fontWeight: FontWeight.w500)),
-        ])),
-        // Change / Remove
-        Column(children: [
-          GestureDetector(
-            onTap: onChange,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('Иваз', style: TextStyle(color: Colors.white60, fontSize: 11)),
-            ),
+    child: Row(children: [
+      // Art + play overlay
+      GestureDetector(
+        onTap: onPlay,
+        child: Stack(alignment: Alignment.center, children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: song.artUrl.isNotEmpty
+                ? Image.network(song.artUrl, width: 50, height: 50, fit: BoxFit.cover)
+                : Container(
+                    width: 50, height: 50,
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF1C2333),
+                        borderRadius: BorderRadius.circular(9)),
+                    child: const Icon(Icons.music_note_rounded,
+                        color: AppColors.neonBlue, size: 24)),
           ),
-          const SizedBox(height: 6),
-          GestureDetector(
-            onTap: onRemove,
-            child: const Icon(Icons.close_rounded, color: Colors.white38, size: 18),
+          Container(
+            width: 50, height: 50,
+            decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.35),
+                borderRadius: BorderRadius.circular(9)),
+            child: Icon(
+              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              color: Colors.white, size: 22),
           ),
         ]),
+      ),
+      const SizedBox(width: 12),
+      // Info
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(song.title,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 2),
+        Text(song.artist,
+            style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 11),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 4),
+        Text('${_t(song.startMs)} – ${_t(song.endMs)}',
+            style: const TextStyle(
+                color: AppColors.neonBlue, fontSize: 11,
+                fontWeight: FontWeight.w500)),
+      ])),
+      // Actions
+      Column(children: [
+        GestureDetector(
+          onTap: onChange,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.07),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text('Иваз', style: TextStyle(color: Colors.white54, fontSize: 11)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: onRemove,
+          child: const Icon(Icons.close_rounded, color: Colors.white30, size: 18),
+        ),
       ]),
     ]),
   );
