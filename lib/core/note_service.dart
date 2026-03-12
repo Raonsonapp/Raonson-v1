@@ -10,16 +10,23 @@ class NoteService extends ChangeNotifier {
 
   final _api = ApiClient.instance;
 
-  String          _myNote   = '';
-  SongInfo        _mySong   = const SongInfo(title: '', artist: '', artUrl: '');
-  List<NoteModel> _friends  = [];
-  bool            _loading  = false;
+  String          _myNote      = '';
+  SongInfo        _mySong      = const SongInfo(title: '', artist: '', artUrl: '');
+  DateTime?       _myExpiresAt;          // ← нигоҳ медорад
+  List<NoteModel> _friends     = [];
+  bool            _loading     = false;
 
   String          get myNote    => _myNote;
   SongInfo        get mySong    => _mySong;
   List<NoteModel> get friends   => List.unmodifiable(_friends);
   bool            get loading   => _loading;
-  bool            get hasMyNote => _myNote.isNotEmpty || !_mySong.isEmpty;
+
+  // hasMyNote — expiry тафтиш мешавад
+  bool get hasMyNote {
+    if (_myNote.isEmpty && _mySong.isEmpty) return false;
+    if (_myExpiresAt == null) return false;
+    return DateTime.now().isBefore(_myExpiresAt!);
+  }
 
   Future<void> load() async {
     _loading = true;
@@ -31,6 +38,14 @@ class NoteService extends ChangeNotifier {
         final user = body['user'] ?? body;
         _myNote = user['note'] ?? '';
         _mySong = SongInfo.fromJson(user['noteSong'] as Map<String, dynamic>?);
+        final expStr = user['noteExpiresAt'];
+        _myExpiresAt = expStr != null ? DateTime.tryParse(expStr.toString()) : null;
+        // Clear locally if expired
+        if (_myExpiresAt != null && DateTime.now().isAfter(_myExpiresAt!)) {
+          _myNote = '';
+          _mySong = const SongInfo(title: '', artist: '', artUrl: '');
+          _myExpiresAt = null;
+        }
       }
       await _loadFriendsNotes();
     } catch (e) {
@@ -45,7 +60,7 @@ class NoteService extends ChangeNotifier {
     try {
       final r = await _api.get('/profile/notes/friends');
       if (r.statusCode != 200) return;
-      final body  = jsonDecode(r.body);
+      final body = jsonDecode(r.body);
       final List raw = body['notes'] ?? [];
       _friends = raw
           .map((e) => NoteModel.fromJson(e as Map<String, dynamic>))
@@ -59,11 +74,14 @@ class NoteService extends ChangeNotifier {
   Future<bool> setNote(String text, {SongInfo? song}) async {
     try {
       final body = <String, dynamic>{'note': text};
-      if (song != null) body['song'] = song.toJson();
+      if (song != null && !song.isEmpty) body['song'] = song.toJson();
       final r = await _api.post('/profile/note', body: body);
       if (r.statusCode != 200) return false;
+      final resp = jsonDecode(r.body);
       _myNote = text;
       _mySong = song ?? const SongInfo(title: '', artist: '', artUrl: '');
+      final expStr = resp['noteExpiresAt'];
+      _myExpiresAt = expStr != null ? DateTime.tryParse(expStr.toString()) : null;
       notifyListeners();
       return true;
     } catch (e) {
@@ -72,5 +90,9 @@ class NoteService extends ChangeNotifier {
     }
   }
 
-  Future<void> clearNote() => setNote('');
+  Future<void> clearNote() async {
+    await setNote('');
+    _myExpiresAt = null;
+    notifyListeners();
+  }
 }
