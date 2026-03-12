@@ -1,18 +1,17 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../app/app_theme.dart';
 import '../../core/note_service.dart';
 import '../../models/note_model.dart';
+import 'music_picker_sheet.dart';
 
 // ─────────────────────────────────────────────────────────────────
-//  NoteBottomSheet — матн | мусиқӣ | матн+мусиқӣ
+//  NoteBottomSheet — як экран, мисли Instagram Notes
 // ─────────────────────────────────────────────────────────────────
 class NoteBottomSheet extends StatefulWidget {
   final String   initialNote;
   final SongInfo initialSong;
-
   const NoteBottomSheet({
     super.key,
     this.initialNote = '',
@@ -23,119 +22,82 @@ class NoteBottomSheet extends StatefulWidget {
   State<NoteBottomSheet> createState() => _NoteBottomSheetState();
 }
 
-class _NoteBottomSheetState extends State<NoteBottomSheet>
-    with SingleTickerProviderStateMixin {
-  late TabController        _tab;
-  late TextEditingController _textCtrl;
-  late TextEditingController _searchCtrl;
-
+class _NoteBottomSheetState extends State<NoteBottomSheet> {
+  final _textCtrl    = TextEditingController();
   final _noteService = NoteService();
   final _player      = AudioPlayer();
 
-  SongInfo?          _selectedSong;
-  List<_TrackResult> _tracks    = [];
-  bool               _searching = false;
-  bool               _saving    = false;
-  String             _playingId = ''; // previewUrl of currently playing track
+  SongInfo? _song;
+  bool      _saving    = false;
+  bool      _isPlaying = false;
+
+  StreamSubscription? _completeSub;
 
   @override
   void initState() {
     super.initState();
-    _tab        = TabController(length: 3, vsync: this);
-    _textCtrl   = TextEditingController(text: widget.initialNote);
-    _searchCtrl = TextEditingController();
-    _selectedSong = widget.initialSong.isEmpty ? null : widget.initialSong;
-
-    // Correct tab based on existing note
-    if (!widget.initialSong.isEmpty && widget.initialNote.isNotEmpty) {
-      _tab.index = 2;
-    } else if (!widget.initialSong.isEmpty) {
-      _tab.index = 1;
-    }
-    _tab.addListener(() => setState(() {}));
-
-    // Stop player when track finishes
-    _player.onPlayerComplete.listen((_) {
-      if (mounted) setState(() => _playingId = '');
+    _textCtrl.text = widget.initialNote;
+    _song          = widget.initialSong.isEmpty ? null : widget.initialSong;
+    _textCtrl.addListener(() => setState(() {}));
+    _completeSub = _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _isPlaying = false);
     });
   }
 
   @override
   void dispose() {
+    _completeSub?.cancel();
     _player.stop();
     _player.dispose();
-    _tab.dispose();
     _textCtrl.dispose();
-    _searchCtrl.dispose();
     super.dispose();
   }
 
-  // ── Овоз пахш / қатъ кун ──
-  Future<void> _togglePlay(String previewUrl) async {
-    if (previewUrl.isEmpty) {
-      _showSnack('Пешнамоиши овозӣ мавҷуд нест');
-      return;
-    }
-
-    if (_playingId == previewUrl) {
-      // Ҳамон суруд — қатъ
-      await _player.stop();
-      setState(() => _playingId = '');
-    } else {
-      // Суруди нав
-      await _player.stop();
-      setState(() => _playingId = previewUrl);
-      await _player.play(UrlSource(previewUrl));
+  // ── Мусиқиро кушо ──
+  Future<void> _openMusicPicker() async {
+    await _player.stop();
+    setState(() => _isPlaying = false);
+    final result = await showModalBottomSheet<SongInfo>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => MusicPickerSheet(initial: _song),
+    );
+    if (result != null && mounted) {
+      setState(() => _song = result);
     }
   }
 
-  // ── iTunes Search ──
-  Future<void> _search(String q) async {
-    if (q.trim().isEmpty) {
-      setState(() => _tracks = []);
-      return;
+  // ── Пешнамоиш ──
+  Future<void> _togglePreview() async {
+    if (_song == null || _song!.previewUrl.isEmpty) return;
+    if (_isPlaying) {
+      await _player.pause();
+      setState(() => _isPlaying = false);
+    } else {
+      await _player.play(UrlSource(_song!.previewUrl));
+      await _player.seek(Duration(milliseconds: _song!.startMs));
+      setState(() => _isPlaying = true);
     }
-    setState(() => _searching = true);
-    try {
-      final uri = Uri.parse(
-        'https://itunes.apple.com/search'
-        '?term=${Uri.encodeComponent(q)}&media=music&limit=15&country=US',
-      );
-      final res = await http.get(uri).timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final j       = jsonDecode(res.body);
-        final List rs = j['results'] ?? [];
-        setState(() {
-          _tracks = rs.map((r) => _TrackResult(
-            id:         r['trackId']?.toString() ?? '',
-            title:      r['trackName']     ?? '',
-            artist:     r['artistName']    ?? '',
-            artUrl:     r['artworkUrl100'] ?? '',
-            previewUrl: r['previewUrl']    ?? '', // ← 30-сония mp3
-          )).toList();
-        });
-      }
-    } catch (e) {
-      debugPrint('[NoteSheet] search error: $e');
-    } finally {
-      if (mounted) setState(() => _searching = false);
-    }
+  }
+
+  // ── Мусиқиро нест кун ──
+  void _removeSong() {
+    _player.stop();
+    setState(() { _song = null; _isPlaying = false; });
   }
 
   // ── Нашр кун ──
   Future<void> _save() async {
-    final text = (_tab.index == 1) ? '' : _textCtrl.text.trim();
-    final song = (_tab.index == 0) ? null : _selectedSong;
-
-    if (_tab.index == 0 && text.isEmpty)       { _showSnack('Матн бинависед'); return; }
-    if (_tab.index == 1 && song == null)        { _showSnack('Мусиқӣ интихоб кунед'); return; }
-    if (_tab.index == 2 && text.isEmpty && song == null) {
-      _showSnack('Матн ё мусиқӣ иловакунед'); return;
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty && (_song == null || _song!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Матн ё мусиқӣ иловакунед')));
+      return;
     }
-
     await _player.stop();
     setState(() => _saving = true);
-    final ok = await _noteService.setNote(text, song: song);
+    final ok = await _noteService.setNote(text, song: _song);
     if (mounted) {
       setState(() => _saving = false);
       Navigator.pop(context, ok);
@@ -153,135 +115,98 @@ class _NoteBottomSheetState extends State<NoteBottomSheet>
     }
   }
 
-  void _showSnack(String msg) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+  bool get _hasOld => widget.initialNote.isNotEmpty || !widget.initialSong.isEmpty;
+  bool get _hasContent => _textCtrl.text.trim().isNotEmpty || (_song != null && !_song!.isEmpty);
 
-  // ─────────────────────────────────────────────────────────────────
+  // ─── BUILD ────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final bottom    = MediaQuery.of(context).viewInsets.bottom;
-    final hasOld    = widget.initialNote.isNotEmpty || !widget.initialSong.isEmpty;
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.90),
       padding: EdgeInsets.only(bottom: bottom),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
       decoration: const BoxDecoration(
         color: Color(0xFF0D1117),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          // ── Handle ──
           const SizedBox(height: 10),
           Container(width: 40, height: 4,
               decoration: BoxDecoration(color: Colors.white24,
                   borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 20),
+
+          // ── Top: PREVIEW of note bubble + avatar ──
+          _NotePreview(
+            text:      _textCtrl.text.trim(),
+            song:      _song,
+            isPlaying: _isPlaying,
+            onPlay:    _song != null ? _togglePreview : null,
+          ),
+          const SizedBox(height: 28),
+
+          // ── Text input ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Ёддошт бинавис',
+                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+              const SizedBox(height: 6),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF161B27),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: TextField(
+                  controller: _textCtrl,
+                  maxLength: 60,
+                  maxLines: 3,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: 'Чӣ дар зеҳнатон аст?',
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.25)),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                    counterStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 11),
+                  ),
+                ),
+              ),
+            ]),
+          ),
           const SizedBox(height: 16),
 
-          // Title
-          const Text('Ёддошт',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text('24 соат дастрас аст',
-              style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12)),
-          const SizedBox(height: 14),
-
-          // Tabs
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-                color: const Color(0xFF161B27), borderRadius: BorderRadius.circular(12)),
-            child: TabBar(
-              controller: _tab,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white38,
-              labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              unselectedLabelStyle: const TextStyle(fontSize: 13),
-              indicator: BoxDecoration(
-                color: AppColors.neonBlue.withOpacity(0.22),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.neonBlue.withOpacity(0.5)),
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: '✏️  Матн'),
-                Tab(text: '🎵  Мусиқӣ'),
-                Tab(text: '✨  Иккиси'),
-              ],
-            ),
+          // ── Music selector ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _song == null || _song!.isEmpty
+                ? _MusicButton(onTap: _openMusicPicker)
+                : _MusicCard(
+                    song:      _song!,
+                    isPlaying: _isPlaying,
+                    onPlay:    _togglePreview,
+                    onChange:  _openMusicPicker,
+                    onRemove:  _removeSong,
+                  ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
 
-          // Content
-          Flexible(
-            child: TabBarView(
-              controller: _tab,
-              children: [
-                // Tab 0 — Text only
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _TextInput(ctrl: _textCtrl),
-                ),
-                // Tab 1 — Music only
-                _MusicTab(
-                  searchCtrl: _searchCtrl,
-                  tracks:     _tracks,
-                  searching:  _searching,
-                  selected:   _selectedSong,
-                  playingId:  _playingId,
-                  onSearch:   _search,
-                  onSelect:   (t) {
-                    setState(() => _selectedSong = SongInfo(
-                      title: t.title, artist: t.artist,
-                      artUrl: t.artUrl, previewUrl: t.previewUrl,
-                    ));
-                  },
-                  onPlay:     _togglePlay,
-                ),
-                // Tab 2 — Text + Music
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(children: [
-                    _TextInput(ctrl: _textCtrl),
-                    const SizedBox(height: 12),
-                    _MusicTab(
-                      searchCtrl: _searchCtrl,
-                      tracks:     _tracks,
-                      searching:  _searching,
-                      selected:   _selectedSong,
-                      playingId:  _playingId,
-                      onSearch:   _search,
-                      onSelect:   (t) {
-                        setState(() => _selectedSong = SongInfo(
-                          title: t.title, artist: t.artist,
-                          artUrl: t.artUrl, previewUrl: t.previewUrl,
-                        ));
-                      },
-                      onPlay:   _togglePlay,
-                      compact:  true,
-                    ),
-                    const SizedBox(height: 20),
-                  ]),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Buttons
+          // ── Buttons ──
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: Row(children: [
-              if (hasOld) ...[
-                Expanded(
+              if (_hasOld) ...[
+                SizedBox(
+                  width: 90,
                   child: OutlinedButton(
                     onPressed: _saving ? null : _delete,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.redAccent,
                       side: const BorderSide(color: Colors.redAccent),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('Ҳазф'),
@@ -290,225 +215,243 @@ class _NoteBottomSheetState extends State<NoteBottomSheet>
                 const SizedBox(width: 12),
               ],
               Expanded(
-                flex: 2,
                 child: ElevatedButton(
-                  onPressed: _saving ? null : _save,
+                  onPressed: (_saving || !_hasContent) ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.neonBlue,
+                    disabledBackgroundColor: AppColors.neonBlue.withOpacity(0.3),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: _saving
                       ? const SizedBox(width: 20, height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Text('Нашр кун',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
             ]),
           ),
-        ],
+        ]),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Text Input
+//  Note Preview — аватар + пуфак болои он (мисли Instagram)
 // ─────────────────────────────────────────────────────────────────
-class _TextInput extends StatelessWidget {
-  final TextEditingController ctrl;
-  const _TextInput({required this.ctrl});
+class _NotePreview extends StatelessWidget {
+  final String    text;
+  final SongInfo? song;
+  final bool      isPlaying;
+  final VoidCallback? onPlay;
+  const _NotePreview({
+    required this.text,
+    required this.song,
+    required this.isPlaying,
+    this.onPlay,
+  });
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFF1C2333),
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
-    ),
-    child: TextField(
-      controller: ctrl,
-      maxLength: 60,
-      maxLines: 4,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
-      decoration: InputDecoration(
-        hintText: 'Чизе бинависед...',
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-        border: InputBorder.none,
-        contentPadding: const EdgeInsets.all(14),
-        counterStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+  Widget build(BuildContext context) {
+    final hasSong = song != null && !song!.isEmpty;
+    final hasText = text.isNotEmpty;
+    final hasAny  = hasText || hasSong;
+
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      // Bubble preview
+      if (hasAny)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: GestureDetector(
+            onTap: onPlay,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 220),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1C2333),
+                borderRadius: const BorderRadius.only(
+                  topLeft:     Radius.circular(18),
+                  topRight:    Radius.circular(18),
+                  bottomRight: Radius.circular(18),
+                  bottomLeft:  Radius.circular(4),
+                ),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                if (hasText)
+                  Text(text,
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                      textAlign: TextAlign.center,
+                      maxLines: 3, overflow: TextOverflow.ellipsis),
+                if (hasText && hasSong) const SizedBox(height: 8),
+                if (hasSong) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.07),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (song!.artUrl.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(song!.artUrl,
+                              width: 28, height: 28, fit: BoxFit.cover),
+                        )
+                      else
+                        Container(width: 28, height: 28,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1C2333),
+                            borderRadius: BorderRadius.circular(4)),
+                          child: const Icon(Icons.music_note_rounded,
+                              color: AppColors.neonBlue, size: 16)),
+                      const SizedBox(width: 8),
+                      Flexible(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(song!.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                          Text(song!.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10)),
+                        ],
+                      )),
+                      const SizedBox(width: 8),
+                      Icon(
+                        isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
+                        color: AppColors.neonBlue, size: 22),
+                    ]),
+                  ),
+                ],
+              ]),
+            ),
+          ),
+        )
+      else
+        Container(
+          constraints: const BoxConstraints(maxWidth: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1C2333),
+            borderRadius: const BorderRadius.only(
+              topLeft:     Radius.circular(16),
+              topRight:    Radius.circular(16),
+              bottomRight: Radius.circular(16),
+              bottomLeft:  Radius.circular(4),
+            ),
+            border: Border.all(color: Colors.white12),
+          ),
+          child: Text('Матн ё мусиқӣ иловакун...',
+              style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 13),
+              textAlign: TextAlign.center),
+        ),
+
+      // Avatar
+      const SizedBox(height: 6),
+      Container(
+        width: 52, height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF1C2333),
+          border: Border.all(color: Colors.white24, width: 1.5),
+        ),
+        child: const Icon(Icons.person_rounded, color: Colors.white38, size: 28),
       ),
+    ]);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Music Button — вақте мусиқӣ интихоб нашудааст
+// ─────────────────────────────────────────────────────────────────
+class _MusicButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _MusicButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B27),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(children: [
+        Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.neonBlue.withOpacity(0.15),
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.neonBlue.withOpacity(0.4)),
+          ),
+          child: const Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Text('Мусиқӣ илова кун',
+            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14)),
+        const Spacer(),
+        const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+      ]),
     ),
   );
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Music Tab
+//  Music Card — вақте мусиқӣ интихоб шудааст
 // ─────────────────────────────────────────────────────────────────
-class _MusicTab extends StatelessWidget {
-  final TextEditingController      searchCtrl;
-  final List<_TrackResult>         tracks;
-  final bool                       searching;
-  final SongInfo?                  selected;
-  final String                     playingId;
-  final ValueChanged<String>       onSearch;
-  final ValueChanged<_TrackResult> onSelect;
-  final ValueChanged<String>       onPlay;
-  final bool                       compact;
-
-  const _MusicTab({
-    required this.searchCtrl,
-    required this.tracks,
-    required this.searching,
-    required this.selected,
-    required this.playingId,
-    required this.onSearch,
-    required this.onSelect,
+class _MusicCard extends StatelessWidget {
+  final SongInfo     song;
+  final bool         isPlaying;
+  final VoidCallback onPlay;
+  final VoidCallback onChange;
+  final VoidCallback onRemove;
+  const _MusicCard({
+    required this.song,
+    required this.isPlaying,
     required this.onPlay,
-    this.compact = false,
+    required this.onChange,
+    required this.onRemove,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Selected preview card
-        if (selected != null && !selected!.isEmpty) ...[
-          _SelectedSongCard(
-            song:      selected!,
-            isPlaying: playingId == selected!.previewUrl && playingId.isNotEmpty,
-            onPlay:    () => onPlay(selected!.previewUrl),
-          ),
-          const SizedBox(height: 10),
-        ],
-
-        // Search field
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 20),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1C2333),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
-            ),
-            child: TextField(
-              controller: searchCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Номи суруд ё хонанда...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.35)),
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38, size: 20),
-                suffixIcon: searching
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(width: 16, height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.neonBlue)),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              onChanged: (v) {
-                if (v.length >= 2) onSearch(v);
-                if (v.isEmpty)    onSearch('');
-              },
-              onSubmitted: onSearch,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Results list
-        if (tracks.isNotEmpty)
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: compact ? 200 : 320),
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 20),
-              itemCount: tracks.length,
-              itemBuilder: (_, i) {
-                final t          = tracks[i];
-                final isSelected = selected?.title == t.title && selected?.artist == t.artist;
-                final isPlaying  = playingId == t.previewUrl && t.previewUrl.isNotEmpty;
-                return _TrackTile(
-                  track:      t,
-                  isSelected: isSelected,
-                  isPlaying:  isPlaying,
-                  onTap:      () => onSelect(t),
-                  onPlay:     () => onPlay(t.previewUrl),
-                );
-              },
-            ),
-          )
-        else if (searchCtrl.text.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 28),
-            child: Center(
-              child: Column(children: [
-                Icon(Icons.music_note_rounded, color: Colors.white.withOpacity(0.18), size: 52),
-                const SizedBox(height: 10),
-                Text('Сурудро ҷустуҷӯ кунед',
-                    style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 13)),
-                const SizedBox(height: 4),
-                Text('Пешнамоиши 30-сония мавҷуд аст',
-                    style: TextStyle(color: Colors.white.withOpacity(0.22), fontSize: 11)),
-              ]),
-            ),
-          ),
-      ],
-    );
+  String _fmt(int ms) {
+    final s = ms ~/ 1000;
+    return '${s ~/ 60}:${(s % 60).toString().padLeft(2,'0')}';
   }
-}
-
-// ─────────────────────────────────────────────────────────────────
-//  Selected Song Card — бо тугмаи ▶ / ◼
-// ─────────────────────────────────────────────────────────────────
-class _SelectedSongCard extends StatelessWidget {
-  final SongInfo song;
-  final bool     isPlaying;
-  final VoidCallback onPlay;
-  const _SelectedSongCard({required this.song, required this.isPlaying, required this.onPlay});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.neonBlue.withOpacity(0.18), Colors.transparent],
-          begin: Alignment.centerLeft, end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.neonBlue.withOpacity(0.45)),
-      ),
-      child: Row(children: [
-        // Album art
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFF161B27),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AppColors.neonBlue.withOpacity(0.35)),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        // Art
         GestureDetector(
           onTap: onPlay,
           child: Stack(alignment: Alignment.center, children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: song.artUrl.isNotEmpty
-                  ? Image.network(song.artUrl, width: 46, height: 46, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _artBox())
-                  : _artBox(),
+                  ? Image.network(song.artUrl, width: 48, height: 48, fit: BoxFit.cover)
+                  : Container(width: 48, height: 48,
+                      decoration: BoxDecoration(color: const Color(0xFF1C2333),
+                          borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.music_note_rounded, color: AppColors.neonBlue)),
             ),
-            // Play overlay
             Container(
-              width: 46, height: 46,
+              width: 48, height: 48,
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.38),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                color: Colors.white, size: 22,
-              ),
+                  color: Colors.black38, borderRadius: BorderRadius.circular(8)),
+              child: Icon(isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: Colors.white, size: 22),
             ),
           ]),
         ),
@@ -521,145 +464,30 @@ class _SelectedSongCard extends StatelessWidget {
           Text(song.artist,
               style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
               maxLines: 1, overflow: TextOverflow.ellipsis),
-          if (song.previewUrl.isEmpty)
-            Text('Пешнамоиш мавҷуд нест',
-                style: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 9)),
+          const SizedBox(height: 4),
+          Text('${_fmt(song.startMs)} – ${_fmt(song.endMs)}',
+              style: const TextStyle(color: AppColors.neonBlue, fontSize: 11, fontWeight: FontWeight.w500)),
         ])),
-        // Play / Stop button
-        GestureDetector(
-          onTap: onPlay,
-          child: Container(
-            width: 38, height: 38,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.neonBlue.withOpacity(isPlaying ? 0.35 : 0.15),
-              border: Border.all(color: AppColors.neonBlue.withOpacity(0.5)),
-            ),
-            child: Icon(
-              isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-              color: AppColors.neonBlue, size: 20,
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-
-  Widget _artBox() => Container(
-    width: 46, height: 46,
-    decoration: BoxDecoration(color: const Color(0xFF1C2333),
-        borderRadius: BorderRadius.circular(8)),
-    child: const Icon(Icons.music_note_rounded, color: Colors.white38, size: 22),
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────
-//  Track Tile — бо тугмаи ▶ барои гӯш кардан
-// ─────────────────────────────────────────────────────────────────
-class _TrackTile extends StatelessWidget {
-  final _TrackResult track;
-  final bool         isSelected;
-  final bool         isPlaying;
-  final VoidCallback onTap;
-  final VoidCallback onPlay;
-  const _TrackTile({
-    required this.track,
-    required this.isSelected,
-    required this.isPlaying,
-    required this.onTap,
-    required this.onPlay,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: AppColors.neonBlue.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.neonBlue.withOpacity(0.35)),
-              )
-            : null,
-        child: Row(children: [
-          // Album art
-          ClipRRect(
-            borderRadius: BorderRadius.circular(7),
-            child: track.artUrl.isNotEmpty
-                ? Image.network(track.artUrl, width: 44, height: 44, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _art())
-                : _art(),
-          ),
-          const SizedBox(width: 10),
-          // Title + artist
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(track.title,
-                style: TextStyle(
-                  color: isSelected ? AppColors.neonBlue : Colors.white,
-                  fontWeight: FontWeight.w500, fontSize: 13),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(track.artist,
-                style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 11),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-          ])),
-          const SizedBox(width: 8),
-          // ▶ / ◼ play button
+        // Change / Remove
+        Column(children: [
           GestureDetector(
-            onTap: onPlay,
-            behavior: HitTestBehavior.opaque,
+            onTap: onChange,
             child: Container(
-              width: 34, height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isPlaying
-                    ? AppColors.neonBlue.withOpacity(0.25)
-                    : Colors.white.withOpacity(0.08),
-                border: Border.all(
-                  color: isPlaying ? AppColors.neonBlue : Colors.white24,
-                ),
+                color: Colors.white.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                color: isPlaying ? AppColors.neonBlue : Colors.white54,
-                size: 18,
-              ),
+              child: const Text('Иваз', style: TextStyle(color: Colors.white60, fontSize: 11)),
             ),
           ),
-          if (isSelected) ...[
-            const SizedBox(width: 6),
-            const Icon(Icons.check_circle_rounded, color: AppColors.neonBlue, size: 18),
-          ],
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: onRemove,
+            child: const Icon(Icons.close_rounded, color: Colors.white38, size: 18),
+          ),
         ]),
-      ),
-    );
-  }
-
-  Widget _art() => Container(
-    width: 44, height: 44,
-    decoration: BoxDecoration(color: const Color(0xFF1C2333),
-        borderRadius: BorderRadius.circular(7)),
-    child: const Icon(Icons.music_note_rounded, color: Colors.white24, size: 20),
+      ]),
+    ]),
   );
-}
-
-// ─────────────────────────────────────────────────────────────────
-//  Track result (local model)
-// ─────────────────────────────────────────────────────────────────
-class _TrackResult {
-  final String id;
-  final String title;
-  final String artist;
-  final String artUrl;
-  final String previewUrl; // 30-sec mp3 аз iTunes
-  const _TrackResult({
-    required this.id,
-    required this.title,
-    required this.artist,
-    required this.artUrl,
-    required this.previewUrl,
-  });
 }
