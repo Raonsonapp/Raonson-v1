@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -161,6 +163,7 @@ class _ChatView extends StatelessWidget {
               myAvatar:   myAvatar,
               myNote:     notes.myNote,
               mySong:     notes.mySong,
+              hasNote:    notes.hasMyNote,
               friends:    notes.friends,
               onMyTap:    onMyNoteTap,
             ),
@@ -220,6 +223,7 @@ class _NotesRow extends StatelessWidget {
   final String         myAvatar;
   final String         myNote;
   final SongInfo       mySong;
+  final bool           hasNote;
   final List<NoteModel> friends;
   final VoidCallback   onMyTap;
 
@@ -227,6 +231,7 @@ class _NotesRow extends StatelessWidget {
     required this.myAvatar,
     required this.myNote,
     required this.mySong,
+    required this.hasNote,
     required this.friends,
     required this.onMyTap,
   });
@@ -241,10 +246,11 @@ class _NotesRow extends StatelessWidget {
         children: [
           // ── My note bubble ──
           _MyNoteBubble(
-            avatar: myAvatar,
-            myNote: myNote,
-            mySong: mySong,
-            onTap:  onMyTap,
+            avatar:  myAvatar,
+            myNote:  myNote,
+            mySong:  mySong,
+            hasNote: hasNote,
+            onTap:   onMyTap,
           ),
           // ── Friends' note bubbles ──
           ...friends.map((n) => _FriendNoteBubble(note: n)),
@@ -261,20 +267,21 @@ class _MyNoteBubble extends StatelessWidget {
   final String       avatar;
   final String       myNote;
   final SongInfo     mySong;
+  final bool         hasNote;
   final VoidCallback onTap;
 
   const _MyNoteBubble({
     required this.avatar,
     required this.myNote,
     required this.mySong,
+    required this.hasNote,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasNote = myNote.isNotEmpty || !mySong.isEmpty;
-    final note    = myNote;
-    final song    = mySong;
+    final note = myNote;
+    final song = mySong;
 
     return GestureDetector(
       onTap: onTap,
@@ -353,11 +360,56 @@ class _MyNoteBubble extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Friend Note bubble
+//  Friend Note bubble — бо овоз пахш кардан
 // ─────────────────────────────────────────────────────────────────
-class _FriendNoteBubble extends StatelessWidget {
+class _FriendNoteBubble extends StatefulWidget {
   final NoteModel note;
   const _FriendNoteBubble({required this.note});
+  @override
+  State<_FriendNoteBubble> createState() => _FriendNoteBubbleState();
+}
+
+class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
+  final _player = AudioPlayer();
+  bool  _playing = false;
+  StreamSubscription? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = _player.onPlayerComplete.listen((_) {
+      if (mounted) setState(() => _playing = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _player.stop();
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    final s = widget.note.song;
+    if (s.previewUrl.isEmpty) return;
+    if (_playing) {
+      await _player.pause();
+      setState(() => _playing = false);
+    } else {
+      await _player.play(UrlSource(s.previewUrl));
+      await _player.seek(Duration(milliseconds: s.startMs));
+      setState(() => _playing = true);
+      // Auto-stop at segment end
+      final segDuration = s.endMs - s.startMs;
+      Future.delayed(Duration(milliseconds: segDuration), () {
+        if (mounted && _playing) {
+          _player.stop();
+          setState(() => _playing = false);
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +420,15 @@ class _FriendNoteBubble extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            _SpeechBubble(text: note.text, song: note.hasSong ? note.song : null, isMine: false),
+            GestureDetector(
+              onTap: widget.note.hasSong ? _toggle : null,
+              child: _SpeechBubble(
+                text:      widget.note.text,
+                song:      widget.note.hasSong ? widget.note.song : null,
+                isMine:    false,
+                isPlaying: _playing,
+              ),
+            ),
             const SizedBox(height: 5),
             Container(
               width: 54, height: 54,
@@ -377,18 +437,17 @@ class _FriendNoteBubble extends StatelessWidget {
                 border: Border.all(color: Colors.white30, width: 1.5),
               ),
               child: ClipOval(
-                child: note.avatar.isNotEmpty
-                    ? Image.network(note.avatar, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder())
-                    : _placeholder(),
+                child: widget.note.avatar.isNotEmpty
+                    ? Image.network(widget.note.avatar, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _ph())
+                    : _ph(),
               ),
             ),
             const SizedBox(height: 5),
             Text(
-              note.username,
+              widget.note.username,
               style: const TextStyle(color: Colors.white70, fontSize: 10),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: 1, overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
           ],
@@ -397,10 +456,8 @@ class _FriendNoteBubble extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-    color: AppColors.card,
-    child: const Icon(Icons.person, color: Colors.white38, size: 26),
-  );
+  Widget _ph() => Container(color: AppColors.card,
+      child: const Icon(Icons.person, color: Colors.white38, size: 26));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -409,8 +466,9 @@ class _FriendNoteBubble extends StatelessWidget {
 class _SpeechBubble extends StatelessWidget {
   final String    text;
   final SongInfo? song;
-  final bool isMine;
-  const _SpeechBubble({required this.text, this.song, required this.isMine});
+  final bool      isMine;
+  final bool      isPlaying;
+  const _SpeechBubble({required this.text, this.song, required this.isMine, this.isPlaying = false});
 
   @override
   Widget build(BuildContext context) {
@@ -457,7 +515,8 @@ class _SpeechBubble extends StatelessWidget {
                       ),
                     )
                   else
-                    const Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 12),
+                    Icon(isPlaying ? Icons.pause_rounded : Icons.music_note_rounded,
+                      color: AppColors.neonBlue, size: 12),
                   const SizedBox(width: 3),
                   Flexible(
                     child: Text(
