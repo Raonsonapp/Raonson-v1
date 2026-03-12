@@ -66,7 +66,10 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
-      builder: (_) => MusicPickerSheet(initial: _song),
+      builder: (_) => MusicPickerSheet(
+        initial:    _song,
+        noteText:   _txt.text.trim(),
+      ),
     );
     if (result != null && mounted) setState(() => _song = result);
   }
