@@ -24,6 +24,9 @@ const UserSchema = new mongoose.Schema(
       artist:     { type: String, default: "" },
       artUrl:     { type: String, default: "" },
       previewUrl: { type: String, default: "" },
+      trackMs:    { type: Number, default: 0 },   // total duration ms
+      startMs:    { type: Number, default: 0 },   // segment start ms
+      endMs:      { type: Number, default: 30000 }, // segment end ms (default 30s)
     },
 
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
