@@ -3,10 +3,19 @@ import { Post } from "../models/post.model.js";
 
 export async function getProfile(req, res) {
   try {
-    const user = await User.findOne({ username: req.params.username })
+    let user = await User.findOne({ username: req.params.username })
       .select("-password");
 
     if (!user) return res.status(404).json({ message: "Profile not found" });
+
+    // Auto-clear expired note
+    if (user.noteExpiresAt && user.noteExpiresAt < new Date()) {
+      user = await User.findByIdAndUpdate(
+        user._id,
+        { note: "", noteSong: { title: "", artist: "", artUrl: "", previewUrl: "", trackMs: 0, startMs: 0, endMs: 30000 }, noteExpiresAt: null },
+        { new: true }
+      ).select("-password");
+    }
 
     const posts = await Post.find({ user: user._id })
       .select("media likes commentsCount createdAt")
@@ -22,8 +31,17 @@ export async function getProfile(req, res) {
 
 export async function getMyProfile(req, res) {
   try {
-    const user = await User.findById(req.user._id).select("-password");
+    let user = await User.findById(req.user._id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Auto-clear expired note
+    if (user.noteExpiresAt && user.noteExpiresAt < new Date()) {
+      user = await User.findByIdAndUpdate(
+        req.user._id,
+        { note: "", noteSong: { title: "", artist: "", artUrl: "", previewUrl: "", trackMs: 0, startMs: 0, endMs: 30000 }, noteExpiresAt: null },
+        { new: true }
+      ).select("-password");
+    }
 
     const posts = await Post.find({ user: user._id })
       .select("media likes commentsCount createdAt")
@@ -69,7 +87,7 @@ export async function setNote(req, res) {
 
     // song = { title, artist, artUrl } or null
     const noteSong = song && (song.title || song.artist)
-      ? { title: song.title || '', artist: song.artist || '', artUrl: song.artUrl || '', previewUrl: song.previewUrl || '' }
+      ? { title: song.title || '', artist: song.artist || '', artUrl: song.artUrl || '', previewUrl: song.previewUrl || '', trackMs: song.trackMs || 0, startMs: song.startMs || 0, endMs: song.endMs || 30000 }
       : { title: '', artist: '', artUrl: '' };
 
     // Expires only if there's content
@@ -110,4 +128,4 @@ export async function getFriendsNotes(req, res) {
     console.error(e);
     res.status(500).json({ message: 'Get notes failed' });
   }
-      }
+  }
