@@ -23,13 +23,55 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
   final _ctrl      = TextEditingController();
   List<_Track> _tracks    = [];
   bool         _searching = false;
+  bool         _isTrending = false; // trending буд ё ҷустуҷӯ
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrending();
+  }
+
+  // Рекомендацияи аввалӣ — top hits
+  Future<void> _loadTrending() async {
+    setState(() => _searching = true);
+    try {
+      final uri = Uri.parse(
+        'https://itunes.apple.com/search'
+        '?term=top+hits+2024&media=music&limit=20&country=US',
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 && mounted) {
+        final j = jsonDecode(res.body);
+        setState(() {
+          _isTrending = true;
+          _tracks = (j['results'] as List? ?? [])
+              .where((e) => (e['previewUrl'] ?? '').isNotEmpty)
+              .map((e) => _Track(
+                    id:         '${e['trackId'] ?? ''}',
+                    title:      e['trackName']     ?? '',
+                    artist:     e['artistName']    ?? '',
+                    artUrl:     e['artworkUrl100'] ?? '',
+                    previewUrl: e['previewUrl']    ?? '',
+                    trackMs:    ((e['trackTimeMillis'] as num?) ?? 210000).toInt(),
+                  ))
+              .toList();
+        });
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
 
   @override
   void dispose() { _ctrl.dispose(); super.dispose(); }
 
   Future<void> _search(String q) async {
-    if (q.trim().length < 2) { setState(() => _tracks = []); return; }
-    setState(() => _searching = true);
+    if (q.trim().length < 2) {
+      setState(() { _isTrending = false; _tracks = []; });
+      _loadTrending();
+      return;
+    }
+    setState(() { _searching = true; _isTrending = false; });
     try {
       final uri = Uri.parse(
         'https://itunes.apple.com/search'
@@ -116,6 +158,27 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
         ),
         const SizedBox(height: 8),
         const Divider(color: Colors.white10, height: 1),
+
+        // Label
+        if (_tracks.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+            child: Row(children: [
+              if (_isTrending)
+                const Icon(Icons.trending_up_rounded,
+                    color: Color(0xFF00A8FF), size: 15),
+              if (_isTrending) const SizedBox(width: 5),
+              Text(
+                _isTrending ? 'Рекомендация' : 'Натиҷаҳо',
+                style: TextStyle(
+                  color: _isTrending
+                      ? const Color(0xFF00A8FF)
+                      : Colors.white.withOpacity(0.4),
+                  fontSize: 12, fontWeight: FontWeight.w600,
+                ),
+              ),
+            ]),
+          ),
 
         // List
         Expanded(
@@ -892,28 +955,14 @@ class _DurationBadge extends StatelessWidget {
   int get _secs => windowMs ~/ 1000;
 
   Future<void> _pick(BuildContext context) async {
-    // Барои дастрасии overlay дар болои waveform
-    final RenderBox box = context.findRenderObject() as RenderBox;
-    final Offset    pos = box.localToGlobal(Offset.zero);
-
-    final picked = await showGeneralDialog<int>(
-      context:   context,
-      barrierDismissible: true,
-      barrierLabel: '',
+    final picked = await showDialog<int>(
+      context: context,
       barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 180),
-      transitionBuilder: (_, anim, __, child) => ScaleTransition(
-        scale: CurvedAnimation(parent: anim, curve: Curves.easeOut),
-        alignment: Alignment.topRight,
-        child: FadeTransition(opacity: anim, child: child),
-      ),
-      pageBuilder: (ctx, _, __) => Align(
-        alignment: Alignment.topRight,
-        child: Padding(
-          padding: EdgeInsets.only(
-            top:   pos.dy + box.size.height + 6,
-            right: 16,
-          ),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(0),
+        child: Align(
+          alignment: Alignment.center,
           child: _WheelPopup(initSecs: _secs),
         ),
       ),
