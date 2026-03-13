@@ -163,8 +163,8 @@ class _SegmentScreen extends StatefulWidget {
 class _SegmentScreenState extends State<_SegmentScreen> {
   final _player = AudioPlayer();
 
-  // Дарозии тирезаи интихоб — 15 сония
-  static const int _windowMs = 15000;
+  // Дарозии тирезаи интихоб — корбар интихоб мекунад
+  int _windowMs = 15000;
   // iTunes preview = 30 сония ҳамеша
   static const int _previewMs = 30000;
 
@@ -242,6 +242,19 @@ class _SegmentScreenState extends State<_SegmentScreen> {
     setState(() => _startMs = newStartMs.clamp(0, _maxStart));
     await _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
     if (!_playing) await _play();
+  }
+
+  // Корбар давомнокии тирезаро иваз кард
+  void _onDuration(int ms) {
+    setState(() {
+      _windowMs = ms;
+      // Ислоҳи startMs агар аз охири суруд гузашта бошад
+      if (_startMs + _windowMs > _trackMs) {
+        _startMs = (_trackMs - _windowMs).clamp(0, _trackMs);
+      }
+    });
+    _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
+    if (!_playing) _play();
   }
 
   void _confirm() => Navigator.pop(context, SongInfo(
@@ -360,12 +373,13 @@ class _SegmentScreenState extends State<_SegmentScreen> {
 
             // ── WAVEFORM TIMELINE ──
             _WaveformTimeline(
-              trackMs:   _trackMs,
-              startMs:   _startMs,
-              windowMs:  _windowMs,
+              trackMs:    _trackMs,
+              startMs:    _startMs,
+              windowMs:   _windowMs,
               playheadMs: _playheadMs,
-              onMove:    _onMove,
-              fmt:       _fmt,
+              onMove:     _onMove,
+              onDuration: _onDuration,
+              fmt:        _fmt,
             ),
           ]),
         ),
@@ -386,6 +400,7 @@ class _WaveformTimeline extends StatefulWidget {
   final int    windowMs;
   final int    playheadMs;
   final ValueChanged<int> onMove;
+  final ValueChanged<int> onDuration;
   final String Function(int) fmt;
 
   const _WaveformTimeline({
@@ -419,12 +434,18 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-      // Вақтҳои интихоб
+      // Вақтҳои интихоб + icon-и давомнокӣ
       Row(children: [
         _TimeChip(widget.fmt(startMs), color: const Color(0xFF00A8FF)),
         Text(' – ', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11)),
         _TimeChip(widget.fmt(endMs),   color: const Color(0xFF00E676)),
         const Spacer(),
+        // Icon-и давомнокӣ — занед → интихоб
+        _DurationBadge(
+          windowMs:   widget.windowMs,
+          onDuration: widget.onDuration,
+        ),
+        const SizedBox(width: 8),
         Text(widget.fmt(trackMs),
             style: TextStyle(color: Colors.white.withOpacity(0.28), fontSize: 11)),
       ]),
@@ -858,3 +879,204 @@ const _kGrad = LinearGradient(
   begin:  Alignment.centerLeft,
   end:    Alignment.centerRight,
 );
+
+// ─────────────────────────────────────────────────────────────────
+//  Duration Badge — давраи клики, барабани 30..45 сония
+// ─────────────────────────────────────────────────────────────────
+class _DurationBadge extends StatelessWidget {
+  final int windowMs;
+  final ValueChanged<int> onDuration;
+  const _DurationBadge({required this.windowMs, required this.onDuration});
+
+  int get _secs => windowMs ~/ 1000;
+
+  Future<void> _pick(BuildContext context) async {
+    // Барои дастрасии overlay дар болои waveform
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset    pos = box.localToGlobal(Offset.zero);
+
+    final picked = await showGeneralDialog<int>(
+      context:   context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 180),
+      transitionBuilder: (_, anim, __, child) => ScaleTransition(
+        scale: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+        alignment: Alignment.topRight,
+        child: FadeTransition(opacity: anim, child: child),
+      ),
+      pageBuilder: (ctx, _, __) => Align(
+        alignment: Alignment.topRight,
+        child: Padding(
+          padding: EdgeInsets.only(
+            top:   pos.dy + box.size.height + 6,
+            right: 16,
+          ),
+          child: _WheelPopup(initSecs: _secs),
+        ),
+      ),
+    );
+    if (picked != null) onDuration(picked * 1000);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _pick(context),
+      child: Container(
+        width: 46, height: 46,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF00A8FF), Color(0xFF00E676)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF00A8FF).withOpacity(0.35),
+              blurRadius: 10, spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text('${_secs}с',
+              style: const TextStyle(
+                color: Colors.white, fontSize: 13,
+                fontWeight: FontWeight.bold)),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Wheel Popup — барабани рақамҳо 30..45
+// ─────────────────────────────────────────────────────────────────
+class _WheelPopup extends StatefulWidget {
+  final int initSecs;
+  const _WheelPopup({required this.initSecs});
+
+  @override
+  State<_WheelPopup> createState() => _WheelPopupState();
+}
+
+class _WheelPopupState extends State<_WheelPopup> {
+  // 30..45 → 16 қадам
+  static const int _min = 30;
+  static const int _max = 45;
+  late final FixedExtentScrollController _ctrl;
+  late int _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initSecs.clamp(_min, _max);
+    _ctrl = FixedExtentScrollController(
+        initialItem: _selected - _min);
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width:  110,
+        height: 230,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D1117),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.5),
+                blurRadius: 24, spreadRadius: 2),
+          ],
+        ),
+        child: Column(children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            child: Text('Сония',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 12, fontWeight: FontWeight.w500)),
+          ),
+
+          // Wheel
+          Expanded(
+            child: Stack(alignment: Alignment.center, children: [
+              // Highlight band
+              Container(
+                height: 44,
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00A8FF), Color(0xFF00E676)],
+                    begin: Alignment.centerLeft,
+                    end:   Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              // Numbers
+              ListWheelScrollView.useDelegate(
+                controller: _ctrl,
+                itemExtent: 44,
+                diameterRatio: 1.6,
+                physics: const FixedExtentScrollPhysics(),
+                onSelectedItemChanged: (i) =>
+                    setState(() => _selected = _min + i),
+                childDelegate: ListWheelChildBuilderDelegate(
+                  childCount: _max - _min + 1,
+                  builder: (_, i) {
+                    final secs    = _min + i;
+                    final active  = secs == _selected;
+                    return Center(
+                      child: Text('$secs',
+                          style: TextStyle(
+                            color: active
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.35),
+                            fontSize:   active ? 22 : 17,
+                            fontWeight: active
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          )),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+
+          // OK button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context, _selected),
+              child: Container(
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00A8FF), Color(0xFF00E676)],
+                    begin: Alignment.centerLeft,
+                    end:   Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: Text('OK',
+                      style: TextStyle(color: Colors.white,
+                          fontWeight: FontWeight.bold, fontSize: 14)),
+                ),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
