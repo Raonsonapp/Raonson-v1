@@ -405,7 +405,8 @@ class _WaveformTimeline extends StatefulWidget {
 
   const _WaveformTimeline({
     required this.trackMs, required this.startMs, required this.windowMs,
-    required this.playheadMs, required this.onMove, required this.fmt,
+    required this.playheadMs, required this.onMove, required this.onDuration,
+    required this.fmt,
   });
 
   @override
