@@ -310,11 +310,10 @@ class _SegmentScreenState extends State<_SegmentScreen> {
   // Корбар давомнокии тирезаро иваз кард
   void _onDuration(int ms) {
     setState(() {
-      _windowMs = ms;
-      // Ислоҳи startMs агар аз охири суруд гузашта бошад
-      if (_startMs + _windowMs > _trackMs) {
-        _startMs = (_trackMs - _windowMs).clamp(0, _trackMs);
-      }
+      // windowMs ҳеҷ гоҳ аз trackMs зиёд шуда наметавонад
+      _windowMs = ms.clamp(1000, _trackMs);
+      // startMs бояд ҳамеша дар доира монад
+      _startMs  = _startMs.clamp(0, (_trackMs - _windowMs).clamp(0, _trackMs));
     });
     _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
     if (!_playing) _play();
@@ -517,10 +516,20 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
 
       // Вавформ
       LayoutBuilder(builder: (_, c) {
-        final W      = c.maxWidth;
-        final winX   = startMs / trackMs * W;
-        final winW   = (windowMs / trackMs * W).clamp(12.0, W);
-        final headX  = widget.playheadMs / trackMs * W;
+        final W = c.maxWidth;
+        if (W <= 0) return const SizedBox.shrink();
+
+        // Ҳамаи қиматҳо clamp мешаванд — overflow имконнопазир
+        final rawWinW = windowMs / trackMs * W;
+        final winW    = rawWinW.clamp(8.0, W);
+        final maxWinX = (W - winW).clamp(0.0, W);
+        final winX    = (startMs / trackMs * W).clamp(0.0, maxWinX);
+        final winEnd  = (winX + winW).clamp(0.0, W);
+        final headX   = (widget.playheadMs / trackMs * W).clamp(2.0, W - 4);
+
+        // Дастакҳо
+        final handleL = (winX - 4).clamp(0.0, W - 8);
+        final handleR = (winEnd - 4).clamp(0.0, W - 8);
 
         return GestureDetector(
           onHorizontalDragStart: (d) {
@@ -528,12 +537,11 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
             _dragStartMs = startMs;
           },
           onHorizontalDragUpdate: (d) {
-            final dx      = d.localPosition.dx - _dragStartX;
-            final newMs   = _dragStartMs + (dx / W * trackMs).round();
+            final dx     = d.localPosition.dx - _dragStartX;
+            final newMs  = _dragStartMs + (dx / W * trackMs).round();
             widget.onMove(newMs);
           },
           onTapDown: (d) {
-            // Тат: тиреза ба ҷои зада шуда ҷаҳид меравад
             final newMs = (d.localPosition.dx / W * trackMs).round()
                         - windowMs ~/ 2;
             widget.onMove(newMs);
@@ -545,41 +553,44 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
               // Вавформи пурра
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _BarsPainter(
-                    bars: _bars, winX: winX, winW: winW),
+                  painter: _BarsPainter(bars: _bars, winX: winX, winW: winW),
                 ),
               ),
 
-              // Тира берун аз тиреза — чап
-              if (winX > 0)
-                Positioned(left: 0, top: 0, bottom: 0,
-                  width: winX,
+              // Тира — чап
+              if (winX > 1)
+                Positioned(
+                  left: 0, top: 0, bottom: 0,
+                  width: winX.clamp(0, W),
                   child: Container(color: Colors.black.withOpacity(0.55)),
                 ),
 
-              // Тира берун аз тиреза — рост
-              if (winX + winW < W)
-                Positioned(left: winX + winW, top: 0, bottom: 0, right: 0,
+              // Тира — рост
+              if (winEnd < W - 1)
+                Positioned(
+                  left: winEnd, top: 0, bottom: 0,
+                  width: (W - winEnd).clamp(0, W),
                   child: Container(color: Colors.black.withOpacity(0.55)),
                 ),
 
-              // Ҳошияи gradient тиреза
-              Positioned(left: winX, top: 0, width: winW, height: 68,
+              // Ҳошияи тиреза
+              Positioned(
+                left: winX, top: 0,
+                width: winW, height: 68,
                 child: CustomPaint(painter: _WindowBorderPainter()),
               ),
 
               // Дастаки чап
-              Positioned(left: winX - 4, top: 0, bottom: 0,
+              Positioned(left: handleL, top: 0, bottom: 0,
                 child: _DragHandle()),
 
               // Дастаки рост
-              Positioned(left: winX + winW - 4, top: 0, bottom: 0,
+              Positioned(left: handleR, top: 0, bottom: 0,
                 child: _DragHandle()),
 
               // Playhead
               Positioned(
-                left: headX.clamp(2, W - 4),
-                top: 6, bottom: 6,
+                left: headX, top: 6, bottom: 6,
                 child: Container(
                   width: 2.5,
                   decoration: BoxDecoration(
