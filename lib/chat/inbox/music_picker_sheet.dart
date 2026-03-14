@@ -246,12 +246,14 @@ class _SegmentScreenState extends State<_SegmentScreen> {
     _posSub  = _player.onPositionChanged.listen((p) {
       if (!mounted) return;
       setState(() => _previewPos = p);
-      // Тирезаи 15с тамом — аз аввали тиреза loop
-      final limit = _toPreviewMs(_startMs) + _windowMs;
+      // Сегмент тамом — loop аз аввали тиреза
+      // limit = preview позитсияи охир (на бештар аз дарозии preview)
+      final previewStart = _toPreviewMs(_startMs);
+      final previewWin   = (_windowMs.clamp(0, _previewMs - previewStart));
+      final limit        = previewStart + previewWin;
       if (p.inMilliseconds >= limit) {
-        _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
-        setState(() => _previewPos =
-            Duration(milliseconds: _toPreviewMs(_startMs)));
+        _player.seek(Duration(milliseconds: previewStart));
+        setState(() => _previewPos = Duration(milliseconds: previewStart));
       }
     });
     _doneSub = _player.onPlayerComplete.listen((_) {
@@ -273,8 +275,14 @@ class _SegmentScreenState extends State<_SegmentScreen> {
   int get _endMs    => _startMs + _windowMs;
 
   // Табдили: позитсияи суруди пурра → позитсияи preview (0..30000)
-  int _toPreviewMs(int songMs) =>
-      (songMs / _trackMs * _previewMs).round().clamp(0, _previewMs - _windowMs);
+  int _toPreviewMs(int songMs) {
+    final frac     = _trackMs > 0 ? (songMs / _trackMs) : 0.0;
+    final raw      = (frac * _previewMs).round();
+    // maxSeek: preview-ро аз охир ихтисор мекунем — агар window аз preview
+    // калонтар бошад, аз 0 мехонем (iTunes 30с-ро пурра нишон медиҳем)
+    final maxSeek  = (_previewMs - _windowMs.clamp(0, _previewMs)).clamp(0, _previewMs);
+    return raw.clamp(0, maxSeek);
+  }
 
   // Позитсияи playhead дар вавформ нисбат ба суруди пурра
   int get _playheadMs {
