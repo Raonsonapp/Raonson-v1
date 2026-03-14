@@ -284,15 +284,31 @@ class _SegmentScreenState extends State<_SegmentScreen> {
     return (_startMs + delta).clamp(_startMs, _endMs);
   }
 
+  // URL-и ба ёд гирифташуда — агар иваз нашуда бошад setSource нагӯем
+  String _loadedUrl = '';
+
   Future<void> _play() async {
     if (widget.track.previewUrl.isEmpty) return;
-    final seekTo = _toPreviewMs(_startMs);
-    await _player.play(UrlSource(widget.track.previewUrl));
-    await _player.seek(Duration(milliseconds: seekTo));
-    if (mounted) setState(() {
-      _playing = true;
-      _previewPos = Duration(milliseconds: seekTo);
-    });
+    final url    = widget.track.previewUrl;
+    final seekTo = Duration(milliseconds: _toPreviewMs(_startMs));
+
+    try {
+      if (_loadedUrl != url) {
+        // Манбаи нав — stop → setSource → seek → resume
+        await _player.stop();
+        await _player.setSource(UrlSource(url));
+        _loadedUrl = url;
+      }
+      await _player.seek(seekTo);
+      await _player.resume();
+
+      if (mounted) setState(() {
+        _playing    = true;
+        _previewPos = seekTo;
+      });
+    } catch (e) {
+      debugPrint('[MusicPlayer] _play error: $e');
+    }
   }
 
   Future<void> _togglePlay() async {
@@ -303,20 +319,29 @@ class _SegmentScreenState extends State<_SegmentScreen> {
   // Корбар тирезаро кашид → нав startMs
   Future<void> _onMove(int newStartMs) async {
     setState(() => _startMs = newStartMs.clamp(0, _maxStart));
-    await _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
-    if (!_playing) await _play();
+    // Агар манба аллакай load шудааст → танҳо seek + resume
+    if (_loadedUrl == widget.track.previewUrl) {
+      await _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
+      if (!_playing) await _player.resume();
+    } else {
+      await _play();
+    }
+    if (mounted && !_playing) setState(() => _playing = true);
   }
 
   // Корбар давомнокии тирезаро иваз кард
   void _onDuration(int ms) {
     setState(() {
-      // windowMs ҳеҷ гоҳ аз trackMs зиёд шуда наметавонад
       _windowMs = ms.clamp(1000, _trackMs);
-      // startMs бояд ҳамеша дар доира монад
       _startMs  = _startMs.clamp(0, (_trackMs - _windowMs).clamp(0, _trackMs));
     });
-    _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
-    if (!_playing) _play();
+    if (_loadedUrl == widget.track.previewUrl) {
+      _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
+      if (!_playing) _player.resume();
+    } else {
+      _play();
+    }
+
   }
 
   void _confirm() => Navigator.pop(context, SongInfo(
