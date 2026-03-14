@@ -515,7 +515,7 @@ class _UserRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
     child: Row(children: [
-      Avatar(url: user.avatar, radius: 26),
+      Avatar(imageUrl: user.avatar, size: 52),
       const SizedBox(width: 12),
       Expanded(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start, children: [
