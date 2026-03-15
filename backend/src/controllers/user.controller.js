@@ -6,7 +6,15 @@ export async function getUserById(req, res) {
   try {
     const user = await User.findById(req.params.id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+
+    // Inject isFollowing for the requesting user
+    const requestingId = req.user?._id?.toString();
+    const followerIds  = (user.followers || []).map(id => id.toString());
+    const isFollowing  = requestingId
+      ? followerIds.includes(requestingId)
+      : false;
+
+    res.json({ ...user.toObject(), isFollowing });
   } catch (e) {
     res.status(500).json({ message: "Get user failed" });
   }
