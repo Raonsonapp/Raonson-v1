@@ -1,151 +1,154 @@
 import 'dart:convert';
-import '../core/api/api_client.dart';
-import '../core/api/api_endpoints.dart';
-import '../models/user_model.dart';
-import '../models/post_model.dart';
-import '../models/reel_model.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
-class ProfileRepository {
-  final ApiClient _api;
-  ProfileRepository(this._api);
+import '../../app/app_config.dart';
+import '../../core/storage/token_storage.dart';
 
-  // ── Профили корбар ─────────────────────────────────────────────
-  // userId = 'me'       → /profile/me
-  // userId = objectId   → /users/:id   (search натиҷа ба ин мефиристад)
-  // userId = username   → /profile/:username  (legacy)
-  Future<UserModel> getProfile(String userId) async {
-    if (userId == 'me') {
-      final res = await _api.get('/profile/me');
-      if (res.statusCode >= 400) throw Exception('Profile not found');
-      final body = jsonDecode(res.body);
-      final userJson = body is Map && body.containsKey('user')
-          ? body['user'] : body;
-      return UserModel.fromJson(userJson as Map<String, dynamic>);
-    }
+class UploadManager {
+  // Cloudinary direct upload (no backend needed!)
+  static const _cloudName = 'dtp3kzqxi';
+  static const _uploadPreset = 'raonson_preset'; // Create this in Cloudinary!
 
-    // MongoDB ObjectId → /users/:id (findById)
-    if (_isObjectId(userId)) {
-      final res = await _api.get('/users/$userId');
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final userJson = body is Map && body.containsKey('user')
-            ? body['user'] : body;
-        return UserModel.fromJson(userJson as Map<String, dynamic>);
-      }
-    }
+  String _ext(File file) => file.path.split('.').last.toLowerCase();
 
-    // Username → /profile/:username
-    final res = await _api.get('/profile/$userId');
-    if (res.statusCode >= 400) throw Exception('User not found');
-    final body = jsonDecode(res.body);
-    final userJson = body is Map && body.containsKey('user')
-        ? body['user'] : body;
-    return UserModel.fromJson(userJson as Map<String, dynamic>);
+  bool _isVideo(File file) {
+    const videos = ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'];
+    return videos.contains(_ext(file));
   }
 
-  // 24 hex char ObjectId?
-  bool _isObjectId(String s) =>
-      s.length == 24 && RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(s);
+  String _typeStr(File file) => _isVideo(file) ? 'video' : 'image';
 
-  // ── Профилро таҳрир кун ───────────────────────────────────────
-  Future<void> updateProfile({
-    required String username,
-    String? bio,
-    bool? isPrivate,
+  MediaType _contentType(File file) {
+    final ext = _ext(file);
+    const videos = ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'];
+    if (videos.contains(ext)) return MediaType('video', 'mp4');
+    if (ext == 'png') return MediaType('image', 'png');
+    return MediaType('image', 'jpeg');
+  }
+
+  /// Upload directly to Cloudinary (most reliable!)
+  Future<String> _uploadToCloudinary(File file) async {
+    final resourceType = _isVideo(file) ? 'video' : 'image';
+    final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/$_cloudName/$resourceType/upload');
+
+    final request = http.MultipartRequest('POST', uri);
+    request.fields['upload_preset'] = _uploadPreset;
+    request.fields['folder'] = 'raonson';
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'file',
+      file.path,
+      contentType: _contentType(file),
+    ));
+
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    final bodyStr = await streamed.stream.bytesToString();
+
+    if (streamed.statusCode >= 400) {
+      print('Cloudinary error ${streamed.statusCode}: $bodyStr');
+      return await _uploadToBackend(file);
+    }
+
+    final body = jsonDecode(bodyStr);
+    final url = body['secure_url'] as String?;
+    if (url == null || url.isEmpty) {
+      print('Cloudinary: no secure_url in response: $bodyStr');
+      return await _uploadToBackend(file);
+    }
+    print('Cloudinary upload success: $url');
+    return url;
+  }
+
+  /// Fallback: upload via backend
+  Future<String> _uploadToBackend(File file) async {
+    final token = await TokenStorage.getAccessToken();
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
+
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token';
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'file', file.path,
+      contentType: _contentType(file),
+    ));
+
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    final bodyStr = await streamed.stream.bytesToString();
+    final body = jsonDecode(bodyStr);
+
+    if (streamed.statusCode >= 400) {
+      throw Exception('Upload failed: ${body['error'] ?? streamed.statusCode}');
+    }
+
+    String url = (body['url'] ?? '') as String;
+    if (url.isEmpty) throw Exception('Upload returned empty URL');
+    if (url.startsWith('/')) url = '${AppConfig.apiBaseUrl}$url';
+    return url;
+  }
+
+  /// Upload avatar image — returns URL
+  Future<String> uploadAvatar(File file) => _uploadToCloudinary(file);
+
+  Future<void> uploadPost({
+    required List<File> media,
+    required String caption,
+    void Function(double)? onProgress,
   }) async {
-    await _api.put(ApiEndpoints.updateProfile, body: {
-      'username': username,
-      if (bio != null) 'bio': bio,
-      if (isPrivate != null) 'isPrivate': isPrivate,
-    });
-  }
+    final token = await TokenStorage.getAccessToken();
+    final List<Map<String, String>> mediaList = [];
 
-  // ── Постҳои корбар ────────────────────────────────────────────
-  Future<List<PostModel>> getUserPosts(String userId) async {
-    if (userId == 'me') {
-      final res = await _api.get('/profile/me');
-      if (res.statusCode >= 400) return [];
-      final body = jsonDecode(res.body);
-      if (body is Map && body.containsKey('posts')) {
-        final List list = body['posts'] as List;
-        return list.map((e) => _parsePost(e as Map<String, dynamic>)).toList();
-      }
-      return [];
+    for (int i = 0; i < media.length; i++) {
+      final url = await _uploadToCloudinary(media[i]);
+      mediaList.add({'url': url, 'type': _typeStr(media[i])});
+      onProgress?.call((i + 1) / media.length * 0.8);
     }
-    // ObjectId or username → /users/:id/posts
-    final id = _isObjectId(userId) ? userId : userId;
-    final res = await _api.get('/users/$id/posts');
-    if (res.statusCode >= 400) return [];
-    final body = jsonDecode(res.body);
-    final List list = body is List ? body : (body['posts'] ?? []);
-    return list.map((e) => _parsePost(e as Map<String, dynamic>)).toList();
+
+    if (mediaList.isEmpty) throw Exception('Файл upload нашуд');
+
+    final res = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/posts'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'caption': caption, 'media': mediaList}),
+    ).timeout(const Duration(seconds: 60));
+
+    onProgress?.call(1.0);
+    if (res.statusCode >= 400) {
+      final err = jsonDecode(res.body);
+      throw Exception(err['message'] ?? 'Post yaratish xato');
+    }
   }
 
-  PostModel _parsePost(Map<String, dynamic> json) {
-    final rawMedia = (json['media'] ?? []) as List;
-    final media = rawMedia.map((m) {
-      final map = m as Map;
-      return <String, String>{
-        'url':  (map['url']  ?? '').toString(),
-        'type': (map['type'] ?? 'image').toString(),
-      };
-    }).toList();
-    return PostModel(
-      id:            (json['_id'] ?? '').toString(),
-      user:          json['user'] != null
-          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
-          : const UserModel(
-              id: '', username: '', avatar: '', verified: false,
-              isPrivate: false, postsCount: 0,
-              followersCount: 0, followingCount: 0),
-      caption:       (json['caption'] ?? '').toString(),
-      media:         media,
-      likesCount:    json['likesCount'] ??
-          (json['likes'] is List ? (json['likes'] as List).length : 0),
-      commentsCount: json['commentsCount'] ?? 0,
-      liked:         json['liked'] ?? false,
-      saved:         json['saved'] ?? false,
-      createdAt:     DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
-    );
-  }
+  Future<void> uploadStory({
+    required File file,
+    String caption = '',
+    void Function(double)? onProgress,
+  }) async {
+    final token = await TokenStorage.getAccessToken();
+    final url = await _uploadToCloudinary(file);
+    onProgress?.call(0.7);
 
-  // ── Рилҳои корбар ─────────────────────────────────────────────
-  Future<List<ReelModel>> getUserReels(String userId) async {
-    final id = userId == 'me' ? 'me' : userId;
-    try {
-      final res = await _api.get('/users/$id/reels');
-      if (res.statusCode >= 400) return [];
-      final body = jsonDecode(res.body);
-      final List list = body is List ? body : (body['reels'] ?? []);
-      return list
-          .map((e) => ReelModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) { return []; }
-  }
+    final res = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/stories'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'mediaUrl': url,
+        'mediaType': _typeStr(file),
+        'caption': caption,
+      }),
+    ).timeout(const Duration(seconds: 60));
 
-  // ── Follow / Unfollow ─────────────────────────────────────────
-  Future<void> follow(String userId) async =>
-      _api.post(ApiEndpoints.follow(userId));
-
-  Future<void> unfollow(String userId) async =>
-      _api.post(ApiEndpoints.unfollow(userId));
-
-  // ── Followers / Following ─────────────────────────────────────
-  Future<List<UserModel>> getFollowers(String userId) async {
-    final res = await _api.get('/users/$userId/followers');
-    if (res.statusCode >= 400) return [];
-    final List list = jsonDecode(res.body);
-    return list
-        .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<List<UserModel>> getFollowing(String userId) async {
-    final res = await _api.get('/users/$userId/following');
-    if (res.statusCode >= 400) return [];
-    final List list = jsonDecode(res.body);
-    return list
-        .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    onProgress?.call(1.0);
+    if (res.statusCode >= 400) {
+      throw Exception('Story: ${jsonDecode(res.body)['message']}');
+    }
   }
 }
