@@ -89,6 +89,9 @@ class UploadManager {
     return url;
   }
 
+  /// Upload avatar image — returns URL
+  Future<String> uploadAvatar(File file) => _uploadToCloudinary(file);
+
   Future<void> uploadPost({
     required List<File> media,
     required String caption,
