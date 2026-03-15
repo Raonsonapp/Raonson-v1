@@ -1,3 +1,4 @@
+import '../../models/note_model.dart';
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 import '../../models/user_model.dart';
@@ -16,6 +17,8 @@ class EditProfileController extends ChangeNotifier {
   String? error;
 
   late UserModel _original;
+
+  String? get currentAvatarUrl => _original.avatar.isNotEmpty ? _original.avatar : null;
 
   Future<void> loadCurrentProfile(String userId) async {
     isLoading = true;
@@ -40,15 +43,16 @@ class EditProfileController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> save() async {
+  Future<bool> save({dynamic bioSong, String? avatarUrl}) async {
     isSaving = true;
     notifyListeners();
 
     try {
       await _repo.updateProfile(
-        username: usernameController.text.trim(),
-        bio: bioController.text.trim(),
+        username:  usernameController.text.trim(),
+        bio:       bioController.text.trim(),
         isPrivate: isPrivate,
+        avatar:    avatarUrl,
       );
       return true;
     } catch (e) {
