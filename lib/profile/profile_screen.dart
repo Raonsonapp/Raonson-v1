@@ -11,6 +11,7 @@ import '../widgets/verified_badge.dart';
 import '../chat/room/chat_room_screen.dart';
 import 'edit/edit_profile_screen.dart';
 import 'profile_controller.dart';
+import '../settings/settings_screen.dart';
 import 'profile_repository.dart';
 import '../core/api/api_client.dart';
 
@@ -153,11 +154,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                   color: Colors.white, size: 20),
               onPressed: _share,
             ),
-            // More
+            // More → settings
             IconButton(
               icon: const Icon(Icons.more_horiz_rounded,
                   color: Colors.white, size: 22),
-              onPressed: () {},
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen())),
             ),
           ]),
         ),
@@ -243,9 +245,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
         child: _isMe
             ? _OwnButtons(
-                onEdit: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) =>
-                        EditProfileScreen(userId: widget.userId))),
+                onEdit: () async {
+                  final updated = await Navigator.push<bool>(context,
+                      MaterialPageRoute(builder: (_) =>
+                          EditProfileScreen(userId: widget.userId)));
+                  if (updated == true && mounted) _ctrl.loadProfile();
+                },
                 onShare: _share,
                 onVerify: !user.verified ? _showVerifySheet : null,
               )
