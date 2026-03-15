@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/user_model.dart';
@@ -10,17 +9,45 @@ class ProfileRepository {
   final ApiClient _api;
   ProfileRepository(this._api);
 
+  // ── Профили корбар ─────────────────────────────────────────────
+  // userId = 'me'       → /profile/me
+  // userId = objectId   → /users/:id   (search натиҷа ба ин мефиристад)
+  // userId = username   → /profile/:username  (legacy)
   Future<UserModel> getProfile(String userId) async {
-    final endpoint = userId == 'me' ? '/profile/me' : '/profile/$userId';
-    final res = await _api.get(endpoint);
-    if (res.statusCode >= 400) throw Exception('Profile not found');
+    if (userId == 'me') {
+      final res = await _api.get('/profile/me');
+      if (res.statusCode >= 400) throw Exception('Profile not found');
+      final body = jsonDecode(res.body);
+      final userJson = body is Map && body.containsKey('user')
+          ? body['user'] : body;
+      return UserModel.fromJson(userJson as Map<String, dynamic>);
+    }
+
+    // MongoDB ObjectId → /users/:id (findById)
+    if (_isObjectId(userId)) {
+      final res = await _api.get('/users/$userId');
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final userJson = body is Map && body.containsKey('user')
+            ? body['user'] : body;
+        return UserModel.fromJson(userJson as Map<String, dynamic>);
+      }
+    }
+
+    // Username → /profile/:username
+    final res = await _api.get('/profile/$userId');
+    if (res.statusCode >= 400) throw Exception('User not found');
     final body = jsonDecode(res.body);
     final userJson = body is Map && body.containsKey('user')
-        ? body['user']
-        : body;
+        ? body['user'] : body;
     return UserModel.fromJson(userJson as Map<String, dynamic>);
   }
 
+  // 24 hex char ObjectId?
+  bool _isObjectId(String s) =>
+      s.length == 24 && RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(s);
+
+  // ── Профилро таҳрир кун ───────────────────────────────────────
   Future<void> updateProfile({
     required String username,
     String? bio,
@@ -33,8 +60,8 @@ class ProfileRepository {
     });
   }
 
+  // ── Постҳои корбар ────────────────────────────────────────────
   Future<List<PostModel>> getUserPosts(String userId) async {
-    // For own profile use /profile/me which returns {user, posts}
     if (userId == 'me') {
       final res = await _api.get('/profile/me');
       if (res.statusCode >= 400) return [];
@@ -45,7 +72,9 @@ class ProfileRepository {
       }
       return [];
     }
-    final res = await _api.get('/users/$userId/posts');
+    // ObjectId or username → /users/:id/posts
+    final id = _isObjectId(userId) ? userId : userId;
+    final res = await _api.get('/users/$id/posts');
     if (res.statusCode >= 400) return [];
     final body = jsonDecode(res.body);
     final List list = body is List ? body : (body['posts'] ?? []);
@@ -57,28 +86,30 @@ class ProfileRepository {
     final media = rawMedia.map((m) {
       final map = m as Map;
       return <String, String>{
-        'url': (map['url'] ?? '').toString(),
+        'url':  (map['url']  ?? '').toString(),
         'type': (map['type'] ?? 'image').toString(),
       };
     }).toList();
     return PostModel(
-      id: (json['_id'] ?? '').toString(),
-      user: json['user'] != null
+      id:            (json['_id'] ?? '').toString(),
+      user:          json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
           : const UserModel(
               id: '', username: '', avatar: '', verified: false,
-              isPrivate: false, postsCount: 0, followersCount: 0, followingCount: 0),
-      caption: (json['caption'] ?? '').toString(),
-      media: media,
-      likesCount: json['likesCount'] ??
+              isPrivate: false, postsCount: 0,
+              followersCount: 0, followingCount: 0),
+      caption:       (json['caption'] ?? '').toString(),
+      media:         media,
+      likesCount:    json['likesCount'] ??
           (json['likes'] is List ? (json['likes'] as List).length : 0),
       commentsCount: json['commentsCount'] ?? 0,
-      liked: json['liked'] ?? false,
-      saved: json['saved'] ?? false,
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      liked:         json['liked'] ?? false,
+      saved:         json['saved'] ?? false,
+      createdAt:     DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
 
+  // ── Рилҳои корбар ─────────────────────────────────────────────
   Future<List<ReelModel>> getUserReels(String userId) async {
     final id = userId == 'me' ? 'me' : userId;
     try {
@@ -86,31 +117,35 @@ class ProfileRepository {
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
       final List list = body is List ? body : (body['reels'] ?? []);
-      return list.map((e) => ReelModel.fromJson(e as Map<String, dynamic>)).toList();
-    } catch (_) {
-      return [];
-    }
+      return list
+          .map((e) => ReelModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) { return []; }
   }
 
+  // ── Follow / Unfollow ─────────────────────────────────────────
+  Future<void> follow(String userId) async =>
+      _api.post(ApiEndpoints.follow(userId));
+
+  Future<void> unfollow(String userId) async =>
+      _api.post(ApiEndpoints.unfollow(userId));
+
+  // ── Followers / Following ─────────────────────────────────────
   Future<List<UserModel>> getFollowers(String userId) async {
     final res = await _api.get('/users/$userId/followers');
     if (res.statusCode >= 400) return [];
     final List list = jsonDecode(res.body);
-    return list.map((e) => UserModel.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<UserModel>> getFollowing(String userId) async {
     final res = await _api.get('/users/$userId/following');
     if (res.statusCode >= 400) return [];
     final List list = jsonDecode(res.body);
-    return list.map((e) => UserModel.fromJson(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<void> follow(String userId) async {
-    await _api.post(ApiEndpoints.follow(userId));
-  }
-
-  Future<void> unfollow(String userId) async {
-    await _api.post(ApiEndpoints.unfollow(userId));
+    return list
+        .map((e) => UserModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }
