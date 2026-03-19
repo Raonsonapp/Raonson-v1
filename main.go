@@ -1,35 +1,62 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	response := `{
-		"status": "ok",
-		"message": "Raonson Go Backend 🚀",
-		"version": "1.0"
-	}`
-
-	fmt.Fprintln(w, response)
-}
+var db *sql.DB
 
 func main() {
+	var err error
+	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	http.HandleFunc("/", home)
+	http.HandleFunc("/register", register)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	http.HandleFunc("/", handler)
+	log.Println("Server running on port", port)
+	http.ListenAndServe(":"+port, nil)
+}
 
-	log.Println("Server started on port " + port)
-	err := http.ListenAndServe(":"+port, nil)
-	if err != nil {
-		log.Fatal(err)
+func home(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ok",
+	})
+}
+
+func register(w http.ResponseWriter, r *http.Request) {
+	var user struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
+
+	json.NewDecoder(r.Body).Decode(&user)
+
+	_, err := db.Exec(
+		"INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
+		user.Username, user.Email, user.Password,
+	)
+
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "User created",
+	})
 }
