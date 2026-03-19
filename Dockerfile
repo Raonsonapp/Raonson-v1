@@ -4,11 +4,11 @@ WORKDIR /app
 
 ENV GOSUMDB=off
 
-COPY go.mod ./
+COPY . .
+
+RUN go get github.com/lib/pq
 
 RUN go mod tidy
-
-COPY . .
 
 RUN go build -o app
 
