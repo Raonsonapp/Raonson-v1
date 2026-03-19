@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/jackc/pgx/v5"
 )
+
+var conn *pgx.Conn
 
 type User struct {
 	Username string `json:"username"`
@@ -13,20 +18,20 @@ type User struct {
 	Password string `json:"password"`
 }
 
-var fakeUser User
-
 func main() {
+	var err error
+
+	conn, err = pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Database connected ✅")
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "ok",
-		})
-	})
 
 	http.HandleFunc("/register", register)
 	http.HandleFunc("/login", login)
@@ -36,44 +41,46 @@ func main() {
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", 405)
-		return
-	}
-
 	var user User
 	json.NewDecoder(r.Body).Decode(&user)
 
-	if user.Email == "" || user.Password == "" {
-		http.Error(w, "Missing fields", 400)
+	_, err := conn.Exec(context.Background(),
+		"INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
+		user.Username, user.Email, user.Password,
+	)
+
+	if err != nil {
+		http.Error(w, "DB error", 500)
 		return
 	}
 
-	// save in memory (temporary)
-	fakeUser = user
-
 	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Registered ✅",
+		"message": "Saved in DB ✅",
 	})
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST only", 405)
-		return
-	}
-
 	var user User
 	json.NewDecoder(r.Body).Decode(&user)
 
-	if user.Email == fakeUser.Email && user.Password == fakeUser.Password {
-		json.NewEncoder(w).Encode(map[string]string{
-			"token": "raonson-token-123",
-		})
+	var dbPassword string
+
+	err := conn.QueryRow(context.Background(),
+		"SELECT password FROM users WHERE email=$1",
+		user.Email,
+	).Scan(&dbPassword)
+
+	if err != nil {
+		http.Error(w, "User not found", 404)
 		return
 	}
 
-	http.Error(w, "Invalid login", 401)
+	if dbPassword != user.Password {
+		http.Error(w, "Invalid login", 401)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": "real-token-123",
+	})
 }
