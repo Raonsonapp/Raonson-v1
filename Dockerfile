@@ -4,8 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN rm -f go.sum
 RUN go mod tidy
-RUN go build -o main
+RUN go build -o app
 
-CMD ["./main"] master
+CMD ./app
