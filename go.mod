@@ -1,4 +1,4 @@
-module raonson
+module github.com/raonson/app
 
 go 1.22
 
