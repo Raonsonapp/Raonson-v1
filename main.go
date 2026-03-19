@@ -1,19 +1,18 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	_ "github.com/lib/pq"
 )
 
-var conn *pgx.Conn
+var db *sql.DB
 
 type User struct {
-	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -21,7 +20,12 @@ type User struct {
 func main() {
 	var err error
 
-	conn, err = pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		panic(err)
+	}
+
+	err = db.Ping()
 	if err != nil {
 		panic(err)
 	}
@@ -41,12 +45,12 @@ func main() {
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
-	var user User
-	json.NewDecoder(r.Body).Decode(&user)
+	var u User
+	json.NewDecoder(r.Body).Decode(&u)
 
-	_, err := conn.Exec(context.Background(),
-		"INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
-		user.Username, user.Email, user.Password,
+	_, err := db.Exec(
+		"INSERT INTO users (email, password) VALUES ($1,$2)",
+		u.Email, u.Password,
 	)
 
 	if err != nil {
@@ -55,32 +59,32 @@ func register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Saved in DB ✅",
+		"message": "ok",
 	})
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-	var user User
-	json.NewDecoder(r.Body).Decode(&user)
+	var u User
+	json.NewDecoder(r.Body).Decode(&u)
 
-	var dbPassword string
+	var pass string
 
-	err := conn.QueryRow(context.Background(),
+	err := db.QueryRow(
 		"SELECT password FROM users WHERE email=$1",
-		user.Email,
-	).Scan(&dbPassword)
+		u.Email,
+	).Scan(&pass)
 
 	if err != nil {
-		http.Error(w, "User not found", 404)
+		http.Error(w, "not found", 404)
 		return
 	}
 
-	if dbPassword != user.Password {
-		http.Error(w, "Invalid login", 401)
+	if pass != u.Password {
+		http.Error(w, "wrong", 401)
 		return
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{
-		"token": "real-token-123",
+		"token": "ok",
 	})
 }
