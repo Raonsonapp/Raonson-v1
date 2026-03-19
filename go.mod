@@ -2,4 +2,4 @@ module raonson
 
 go 1.22
 
-require github.com/jackc/pgx/v5 v5.5.4
+require github.com/lib/pq v1.10.9
