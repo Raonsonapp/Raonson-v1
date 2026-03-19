@@ -15,46 +15,38 @@ var db *sql.DB
 func main() {
 	var err error
 
-	// пайвастшавӣ ба PostgreSQL (Supabase)
 	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatal("Database error:", err)
+		log.Fatal(err)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal("Cannot connect DB:", err)
+		log.Fatal(err)
 	}
 
-	log.Println("Connected to database ✅")
-
-	// routes
 	http.HandleFunc("/", home)
 	http.HandleFunc("/register", register)
 
-	// порт
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	log.Println("Server running on port", port)
+	log.Println("Server started on", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
-// 🟢 Home route
 func home(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "ok",
-		"message": "Raonson Go Backend 🚀",
+		"status": "ok",
 	})
 }
 
-// 🟢 Register route
 func register(w http.ResponseWriter, r *http.Request) {
 
-	// 👉 агар аз браузер (GET) биёяд
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		_, err := db.Exec(
 			"INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
 			"testuser", "test@gmail.com", "123456",
@@ -65,20 +57,21 @@ func register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.Write([]byte("User created from browser ✅"))
+		w.Write([]byte("User created ✅"))
 		return
 	}
 
-	// 👉 агар POST бошад (API)
-	var user struct {
+	type User struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
+	var user User
+
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Invalid JSON", 400)
+		http.Error(w, "Bad request", 400)
 		return
 	}
 
