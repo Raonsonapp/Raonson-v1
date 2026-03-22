@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"raonson/db"
-	"raonson/jobs"
 	mw "raonson/middleware"
 
 	"github.com/gin-gonic/gin"
