@@ -159,15 +159,14 @@ func GetOrCreateChat(c *gin.Context) {
 func GetChats(c *gin.Context) {
 	myID := mw.UID(c)
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT DISTINCT ON (m.chat_id)
-		       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
+		SELECT m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
 		       s.username,s.avatar,s.verified,
 		       r.username,r.avatar,r.verified
 		FROM messages m
 		JOIN users s ON s.id=m.sender_id
 		JOIN users r ON r.id=m.receiver_id
-		WHERE m.sender_id=$1 OR m.receiver_id=$1
-		ORDER BY m.chat_id, m.created_at DESC`, myID)
+		WHERE (m.sender_id=$1 OR m.receiver_id=$1)
+		ORDER BY m.created_at DESC LIMIT 100`, myID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get chats failed"})
 		return
