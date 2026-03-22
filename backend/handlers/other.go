@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"raonson/db"
@@ -365,6 +366,7 @@ func GetReels(c *gin.Context) {
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset)
 	if err != nil {
+		log.Printf("[GetReels] query error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get reels failed"})
 		return
 	}
