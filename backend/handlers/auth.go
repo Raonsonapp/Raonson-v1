@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -93,13 +94,15 @@ func Login(c *gin.Context) {
 
 	var id, username, email, hash string
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id,username,email,password FROM users WHERE email=$1 AND banned=FALSE`,
+		`SELECT id,username,email,password FROM users WHERE email=$1`,
 		b.Email).Scan(&id, &username, &email, &hash)
 	if err != nil {
+		log.Printf("[Login] User not found: email=%s err=%v", b.Email, err)
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.Password)) != nil {
+		log.Printf("[Login] Wrong password for: email=%s", b.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
 		return
 	}
