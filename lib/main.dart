@@ -8,7 +8,7 @@ Future<void> main() async {
   AppConfig.initialize(
     baseUrl: const String.fromEnvironment(
       'BASE_URL',
-      defaultValue: 'https://raonson-v1.onrender.com',
+      defaultValue: 'https://raonson-v1-go.onrender.com',,
     ),
     appName: 'Raonson',
     enableLogs: true,
