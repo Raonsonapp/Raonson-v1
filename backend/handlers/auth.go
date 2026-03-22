@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -36,8 +37,17 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing fields"})
 		return
 	}
-	b.Username = strings.TrimSpace(b.Username)
-	b.Email = strings.ToLower(strings.TrimSpace(b.Email))
+	b.Username = strings.ToLower(strings.TrimSpace(b.Username))
+	b.Email    = strings.ToLower(strings.TrimSpace(b.Email))
+
+	// Validate username: only a-z, 0-9, _ and .
+	validUsername := regexp.MustCompile(`^[a-z0-9_.]{3,30}$`)
+	if !validUsername.MatchString(b.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Username can only contain letters, numbers, _ and .",
+		})
+		return
+	}
 
 	var exists bool
 	db.Pool.QueryRow(context.Background(),
