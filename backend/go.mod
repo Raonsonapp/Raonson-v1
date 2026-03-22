@@ -1,21 +1,14 @@
-FROM golang:1.21-alpine AS builder
+module raonson
 
-RUN apk add --no-cache git ca-certificates tzdata
+go 1.21
 
-WORKDIR /app
-
-COPY go.mod ./
-RUN go mod download && go mod verify
-
-COPY . .
-
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o raonson .
-
-FROM alpine:3.19
-RUN apk --no-cache add ca-certificates tzdata wget
-WORKDIR /app
-COPY --from=builder /app/raonson .
-EXPOSE 10000
-HEALTHCHECK --interval=30s --timeout=5s \
-  CMD wget -qO- http://localhost:10000/health || exit 1
-CMD ["./raonson"]
+require (
+	github.com/gin-contrib/cors v1.5.0
+	github.com/gin-gonic/gin v1.9.1
+	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/google/uuid v1.4.0
+	github.com/gorilla/websocket v1.5.1
+	github.com/jackc/pgx/v5 v5.5.0
+	github.com/joho/godotenv v1.5.1
+	golang.org/x/crypto v0.17.0
+)
