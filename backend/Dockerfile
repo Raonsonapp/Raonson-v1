@@ -5,14 +5,11 @@ RUN apk add --no-cache git ca-certificates tzdata
 WORKDIR /app
 
 COPY go.mod ./
-
-# Delete bad go.sum and generate fresh one
-RUN rm -f go.sum && go mod tidy
+RUN go mod download && go mod verify
 
 COPY . .
 
-RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o raonson .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o raonson .
 
 FROM alpine:3.19
 RUN apk --no-cache add ca-certificates tzdata wget
