@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 class Api {
-  static const String baseUrl = 'https://raonson-v1.onrender.com';
+  static const String baseUrl = 'https://raonson-v1-go.onrender.com';
 
   // ================= GET =================
   static Future<Map<String, dynamic>> get(String path) async {
