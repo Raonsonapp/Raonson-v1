@@ -11,7 +11,16 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// ── User scan ──────────────────────────────────────────────────
+const userSelectSQL = `
+	SELECT id, username, avatar, bio, verified, is_private, role,
+	       posts_count, followers_count, following_count, last_seen,
+	       banned, note, note_expires_at,
+	       note_song_title, note_song_artist, note_song_art_url,
+	       note_song_preview_url, note_song_track_ms,
+	       note_song_start_ms, note_song_end_ms,
+	       COALESCE(website,''), COALESCE(location,'')
+	FROM users`
+
 func scanFullUser(row pgx.Row) (gin.H, error) {
 	var (
 		id, username, avatar, bio, role string
@@ -22,6 +31,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		noteExpiresAt                   interface{}
 		stTitle, stArtist, stArtUrl, stPreviewUrl string
 		stTrackMs, stStartMs, stEndMs   int
+		website, location               string
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -29,6 +39,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&banned, &note, &noteExpiresAt,
 		&stTitle, &stArtist, &stArtUrl, &stPreviewUrl,
 		&stTrackMs, &stStartMs, &stEndMs,
+		&website, &location,
 	)
 	if err != nil {
 		return nil, err
@@ -43,6 +54,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"followingCount": followingCount,
 		"lastSeen": lastSeen,
 		"isFollowing": false,
+		"website": website, "location": location,
 		"note": note, "noteExpiresAt": noteExpiresAt,
 		"noteSong": gin.H{
 			"title": stTitle, "artist": stArtist,
@@ -51,15 +63,6 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		},
 	}, nil
 }
-
-const userSelectSQL = `
-	SELECT id, username, avatar, bio, verified, is_private, role,
-	       posts_count, followers_count, following_count, last_seen,
-	       banned, note, note_expires_at,
-	       note_song_title, note_song_artist, note_song_art_url,
-	       note_song_preview_url, note_song_track_ms,
-	       note_song_start_ms, note_song_end_ms
-	FROM users`
 
 func getUserByID(id string) (gin.H, error) {
 	row := db.Pool.QueryRow(context.Background(),
@@ -90,7 +93,6 @@ func setIsFollowing(u gin.H, myID, targetID string) {
 	u["isFollowing"] = isFollowing
 }
 
-// ── Post helpers ───────────────────────────────────────────────
 func postsForUser(userID string, limit int) []gin.H {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
