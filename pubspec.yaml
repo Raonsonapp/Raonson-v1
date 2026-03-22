@@ -43,7 +43,7 @@ dependencies:
   country_picker: ^2.0.26
   country_code_picker: ^3.0.0
 
-  socket_io_client: ^2.0.3+1
+  web_socket_channel: ^2.4.0
   agora_rtc_engine: ^6.3.2
   permission_handler: ^11.3.1
 
