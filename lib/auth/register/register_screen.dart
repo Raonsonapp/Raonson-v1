@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'register_controller.dart';
@@ -55,10 +56,8 @@ class _RegisterView extends StatelessWidget {
 
               const SizedBox(height: 32),
 
-              _field(
-                label: 'Username',
-                onChanged: controller.updateUsername,
-              ),
+              // ── Username field (Instagram-style) ──────────────────
+              _UsernameField(onChanged: controller.updateUsername),
               const SizedBox(height: 16),
 
               _field(
@@ -105,11 +104,7 @@ class _RegisterView extends StatelessWidget {
                       ? () async {
                           final ok = await controller.register();
                           if (!context.mounted) return;
-
-                          if (ok) {
-                            // ✅ Instagram-style: back to Login
-                            Navigator.pop(context);
-                          }
+                          if (ok) Navigator.pop(context);
                         }
                       : null,
                   child: state.isLoading
@@ -137,9 +132,7 @@ class _RegisterView extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
                 child: const Text(
                   'Already have an account? Log in',
-                  style: TextStyle(
-                    color: Color(0xFF2EFF8A),
-                  ),
+                  style: TextStyle(color: Color(0xFF2EFF8A)),
                 ),
               ),
 
@@ -167,12 +160,107 @@ class _RegisterView extends StatelessWidget {
           borderSide: BorderSide(color: Colors.white38),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(
-            color: Color(0xFF2EFF8A),
-            width: 2,
-          ),
+          borderSide: BorderSide(color: Color(0xFF2EFF8A), width: 2),
         ),
       ),
     );
+  }
+}
+
+// ── Username field — Instagram-style ─────────────────────────────
+class _UsernameField extends StatefulWidget {
+  final ValueChanged<String> onChanged;
+  const _UsernameField({required this.onChanged});
+
+  @override
+  State<_UsernameField> createState() => _UsernameFieldState();
+}
+
+class _UsernameFieldState extends State<_UsernameField> {
+  final _ctrl = TextEditingController();
+  String? _error;
+
+  // Фақат a-z, 0-9, _ ва . иҷозат дорад
+  static final _validChars = RegExp(r'^[a-z0-9_.]*$');
+
+  void _onChanged(String value) {
+    // Ҳарфи калонро хурд мекунад
+    final lower = value.toLowerCase();
+
+    // Агар курсор дигар шавад, fix мекунем
+    if (lower != value) {
+      _ctrl.value = TextEditingValue(
+        text: lower,
+        selection: TextSelection.collapsed(offset: lower.length),
+      );
+    }
+
+    // Validation
+    setState(() {
+      if (lower.isEmpty) {
+        _error = null;
+      } else if (lower.length < 3) {
+        _error = 'Ҳадди аққал 3 аломат';
+      } else if (lower.length > 30) {
+        _error = 'Ҳадди аксар 30 аломат';
+      } else if (!_validChars.hasMatch(lower)) {
+        _error = 'Танҳо a-z, 0-9, _ ва . иҷозат';
+      } else {
+        _error = null;
+      }
+    });
+
+    widget.onChanged(lower);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _ctrl,
+      onChanged: _onChanged,
+      // Ҳарфи калон набошад
+      textCapitalization: TextCapitalization.none,
+      autocorrect: false,
+      enableSuggestions: false,
+      // Танҳо иҷозатдодашуда chars
+      inputFormatters: [
+        TextInputFormatter.withFunction((oldValue, newValue) {
+          final lower = newValue.text.toLowerCase();
+          // Фақат a-z 0-9 _ . иҷозат
+          final filtered = lower.replaceAll(RegExp(r'[^a-z0-9_.]'), '');
+          return newValue.copyWith(
+            text: filtered,
+            selection: TextSelection.collapsed(offset: filtered.length),
+          );
+        }),
+      ],
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: 'Username',
+        labelStyle: const TextStyle(color: Colors.white70),
+        helperText: 'a-z, 0-9, _ ва . истифода кунед',
+        helperStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+        errorText: _error,
+        errorStyle: const TextStyle(color: Colors.redAccent),
+        enabledBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.white38),
+        ),
+        focusedBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFF2EFF8A), width: 2),
+        ),
+        errorBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.redAccent),
+        ),
+        focusedErrorBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: Colors.redAccent, width: 2),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 }
