@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: raonson-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        value: postgresql://postgres.zhyxhxdzsrkxwlgjqxuz:ehsonjon.2009@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+      - key: JWT_SECRET
+        value: raonson_jwt_secret_2024_super_secure
+      - key: JWT_REFRESH_SECRET
+        value: raonson_refresh_secret_2024_secure
+      - key: CF_ACCOUNT_ID
+        value: 4362a439e21a5c003fe9a49560b370b6
+      - key: CF_R2_ACCESS_KEY
+        value: fed4dc11c0cedd66329d545cc5e286a1
+      - key: CF_R2_SECRET_KEY
+        value: 49aa55246ee4c4423946217f9b5127672d4555f09b6116fbdf45a12beeb74297
+      - key: CF_R2_BUCKET
+        value: raonson-media
+      - key: CF_R2_PUBLIC_URL
+        value: https://pub-f2661a242564423dbef95596dd6176b6.r2.dev
+      - key: UPSTASH_REDIS_REST_URL
+        value: https://liberal-shrimp-78145.upstash.io
+      - key: UPSTASH_REDIS_REST_TOKEN
+        value: gQAAAAAAATFBAAIncDI3ZGE3MTA5Yjg4YmY0YWU0OTczMDAxZWEwYTUzYjFhM3AyNzgxNDU
+      - key: FCM_SERVER_KEY
+        value: ""
+    healthCheckPath: /health
