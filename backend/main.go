@@ -19,7 +19,6 @@ import (
 func main() {
 	godotenv.Load()
 
-	// Init services
 	db.Init()
 	mw.InitRedis()
 	jobs.StartJobs()
@@ -30,12 +29,8 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
-
-	// Security middleware (global)
 	r.Use(mw.IPBlock())
 	r.Use(mw.AntiSpam())
-
-	// CORS
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
@@ -44,40 +39,31 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// ── HEALTH ──────────────────────────────────────────────────
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "Raonson API ✅",
-			"stack":  "Go + PostgreSQL + Cloudflare R2 + Redis",
-		})
+		c.JSON(http.StatusOK, gin.H{"status": "Raonson API ✅"})
 	})
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// ── PUBLIC ───────────────────────────────────────────────────
-	r.GET("/posts/preview/:id", handlers.PostPreview) // public HTML
-
-	// ── WEBSOCKET ────────────────────────────────────────────────
+	r.GET("/posts/preview/:id", handlers.PostPreview)
 	r.GET("/ws", sockets.Handler)
 
 	auth  := mw.Auth()
 	admin := mw.AdminOnly()
-	rl100 := mw.RateLimit(100, 60) // 100 req/min
-	rl20  := mw.RateLimit(20, 60)  // 20 req/min (uploads, auth)
+	rl100 := mw.RateLimit(100, 60)
+	rl20  := mw.RateLimit(20, 60)
 
-	// ── AUTH ─────────────────────────────────────────────────────
 	a := r.Group("/auth")
 	{
-		a.POST("/register",         rl20, handlers.Register)
-		a.POST("/login",            rl20, handlers.Login)
-		a.POST("/refresh",          handlers.RefreshToken)
-		a.POST("/logout",           auth, handlers.Logout)
-		a.POST("/forgot-password",  rl20, handlers.ForgotPassword)
-		a.POST("/reset-password",   rl20, handlers.ResetPassword)
+		a.POST("/register",        rl20, handlers.Register)
+		a.POST("/login",           rl20, handlers.Login)
+		a.POST("/refresh",         handlers.RefreshToken)
+		a.POST("/logout",          auth, handlers.Logout)
+		a.POST("/forgot-password", rl20, handlers.ForgotPassword)
+		a.POST("/reset-password",  rl20, handlers.ResetPassword)
 	}
 
-	// ── USERS ────────────────────────────────────────────────────
 	u := r.Group("/users", auth, rl100)
 	{
 		u.GET("/:id",           handlers.GetUserByID)
@@ -89,7 +75,6 @@ func main() {
 		u.GET("/:id/following", handlers.GetFollowing)
 	}
 
-	// ── PROFILE ──────────────────────────────────────────────────
 	p := r.Group("/profile", auth, rl100)
 	{
 		p.GET("/me",            handlers.GetMyProfile)
@@ -99,25 +84,19 @@ func main() {
 		p.GET("/:username",     handlers.GetProfile)
 	}
 
-	// ── POSTS ────────────────────────────────────────────────────
 	po := r.Group("/posts", auth, rl100)
 	{
-		po.POST("/",                           handlers.CreatePost)
-		po.GET("/",                            handlers.GetFeed)
-		po.GET("/feed",                        handlers.GetFeed)
-		po.GET("/smart-feed",                  handlers.GetSmartFeed)
-		po.POST("/:id/view",                   handlers.TrackPostView)
-		po.GET("/:id",                         handlers.GetPost)
-		po.DELETE("/:id",                      handlers.DeletePost)
-		po.POST("/:id/like",                   handlers.TogglePostLike)
-		po.POST("/:id/save",                   handlers.TogglePostSave)
-		po.GET("/:postId/comments",            handlers.GetComments)
-		po.POST("/:postId/comments",           handlers.AddComment)
-		po.DELETE("/:postId/comments/:id",     handlers.DeleteComment)
-		po.POST("/:postId/comments/:id/like",  handlers.ToggleCommentLike)
+		po.POST("/",          handlers.CreatePost)
+		po.GET("/",           handlers.GetFeed)
+		po.GET("/feed",       handlers.GetFeed)
+		po.GET("/smart-feed", handlers.GetSmartFeed)
+		po.GET("/:id",        handlers.GetPost)
+		po.DELETE("/:id",     handlers.DeletePost)
+		po.POST("/:id/like",  handlers.TogglePostLike)
+		po.POST("/:id/save",  handlers.TogglePostSave)
 	}
+	r.POST("/posts/view/:id", auth, handlers.TrackPostView)
 
-	// ── COMMENTS ─────────────────────────────────────────────────
 	co := r.Group("/comments", auth, rl100)
 	{
 		co.GET("/:postId",      handlers.GetComments)
@@ -126,27 +105,24 @@ func main() {
 		co.POST("/:id/like",    handlers.ToggleCommentLike)
 	}
 
-	// ── LIKES (generic) ──────────────────────────────────────────
 	li := r.Group("/likes", auth, rl100)
 	{
-		li.POST("/",            handlers.LikeTarget)
-		li.DELETE("/",          handlers.UnlikeTarget)
-		li.GET("/:targetId",    handlers.GetLikes)
+		li.POST("/",         handlers.LikeTarget)
+		li.DELETE("/",       handlers.UnlikeTarget)
+		li.GET("/:targetId", handlers.GetLikes)
 	}
 
-	// ── FOLLOW ───────────────────────────────────────────────────
 	fo := r.Group("/follow", auth, rl100)
 	{
-		fo.POST("/:id",                  handlers.FollowUser)
-		fo.DELETE("/:id",                handlers.UnfollowUser)
-		fo.GET("/:id/followers",         handlers.GetFollowers)
-		fo.GET("/:id/following",         handlers.GetFollowing)
-		fo.POST("/request/:id/accept",   handlers.AcceptRequest)
-		fo.POST("/request/:id/reject",   handlers.RejectRequest)
+		fo.POST("/:id",               handlers.FollowUser)
+		fo.DELETE("/:id",             handlers.UnfollowUser)
+		fo.GET("/:id/followers",      handlers.GetFollowers)
+		fo.GET("/:id/following",      handlers.GetFollowing)
+		fo.POST("/request/:id/accept", handlers.AcceptRequest)
+		fo.POST("/request/:id/reject", handlers.RejectRequest)
 	}
 	r.POST("/unfollow/:id", auth, handlers.UnfollowUser)
 
-	// ── REELS ────────────────────────────────────────────────────
 	re := r.Group("/reels", auth, rl100)
 	{
 		re.GET("/",              handlers.GetReels)
@@ -159,19 +135,17 @@ func main() {
 		re.POST("/:id/comments", handlers.AddReelComment)
 	}
 
-	// ── STORIES ──────────────────────────────────────────────────
 	st := r.Group("/stories", auth, rl100)
 	{
-		st.GET("/",              handlers.GetStories)
-		st.GET("/my",            handlers.GetMyStories)
-		st.POST("/",             handlers.CreateStory)
-		st.DELETE("/:id",        handlers.DeleteStory)
-		st.POST("/:id/view",     handlers.ViewStory)
-		st.POST("/:id/like",     handlers.LikeStory)
-		st.GET("/:id/viewers",   handlers.GetStoryViewers)
+		st.GET("/",            handlers.GetStories)
+		st.GET("/my",          handlers.GetMyStories)
+		st.POST("/",           handlers.CreateStory)
+		st.DELETE("/:id",      handlers.DeleteStory)
+		st.POST("/:id/view",   handlers.ViewStory)
+		st.POST("/:id/like",   handlers.LikeStory)
+		st.GET("/:id/viewers", handlers.GetStoryViewers)
 	}
 
-	// ── CHAT ─────────────────────────────────────────────────────
 	ch := r.Group("/chat", auth, rl100)
 	{
 		ch.GET("/",                  handlers.GetChats)
@@ -182,40 +156,35 @@ func main() {
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 	}
 
-	// ── NOTIFICATIONS ─────────────────────────────────────────────
 	no := r.Group("/notifications", auth, rl100)
 	{
-		no.GET("/",            handlers.GetNotifications)
-		no.POST("/push-token", handlers.SavePushToken)
-		no.POST("/read-all",   handlers.MarkAllNotifsRead)
-		no.POST("/:id/read",   handlers.MarkNotifRead)
-		no.DELETE("/:id",      handlers.DeleteNotification)
+		no.GET("/",             handlers.GetNotifications)
+		no.POST("/push-token",  handlers.SavePushToken)
+		no.POST("/read-all",    handlers.MarkAllNotifsRead)
+		no.POST("/:id/read",    handlers.MarkNotifRead)
+		no.DELETE("/:id",       handlers.DeleteNotification)
 	}
 
-	// ── SEARCH ────────────────────────────────────────────────────
 	se := r.Group("/search", auth, rl100)
 	{
 		se.GET("/",      handlers.Search)
 		se.GET("/users", handlers.SearchUsers)
 	}
 
-	// ── EXPLORE ───────────────────────────────────────────────────
 	r.GET("/explore", auth, rl100, handlers.ExploreGrid)
 
-	// ── UPLOAD (Cloudflare R2) ────────────────────────────────────
 	r.POST("/upload",        auth, rl20, mw.AntiAbuse("upload", 50, 3600), handlers.UploadToR2)
 	r.POST("/upload/avatar", auth, rl20, handlers.UploadToR2)
 	r.POST("/upload/video",  auth, rl20, handlers.UploadToR2)
 	r.POST("/media/upload",  auth, rl20, handlers.UploadToR2)
 
-	// ── ADMIN ──────────────────────────────────────────────────────
 	ad := r.Group("/admin", auth, admin)
 	{
-		ad.GET("/stats",       handlers.AdminStats)
-		ad.POST("/ban/:id",    handlers.BanUser)
-		ad.POST("/unban/:id",  handlers.UnbanUser)
+		ad.GET("/stats",      handlers.AdminStats)
+		ad.POST("/ban/:id",   handlers.BanUser)
+		ad.POST("/unban/:id", handlers.UnbanUser)
 	}
 
-	log.Printf("🚀 Raonson Go | Port:%s | PostgreSQL+R2+Redis", port)
+	log.Printf("🚀 Raonson Go | Port:%s", port)
 	r.Run(":" + port)
 }
