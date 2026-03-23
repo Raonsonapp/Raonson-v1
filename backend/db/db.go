@@ -32,9 +32,42 @@ func Init() {
 }
 
 func migrate() {
-	// NO foreign keys — avoids UUID/TEXT type conflicts with Supabase
-	// Application logic handles referential integrity
+	ctx := context.Background()
+
+	// Step 1: Drop old tables if they exist with wrong schema
+	dropOld := `
+	DROP TABLE IF EXISTS messages CASCADE;
+	DROP TABLE IF EXISTS notifications CASCADE;
+	DROP TABLE IF EXISTS follows CASCADE;
+	DROP TABLE IF EXISTS follow_requests CASCADE;
+	DROP TABLE IF EXISTS post_likes CASCADE;
+	DROP TABLE IF EXISTS post_saves CASCADE;
+	DROP TABLE IF EXISTS post_views CASCADE;
+	DROP TABLE IF EXISTS post_media CASCADE;
+	DROP TABLE IF EXISTS posts CASCADE;
+	DROP TABLE IF EXISTS comment_likes CASCADE;
+	DROP TABLE IF EXISTS comments CASCADE;
+	DROP TABLE IF EXISTS story_views CASCADE;
+	DROP TABLE IF EXISTS story_likes CASCADE;
+	DROP TABLE IF EXISTS stories CASCADE;
+	DROP TABLE IF EXISTS reel_likes CASCADE;
+	DROP TABLE IF EXISTS reel_saves CASCADE;
+	DROP TABLE IF EXISTS reel_comments CASCADE;
+	DROP TABLE IF EXISTS reels CASCADE;
+	DROP TABLE IF EXISTS likes CASCADE;
+	DROP TABLE IF EXISTS blocks CASCADE;
+	DROP TABLE IF EXISTS push_tokens CASCADE;
+	DROP TABLE IF EXISTS users CASCADE;
+	`
+
+	if _, err := Pool.Exec(ctx, dropOld); err != nil {
+		log.Printf("⚠️ Drop old tables: %v", err)
+	}
+
+	// Step 2: Create fresh schema
 	sql := `
+	CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 	CREATE TABLE IF NOT EXISTS users (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
 		username VARCHAR(50) UNIQUE NOT NULL,
@@ -47,8 +80,8 @@ func migrate() {
 		banned BOOLEAN DEFAULT FALSE,
 		role VARCHAR(20) DEFAULT 'user',
 		last_seen TIMESTAMPTZ,
-		website VARCHAR(100) DEFAULT '',
-		location VARCHAR(100) DEFAULT '',
+		website TEXT DEFAULT '',
+		location TEXT DEFAULT '',
 		note VARCHAR(60) DEFAULT '',
 		note_expires_at TIMESTAMPTZ,
 		note_song_title TEXT DEFAULT '',
@@ -73,7 +106,6 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW(),
 		PRIMARY KEY (follower_id, following_id)
 	);
-	CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
 
 	CREATE TABLE IF NOT EXISTS follow_requests (
 		requester_id TEXT NOT NULL,
@@ -101,7 +133,6 @@ func migrate() {
 		type VARCHAR(10) DEFAULT 'image',
 		position INTEGER DEFAULT 0
 	);
-	CREATE INDEX IF NOT EXISTS idx_post_media_post ON post_media(post_id);
 
 	CREATE TABLE IF NOT EXISTS post_likes (
 		user_id TEXT NOT NULL,
@@ -148,7 +179,6 @@ func migrate() {
 		expires_at TIMESTAMPTZ NOT NULL,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
-	CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at);
 	CREATE INDEX IF NOT EXISTS idx_stories_user ON stories(user_id);
 
 	CREATE TABLE IF NOT EXISTS story_views (
@@ -173,7 +203,6 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_reels_user ON reels(user_id);
-	CREATE INDEX IF NOT EXISTS idx_reels_created ON reels(created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,
@@ -206,8 +235,6 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, created_at);
-	CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
-	CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
 
 	CREATE TABLE IF NOT EXISTS notifications (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -232,7 +259,6 @@ func migrate() {
 	CREATE TABLE IF NOT EXISTS blocks (
 		blocker_id TEXT NOT NULL,
 		blocked_id TEXT NOT NULL,
-		created_at TIMESTAMPTZ DEFAULT NOW(),
 		PRIMARY KEY (blocker_id, blocked_id)
 	);
 
@@ -244,7 +270,8 @@ func migrate() {
 		UNIQUE(user_id, platform)
 	);
 	`
-	if _, err := Pool.Exec(context.Background(), sql); err != nil {
+
+	if _, err := Pool.Exec(ctx, sql); err != nil {
 		log.Fatalf("❌ Migration failed: %v", err)
 	}
 	log.Println("✅ DB schema ready")
