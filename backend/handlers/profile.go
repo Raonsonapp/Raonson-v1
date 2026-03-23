@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -14,9 +15,12 @@ import (
 // GET /profile/me
 func GetMyProfile(c *gin.Context) {
 	myID := mw.UID(c)
-	row  := db.Pool.QueryRow(context.Background(), userSelectSQL+" WHERE id=$1", myID)
+	log.Printf("[Profile] GetMyProfile userID=%s", myID)
+
+	row := db.Pool.QueryRow(context.Background(), userSelectSQL+" WHERE id=$1", myID)
 	u, err := scanFullUser(row)
 	if err != nil {
+		log.Printf("[Profile] scanFullUser error: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
 		return
 	}
@@ -29,10 +33,12 @@ func GetMyProfile(c *gin.Context) {
 func GetProfile(c *gin.Context) {
 	username := c.Param("username")
 	myID     := mw.UID(c)
+	log.Printf("[Profile] GetProfile username=%s myID=%s", username, myID)
 
 	row := db.Pool.QueryRow(context.Background(), userSelectSQL+" WHERE username=$1", username)
 	u, err := scanFullUser(row)
 	if err != nil {
+		log.Printf("[Profile] GetProfile error: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"message": "Profile not found"})
 		return
 	}
@@ -53,7 +59,6 @@ func UpdateProfile(c *gin.Context) {
 		Username  *string `json:"username"`
 		Website   *string `json:"website"`
 		Location  *string `json:"location"`
-		Birthday  *string `json:"birthday"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
@@ -72,11 +77,12 @@ func UpdateProfile(c *gin.Context) {
 		b.Bio, b.Avatar, b.IsPrivate, b.Username,
 		b.Website, b.Location, myID)
 	if err != nil {
+		log.Printf("[Profile] UpdateProfile error: %v", err)
 		if isUnique(err) {
 			c.JSON(http.StatusConflict, gin.H{"message": "Username already taken"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update profile failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
 	u, _ := getUserByID(myID)
@@ -103,9 +109,9 @@ func SetNote(c *gin.Context) {
 	)
 	endMs = 30000
 	if b.Song != nil {
-		title, _    = b.Song["title"].(string)
-		artist, _   = b.Song["artist"].(string)
-		artUrl, _   = b.Song["artUrl"].(string)
+		title, _      = b.Song["title"].(string)
+		artist, _     = b.Song["artist"].(string)
+		artUrl, _     = b.Song["artUrl"].(string)
 		previewUrl, _ = b.Song["previewUrl"].(string)
 		if v, ok := b.Song["trackMs"].(float64); ok { trackMs = int(v) }
 		if v, ok := b.Song["startMs"].(float64); ok { startMs = int(v) }
@@ -128,19 +134,13 @@ func SetNote(c *gin.Context) {
 		text, expires, title, artist, artUrl, previewUrl,
 		trackMs, startMs, endMs, myID)
 
-	c.JSON(http.StatusOK, gin.H{
-		"note": text, "noteExpiresAt": expires,
-		"noteSong": gin.H{
-			"title": title, "artist": artist, "artUrl": artUrl,
-			"previewUrl": previewUrl, "trackMs": trackMs,
-			"startMs": startMs, "endMs": endMs,
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"note": text})
 }
 
 // GET /profile/notes/friends
 func GetFriendsNotes(c *gin.Context) {
 	myID := mw.UID(c)
+	log.Printf("[Profile] GetFriendsNotes userID=%s", myID)
 
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id,u.username,u.avatar,u.verified,
@@ -154,6 +154,7 @@ func GetFriendsNotes(c *gin.Context) {
 		  AND (u.note != '' OR u.note_song_title != '')`,
 		myID)
 	if err != nil {
+		log.Printf("[Profile] GetFriendsNotes error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get notes failed"})
 		return
 	}
@@ -181,22 +182,13 @@ func GetFriendsNotes(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"notes": friends})
 }
 
-// clearExpiredNote auto-clears note if expired
 func clearExpiredNote(uid string, u gin.H) {
 	if exp, ok := u["noteExpiresAt"]; ok && exp != nil {
 		if t, ok := exp.(time.Time); ok && t.Before(time.Now()) {
 			db.Pool.Exec(context.Background(), `
-				UPDATE users SET note='', note_expires_at=NULL,
-				  note_song_title='', note_song_artist='', note_song_art_url='',
-				  note_song_preview_url='', note_song_track_ms=0,
-				  note_song_start_ms=0, note_song_end_ms=30000
-				WHERE id=$1`, uid)
+				UPDATE users SET note='', note_expires_at=NULL WHERE id=$1`, uid)
 			u["note"] = ""
 			u["noteExpiresAt"] = nil
-			u["noteSong"] = gin.H{
-				"title": "", "artist": "", "artUrl": "",
-				"previewUrl": "", "trackMs": 0, "startMs": 0, "endMs": 30000,
-			}
 		}
 	}
 }
