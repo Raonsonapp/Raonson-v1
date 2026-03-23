@@ -10,9 +10,6 @@ class ProfileRepository {
   ProfileRepository(this._api);
 
   // ── Профили корбар ─────────────────────────────────────────────
-  // userId = 'me'       → /profile/me
-  // userId = objectId   → /users/:id   (search натиҷа ба ин мефиристад)
-  // userId = username   → /profile/:username  (legacy)
   Future<UserModel> getProfile(String userId) async {
     if (userId == 'me') {
       final res = await _api.get('/profile/me');
@@ -23,8 +20,8 @@ class ProfileRepository {
       return UserModel.fromJson(userJson as Map<String, dynamic>);
     }
 
-    // MongoDB ObjectId → /users/:id (findById)
-    if (_isObjectId(userId)) {
+    // UUID ё ObjectId → /users/:id
+    if (_isUUID(userId) || _isObjectId(userId)) {
       final res = await _api.get('/users/$userId');
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -43,7 +40,13 @@ class ProfileRepository {
     return UserModel.fromJson(userJson as Map<String, dynamic>);
   }
 
-  // 24 hex char ObjectId?
+  // UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars)
+  bool _isUUID(String s) =>
+      s.length == 36 &&
+      RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+          .hasMatch(s);
+
+  // MongoDB ObjectId: 24 hex chars
   bool _isObjectId(String s) =>
       s.length == 24 && RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(s);
 
@@ -56,9 +59,9 @@ class ProfileRepository {
   }) async {
     await _api.put(ApiEndpoints.updateProfile, body: {
       'username': username,
-      if (bio      != null) 'bio':       bio,
+      if (bio       != null) 'bio':       bio,
       if (isPrivate != null) 'isPrivate': isPrivate,
-      if (avatar   != null && avatar.isNotEmpty) 'avatar': avatar,
+      if (avatar    != null && avatar.isNotEmpty) 'avatar': avatar,
     });
   }
 
@@ -74,9 +77,7 @@ class ProfileRepository {
       }
       return [];
     }
-    // ObjectId or username → /users/:id/posts
-    final id = _isObjectId(userId) ? userId : userId;
-    final res = await _api.get('/users/$id/posts');
+    final res = await _api.get('/users/$userId/posts');
     if (res.statusCode >= 400) return [];
     final body = jsonDecode(res.body);
     final List list = body is List ? body : (body['posts'] ?? []);
@@ -93,7 +94,7 @@ class ProfileRepository {
       };
     }).toList();
     return PostModel(
-      id:            (json['_id'] ?? '').toString(),
+      id:            (json['_id'] ?? json['id'] ?? '').toString(),
       user:          json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
           : const UserModel(
@@ -113,9 +114,8 @@ class ProfileRepository {
 
   // ── Рилҳои корбар ─────────────────────────────────────────────
   Future<List<ReelModel>> getUserReels(String userId) async {
-    final id = userId == 'me' ? 'me' : userId;
     try {
-      final res = await _api.get('/users/$id/reels');
+      final res = await _api.get('/users/$userId/reels');
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
       final List list = body is List ? body : (body['reels'] ?? []);
