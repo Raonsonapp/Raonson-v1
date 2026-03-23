@@ -236,7 +236,9 @@ class _SegmentScreenState extends State<_SegmentScreen> {
   bool      _playing  = false;
   Duration  _previewPos = Duration.zero; // позитсияи preview player
 
-  StreamSubscription? _posSub, _doneSub;
+  StreamSubscription? _posSub, _doneSub, _stateSub;
+  bool _loading = false;
+  bool _ready   = false;
 
   @override
   void initState() {
@@ -246,8 +248,6 @@ class _SegmentScreenState extends State<_SegmentScreen> {
     _posSub  = _player.onPositionChanged.listen((p) {
       if (!mounted) return;
       setState(() => _previewPos = p);
-      // Сегмент тамом — loop аз аввали тиреза
-      // limit = preview позитсияи охир (на бештар аз дарозии preview)
       final previewStart = _toPreviewMs(_startMs);
       final previewWin   = (_windowMs.clamp(0, _previewMs - previewStart));
       final limit        = previewStart + previewWin;
@@ -256,16 +256,20 @@ class _SegmentScreenState extends State<_SegmentScreen> {
         setState(() => _previewPos = Duration(milliseconds: previewStart));
       }
     });
-    _doneSub = _player.onPlayerComplete.listen((_) {
+    _doneSub  = _player.onPlayerComplete.listen((_) {
       if (mounted) setState(() { _playing = false; _previewPos = Duration.zero; });
     });
+    _stateSub = _player.onPlayerStateChanged.listen((s) {
+      if (!mounted) return;
+      setState(() { _playing = s == PlayerState.playing; _loading = false; });
+    });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _play());
+    _preload();
   }
 
   @override
   void dispose() {
-    _posSub?.cancel(); _doneSub?.cancel();
+    _posSub?.cancel(); _doneSub?.cancel(); _stateSub?.cancel();
     _player.stop(); _player.dispose();
     super.dispose();
   }
@@ -292,64 +296,64 @@ class _SegmentScreenState extends State<_SegmentScreen> {
     return (_startMs + delta).clamp(_startMs, _endMs);
   }
 
-  // URL-и ба ёд гирифташуда — агар иваз нашуда бошад setSource нагӯем
-  String _loadedUrl = '';
-
-  Future<void> _play() async {
+  // ── Preload — 1 маротиба ──────────────────────────────────────
+  Future<void> _preload() async {
     if (widget.track.previewUrl.isEmpty) return;
-    final url    = widget.track.previewUrl;
-    final seekTo = Duration(milliseconds: _toPreviewMs(_startMs));
-
+    setState(() => _loading = true);
     try {
-      if (_loadedUrl != url) {
-        // Манбаи нав — stop → setSource → seek → resume
-        await _player.stop();
-        await _player.setSource(UrlSource(url));
-        _loadedUrl = url;
-      }
+      await _player.setSource(UrlSource(widget.track.previewUrl));
+      if (mounted) setState(() { _ready = true; _loading = false; });
+      await _seekAndPlay();
+    } catch (e) {
+      debugPrint('[Music] preload: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _seekAndPlay() async {
+    if (!_ready) return;
+    final seekTo = Duration(milliseconds: _toPreviewMs(_startMs));
+    try {
       await _player.seek(seekTo);
       await _player.resume();
-
-      if (mounted) setState(() {
-        _playing    = true;
-        _previewPos = seekTo;
-      });
+      if (mounted) setState(() { _playing = true; _previewPos = seekTo; });
     } catch (e) {
-      debugPrint('[MusicPlayer] _play error: $e');
+      debugPrint('[Music] seekAndPlay: $e');
     }
   }
 
+  // ✅ 1 клик — дарҳол pause/resume
   Future<void> _togglePlay() async {
-    if (_playing) { await _player.pause(); setState(() => _playing = false); }
-    else          { await _play(); }
+    if (_loading) return;
+    if (!_ready) { await _preload(); return; }
+    if (_playing) {
+      await _player.pause();
+      if (mounted) setState(() => _playing = false);
+    } else {
+      await _seekAndPlay();
+    }
   }
 
-  // Корбар тирезаро кашид → нав startMs
   Future<void> _onMove(int newStartMs) async {
     setState(() => _startMs = newStartMs.clamp(0, _maxStart));
-    // Агар манба аллакай load шудааст → танҳо seek + resume
-    if (_loadedUrl == widget.track.previewUrl) {
-      await _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
+    if (_ready) {
+      final seekTo = Duration(milliseconds: _toPreviewMs(_startMs));
+      await _player.seek(seekTo);
+      setState(() => _previewPos = seekTo);
       if (!_playing) await _player.resume();
-    } else {
-      await _play();
+      if (mounted) setState(() => _playing = true);
     }
-    if (mounted && !_playing) setState(() => _playing = true);
   }
 
-  // Корбар давомнокии тирезаро иваз кард
   void _onDuration(int ms) {
     setState(() {
       _windowMs = ms.clamp(1000, _trackMs);
       _startMs  = _startMs.clamp(0, (_trackMs - _windowMs).clamp(0, _trackMs));
     });
-    if (_loadedUrl == widget.track.previewUrl) {
+    if (_ready) {
       _player.seek(Duration(milliseconds: _toPreviewMs(_startMs)));
       if (!_playing) _player.resume();
-    } else {
-      _play();
     }
-
   }
 
   void _confirm() => Navigator.pop(context, SongInfo(
@@ -458,9 +462,13 @@ class _SegmentScreenState extends State<_SegmentScreen> {
                   width: 46, height: 46,
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle, gradient: _kGrad),
-                  child: Icon(
-                    _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    color: Colors.white, size: 26),
+                  child: _loading
+                      ? const Padding(padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2.5, color: Colors.white))
+                      : Icon(
+                          _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          color: Colors.white, size: 26),
                 ),
               ),
             ]),
