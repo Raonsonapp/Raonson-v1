@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"strings"
 	"strconv"
 
@@ -12,12 +13,18 @@ import (
 )
 
 const userSelectSQL = `
-	SELECT id, username, avatar, bio, verified, is_private, role,
-	       posts_count, followers_count, following_count, last_seen,
-	       banned, note, note_expires_at,
-	       note_song_title, note_song_artist, note_song_art_url,
-	       note_song_preview_url, note_song_track_ms,
-	       note_song_start_ms, note_song_end_ms,
+	SELECT id, username,
+	       COALESCE(avatar,''), COALESCE(bio,''),
+	       COALESCE(verified,false), COALESCE(is_private,false),
+	       COALESCE(role,'user'),
+	       COALESCE(posts_count,0), COALESCE(followers_count,0),
+	       COALESCE(following_count,0), last_seen,
+	       COALESCE(banned,false),
+	       COALESCE(note,''), note_expires_at,
+	       COALESCE(note_song_title,''), COALESCE(note_song_artist,''),
+	       COALESCE(note_song_art_url,''), COALESCE(note_song_preview_url,''),
+	       COALESCE(note_song_track_ms,0), COALESCE(note_song_start_ms,0),
+	       COALESCE(note_song_end_ms,30000),
 	       COALESCE(website,''), COALESCE(location,'')
 	FROM users`
 
@@ -42,6 +49,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&website, &location,
 	)
 	if err != nil {
+		log.Printf("[scanFullUser] error: %v", err)
 		return nil, err
 	}
 	return gin.H{
@@ -95,7 +103,9 @@ func setIsFollowing(u gin.H, myID, targetID string) {
 
 func postsForUser(userID string, limit int) []gin.H {
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
+		SELECT p.id, p.caption,
+		       COALESCE(p.likes_count,0), COALESCE(p.comments_count,0),
+		       p.created_at,
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type)
 		                ORDER BY m.position), '[]'::json)
@@ -103,6 +113,7 @@ func postsForUser(userID string, limit int) []gin.H {
 		FROM posts p WHERE p.user_id=$1
 		ORDER BY p.created_at DESC LIMIT $2`, userID, limit)
 	if err != nil {
+		log.Printf("[postsForUser] error: %v", err)
 		return []gin.H{}
 	}
 	defer rows.Close()
@@ -116,6 +127,7 @@ func scanPostRows(rows pgx.Rows, myID string) []gin.H {
 		var likes, comms int
 		var createdAt, media interface{}
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt, &media); err != nil {
+			log.Printf("[scanPostRows] error: %v", err)
 			continue
 		}
 		out = append(out, gin.H{
@@ -128,16 +140,12 @@ func scanPostRows(rows pgx.Rows, myID string) []gin.H {
 }
 
 func nilToEmpty(v interface{}) interface{} {
-	if v == nil {
-		return []interface{}{}
-	}
+	if v == nil { return []interface{}{} }
 	return v
 }
 
 func toInt(s string, def int) int {
-	if n, err := strconv.Atoi(s); err == nil && n > 0 {
-		return n
-	}
+	if n, err := strconv.Atoi(s); err == nil && n > 0 { return n }
 	return def
 }
 
@@ -149,8 +157,6 @@ func isUnique(err error) bool {
 }
 
 func sortedChatID(a, b string) string {
-	if a < b {
-		return a + "_" + b
-	}
+	if a < b { return a + "_" + b }
 	return b + "_" + a
 }
