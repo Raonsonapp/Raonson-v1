@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// Pure black theme — like X (Twitter)
 class AppColors {
-  static const Color bg = Color(0xFF050914);
-  static const Color surface = Color(0xFF0D1117);
-  static const Color card = Color(0xFF111827);
-  static const Color neonBlue = Color(0xFF3B9EFF);
-  static const Color neonBlueDim = Color(0xFF1A6EFF);
-  static const Color neonBlueGlow = Color(0x443B9EFF);
-  static const Color white = Colors.white;
-  static const Color grey = Color(0xFF8899AA);
-  static const Color greyLight = Color(0xFFB0BEC5);
-  static const Color storyBorder = Color(0xFF3B9EFF);
-  static const Color red = Color(0xFFFF4B6E);
+  static const Color bg      = Color(0xFF000000); // pure black
+  static const Color surface = Color(0xFF111111); // card background
+  static const Color card    = Color(0xFF1A1A1A); // slightly lighter card
+  static const Color neonBlue    = Color(0xFF1D9BF0); // X blue (not neon)
+  static const Color neonBlueDim = Color(0xFF1A8CD8);
+  static const Color neonBlueGlow= Color(0x221D9BF0);
+  static const Color white   = Colors.white;
+  static const Color grey    = Color(0xFF71767B); // X grey
+  static const Color greyLight   = Color(0xFFE7E9EA);
+  static const Color storyBorder = Color(0xFF1D9BF0);
+  static const Color red     = Color(0xFFF4212E);
+  static const Color divider = Color(0xFF2F3336); // X divider
 }
 
 class AppTheme {
@@ -23,9 +25,9 @@ class AppTheme {
       primaryColor: AppColors.neonBlue,
       fontFamily: 'RaonsonFont',
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.neonBlue,
+        primary:   AppColors.neonBlue,
         secondary: AppColors.neonBlueDim,
-        surface: AppColors.bg,
+        surface:   AppColors.bg,
         onPrimary: Colors.white,
         onSurface: Colors.white,
       ),
@@ -46,15 +48,15 @@ class AppTheme {
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(color: AppColors.neonBlue, width: 2),
         ),
-        labelColor: AppColors.neonBlue,
+        labelColor:          AppColors.neonBlue,
         unselectedLabelColor: AppColors.grey,
       ),
-      iconTheme: const IconThemeData(color: Colors.white),
-      dividerColor: Colors.white10,
+      iconTheme:   const IconThemeData(color: Colors.white),
+      dividerColor: AppColors.divider,
       textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: Colors.white),
+        bodyLarge:  TextStyle(color: Colors.white),
         bodyMedium: TextStyle(color: AppColors.greyLight),
-        bodySmall: TextStyle(color: AppColors.grey),
+        bodySmall:  TextStyle(color: AppColors.grey),
         titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
