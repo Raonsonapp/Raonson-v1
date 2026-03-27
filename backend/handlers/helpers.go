@@ -96,7 +96,7 @@ func miniUser(rows pgx.Rows) []gin.H {
 func setIsFollowing(u gin.H, myID, targetID string) {
 	var isFollowing bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1 AND following_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1::text AND following_id=$2::text)`,
 		myID, targetID).Scan(&isFollowing)
 	u["isFollowing"] = isFollowing
 }
