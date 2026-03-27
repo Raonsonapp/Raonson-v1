@@ -73,9 +73,9 @@ class _FeedShellState extends State<_FeedShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Colors.black,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
@@ -214,8 +214,8 @@ class _FeedBody extends StatelessWidget {
 
     // Posts list
     return RefreshIndicator(
-      color: AppColors.neonBlue,
-      backgroundColor: AppColors.surface,
+      color: Colors.white,
+      backgroundColor: const Color(0xFF111111),
       onRefresh: feedCtrl.refresh,
       child: ListView.builder(
         controller: scroll,
