@@ -67,10 +67,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
     }
   }
 
-  Future<String> _doUpload(File file) async {
-    // Use UploadManager's internal upload
-    return await UploadManager().uploadAvatar(file);
-  }
+
 
   @override
   void dispose() {
