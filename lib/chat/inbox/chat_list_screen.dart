@@ -103,7 +103,7 @@ class _ChatView extends StatelessWidget {
     final notes = context.watch<NoteService>();
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,7 +143,7 @@ class _ChatView extends StatelessWidget {
               child: Container(
                 height: 38,
                 decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: const Color(0xFF111111),
                     borderRadius: BorderRadius.circular(12)),
                 child: const TextField(
                   style: TextStyle(color: Colors.white, fontSize: 14),
@@ -201,7 +201,7 @@ class _ChatView extends StatelessWidget {
                               style: TextStyle(color: Colors.white38)))
                       : RefreshIndicator(
                           color: AppColors.neonBlue,
-                          backgroundColor: AppColors.surface,
+                          backgroundColor: const Color(0xFF111111),
                           onRefresh: () => ctrl.loadChats(),
                           child: ListView.builder(
                             itemCount: ctrl.chats.length,
@@ -327,7 +327,7 @@ class _MyNoteBubble extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.neonBlue,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.bg, width: 1.5),
+                      border: Border.all(color: Colors.black, width: 1.5),
                     ),
                     child: Icon(
                       hasNote ? Icons.edit_rounded : Icons.add_rounded,
@@ -354,7 +354,7 @@ class _MyNoteBubble extends StatelessWidget {
   }
 
   Widget _avatarPlaceholder() => Container(
-    color: AppColors.card,
+    color: const Color(0xFF1A1A1A),
     child: const Icon(Icons.person, color: Colors.white38, size: 26),
   );
 }
@@ -456,7 +456,7 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
     );
   }
 
-  Widget _ph() => Container(color: AppColors.card,
+  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
       child: const Icon(Icons.person, color: Colors.white38, size: 26));
 }
 
@@ -612,7 +612,7 @@ class _ChatTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00E676),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.bg, width: 2.5),
+                    border: Border.all(color: Colors.black, width: 2.5),
                   ),
                 ),
               ),
