@@ -32,15 +32,18 @@ class StoryModel {
     final likes = json['likes'];
     final views = json['views'];
     return StoryModel(
-      id: json['_id']?.toString() ?? '',
-      user: UserModel.fromJson(json['user']),
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      user: json['user'] != null
+          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
+          : const UserModel(id:'',username:'',avatar:'',verified:false,
+              isPrivate:false,postsCount:0,followersCount:0,followingCount:0),
       mediaUrl: json['mediaUrl'] ?? '',
       mediaType: json['mediaType'] ?? 'image',
       viewed: json['viewed'] ?? false,
       isLiked: json['isLiked'] ?? false,
       likesCount: likes is List ? likes.length : (json['likesCount'] ?? 0),
       viewsCount: views is List ? views.length : (json['viewsCount'] ?? 0),
-      expiresAt: DateTime.parse(json['expiresAt']),
+      expiresAt: DateTime.tryParse(json['expiresAt'] ?? '') ?? DateTime.now().add(const Duration(hours: 24)),
     );
   }
 }
