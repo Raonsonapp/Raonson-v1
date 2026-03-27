@@ -188,12 +188,10 @@ class _SearchScreenState extends State<SearchScreen>
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: const Color(0xFF111111),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: _hasQuery
-                        ? AppColors.neonBlue.withOpacity(0.4)
-                        : Colors.white.withOpacity(0.07),
+                    color: Colors.white.withOpacity(0.12),
                   ),
                 ),
                 child: TextField(
@@ -597,7 +595,7 @@ class _MusicRow extends StatelessWidget {
               ? Image.network(art, width: 48, height: 48, fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) =>
                       Container(width: 48, height: 48, color: AppColors.card))
-              : Container(width: 48, height: 48, color: AppColors.card,
+              : Container(width: 48, height: 48, color: const Color(0xFF1A1A1A),
                   child: const Icon(Icons.music_note_rounded,
                       color: Colors.white24, size: 22)),
         ),
