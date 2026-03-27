@@ -43,9 +43,12 @@ class CommentModel {
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
     return CommentModel(
-      id: (json['_id'] ?? '').toString(),
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
       postId: (json['post'] ?? '').toString(),
-      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
+      user: json['user'] != null
+          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
+          : const UserModel(id:'',username:'',avatar:'',verified:false,
+              isPrivate:false,postsCount:0,followersCount:0,followingCount:0),
       text: json['text'] ?? '',
       liked: json['liked'] ?? false,
       likesCount: (json['likes'] is List)
