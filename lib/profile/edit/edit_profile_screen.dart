@@ -115,18 +115,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   padding: EdgeInsets.all(14),
                   child: SizedBox(width: 20, height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.neonBlue)))
+                        strokeWidth: 2, color: Colors.white)))
               : TextButton(
                   onPressed: _save,
                   child: const Text('Сабт',
-                      style: TextStyle(color: AppColors.neonBlue,
+                      style: TextStyle(color: Colors.white,
                           fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
         ],
       ),
       body: _ctrl.isLoading
           ? const Center(child: CircularProgressIndicator(
-              color: AppColors.neonBlue, strokeWidth: 2))
+              color: Colors.white, strokeWidth: 2))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(children: [
@@ -141,9 +141,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         width: 88, height: 88,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.card,
+                          color: const Color(0xFF1A1A1A),
                           border: Border.all(
-                              color: AppColors.neonBlue.withOpacity(0.4),
+                              color: Colors.white.withOpacity(0.4),
                               width: 2),
                         ),
                         child: ClipOval(
@@ -165,7 +165,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: _uploadingAvatar
-                              ? Colors.grey : AppColors.neonBlue,
+                              ? Colors.grey : Colors.white,
                         ),
                         child: _uploadingAvatar
                             ? const Padding(
@@ -196,7 +196,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 const SizedBox(height: 6),
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: const Color(0xFF111111),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                         color: Colors.white.withOpacity(0.08)),
@@ -243,7 +243,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: const Color(0xFF111111),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                         color: Colors.white.withOpacity(0.08)),
@@ -260,7 +260,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     Switch(
                       value:    _ctrl.isPrivate,
                       onChanged: _ctrl.togglePrivate,
-                      activeColor: AppColors.neonBlue,
+                      activeColor: Colors.white,
                     ),
                   ]),
                 ),
@@ -295,7 +295,7 @@ class _TextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: const Color(0xFF111111),
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: Colors.white.withOpacity(0.08)),
     ),
@@ -325,7 +325,7 @@ class _AddMusicTile extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF111111),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
@@ -334,12 +334,12 @@ class _AddMusicTile extends StatelessWidget {
           width: 34, height: 34,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.neonBlue.withOpacity(0.1),
+            color: Colors.white.withOpacity(0.1),
             border: Border.all(
-                color: AppColors.neonBlue.withOpacity(0.35)),
+                color: Colors.white.withOpacity(0.35)),
           ),
           child: const Icon(Icons.music_note_rounded,
-              color: AppColors.neonBlue, size: 17),
+              color: Colors.white, size: 17),
         ),
         const SizedBox(width: 12),
         Text('Мусиқӣ илова кун',
@@ -369,10 +369,10 @@ class _MusicCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: const Color(0xFF111111),
       borderRadius: BorderRadius.circular(14),
       border: Border.all(
-          color: AppColors.neonBlue.withOpacity(0.3)),
+          color: Colors.white.withOpacity(0.3)),
     ),
     child: Row(children: [
       ClipRRect(
@@ -381,9 +381,9 @@ class _MusicCard extends StatelessWidget {
             ? Image.network(song.artUrl,
                 width: 46, height: 46, fit: BoxFit.cover)
             : Container(width: 46, height: 46,
-                color: AppColors.card,
+                color: const Color(0xFF1A1A1A),
                 child: const Icon(Icons.music_note_rounded,
-                    color: AppColors.neonBlue, size: 22)),
+                    color: Colors.white, size: 22)),
       ),
       const SizedBox(width: 10),
       Expanded(child: Column(
@@ -398,7 +398,7 @@ class _MusicCard extends StatelessWidget {
             maxLines: 1, overflow: TextOverflow.ellipsis),
         Text('${_t(song.startMs)} – ${_t(song.endMs)}',
             style: const TextStyle(
-                color: AppColors.neonBlue, fontSize: 10)),
+                color: Colors.white, fontSize: 10)),
       ])),
       GestureDetector(
         onTap: onChange,
