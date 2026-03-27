@@ -30,12 +30,14 @@ class CreatePostController extends ChangeNotifier {
         caption: caption,
         media: media.value,
       );
-
       media.value = [];
-    } finally {
+    } catch (e) {
       isUploading = false;
       notifyListeners();
+      rethrow; // ← МУҲИМ: хаторо ба screen мефиристад
     }
+    isUploading = false;
+    notifyListeners();
   }
 
   @override
