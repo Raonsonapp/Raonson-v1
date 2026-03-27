@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
+import '../../core/services/user_session.dart';
 
 class LoginState {
   final String email;
@@ -103,7 +104,12 @@ class LoginController extends ChangeNotifier {
       final userData = data['user'] as Map<String, dynamic>?;
       if (userData != null) {
         final uid = (userData['id'] ?? userData['_id'])?.toString() ?? '';
-        if (uid.isNotEmpty) await TokenStorage.saveUserId(uid);
+        if (uid.isNotEmpty) {
+          await TokenStorage.saveUserId(uid);
+          UserSession.userId   = uid;
+          UserSession.username = (userData['username'] ?? '').toString();
+          UserSession.avatar   = (userData['avatar']   ?? '').toString();
+        }
       }
 
       _state = _state.copyWith(isLoading: false);
