@@ -79,7 +79,7 @@ class _PostCardState extends State<PostCard> {
   void _showOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (_) => SafeArea(
@@ -116,7 +116,7 @@ class _PostCardState extends State<PostCard> {
     final postUrl = 'https://raonson-v1.onrender.com/posts/preview/${widget.post.id}';
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -165,7 +165,7 @@ class _PostCardState extends State<PostCard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SizedBox(
@@ -350,11 +350,11 @@ class _MediaCarouselState extends State<_MediaCarousel> {
               fit: BoxFit.cover,
               width: double.infinity,
               placeholder: (_, __) => Container(
-                color: AppColors.card,
+                color: const Color(0xFF1A1A1A),
                 child: const Center(child: CircularProgressIndicator(
                     strokeWidth: 2, color: Colors.white30))),
               errorWidget: (_, url, err) => Container(
-                color: AppColors.card,
+                color: const Color(0xFF1A1A1A),
                 child: const Center(child: Icon(Icons.broken_image_outlined,
                     color: Colors.white30, size: 48)),
               ),
