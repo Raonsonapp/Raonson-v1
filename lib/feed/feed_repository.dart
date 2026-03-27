@@ -38,7 +38,7 @@ class FeedRepository {
   }
 
   Future<List<CommentModel>> fetchComments(String postId) async {
-    final response = await _api.getRequest('/posts/$postId/comments');
+    final response = await _api.getRequest('/comments/$postId');
     if (response.statusCode >= 400) throw Exception('Failed to load comments');
     final body = jsonDecode(response.body);
     final List list = body is Map ? (body['comments'] ?? []) : body as List;
@@ -50,7 +50,7 @@ class FeedRepository {
     required String text,
   }) async {
     final response = await _api.postRequest(
-      '/posts/$postId/comments',
+      '/comments/$postId',
       body: {'text': text},
     );
     if (response.statusCode >= 400) throw Exception('Failed to add comment');
@@ -58,6 +58,6 @@ class FeedRepository {
   }
 
   Future<void> likeComment({required String postId, required String commentId}) async {
-    await _api.postRequest('/posts/$postId/comments/$commentId/like');
+    await _api.postRequest('/comments/$commentId/like');
   }
 }
