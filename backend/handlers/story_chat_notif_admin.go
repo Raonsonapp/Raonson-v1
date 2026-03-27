@@ -75,11 +75,11 @@ func LikeStory(c *gin.Context) {
 	myID := mw.UID(c)
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM story_likes WHERE story_id=$1 AND user_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM story_likes WHERE story_id=$1::text AND user_id=$2::text)`,
 		sid, myID).Scan(&liked)
 	if liked {
 		db.Pool.Exec(context.Background(),
-			`DELETE FROM story_likes WHERE story_id=$1 AND user_id=$2`, sid, myID)
+			`DELETE FROM story_likes WHERE story_id=$1::text AND user_id=$2::text`, sid, myID)
 	} else {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO story_likes(story_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, sid, myID)
@@ -103,9 +103,9 @@ func GetStoryViewers(c *gin.Context) {
 	}
 	var viewCount, likeCount int
 	db.Pool.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM story_views WHERE story_id=$1`, sid).Scan(&viewCount)
+		`SELECT COUNT(*) FROM story_views WHERE story_id=$1::text`, sid).Scan(&viewCount)
 	db.Pool.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM story_likes WHERE story_id=$1`, sid).Scan(&likeCount)
+		`SELECT COUNT(*) FROM story_likes WHERE story_id=$1::text`, sid).Scan(&likeCount)
 	c.JSON(http.StatusOK, gin.H{"viewsCount": viewCount, "likesCount": likeCount})
 }
 
@@ -114,7 +114,7 @@ func DeleteStory(c *gin.Context) {
 	sid  := c.Param("id")
 	myID := mw.UID(c)
 	res, _ := db.Pool.Exec(context.Background(),
-		`DELETE FROM stories WHERE id=$1 AND user_id=$2`, sid, myID)
+		`DELETE FROM stories WHERE id=$1 AND user_id=$2::text`, sid, myID)
 	if res.RowsAffected() == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Story not found"})
 		return
@@ -271,7 +271,7 @@ func MarkChatRead(c *gin.Context) {
 	chatID := c.Param("chatId")
 	myID   := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`UPDATE messages SET read=TRUE WHERE chat_id=$1 AND receiver_id=$2`, chatID, myID)
+		`UPDATE messages SET read=TRUE WHERE chat_id=$1::text AND receiver_id=$2::text`, chatID, myID)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -280,7 +280,7 @@ func DeleteMessage(c *gin.Context) {
 	msgID := c.Param("id")
 	myID  := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`DELETE FROM messages WHERE id=$1 AND sender_id=$2`, msgID, myID)
+		`DELETE FROM messages WHERE id=$1 AND sender_id=$2::text`, msgID, myID)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
@@ -327,7 +327,7 @@ func GetNotifications(c *gin.Context) {
 	}
 	var unread int
 	db.Pool.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND read=FALSE`, myID).Scan(&unread)
+		`SELECT COUNT(*) FROM notifications WHERE user_id=$1::text AND read=FALSE`, myID).Scan(&unread)
 	c.JSON(http.StatusOK, gin.H{"notifications": notifs, "unreadCount": unread, "page": page})
 }
 
@@ -342,7 +342,7 @@ func MarkNotifRead(c *gin.Context) {
 func MarkAllNotifsRead(c *gin.Context) {
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`UPDATE notifications SET read=TRUE WHERE user_id=$1`, myID)
+		`UPDATE notifications SET read=TRUE WHERE user_id=$1::text`, myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
