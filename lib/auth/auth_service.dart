@@ -1,6 +1,7 @@
 import '../core/api/api_client.dart';
 import '../core/storage/token_storage.dart';
 import 'auth_repository.dart';
+import '../core/services/user_session.dart';
 
 class AuthService {
   final AuthRepository _repository;
@@ -25,6 +26,17 @@ class AuthService {
 
     await _tokenStorage.saveToken(accessToken);
     ApiClient.instance.setAuthToken(accessToken);
+
+    final user = data['user'] as Map<String, dynamic>?;
+    if (user != null) {
+      final uid = (user['id'] ?? user['_id'] ?? '').toString();
+      if (uid.isNotEmpty) {
+        await _tokenStorage.saveUserId(uid);
+        UserSession.userId   = uid;
+        UserSession.username = (user['username'] ?? '').toString();
+        UserSession.avatar   = (user['avatar']   ?? '').toString();
+      }
+    }
   }
 
   // ================= REGISTER =================
@@ -58,6 +70,10 @@ class AuthService {
     final token = await _tokenStorage.getToken();
     if (token != null) {
       ApiClient.instance.setAuthToken(token);
+      final uid = await _tokenStorage.getUserId();
+      if (uid != null && uid.isNotEmpty) {
+        UserSession.userId = uid;
+      }
     }
   }
 
