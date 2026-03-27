@@ -144,9 +144,19 @@ class _ProfileScreenState extends State<ProfileScreen>
             else
               const SizedBox(width: 12),
             Expanded(
-              child: Text(user.username,
-                  style: const TextStyle(color: Colors.white,
-                      fontSize: 17, fontWeight: FontWeight.bold)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Flexible(
+                  child: Text(user.username,
+                      style: const TextStyle(color: Colors.white,
+                          fontSize: 17, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis),
+                ),
+                if (user.verified) ...[
+                  const SizedBox(width: 5),
+                  const Icon(Icons.verified_rounded,
+                      color: Color(0xFF00C853), size: 16),
+                ],
+              ]),
             ),
             // Share button
             IconButton(
@@ -217,28 +227,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
 
       // ── BIO ──────────────────────────────────────────────────────
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Name + verified
-          Row(children: [
-            Text(user.username,
-                style: const TextStyle(color: Colors.white,
-                    fontSize: 14, fontWeight: FontWeight.bold)),
-            if (user.verified) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.verified_rounded,
-                  color: Color(0xFF00C853), size: 15),
-            ],
-          ]),
-          if ((user.bio ?? '').isNotEmpty) ...[
-            const SizedBox(height: 3),
-            Text(user.bio!,
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.8), fontSize: 13)),
-          ],
-        ]),
-      ),
+      if ((user.bio ?? '').isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Text(user.bio!,
+              style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 13)),
+        ),
 
       // ── BUTTONS ──────────────────────────────────────────────────
       Padding(
