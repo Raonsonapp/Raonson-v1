@@ -90,7 +90,7 @@ class _MyStoryItem extends StatelessWidget {
             child: Container(
               width: 22, height: 22,
               decoration: BoxDecoration(
-                color: AppColors.neonBlue,
+                color: const Color(0xFF1D9BF0),
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.bg, width: 2),
               ),
@@ -145,7 +145,7 @@ class _StoryGroupItem extends StatelessWidget {
                       placeholder: (_, __) => Container(color: AppColors.surface),
                     )
                   : Container(
-                      color: AppColors.surface,
+                      color: const Color(0xFF1A1A1A),
                       child: const Icon(Icons.person,
                           color: Colors.white54, size: 28)),
             ),
