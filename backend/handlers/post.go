@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -85,12 +86,13 @@ func GetFeed(c *gin.Context) {
 		                json_build_object('url',m.url,'type',m.type)
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
-		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1),
-		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1)
+		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1::text),
+		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1::text)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		ORDER BY p.created_at DESC
 		LIMIT $2 OFFSET $3`, myID, limit, offset)
 	if err != nil {
+		log.Printf("[GetFeed] query error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get feed failed"})
 		return
 	}
@@ -137,8 +139,8 @@ func GetPost(c *gin.Context) {
 		                json_build_object('url',m.url,'type',m.type)
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
-		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$2),
-		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$2)
+		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$2::text),
+		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$2::text)
 		FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=$1`,
 		pid, myID).Scan(&pid2, &cap, &likes, &comms, &createdAt,
 		&uid, &uname, &uavatar, &verified, &media, &liked, &saved)
@@ -158,7 +160,7 @@ func DeletePost(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
 	res, _ := db.Pool.Exec(context.Background(),
-		`DELETE FROM posts WHERE id=$1 AND user_id=$2`, pid, myID)
+		`DELETE FROM posts WHERE id=$1 AND user_id=$2::text`, pid, myID)
 	if res.RowsAffected() == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
@@ -175,12 +177,12 @@ func TogglePostLike(c *gin.Context) {
 
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM post_likes WHERE post_id=$1 AND user_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM post_likes WHERE post_id=$1::text AND user_id=$2::text)`,
 		pid, myID).Scan(&liked)
 
 	if liked {
 		db.Pool.Exec(context.Background(),
-			`DELETE FROM post_likes WHERE post_id=$1 AND user_id=$2`, pid, myID)
+			`DELETE FROM post_likes WHERE post_id=$1::text AND user_id=$2::text`, pid, myID)
 		db.Pool.Exec(context.Background(),
 			`UPDATE posts SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, pid)
 	} else {
@@ -217,12 +219,12 @@ func TogglePostSave(c *gin.Context) {
 
 	var saved bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM post_saves WHERE post_id=$1 AND user_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM post_saves WHERE post_id=$1::text AND user_id=$2::text)`,
 		pid, myID).Scan(&saved)
 
 	if saved {
 		db.Pool.Exec(context.Background(),
-			`DELETE FROM post_saves WHERE post_id=$1 AND user_id=$2`, pid, myID)
+			`DELETE FROM post_saves WHERE post_id=$1::text AND user_id=$2::text`, pid, myID)
 	} else {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO post_saves(post_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, pid, myID)
