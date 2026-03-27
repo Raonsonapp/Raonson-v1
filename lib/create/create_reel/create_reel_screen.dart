@@ -48,9 +48,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       setState(() => _progress = 0.2);
       final compressed = await MediaCompressor.compressVideo(_file!);
       setState(() => _progress = 0.5);
-      final url = await UploadManager().uploadAvatar(compressed); // reuse upload
-      // Actually upload as video
-      final videoUrl = await _doUpload(compressed);
+      final videoUrl = await UploadManager().uploadFile(compressed);
       setState(() => _progress = 0.85);
       final res = await ApiClient.instance.post('/reels', body: {
         'videoUrl': videoUrl,
