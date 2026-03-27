@@ -71,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       return const Scaffold(
         backgroundColor: AppColors.bg,
         body: Center(child: CircularProgressIndicator(
-            color: AppColors.neonBlue, strokeWidth: 2)),
+            color: Colors.white, strokeWidth: 2)),
       );
     }
 
@@ -266,9 +266,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           Tab(icon: Icon(Icons.grid_on_rounded)),
           Tab(icon: Icon(Icons.play_circle_outline_rounded)),
         ],
-        indicatorColor:       AppColors.neonBlue,
+        indicatorColor: Colors.white,
         indicatorWeight:      2,
-        labelColor:           AppColors.neonBlue,
+        labelColor: Colors.white,
         unselectedLabelColor: Colors.white24,
         dividerColor:         Colors.white10,
       ),
@@ -400,21 +400,18 @@ class _OtherButtons extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           height: 36,
           decoration: BoxDecoration(
-            color:         isFollowing ? Colors.transparent : AppColors.neonBlue,
+            color:         isFollowing ? Colors.transparent : Colors.white,
             borderRadius:  BorderRadius.circular(10),
             border:        isFollowing
                 ? Border.all(color: Colors.white24)
                 : null,
-            boxShadow: !isFollowing ? [
-              BoxShadow(color: AppColors.neonBlue.withOpacity(0.35),
-                  blurRadius: 10)
-            ] : null,
+
           ),
           child: Center(
             child: Text(
               isFollowing ? 'Обунашуда' : 'Обуна',
               style: TextStyle(
-                color: isFollowing ? Colors.white70 : Colors.white,
+                color: isFollowing ? Colors.white54 : Colors.black,
                 fontWeight: FontWeight.bold, fontSize: 14,
               ),
             ),
@@ -582,7 +579,7 @@ class _UserListSheetState extends State<_UserListSheet> {
   Widget build(BuildContext context) => Container(
     height: MediaQuery.of(context).size.height * 0.65,
     decoration: const BoxDecoration(
-      color: Color(0xFF0D1117),
+      color: Color(0xFF111111),
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     child: Column(children: [
@@ -599,7 +596,7 @@ class _UserListSheetState extends State<_UserListSheet> {
       Expanded(
         child: _loading
             ? const Center(child: CircularProgressIndicator(
-                color: AppColors.neonBlue, strokeWidth: 2))
+                color: Colors.white, strokeWidth: 2))
             : _list.isEmpty
                 ? Center(child: Text('Ҳанӯз ${widget.title.toLowerCase()} нест',
                     style: TextStyle(
@@ -651,7 +648,7 @@ class _VerifySheet extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
     decoration: const BoxDecoration(
-      color: Color(0xFF0D1117),
+      color: Color(0xFF111111),
       borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
     ),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
