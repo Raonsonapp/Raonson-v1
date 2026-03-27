@@ -46,7 +46,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   Future<void> _loadComments() async {
     setState(() => _loading = true);
     try {
-      final res = await ApiClient.instance.get('/posts/${widget.post.id}/comments');
+      final res = await ApiClient.instance.get('/comments/${widget.post.id}');
       if (res.statusCode < 400) {
         final body = jsonDecode(res.body);
         final List list = body is List ? body : (body['comments'] ?? []);
@@ -69,7 +69,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
     try {
       final res = await ApiClient.instance.post(
-        '/posts/${widget.post.id}/comments',
+        '/comments/${widget.post.id}',
         body: {'text': text},
       );
       if (res.statusCode < 400) {
