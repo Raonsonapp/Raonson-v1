@@ -56,17 +56,13 @@ dev_dependencies:
 
   flutter_lints: ^3.0.0
   flutter_launcher_icons: ^0.13.1
-  flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/icon.png"
-
+  
 flutter:
   uses-material-design: true
 
   assets:
-    - assets/icon/logo.png
-    - assets/icons/
+    - assets/icon.png
+    - assets/icon.png
 
   fonts:
     - family: RaonsonFont
@@ -78,7 +74,7 @@ flutter_launcher_icons:
   android: true
   ios: true
 
-  image_path: assets/icon/logo.png
+  image_path: assets/icon.png
 
   adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: assets/icon/logo.png
+  adaptive_icon_foreground: assets/icon.png
