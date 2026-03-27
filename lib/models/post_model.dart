@@ -45,8 +45,11 @@ class PostModel {
     }).toList();
 
     return PostModel(
-      id: (json['_id'] ?? '').toString(),
-      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      user: json['user'] != null
+          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
+          : const UserModel(id:'',username:'',avatar:'',verified:false,
+              isPrivate:false,postsCount:0,followersCount:0,followingCount:0),
       caption: (json['caption'] ?? '').toString(),
       media: media,
       // Backend has "likes" array, not "likesCount"
