@@ -73,6 +73,9 @@ class UploadManager {
 
   Future<String> uploadAvatar(File file) => _upload(file);
 
+  // Upload any file (image or video) - public method for reels
+  Future<String> uploadFile(File file) => _upload(file);
+
   Future<void> uploadPost({
     required List<File> media,
     required String caption,
