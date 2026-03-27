@@ -19,18 +19,11 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bg,
+        color: Colors.black,
         border: const Border(
           top: BorderSide(color: Colors.white10, width: 0.5),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.neonBlue.withOpacity(0.18),
-            blurRadius: 24,
-            spreadRadius: 0,
-            offset: const Offset(0, -4),
-          ),
-        ],
+
       ),
       child: SafeArea(
         top: false,
@@ -77,9 +70,7 @@ class BottomNavBar extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: currentIndex == 4
-                                ? AppColors.neonBlue
-                                : Colors.transparent,
+                            color: currentIndex == 4 ? Colors.white : Colors.transparent,
                             width: 2,
                           ),
                         ),
@@ -154,22 +145,8 @@ class _NavItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          child: Icon(
-            icon,
-            size: 28,
-            color: selected ? AppColors.neonBlue : Colors.white60,
-            shadows: selected
-                ? [
-                    Shadow(
-                      color: AppColors.neonBlue.withOpacity(0.8),
-                      blurRadius: 12,
-                    )
-                  ]
-                : null,
-          ),
-        ),
+        child: Icon(icon, size: 28,
+            color: selected ? Colors.white : Colors.white38),
       ),
     );
   }
