@@ -23,10 +23,13 @@ class ReelModel {
 
   factory ReelModel.fromJson(Map<String, dynamic> json) {
     return ReelModel(
-      id: json['_id'],
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
       videoUrl: json['videoUrl'] ?? '',
       caption: json['caption'] ?? '',
-      user: UserModel.fromJson(json['user']),
+      user: json['user'] != null
+          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
+          : const UserModel(id:'',username:'',avatar:'',verified:false,
+              isPrivate:false,postsCount:0,followersCount:0,followingCount:0),
       likesCount: json['likesCount'] ?? 0,
       commentsCount: json['commentsCount'] ?? 0,
       isLiked: json['isLiked'] ?? false,
