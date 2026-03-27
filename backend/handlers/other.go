@@ -95,7 +95,7 @@ func DeleteComment(c *gin.Context) {
 	myID := mw.UID(c)
 	var postID string
 	err := db.Pool.QueryRow(context.Background(),
-		`DELETE FROM comments WHERE id=$1 AND user_id=$2 RETURNING post_id`, cid, myID,
+		`DELETE FROM comments WHERE id=$1 AND user_id=$2::text RETURNING post_id`, cid, myID,
 	).Scan(&postID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Comment not found"})
@@ -112,11 +112,11 @@ func ToggleCommentLike(c *gin.Context) {
 	myID := mw.UID(c)
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM comment_likes WHERE comment_id=$1 AND user_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM comment_likes WHERE comment_id=$1::text AND user_id=$2::text)`,
 		cid, myID).Scan(&liked)
 	if liked {
 		db.Pool.Exec(context.Background(),
-			`DELETE FROM comment_likes WHERE comment_id=$1 AND user_id=$2`, cid, myID)
+			`DELETE FROM comment_likes WHERE comment_id=$1::text AND user_id=$2::text`, cid, myID)
 		db.Pool.Exec(context.Background(),
 			`UPDATE comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
 	} else {
@@ -147,7 +147,7 @@ func FollowUser(c *gin.Context) {
 	}
 	var alreadyFollowing bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1 AND following_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1::text AND following_id=$2::text)`,
 		myID, targetID).Scan(&alreadyFollowing)
 	if alreadyFollowing {
 		c.JSON(http.StatusOK, gin.H{"following": true})
@@ -186,7 +186,7 @@ func UnfollowUser(c *gin.Context) {
 	targetID := c.Param("id")
 	myID     := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`DELETE FROM follows WHERE follower_id=$1 AND following_id=$2`, myID, targetID)
+		`DELETE FROM follows WHERE follower_id=$1::text AND following_id=$2::text`, myID, targetID)
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET followers_count=GREATEST(followers_count-1,0) WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
@@ -199,7 +199,7 @@ func AcceptRequest(c *gin.Context) {
 	rid  := c.Param("id")
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`DELETE FROM follow_requests WHERE requester_id=$1 AND target_id=$2`, rid, myID)
+		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`, rid, myID)
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
 	db.Pool.Exec(context.Background(),
@@ -214,7 +214,7 @@ func RejectRequest(c *gin.Context) {
 	rid  := c.Param("id")
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`DELETE FROM follow_requests WHERE requester_id=$1 AND target_id=$2`, rid, myID)
+		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`, rid, myID)
 	c.JSON(http.StatusOK, gin.H{"rejected": true})
 }
 
@@ -360,8 +360,8 @@ func GetReels(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT r.id, r.video_url, r.caption, r.views_count, r.likes_count, r.created_at,
 		       u.id, u.username, u.avatar, u.verified,
-		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1),
-		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1)
+		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
+		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text)
 		FROM reels r JOIN users u ON u.id=r.user_id
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset)
@@ -403,11 +403,11 @@ func ToggleReelLike(c *gin.Context) {
 	myID := mw.UID(c)
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM reel_likes WHERE reel_id=$1 AND user_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM reel_likes WHERE reel_id=$1::text AND user_id=$2::text)`,
 		rid, myID).Scan(&liked)
 	if liked {
 		db.Pool.Exec(context.Background(),
-			`DELETE FROM reel_likes WHERE reel_id=$1 AND user_id=$2`, rid, myID)
+			`DELETE FROM reel_likes WHERE reel_id=$1::text AND user_id=$2::text`, rid, myID)
 		db.Pool.Exec(context.Background(),
 			`UPDATE reels SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, rid)
 	} else {
@@ -425,11 +425,11 @@ func ToggleReelSave(c *gin.Context) {
 	myID := mw.UID(c)
 	var saved bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM reel_saves WHERE reel_id=$1 AND user_id=$2)`,
+		`SELECT EXISTS(SELECT 1 FROM reel_saves WHERE reel_id=$1::text AND user_id=$2::text)`,
 		rid, myID).Scan(&saved)
 	if saved {
 		db.Pool.Exec(context.Background(),
-			`DELETE FROM reel_saves WHERE reel_id=$1 AND user_id=$2`, rid, myID)
+			`DELETE FROM reel_saves WHERE reel_id=$1::text AND user_id=$2::text`, rid, myID)
 	} else {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO reel_saves(reel_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
@@ -442,7 +442,7 @@ func DeleteReel(c *gin.Context) {
 	rid  := c.Param("id")
 	myID := mw.UID(c)
 	res, _ := db.Pool.Exec(context.Background(),
-		`DELETE FROM reels WHERE id=$1 AND user_id=$2`, rid, myID)
+		`DELETE FROM reels WHERE id=$1 AND user_id=$2::text`, rid, myID)
 	if res.RowsAffected() == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
 		return
