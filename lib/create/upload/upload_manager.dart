@@ -50,9 +50,11 @@ class UploadManager {
       'file', file.path, contentType: _contentType(file)));
     final streamed = await req.send().timeout(const Duration(seconds: 120));
     final body     = jsonDecode(await streamed.stream.bytesToString());
-    if (streamed.statusCode >= 400) throw Exception('Cloudinary error');
+    if (streamed.statusCode >= 400) {
+      throw Exception('Cloudinary error ${streamed.statusCode}: ${body['error']?['message'] ?? body}');
+    }
     final url = body['secure_url'] as String?;
-    if (url == null || url.isEmpty) throw Exception('No URL');
+    if (url == null || url.isEmpty) throw Exception('Cloudinary: no secure_url');
     return url;
   }
 
@@ -65,15 +67,16 @@ class UploadManager {
         'file', file.path, contentType: _contentType(file)));
     final streamed = await req.send().timeout(const Duration(seconds: 120));
     final body     = jsonDecode(await streamed.stream.bytesToString());
-    if (streamed.statusCode >= 400) throw Exception('Upload failed');
-    final url = body['url'] as String?;
-    if (url == null || url.isEmpty) throw Exception('No URL');
+    if (streamed.statusCode >= 400) {
+      throw Exception('Backend upload failed ${streamed.statusCode}: ${body['message'] ?? body}');
+    }
+    final url = (body['url'] ?? body['secure_url']) as String?;
+    if (url == null || url.isEmpty) throw Exception('Backend: no url in response');
     return url;
   }
 
   Future<String> uploadAvatar(File file) => _upload(file);
 
-  // Upload any file (image or video) - public method for reels
   Future<String> uploadFile(File file) => _upload(file);
 
   Future<void> uploadPost({
