@@ -146,9 +146,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
               icon: _sending
                   ? const SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.neonBlue))
+                          strokeWidth: 2, color: const Color(0xFF1D9BF0)))
                   : const Icon(Icons.send_rounded,
-                      color: AppColors.neonBlue),
+                      color: const Color(0xFF1D9BF0)),
             ),
           ]),
         ),
