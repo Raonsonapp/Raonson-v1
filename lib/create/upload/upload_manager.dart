@@ -1,5 +1,6 @@
 // lib/create/upload/upload_manager.dart
-// Compress + Upload → Cloudinary (primary) ё R2 (fallback)
+// Direct upload to Go backend → Cloudflare R2
+// Cloudinary removed — no preset/config needed
 
 import 'dart:convert';
 import 'dart:io';
@@ -11,69 +12,77 @@ import '../../core/storage/token_storage.dart';
 import '../../core/utils/media_compressor.dart';
 
 class UploadManager {
-  static const _cloudName    = 'dtp3kzqxi';
-  static const _uploadPreset = 'raonson_preset';
-
   String _ext(File f) => f.path.split('.').last.toLowerCase();
 
   bool _isVideo(File f) =>
-      ['mp4','mov','avi','mkv','webm','3gp'].contains(_ext(f));
+      ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'].contains(_ext(f));
 
   MediaType _contentType(File f) {
     final ext = _ext(f);
-    if (['mp4','mov','avi','mkv','webm'].contains(ext)) return MediaType('video','mp4');
-    if (ext == 'png') return MediaType('image','png');
-    return MediaType('image','jpeg');
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(ext)) return MediaType('video', 'mp4');
+    if (ext == 'png') return MediaType('image', 'png');
+    return MediaType('image', 'jpeg');
   }
 
+  // ── Compress + upload to backend (R2) ──────────────────────────
   Future<String> _upload(File file) async {
-    final compressed = await MediaCompressor.compress(file);
-    final before = await MediaCompressor.sizeLabel(file);
-    final after  = await MediaCompressor.sizeLabel(compressed);
-    print('Compress: $before → $after');
-
+    // 1. Compress
+    File toUpload;
     try {
-      return await _uploadToCloudinary(compressed);
-    } catch (e) {
-      print('Cloudinary failed: $e — trying R2...');
-      return await _uploadToBackend(compressed);
+      toUpload = await MediaCompressor.compress(file);
+    } catch (_) {
+      toUpload = file; // fallback: no compress
     }
-  }
 
-  Future<String> _uploadToCloudinary(File file) async {
-    final type = _isVideo(file) ? 'video' : 'image';
-    final uri  = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudName/$type/upload');
-    final req  = http.MultipartRequest('POST', uri)
-      ..fields['upload_preset'] = _uploadPreset
-      ..fields['folder']        = 'raonson';
-    req.files.add(await http.MultipartFile.fromPath(
-      'file', file.path, contentType: _contentType(file)));
-    final streamed = await req.send().timeout(const Duration(seconds: 120));
-    final body     = jsonDecode(await streamed.stream.bytesToString());
-    if (streamed.statusCode >= 400) {
-      throw Exception('Cloudinary error ${streamed.statusCode}: ${body['error']?['message'] ?? body}');
-    }
-    final url = body['secure_url'] as String?;
-    if (url == null || url.isEmpty) throw Exception('Cloudinary: no secure_url');
-    return url;
+    final before = await MediaCompressor.sizeLabel(file);
+    final after  = await MediaCompressor.sizeLabel(toUpload);
+    print('[Upload] $before → $after');
+
+    return await _uploadToBackend(toUpload);
   }
 
   Future<String> _uploadToBackend(File file) async {
     final token = await TokenStorage.getAccessToken();
-    final req   = http.MultipartRequest(
-        'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
+    if (token == null || token.isEmpty) {
+      throw Exception('Токен нест — дубора ворид шавед');
+    }
+
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
+    final req = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath(
-        'file', file.path, contentType: _contentType(file)));
-    final streamed = await req.send().timeout(const Duration(seconds: 120));
-    final body     = jsonDecode(await streamed.stream.bytesToString());
+        'file',
+        file.path,
+        contentType: _contentType(file),
+      ));
+
+    print('[Upload] Sending to: $uri');
+
+    final streamed = await req.send().timeout(
+      const Duration(seconds: 120),
+      onTimeout: () => throw Exception('Upload timeout — интернет суст аст'),
+    );
+
+    final bodyStr = await streamed.stream.bytesToString();
+    print('[Upload] Response ${streamed.statusCode}: $bodyStr');
+
     if (streamed.statusCode >= 400) {
-      throw Exception('Backend upload failed ${streamed.statusCode}: ${body['message'] ?? body}');
+      Map body = {};
+      try { body = jsonDecode(bodyStr); } catch (_) {}
+      throw Exception('Upload хато ${streamed.statusCode}: ${body['error'] ?? bodyStr}');
     }
-    final url = (body['url'] ?? body['secure_url']) as String?;
-    if (url == null || url.isEmpty) throw Exception('Backend: no url in response');
+
+    final body = jsonDecode(bodyStr);
+    final url = (body['url'] ?? body['secure_url'])?.toString();
+    if (url == null || url.isEmpty) {
+      throw Exception('Server URL нафиристод: $bodyStr');
+    }
+
+    print('[Upload] ✅ URL: $url');
     return url;
   }
+
+  // ── Public API ──────────────────────────────────────────────────
 
   Future<String> uploadAvatar(File file) => _upload(file);
 
@@ -84,22 +93,42 @@ class UploadManager {
     required String caption,
     void Function(double)? onProgress,
   }) async {
-    final token     = await TokenStorage.getAccessToken();
-    final mediaList = <Map<String,String>>[];
+    final token = await TokenStorage.getAccessToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Токен нест — дубора ворид шавед');
+    }
+
+    final mediaList = <Map<String, String>>[];
+
     for (int i = 0; i < media.length; i++) {
       final url = await _upload(media[i]);
-      mediaList.add({'url': url, 'type': _isVideo(media[i]) ? 'video' : 'image'});
-      onProgress?.call((i+1) / media.length * 0.85);
+      mediaList.add({
+        'url':  url,
+        'type': _isVideo(media[i]) ? 'video' : 'image',
+      });
+      onProgress?.call((i + 1) / media.length * 0.85);
     }
+
+    print('[Upload] Creating post with ${mediaList.length} media...');
+
     final res = await http.post(
       Uri.parse('${AppConfig.apiBaseUrl}/posts'),
-      headers: {'Authorization':'Bearer $token','Content-Type':'application/json'},
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type':  'application/json',
+      },
       body: jsonEncode({'caption': caption, 'media': mediaList}),
     ).timeout(const Duration(seconds: 60));
+
     onProgress?.call(1.0);
+
     if (res.statusCode >= 400) {
-      throw Exception(jsonDecode(res.body)['message'] ?? 'Post failed');
+      Map body = {};
+      try { body = jsonDecode(res.body); } catch (_) {}
+      throw Exception('Post сохта нашуд: ${body['message'] ?? res.body}');
     }
+
+    print('[Upload] ✅ Post created');
   }
 
   Future<void> uploadStory({
@@ -108,14 +137,36 @@ class UploadManager {
     void Function(double)? onProgress,
   }) async {
     final token = await TokenStorage.getAccessToken();
-    final url   = await _upload(file);
+    if (token == null || token.isEmpty) {
+      throw Exception('Токен нест — дубора ворид шавед');
+    }
+
+    final url = await _upload(file);
     onProgress?.call(0.8);
+
+    print('[Upload] Creating story...');
+
     final res = await http.post(
       Uri.parse('${AppConfig.apiBaseUrl}/stories'),
-      headers: {'Authorization':'Bearer $token','Content-Type':'application/json'},
-      body: jsonEncode({'mediaUrl':url,'mediaType':_isVideo(file)?'video':'image','caption':caption}),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type':  'application/json',
+      },
+      body: jsonEncode({
+        'mediaUrl':  url,
+        'mediaType': _isVideo(file) ? 'video' : 'image',
+        'caption':   caption,
+      }),
     ).timeout(const Duration(seconds: 60));
+
     onProgress?.call(1.0);
-    if (res.statusCode >= 400) throw Exception('Story failed');
+
+    if (res.statusCode >= 400) {
+      Map body = {};
+      try { body = jsonDecode(res.body); } catch (_) {}
+      throw Exception('Story сохта нашуд: ${body['message'] ?? res.body}');
+    }
+
+    print('[Upload] ✅ Story created');
   }
 }
