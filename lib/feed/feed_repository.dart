@@ -21,7 +21,12 @@ class FeedRepository {
     }
 
     final body = jsonDecode(response.body);
-    final List list = body is Map ? (body['posts'] ?? []) : body as List;
+    List list = [];
+    if (body is List) {
+      list = body;
+    } else if (body is Map) {
+      list = body['posts'] ?? body['data'] ?? [];
+    }
     return list.map((e) => PostModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
