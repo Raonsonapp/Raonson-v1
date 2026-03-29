@@ -1,49 +1,50 @@
-import 'user_model.dart';
+import 'dart:convert';
 
-class StoryModel {
-  final String id;
-  final UserModel user;
-  final String mediaUrl;
-  final String mediaType;
-  final bool viewed;
-  final bool isLiked;
-  final int likesCount;
-  final int viewsCount;
-  final DateTime expiresAt;
+import '../core/api/api_client.dart';
+import '../core/api/api_endpoints.dart';
+import '../models/story_model.dart';
 
-  const StoryModel({
-    required this.id,
-    required this.user,
-    required this.mediaUrl,
-    required this.mediaType,
-    required this.viewed,
-    this.isLiked = false,
-    this.likesCount = 0,
-    this.viewsCount = 0,
-    required this.expiresAt,
-  });
+class StoryRepository {
+  final ApiClient _api;
+  StoryRepository(this._api);
 
-  bool get isVideo => mediaType == 'video';
-  bool get isImage => mediaType == 'image';
-  String get userAvatar => user.avatar;
-  String get username => user.username;
+  Future<List<StoryModel>> fetchStories() async {
+    try {
+      final res = await _api.get(ApiEndpoints.stories);
+      if (res.statusCode >= 400) return [];
+      final body = jsonDecode(res.body);
+      List list = [];
+      if (body is List) {
+        list = body;
+      } else if (body is Map) {
+        list = body['stories'] ?? body['data'] ?? [];
+      }
+      return list.map((e) => StoryModel.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
-  factory StoryModel.fromJson(Map<String, dynamic> json) {
-    final likes = json['likes'];
-    final views = json['views'];
-    return StoryModel(
-      id: (json['_id'] ?? json['id'] ?? '').toString(),
-      user: json['user'] != null
-          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
-          : const UserModel(id:'',username:'',avatar:'',verified:false,
-              isPrivate:false,postsCount:0,followersCount:0,followingCount:0),
-      mediaUrl: json['mediaUrl'] ?? '',
-      mediaType: json['mediaType'] ?? 'image',
-      viewed: json['viewed'] ?? false,
-      isLiked: json['isLiked'] ?? false,
-      likesCount: likes is List ? likes.length : (json['likesCount'] ?? 0),
-      viewsCount: views is List ? views.length : (json['viewsCount'] ?? 0),
-      expiresAt: DateTime.tryParse(json['expiresAt'] ?? '') ?? DateTime.now().add(const Duration(hours: 24)),
-    );
+  Future<List<StoryModel>> fetchMyStories() async {
+    try {
+      final res = await _api.get('${ApiEndpoints.stories}/my');
+      if (res.statusCode >= 400) return [];
+      final body = jsonDecode(res.body);
+      List list = [];
+      if (body is List) {
+        list = body;
+      } else if (body is Map) {
+        list = body['stories'] ?? body['data'] ?? [];
+      }
+      return list.map((e) => StoryModel.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> markStoryViewed(String storyId) async {
+    try {
+      await _api.post('${ApiEndpoints.stories}/$storyId/view');
+    } catch (_) {}
   }
 }
