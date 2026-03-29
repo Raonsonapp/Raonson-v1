@@ -22,8 +22,28 @@ class BottomNavScaffold extends StatelessWidget {
   }
 }
 
-class _BottomNavView extends StatelessWidget {
+class _BottomNavView extends StatefulWidget {
   const _BottomNavView();
+
+  @override
+  State<_BottomNavView> createState() => _BottomNavViewState();
+}
+
+class _BottomNavViewState extends State<_BottomNavView> {
+  // Keys for refreshing screens
+  Key _feedKey    = UniqueKey();
+  Key _storiesKey = UniqueKey();
+  Key _reelsKey   = UniqueKey();
+
+  void _refreshFeed() {
+    setState(() {
+      _feedKey    = UniqueKey(); // force FeedScreen rebuild → reload
+    });
+  }
+
+  void _refreshReels() {
+    setState(() => _reelsKey = UniqueKey());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +52,21 @@ class _BottomNavView extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          _Tab(active: nav.currentIndex == 0, child: FeedScreen(isActive: nav.currentIndex == 0)),
-          _Tab(active: nav.currentIndex == 1, child: ReelsScreen(isActive: nav.currentIndex == 1)),
+          _Tab(
+            active: nav.currentIndex == 0,
+            child: FeedScreen(
+              key: _feedKey,
+              isActive: nav.currentIndex == 0,
+              onCreatePost: _refreshFeed,
+            ),
+          ),
+          _Tab(
+            active: nav.currentIndex == 1,
+            child: ReelsScreen(
+              key: _reelsKey,
+              isActive: nav.currentIndex == 1,
+            ),
+          ),
           _Tab(active: nav.currentIndex == 2, child: const ChatListScreen()),
           _Tab(active: nav.currentIndex == 3, child: const SearchScreen()),
           _Tab(active: nav.currentIndex == 4, child: const ProfileScreen(userId: 'me')),
@@ -42,18 +75,16 @@ class _BottomNavView extends StatelessWidget {
       bottomNavigationBar: BottomNavBar(
         currentIndex: nav.currentIndex,
         onTap: nav.setIndex,
-        notifCount: 6,
+        notifCount: 0,
       ),
     );
   }
 }
 
-// Offstage wrapper - widget зинда аст аммо RENDER намешавад
-// => видео pause мешавад вақте tab иваз шавад
 class _Tab extends StatelessWidget {
-  final bool active;
+  final bool   active;
   final Widget child;
-  const _Tab({required this.active, required this.child});
+  const _Tab({required this.active, required this.child, super.key});
 
   @override
   Widget build(BuildContext context) {
