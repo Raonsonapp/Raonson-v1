@@ -29,9 +29,8 @@ class StoryController extends ChangeNotifier {
       final all = results[0];
       final my = results[1];
       _myStories = my;
-      // Filter out own stories from main feed
-      final myIds = my.map((s) => s.id).toSet();
-      _stories = all.where((s) => !myIds.contains(s.id)).toList();
+      // Keep all stories including own in feed (user can see their own)
+      _stories = all;
     } catch (_) {
       _stories = [];
       _myStories = [];
