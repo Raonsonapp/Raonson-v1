@@ -11,13 +11,14 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func r2Client() *s3.Client {
+func getR2Client() (*s3.Client, error) {
 	accountID := os.Getenv("CF_ACCOUNT_ID")
 	accessKey := os.Getenv("CF_R2_ACCESS_KEY")
 	secretKey := os.Getenv("CF_R2_SECRET_KEY")
@@ -26,16 +27,30 @@ func r2Client() *s3.Client {
 	if accessKey == "" { accessKey = "fed4dc11c0cedd66329d545cc5e286a1" }
 	if secretKey == "" { secretKey = "49aa55246ee4c4423946217f9b5127672d4555f09b6116fbdf45a12beeb74297" }
 
+	// Cloudflare R2 endpoint
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)
 
-	return s3.New(s3.Options{
-		BaseEndpoint: aws.String(endpoint),
-		Region:       "auto",
-		Credentials:  aws.NewCredentialsCache(
-			credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
-		),
-		UsePathStyle: true,
+	r2Resolver := aws.EndpointResolverWithOptionsFunc(
+		func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			return aws.Endpoint{URL: endpoint}, nil
+		},
+	)
+
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithEndpointResolverWithOptions(r2Resolver),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			accessKey, secretKey, "",
+		)),
+		config.WithRegion("auto"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
 	})
+	return client, nil
 }
 
 func r2Bucket() string {
@@ -52,7 +67,7 @@ func r2PublicURL() string {
 func UploadToR2(c *gin.Context) {
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No file"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
 		return
 	}
 	defer file.Close()
@@ -64,7 +79,9 @@ func UploadToR2(c *gin.Context) {
 	}
 
 	contentType := header.Header.Get("Content-Type")
-	if contentType == "" { contentType = detectContentType(header.Filename, data) }
+	if contentType == "" {
+		contentType = detectContentType(header.Filename, data)
+	}
 
 	folder := "images"
 	if strings.Contains(contentType, "video") { folder = "videos" }
@@ -74,15 +91,24 @@ func UploadToR2(c *gin.Context) {
 	if ext == "" { ext = extensionFromMime(contentType) }
 	key := fmt.Sprintf("%s/%s%s", folder, uuid.New().String(), ext)
 
-	client := r2Client()
+	client, err := getR2Client()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "R2 client init failed: " + err.Error()})
+		return
+	}
+
+	bucket := r2Bucket()
 	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-		Bucket:      aws.String(r2Bucket()),
-		Key:         aws.String(key),
-		Body:        bytes.NewReader(data),
-		ContentType: aws.String(contentType),
+		Bucket:        aws.String(bucket),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(data),
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(int64(len(data))),
 	})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "R2 upload failed: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("R2 upload failed (bucket=%s key=%s): %v", bucket, key, err),
+		})
 		return
 	}
 
@@ -104,6 +130,7 @@ func detectContentType(filename string, data []byte) string {
 	if len(data) > 2 && data[0] == 0x89 && data[1] == 0x50 { return "image/png" }
 	return "application/octet-stream"
 }
+
 func extensionFromMime(mime string) string {
 	switch {
 	case strings.Contains(mime, "jpeg"):      return ".jpg"
