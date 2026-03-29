@@ -17,7 +17,8 @@ import '../../widgets/loading_indicator.dart';
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
-  const FeedScreen({super.key, this.isActive = true});
+  final VoidCallback? onCreatePost;
+  const FeedScreen({super.key, this.isActive = true, this.onCreatePost});
 
   @override
   Widget build(BuildContext context) {
@@ -37,14 +38,15 @@ class FeedScreen extends StatelessWidget {
                 ..loadStories(),
         ),
       ],
-      child: _FeedShell(isActive: isActive),
+      child: _FeedShell(isActive: isActive, onCreatePost: onCreatePost),
     );
   }
 }
 
 class _FeedShell extends StatefulWidget {
   final bool isActive;
-  const _FeedShell({this.isActive = true});
+  final VoidCallback? onCreatePost;
+  const _FeedShell({this.isActive = true, this.onCreatePost});
   @override
   State<_FeedShell> createState() => _FeedShellState();
 }
@@ -73,13 +75,13 @@ class _FeedShellState extends State<_FeedShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
-          onPressed: () async { final r = await Navigator.pushNamed(context, AppRoutes.create); if (r == true && context.mounted) context.read<FeedController>().refresh(); },
+          onPressed: () async { final r = await Navigator.pushNamed(context, AppRoutes.create); if (r == true && context.mounted) { context.read<FeedController>().refresh(); widget.onCreatePost?.call(); } },
         ),
         title: const Text('Raonson',
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
@@ -110,7 +112,7 @@ class _FeedBody extends StatelessWidget {
     // Loading
     if (state.isLoading && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { await Navigator.pushNamed(context, '/create-story'); if (context.mounted) context.read<StoryController>().loadStories(); }),
+        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
         const Divider(color: Colors.white10, height: 1),
         const Expanded(
           child: Center(
@@ -131,7 +133,7 @@ class _FeedBody extends StatelessWidget {
     // Error — shows REAL error message for debugging
     if (state.hasError && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { await Navigator.pushNamed(context, '/create-story'); if (context.mounted) context.read<StoryController>().loadStories(); }),
+        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
         const Divider(color: Colors.white10, height: 1),
         Expanded(
           child: Center(
@@ -182,7 +184,7 @@ class _FeedBody extends StatelessWidget {
     // Empty
     if (!state.isLoading && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { await Navigator.pushNamed(context, '/create-story'); if (context.mounted) context.read<StoryController>().loadStories(); }),
+        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
         const Divider(color: Colors.white10, height: 1),
         Expanded(
           child: Center(
@@ -202,7 +204,7 @@ class _FeedBody extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                onPressed: () async { final r = await Navigator.pushNamed(context, AppRoutes.create); if (r == true && context.mounted) context.read<FeedController>().refresh(); },
+                onPressed: () async { final r = await Navigator.pushNamed(context, AppRoutes.create); if (r == true && context.mounted) { context.read<FeedController>().refresh(); widget.onCreatePost?.call(); } },
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 label: const Text('Пост гузор'),
               ),
@@ -214,8 +216,8 @@ class _FeedBody extends StatelessWidget {
 
     // Posts list
     return RefreshIndicator(
-      color: Colors.white,
-      backgroundColor: const Color(0xFF111111),
+      color: AppColors.neonBlue,
+      backgroundColor: AppColors.surface,
       onRefresh: feedCtrl.refresh,
       child: ListView.builder(
         controller: scroll,
@@ -223,7 +225,7 @@ class _FeedBody extends StatelessWidget {
         itemBuilder: (context, index) {
           if (index == 0) {
             return Column(children: [
-              StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { await Navigator.pushNamed(context, '/create-story'); if (context.mounted) context.read<StoryController>().loadStories(); }),
+              StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
               const Divider(color: Colors.white10, height: 1),
             ]);
           }
