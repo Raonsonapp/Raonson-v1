@@ -11,51 +11,35 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func getR2Client() (*s3.Client, error) {
+func getR2Client() *s3.Client {
 	accountID := os.Getenv("CF_ACCOUNT_ID")
-	accessKey := os.Getenv("CF_R2_ACCESS_KEY")
-	secretKey := os.Getenv("CF_R2_SECRET_KEY")
-
+	accessKey  := os.Getenv("CF_R2_ACCESS_KEY")
+	secretKey  := os.Getenv("CF_R2_SECRET_KEY")
 	if accountID == "" { accountID = "4362a439e21a5c003fe9a49560b370b6" }
-	if accessKey == "" { accessKey = "fed4dc11c0cedd66329d545cc5e286a1" }
-	if secretKey == "" { secretKey = "49aa55246ee4c4423946217f9b5127672d4555f09b6116fbdf45a12beeb74297" }
+	if accessKey  == "" { accessKey  = "fed4dc11c0cedd66329d545cc5e286a1" }
+	if secretKey  == "" { secretKey  = "49aa55246ee4c4423946217f9b5127672d4555f09b6116fbdf45a12beeb74297" }
 
-	// Cloudflare R2 endpoint
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)
 
-	r2Resolver := aws.EndpointResolverWithOptionsFunc(
-		func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{URL: endpoint}, nil
-		},
-	)
-
-	cfg, err := config.LoadDefaultConfig(context.Background(),
-		config.WithEndpointResolverWithOptions(r2Resolver),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
-			accessKey, secretKey, "",
-		)),
-		config.WithRegion("auto"),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true
+	return s3.New(s3.Options{
+		Region:       "auto",
+		BaseEndpoint: aws.String(endpoint),
+		UsePathStyle: true,
+		Credentials:  aws.NewCredentialsCache(
+			credentials.NewStaticCredentialsProvider(accessKey, secretKey, ""),
+		),
 	})
-	return client, nil
 }
 
 func r2Bucket() string {
 	if v := os.Getenv("CF_R2_BUCKET"); v != "" { return v }
-	return "raonson-media"
+	return "raonson"
 }
 
 func r2PublicURL() string {
@@ -79,35 +63,28 @@ func UploadToR2(c *gin.Context) {
 	}
 
 	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = detectContentType(header.Filename, data)
-	}
+	if contentType == "" { contentType = detectContentType(header.Filename, data) }
 
 	folder := "images"
 	if strings.Contains(contentType, "video") { folder = "videos" }
-	if strings.Contains(contentType, "audio") { folder = "audio" }
+	if strings.Contains(contentType, "audio")  { folder = "audio"  }
 
 	ext := filepath.Ext(header.Filename)
 	if ext == "" { ext = extensionFromMime(contentType) }
 	key := fmt.Sprintf("%s/%s%s", folder, uuid.New().String(), ext)
 
-	client, err := getR2Client()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "R2 client init failed: " + err.Error()})
-		return
-	}
-
-	bucket := r2Bucket()
-	_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-		Bucket:        aws.String(bucket),
+	cl := getR2Client()
+	cl64 := int64(len(data))
+	_, err = cl.PutObject(context.Background(), &s3.PutObjectInput{
+		Bucket:        aws.String(r2Bucket()),
 		Key:           aws.String(key),
 		Body:          bytes.NewReader(data),
 		ContentType:   aws.String(contentType),
-		ContentLength: aws.Int64(int64(len(data))),
+		ContentLength: &cl64,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("R2 upload failed (bucket=%s key=%s): %v", bucket, key, err),
+			"error": fmt.Sprintf("R2 upload failed: %v", err),
 		})
 		return
 	}
@@ -135,8 +112,6 @@ func extensionFromMime(mime string) string {
 	switch {
 	case strings.Contains(mime, "jpeg"):      return ".jpg"
 	case strings.Contains(mime, "png"):       return ".png"
-	case strings.Contains(mime, "gif"):       return ".gif"
-	case strings.Contains(mime, "webp"):      return ".webp"
 	case strings.Contains(mime, "mp4"):       return ".mp4"
 	case strings.Contains(mime, "quicktime"): return ".mov"
 	case strings.Contains(mime, "mpeg"):      return ".mp3"
