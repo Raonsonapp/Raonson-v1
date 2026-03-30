@@ -9,11 +9,13 @@ import 'timeline/feed_controller.dart';
 class FeedRepository {
   final ApiClient _api = ApiClient.instance;
 
-  Future<List<PostModel>> fetchFeed({int limit = 20, int page = 1}) async {
-    final response = await _api.getRequest(
-      ApiEndpoints.posts,
-      query: {'limit': '$limit', 'page': '$page'},
-    );
+  Future<List<PostModel>> fetchFeed({int limit = 20, int page = 1, bool forceRefresh = false}) async {
+    final query = <String, String>{
+      'limit': '$limit',
+      'page':  '$page',
+      if (forceRefresh) 't': '${DateTime.now().millisecondsSinceEpoch}', // cache bust
+    };
+    final response = await _api.getRequest(ApiEndpoints.posts, query: query);
 
     if (response.statusCode == 401) throw UnauthorizedException();
     if (response.statusCode >= 400) {
@@ -21,12 +23,7 @@ class FeedRepository {
     }
 
     final body = jsonDecode(response.body);
-    List list = [];
-    if (body is List) {
-      list = body;
-    } else if (body is Map) {
-      list = body['posts'] ?? body['data'] ?? [];
-    }
+    final List list = body is Map ? (body['posts'] ?? []) : body as List;
     return list.map((e) => PostModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
