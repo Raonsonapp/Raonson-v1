@@ -130,3 +130,8 @@ func (w *responseWriter) WriteHeader(code int) {
 func itoa(n int) string {
 	return string(rune('0'+n/10)) + string(rune('0'+n%10))
 }
+
+func CacheDelete(key string) {
+	if rdb == nil { return }
+	rdb.Del(context.Background(), key)
+}
