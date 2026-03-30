@@ -89,7 +89,7 @@ class FeedController extends ChangeNotifier {
     _state = _state.copyWith(isRefreshing: true, hasError: false);
     notifyListeners();
     try {
-      final posts = await _repository.fetchFeed(limit: _limit, page: _page);
+      final posts = await _repository.fetchFeed(limit: _limit, page: _page, forceRefresh: true);
       _state = _state.copyWith(
         isRefreshing: false,
         posts: posts,
