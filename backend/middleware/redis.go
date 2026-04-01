@@ -132,6 +132,5 @@ func itoa(n int) string {
 }
 
 func CacheDelete(key string) {
-	if rdb == nil { return }
-	rdb.Del(context.Background(), key)
+	CacheDel(key)
 }
