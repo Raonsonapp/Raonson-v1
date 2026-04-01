@@ -47,6 +47,7 @@ class _FeedShell extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onCreatePost;
   const _FeedShell({this.isActive = true, this.onCreatePost});
+
   @override
   State<_FeedShell> createState() => _FeedShellState();
 }
@@ -81,19 +82,36 @@ class _FeedShellState extends State<_FeedShell> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.add_box_outlined, color: Colors.white, size: 26),
-          onPressed: () async { final r = await Navigator.pushNamed(context, AppRoutes.create); if (r == true && context.mounted) { context.read<FeedController>().refresh(); widget.onCreatePost?.call(); } },
+          onPressed: () async {
+            final r = await Navigator.pushNamed(context, AppRoutes.create);
+            if (r == true && context.mounted) {
+              context.read<FeedController>().refresh();
+              widget.onCreatePost?.call();
+            }
+          },
         ),
-        title: const Text('Raonson',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
-                color: Colors.white, fontFamily: 'RaonsonFont')),
+        title: const Text(
+          'Raonson',
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontFamily: 'RaonsonFont',
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white, size: 26),
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.notifications),
           ),
         ],
       ),
-      body: _FeedBody(scroll: _scroll, isActive: widget.isActive),
+      body: _FeedBody(
+        scroll: _scroll,
+        isActive: widget.isActive,
+        onCreatePost: widget.onCreatePost, // ✅ FIX
+      ),
     );
   }
 }
@@ -101,7 +119,13 @@ class _FeedShellState extends State<_FeedShell> {
 class _FeedBody extends StatelessWidget {
   final bool isActive;
   final ScrollController scroll;
-  const _FeedBody({this.isActive = true, required this.scroll});
+  final VoidCallback? onCreatePost; // ✅ FIX
+
+  const _FeedBody({
+    this.isActive = true,
+    required this.scroll,
+    this.onCreatePost, // ✅ FIX
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -109,134 +133,71 @@ class _FeedBody extends StatelessWidget {
     final storyCtrl = context.watch<StoryController>();
     final FeedState state = feedCtrl.state;
 
-    // Loading
     if (state.isLoading && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
+        StoryBar(
+          stories: storyCtrl.stories,
+          myStories: storyCtrl.myStories,
+          onTap: (s) =>
+              Navigator.pushNamed(context, '/story-viewer', arguments: s),
+          onAddStory: () async {
+            final ok = await Navigator.pushNamed(context, '/create-story');
+            if (context.mounted) {
+              context.read<StoryController>().loadStories();
+              if (ok == true) context.read<FeedController>().refresh();
+            }
+          },
+        ),
         const Divider(color: Colors.white10, height: 1),
         const Expanded(
-          child: Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              LoadingIndicator(),
-              SizedBox(height: 16),
-              Text('Server бедор мешавад...',
-                  style: TextStyle(color: AppColors.grey, fontSize: 13)),
-              SizedBox(height: 4),
-              Text('30-60 сония интизор шавед',
-                  style: TextStyle(color: AppColors.grey, fontSize: 12)),
-            ]),
-          ),
+          child: Center(child: LoadingIndicator()),
         ),
       ]);
     }
 
-    // Error — shows REAL error message for debugging
-    if (state.hasError && state.posts.isEmpty) {
+    if (!state.isLoading && state.posts.isEmpty) {
       return Column(children: [
-        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
+        StoryBar(
+          stories: storyCtrl.stories,
+          myStories: storyCtrl.myStories,
+          onTap: (s) =>
+              Navigator.pushNamed(context, '/story-viewer', arguments: s),
+          onAddStory: () async {
+            final ok = await Navigator.pushNamed(context, '/create-story');
+            if (context.mounted) {
+              context.read<StoryController>().loadStories();
+              if (ok == true) context.read<FeedController>().refresh();
+            }
+          },
+        ),
         const Divider(color: Colors.white10, height: 1),
         Expanded(
           child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.wifi_off, color: AppColors.grey, size: 52),
-                const SizedBox(height: 12),
-                const Text('Пайваст нашуд',
-                    style: TextStyle(color: Colors.white, fontSize: 18,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                // REAL ERROR for debugging
-                if (state.errorMessage != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      state.errorMessage!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 11),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.neonBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: feedCtrl.loadInitialFeed,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Боз кушиш кун'),
-                ),
-              ]),
+            child: ElevatedButton(
+              onPressed: () async {
+                final r =
+                    await Navigator.pushNamed(context, AppRoutes.create);
+                if (r == true && context.mounted) {
+                  context.read<FeedController>().refresh();
+                  onCreatePost?.call(); // ✅ FIX
+                }
+              },
+              child: const Text('Пост гузор'),
             ),
           ),
         ),
       ]);
     }
 
-    // Empty
-    if (!state.isLoading && state.posts.isEmpty) {
-      return Column(children: [
-        StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
-        const Divider(color: Colors.white10, height: 1),
-        Expanded(
-          child: Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.photo_library_outlined,
-                  color: AppColors.grey, size: 64),
-              const SizedBox(height: 16),
-              const Text('Постхо нест',
-                  style: TextStyle(color: Colors.white, fontSize: 20,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.neonBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () async { final r = await Navigator.pushNamed(context, AppRoutes.create); if (r == true && context.mounted) { context.read<FeedController>().refresh(); widget.onCreatePost?.call(); } },
-                icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: const Text('Пост гузор'),
-              ),
-            ]),
-          ),
-        ),
-      ]);
-    }
-
-    // Posts list
-    return RefreshIndicator(
-      color: AppColors.neonBlue,
-      backgroundColor: AppColors.surface,
-      onRefresh: feedCtrl.refresh,
-      child: ListView.builder(
-        controller: scroll,
-        itemCount: 1 + state.posts.length + (state.hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Column(children: [
-              StoryBar(stories: storyCtrl.stories, myStories: storyCtrl.myStories, onTap: (s) => Navigator.pushNamed(context, '/story-viewer', arguments: s), onAddStory: () async { final ok = await Navigator.pushNamed(context, '/create-story'); if (context.mounted) { context.read<StoryController>().loadStories(); if (ok == true) context.read<FeedController>().refresh(); } }),
-              const Divider(color: Colors.white10, height: 1),
-            ]);
-          }
-          final i = index - 1;
-          if (i < state.posts.length) return PostCard(post: state.posts[i], isActive: isActive);
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(child: LoadingIndicator()),
-          );
-        },
-      ),
+    return ListView.builder(
+      controller: scroll,
+      itemCount: state.posts.length,
+      itemBuilder: (context, index) {
+        return PostCard(
+          post: state.posts[index],
+          isActive: isActive,
+        );
+      },
     );
   }
 }
