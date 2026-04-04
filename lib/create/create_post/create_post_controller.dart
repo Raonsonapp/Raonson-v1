@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-
 import '../upload/upload_manager.dart';
 
 class CreatePostController extends ChangeNotifier {
@@ -9,16 +8,9 @@ class CreatePostController extends ChangeNotifier {
   final ValueNotifier<List<File>> media = ValueNotifier<List<File>>([]);
   bool isUploading = false;
 
-  void addMedia(File file) {
-    media.value = [...media.value, file];
-  }
-
-  void removeMedia(File file) {
-    media.value = media.value.where((f) => f != file).toList();
-  }
-
   Future<void> publishPost({
     required String caption,
+    void Function(double)? onProgress,
   }) async {
     if (media.value.isEmpty || isUploading) return;
 
@@ -27,15 +19,17 @@ class CreatePostController extends ChangeNotifier {
 
     try {
       await _uploadManager.uploadPost(
-        caption: caption,
-        media: media.value,
+        caption:    caption,
+        media:      media.value,
+        onProgress: onProgress,
       );
       media.value = [];
     } catch (e) {
       isUploading = false;
       notifyListeners();
-      rethrow; // ← МУҲИМ: хаторо ба screen мефиристад
+      rethrow; // ← screen-да нишон медиҳад
     }
+
     isUploading = false;
     notifyListeners();
   }
