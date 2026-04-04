@@ -3,13 +3,15 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
+import '../../core/storage/token_storage.dart';
+import '../../core/services/user_session.dart';
 
 class RegisterState {
   final String username;
   final String email;
   final String password;
   final String confirmPassword;
-  final bool isLoading;
+  final bool   isLoading;
   final String? error;
 
   const RegisterState({
@@ -21,103 +23,95 @@ class RegisterState {
     this.error,
   });
 
-  factory RegisterState.initial() {
-    return const RegisterState(
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      isLoading: false,
-    );
-  }
+  factory RegisterState.initial() => const RegisterState(
+    username: '', email: '', password: '',
+    confirmPassword: '', isLoading: false);
 
   bool get canSubmit =>
-      username.isNotEmpty &&
-      email.isNotEmpty &&
-      password.isNotEmpty &&
-      password == confirmPassword &&
-      !isLoading;
+      username.isNotEmpty && email.isNotEmpty &&
+      password.isNotEmpty && password == confirmPassword && !isLoading;
 
   RegisterState copyWith({
-    String? username,
-    String? email,
-    String? password,
-    String? confirmPassword,
-    bool? isLoading,
-    String? error,
-  }) {
-    return RegisterState(
-      username: username ?? this.username,
-      email: email ?? this.email,
-      password: password ?? this.password,
+    String? username, String? email, String? password,
+    String? confirmPassword, bool? isLoading, String? error}) =>
+    RegisterState(
+      username:        username        ?? this.username,
+      email:           email           ?? this.email,
+      password:        password        ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
+      isLoading:       isLoading       ?? this.isLoading,
+      error:           error,
     );
-  }
 }
 
 class RegisterController extends ChangeNotifier {
   RegisterState _state = RegisterState.initial();
   RegisterState get state => _state;
 
-  void updateUsername(String v) {
-    _state = _state.copyWith(username: v);
-    notifyListeners();
-  }
+  void updateUsername(String v)        { _state = _state.copyWith(username: v);        notifyListeners(); }
+  void updateEmail(String v)           { _state = _state.copyWith(email: v);           notifyListeners(); }
+  void updatePassword(String v)        { _state = _state.copyWith(password: v);        notifyListeners(); }
+  void updateConfirmPassword(String v) { _state = _state.copyWith(confirmPassword: v); notifyListeners(); }
 
-  void updateEmail(String v) {
-    _state = _state.copyWith(email: v);
-    notifyListeners();
-  }
-
-  void updatePassword(String v) {
-    _state = _state.copyWith(password: v);
-    notifyListeners();
-  }
-
-  void updateConfirmPassword(String v) {
-    _state = _state.copyWith(confirmPassword: v);
-    notifyListeners();
-  }
-
-  /// ✅ INSTAGRAM-STYLE REGISTER
-  /// Token интизор НЕ мешавем
   Future<bool> register() async {
     if (!_state.canSubmit) return false;
-
     _state = _state.copyWith(isLoading: true, error: null);
     notifyListeners();
 
     try {
-      final response = await ApiClient.instance.post(
+      // 1. Register
+      final res = await ApiClient.instance.post(
         ApiEndpoints.register,
         body: {
           'username': _state.username.trim(),
-          'email': _state.email.trim(),
+          'email':    _state.email.trim(),
           'password': _state.password,
         },
       );
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        dynamic body;
-        try {
-          body = jsonDecode(response.body);
-        } catch (_) {
-          body = null;
-        }
-
-        throw Exception(
-          body is Map<String, dynamic>
-              ? (body['message'] ?? 'Registration failed')
-              : 'Registration failed',
-        );
+      if (res.statusCode != 200 && res.statusCode != 201) {
+        Map body = {};
+        try { body = jsonDecode(res.body); } catch (_) {}
+        throw Exception(body['message'] ?? 'Рӯйхат нашуд ${res.statusCode}');
       }
 
-      // ✅ Account created successfully
+      // 2. Auto-login after register
+      final loginRes = await ApiClient.instance.post(
+        ApiEndpoints.login,
+        body: {
+          'email':    _state.email.trim(),
+          'password': _state.password,
+        },
+      );
+
+      if (loginRes.statusCode == 200) {
+        final data  = jsonDecode(loginRes.body) as Map<String, dynamic>;
+        final token = data['accessToken']?.toString() ?? '';
+        if (token.isNotEmpty) {
+          // Save token permanently
+          await TokenStorage.saveAccessToken(token);
+          ApiClient.instance.setAuthToken(token);
+
+          final refresh = data['refreshToken']?.toString() ?? '';
+          if (refresh.isNotEmpty) await TokenStorage.saveRefreshToken(refresh);
+
+          final user = data['user'] as Map<String, dynamic>?;
+          if (user != null) {
+            final uid = (user['id'] ?? user['_id'])?.toString() ?? '';
+            if (uid.isNotEmpty) {
+              await TokenStorage.saveUserId(uid);
+              UserSession.userId   = uid;
+              UserSession.username = (user['username'] ?? '').toString();
+              UserSession.avatar   = (user['avatar']   ?? '').toString();
+            }
+          }
+        }
+      }
+
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;
+
     } catch (e) {
       _state = _state.copyWith(
         isLoading: false,
