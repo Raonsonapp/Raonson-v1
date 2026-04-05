@@ -34,37 +34,9 @@ func Init() {
 func migrate() {
 	ctx := context.Background()
 
-	// Step 1: Drop old tables if they exist with wrong schema
-	dropOld := `
-	DROP TABLE IF EXISTS messages CASCADE;
-	DROP TABLE IF EXISTS notifications CASCADE;
-	DROP TABLE IF EXISTS follows CASCADE;
-	DROP TABLE IF EXISTS follow_requests CASCADE;
-	DROP TABLE IF EXISTS post_likes CASCADE;
-	DROP TABLE IF EXISTS post_saves CASCADE;
-	DROP TABLE IF EXISTS post_views CASCADE;
-	DROP TABLE IF EXISTS post_media CASCADE;
-	DROP TABLE IF EXISTS posts CASCADE;
-	DROP TABLE IF EXISTS comment_likes CASCADE;
-	DROP TABLE IF EXISTS comments CASCADE;
-	DROP TABLE IF EXISTS story_views CASCADE;
-	DROP TABLE IF EXISTS story_likes CASCADE;
-	DROP TABLE IF EXISTS stories CASCADE;
-	DROP TABLE IF EXISTS reel_likes CASCADE;
-	DROP TABLE IF EXISTS reel_saves CASCADE;
-	DROP TABLE IF EXISTS reel_comments CASCADE;
-	DROP TABLE IF EXISTS reels CASCADE;
-	DROP TABLE IF EXISTS likes CASCADE;
-	DROP TABLE IF EXISTS blocks CASCADE;
-	DROP TABLE IF EXISTS push_tokens CASCADE;
-	DROP TABLE IF EXISTS users CASCADE;
-	`
+	// ⚠️ DROP хориҷ шуд — маълумот нест намешавад!
+	// Танҳо CREATE IF NOT EXISTS — mavjud bo'lsa skip qiladi
 
-	if _, err := Pool.Exec(ctx, dropOld); err != nil {
-		log.Printf("⚠️ Drop old tables: %v", err)
-	}
-
-	// Step 2: Create fresh schema
 	sql := `
 	CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -200,6 +172,7 @@ func migrate() {
 		caption TEXT DEFAULT '',
 		views_count INTEGER DEFAULT 0,
 		likes_count INTEGER DEFAULT 0,
+		comments_count INTEGER DEFAULT 0,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_reels_user ON reels(user_id);
