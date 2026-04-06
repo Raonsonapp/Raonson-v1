@@ -1,11 +1,10 @@
+// lib/create/upload/upload_manager.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-
 import '../../app/app_config.dart';
 import '../../core/storage/token_storage.dart';
-import '../../core/utils/media_compressor.dart';
 
 class UploadManager {
 
@@ -14,69 +13,47 @@ class UploadManager {
   bool _isVideo(File f) =>
       ['mp4','mov','avi','mkv','webm','3gp'].contains(_ext(f));
 
-  MediaType _contentType(File f) {
-    final ext = _ext(f);
-    if (['mp4','mov','avi','mkv','webm'].contains(ext)) return MediaType('video','mp4');
-    if (ext == 'png') return MediaType('image','png');
+  MediaType _mime(File f) {
+    final e = _ext(f);
+    if (['mp4','mov','avi','mkv','webm'].contains(e)) return MediaType('video','mp4');
+    if (e == 'png') return MediaType('image','png');
     return MediaType('image','jpeg');
   }
 
-  // ─── Internal: compress + upload to R2 via backend ─────────────
-  Future<String> _upload(File file) async {
-    // Compress
-    File toUpload = file;
-    try {
-      toUpload = await MediaCompressor.compress(file);
-    } catch (e) {
-      print('[Upload] compress failed, using original: $e');
-    }
-
-    final before = await MediaCompressor.sizeLabel(file);
-    final after  = await MediaCompressor.sizeLabel(toUpload);
-    print('[Upload] size: $before → $after');
-
-    // Get token
+  // Upload file directly — NO compression (compression was crashing)
+  Future<String> _uploadFile(File file) async {
     final token = await TokenStorage.getAccessToken();
     if (token == null || token.isEmpty) {
       throw Exception('Токен нест — дубора ворид шавед');
     }
 
-    // Upload file
-    final uri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
-    print('[Upload] → $uri');
+    final base = AppConfig.apiBaseUrl;
+    final uri  = Uri.parse('$base/upload');
 
     final req = http.MultipartRequest('POST', uri)
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(await http.MultipartFile.fromPath(
-        'file', toUpload.path,
-        contentType: _contentType(toUpload),
-      ));
+        'file', file.path, contentType: _mime(file)));
 
-    final streamed = await req.send().timeout(
-      const Duration(seconds: 120),
-      onTimeout: () => throw Exception('Upload timeout'),
-    );
+    final streamed = await req.send()
+        .timeout(const Duration(minutes: 3));
 
-    final bodyStr = await streamed.stream.bytesToString();
-    print('[Upload] response ${streamed.statusCode}: $bodyStr');
+    final body = await streamed.stream.bytesToString();
 
     if (streamed.statusCode >= 400) {
-      throw Exception('Upload хато ${streamed.statusCode}: $bodyStr');
+      throw Exception('Upload хато ${streamed.statusCode}: $body');
     }
 
-    final body = jsonDecode(bodyStr) as Map<String, dynamic>;
-    final url  = (body['url'] ?? body['secure_url'])?.toString() ?? '';
-    if (url.isEmpty) throw Exception('URL нест: $bodyStr');
-
-    print('[Upload] ✅ url=$url');
+    final json = jsonDecode(body) as Map<String, dynamic>;
+    final url  = (json['url'] ?? json['secure_url'] ?? '').toString();
+    if (url.isEmpty) throw Exception('Server URL нафиристод');
     return url;
   }
 
-  // ─── Public ────────────────────────────────────────────────────
-  Future<String> uploadAvatar(File file) => _upload(file);
-  Future<String> uploadFile(File file)   => _upload(file);
+  Future<String> uploadAvatar(File f) => _uploadFile(f);
+  Future<String> uploadFile(File f)   => _uploadFile(f);
 
-  // POST /posts
+  // ── POST /posts ────────────────────────────────────────────────
   Future<void> uploadPost({
     required List<File> media,
     required String caption,
@@ -87,48 +64,39 @@ class UploadManager {
       throw Exception('Токен нест — дубора ворид шавед');
     }
 
-    // 1. Upload all media files
-    final mediaList = <Map<String, String>>[];
+    final base = AppConfig.apiBaseUrl;
+
+    // Step 1: upload each file
+    final list = <Map<String, String>>[];
     for (int i = 0; i < media.length; i++) {
-      print('[Upload] uploading media ${i+1}/${media.length}');
-      final url = await _upload(media[i]);
-      mediaList.add({
-        'url':  url,
-        'type': _isVideo(media[i]) ? 'video' : 'image',
-      });
-      onProgress?.call((i + 1) / media.length * 0.85);
+      final url = await _uploadFile(media[i]);
+      list.add({'url': url, 'type': _isVideo(media[i]) ? 'video' : 'image'});
+      onProgress?.call((i + 1) / media.length * 0.8);
     }
 
-    // 2. Create post
-    print('[Upload] creating post, media=${mediaList.length}, caption=$caption');
-    final postUri = Uri.parse('${AppConfig.apiBaseUrl}/posts');
-    print('[Upload] POST → $postUri');
-
+    // Step 2: create post
     final res = await http.post(
-      postUri,
+      Uri.parse('$base/posts'),
       headers: {
         'Authorization': 'Bearer $token',
-        'Content-Type':  'application/json',
+        'Content-Type' : 'application/json',
       },
-      body: jsonEncode({'caption': caption, 'media': mediaList}),
-    ).timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => throw Exception('Post timeout'),
-    );
+      body: jsonEncode({'caption': caption, 'media': list}),
+    ).timeout(const Duration(seconds: 30));
 
     onProgress?.call(1.0);
-    print('[Upload] POST /posts → ${res.statusCode}: ${res.body}');
 
     if (res.statusCode >= 400) {
-      Map body = {};
-      try { body = jsonDecode(res.body); } catch (_) {}
-      throw Exception('Post сохта нашуд ${res.statusCode}: ${body['message'] ?? res.body}');
+      Map err = {};
+      try { err = jsonDecode(res.body); } catch (_) {}
+      throw Exception(
+        'Post сохта нашуд (${res.statusCode}): '
+        '${err['message'] ?? res.body}',
+      );
     }
-
-    print('[Upload] ✅ Post created!');
   }
 
-  // POST /stories
+  // ── POST /stories ──────────────────────────────────────────────
   Future<void> uploadStory({
     required File file,
     String caption = '',
@@ -139,32 +107,35 @@ class UploadManager {
       throw Exception('Токен нест — дубора ворид шавед');
     }
 
-    final url = await _upload(file);
-    onProgress?.call(0.8);
+    final base = AppConfig.apiBaseUrl;
 
-    print('[Upload] creating story url=$url');
+    // Step 1: upload
+    final url = await _uploadFile(file);
+    onProgress?.call(0.7);
+
+    // Step 2: create story
     final res = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/stories'),
+      Uri.parse('$base/stories'),
       headers: {
         'Authorization': 'Bearer $token',
-        'Content-Type':  'application/json',
+        'Content-Type' : 'application/json',
       },
       body: jsonEncode({
-        'mediaUrl':  url,
+        'mediaUrl' : url,
         'mediaType': _isVideo(file) ? 'video' : 'image',
-        'caption':   caption,
+        'caption'  : caption,
       }),
     ).timeout(const Duration(seconds: 30));
 
     onProgress?.call(1.0);
-    print('[Upload] POST /stories → ${res.statusCode}: ${res.body}');
 
     if (res.statusCode >= 400) {
-      Map body = {};
-      try { body = jsonDecode(res.body); } catch (_) {}
-      throw Exception('Story сохта нашуд: ${body['message'] ?? res.body}');
+      Map err = {};
+      try { err = jsonDecode(res.body); } catch (_) {}
+      throw Exception(
+        'Story сохта нашуд (${res.statusCode}): '
+        '${err['message'] ?? res.body}',
+      );
     }
-
-    print('[Upload] ✅ Story created!');
   }
 }
