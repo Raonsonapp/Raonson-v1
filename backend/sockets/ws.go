@@ -333,3 +333,50 @@ func parseToken(s string) string {
 
 // EmitToUser - for use from handlers
 func EmitToUser(userID, event string, data interface{}) { emit(userID, event, data) }
+// ── PATCH: backend/sockets/ws.go ─────────────────────────────────
+// Ин функсияҳоро ба охири ws.go илова кун (пеш аз охири файл)
+
+// BroadcastNewPost — вақте пост сохта мешавад, ба ҳама followers мефиристад
+// Дар handlers/post.go, баъди tx.Commit() чунин зоваш кун:
+//   go sockets.BroadcastNewPost(myID, postPayload)
+func BroadcastNewPost(authorID string, post interface{}) {
+	// 1. Пайдо кун ҳама followers-и ин автор
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT follower_id FROM follows WHERE following_id=$1`, authorID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	// 2. Ба ҳар follower event мефиристад
+	for rows.Next() {
+		var followerID string
+		if rows.Scan(&followerID) == nil {
+			emit(followerID, "feed:new_post", post)
+		}
+	}
+
+	// 3. Ба худи автор ҳам (барои дидани посташ дар feed)
+	emit(authorID, "feed:new_post", post)
+}
+
+// BroadcastNewStory — вақте story сохта мешавад, ба followers мефиристад
+// Дар handlers/story_chat_notif_admin.go, баъди INSERT чунин:
+//   go sockets.BroadcastNewStory(myID, storyPayload)
+func BroadcastNewStory(authorID string, story interface{}) {
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT follower_id FROM follows WHERE following_id=$1`, authorID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var followerID string
+		if rows.Scan(&followerID) == nil {
+			emit(followerID, "story:new", story)
+		}
+	}
+	// Худ ҳам мебинад
+	emit(authorID, "story:new", story)
+}
