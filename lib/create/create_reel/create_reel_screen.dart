@@ -1,10 +1,13 @@
+// lib/create/create_reel/create_reel_screen.dart
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
-import '../../core/api/api_client.dart';
-import '../../core/utils/media_compressor.dart';
-import '../create_post/media_picker.dart';
-import '../upload/upload_manager.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../app/app_config.dart';
+import '../../core/storage/token_storage.dart';
 
 class CreateReelScreen extends StatefulWidget {
   const CreateReelScreen({super.key});
@@ -14,64 +17,93 @@ class CreateReelScreen extends StatefulWidget {
 
 class _CreateReelScreenState extends State<CreateReelScreen> {
   File?   _file;
-  final   _captionCtrl = TextEditingController();
-  bool    _uploading   = false;
-  double  _progress    = 0;
+  bool    _busy     = false;
+  String  _status   = '';
   String? _error;
-  VideoPlayerController? _videoCtrl;
+  double  _progress = 0;
+  final   _caption  = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pickVideo());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pick());
   }
 
-  Future<void> _pickVideo() async {
-    final f = await MediaPicker.pickVideoOnly();
-    if (f != null && mounted) {
-      setState(() { _file = f; _error = null; });
-      _videoCtrl = VideoPlayerController.file(f)
-        ..initialize().then((_) {
-          if (mounted) setState(() {});
-          _videoCtrl?.setLooping(true);
-          _videoCtrl?.play();
-        });
-    } else if (mounted) {
-      Navigator.pop(context);
-    }
+  @override
+  void dispose() { _caption.dispose(); super.dispose(); }
+
+  Future<void> _pick() async {
+    final xf = await ImagePicker()
+        .pickVideo(source: ImageSource.gallery);
+    if (xf == null) { if (mounted) Navigator.pop(context); return; }
+    if (mounted) setState(() { _file = File(xf.path); _error = null; });
   }
 
   Future<void> _publish() async {
-    if (_file == null || _uploading) return;
-    setState(() { _uploading = true; _error = null; _progress = 0.1; });
+    if (_file == null || _busy) return;
+
+    final token = await TokenStorage.getAccessToken();
+    if (token == null || token.isEmpty) {
+      setState(() => _error = 'Токен нест — дубора login кунед');
+      return;
+    }
+
+    setState(() { _busy = true; _error = null; _progress = 0.1; _status = 'Видео бор мешавад...'; });
+
     try {
-      setState(() => _progress = 0.2);
-      final compressed = await MediaCompressor.compressVideo(_file!);
-      setState(() => _progress = 0.5);
-      final videoUrl = await UploadManager().uploadFile(compressed);
-      setState(() => _progress = 0.85);
-      final res = await ApiClient.instance.post('/reels', body: {
-        'videoUrl': videoUrl,
-        'caption':  _captionCtrl.text.trim(),
-      });
-      if (res.statusCode >= 400) throw Exception('Reel сохта нашуд');
+      // Upload
+      final req = http.MultipartRequest(
+        'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath(
+            'file', _file!.path, contentType: MediaType('video', 'mp4')));
+
+      final streamed   = await req.send().timeout(const Duration(minutes: 5));
+      final uploadBody = await streamed.stream.bytesToString();
+
+      setState(() => _progress = 0.75);
+
+      if (streamed.statusCode >= 400) {
+        throw Exception('Upload хато ${streamed.statusCode}: $uploadBody');
+      }
+
+      final uploadJson = jsonDecode(uploadBody) as Map<String, dynamic>;
+      final videoUrl   = (uploadJson['url'] ?? uploadJson['secure_url'] ?? '').toString();
+      if (videoUrl.isEmpty) throw Exception('URL нест: $uploadBody');
+
+      setState(() { _status = 'Reel сохта мешавад...'; _progress = 0.9; });
+
+      // Create reel
+      final res = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/reels'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type' : 'application/json',
+        },
+        body: jsonEncode({
+          'videoUrl': videoUrl,
+          'caption' : _caption.text.trim(),
+        }),
+      ).timeout(const Duration(seconds: 30));
+
       setState(() => _progress = 1.0);
-      if (mounted) Navigator.pop(context, true);
+
+      if (res.statusCode >= 400) {
+        Map err = {};
+        try { err = jsonDecode(res.body); } catch (_) {}
+        throw Exception('Reel сохта нашуд (${res.statusCode}): ${err['message'] ?? res.body}');
+      }
+
+      if (mounted) Navigator.of(context).pop(true);
+
     } catch (e) {
-      setState(() {
-        _uploading = false;
-        _error = e.toString().replaceAll('Exception: ', '');
+      if (mounted) setState(() {
+        _busy    = false;
+        _error   = e.toString().replaceAll('Exception: ', '');
+        _status  = '';
+        _progress = 0;
       });
     }
-  }
-
-
-
-  @override
-  void dispose() {
-    _captionCtrl.dispose();
-    _videoCtrl?.dispose();
-    super.dispose();
   }
 
   @override
@@ -82,70 +114,74 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         backgroundColor: Colors.black, elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.pop(context)),
+          onPressed: _busy ? null : () => Navigator.pop(context)),
         title: const Text('Reel гузоред',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           TextButton(
-            onPressed: _uploading ? null : _publish,
-            child: _uploading
+            onPressed: (_busy || _file == null) ? null : _publish,
+            child: _busy
                 ? const SizedBox(width: 18, height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0095F6)))
-                : const Text('Нашр кун',
-                    style: TextStyle(color: Color(0xFF0095F6),
-                        fontWeight: FontWeight.bold, fontSize: 15))),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text('Нашр кун',
+                    style: TextStyle(
+                      color: _file == null ? Colors.white30 : Colors.white,
+                      fontWeight: FontWeight.bold, fontSize: 15))),
         ]),
-      body: _file == null
-          ? const Center(child: CircularProgressIndicator(color: Colors.white30))
-          : Stack(children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(children: [
-                  ClipRRect(
+
+      body: Stack(children: [
+        Padding(padding: const EdgeInsets.all(16),
+          child: Column(children: [
+            Container(height: 240, width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(12)),
+              child: Center(child: _file == null
+                  ? const CircularProgressIndicator(color: Colors.white30)
+                  : Column(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.videocam, color: Colors.white54, size: 64),
+                      const SizedBox(height: 8),
+                      Text(_file!.path.split('/').last,
+                          style: const TextStyle(color: Colors.white38, fontSize: 12),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ]))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _caption, enabled: !_busy,
+              style: const TextStyle(color: Colors.white), maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Тавсиф нависед...',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true, fillColor: const Color(0xFF111111),
+                border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(height: 280, width: double.infinity,
-                      child: _videoCtrl != null && _videoCtrl!.value.isInitialized
-                          ? FittedBox(fit: BoxFit.cover,
-                              child: SizedBox(
-                                width: _videoCtrl!.value.size.width,
-                                height: _videoCtrl!.value.size.height,
-                                child: VideoPlayer(_videoCtrl!)))
-                          : Container(color: Colors.white10,
-                              child: const Center(child: Icon(Icons.videocam,
-                                  color: Colors.white38, size: 48))))),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _captionCtrl,
-                    style: const TextStyle(color: Colors.white),
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: 'Тавсиф нависед...',
-                      hintStyle: const TextStyle(color: Colors.white38),
-                      filled: true, fillColor: Colors.white10,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.all(14))),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
-                  ],
-                ])),
-              if (_uploading)
-                Positioned.fill(
-                  child: Container(color: Colors.black54,
-                    child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      SizedBox(width: 64, height: 64,
-                        child: CircularProgressIndicator(
-                          value: _progress > 0 ? _progress : null,
-                          color: Colors.white, strokeWidth: 3)),
-                      const SizedBox(height: 12),
-                      Text('${(_progress * 100).toInt()}%',
-                          style: const TextStyle(color: Colors.white, fontSize: 16)),
-                      const SizedBox(height: 6),
-                      const Text('Compress + Upload...',
-                          style: TextStyle(color: Colors.white54, fontSize: 12)),
-                    ])))),
-            ]));
+                    borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.all(14))),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Container(padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.red.shade900,
+                    borderRadius: BorderRadius.circular(8)),
+                child: Text(_error!, style: const TextStyle(color: Colors.white))),
+            ],
+          ])),
+
+        if (_busy)
+          Positioned.fill(
+            child: Container(color: Colors.black.withOpacity(0.75),
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(width: 72, height: 72,
+                  child: CircularProgressIndicator(
+                    value: _progress > 0 ? _progress : null,
+                    color: Colors.white, strokeWidth: 4)),
+                const SizedBox(height: 16),
+                Text('${(_progress * 100).toInt()}%',
+                    style: const TextStyle(color: Colors.white,
+                        fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(_status,
+                    style: const TextStyle(color: Colors.white60, fontSize: 13)),
+              ])))),
+      ]));
   }
 }
