@@ -1,15 +1,11 @@
-// lib/create/create_post/create_post_screen.dart
-// Self-contained — upload + POST /posts дар як файл
-
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-
+import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
-import '../../core/storage/token_storage.dart';
 
 class CreatePostScreen extends StatefulWidget {
   const CreatePostScreen({super.key});
@@ -35,100 +31,90 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void dispose() { _caption.dispose(); super.dispose(); }
 
-  // ── pick media ────────────────────────────────────────────────
   Future<void> _pick() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          Container(width: 36, height: 4,
-              decoration: BoxDecoration(color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 12),
-          ListTile(
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const SizedBox(height: 8),
+        Container(width: 36, height: 4,
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2))),
+        const SizedBox(height: 12),
+        const Text('Чи интихоб кунед?',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 4),
+        ListTile(
             leading: const Icon(Icons.image_outlined, color: Colors.white),
             title: const Text('Расм', style: TextStyle(color: Colors.white)),
             onTap: () => Navigator.pop(_, 'image')),
-          ListTile(
+        ListTile(
             leading: const Icon(Icons.videocam_outlined, color: Colors.white),
             title: const Text('Видео', style: TextStyle(color: Colors.white)),
             onTap: () => Navigator.pop(_, 'video')),
-          const SizedBox(height: 8),
-        ])));
+        const SizedBox(height: 8),
+      ])));
 
     if (choice == null) { if (mounted) Navigator.pop(context); return; }
 
-    final picker = ImagePicker();
     XFile? xf;
     if (choice == 'image') {
-      xf = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      xf = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
     } else {
-      xf = await picker.pickVideo(source: ImageSource.gallery);
+      xf = await ImagePicker().pickVideo(source: ImageSource.gallery);
     }
-
     if (xf == null) { if (mounted) Navigator.pop(context); return; }
-    if (mounted) setState(() {
-      _file    = File(xf!.path);
-      _isVideo = choice == 'video';
-      _error   = null;
-    });
+    if (mounted) setState(() { _file = File(xf!.path); _isVideo = choice == 'video'; _error = null; });
   }
 
-  // ── publish ───────────────────────────────────────────────────
   Future<void> _publish() async {
     if (_file == null || _busy) return;
 
-    final token = await TokenStorage.getAccessToken();
-    if (token == null || token.isEmpty) {
-      setState(() => _error = 'Токен нест — дубора login кунед');
+    // Token аз ApiClient (хотира) — ҳамеша мавҷуд аст
+    final token = ApiClient.instance.authToken ?? '';
+    if (token.isEmpty) {
+      setState(() => _error = 'Токен нест — барномаро баред ва ворид шавед');
       return;
     }
 
-    setState(() { _busy = true; _error = null; _progress = 0.05; _status = 'Бор мешавад...'; });
+    setState(() { _busy = true; _error = null; _progress = 0.05; _status = 'Тайёр мешавад...'; });
 
     try {
-      // ── Step 1: upload file ──────────────────────────────────
+      // ── 1. UPLOAD ────────────────────────────────────────────
       setState(() { _status = 'Расм/Видео бор мешавад...'; _progress = 0.1; });
 
-      final ext  = _file!.path.split('.').last.toLowerCase();
+      final ext = _file!.path.split('.').last.toLowerCase();
       MediaType mime;
-      if (_isVideo)       mime = MediaType('video', 'mp4');
-      else if (ext=='png') mime = MediaType('image', 'png');
-      else                 mime = MediaType('image', 'jpeg');
+      if (_isVideo)          mime = MediaType('video', 'mp4');
+      else if (ext == 'png') mime = MediaType('image', 'png');
+      else                   mime = MediaType('image', 'jpeg');
 
-      final uploadUri = Uri.parse('${AppConfig.apiBaseUrl}/upload');
-      final req = http.MultipartRequest('POST', uploadUri)
+      final uploadReq = http.MultipartRequest(
+          'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
         ..headers['Authorization'] = 'Bearer $token'
         ..files.add(await http.MultipartFile.fromPath(
             'file', _file!.path, contentType: mime));
 
-      final streamed  = await req.send().timeout(const Duration(minutes: 3));
-      final uploadBody = await streamed.stream.bytesToString();
-
+      final up    = await uploadReq.send().timeout(const Duration(minutes: 3));
+      final upStr = await up.stream.bytesToString();
       setState(() => _progress = 0.7);
 
-      if (streamed.statusCode >= 400) {
-        throw Exception('Upload хато ${streamed.statusCode}: $uploadBody');
+      if (up.statusCode >= 400) {
+        throw Exception('Upload ${up.statusCode}: $upStr');
       }
 
-      final uploadJson = jsonDecode(uploadBody) as Map<String, dynamic>;
-      final mediaUrl   = (uploadJson['url'] ?? uploadJson['secure_url'] ?? '').toString();
-      if (mediaUrl.isEmpty) throw Exception('Server URL нафиристод: $uploadBody');
+      final upJson   = jsonDecode(upStr) as Map<String, dynamic>;
+      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString();
+      if (mediaUrl.isEmpty) throw Exception('URL нест: $upStr');
 
+      // ── 2. POST /posts ────────────────────────────────────────
       setState(() { _status = 'Post сохта мешавад...'; _progress = 0.85; });
 
-      // ── Step 2: create post ──────────────────────────────────
-      final postUri = Uri.parse('${AppConfig.apiBaseUrl}/posts');
       final postRes = await http.post(
-        postUri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type' : 'application/json',
-        },
+        Uri.parse('${AppConfig.apiBaseUrl}/posts'),
+        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode({
           'caption': _caption.text.trim(),
           'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image'}],
@@ -140,17 +126,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       if (postRes.statusCode >= 400) {
         Map err = {};
         try { err = jsonDecode(postRes.body); } catch (_) {}
-        throw Exception('Post сохта нашуд (${postRes.statusCode}): ${err['message'] ?? postRes.body}');
+        throw Exception('Post ${postRes.statusCode}: ${err['message'] ?? postRes.body}');
       }
 
-      // ── Done ─────────────────────────────────────────────────
       if (mounted) Navigator.of(context).pop(true);
 
     } catch (e) {
       if (mounted) setState(() {
-        _busy   = false;
-        _error  = e.toString().replaceAll('Exception: ', '');
+        _busy = false;
+        _error = e.toString().replaceAll('Exception: ', '');
         _status = '';
+        _progress = 0;
       });
     }
   }
@@ -162,8 +148,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: _busy ? null : () => Navigator.pop(context)),
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: _busy ? null : () => Navigator.pop(context)),
         title: const Text('Нашри нав',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
@@ -174,75 +160,86 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text('Нашр кун',
                     style: TextStyle(
-                      color: _file == null ? Colors.white30 : Colors.white,
-                      fontWeight: FontWeight.bold, fontSize: 16))),
+                        color: _file == null ? Colors.white30 : Colors.white,
+                        fontWeight: FontWeight.bold, fontSize: 16))),
         ]),
-
       body: Stack(children: [
         Column(children: [
-          // Error banner
           if (_error != null)
             Container(
-              width: double.infinity,
-              color: Colors.red.shade900,
-              padding: const EdgeInsets.all(12),
+              width: double.infinity, color: Colors.red.shade900,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
                 Expanded(child: Text(_error!,
                     style: const TextStyle(color: Colors.white, fontSize: 13))),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 18),
-                  onPressed: () => setState(() => _error = null)),
+                GestureDetector(
+                    onTap: () => setState(() => _error = null),
+                    child: const Icon(Icons.close, color: Colors.white, size: 18)),
               ])),
-
-          // Preview
           Expanded(
             child: _file == null
                 ? GestureDetector(
                     onTap: _busy ? null : _pick,
                     child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.add_photo_alternate_outlined,
-                          size: 80, color: Colors.white24),
+                      Icon(Icons.add_photo_alternate_outlined, size: 80, color: Colors.white24),
                       SizedBox(height: 12),
                       Text('Расм ё видео интихоб кунед',
                           style: TextStyle(color: Colors.white38, fontSize: 16)),
                     ])))
-                : _isVideo
-                    ? Container(color: Colors.black,
-                        child: const Center(child: Icon(Icons.play_circle_outline,
-                            color: Colors.white54, size: 80)))
-                    : Image.file(_file!, fit: BoxFit.contain, width: double.infinity)),
-
-          // Caption
+                : Stack(children: [
+                    Positioned.fill(
+                      child: _isVideo
+                          ? Container(color: const Color(0xFF111111),
+                              child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(Icons.play_circle_outline, color: Colors.white54, size: 80),
+                                SizedBox(height: 8),
+                                Text('Видео интихоб шуд',
+                                    style: TextStyle(color: Colors.white54, fontSize: 14)),
+                              ])))
+                          : Image.file(_file!, fit: BoxFit.contain, width: double.infinity)),
+                    Positioned(bottom: 12, right: 12,
+                      child: GestureDetector(
+                        onTap: _busy ? null : _pick,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(color: Colors.black54,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.swap_horiz, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text('Иваз', style: TextStyle(color: Colors.white, fontSize: 13)),
+                          ])))),
+                  ])),
           Container(
             color: const Color(0xFF111111),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             child: TextField(
-              controller: _caption,
-              enabled: !_busy,
+              controller: _caption, enabled: !_busy,
               style: const TextStyle(color: Colors.white),
-              maxLines: 3,
+              maxLines: 3, maxLength: 500,
               decoration: const InputDecoration(
                 hintText: 'Тавсиф нависед...',
                 hintStyle: TextStyle(color: Colors.white38),
-                border: InputBorder.none))),
+                border: InputBorder.none,
+                counterStyle: TextStyle(color: Colors.white24)))),
         ]),
-
-        // Progress overlay
         if (_busy)
           Positioned.fill(
-            child: Container(color: Colors.black.withOpacity(0.75),
+            child: Container(color: Colors.black.withOpacity(0.8),
               child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                 SizedBox(width: 72, height: 72,
                   child: CircularProgressIndicator(
                     value: _progress > 0 ? _progress : null,
-                    color: Colors.white, strokeWidth: 4)),
+                    color: Colors.white, strokeWidth: 4,
+                    backgroundColor: Colors.white12)),
                 const SizedBox(height: 16),
                 Text('${(_progress * 100).toInt()}%',
                     style: const TextStyle(color: Colors.white,
-                        fontSize: 22, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(_status,
-                    style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                        fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(_status, style: const TextStyle(color: Colors.white54, fontSize: 13)),
               ])))),
       ]));
   }
