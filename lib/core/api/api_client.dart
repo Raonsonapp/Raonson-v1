@@ -10,6 +10,7 @@ class ApiClient {
   String? _authToken;
 
   void setAuthToken(String? token) => _authToken = token;
+  String? get authToken => _authToken;
 
   Map<String, String> _headers() {
     final h = <String, String>{'Content-Type': 'application/json'};
