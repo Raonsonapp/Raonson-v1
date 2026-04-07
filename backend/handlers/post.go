@@ -56,11 +56,37 @@ func CreatePost(c *gin.Context) {
 	// Invalidate feed cache for this user
 	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":")
 
-	c.JSON(http.StatusCreated, gin.H{
-		"_id": postID, "caption": b.Caption,
-		"media": b.Media, "likesCount": 0, "commentsCount": 0,
-		"liked": false, "saved": false,
-	})
+// ➕ ИЛОВА
+var uname, uavatar string
+var verified bool
+
+db.Pool.QueryRow(context.Background(),
+	`SELECT username, avatar, verified FROM users WHERE id=$1`, myID,
+).Scan(&uname, &uavatar, &verified)
+
+// ➕ ИЛОВА
+wsPost := gin.H{
+	"_id":           postID,
+	"caption":       b.Caption,
+	"media":         b.Media,
+	"likesCount":    0,
+	"commentsCount": 0,
+	"liked":         false,
+	"saved":         false,
+	"createdAt":     time.Now().Format(time.RFC3339),
+	"user": gin.H{
+		"_id":      myID,
+		"username": uname,
+		"avatar":   uavatar,
+		"verified": verified,
+	},
+}
+
+// ➕ ИЛОВА
+go sockets.BroadcastNewPost(myID, wsPost)
+
+// 🔁 ИВАЗ
+c.JSON(http.StatusCreated, wsPost)
 }
 
 // GET /posts  GET /posts/feed
