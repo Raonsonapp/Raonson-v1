@@ -72,7 +72,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _publish() async {
     if (_file == null || _busy) return;
 
-    // Token аз ApiClient (хотира) — ҳамеша мавҷуд аст
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) {
       setState(() => _error = 'Токен нест — барномаро баред ва ворид шавед');
@@ -82,7 +81,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() { _busy = true; _error = null; _progress = 0.05; _status = 'Тайёр мешавад...'; });
 
     try {
-      // ── 1. UPLOAD ────────────────────────────────────────────
+      // ── 1. UPLOAD ────────────────────────────────────────────────
       setState(() { _status = 'Расм/Видео бор мешавад...'; _progress = 0.1; });
 
       final ext = _file!.path.split('.').last.toLowerCase();
@@ -105,39 +104,53 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         throw Exception('Upload ${up.statusCode}: $upStr');
       }
 
+      // ── URL-ро аз ҷавоб мегирем ──────────────────────────────────
       final upJson   = jsonDecode(upStr) as Map<String, dynamic>;
-      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString();
-      if (mediaUrl.isEmpty) throw Exception('URL нест: $upStr');
+      // Backend "url" бармегардонад
+      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? upJson['mediaUrl'] ?? '').toString().trim();
+      if (mediaUrl.isEmpty) {
+        throw Exception('Сервер URL нафиристод: $upStr');
+      }
 
-      // ── 2. POST /posts ────────────────────────────────────────
-      setState(() { _status = 'Post сохта мешавад...'; _progress = 0.85; });
+      // ── 2. POST /posts ────────────────────────────────────────────
+      setState(() { _status = 'Пост сохта мешавад...'; _progress = 0.85; });
+
+      final postBody = jsonEncode({
+        'caption': _caption.text.trim(),
+        'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image'}],
+      });
 
       final postRes = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/posts'),
-        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'caption': _caption.text.trim(),
-          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image'}],
-        }),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type' : 'application/json',
+        },
+        body: postBody,
       ).timeout(const Duration(seconds: 30));
 
       setState(() => _progress = 1.0);
 
       if (postRes.statusCode >= 400) {
         Map err = {};
-        try { err = jsonDecode(postRes.body); } catch (_) {}
-        throw Exception('Post ${postRes.statusCode}: ${err['message'] ?? postRes.body}');
+        try { err = jsonDecode(postRes.body) as Map; } catch (_) {}
+        throw Exception(
+          'Пост ${postRes.statusCode}: ${err['message'] ?? postRes.body}',
+        );
       }
 
+      // ── Муваффақ ─────────────────────────────────────────────────
       if (mounted) Navigator.of(context).pop(true);
 
     } catch (e) {
-      if (mounted) setState(() {
-        _busy = false;
-        _error = e.toString().replaceAll('Exception: ', '');
-        _status = '';
-        _progress = 0;
-      });
+      if (mounted) {
+        setState(() {
+          _busy     = false;
+          _error    = e.toString().replaceAll('Exception: ', '');
+          _status   = '';
+          _progress = 0;
+        });
+      }
     }
   }
 
@@ -161,23 +174,33 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 : Text('Нашр кун',
                     style: TextStyle(
                         color: _file == null ? Colors.white30 : Colors.white,
-                        fontWeight: FontWeight.bold, fontSize: 16))),
-        ]),
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
+      ),
       body: Stack(children: [
         Column(children: [
+
+          // ── Хато ────────────────────────────────────────────────
           if (_error != null)
             Container(
-              width: double.infinity, color: Colors.red.shade900,
+              width: double.infinity,
+              color: Colors.red.shade900,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(children: [
                 const Icon(Icons.error_outline, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
-                Expanded(child: Text(_error!,
-                    style: const TextStyle(color: Colors.white, fontSize: 13))),
+                Expanded(child: Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                )),
                 GestureDetector(
                     onTap: () => setState(() => _error = null),
                     child: const Icon(Icons.close, color: Colors.white, size: 18)),
-              ])),
+              ]),
+            ),
+
+          // ── Preview ─────────────────────────────────────────────
           Expanded(
             child: _file == null
                 ? GestureDetector(
@@ -198,7 +221,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                 Text('Видео интихоб шуд',
                                     style: TextStyle(color: Colors.white54, fontSize: 14)),
                               ])))
-                          : Image.file(_file!, fit: BoxFit.contain, width: double.infinity)),
+                          : Image.file(_file!, fit: BoxFit.contain, width: double.infinity),
+                    ),
                     Positioned(bottom: 12, right: 12,
                       child: GestureDetector(
                         onTap: _busy ? null : _pick,
@@ -211,7 +235,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                             SizedBox(width: 4),
                             Text('Иваз', style: TextStyle(color: Colors.white, fontSize: 13)),
                           ])))),
-                  ])),
+                  ]),
+          ),
+
+          // ── Caption ─────────────────────────────────────────────
           Container(
             color: const Color(0xFF111111),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -225,6 +252,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 border: InputBorder.none,
                 counterStyle: TextStyle(color: Colors.white24)))),
         ]),
+
+        // ── Progress overlay ─────────────────────────────────────
         if (_busy)
           Positioned.fill(
             child: Container(color: Colors.black.withOpacity(0.8),
@@ -240,7 +269,20 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 Text(_status, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                // ── Хатои live ──────────────────────────────────
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
               ])))),
-      ]));
+      ]),
+    );
   }
 }
