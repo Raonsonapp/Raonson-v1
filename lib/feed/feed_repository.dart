@@ -4,7 +4,7 @@ import '../models/post_model.dart';
 import '../models/comment_model.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
-import 'timeline/feed_controller.dart';
+import 'feed_exceptions.dart'; // ✅ UnauthorizedException — ин ҷо, на аз controller
 
 class FeedRepository {
   final ApiClient _api = ApiClient.instance;
@@ -13,11 +13,11 @@ class FeedRepository {
     final query = <String, String>{
       'limit': '$limit',
       'page':  '$page',
-      if (forceRefresh) 't': '${DateTime.now().millisecondsSinceEpoch}', // cache bust
+      if (forceRefresh) 't': '${DateTime.now().millisecondsSinceEpoch}',
     };
     final response = await _api.getRequest(ApiEndpoints.posts, query: query);
 
-    if (response.statusCode == 401) throw UnauthorizedException();
+    if (response.statusCode == 401) throw const UnauthorizedException();
     if (response.statusCode >= 400) {
       throw Exception('Server error ${response.statusCode}');
     }
