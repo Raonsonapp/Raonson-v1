@@ -63,7 +63,7 @@ func main() {
 
 	auth  := mw.Auth()
 	admin := mw.AdminOnly()
-	rl100 := mw.RateLimit(100, 60) // 100 req/min
+	rl100 := mw.RateLimit(500, 60) // 100 req/min
 	rl20  := mw.RateLimit(20, 60)  // 20 req/min (uploads, auth)
 
 	// ── AUTH ─────────────────────────────────────────────────────
