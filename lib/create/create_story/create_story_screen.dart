@@ -80,7 +80,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     setState(() { _busy = true; _error = null; _progress = 0.1; _status = 'Бор мешавад...'; });
 
     try {
-      // Upload
+      // ── 1. UPLOAD ─────────────────────────────────────────────────
       final ext = _file!.path.split('.').last.toLowerCase();
       MediaType mime;
       if (_isVideo)          mime = MediaType('video', 'mp4');
@@ -97,18 +97,25 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       final upStr = await up.stream.bytesToString();
       setState(() => _progress = 0.75);
 
-      if (up.statusCode >= 400) throw Exception('Upload ${up.statusCode}: $upStr');
+      if (up.statusCode >= 400) {
+        throw Exception('Upload хато ${up.statusCode}: $upStr');
+      }
 
       final upJson   = jsonDecode(upStr) as Map<String, dynamic>;
-      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString();
-      if (mediaUrl.isEmpty) throw Exception('URL нест: $upStr');
+      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString().trim();
+      if (mediaUrl.isEmpty) {
+        throw Exception('Сервер URL нафиристод. Ҷавоб: $upStr');
+      }
 
+      // ── 2. POST /stories/ (trailing slash муҳим!) ─────────────────
       setState(() { _status = 'Story сохта мешавад...'; _progress = 0.9; });
 
-      // POST /stories
       final res = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/stories'),
-        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+        Uri.parse('${AppConfig.apiBaseUrl}/stories/'), // ← /stories/ бо slash
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type' : 'application/json',
+        },
         body: jsonEncode({
           'mediaUrl' : mediaUrl,
           'mediaType': _isVideo ? 'video' : 'image',
@@ -119,18 +126,21 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       setState(() => _progress = 1.0);
 
       if (res.statusCode >= 400) {
-        Map err = {};
-        try { err = jsonDecode(res.body); } catch (_) {}
-        throw Exception('Story ${res.statusCode}: ${err['message'] ?? res.body}');
+        Map<String, dynamic> err = {};
+        try { err = jsonDecode(res.body) as Map<String, dynamic>; } catch (_) {}
+        throw Exception(
+          'Story сохта нашуд (${res.statusCode}): ${err['message'] ?? res.body}',
+        );
       }
 
+      // ── Муваффақ ──────────────────────────────────────────────────
       if (mounted) Navigator.of(context).pop(true);
 
     } catch (e) {
       if (mounted) setState(() {
-        _busy = false;
-        _error = e.toString().replaceAll('Exception: ', '');
-        _status = '';
+        _busy     = false;
+        _error    = e.toString().replaceAll('Exception: ', '');
+        _status   = '';
         _progress = 0;
       });
     }
@@ -146,8 +156,20 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: _busy ? null : () => Navigator.pop(context)),
         title: const Text('Сторис',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        // Retry тугма — агар хато бошад
+        actions: [
+          if (_error != null && !_busy)
+            TextButton(
+              onPressed: _publish,
+              child: const Text('Дубора',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+        ],
+      ),
       body: Stack(children: [
+
+        // ── Preview ───────────────────────────────────────────────
         Center(child: _file == null
             ? const CircularProgressIndicator(color: Colors.white30)
             : _isVideo
@@ -158,22 +180,36 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                         style: TextStyle(color: Colors.white54, fontSize: 14)),
                   ])
                 : Image.file(_file!, fit: BoxFit.contain, width: double.infinity)),
+
+        // ── 🔴 Хато — дар боло бо рамки сурх ─────────────────────
         if (_error != null)
-          Positioned(top: 80, left: 16, right: 16,
+          Positioned(top: 16, left: 16, right: 16,
             child: Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: Colors.red.shade900,
-                  borderRadius: BorderRadius.circular(12)),
-              child: Row(children: [
-                Expanded(child: Text(_error!,
-                    style: const TextStyle(color: Colors.white))),
+              decoration: BoxDecoration(
+                color: Colors.red.shade800,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(
+                  color: Colors.red.withOpacity(0.3),
+                  blurRadius: 12, offset: const Offset(0, 4))],
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text(
+                  _error!,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+                )),
                 GestureDetector(
                     onTap: () => setState(() => _error = null),
-                    child: const Icon(Icons.close, color: Colors.white, size: 18)),
-              ]))),
+                    child: const Icon(Icons.close, color: Colors.white70, size: 18)),
+              ]),
+            )),
+
+        // ── Progress overlay ──────────────────────────────────────
         if (_busy)
           Positioned.fill(
-            child: Container(color: Colors.black.withOpacity(0.8),
+            child: Container(color: Colors.black.withOpacity(0.85),
               child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                 SizedBox(width: 72, height: 72,
                   child: CircularProgressIndicator(
@@ -185,8 +221,10 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
                     style: const TextStyle(color: Colors.white,
                         fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
-                Text(_status, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                Text(_status,
+                    style: const TextStyle(color: Colors.white54, fontSize: 13)),
               ])))),
-      ]));
+      ]),
+    );
   }
 }
