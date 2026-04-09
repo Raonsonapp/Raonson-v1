@@ -1,20 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// Pure black theme — like X (Twitter)
 class AppColors {
-  static const Color bg      = Color(0xFF000000); // pure black
-  static const Color surface = Color(0xFF111111); // card background
-  static const Color card    = Color(0xFF1A1A1A); // slightly lighter card
-  static const Color neonBlue    = Color(0xFF1D9BF0); // X blue (not neon)
+  static const Color bg          = Color(0xFF000000); // чист сиёҳ
+  static const Color surface     = Color(0xFF111111);
+  static const Color card        = Color(0xFF1A1A1A);
+
+  // Аз расм — story gradient: кабуди равшан → сабзи нур
+  static const Color storyStart  = Color(0xFF00C8FF); // cyan
+  static const Color storyEnd    = Color(0xFF00FF85); // neon green
+  static const List<Color> storyGradient = [Color(0xFF00C8FF), Color(0xFF00FF85)];
+
+  // Verified badge — САБЗ мисли расм (на кабуд!)
+  static const Color verified    = Color(0xFF20C954);
+
+  // Hashtag — сабзи равшан мисли расм
+  static const Color hashtag     = Color(0xFF1DB954);
+
+  // Action buttons — сафед
+  static const Color actionIcon  = Colors.white;
+  static const Color actionCount = Color(0xFFAAAAAA);
+
+  // Caption text
+  static const Color captionUser = Colors.white;
+  static const Color captionText = Color(0xFFCCCCCC);
+  static const Color timeColor   = Color(0xFF888888);
+
+  static const Color neonBlue    = Color(0xFF1D9BF0);
   static const Color neonBlueDim = Color(0xFF1A8CD8);
   static const Color neonBlueGlow= Color(0x221D9BF0);
-  static const Color white   = Colors.white;
-  static const Color grey    = Color(0xFF71767B); // X grey
+  static const Color white       = Colors.white;
+  static const Color grey        = Color(0xFF71767B);
   static const Color greyLight   = Color(0xFFE7E9EA);
-  static const Color storyBorder = Color(0xFF1D9BF0);
-  static const Color red     = Color(0xFFF4212E);
-  static const Color divider = Color(0xFF2F3336); // X divider
+  static const Color divider     = Color(0xFF1A1A1A);
+  static const Color red         = Color(0xFFF4212E);
 }
 
 class AppTheme {
@@ -26,7 +45,7 @@ class AppTheme {
       fontFamily: 'RaonsonFont',
       colorScheme: const ColorScheme.dark(
         primary:   AppColors.neonBlue,
-        secondary: AppColors.neonBlueDim,
+        secondary: AppColors.storyStart,
         surface:   AppColors.bg,
         onPrimary: Colors.white,
         onSurface: Colors.white,
@@ -39,17 +58,11 @@ class AppTheme {
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
           color: Colors.white,
-          fontSize: 22,
+          fontSize: 28,
+          fontStyle: FontStyle.italic,
           fontWeight: FontWeight.bold,
           fontFamily: 'RaonsonFont',
         ),
-      ),
-      tabBarTheme: const TabBarTheme(
-        indicator: UnderlineTabIndicator(
-          borderSide: BorderSide(color: AppColors.neonBlue, width: 2),
-        ),
-        labelColor:          AppColors.neonBlue,
-        unselectedLabelColor: AppColors.grey,
       ),
       iconTheme:   const IconThemeData(color: Colors.white),
       dividerColor: AppColors.divider,
@@ -61,6 +74,5 @@ class AppTheme {
       ),
     );
   }
-
   static ThemeData light() => dark();
 }
