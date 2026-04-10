@@ -71,8 +71,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
     final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     final optimistic = CommentModel(
       id:         tempId,
+      postId:     widget.post.id,
       text:       text,
-      isLiked:    false,
+      liked:      false,
       likesCount: 0,
       createdAt:  DateTime.now(),
       user: UserModel(
