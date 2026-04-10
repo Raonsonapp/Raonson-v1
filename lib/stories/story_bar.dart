@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/story_model.dart';
+import '../core/services/user_session.dart';
 import '../app/app_theme.dart';
 
 List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
@@ -31,36 +32,60 @@ class StoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ── Stories-ро гурӯҳбандӣ мекунем ──────────────────────────────
     final groups = groupStoriesByUser(stories);
+    final myId   = UserSession.userId ?? '';
+
+    // ── Худамонро аз рӯйхат хориҷ мекунем (алоҳида нишон медиҳем) ──
+    final otherGroups = groups.where((g) => g.first.user.id != myId).toList();
+
     return SizedBox(
-      height: 110,
+      height: 108,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         children: [
-          _MyStoryItem(onTap: onAddStory ?? () {}, avatarUrl: myAvatar),
+          // ── "История шумо" — ҲАМЕША АВВАЛ ─────────────────────────
+          _MyStoryItem(
+            onTap: onAddStory ?? () {},
+            avatarUrl: myAvatar ?? UserSession.avatar ?? '',
+            hasStory: myStories?.isNotEmpty == true,
+          ),
           const SizedBox(width: 14),
-          ...groups.map((group) => Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: _StoryItem(
-              story: group.first,
-              onTap: () {
-                if (onTapGroup != null) onTapGroup!(group, 0);
-                else if (onTap != null) onTap!(group.first);
-              },
-            ),
-          )),
+
+          // ── Stories-и дигарон ───────────────────────────────────────
+          ...otherGroups.map((group) {
+            // Агар ҳама stories-и ин user дида шудааст → хокистарӣ
+            final allViewed = group.every((s) => s.viewed);
+            return Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: _StoryItem(
+                story: group.first,
+                allViewed: allViewed,
+                onTap: () {
+                  if (onTapGroup != null) onTapGroup!(group, 0);
+                  else if (onTap != null) onTap!(group.first);
+                },
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 }
 
-// ── "история шумо" — аввалин item, бе gradient, бо + badge ─────────
+// ── "История шумо" — аввалин item ──────────────────────────────────
 class _MyStoryItem extends StatelessWidget {
   final VoidCallback onTap;
-  final String? avatarUrl;
-  const _MyStoryItem({required this.onTap, this.avatarUrl});
+  final String avatarUrl;
+  final bool hasStory; // агар story гузошта бошад → gradient border нишон деҳ
+
+  const _MyStoryItem({
+    required this.onTap,
+    required this.avatarUrl,
+    this.hasStory = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -70,28 +95,33 @@ class _MyStoryItem extends StatelessWidget {
         SizedBox(
           width: 72, height: 72,
           child: Stack(children: [
-            // Avatar доира бо gradient border мисли расм
+            // Border — gradient агар story бошад, одӣ агар набошад
             Container(
               width: 72, height: 72,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: AppColors.storyGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: hasStory
+                    ? const LinearGradient(
+                        colors: AppColors.storyGradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                border: hasStory
+                    ? null
+                    : Border.all(color: Colors.white24, width: 1.5),
               ),
-              padding: const EdgeInsets.all(2.5),
+              padding: EdgeInsets.all(hasStory ? 2.5 : 0),
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.black,
+                  color: hasStory ? Colors.black : Colors.transparent,
                 ),
-                padding: const EdgeInsets.all(2),
+                padding: EdgeInsets.all(hasStory ? 2 : 0),
                 child: ClipOval(
-                  child: avatarUrl != null && avatarUrl!.isNotEmpty
+                  child: avatarUrl.isNotEmpty
                       ? CachedNetworkImage(
-                          imageUrl: avatarUrl!,
+                          imageUrl: avatarUrl,
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
@@ -101,13 +131,13 @@ class _MyStoryItem extends StatelessWidget {
                 ),
               ),
             ),
-            // "+" badge — мисли расм кабуди равшан
+            // "+" badge — кабуди равшан мисли расм
             Positioned(
               bottom: 2, right: 2,
               child: Container(
                 width: 22, height: 22,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1877F2), // кабуди Facebook-style мисли расм
+                  color: const Color(0xFF1877F2),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.black, width: 1.5),
                 ),
@@ -137,27 +167,40 @@ class _MyStoryItem extends StatelessWidget {
   );
 }
 
-// ── Story item — бо gradient border cyan→green ──────────────────────
+// ── Story item — дида шуда: хокистарӣ / надида: gradient ───────────
 class _StoryItem extends StatelessWidget {
   final StoryModel story;
+  final bool allViewed;
   final VoidCallback onTap;
-  const _StoryItem({required this.story, required this.onTap});
+
+  const _StoryItem({
+    required this.story,
+    required this.allViewed,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        // Gradient border — cyan → green мисли расм
         Container(
           width: 72, height: 72,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: AppColors.storyGradient,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            // ── Дида шуда → хокистарӣ мисли Instagram ──────────────
+            // ── Надида → cyan → green gradient ──────────────────────
+            gradient: allViewed
+                ? const LinearGradient(
+                    colors: [Color(0xFF555555), Color(0xFF333333)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : const LinearGradient(
+                    colors: AppColors.storyGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
           ),
           padding: const EdgeInsets.all(2.5),
           child: Container(
@@ -184,7 +227,11 @@ class _StoryItem extends StatelessWidget {
           width: 72,
           child: Text(
             story.user.username,
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
+            // Дида шуда → ранги хокистарӣ мисли Instagram
+            style: TextStyle(
+              color: allViewed ? const Color(0xFF666666) : Colors.white70,
+              fontSize: 11,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
