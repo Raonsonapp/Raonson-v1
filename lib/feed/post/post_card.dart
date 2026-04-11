@@ -13,15 +13,6 @@ import '../../core/api/api_client.dart';
 import '../comments/comments_screen.dart';
 import '../../app/app_theme.dart';
 
-// ── SVG icon paths (assets/icons/) ─────────────────────────────────
-const _iconHeart        = 'assets/icons/heart.svg';
-const _iconHeartFilled  = 'assets/icons/heart_filled.svg';
-const _iconComment      = 'assets/icons/comment.svg';
-const _iconRetweet      = 'assets/icons/retweet.svg';
-const _iconShare        = 'assets/icons/share.svg';
-const _iconBookmark     = 'assets/icons/bookmark.svg';
-const _iconBookmarkFill = 'assets/icons/bookmark_filled.svg';
-
 class PostCard extends StatefulWidget {
   final PostModel post;
   final bool isActive;
@@ -92,12 +83,14 @@ class _PostCardState extends State<PostCard> {
               borderRadius: BorderRadius.circular(2))),
         ListTile(
           leading: const Icon(Icons.not_interested, color: Colors.white),
-          title: const Text('Ба ман нишон надех', style: TextStyle(color: Colors.white)),
+          title: const Text('Ба ман нишон надех',
+              style: TextStyle(color: Colors.white)),
           onTap: () => Navigator.pop(context),
         ),
         ListTile(
           leading: const Icon(Icons.flag_outlined, color: Colors.redAccent),
-          title: const Text('Шикоят кардан', style: TextStyle(color: Colors.redAccent)),
+          title: const Text('Шикоят кардан',
+              style: TextStyle(color: Colors.redAccent)),
           onTap: () => Navigator.pop(context),
         ),
         const SizedBox(height: 8),
@@ -123,7 +116,8 @@ class _PostCardState extends State<PostCard> {
         ListTile(
           leading: const CircleAvatar(backgroundColor: Colors.white12,
               child: Icon(Icons.link, color: Colors.white, size: 20)),
-          title: const Text('Линкро нусха кун', style: TextStyle(color: Colors.white)),
+          title: const Text('Линкро нусха кун',
+              style: TextStyle(color: Colors.white)),
           onTap: () {
             Clipboard.setData(ClipboardData(text: url));
             Navigator.pop(context);
@@ -136,7 +130,8 @@ class _PostCardState extends State<PostCard> {
         ListTile(
           leading: const CircleAvatar(backgroundColor: Colors.white12,
               child: Icon(Icons.share_outlined, color: Colors.white, size: 20)),
-          title: const Text('Дигар барномаҳо', style: TextStyle(color: Colors.white)),
+          title: const Text('Дигар барномаҳо',
+              style: TextStyle(color: Colors.white)),
           onTap: () {
             Navigator.pop(context);
             Share.share(url);
@@ -174,196 +169,195 @@ class _PostCardState extends State<PostCard> {
     return '${(d.inDays / 7).floor()} ҳафта пеш';
   }
 
-  // Caption: username bold + text + #hashtag сабз + hashtag сатри алоҳида
-  Widget _buildCaption(BuildContext context, PostModel post) {
-    final words = post.caption.split(' ');
-    final mainWords  = <String>[];
-    final hashWords  = <String>[];
-    bool seenHash = false;
-    for (final w in words) {
-      if (w.startsWith('#')) { seenHash = true; }
-      if (seenHash && w.startsWith('#')) { hashWords.add(w); }
-      else { mainWords.add(w); }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Username + text
-        RichText(text: TextSpan(children: [
-          TextSpan(
-            text: '${post.user.username} ',
-            style: const TextStyle(fontWeight: FontWeight.w700,
-                color: Colors.white, fontSize: 14),
-          ),
-          TextSpan(
-            text: mainWords.join(' '),
-            style: const TextStyle(color: Color(0xFFCCCCCC), fontSize: 14),
-          ),
-        ])),
-        // Hashtags — сатри алоҳида сабз мисли расм 2
-        if (hashWords.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            hashWords.join(' '),
-            style: const TextStyle(
-              color: Color(0xFF1DB954), // сабзи spotify-green мисли расм
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ]),
-    );
-  }
-
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000)    return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
     return '$n';
+  }
+
+  List<InlineSpan> _captionSpans(String text) {
+    return text.split(' ').map((word) {
+      if (word.startsWith('#')) {
+        return TextSpan(text: '$word ',
+          style: const TextStyle(color: AppColors.hashtag, fontSize: 14,
+              fontWeight: FontWeight.w500));
+      }
+      return TextSpan(text: '$word ',
+        style: const TextStyle(color: AppColors.captionText, fontSize: 14));
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-        // ── HEADER ─────────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 8, 6),
-          child: Row(children: [
-            Avatar(imageUrl: post.user.avatar, size: 44, glowBorder: false),
-            const SizedBox(width: 10),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [
-                  Text(post.user.username, style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 15, color: Colors.white)),
-                  if (post.user.verified) ...[
-                    const SizedBox(width: 4),
-                    const VerifiedBadge(size: 16),
-                  ],
-                ]),
-                const SizedBox(height: 2),
-                Text(_timeAgo(post.createdAt),
-                    style: const TextStyle(color: Color(0xFF888888), fontSize: 12.5)),
-              ],
-            )),
-            // ⋮ — вертикал 3 нуқта мисли расм
-            GestureDetector(
-              onTap: _showOptions,
-              child: const Padding(padding: EdgeInsets.all(8),
-                child: Icon(Icons.more_vert, color: Color(0xFF888888), size: 20)),
-            ),
-          ]),
-        ),
-
-        // ── MEDIA ──────────────────────────────────────────────────
-        if (post.media.isNotEmpty)
-          _MediaCarousel(media: post.media, isActive: widget.isActive),
-
-        // ── ACTIONS — айнан мисли расм 2 ───────────────────────────
-        // ♡ 3 558   💬 23   🔄 321   ↗ 435        🔖
-        Padding(
-          padding: const EdgeInsets.fromLTRB(6, 8, 6, 2),
-          child: Row(children: [
-
-            // ♡ / ❤ Like
-            _SvgActionBtn(
-              onTap: _toggleLike,
-              svgPath: _liked ? _iconHeartFilled : _iconHeart,
-              color: _liked ? Colors.red : Colors.white,
-              count: _likeCount,
-            ),
-
-            const SizedBox(width: 2),
-
-            // 💬 Comment
-            _SvgActionBtn(
-              onTap: _openComments,
-              svgPath: _iconComment,
-              color: Colors.white,
-              count: _commentCount,
-            ),
-
-            const SizedBox(width: 2),
-
-            // 🔄 Retweet
-            _SvgActionBtn(
-              onTap: () => setState(() => _retweetCount++),
-              svgPath: _iconRetweet,
-              color: Colors.white,
-              count: _retweetCount,
-            ),
-
-            const SizedBox(width: 2),
-
-            // ↗ Share
-            _SvgActionBtn(
-              onTap: _showShare,
-              svgPath: _iconShare,
-              color: Colors.white,
-              count: _shareCount,
-            ),
-
-            const Spacer(),
-
-            // 🔖 Bookmark
-            _SvgActionBtn(
-              onTap: _toggleSave,
-              svgPath: _saved ? _iconBookmarkFill : _iconBookmark,
-              color: Colors.white,
-              count: 0,
-            ),
-          ]),
-        ),
-
-        // ── CAPTION: username + text + #hashtag сабз ────────────────
-        if (post.caption.isNotEmpty) _buildCaption(context, post),
-
-        // ── "Намоиш ҳама N шарх" ────────────────────────────────────
-        if (_commentCount > 0)
+      // ── HEADER ──────────────────────────────────────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 8),
+        child: Row(children: [
+          Avatar(imageUrl: post.user.avatar, size: 44, glowBorder: false),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(children: [
+                Text(post.user.username,
+                  style: const TextStyle(fontWeight: FontWeight.w700,
+                      fontSize: 15, color: Colors.white)),
+                if (post.user.verified) ...[
+                  const SizedBox(width: 4),
+                  const VerifiedBadge(size: 16),
+                ],
+              ]),
+              const SizedBox(height: 2),
+              Text(_timeAgo(post.createdAt),
+                  style: const TextStyle(color: AppColors.timeColor, fontSize: 12.5)),
+            ],
+          )),
           GestureDetector(
-            onTap: _openComments,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
-              child: Text(
-                'Намоиш ҳама $_commentCount шарх',
-                style: const TextStyle(color: Color(0xFF666666), fontSize: 13.5),
-              ),
-            ),
-          )
-        else
-          const SizedBox(height: 10),
+            onTap: _showOptions,
+            child: const Padding(padding: EdgeInsets.all(8),
+              child: Icon(Icons.more_vert, color: AppColors.grey, size: 20)),
+          ),
+        ]),
+      ),
 
-        const Divider(color: Color(0xFF1A1A1A), height: 1),
-      ],
-    );
+      // ── MEDIA ────────────────────────────────────────────────────
+      if (post.media.isNotEmpty)
+        _MediaCarousel(media: post.media, isActive: widget.isActive),
+
+      // ── ACTIONS — айнан мисли расм 1 ─────────────────────────────
+      // ♡ 3558  ◯ 23  ↩↪ 321  ↗ 435                    🔖
+      Padding(
+        padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
+        child: Row(children: [
+
+          // ♡ Heart outline → filled red
+          _ActionBtn(
+            onTap: _toggleLike,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              child: _liked
+                  ? SvgPicture.asset('assets/icons/heart_filled.svg',
+                      key: const ValueKey(true), width: 24, height: 24)
+                  : SvgPicture.asset('assets/icons/heart.svg',
+                      key: const ValueKey(false), width: 24, height: 24,
+                      colorFilter: const ColorFilter.mode(
+                          Colors.white, BlendMode.srcIn)),
+            ),
+            count: _likeCount,
+            fmt: _fmt,
+          ),
+
+          const SizedBox(width: 4),
+
+          // ◯ Comment — тунук доира мисли расм 1
+          _ActionBtn(
+            onTap: _openComments,
+            child: SvgPicture.asset('assets/icons/comment.svg',
+              width: 23, height: 23,
+              colorFilter: const ColorFilter.mode(
+                  Colors.white, BlendMode.srcIn)),
+            count: _commentCount,
+            fmt: _fmt,
+          ),
+
+          const SizedBox(width: 4),
+
+          // ↩↪ Retweet
+          _ActionBtn(
+            onTap: () => setState(() => _retweetCount++),
+            child: SvgPicture.asset('assets/icons/retweet.svg',
+              width: 24, height: 24,
+              colorFilter: const ColorFilter.mode(
+                  Colors.white, BlendMode.srcIn)),
+            count: _retweetCount,
+            fmt: _fmt,
+          ),
+
+          const SizedBox(width: 4),
+
+          // ↗ Share
+          _ActionBtn(
+            onTap: _showShare,
+            child: SvgPicture.asset('assets/icons/share.svg',
+              width: 23, height: 23,
+              colorFilter: const ColorFilter.mode(
+                  Colors.white, BlendMode.srcIn)),
+            count: _shareCount,
+            fmt: _fmt,
+          ),
+
+          const Spacer(),
+
+          // 🔖 Bookmark
+          _ActionBtn(
+            onTap: _toggleSave,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              child: _saved
+                  ? SvgPicture.asset('assets/icons/save_filled.svg',
+                      key: const ValueKey(true), width: 23, height: 23,
+                      colorFilter: const ColorFilter.mode(
+                          Colors.white, BlendMode.srcIn))
+                  : SvgPicture.asset('assets/icons/save.svg',
+                      key: const ValueKey(false), width: 23, height: 23,
+                      colorFilter: const ColorFilter.mode(
+                          Colors.white, BlendMode.srcIn)),
+            ),
+            count: 0,
+            fmt: _fmt,
+          ),
+        ]),
+      ),
+
+      // ── CAPTION ──────────────────────────────────────────────────
+      if (post.caption.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+          child: RichText(
+            text: TextSpan(children: [
+              TextSpan(text: '${post.user.username} ',
+                style: const TextStyle(fontWeight: FontWeight.w700,
+                    color: Colors.white, fontSize: 14)),
+              ..._captionSpans(post.caption),
+            ]),
+          ),
+        ),
+
+      // ── "Намоиш ҳама N шарх" ─────────────────────────────────────
+      if (_commentCount > 0)
+        GestureDetector(
+          onTap: _openComments,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+            child: Text('Намоиш ҳама $_commentCount шарх',
+              style: const TextStyle(color: AppColors.timeColor, fontSize: 13.5)),
+          ),
+        )
+      else
+        const SizedBox(height: 10),
+
+      const Divider(color: Color(0xFF1A1A1A), height: 1),
+    ]);
   }
 }
 
-// ── SVG Action Button бо шумора ─────────────────────────────────────
-class _SvgActionBtn extends StatelessWidget {
+// ── Action button бо шумора ─────────────────────────────────────────
+class _ActionBtn extends StatelessWidget {
   final VoidCallback onTap;
-  final String svgPath;
-  final Color color;
+  final Widget child;
   final int count;
-  const _SvgActionBtn({
-    required this.onTap,
-    required this.svgPath,
-    required this.color,
-    this.count = 0,
-  });
+  final String Function(int) fmt;
 
-  String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000)    return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
-    return '$n';
-  }
+  const _ActionBtn({
+    required this.onTap,
+    required this.child,
+    required this.count,
+    required this.fmt,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -371,23 +365,14 @@ class _SvgActionBtn extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          SvgPicture.asset(
-            svgPath,
-            width: 23, height: 23,
-            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-          ),
+          child,
           if (count > 0) ...[
             const SizedBox(width: 5),
-            Text(
-              _fmt(count),
-              style: const TextStyle(
-                color: Color(0xFFAAAAAA),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text(fmt(count),
+              style: const TextStyle(color: AppColors.actionCount,
+                  fontSize: 14, fontWeight: FontWeight.w500)),
           ],
         ]),
       ),
@@ -412,26 +397,25 @@ class _MediaCarouselState extends State<_MediaCarousel> {
     final w = MediaQuery.of(context).size.width;
     return Stack(alignment: Alignment.bottomCenter, children: [
       SizedBox(
-        height: w * 0.72,
+        height: w * 0.75,
         child: PageView.builder(
           onPageChanged: (i) => setState(() => _current = i),
           itemCount: widget.media.length,
           itemBuilder: (_, i) {
             final url  = widget.media[i]['url']  ?? '';
             final type = widget.media[i]['type'] ?? 'image';
-            if (url.isEmpty) return Container(color: AppColors.card);
-            if (type == 'video') return _VideoItem(url: url, isActive: widget.isActive);
+            if (url.isEmpty) return Container(color: const Color(0xFF111111));
+            if (type == 'video') {
+              return _VideoItem(url: url, isActive: widget.isActive);
+            }
             return CachedNetworkImage(
-              imageUrl: url,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              placeholder: (_, __) => Container(
-                color: const Color(0xFF1A1A1A),
+              imageUrl: url, fit: BoxFit.cover,
+              width: double.infinity, height: double.infinity,
+              placeholder: (_, __) => Container(color: const Color(0xFF111111),
                 child: const Center(child: CircularProgressIndicator(
                     strokeWidth: 2, color: Colors.white30))),
               errorWidget: (_, __, ___) => Container(
-                color: const Color(0xFF1A1A1A),
+                color: const Color(0xFF111111),
                 child: const Center(child: Icon(Icons.broken_image_outlined,
                     color: Colors.white30, size: 48))),
             );
@@ -503,10 +487,8 @@ class _VideoItemState extends State<_VideoItem> {
       onTap: () => _ctrl.value.isPlaying ? _ctrl.pause() : _ctrl.play(),
       child: Stack(fit: StackFit.expand, children: [
         FittedBox(fit: BoxFit.cover,
-          child: SizedBox(
-            width:  _ctrl.value.size.width,
-            height: _ctrl.value.size.height,
-            child:  VideoPlayer(_ctrl))),
+          child: SizedBox(width: _ctrl.value.size.width,
+              height: _ctrl.value.size.height, child: VideoPlayer(_ctrl))),
         if (!_ctrl.value.isPlaying)
           const Center(child: Icon(Icons.play_circle_outline_rounded,
               color: Colors.white70, size: 56)),
