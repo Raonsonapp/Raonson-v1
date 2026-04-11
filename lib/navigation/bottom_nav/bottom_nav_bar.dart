@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/app_theme.dart';
 
@@ -21,45 +22,56 @@ class BottomNavBar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.black,
-        border: Border(top: BorderSide(color: Color(0xFF1C1C1C), width: 0.5)),
+        border: Border(top: BorderSide(color: Color(0xFF1A1A1A), width: 0.5)),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 58,
+          height: 60,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-
-              // 🏠 Home — filled house мисли расм
-              _NavItem(
-                index: 0, currentIndex: currentIndex, onTap: onTap,
-                activeIcon: Icons.home_rounded,
-                inactiveIcon: Icons.home_outlined,
+              // 🏠 Home — filled house
+              _SvgNavItem(
+                index: 0,
+                currentIndex: currentIndex,
+                onTap: onTap,
+                svgActive: 'assets/icons/nav_home.svg',
+                svgInactive: 'assets/icons/nav_home.svg',
+                fallback: Icons.home_rounded,
               ),
 
-              // ▶□ Play square — мисли расм (reels)
-              _NavItem(
-                index: 1, currentIndex: currentIndex, onTap: onTap,
-                activeIcon: Icons.smart_display_rounded,
-                inactiveIcon: Icons.smart_display_outlined,
+              // ▶□ Reels — film strip with play
+              _SvgNavItem(
+                index: 1,
+                currentIndex: currentIndex,
+                onTap: onTap,
+                svgActive: 'assets/icons/nav_reels.svg',
+                svgInactive: 'assets/icons/nav_reels.svg',
+                fallback: Icons.smart_display_outlined,
               ),
 
-              // 💬 Chat bubble бо 3 нуқта мисли расм
-              _NavItem(
-                index: 2, currentIndex: currentIndex, onTap: onTap,
-                activeIcon: Icons.chat_rounded,
-                inactiveIcon: Icons.chat_outlined,
+              // 💬 Chat — bubble бо нуқтаҳо мисли расм 2
+              _SvgNavItem(
+                index: 2,
+                currentIndex: currentIndex,
+                onTap: onTap,
+                svgActive: 'assets/icons/nav_chat.svg',
+                svgInactive: 'assets/icons/nav_chat.svg',
+                fallback: Icons.chat_bubble_outline_rounded,
               ),
 
-              // 🔍 Search мисли расм
-              _NavItem(
-                index: 3, currentIndex: currentIndex, onTap: onTap,
-                activeIcon: Icons.search_rounded,
-                inactiveIcon: Icons.search_rounded,
+              // 🔍 Search
+              _SvgNavItem(
+                index: 3,
+                currentIndex: currentIndex,
+                onTap: onTap,
+                svgActive: 'assets/icons/nav_search.svg',
+                svgInactive: 'assets/icons/nav_search.svg',
+                fallback: Icons.search_rounded,
               ),
 
-              // 👤 Profile — avatar доира мисли расм
+              // 👤 Profile avatar доира
               _ProfileItem(
                 index: 4,
                 currentIndex: currentIndex,
@@ -75,39 +87,45 @@ class BottomNavBar extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
+// ── SVG Nav Item ────────────────────────────────────────────────────
+class _SvgNavItem extends StatelessWidget {
   final int index;
   final int currentIndex;
   final ValueChanged<int> onTap;
-  final IconData activeIcon;
-  final IconData inactiveIcon;
+  final String svgActive;
+  final String svgInactive;
+  final IconData fallback;
 
-  const _NavItem({
+  const _SvgNavItem({
     required this.index,
     required this.currentIndex,
     required this.onTap,
-    required this.activeIcon,
-    required this.inactiveIcon,
+    required this.svgActive,
+    required this.svgInactive,
+    required this.fallback,
   });
 
   @override
   Widget build(BuildContext context) {
-    final selected = currentIndex == index;
+    final sel = currentIndex == index;
+    final color = sel ? Colors.white : const Color(0xFF555555);
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        child: Icon(
-          selected ? activeIcon : inactiveIcon,
-          size: 28,
-          color: selected ? Colors.white : const Color(0xFF666666),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: SvgPicture.asset(
+          sel ? svgActive : svgInactive,
+          width: 26, height: 26,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          placeholderBuilder: (_) => Icon(fallback, color: color, size: 26),
         ),
       ),
     );
   }
 }
 
+// ── Profile avatar ──────────────────────────────────────────────────
 class _ProfileItem extends StatelessWidget {
   final int index;
   final int currentIndex;
@@ -125,20 +143,19 @@ class _ProfileItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selected = currentIndex == index;
+    final sel = currentIndex == index;
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Stack(clipBehavior: Clip.none, children: [
-          // Avatar доира бо border агар active
           Container(
-            width: 30, height: 30,
+            width: 28, height: 28,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: selected ? Colors.white : Colors.transparent,
+                color: sel ? Colors.white : Colors.transparent,
                 width: 1.5,
               ),
             ),
@@ -154,16 +171,16 @@ class _ProfileItem extends StatelessWidget {
           ),
           if (notifCount > 0)
             Positioned(
-              right: -4, top: -4,
+              right: -3, top: -3,
               child: Container(
-                width: 15, height: 15,
+                width: 14, height: 14,
                 decoration: const BoxDecoration(
-                  color: Colors.red, shape: BoxShape.circle),
+                    color: Colors.red, shape: BoxShape.circle),
                 child: Center(
                   child: Text(
                     notifCount > 9 ? '9+' : '$notifCount',
-                    style: const TextStyle(
-                        fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 8,
+                        color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -174,7 +191,7 @@ class _ProfileItem extends StatelessWidget {
   }
 
   Widget _defaultIcon() => Container(
-    color: AppColors.surface,
+    color: const Color(0xFF1A1A1A),
     child: const Icon(Icons.person, size: 16, color: Colors.white60),
   );
 }
