@@ -62,7 +62,7 @@ flutter:
 
   assets:
     - assets/icon.png
-    - assets/icon.png
+    - assets/icons/
 
   fonts:
     - family: RaonsonFont
