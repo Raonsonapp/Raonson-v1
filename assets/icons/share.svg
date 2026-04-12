@@ -1,12 +1,12 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M15 5L22 12L15 19" 
+  <path d="M15 5l7 7-7 7" 
         stroke="white" 
-        stroke-width="2.2" 
+        stroke-width="2.5" 
         stroke-linecap="round" 
         stroke-linejoin="round"/>
-  <path d="M2 20C2 13.5 7.5 8 14 8H22" 
+  <path d="M2 20c0-4.5 3.5-9 10-9h10" 
         stroke="white" 
-        stroke-width="2.2" 
+        stroke-width="2.5" 
         stroke-linecap="round" 
         stroke-linejoin="round"/>
 </svg>
