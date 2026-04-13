@@ -110,6 +110,12 @@ func main() {
 		po.DELETE("/:id",                      handlers.DeletePost)
 		po.POST("/:id/like",                   handlers.TogglePostLike)
 		po.POST("/:id/save",                   handlers.TogglePostSave)
+	    po.POST("/:id/report",                 handlers.ReportPost)
+        po.POST("/:id/interest",               handlers.MarkInterest)
+        po.POST("/:id/not_interest",           handlers.MarkNotInterest)
+        po.PUT("/:id/caption",                 handlers.UpdatePostCaption)
+        po.PUT("/:id/music",                   handlers.UpdatePostMusic)
+        po.GET("/:id/stats",                   handlers.GetPostStats)
 	}
 
 	// Post view tracking
