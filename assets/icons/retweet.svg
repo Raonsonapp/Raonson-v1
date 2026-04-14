@@ -1,9 +1,13 @@
-<svg width="200" height="200" viewBox="0 0 100 100" fill="none" xmlns="http://w3.org">
-  <!-- Верхняя стрелка (линия и наконечник справа) -->
-  <path d="M37 26H63C73 26 81 34 81 44V54M81 54L74 47M81 54L88 47" 
-        stroke="black" stroke-width="6" stroke-linecap="round" stroke-linejoin="round""")/>>
+<svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M30 30h33c10 0 18 8 18 18v10m0 0l-7-7m7 7l7-7" 
+        stroke="white" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
   
-  <!-- Нижняя стрелка (линия и наконечник слева) -->
-  <path d="M63 74H37C27 74 19 66 19 56V46M19 46L26 53M19 46L12 53" 
-        stroke="black" stroke-width="6" stroke-linecap="round" stroke-linejoin="round""")/>>
+  <path d="M70 70H37c-10 0-18-8-18-18V42m0 0l7 7m-7-7l-7 7" 
+        stroke="white" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
 </svg>
