@@ -659,22 +659,42 @@ class _StoryViewerState extends State<StoryViewer>
 
   // ── Media builders ────────────────────────────────────────────────
   Widget _buildImage() {
-    if (widget.story.mediaUrl.isEmpty) {
-      return Container(color: Colors.grey[900],
-        child: const Center(child: Icon(Icons.image_not_supported,
-            color: Colors.white30, size: 64)));
+    final url = widget.story.mediaUrl.trim();
+    if (url.isEmpty) {
+      return Container(color: AppColors.bg,
+        child: const Center(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.image_not_supported_outlined,
+                color: Colors.white30, size: 64),
+            SizedBox(height: 8),
+            Text('Расм ёфт нашуд',
+                style: TextStyle(color: Colors.white38, fontSize: 14)),
+          ],
+        )));
     }
     return CachedNetworkImage(
-      imageUrl: widget.story.mediaUrl,
+      imageUrl: url,
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
-      placeholder: (_, __) => Container(color: Colors.black,
+      // Cache key барои refresh
+      cacheKey: 'story_${widget.story.id}',
+      placeholder: (_, __) => Container(color: AppColors.bg,
         child: const Center(child: CircularProgressIndicator(
-            strokeWidth: 2, color: Colors.white30))),
-      errorWidget: (_, __, ___) => Container(color: Colors.grey[900],
-        child: const Center(child: Icon(Icons.broken_image,
-            color: Colors.white38, size: 72))),
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(AppColors.storyStart)))),
+      errorWidget: (ctx, url, err) => Container(color: AppColors.bg,
+        child: Center(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.broken_image_outlined,
+                color: Colors.white38, size: 64),
+            const SizedBox(height: 8),
+            Text('Расм load нашуд',
+                style: const TextStyle(color: Colors.white38, fontSize: 13)),
+          ],
+        ))),
     );
   }
 
