@@ -13,13 +13,11 @@ class StoryRepository {
       final res = await _api.get(ApiEndpoints.stories);
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
-      List list = [];
-      if (body is List) {
-        list = body;
-      } else if (body is Map) {
-        list = body['stories'] ?? body['data'] ?? [];
-      }
-      return list.map((e) => StoryModel.fromJson(e as Map<String, dynamic>)).toList();
+      // Backend Array ё Object бармегардонад
+      final List list = _extractList(body);
+      return list
+          .map((e) => StoryModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return [];
     }
@@ -30,13 +28,10 @@ class StoryRepository {
       final res = await _api.get('${ApiEndpoints.stories}/my');
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
-      List list = [];
-      if (body is List) {
-        list = body;
-      } else if (body is Map) {
-        list = body['stories'] ?? body['data'] ?? [];
-      }
-      return list.map((e) => StoryModel.fromJson(e as Map<String, dynamic>)).toList();
+      final List list = _extractList(body);
+      return list
+          .map((e) => StoryModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return [];
     }
@@ -46,5 +41,17 @@ class StoryRepository {
     try {
       await _api.post('${ApiEndpoints.stories}/$storyId/view');
     } catch (_) {}
+  }
+
+  // Backend array ё object бармегардонад — ҳарду ҳолро мегирем
+  List _extractList(dynamic body) {
+    if (body is List) return body;
+    if (body is Map) {
+      return body['stories'] ??
+             body['data']    ??
+             body['items']   ??
+             [];
+    }
+    return [];
   }
 }
