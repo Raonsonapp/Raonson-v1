@@ -81,7 +81,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       setState(() { _status = 'Reel сохта мешавад...'; _progress = 0.9; });
 
       final res = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/reels'),
+        Uri.parse('${AppConfig.apiBaseUrl}/reels/'),  // ← slash ЛОЗИМ
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type' : 'application/json',
