@@ -138,11 +138,11 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         throw Exception('Сервер URL нафиристод: $upStr');
       }
 
-      // ── 2. POST /stories (БЕ trailing slash!) ────────────────────
+      // ── 2. POST /stories/ (trailing slash лозим - Gin route: st.POST("/")) ──
       setState(() { _status = 'Story сохта мешавад...'; _progress = 0.9; });
 
       final res = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/stories'),  // ← БЕ slash
+        Uri.parse('${AppConfig.apiBaseUrl}/stories/'),  // ← slash ЛОЗИМ
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type' : 'application/json',
