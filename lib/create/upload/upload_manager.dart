@@ -5,6 +5,13 @@ import 'package:http_parser/http_parser.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 
+// ─────────────────────────────────────────────────────────────────
+// МУҲИМ: Gin backend routes:
+//   po.POST("/")  → /posts/   (бо slash)
+//   st.POST("/")  → /stories/ (бо slash)
+//   re.POST("/")  → /reels/   (бо slash)
+// Бе slash → 301 redirect → http package POST-ро GET мекунад → 404
+// ─────────────────────────────────────────────────────────────────
 class UploadManager {
   String _ext(File f) => f.path.split('.').last.toLowerCase();
 
@@ -13,13 +20,15 @@ class UploadManager {
 
   MediaType _mime(File f) {
     final e = _ext(f);
-    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(e)) return MediaType('video', 'mp4');
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(e))
+      return MediaType('video', 'mp4');
     if (e == 'png') return MediaType('image', 'png');
     return MediaType('image', 'jpeg');
   }
 
   String get _token => ApiClient.instance.authToken ?? '';
 
+  // ── Upload file to R2 ─────────────────────────────────────────
   Future<String> _uploadFile(File file) async {
     final token = _token;
     if (token.isEmpty) throw Exception('Токен нест');
@@ -38,7 +47,7 @@ class UploadManager {
     }
 
     final j   = jsonDecode(str) as Map<String, dynamic>;
-    final url = (j['url'] ?? j['secure_url'] ?? '').toString();
+    final url = (j['url'] ?? j['secure_url'] ?? '').toString().trim();
     if (url.isEmpty) throw Exception('URL нест: $str');
     return url;
   }
@@ -46,6 +55,7 @@ class UploadManager {
   Future<String> uploadAvatar(File f) => _uploadFile(f);
   Future<String> uploadFile(File f)   => _uploadFile(f);
 
+  // ── Upload post ───────────────────────────────────────────────
   Future<void> uploadPost({
     required List<File> media,
     required String caption,
@@ -61,11 +71,12 @@ class UploadManager {
       onProgress?.call((i + 1) / media.length * 0.8);
     }
 
+    // /posts/ — БО slash (Gin route: po.POST("/"))
     final res = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/posts'),
+      Uri.parse('${AppConfig.apiBaseUrl}/posts/'),
       headers: {
         'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
+        'Content-Type' : 'application/json',
       },
       body: jsonEncode({'caption': caption, 'media': list}),
     ).timeout(const Duration(seconds: 30));
@@ -75,11 +86,11 @@ class UploadManager {
     if (res.statusCode >= 400) {
       Map<String, dynamic> err = {};
       try { err = jsonDecode(res.body) as Map<String, dynamic>; } catch (_) {}
-      final msg = err['message']?.toString() ?? res.body;
-      throw Exception('Post ${res.statusCode}: $msg');
+      throw Exception('Post ${res.statusCode}: ${err['message'] ?? res.body}');
     }
   }
 
+  // ── Upload story ──────────────────────────────────────────────
   Future<void> uploadStory({
     required File file,
     String caption = '',
@@ -91,11 +102,12 @@ class UploadManager {
     final url = await _uploadFile(file);
     onProgress?.call(0.7);
 
+    // /stories/ — БО slash (Gin route: st.POST("/"))
     final res = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/stories'),
+      Uri.parse('${AppConfig.apiBaseUrl}/stories/'),
       headers: {
         'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
+        'Content-Type' : 'application/json',
       },
       body: jsonEncode({
         'mediaUrl' : url,
@@ -109,8 +121,7 @@ class UploadManager {
     if (res.statusCode >= 400) {
       Map<String, dynamic> err = {};
       try { err = jsonDecode(res.body) as Map<String, dynamic>; } catch (_) {}
-      final msg = err['message']?.toString() ?? res.body;
-      throw Exception('Story ${res.statusCode}: $msg');
+      throw Exception('Story ${res.statusCode}: ${err['message'] ?? res.body}');
     }
   }
 }
