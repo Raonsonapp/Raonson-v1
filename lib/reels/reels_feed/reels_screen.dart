@@ -458,63 +458,52 @@ class _ReelItemState extends State<_ReelItem> {
           ]),
         ),
 
-        // ── RIGHT ACTIONS — мисли расм: ♡·💬·🔄·↗·🔖···· ──────
+        // ── RIGHT ACTIONS — icon ҷойаш иваз намекунад ────────────
         Positioned(
           right: 10,
           bottom: bottom + size.height * 0.10,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
 
-            // ♡ Like
-            _SvgAction(
-              svgPath: reel.isLiked
-                  ? 'assets/icons/heart_filled.svg'
-                  : 'assets/icons/heart.svg',
-              fallback: reel.isLiked
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              color: reel.isLiked ? Colors.red : Colors.white,
+            // ♡ Like — rang иваз мешавад, ҷой не
+            _ReelStableBtn(
+              svgPath: 'assets/icons/heart.svg',
+              activeSvgPath: 'assets/icons/heart_filled.svg',
+              isActive: reel.isLiked,
+              activeColor: Colors.red,
               count: _fmt(reel.likesCount),
               onTap: widget.onLike,
             ),
             const SizedBox(height: 22),
 
             // 💬 Comment
-            _SvgAction(
+            _ReelStableBtn(
               svgPath: 'assets/icons/comment.svg',
-              fallback: Icons.chat_bubble_outline_rounded,
-              color: Colors.white,
               count: _fmt(reel.commentsCount),
               onTap: _openComments,
             ),
             const SizedBox(height: 22),
 
             // 🔄 Retweet
-            _SvgAction(
+            _ReelStableBtn(
               svgPath: 'assets/icons/retweet.svg',
-              fallback: Icons.repeat_rounded,
-              color: Colors.white,
               count: _fmt(_retweetCount),
               onTap: () => setState(() => _retweetCount++),
             ),
             const SizedBox(height: 22),
 
             // ↗ Share
-            _SvgAction(
+            _ReelStableBtn(
               svgPath: 'assets/icons/share.svg',
-              fallback: Icons.ios_share_rounded,
-              color: Colors.white,
               count: '',
               onTap: _share,
             ),
             const SizedBox(height: 22),
 
-            // 🔖 Save
-            _SvgAction(
-              svgPath: _saved
-                  ? 'assets/icons/save_filled.svg'
-                  : 'assets/icons/save.svg',
-              fallback: _saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-              color: Colors.white,
+            // 🔖 Save — rang иваз мешавад, ҷой не
+            _ReelStableBtn(
+              svgPath: 'assets/icons/save.svg',
+              activeSvgPath: 'assets/icons/save_filled.svg',
+              isActive: _saved,
               count: '',
               onTap: () { setState(() => _saved = !_saved); widget.onSave(); },
             ),
@@ -523,10 +512,10 @@ class _ReelItemState extends State<_ReelItem> {
             // ··· More
             GestureDetector(
               onTap: () {},
-              child: const Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.more_horiz_rounded, color: Colors.white, size: 28,
-                    shadows: [Shadow(blurRadius: 6, color: Colors.black54)]),
-              ]),
+              child: const SizedBox(
+                width: 30, height: 30,
+                child: Icon(Icons.more_horiz_rounded, color: Colors.white, size: 28,
+                    shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
             ),
             const SizedBox(height: 16),
 
@@ -608,33 +597,41 @@ class _ReelItemState extends State<_ReelItem> {
   }
 }
 
-// ── SVG Action button (right side) ─────────────────────────────────
-class _SvgAction extends StatelessWidget {
-  final String   svgPath;
-  final IconData fallback;
-  final Color    color;
-  final String   count;
+// ── Stable Reel Button — icon ҷойаш иваз намешавад ─────────────────
+class _ReelStableBtn extends StatelessWidget {
+  final String    svgPath;
+  final String?   activeSvgPath;
+  final bool      isActive;
+  final Color     activeColor;
+  final String    count;
   final VoidCallback onTap;
 
-  const _SvgAction({
+  const _ReelStableBtn({
     required this.svgPath,
-    required this.fallback,
-    required this.color,
+    this.activeSvgPath,
+    this.isActive   = false,
+    this.activeColor = Colors.red,
     required this.count,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
+    final color = isActive ? activeColor : Colors.white;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        SvgPicture.asset(
-          svgPath, width: 30, height: 30,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-          placeholderBuilder: (_) => Icon(fallback, color: color, size: 30,
-            shadows: const [Shadow(blurRadius: 6, color: Colors.black54)]),
+        // SizedBox — ҷойро фиксд нигоҳ медорад
+        SizedBox(
+          width: 30, height: 30,
+          child: SvgPicture.asset(
+            path,
+            width: 30, height: 30,
+            fit: BoxFit.contain,
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          ),
         ),
         if (count.isNotEmpty) ...[
           const SizedBox(height: 4),
