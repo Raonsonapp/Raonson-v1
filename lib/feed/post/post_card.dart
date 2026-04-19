@@ -700,76 +700,67 @@ class _PostCardState extends State<PostCard> {
       if (post.media.isNotEmpty)
         _MediaCarousel(media: post.media, isActive: widget.isActive),
 
-      // ── ACTIONS ────────────────────────────────────────────────
+      // ── ACTIONS — icon ҷойаш иваз намекунад мисли Instagram ────
       Padding(
         padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
         child: Row(children: [
 
-          _SvgBtn(
+          // ♡ Like — як SVG, танҳо rang иваз мешавад
+          _StableBtn(
             onTap: _toggleLike,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              child: _liked
-                  ? SvgPicture.asset('assets/icons/heart_filled.svg',
-                      key: const ValueKey(true), width: 24, height: 24)
-                  : SvgPicture.asset('assets/icons/heart.svg',
-                      key: const ValueKey(false), width: 24, height: 24,
-                      colorFilter: const ColorFilter.mode(
-                          Colors.white, BlendMode.srcIn)),
-            ),
-            count: _likeCount, fmt: _fmt,
+            svgPath: 'assets/icons/heart.svg',
+            activeSvgPath: 'assets/icons/heart_filled.svg',
+            isActive: _liked,
+            activeColor: Colors.red,
+            inactiveColor: Colors.white,
+            size: 24,
+            count: _likeCount,
+            fmt: _fmt,
           ),
 
           const SizedBox(width: 4),
 
-          _SvgBtn(
+          _StableBtn(
             onTap: _openComments,
-            child: SvgPicture.asset('assets/icons/comment.svg',
-              width: 23, height: 23,
-              colorFilter: const ColorFilter.mode(
-                  Colors.white, BlendMode.srcIn)),
-            count: _commentCount, fmt: _fmt,
+            svgPath: 'assets/icons/comment.svg',
+            size: 23,
+            count: _commentCount,
+            fmt: _fmt,
           ),
 
           const SizedBox(width: 4),
 
-          _SvgBtn(
+          _StableBtn(
             onTap: () => setState(() => _retweetCount++),
-            child: SvgPicture.asset('assets/icons/retweet.svg',
-              width: 24, height: 24,
-              colorFilter: const ColorFilter.mode(
-                  Colors.white, BlendMode.srcIn)),
-            count: _retweetCount, fmt: _fmt,
+            svgPath: 'assets/icons/retweet.svg',
+            size: 24,
+            count: _retweetCount,
+            fmt: _fmt,
           ),
 
           const SizedBox(width: 4),
 
-          _SvgBtn(
+          _StableBtn(
             onTap: _showShare,
-            child: SvgPicture.asset('assets/icons/share.svg',
-              width: 23, height: 23,
-              colorFilter: const ColorFilter.mode(
-                  Colors.white, BlendMode.srcIn)),
-            count: _shareCount, fmt: _fmt,
+            svgPath: 'assets/icons/share.svg',
+            size: 23,
+            count: _shareCount,
+            fmt: _fmt,
           ),
 
           const Spacer(),
 
-          _SvgBtn(
+          // 🔖 Save — ҷойаш иваз намекунад
+          _StableBtn(
             onTap: _toggleSave,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              child: _saved
-                  ? SvgPicture.asset('assets/icons/save_filled.svg',
-                      key: const ValueKey(true), width: 23, height: 23,
-                      colorFilter: const ColorFilter.mode(
-                          Colors.white, BlendMode.srcIn))
-                  : SvgPicture.asset('assets/icons/save.svg',
-                      key: const ValueKey(false), width: 23, height: 23,
-                      colorFilter: const ColorFilter.mode(
-                          Colors.white, BlendMode.srcIn)),
-            ),
-            count: 0, fmt: _fmt,
+            svgPath: 'assets/icons/save.svg',
+            activeSvgPath: 'assets/icons/save_filled.svg',
+            isActive: _saved,
+            activeColor: Colors.white,
+            inactiveColor: Colors.white,
+            size: 23,
+            count: 0,
+            fmt: _fmt,
           ),
         ]),
       ),
@@ -841,6 +832,71 @@ class _MenuItem extends StatelessWidget {
 }
 
 // ── SVG Action Button ───────────────────────────────────────────────
+// ── Stable Button — icon ҷойаш иваз намешавад (мисли Instagram) ───
+// SVG path якхела мемонад, танҳо colorFilter иваз мешавад
+class _StableBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  final String   svgPath;
+  final String?  activeSvgPath;  // агар filled svg бошад
+  final bool     isActive;
+  final Color    activeColor;
+  final Color    inactiveColor;
+  final double   size;
+  final int      count;
+  final String Function(int) fmt;
+
+  const _StableBtn({
+    required this.onTap,
+    required this.svgPath,
+    this.activeSvgPath,
+    this.isActive = false,
+    this.activeColor   = Colors.white,
+    this.inactiveColor = Colors.white,
+    required this.size,
+    required this.count,
+    required this.fmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Агар activeSvgPath бошад ва active ҳолат — filled icon нишон деҳ
+    // Аммо ҲАМЕША ҳамон андоза нигоҳ дор
+    final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
+    final color = isActive ? activeColor : inactiveColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          // SizedBox андозаро фиксд нигоҳ медорад — icon ҷой иваз намекунад
+          SizedBox(
+            width: size, height: size,
+            child: SvgPicture.asset(
+              path,
+              width: size, height: size,
+              fit: BoxFit.contain,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
+          ),
+          if (count > 0) ...[
+            const SizedBox(width: 5),
+            Text(
+              fmt(count),
+              style: const TextStyle(
+                color: AppColors.actionCount,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
 class _SvgBtn extends StatelessWidget {
   final VoidCallback onTap;
   final Widget child;
