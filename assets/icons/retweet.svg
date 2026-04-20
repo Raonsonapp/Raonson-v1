@@ -1,14 +1,49 @@
-<svg width="256" height="256" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path 
-    d="M7 3H16C18.2091 3 20 4.79086 20 7V16
-       M20 16L17.5 13.5
-       M20 16L22.5 13.5
-       
-       M17 21H8C5.79086 21 4 19.2091 4 17V8
-       M4 8L6.5 10.5
-       M4 8L1.5 10.5"
-    stroke="black"
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Top-right to bottom-right arrow -->
+  <path
+    d="
+      M8 4
+      H15
+      C17.2 4 19 5.8 19 8
+      V14
+    "
+    stroke="white"
     stroke-width="2"
     stroke-linecap="round"
-    stroke-linejoin="round"/>
+    stroke-linejoin="round"
+  />
+
+  <!-- Bottom-right arrow head -->
+  <path
+    d="M19 14 L16.8 11.8 M19 14 L21.2 11.8"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Bottom-left to top-left arrow -->
+  <path
+    d="
+      M16 20
+      H9
+      C6.8 20 5 18.2 5 16
+      V10
+    "
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Top-left arrow head -->
+  <path
+    d="M5 10 L7.2 12.2 M5 10 L2.8 12.2"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
 </svg>
