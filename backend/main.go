@@ -126,6 +126,7 @@ func main() {
 	r.GET("/comments/:id",       auth, rl100, handlers.GetComments)
 	r.POST("/comments/:id",      auth, rl100, handlers.AddComment)
 	r.DELETE("/comments/:id",    auth, rl100, handlers.DeleteComment)
+	r.PUT("/comments/:id",       auth, rl100, handlers.EditComment)
 	r.POST("/comments/:id/like", auth, rl100, handlers.ToggleCommentLike)
 
 	// ── LIKES (generic) ──────────────────────────────────────────
