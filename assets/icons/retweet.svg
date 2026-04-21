@@ -1,31 +1,49 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Top-right to bottom-right arrow -->
   <path
-    d="M5 9V8c0-2.2 1.8-4 4-4h10"
-    stroke="white"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  <path
-    d="M16.5 1.5L20 5l-3.5 3.5"
+    d="
+      M8 4
+      H15
+      C17.2 4 19 5.8 19 8
+      V14
+    "
     stroke="white"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
 
+  <!-- Bottom-right arrow head -->
   <path
-    d="M19 15v1c0 2.2-1.8 4-4 4H5"
+    d="M19 14 L16.8 11.8 M19 14 L21.2 11.8"
     stroke="white"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
+
+  <!-- Bottom-left to top-left arrow -->
   <path
-    d="M7.5 22.5L4 19l3.5-3.5"
+    d="
+      M16 20
+      H9
+      C6.8 20 5 18.2 5 16
+      V10
+    "
     stroke="white"
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
+
+  <!-- Top-left arrow head -->
+  <path
+    d="M5 10 L7.2 12.2 M5 10 L2.8 12.2"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
 </svg>
