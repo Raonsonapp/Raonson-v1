@@ -127,6 +127,43 @@ func ToggleCommentLike(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }
+// PUT /comments/:id — таҳрири comment
+func EditComment(c *gin.Context) {
+	cid  := c.Param("id")
+	myID := mw.UID(c)
+
+	var b struct {
+		Text string `json:"text"`
+	}
+
+	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
+		return
+	}
+
+	res, err := db.Pool.Exec(context.Background(),
+		`UPDATE comments 
+		 SET text=$1, updated_at=NOW()
+		 WHERE id=$2 AND user_id=$3`,
+		b.Text, cid, myID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+
+	if res.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Comment not found or not owner",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"updated": true,
+		"text":    b.Text,
+	})
+}
 
 // ── FOLLOW ───────────────────────────────────────────────────────
 
