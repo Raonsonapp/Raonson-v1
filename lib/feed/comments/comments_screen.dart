@@ -209,7 +209,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           // Reply hint
           if (_replyTo != null)
             Container(
-              color: Colors.white.withOpacity(0.08)
+              color: Colors.white.withOpacity(0.08),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(children: [
                 const Icon(Icons.reply_rounded, color: AppColors.neonBlue, size: 16),
