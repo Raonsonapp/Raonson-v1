@@ -11,77 +11,60 @@ import '../profile/profile_screen.dart';
 import '../create/create_post/create_post_screen.dart';
 import '../stories/story_viewer.dart';
 import '../models/story_model.dart';
-import '../models/story_model.dart';
 import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
-
-// AUTH SCREENS
 import '../auth/login/login_screen.dart';
 import '../auth/register/register_screen.dart';
 
 class AppController {
   final AppState appState;
-
   AppController(this.appState);
 
   String get initialRoute {
     if (!appState.isInitialized) return AppRoutes.splash;
-
-    return appState.isAuthenticated
-        ? AppRoutes.home
-        : AppRoutes.login;
+    return appState.isAuthenticated ? AppRoutes.home : AppRoutes.login;
   }
 
   Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
-      // ================= AUTH =================
       case AppRoutes.login:
         return _page(const LoginScreen());
-
       case AppRoutes.register:
         return _page(const RegisterScreen());
-
-      // ================= MAIN =================
       case AppRoutes.home:
         return _page(const BottomNavScaffold());
-
       case '/create-reel':
         return _page(const CreateReelScreen());
       case AppRoutes.reels:
         return _page(const ReelsScreen());
-
       case AppRoutes.chat:
         return _page(const ChatListScreen());
-
       case AppRoutes.search:
         return _page(const SearchScreen());
-
       case AppRoutes.profile:
         return _page(const ProfileScreen(userId: 'me'));
 
-      // ================= ACTIONS =================
+      // ── Профили дигар корбар — аз Reels/Posts/Comments ────
+      case '/user-profile':
+      case '/profile':
+        final uid = settings.arguments;
+        final userId = (uid is String && uid.isNotEmpty) ? uid : 'me';
+        return _page(ProfileScreen(userId: userId));
+
       case AppRoutes.create:
         return _page(const CreatePostScreen());
-
       case AppRoutes.notifications:
         return _page(const NotificationsScreen());
-
       case '/story-viewer':
         final story = settings.arguments as StoryModel;
-        return _page(StoryViewer(
-          story: story,
-          onComplete: () {},
-        ));
-
+        return _page(StoryViewer(story: story, onComplete: () {}));
       case '/create-story':
         return _page(const CreateStoryScreen());
-
       default:
         return _page(const LoginScreen());
     }
   }
 
-  MaterialPageRoute _page(Widget child) {
-    return MaterialPageRoute(builder: (_) => child);
-  }
+  MaterialPageRoute _page(Widget child) =>
+      MaterialPageRoute(builder: (_) => child);
 }
