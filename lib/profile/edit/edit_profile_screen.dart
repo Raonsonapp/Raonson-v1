@@ -442,13 +442,13 @@ class _MusicCard extends StatelessWidget {
           child: const Icon(Icons.music_note_rounded, color: Colors.white38)),
       const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(song.name, style: const TextStyle(
+        Text(song.title, style: const TextStyle(
             color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
             maxLines: 1, overflow: TextOverflow.ellipsis),
         Text(song.artist, style: const TextStyle(
             color: Colors.white54, fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(_t(song.durationMs), style: const TextStyle(
+        Text(_t(song.trackMs), style: const TextStyle(
             color: Colors.white38, fontSize: 11)),
       ])),
       IconButton(icon: const Icon(Icons.edit_rounded, color: Colors.white54, size: 18),
