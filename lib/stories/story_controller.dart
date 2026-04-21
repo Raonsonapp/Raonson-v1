@@ -42,7 +42,7 @@ class StoryController extends ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint('[Story] WebSocket parse error: $e');
+      debugPrint('[Story] socket parse error: $e');
     }
   }
 
@@ -65,46 +65,40 @@ class StoryController extends ChangeNotifier {
     }
   }
 
-  /// Story дида шуд — ВА ҲАМ stories-и ҳамон user-ро viewed=true мекунем
-  /// Ин мисли Instagram: агар 1 story-и user дида шавад → ҳалқа dark green мешавад
+  /// Баъди тамошои story → ҳалқа dark green мешавад.
+  /// Мисли Instagram: вақте 1 story-и корбар дида шуд →
+  /// ҲАМАИ story-ҳои ҳамон корбар viewed=true мешаванд → ҳалқа dark green
   Future<void> markViewed(String storyId) async {
-    // API call
+    // Аввал API-га хабар медиҳем
     await _repository.markStoryViewed(storyId);
 
-    // Story-и дида шударо пайдо мекунем
-    final viewedStory = _stories.firstWhere(
-      (s) => s.id == storyId,
-      orElse: () => _myStories.firstWhere(
-        (s) => s.id == storyId,
-        orElse: () => throw StateError('not found'),
-      ),
-    );
+    // Кадом user-ни story дида шуд пайдо мекунем
+    StoryModel? viewed;
+    for (final s in _stories) {
+      if (s.id == storyId) { viewed = s; break; }
+    }
+    if (viewed == null) return;
 
-    // ҲАМ story-ҳои ҳамон userid-ро viewed=true мекунем
-    // (як story дида шуд → ҳалқа dark green мешавад мисли Instagram)
-    final userId = viewedStory.user.id;
+    final userId = viewed.user.id;
 
+    // Ҳамаи story-ҳои ҳамон userId → viewed=true
     _stories = _stories.map((s) {
-      if (s.user.id == userId) {
-        return _copyWithViewed(s);
-      }
-      return s;
+      if (s.user.id != userId) return s;
+      return StoryModel(
+        id:         s.id,
+        user:       s.user,
+        mediaUrl:   s.mediaUrl,
+        mediaType:  s.mediaType,
+        viewed:     true,       // ← viewed
+        isLiked:    s.isLiked,
+        likesCount: s.likesCount,
+        viewsCount: s.viewsCount,
+        expiresAt:  s.expiresAt,
+      );
     }).toList();
 
     notifyListeners();
   }
-
-  StoryModel _copyWithViewed(StoryModel s) => StoryModel(
-    id:         s.id,
-    user:       s.user,
-    mediaUrl:   s.mediaUrl,
-    mediaType:  s.mediaType,
-    viewed:     true,
-    isLiked:    s.isLiked,
-    likesCount: s.likesCount,
-    viewsCount: s.viewsCount,
-    expiresAt:  s.expiresAt,
-  );
 
   // Legacy compat
   Future<void> viewStory(String storyId) => markViewed(storyId);
