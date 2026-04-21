@@ -21,7 +21,6 @@ class StoryController extends ChangeNotifier {
   bool get hasMyStory => _myStories.isNotEmpty;
   bool get isLoading  => _loading;
 
-  // ── WebSocket: story нав омад ─────────────────────────────────────
   void _subscribeSocket() {
     SocketService.instance.on('story:new', _onNewStory);
   }
@@ -31,18 +30,13 @@ class StoryController extends ChangeNotifier {
     try {
       final story = StoryModel.fromJson(data);
       final myId  = UserSession.userId ?? '';
-
       if (story.user.id == myId) {
-        // Ин story-и худамон аст
-        final alreadyMine = _myStories.any((s) => s.id == story.id);
-        if (!alreadyMine) {
+        if (!_myStories.any((s) => s.id == story.id)) {
           _myStories = [story, ..._myStories];
           notifyListeners();
         }
       } else {
-        // Story-и дигар нафар
-        final alreadyInFeed = _stories.any((s) => s.id == story.id);
-        if (!alreadyInFeed) {
+        if (!_stories.any((s) => s.id == story.id)) {
           _stories = [story, ..._stories];
           notifyListeners();
         }
@@ -71,24 +65,28 @@ class StoryController extends ChangeNotifier {
     }
   }
 
-  /// Story дида шуд — UI-ро навмекунем (border хокистарӣ мешавад)
+  /// Story дида шуд — ВА ҲАМ stories-и ҳамон user-ро viewed=true мекунем
+  /// Ин мисли Instagram: агар 1 story-и user дида шавад → ҳалқа dark green мешавад
   Future<void> markViewed(String storyId) async {
+    // API call
     await _repository.markStoryViewed(storyId);
 
-    // Stories-ро дар рӯйхат viewed=true мекунем
+    // Story-и дида шударо пайдо мекунем
+    final viewedStory = _stories.firstWhere(
+      (s) => s.id == storyId,
+      orElse: () => _myStories.firstWhere(
+        (s) => s.id == storyId,
+        orElse: () => throw StateError('not found'),
+      ),
+    );
+
+    // ҲАМ story-ҳои ҳамон userid-ро viewed=true мекунем
+    // (як story дида шуд → ҳалқа dark green мешавад мисли Instagram)
+    final userId = viewedStory.user.id;
+
     _stories = _stories.map((s) {
-      if (s.id == storyId) {
-        return StoryModel(
-          id:         s.id,
-          user:       s.user,
-          mediaUrl:   s.mediaUrl,
-          mediaType:  s.mediaType,
-          viewed:     true, // ← viewed шуд
-          isLiked:    s.isLiked,
-          likesCount: s.likesCount,
-          viewsCount: s.viewsCount,
-          expiresAt:  s.expiresAt,
-        );
+      if (s.user.id == userId) {
+        return _copyWithViewed(s);
       }
       return s;
     }).toList();
@@ -96,7 +94,19 @@ class StoryController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Legacy
+  StoryModel _copyWithViewed(StoryModel s) => StoryModel(
+    id:         s.id,
+    user:       s.user,
+    mediaUrl:   s.mediaUrl,
+    mediaType:  s.mediaType,
+    viewed:     true,
+    isLiked:    s.isLiked,
+    likesCount: s.likesCount,
+    viewsCount: s.viewsCount,
+    expiresAt:  s.expiresAt,
+  );
+
+  // Legacy compat
   Future<void> viewStory(String storyId) => markViewed(storyId);
 
   @override
