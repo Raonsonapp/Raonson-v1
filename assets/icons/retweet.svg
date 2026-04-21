@@ -1,4 +1,31 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M17 4l3 3-3 3M20 7H8.5A4.5 4.5 0 0 0 4 11.5V13m4 7l-3-3 3-3M5 17h11.5a4.5 4.5 0 0 0 4.5-4.5V11" 
-        stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path
+    d="M5 9V8c0-2.2 1.8-4 4-4h10"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M16.5 1.5L20 5l-3.5 3.5"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <path
+    d="M19 15v1c0 2.2-1.8 4-4 4H5"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M7.5 22.5L4 19l3.5-3.5"
+    stroke="white"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>
