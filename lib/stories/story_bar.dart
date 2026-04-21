@@ -12,6 +12,7 @@ List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
   return map.values.toList();
 }
 
+// ══════════════════════════════════════════════════════════════════
 class StoryBar extends StatelessWidget {
   final List<StoryModel> stories;
   final VoidCallback? onAddStory;
@@ -34,57 +35,40 @@ class StoryBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final myId      = UserSession.userId ?? '';
     final allGroups = groupStoriesByUser(stories);
-
-    // Худамонро аз рӯйхат хориҷ мекунем
-    final myGroup     = myStories ?? allGroups
-        .where((g) => g.first.user.id == myId)
-        .firstOrNull ?? <StoryModel>[];
-    final otherGroups = allGroups
-        .where((g) => g.first.user.id != myId)
-        .toList();
+    final myGroup   = myStories ??
+        allGroups.where((g) => g.first.user.id == myId).firstOrNull ??
+        <StoryModel>[];
+    final others    = allGroups.where((g) => g.first.user.id != myId).toList();
 
     return SizedBox(
-      height: 110,
+      height: 108,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
-          // ── "История шумо" — ҲАМЕША АВВАЛ ─────────────────
+          // ── "История шумо" ──────────────────────────────────
           _MyStoryItem(
-            avatarUrl:  myAvatar ?? UserSession.avatar ?? '',
-            hasStory:   myGroup.isNotEmpty,
+            avatarUrl: myAvatar ?? UserSession.avatar ?? '',
+            hasStory:  myGroup.isNotEmpty,
             onTapAvatar: () {
-              if (myGroup.isNotEmpty && onTap != null) {
-                onTap!(myGroup.first);
-              } else {
-                onAddStory?.call();
-              }
+              if (myGroup.isNotEmpty) onTap?.call(myGroup.first);
+              else onAddStory?.call();
             },
             onTapAdd: onAddStory ?? () {},
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
 
-          // ── Stories-и дигарон ───────────────────────────────
-          ...otherGroups.map((group) {
-            // ── Story ring логика мисли Instagram ─────────────
-            // 1 story дида шуд → ҳамаи ҳалқа dark green
-            // Ҳеч надида → gradient cyan→green
-            // Story надорад → ҳалқа нест
-            final anyViewed  = group.any((s) => s.viewed);
-            final allViewed  = group.every((s) => s.viewed);
-
+          // ── Дигарон ─────────────────────────────────────────
+          ...others.map((group) {
+            final anyViewed = group.any((s) => s.viewed);
             return Padding(
-              padding: const EdgeInsets.only(right: 14),
+              padding: const EdgeInsets.only(right: 16),
               child: _StoryItem(
-                story:      group.first,
-                allViewed:  allViewed,
-                anyViewed:  anyViewed,
+                story: group.first,
+                viewed: anyViewed, // 1 дида → dark green мисли Instagram
                 onTap: () {
-                  if (onTapGroup != null) {
-                    onTapGroup!(group, 0);
-                  } else if (onTap != null) {
-                    onTap!(group.first);
-                  }
+                  if (onTapGroup != null) onTapGroup!(group, 0);
+                  else onTap?.call(group.first);
                 },
               ),
             );
@@ -109,17 +93,27 @@ class _MyStoryItem extends StatelessWidget {
     required this.onTapAdd,
   });
 
+  // Gap-ҳо мисли Instagram:
+  // - ring border: 2px
+  // - gap байни ring ва avatar: 3px  ← ин аст муаммо
+  // - ring outer size: 74px, avatar: 62px → gap = (74-62)/2 - 2 = 4px
+
   @override
   Widget build(BuildContext context) {
+    const double outerSize  = 74;
+    const double borderW    = 2.2;
+    const double gapW       = 2.5; // масофа байни ҳалқа ва аватар
+    const double innerSize  = outerSize - (borderW + gapW) * 2;
+
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
-        width: 76, height: 76,
+        width: outerSize, height: outerSize,
         child: Stack(children: [
-          // Avatar tap → viewer (агар story бошад) ё create
+          // Tap avatar → viewer / create
           GestureDetector(
             onTap: onTapAvatar,
             child: Container(
-              width: 76, height: 76,
+              width: outerSize, height: outerSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: hasStory
@@ -130,118 +124,120 @@ class _MyStoryItem extends StatelessWidget {
                     : null,
                 border: hasStory
                     ? null
-                    : Border.all(color: const Color(0xFF2A3A44), width: 1.5),
+                    : Border.all(
+                        color: const Color(0xFF2A3A44), width: borderW),
               ),
-              padding: EdgeInsets.all(hasStory ? 2.5 : 0),
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: hasStory ? AppColors.bg : Colors.transparent,
-                ),
-                padding: EdgeInsets.all(hasStory ? 2 : 0),
-                child: ClipOval(
-                  child: avatarUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: avatarUrl, fit: BoxFit.cover,
-                          width: double.infinity, height: double.infinity,
-                          errorWidget: (_, __, ___) => _placeholder())
-                      : _placeholder(),
+              child: Center(
+                child: Container(
+                  width: innerSize, height: innerSize,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.bg,
+                  ),
+                  child: ClipOval(
+                    child: avatarUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: avatarUrl, fit: BoxFit.cover,
+                            width: innerSize, height: innerSize,
+                            errorWidget: (_, __, ___) => _ph())
+                        : _ph(),
+                  ),
                 ),
               ),
             ),
           ),
-          // "+" → create story
-          Positioned(bottom: 2, right: 2,
+          // "+" → create
+          Positioned(
+            bottom: 0, right: 0,
             child: GestureDetector(
               onTap: onTapAdd,
               child: Container(
-                width: 24, height: 24,
+                width: 22, height: 22,
                 decoration: BoxDecoration(
                   color: const Color(0xFF1877F2),
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.bg, width: 1.5)),
-                child: const Icon(Icons.add, color: Colors.white, size: 15),
+                child: const Icon(Icons.add, color: Colors.white, size: 13),
               ),
-            )),
+            ),
+          ),
         ]),
       ),
       const SizedBox(height: 5),
-      const SizedBox(
-        width: 76,
-        child: Text('история шумо',
-          style: TextStyle(color: AppColors.grey, fontSize: 11),
+      SizedBox(
+        width: outerSize + 4,
+        child: const Text('история шумо',
+          style: TextStyle(color: AppColors.grey, fontSize: 10.5),
           maxLines: 1, overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center),
       ),
     ]);
   }
 
-  Widget _placeholder() => Container(
+  Widget _ph() => Container(
     color: AppColors.card,
-    child: const Icon(Icons.person, color: Colors.white54, size: 32));
+    child: const Icon(Icons.person, color: Colors.white54, size: 28));
 }
 
 // ── Story item — дигар корбар ───────────────────────────────────────
 class _StoryItem extends StatelessWidget {
-  final StoryModel story;
-  final bool       allViewed;  // ҳамаи story дида шуд → dark green
-  final bool       anyViewed;  // камаш 1 → dark green мисли Instagram
+  final StoryModel   story;
+  final bool         viewed;
   final VoidCallback onTap;
 
   const _StoryItem({
     required this.story,
-    required this.allViewed,
-    required this.anyViewed,
+    required this.viewed,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Мисли Instagram: як story ҳам дида шуд → ҳалқа dark green
-    final viewed = anyViewed;
+    const double outerSize = 72;
+    const double borderW   = 2.2;
+    const double gapW      = 2.5;
+    const double innerSize = outerSize - (borderW + gapW) * 2;
 
-    final ringColors = viewed
-        ? [const Color(0xFF2E5A3A), const Color(0xFF1E3D28)] // dark green
-        : AppColors.storyGradient;                            // cyan → green
+    // Дида → dark green | Надида → cyan→green
+    final gradColors = viewed
+        ? [const Color(0xFF2E5A3A), const Color(0xFF1E3D28)]
+        : AppColors.storyGradient;
 
     return GestureDetector(
       onTap: onTap,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          width: 72, height: 72,
+          width: outerSize, height: outerSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: ringColors,
+              colors: gradColors,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight),
           ),
-          padding: const EdgeInsets.all(2.5),
-          child: Container(
-            decoration: const BoxDecoration(
-                shape: BoxShape.circle, color: AppColors.bg),
-            padding: const EdgeInsets.all(2),
-            child: ClipOval(
-              child: story.user.avatar.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: story.user.avatar, fit: BoxFit.cover,
-                      width: double.infinity, height: double.infinity,
-                      errorWidget: (_, __, ___) => _placeholder())
-                  : _placeholder(),
+          child: Center(
+            child: Container(
+              width: innerSize, height: innerSize,
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: AppColors.bg),
+              child: ClipOval(
+                child: story.user.avatar.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: story.user.avatar, fit: BoxFit.cover,
+                        width: innerSize, height: innerSize,
+                        errorWidget: (_, __, ___) => _ph())
+                    : _ph(),
+              ),
             ),
           ),
         ),
         const SizedBox(height: 5),
         SizedBox(
-          width: 72,
-          child: Text(
-            story.user.username,
+          width: outerSize + 4,
+          child: Text(story.user.username,
             style: TextStyle(
-              // Дида шуда → ранги dim
-              color: viewed
-                  ? const Color(0xFF4A6572)
-                  : AppColors.grey,
-              fontSize: 11),
+              color: viewed ? const Color(0xFF4A6572) : AppColors.grey,
+              fontSize: 10.5),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center),
         ),
@@ -249,13 +245,12 @@ class _StoryItem extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
+  Widget _ph() => Container(
     color: AppColors.card,
-    child: const Icon(Icons.person, color: Colors.white54, size: 28));
+    child: const Icon(Icons.person, color: Colors.white54, size: 26));
 }
 
-// Extension
-extension _IterableExt<T> on Iterable<T> {
+extension _IterExt<T> on Iterable<T> {
   T? get firstOrNull {
     final it = iterator;
     return it.moveNext() ? it.current : null;
