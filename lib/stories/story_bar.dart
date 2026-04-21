@@ -14,9 +14,9 @@ List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
 
 class StoryBar extends StatelessWidget {
   final List<StoryModel> stories;
-  final VoidCallback? onAddStory;          // → /create-story
+  final VoidCallback? onAddStory;
   final void Function(List<StoryModel>, int)? onTapGroup;
-  final void Function(StoryModel)? onTap; // → /story-viewer
+  final void Function(StoryModel)? onTap;
   final String? myAvatar;
   final List<StoryModel>? myStories;
 
@@ -32,13 +32,16 @@ class StoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myId     = UserSession.userId ?? '';
+    final myId      = UserSession.userId ?? '';
     final allGroups = groupStoriesByUser(stories);
 
-    // ── Stories-и худамон (аввал) ────────────────────────────────
-    final myGroup    = myStories ?? allGroups.where((g) => g.first.user.id == myId).firstOrNull ?? [];
-    // ── Stories-и дигарон ────────────────────────────────────────
-    final otherGroups = allGroups.where((g) => g.first.user.id != myId).toList();
+    // Худамонро аз рӯйхат хориҷ мекунем
+    final myGroup     = myStories ?? allGroups
+        .where((g) => g.first.user.id == myId)
+        .firstOrNull ?? <StoryModel>[];
+    final otherGroups = allGroups
+        .where((g) => g.first.user.id != myId)
+        .toList();
 
     return SizedBox(
       height: 110,
@@ -46,29 +49,36 @@ class StoryBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         children: [
-          // ── "История шумо" — ҲАМЕША АВВАЛ ─────────────────────
+          // ── "История шумо" — ҲАМЕША АВВАЛ ─────────────────
           _MyStoryItem(
             avatarUrl:  myAvatar ?? UserSession.avatar ?? '',
             hasStory:   myGroup.isNotEmpty,
-            // Зер кардани аватар → story viewer (агар story бошад)
             onTapAvatar: () {
               if (myGroup.isNotEmpty && onTap != null) {
                 onTap!(myGroup.first);
+              } else {
+                onAddStory?.call();
               }
             },
-            // Зер кардани "+" → create story
             onTapAdd: onAddStory ?? () {},
           ),
           const SizedBox(width: 14),
 
-          // ── Stories-и дигарон ───────────────────────────────────
+          // ── Stories-и дигарон ───────────────────────────────
           ...otherGroups.map((group) {
-            final allViewed = group.every((s) => s.viewed);
+            // ── Story ring логика мисли Instagram ─────────────
+            // 1 story дида шуд → ҳамаи ҳалқа dark green
+            // Ҳеч надида → gradient cyan→green
+            // Story надорад → ҳалқа нест
+            final anyViewed  = group.any((s) => s.viewed);
+            final allViewed  = group.every((s) => s.viewed);
+
             return Padding(
               padding: const EdgeInsets.only(right: 14),
               child: _StoryItem(
                 story:      group.first,
                 allViewed:  allViewed,
+                anyViewed:  anyViewed,
                 onTap: () {
                   if (onTapGroup != null) {
                     onTapGroup!(group, 0);
@@ -85,12 +95,12 @@ class StoryBar extends StatelessWidget {
   }
 }
 
-// ── "История шумо" — аватар + "+" badge ────────────────────────────
+// ── "История шумо" ──────────────────────────────────────────────────
 class _MyStoryItem extends StatelessWidget {
-  final String avatarUrl;
-  final bool hasStory;
-  final VoidCallback onTapAvatar; // tap on avatar → viewer
-  final VoidCallback onTapAdd;   // tap on "+" → create
+  final String       avatarUrl;
+  final bool         hasStory;
+  final VoidCallback onTapAvatar;
+  final VoidCallback onTapAdd;
 
   const _MyStoryItem({
     required this.avatarUrl,
@@ -105,7 +115,7 @@ class _MyStoryItem extends StatelessWidget {
       SizedBox(
         width: 76, height: 76,
         child: Stack(children: [
-          // Аватар — зер кардан story viewer-ро мекушояд
+          // Avatar tap → viewer (агар story бошад) ё create
           GestureDetector(
             onTap: onTapAvatar,
             child: Container(
@@ -116,8 +126,7 @@ class _MyStoryItem extends StatelessWidget {
                     ? const LinearGradient(
                         colors: AppColors.storyGradient,
                         begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
+                        end: Alignment.bottomRight)
                     : null,
                 border: hasStory
                     ? null
@@ -133,21 +142,16 @@ class _MyStoryItem extends StatelessWidget {
                 child: ClipOval(
                   child: avatarUrl.isNotEmpty
                       ? CachedNetworkImage(
-                          imageUrl: avatarUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorWidget: (_, __, ___) => _placeholder(),
-                        )
+                          imageUrl: avatarUrl, fit: BoxFit.cover,
+                          width: double.infinity, height: double.infinity,
+                          errorWidget: (_, __, ___) => _placeholder())
                       : _placeholder(),
                 ),
               ),
             ),
           ),
-
-          // "+" badge — зер кардан /create-story мебарад
-          Positioned(
-            bottom: 2, right: 2,
+          // "+" → create story
+          Positioned(bottom: 2, right: 2,
             child: GestureDetector(
               onTap: onTapAdd,
               child: Container(
@@ -155,12 +159,10 @@ class _MyStoryItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF1877F2),
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.bg, width: 1.5),
-                ),
+                  border: Border.all(color: AppColors.bg, width: 1.5)),
                 child: const Icon(Icons.add, color: Colors.white, size: 15),
               ),
-            ),
-          ),
+            )),
         ]),
       ),
       const SizedBox(height: 5),
@@ -176,24 +178,32 @@ class _MyStoryItem extends StatelessWidget {
 
   Widget _placeholder() => Container(
     color: AppColors.card,
-    child: const Icon(Icons.person, color: Colors.white54, size: 32),
-  );
+    child: const Icon(Icons.person, color: Colors.white54, size: 32));
 }
 
-// ── Story-и дигар нафар ────────────────────────────────────────────
+// ── Story item — дигар корбар ───────────────────────────────────────
 class _StoryItem extends StatelessWidget {
   final StoryModel story;
-  final bool allViewed;
+  final bool       allViewed;  // ҳамаи story дида шуд → dark green
+  final bool       anyViewed;  // камаш 1 → dark green мисли Instagram
   final VoidCallback onTap;
 
   const _StoryItem({
     required this.story,
     required this.allViewed,
+    required this.anyViewed,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Мисли Instagram: як story ҳам дида шуд → ҳалқа dark green
+    final viewed = anyViewed;
+
+    final ringColors = viewed
+        ? [const Color(0xFF2E5A3A), const Color(0xFF1E3D28)] // dark green
+        : AppColors.storyGradient;                            // cyan → green
+
     return GestureDetector(
       onTap: onTap,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -201,33 +211,22 @@ class _StoryItem extends StatelessWidget {
           width: 72, height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            // Дида шуда → хокистарӣ | надида → cyan→green
-            gradient: allViewed
-                ? const LinearGradient(
-                    colors: [Color(0xFF3A4A52), Color(0xFF2A3840)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : const LinearGradient(
-                    colors: AppColors.storyGradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+            gradient: LinearGradient(
+              colors: ringColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight),
           ),
           padding: const EdgeInsets.all(2.5),
           child: Container(
             decoration: const BoxDecoration(
-              shape: BoxShape.circle, color: AppColors.bg),
+                shape: BoxShape.circle, color: AppColors.bg),
             padding: const EdgeInsets.all(2),
             child: ClipOval(
               child: story.user.avatar.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: story.user.avatar,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      errorWidget: (_, __, ___) => _placeholder(),
-                    )
+                      imageUrl: story.user.avatar, fit: BoxFit.cover,
+                      width: double.infinity, height: double.infinity,
+                      errorWidget: (_, __, ___) => _placeholder())
                   : _placeholder(),
             ),
           ),
@@ -238,12 +237,13 @@ class _StoryItem extends StatelessWidget {
           child: Text(
             story.user.username,
             style: TextStyle(
-              color: allViewed ? const Color(0xFF4A6572) : AppColors.grey,
-              fontSize: 11,
-            ),
+              // Дида шуда → ранги dim
+              color: viewed
+                  ? const Color(0xFF4A6572)
+                  : AppColors.grey,
+              fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
+            textAlign: TextAlign.center),
         ),
       ]),
     );
@@ -251,12 +251,11 @@ class _StoryItem extends StatelessWidget {
 
   Widget _placeholder() => Container(
     color: AppColors.card,
-    child: const Icon(Icons.person, color: Colors.white54, size: 28),
-  );
+    child: const Icon(Icons.person, color: Colors.white54, size: 28));
 }
 
-// Extension барои firstOrNull
-extension _ListExt<T> on Iterable<T> {
+// Extension
+extension _IterableExt<T> on Iterable<T> {
   T? get firstOrNull {
     final it = iterator;
     return it.moveNext() ? it.current : null;
