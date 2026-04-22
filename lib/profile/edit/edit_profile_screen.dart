@@ -4,7 +4,6 @@ import 'dart:io';
 import '../../create/create_post/media_picker.dart';
 import '../../create/upload/upload_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
@@ -12,7 +11,6 @@ import '../../models/note_model.dart';
 import '../../chat/inbox/music_picker_sheet.dart';
 import 'edit_profile_controller.dart';
 
-// ══════════════════════════════════════════════════════════════════
 class EditProfileScreen extends StatefulWidget {
   final String userId;
   const EditProfileScreen({super.key, required this.userId});
@@ -31,8 +29,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // Username validation
   Timer?  _debounce;
   bool    _checkingUsername = false;
-  String? _usernameError;
-  bool    _usernameTaken   = false;
+  bool    _usernameTaken    = false;
+  String? _usernameMsg;      // null = ok, string = error
 
   @override
   void initState() {
@@ -40,7 +38,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _ctrl = EditProfileController();
     _ctrl.loadCurrentProfile(widget.userId);
     _ctrl.addListener(() { if (mounted) setState(() {}); });
-    // Listen to username changes
     _ctrl.usernameController.addListener(_onUsernameChanged);
   }
 
@@ -52,57 +49,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  // ── Username real-time validation ────────────────────────────
+  // ── Username validation ──────────────────────────────────────
   void _onUsernameChanged() {
     final val = _ctrl.usernameController.text.trim();
     _debounce?.cancel();
+
     if (val.isEmpty) {
-      setState(() { _usernameError = null; _usernameTaken = false; });
+      setState(() { _usernameMsg = null; _usernameTaken = false; _checkingUsername = false; });
       return;
     }
-
-    // Instant format check
-    final rx = RegExp(r'^[a-zA-Z0-9._]{3,30}$');
-    if (!rx.hasMatch(val)) {
+    if (!RegExp(r'^[a-zA-Z0-9._]{3,30}$').hasMatch(val)) {
       setState(() {
-        _usernameError = 'Танҳо ҳарфҳо, рақамҳо, . ва _ иҷозат дода мешаванд';
-        _usernameTaken = false;
+        _usernameMsg   = 'Танҳо ҳарфҳо, рақамҳо, . ва _ (3-30)';
+        _usernameTaken = false; _checkingUsername = false;
       });
       return;
     }
-
-    setState(() { _checkingUsername = true; _usernameError = null; });
-    // Debounce 600ms → server check
+    setState(() { _checkingUsername = true; _usernameMsg = null; });
     _debounce = Timer(const Duration(milliseconds: 600), () => _checkUsername(val));
   }
 
   Future<void> _checkUsername(String val) async {
-    // Агар ҳамон номи ҳозира бошад — занят нест
-    if (val == (_ctrl.currentAvatarUrl == null ? '' : '')) {
-      setState(() { _checkingUsername = false; _usernameTaken = false; });
-      return;
-    }
     try {
       final res = await ApiClient.instance.get(
           '/users/check-username', query: {'username': val});
       if (!mounted) return;
-      if (res.statusCode == 409 || res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final taken = body['taken'] as bool? ?? (res.statusCode == 409);
-        setState(() {
-          _checkingUsername = false;
-          _usernameTaken    = taken;
-          _usernameError    = taken ? 'Ин username аллакай банд аст' : null;
-        });
-      } else {
-        setState(() { _checkingUsername = false; _usernameTaken = false; });
-      }
+      final body  = jsonDecode(res.body) as Map<String, dynamic>? ?? {};
+      final taken = body['taken'] as bool? ?? (res.statusCode == 409);
+      setState(() {
+        _checkingUsername = false;
+        _usernameTaken    = taken;
+        _usernameMsg      = taken ? 'Ин username аллакай банд аст' : null;
+      });
     } catch (_) {
       if (mounted) setState(() { _checkingUsername = false; });
     }
   }
 
-  // ── Avatar upload ────────────────────────────────────────────
+  // ── Avatar ──────────────────────────────────────────────────
   Future<void> _pickAvatar() async {
     final file = await MediaPicker.pickImageOnly();
     if (file == null || !mounted) return;
@@ -123,7 +107,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  // ── Music picker ─────────────────────────────────────────────
+  // ── Music ───────────────────────────────────────────────────
   Future<void> _openMusicPicker() async {
     final result = await showModalBottomSheet<SongInfo>(
       context: context, isScrollControlled: true,
@@ -134,7 +118,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ── Save ─────────────────────────────────────────────────────
   Future<void> _save() async {
-    if (_usernameTaken || _usernameError != null) {
+    if (_usernameTaken || _usernameMsg != null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Username-ро дуруст кунед'),
         backgroundColor: Colors.red));
@@ -144,7 +128,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         bioSong: _bioSong, avatarUrl: _uploadedAvatarUrl);
     if (!mounted) return;
     if (ok) {
-      // Update session
       UserSession.username = _ctrl.usernameController.text.trim();
       if (_uploadedAvatarUrl != null) UserSession.avatar = _uploadedAvatarUrl;
       Navigator.pop(context, true);
@@ -162,7 +145,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: AppColors.bg, elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context)),
@@ -178,8 +161,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               : TextButton(
                   onPressed: _save,
                   child: const Text('Сабт', style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold,
-                      fontSize: 15))),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold, fontSize: 15))),
         ],
       ),
       body: _ctrl.isLoading
@@ -189,17 +172,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(children: [
 
-                // ── Avatar ──────────────────────────────────────
+                // ── Avatar ────────────────────────────────────
                 Center(child: GestureDetector(
                   onTap: _uploadingAvatar ? null : _pickAvatar,
                   child: Stack(alignment: Alignment.bottomRight, children: [
                     Container(
-                      width: 92, height: 92,
+                      width: 96, height: 96,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.card,
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.3), width: 2)),
+                        shape: BoxShape.circle, color: AppColors.card,
+                        border: Border.all(color: Colors.white24, width: 2)),
                       child: ClipOval(child: _localAvatar != null
                           ? Image.file(_localAvatar!, fit: BoxFit.cover)
                           : (_ctrl.currentAvatarUrl?.isNotEmpty == true
@@ -207,16 +188,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) =>
                                       const Icon(Icons.person_rounded,
-                                          color: Colors.white38, size: 44))
+                                          color: Colors.white38, size: 46))
                               : const Icon(Icons.person_rounded,
-                                  color: Colors.white38, size: 44))),
+                                  color: Colors.white38, size: 46))),
                     ),
                     Container(
                       width: 30, height: 30,
                       decoration: const BoxDecoration(
-                          shape: BoxShape.circle, color: AppColors.neonBlue),
+                          shape: BoxShape.circle, color: Color(0xFF0095F6)),
                       child: _uploadingAvatar
-                          ? const Padding(padding: EdgeInsets.all(6),
+                          ? const Padding(padding: EdgeInsets.all(7),
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.camera_alt_rounded,
@@ -224,23 +205,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ]),
                 )),
                 const SizedBox(height: 6),
-                const Text('Аксро иваз кун',
-                    style: TextStyle(color: AppColors.neonBlue, fontSize: 13)),
+                const Text('Аксро тағир бидеҳ',
+                    style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
                 const SizedBox(height: 28),
 
-                // ── Username ────────────────────────────────────
-                _FieldLabel('Номи корбарӣ'),
+                // ── Username ──────────────────────────────────
+                _Label('Номи корбарӣ'),
                 const SizedBox(height: 6),
                 _UsernameField(
                   controller: _ctrl.usernameController,
                   isChecking: _checkingUsername,
                   isTaken:    _usernameTaken,
-                  error:      _usernameError,
-                ),
+                  errorMsg:   _usernameMsg),
                 const SizedBox(height: 20),
 
-                // ── Bio ─────────────────────────────────────────
-                _FieldLabel('Биография'),
+                // ── Bio ───────────────────────────────────────
+                _Label('Биография'),
                 const SizedBox(height: 6),
                 Container(
                   decoration: BoxDecoration(
@@ -265,8 +245,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // ── Music ───────────────────────────────────────
-                _FieldLabel('Мусиқии профил'),
+                // ── Music ─────────────────────────────────────
+                _Label('Мусиқии профил'),
                 const SizedBox(height: 6),
                 _bioSong == null || _bioSong!.isEmpty
                     ? _AddMusicTile(onTap: _openMusicPicker)
@@ -276,9 +256,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         onRemove: () => setState(() => _bioSong = null)),
                 const SizedBox(height: 20),
 
-                // ── Private ─────────────────────────────────────
+                // ── Private toggle ────────────────────────────
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: const Color(0xFF111111),
                     borderRadius: BorderRadius.circular(14),
@@ -290,8 +271,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     const Expanded(child: Text('Профили хусусӣ',
                         style: TextStyle(color: Colors.white, fontSize: 14))),
                     Switch(
-                      value: _ctrl.isPrivate,
-                      onChanged: _ctrl.togglePrivate,
+                      value: _ctrl.isPrivate, onChanged: _ctrl.togglePrivate,
                       activeColor: AppColors.storyStart),
                   ]),
                 ),
@@ -302,33 +282,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 }
 
-// ── Username field бо validation ────────────────────────────────────
+// ── Username field ─────────────────────────────────────────────────────
 class _UsernameField extends StatelessWidget {
   final TextEditingController controller;
   final bool    isChecking;
   final bool    isTaken;
-  final String? error;
-
-  const _UsernameField({
-    required this.controller,
-    required this.isChecking,
-    required this.isTaken,
-    this.error,
-  });
+  final String? errorMsg;
+  const _UsernameField({required this.controller,
+      required this.isChecking, required this.isTaken, this.errorMsg});
 
   @override
   Widget build(BuildContext context) {
-    Color borderColor = Colors.white.withOpacity(0.08);
-    if (isTaken) borderColor = Colors.red.withOpacity(0.6);
-    else if (!isChecking && error == null && controller.text.isNotEmpty)
-      borderColor = Colors.green.withOpacity(0.5);
+    Color border = Colors.white.withOpacity(0.08);
+    if (isTaken || errorMsg != null) border = Colors.red.withOpacity(0.7);
+    else if (!isChecking && controller.text.length >= 3 && errorMsg == null)
+      border = Colors.green.withOpacity(0.6);
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
         decoration: BoxDecoration(
           color: const Color(0xFF111111),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderColor, width: 1.2)),
+          border: Border.all(color: border, width: 1.2)),
         child: TextField(
           controller: controller,
           maxLength: 30,
@@ -343,25 +318,22 @@ class _UsernameField extends StatelessWidget {
                     child: SizedBox(width: 16, height: 16,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white38)))
-                : isTaken
-                    ? const Icon(Icons.close_rounded,
-                        color: Colors.red, size: 20)
-                    : (error == null && controller.text.length >= 3)
-                        ? const Icon(Icons.check_circle_outline_rounded,
-                            color: Colors.green, size: 20)
-                        : null,
+                : (isTaken || errorMsg != null)
+                    ? const Icon(Icons.close_rounded, color: Colors.red, size: 20)
+                    : controller.text.length >= 3
+                        ? const Icon(Icons.check_circle_rounded,
+                            color: Colors.green, size: 20) : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 13),
             counterStyle: TextStyle(
                 color: Colors.white.withOpacity(0.2), fontSize: 11))),
       ),
-      if (error != null || isTaken) ...[
-        const SizedBox(height: 6),
-        Text(
-          isTaken ? 'Ин username аллакай банд аст' : (error ?? ''),
-          style: const TextStyle(color: Colors.red, fontSize: 12)),
+      if (errorMsg != null || isTaken) ...[
+        const SizedBox(height: 5),
+        Text(isTaken ? 'Ин username аллакай банд аст ✗' : (errorMsg ?? ''),
+            style: const TextStyle(color: Colors.red, fontSize: 12)),
       ] else if (!isChecking && controller.text.length >= 3) ...[
-        const SizedBox(height: 6),
+        const SizedBox(height: 5),
         const Text('Username озод аст ✓',
             style: TextStyle(color: Colors.green, fontSize: 12)),
       ],
@@ -369,9 +341,9 @@ class _UsernameField extends StatelessWidget {
   }
 }
 
-class _FieldLabel extends StatelessWidget {
+class _Label extends StatelessWidget {
   final String text;
-  const _FieldLabel(this.text);
+  const _Label(this.text);
   @override
   Widget build(BuildContext context) => Align(
     alignment: Alignment.centerLeft,
@@ -396,24 +368,23 @@ class _AddMusicTile extends StatelessWidget {
         Container(width: 34, height: 34,
           decoration: BoxDecoration(shape: BoxShape.circle,
             color: Colors.white.withOpacity(0.1),
-            border: Border.all(color: Colors.white.withOpacity(0.35))),
+            border: Border.all(color: Colors.white.withOpacity(0.3))),
           child: const Icon(Icons.music_note_rounded,
               color: Colors.white, size: 17)),
         const SizedBox(width: 12),
-        Text('Мусиқӣ илова кун',
-            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14)),
+        Text('Мусиқӣ илова кун', style: TextStyle(
+            color: Colors.white.withOpacity(0.5), fontSize: 14)),
         const Spacer(),
         Icon(Icons.chevron_right_rounded,
             color: Colors.white.withOpacity(0.2)),
-      ]),
-    ));
+      ])));
 }
 
 class _MusicCard extends StatelessWidget {
   final SongInfo song;
   final VoidCallback onChange, onRemove;
-  const _MusicCard({required this.song, required this.onChange,
-      required this.onRemove});
+  const _MusicCard({required this.song,
+      required this.onChange, required this.onRemove});
 
   String _t(int ms) {
     final s = ms ~/ 1000;
@@ -428,25 +399,20 @@ class _MusicCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: Colors.white.withOpacity(0.3))),
     child: Row(children: [
-      if (song.artUrl.isNotEmpty)
-        ClipRRect(borderRadius: BorderRadius.circular(8),
-          child: Image.network(song.artUrl, width: 48, height: 48,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                  width: 48, height: 48, color: AppColors.card,
-                  child: const Icon(Icons.music_note_rounded,
-                      color: Colors.white38))))
-      else
-        Container(width: 48, height: 48, color: AppColors.card,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.music_note_rounded, color: Colors.white38)),
+      ClipRRect(borderRadius: BorderRadius.circular(8),
+        child: song.artUrl.isNotEmpty
+            ? Image.network(song.artUrl, width: 48, height: 48, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                    width: 48, height: 48, color: AppColors.card,
+                    child: const Icon(Icons.music_note_rounded, color: Colors.white38)))
+            : Container(width: 48, height: 48, color: AppColors.card,
+                child: const Icon(Icons.music_note_rounded, color: Colors.white38))),
       const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(song.title, style: const TextStyle(
             color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
             maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(song.artist, style: const TextStyle(
-            color: Colors.white54, fontSize: 11),
+        Text(song.artist, style: const TextStyle(color: Colors.white54, fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis),
         Text(_t(song.trackMs), style: const TextStyle(
             color: Colors.white38, fontSize: 11)),
@@ -455,6 +421,5 @@ class _MusicCard extends StatelessWidget {
           onPressed: onChange),
       IconButton(icon: const Icon(Icons.close_rounded, color: Colors.white38, size: 18),
           onPressed: onRemove),
-    ]),
-  );
+    ]));
 }
