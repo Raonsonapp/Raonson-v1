@@ -1,6 +1,7 @@
-import '../create/create_reel/create_reel_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../create/create_reel/create_reel_screen.dart';
 import 'app_state.dart';
 import 'app_routes.dart';
 import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
@@ -10,6 +11,7 @@ import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../create/create_post/create_post_screen.dart';
 import '../stories/story_viewer.dart';
+import '../stories/story_controller.dart';
 import '../models/story_model.dart';
 import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
@@ -44,7 +46,7 @@ class AppController {
       case AppRoutes.profile:
         return _page(const ProfileScreen(userId: 'me'));
 
-      // ── Профили дигар корбар — аз Reels/Posts/Comments ────
+      // Профили дигар корбар
       case '/user-profile':
       case '/profile':
         final uid = settings.arguments;
@@ -55,9 +57,23 @@ class AppController {
         return _page(const CreatePostScreen());
       case AppRoutes.notifications:
         return _page(const NotificationsScreen());
+
+      // Story viewer — onComplete → markViewed
       case '/story-viewer':
         final story = settings.arguments as StoryModel;
-        return _page(StoryViewer(story: story, onComplete: () {}));
+        return MaterialPageRoute(
+          builder: (ctx) => StoryViewer(
+            story: story,
+            onComplete: () {
+              // markViewed — story дида шуд → ҳалқа dark green
+              try {
+                final ctrl = ctx.read<StoryController>();
+                ctrl.markViewed(story.id);
+              } catch (_) {}
+            },
+          ),
+        );
+
       case '/create-story':
         return _page(const CreateStoryScreen());
       default:
@@ -65,6 +81,6 @@ class AppController {
     }
   }
 
-  MaterialPageRoute _page(Widget child) =>
-      MaterialPageRoute(builder: (_) => child);
+  MaterialPageRoute _page(Widget w) =>
+      MaterialPageRoute(builder: (_) => w);
 }
