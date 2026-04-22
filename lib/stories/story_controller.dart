@@ -22,7 +22,9 @@ class StoryController extends ChangeNotifier {
   bool get isLoading  => _loading;
 
   void _subscribeSocket() {
-    SocketService.instance.on('story:new', _onNewStory);
+    try {
+      SocketService.instance.on('story:new', _onNewStory);
+    } catch (_) {}
   }
 
   void _onNewStory(dynamic data) {
@@ -42,7 +44,7 @@ class StoryController extends ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint('[Story] socket parse error: $e');
+      debugPrint('[Story] socket parse: $e');
     }
   }
 
@@ -50,12 +52,12 @@ class StoryController extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      final results = await Future.wait([
+      final res = await Future.wait([
         _repository.fetchStories(),
         _repository.fetchMyStories(),
       ]);
-      _myStories = results[1];
-      _stories   = results[0];
+      _stories   = res[0];
+      _myStories = res[1];
     } catch (_) {
       _stories   = [];
       _myStories = [];
@@ -65,47 +67,43 @@ class StoryController extends ChangeNotifier {
     }
   }
 
-  /// Баъди тамошои story → ҳалқа dark green мешавад.
-  /// Мисли Instagram: вақте 1 story-и корбар дида шуд →
-  /// ҲАМАИ story-ҳои ҳамон корбар viewed=true мешаванд → ҳалқа dark green
+  /// Баъди тамошои story → ҳалқа dark green/grey мешавад
   Future<void> markViewed(String storyId) async {
-    // Аввал API-га хабар медиҳем
-    await _repository.markStoryViewed(storyId);
+    try {
+      await _repository.markStoryViewed(storyId);
+    } catch (_) {}
 
-    // Кадом user-ни story дида шуд пайдо мекунем
-    StoryModel? viewed;
+    // Кадом userId story дид
+    String? userId;
     for (final s in _stories) {
-      if (s.id == storyId) { viewed = s; break; }
+      if (s.id == storyId) { userId = s.user.id; break; }
     }
-    if (viewed == null) return;
+    if (userId == null) return;
 
-    final userId = viewed.user.id;
-
-    // Ҳамаи story-ҳои ҳамон userId → viewed=true
-    _stories = _stories.map((s) {
-      if (s.user.id != userId) return s;
-      return StoryModel(
-        id:         s.id,
-        user:       s.user,
-        mediaUrl:   s.mediaUrl,
-        mediaType:  s.mediaType,
-        viewed:     true,       // ← viewed
-        isLiked:    s.isLiked,
-        likesCount: s.likesCount,
-        viewsCount: s.viewsCount,
-        expiresAt:  s.expiresAt,
-      );
-    }).toList();
+    // Ҳамаи story-ҳои ҳамон user → viewed=true
+    _stories = _stories.map((s) =>
+      s.user.id == userId ? _viewed(s) : s).toList();
 
     notifyListeners();
   }
 
-  // Legacy compat
+  StoryModel _viewed(StoryModel s) => StoryModel(
+    id:         s.id,
+    user:       s.user,
+    mediaUrl:   s.mediaUrl,
+    mediaType:  s.mediaType,
+    viewed:     true,
+    isLiked:    s.isLiked,
+    likesCount: s.likesCount,
+    viewsCount: s.viewsCount,
+    expiresAt:  s.expiresAt,
+  );
+
   Future<void> viewStory(String storyId) => markViewed(storyId);
 
   @override
   void dispose() {
-    SocketService.instance.off('story:new');
+    try { SocketService.instance.off('story:new'); } catch (_) {}
     super.dispose();
   }
 }
