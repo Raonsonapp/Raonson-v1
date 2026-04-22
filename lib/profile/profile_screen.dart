@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,7 +14,6 @@ import 'profile_controller.dart';
 import '../settings/settings_screen.dart';
 import 'profile_repository.dart';
 
-// ══════════════════════════════════════════════════════════════════
 class ProfileScreen extends StatefulWidget {
   final String userId;
   const ProfileScreen({super.key, required this.userId});
@@ -47,8 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _share() {
     final u = _ctrl.profile;
     if (u == null) return;
-    Clipboard.setData(ClipboardData(
-        text: 'raonson://profile/${u.username}'));
+    Clipboard.setData(ClipboardData(text: 'raonson://profile/${u.username}'));
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
       content: Text('Профил нусхабардорӣ шуд ✓'),
       duration: Duration(seconds: 2)));
@@ -70,17 +67,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         appBar: AppBar(backgroundColor: AppColors.bg, elevation: 0,
           leading: const BackButton(color: Colors.white)),
         body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.person_off_rounded, size: 56,
-              color: Colors.white24),
+          const Icon(Icons.person_off_rounded, size: 56, color: Colors.white24),
           const SizedBox(height: 12),
           const Text('Корбар ёфт нашуд',
               style: TextStyle(color: Colors.white54, fontSize: 15)),
-          if (_ctrl.error != null) ...[
-            const SizedBox(height: 8),
-            Text(_ctrl.error!, style: const TextStyle(
-                color: Colors.redAccent, fontSize: 12),
-                textAlign: TextAlign.center),
-          ],
+          if (_ctrl.error != null) Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(_ctrl.error!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                textAlign: TextAlign.center)),
           const SizedBox(height: 20),
           TextButton(onPressed: _ctrl.loadProfile,
               child: const Text('Дубора кӯшиш',
@@ -93,7 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       backgroundColor: AppColors.bg,
       body: NestedScrollView(
         headerSliverBuilder: (_, __) => [
-          SliverToBoxAdapter(child: _buildHeader(user)),
+          SliverToBoxAdapter(child: _header(user)),
         ],
         body: TabBarView(controller: _tab, children: [
           _PostGrid(posts: _ctrl.posts),
@@ -103,10 +98,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildHeader(UserModel user) {
+  Widget _header(UserModel user) {
+    // Avatar URL: аз profile API ё аз UserSession
+    final avatarUrl = user.avatar.isNotEmpty
+        ? user.avatar
+        : (_isMe ? (UserSession.avatar ?? '') : '');
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-      // ── TOP BAR ────────────────────────────────────────────
+      // ── TOP BAR ─────────────────────────────────────────────
       SafeArea(bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
@@ -117,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: Colors.white, size: 20),
                 onPressed: () => Navigator.maybePop(context))
             else
-              const SizedBox(width: 12),
+              const SizedBox(width: 4),
             Expanded(child: Row(mainAxisSize: MainAxisSize.min, children: [
               Flexible(child: Text(user.username,
                   style: const TextStyle(color: Colors.white,
@@ -129,8 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: Color(0xFF00C853), size: 16)],
             ])),
             IconButton(
-              icon: const Icon(Icons.share_outlined,
-                  color: Colors.white, size: 20),
+              icon: const Icon(Icons.share_outlined, color: Colors.white, size: 20),
               onPressed: _share),
             if (_isMe)
               IconButton(
@@ -142,46 +141,39 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
 
-      // ── AVATAR + STATS ─────────────────────────────────────
+      // ── AVATAR + STATS ────────────────────────────────────
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          // Avatar — story ring мисли расм
-          _ProfileAvatar(
-            avatarUrl:   user.avatar,
-            hasStory:    false, // TODO: fetch story status
-            storyViewed: false,
-            size:        84,
-          ),
+          // Avatar — мисли Instagram (ҳалқа + gap)
+          _Avatar(url: avatarUrl, size: 86),
           const SizedBox(width: 24),
-          // Stats
           Expanded(child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _StatBtn(count: user.postsCount,     label: 'Постҳо',     onTap: null),
-              _StatBtn(count: user.followersCount, label: 'Пайравон',
-                  onTap: () => _showList('Пайравон', user.id, true)),
-              _StatBtn(count: user.followingCount, label: 'Пайравӣ',
-                  onTap: () => _showList('Пайравӣ', user.id, false)),
+              _Stat(count: user.postsCount,     label: 'Постҳо'),
+              _Stat(count: user.followersCount, label: 'Пайравон',
+                  onTap: () => _list('Пайравон', user.id, true)),
+              _Stat(count: user.followingCount, label: 'Пайравӣ',
+                  onTap: () => _list('Пайравӣ', user.id, false)),
             ],
           )),
         ]),
       ),
 
-      // ── BIO ────────────────────────────────────────────────
-      const SizedBox(height: 12),
+      // ── BIO ───────────────────────────────────────────────
       if (user.bio != null && user.bio!.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
           child: Text(user.bio!,
-              style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.4)),
-        ),
+              style: const TextStyle(color: Colors.white,
+                  fontSize: 13.5, height: 1.4))),
 
-      // ── BUTTONS ────────────────────────────────────────────
+      // ── BUTTONS ───────────────────────────────────────────
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
         child: _isMe
-            ? _OwnButtons(
+            ? _OwnBtns(
                 onEdit: () async {
                   final ok = await Navigator.push<bool>(context,
                       MaterialPageRoute(builder: (_) =>
@@ -189,15 +181,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                   if (ok == true && mounted) _ctrl.loadProfile();
                 },
                 onShare: _share,
-                onVerify: !user.verified ? _showVerifySheet : null)
-            : _OtherButtons(
+                onVerify: !user.verified ? _verifySheet : null)
+            : _OtherBtns(
                 isFollowing: user.isFollowing,
                 onFollow:    _ctrl.toggleFollow,
                 onMessage:   () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: user)))),
+                    MaterialPageRoute(builder: (_) =>
+                        ChatRoomScreen(peer: user)))),
       ),
 
-      // ── TAB BAR ────────────────────────────────────────────
+      // ── TABS ──────────────────────────────────────────────
       const SizedBox(height: 8),
       TabBar(
         controller: _tab,
@@ -205,95 +198,69 @@ class _ProfileScreenState extends State<ProfileScreen>
           Tab(icon: Icon(Icons.grid_on_rounded)),
           Tab(icon: Icon(Icons.play_circle_outline_rounded)),
         ],
-        indicatorColor:       Colors.white,
-        indicatorWeight:      2,
-        labelColor:           Colors.white,
-        unselectedLabelColor: Colors.white24,
-        dividerColor:         Colors.white10,
-      ),
+        indicatorColor: Colors.white, indicatorWeight: 2,
+        labelColor: Colors.white, unselectedLabelColor: Colors.white24,
+        dividerColor: Colors.white10),
     ]);
   }
 
-  void _showList(String title, String userId, bool isFollowers) {
-    showModalBottomSheet(
-      context: context, isScrollControlled: true,
+  void _list(String title, String uid, bool isFollowers) {
+    showModalBottomSheet(context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _UserListSheet(
-          title: title, userId: userId, isFollowers: isFollowers));
+          title: title, userId: uid, isFollowers: isFollowers));
   }
 
-  void _showVerifySheet() {
-    showModalBottomSheet(
-      context: context, backgroundColor: Colors.transparent,
+  void _verifySheet() {
+    showModalBottomSheet(context: context, backgroundColor: Colors.transparent,
       builder: (_) => const _VerifySheet());
   }
 }
 
-// ── Profile avatar бо story ring ────────────────────────────────────
-class _ProfileAvatar extends StatelessWidget {
-  final String avatarUrl;
-  final bool   hasStory;
-  final bool   storyViewed;
+// ── Avatar widget ────────────────────────────────────────────────────
+class _Avatar extends StatelessWidget {
+  final String url;
   final double size;
-
-  const _ProfileAvatar({
-    required this.avatarUrl,
-    required this.hasStory,
-    required this.storyViewed,
-    this.size = 84,
-  });
+  const _Avatar({required this.url, required this.size});
 
   @override
   Widget build(BuildContext context) {
-    if (!hasStory) {
-      // Ҳалқа нест — танҳо аватар
-      return _avatar(size);
-    }
-
-    const borderW = 2.5;
-    const gapW    = 3.0;
-    final outer   = size + (borderW + gapW) * 2;
-
-    final colors = storyViewed
-        ? [const Color(0xFF2E5A3A), const Color(0xFF1E3D28)]
-        : AppColors.storyGradient;
-
     return Container(
-      width: outer, height: outer,
+      width: size, height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(colors: colors,
-          begin: Alignment.topLeft, end: Alignment.bottomRight)),
-      child: Center(child: _avatar(size)),
+        color: AppColors.card,
+        border: Border.all(color: Colors.white12, width: 1),
+      ),
+      child: ClipOval(
+        child: url.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: url, fit: BoxFit.cover,
+                width: size, height: size,
+                placeholder: (_, __) => Container(
+                    color: AppColors.card,
+                    child: const Icon(Icons.person_rounded,
+                        color: Colors.white38, size: 40)),
+                errorWidget: (_, __, ___) => Container(
+                    color: AppColors.card,
+                    child: const Icon(Icons.person_rounded,
+                        color: Colors.white38, size: 40)))
+            : Container(color: AppColors.card,
+                child: const Icon(Icons.person_rounded,
+                    color: Colors.white38, size: 40)),
+      ),
     );
   }
-
-  Widget _avatar(double s) => Container(
-    width: s, height: s,
-    decoration: const BoxDecoration(
-      shape: BoxShape.circle, color: AppColors.bg),
-    child: ClipOval(
-      child: avatarUrl.isNotEmpty
-          ? CachedNetworkImage(imageUrl: avatarUrl, fit: BoxFit.cover,
-              width: s, height: s,
-              errorWidget: (_, __, ___) => _ph(s))
-          : _ph(s)),
-  );
-
-  Widget _ph(double s) => Container(
-    width: s, height: s, color: AppColors.card,
-    child: Icon(Icons.person_rounded, color: Colors.white38, size: s * 0.5));
 }
 
-// ── Stat button ─────────────────────────────────────────────────────
-class _StatBtn extends StatelessWidget {
+// ── Stat ─────────────────────────────────────────────────────────────
+class _Stat extends StatelessWidget {
   final int count;
   final String label;
   final VoidCallback? onTap;
+  const _Stat({required this.count, required this.label, this.onTap});
 
-  const _StatBtn({required this.count, required this.label, this.onTap});
-
-  String _fmt(int n) {
+  String _f(int n) {
     if (n >= 1000000) return '${(n/1e6).toStringAsFixed(1)}M';
     if (n >= 1000)    return '${(n/1000).toStringAsFixed(1)}K';
     return '$n';
@@ -303,21 +270,18 @@ class _StatBtn extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Column(children: [
-      Text(_fmt(count), style: const TextStyle(color: Colors.white,
+      Text(_f(count), style: const TextStyle(color: Colors.white,
           fontSize: 17, fontWeight: FontWeight.bold)),
       const SizedBox(height: 2),
       Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11.5)),
-    ]),
-  );
+    ]));
 }
 
-// ── Own buttons ─────────────────────────────────────────────────────
-class _OwnButtons extends StatelessWidget {
-  final VoidCallback  onEdit;
-  final VoidCallback  onShare;
+// ── Own buttons ──────────────────────────────────────────────────────
+class _OwnBtns extends StatelessWidget {
+  final VoidCallback onEdit, onShare;
   final VoidCallback? onVerify;
-
-  const _OwnButtons({required this.onEdit, required this.onShare, this.onVerify});
+  const _OwnBtns({required this.onEdit, required this.onShare, this.onVerify});
 
   @override
   Widget build(BuildContext context) => Row(children: [
@@ -343,17 +307,12 @@ class _OwnButtons extends StatelessWidget {
   ]);
 }
 
-// ── Other buttons ───────────────────────────────────────────────────
-class _OtherButtons extends StatelessWidget {
+// ── Other buttons ─────────────────────────────────────────────────────
+class _OtherBtns extends StatelessWidget {
   final bool isFollowing;
-  final VoidCallback onFollow;
-  final VoidCallback onMessage;
-
-  const _OtherButtons({
-    required this.isFollowing,
-    required this.onFollow,
-    required this.onMessage,
-  });
+  final VoidCallback onFollow, onMessage;
+  const _OtherBtns({required this.isFollowing,
+      required this.onFollow, required this.onMessage});
 
   @override
   Widget build(BuildContext context) => Row(children: [
@@ -386,12 +345,11 @@ class _OtherButtons extends StatelessWidget {
   ]);
 }
 
-// ── Generic button ──────────────────────────────────────────────────
+// ── Generic button ────────────────────────────────────────────────────
 class _Btn extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
-
   const _Btn({required this.label, required this.icon, required this.onTap});
 
   @override
@@ -409,159 +367,140 @@ class _Btn extends StatelessWidget {
         Flexible(child: Text(label, style: const TextStyle(
             color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
             overflow: TextOverflow.ellipsis)),
-      ]),
-    ),
-  );
+      ])));
 }
 
-// ── Post grid — tap кунад ба post detail ────────────────────────────
+// ── Post grid + tap to detail ─────────────────────────────────────────
 class _PostGrid extends StatelessWidget {
   final List<PostModel> posts;
   const _PostGrid({required this.posts});
 
   @override
   Widget build(BuildContext context) {
-    if (posts.isEmpty) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.grid_off_rounded, size: 48, color: Colors.white12),
-        const SizedBox(height: 10),
-        const Text('Ҳанӯз пост нест',
-            style: TextStyle(color: Colors.white30, fontSize: 14)),
-      ]));
-    }
+    if (posts.isEmpty) return _empty(Icons.grid_off_rounded, 'Ҳанӯз пост нест');
     return GridView.builder(
       padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2),
       itemCount: posts.length,
       itemBuilder: (_, i) {
-        final post = posts[i];
-        final url  = post.media.isNotEmpty
-            ? (post.media.first['url'] ?? '') : '';
+        final url = posts[i].media.isNotEmpty
+            ? (posts[i].media.first['url'] ?? '') : '';
         return GestureDetector(
-          onTap: () => _openPost(context, posts, i),
+          onTap: () => _detail(context, i),
           child: Stack(fit: StackFit.expand, children: [
             url.isNotEmpty
                 ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
                     placeholder: (_, __) => Container(color: AppColors.card),
-                    errorWidget: (_, __, ___) =>
-                        Container(color: AppColors.card))
-                : Container(color: AppColors.card),
-            // Multi-media indicator
-            if (post.media.length > 1)
+                    errorWidget: (_, __, ___) => Container(color: AppColors.card))
+                : Container(color: AppColors.card,
+                    child: const Icon(Icons.image_outlined,
+                        color: Colors.white24, size: 28)),
+            if ((posts[i].media.length) > 1)
               const Positioned(top: 6, right: 6,
                 child: Icon(Icons.collections_rounded,
-                    color: Colors.white, size: 16)),
-          ]),
-        );
-      },
-    );
+                    color: Colors.white, size: 16,
+                    shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
+          ]));
+      });
   }
 
-  void _openPost(BuildContext ctx, List<PostModel> posts, int idx) {
-    showModalBottomSheet(
-      context: ctx,
-      isScrollControlled: true,
+  void _detail(BuildContext ctx, int idx) {
+    showModalBottomSheet(context: ctx, isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _PostDetailSheet(posts: posts, initialIndex: idx));
+      builder: (_) => _PostSheet(posts: posts, idx: idx));
   }
+
+  Widget _empty(IconData icon, String msg) => Center(
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 52, color: Colors.white12),
+      const SizedBox(height: 10),
+      Text(msg, style: const TextStyle(color: Colors.white30, fontSize: 14)),
+    ]));
 }
 
-// ── Post detail sheet ───────────────────────────────────────────────
-class _PostDetailSheet extends StatefulWidget {
+// ── Post detail sheet ─────────────────────────────────────────────────
+class _PostSheet extends StatefulWidget {
   final List<PostModel> posts;
-  final int initialIndex;
-  const _PostDetailSheet({required this.posts, required this.initialIndex});
-  @override State<_PostDetailSheet> createState() => _PostDetailSheetState();
+  final int idx;
+  const _PostSheet({required this.posts, required this.idx});
+  @override State<_PostSheet> createState() => _PostSheetState();
 }
 
-class _PostDetailSheetState extends State<_PostDetailSheet> {
-  late PageController _page;
-
-  @override
-  void initState() {
+class _PostSheetState extends State<_PostSheet> {
+  late final PageController _pg;
+  @override void initState() {
     super.initState();
-    _page = PageController(initialPage: widget.initialIndex);
+    _pg = PageController(initialPage: widget.idx);
   }
-  @override void dispose() { _page.dispose(); super.dispose(); }
+  @override void dispose() { _pg.dispose(); super.dispose(); }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.92,
-      decoration: const BoxDecoration(
-        color: AppColors.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      child: Column(children: [
-        Container(margin: const EdgeInsets.symmetric(vertical: 10),
-          width: 36, height: 4,
-          decoration: BoxDecoration(color: Colors.white24,
-              borderRadius: BorderRadius.circular(2))),
-        Expanded(child: PageView.builder(
-          controller: _page,
-          itemCount: widget.posts.length,
-          itemBuilder: (_, i) {
-            final post = widget.posts[i];
-            final url  = post.media.isNotEmpty
-                ? (post.media.first['url'] ?? '') : '';
-            return SingleChildScrollView(child: Column(children: [
-              // Image
-              if (url.isNotEmpty)
-                CachedNetworkImage(imageUrl: url, width: double.infinity,
-                    fit: BoxFit.contain,
-                    placeholder: (_, __) =>
-                        Container(height: 300, color: AppColors.card),
-                    errorWidget: (_, __, ___) =>
-                        Container(height: 300, color: AppColors.card)),
-              // Caption
-              if (post.caption.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Align(alignment: Alignment.centerLeft,
-                    child: Text(post.caption,
-                        style: const TextStyle(color: Colors.white, fontSize: 14)))),
-              // Likes + comments
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Row(children: [
-                  const Icon(Icons.favorite_border_rounded,
-                      color: Colors.white70, size: 20),
-                  const SizedBox(width: 6),
-                  Text('${post.likesCount}',
-                      style: const TextStyle(color: Colors.white70)),
-                  const SizedBox(width: 16),
-                  const Icon(Icons.chat_bubble_outline_rounded,
-                      color: Colors.white70, size: 18),
-                  const SizedBox(width: 6),
-                  Text('${post.commentsCount}',
-                      style: const TextStyle(color: Colors.white70)),
-                ]),
-              ),
-              const SizedBox(height: 16),
-            ]));
-          },
-        )),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    height: MediaQuery.of(context).size.height * 0.92,
+    decoration: const BoxDecoration(
+      color: AppColors.bg,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    child: Column(children: [
+      Container(margin: const EdgeInsets.symmetric(vertical: 10),
+        width: 36, height: 4,
+        decoration: BoxDecoration(color: Colors.white24,
+            borderRadius: BorderRadius.circular(2))),
+      Expanded(child: PageView.builder(
+        controller: _pg,
+        itemCount: widget.posts.length,
+        itemBuilder: (_, i) {
+          final p   = widget.posts[i];
+          final url = p.media.isNotEmpty ? (p.media.first['url'] ?? '') : '';
+          return SingleChildScrollView(child: Column(children: [
+            if (url.isNotEmpty)
+              CachedNetworkImage(imageUrl: url,
+                  width: double.infinity, fit: BoxFit.contain,
+                  placeholder: (_, __) =>
+                      Container(height: 300, color: AppColors.card),
+                  errorWidget: (_, __, ___) =>
+                      Container(height: 300, color: AppColors.card))
+            else
+              Container(height: 300, color: AppColors.card),
+            if (p.caption.isNotEmpty)
+              Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+                child: Align(alignment: Alignment.centerLeft,
+                  child: Text(p.caption,
+                      style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4)))),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+              child: Row(children: [
+                const Icon(Icons.favorite_border_rounded,
+                    color: Colors.white54, size: 20),
+                const SizedBox(width: 6),
+                Text('${p.likesCount}',
+                    style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                const SizedBox(width: 16),
+                const Icon(Icons.chat_bubble_outline_rounded,
+                    color: Colors.white54, size: 18),
+                const SizedBox(width: 6),
+                Text('${p.commentsCount}',
+                    style: const TextStyle(color: Colors.white54, fontSize: 13)),
+              ])),
+          ]));
+        })),
+    ]));
 }
 
-// ── Reel grid ───────────────────────────────────────────────────────
+// ── Reel grid ─────────────────────────────────────────────────────────
 class _ReelGrid extends StatelessWidget {
   final List<ReelModel> reels;
   const _ReelGrid({required this.reels});
 
   @override
   Widget build(BuildContext context) {
-    if (reels.isEmpty) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.videocam_off_rounded, size: 48,
-            color: Colors.white12),
-        const SizedBox(height: 10),
-        const Text('Ҳанӯз рил нест',
-            style: TextStyle(color: Colors.white30, fontSize: 14)),
-      ]));
-    }
+    if (reels.isEmpty) return Center(child: Column(
+      mainAxisSize: MainAxisSize.min, children: const [
+      Icon(Icons.videocam_off_rounded, size: 52, color: Colors.white12),
+      SizedBox(height: 10),
+      Text('Ҳанӯз рил нест',
+          style: TextStyle(color: Colors.white30, fontSize: 14)),
+    ]));
     return GridView.builder(
       padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -572,27 +511,23 @@ class _ReelGrid extends StatelessWidget {
         Container(color: AppColors.card),
         const Center(child: Icon(Icons.play_circle_outline_rounded,
             color: Colors.white38, size: 32)),
-        // Views
         Positioned(bottom: 6, left: 6,
           child: Row(children: [
-            const Icon(Icons.play_arrow_rounded,
-                color: Colors.white, size: 14),
+            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 14,
+                shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
             const SizedBox(width: 2),
             Text('${reels[i].likesCount}',
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 12,
+                style: const TextStyle(color: Colors.white, fontSize: 11,
                     fontWeight: FontWeight.bold,
                     shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
           ])),
-      ]),
-    );
+      ]));
   }
 }
 
-// ── Followers/Following sheet ────────────────────────────────────────
+// ── Followers/Following sheet ──────────────────────────────────────────
 class _UserListSheet extends StatefulWidget {
-  final String title;
-  final String userId;
+  final String title, userId;
   final bool   isFollowers;
   const _UserListSheet({required this.title, required this.userId,
       required this.isFollowers});
@@ -603,7 +538,6 @@ class _UserListSheetState extends State<_UserListSheet> {
   final _repo = ProfileRepository(ApiClient.instance);
   List<UserModel> _list = [];
   bool _loading = true;
-
   @override void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
@@ -629,52 +563,46 @@ class _UserListSheetState extends State<_UserListSheet> {
           fontSize: 16, fontWeight: FontWeight.bold)),
       const SizedBox(height: 8),
       const Divider(color: Colors.white10),
-      Expanded(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator(
-                color: AppColors.storyStart, strokeWidth: 2))
-            : _list.isEmpty
-                ? Center(child: Text(
-                    'Ҳанӯз ${widget.title.toLowerCase()} нест',
-                    style: const TextStyle(color: Colors.white30, fontSize: 14)))
-                : ListView.builder(
-                    itemCount: _list.length,
-                    itemBuilder: (_, i) {
-                      final u = _list[i];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: AppColors.card,
-                          backgroundImage: u.avatar.isNotEmpty
-                              ? NetworkImage(u.avatar) : null,
-                          child: u.avatar.isEmpty
-                              ? const Icon(Icons.person,
-                                  color: Colors.white54) : null),
-                        title: Row(children: [
-                          Text(u.username, style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.w600)),
-                          if (u.verified) ...[
-                            const SizedBox(width: 4),
-                            const VerifiedBadge(size: 14)],
-                        ]),
-                        subtitle: u.bio != null && u.bio!.isNotEmpty
-                            ? Text(u.bio!, style: const TextStyle(
-                                color: Colors.white38, fontSize: 12),
-                                maxLines: 1, overflow: TextOverflow.ellipsis)
-                            : null,
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(context, MaterialPageRoute(
-                              builder: (_) => ProfileScreen(userId: u.id)));
-                        },
-                      );
-                    }),
-      ),
-    ]),
-  );
+      Expanded(child: _loading
+          ? const Center(child: CircularProgressIndicator(
+              color: AppColors.storyStart, strokeWidth: 2))
+          : _list.isEmpty
+              ? Center(child: Text('Ҳанӯз ${widget.title.toLowerCase()} нест',
+                  style: const TextStyle(color: Colors.white30, fontSize: 14)))
+              : ListView.builder(
+                  itemCount: _list.length,
+                  itemBuilder: (_, i) {
+                    final u = _list[i];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: 22, backgroundColor: AppColors.card,
+                        backgroundImage: u.avatar.isNotEmpty
+                            ? NetworkImage(u.avatar) : null,
+                        child: u.avatar.isEmpty
+                            ? const Icon(Icons.person, color: Colors.white38)
+                            : null),
+                      title: Row(children: [
+                        Text(u.username, style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w600)),
+                        if (u.verified) ...[
+                          const SizedBox(width: 4),
+                          const VerifiedBadge(size: 14)],
+                      ]),
+                      subtitle: u.bio != null && u.bio!.isNotEmpty
+                          ? Text(u.bio!, style: const TextStyle(
+                              color: Colors.white38, fontSize: 12),
+                              maxLines: 1, overflow: TextOverflow.ellipsis)
+                          : null,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => ProfileScreen(userId: u.id)));
+                      });
+                  })),
+    ]));
 }
 
-// ── Verify sheet ────────────────────────────────────────────────────
+// ── Verify sheet ───────────────────────────────────────────────────────
 class _VerifySheet extends StatelessWidget {
   const _VerifySheet();
   @override
@@ -691,8 +619,7 @@ class _VerifySheet extends StatelessWidget {
       Container(width: 64, height: 64,
         decoration: BoxDecoration(shape: BoxShape.circle,
           color: const Color(0xFF00C853).withOpacity(0.12),
-          border: Border.all(
-              color: const Color(0xFF00C853).withOpacity(0.4), width: 2)),
+          border: Border.all(color: const Color(0xFF00C853).withOpacity(0.4), width: 2)),
         child: const Icon(Icons.verified_rounded,
             color: Color(0xFF00C853), size: 34)),
       const SizedBox(height: 16),
@@ -704,33 +631,25 @@ class _VerifySheet extends StatelessWidget {
           textAlign: TextAlign.center),
       const SizedBox(height: 24),
       ...[
-        ('Нишони тасдиқшудаи сабз',     Icons.check_circle_outline),
-        ('Дар ҷустуҷӯ болотар намоиш',  Icons.search_rounded),
-        ('Ҳифзи профил аз ҷаъл',        Icons.security_rounded),
+        ('Нишони тасдиқшудаи сабз', Icons.check_circle_outline),
+        ('Дар ҷустуҷӯ болотар', Icons.search_rounded),
+        ('Ҳифзи профил аз ҷаъл', Icons.security_rounded),
       ].map((e) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(children: [
           Icon(e.$2, color: const Color(0xFF00C853), size: 18),
           const SizedBox(width: 10),
-          Text(e.$1, style: const TextStyle(
-              color: Colors.white70, fontSize: 13)),
+          Text(e.$1, style: const TextStyle(color: Colors.white70, fontSize: 13)),
         ]))),
       const SizedBox(height: 24),
       SizedBox(width: double.infinity, child: ElevatedButton(
-        onPressed: () {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Тасдиқи профил тавассути барнома'),
-            duration: Duration(seconds: 2)));
-        },
+        onPressed: () { Navigator.pop(context); },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF00C853),
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14))),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
         child: const Text('Тасдиқ кун — \$2 / моҳ',
             style: TextStyle(color: Colors.white,
                 fontWeight: FontWeight.bold, fontSize: 15)))),
-    ]),
-  );
+    ]));
 }
