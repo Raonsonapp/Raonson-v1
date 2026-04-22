@@ -71,7 +71,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _checkUsername(String val) async {
     if (!mounted) return;
     try {
-      final taken = await _ctrl.checkUsername(val);
+      final taken = await _repo.isUsernameTaken(val, _originalUsername);
       if (!mounted) return;
       setState(() { _checkingUsername = false; _usernameTaken = taken; _usernameError = taken ? 'Ин username аллакай банд аст' : null; });
     } catch (_) {
