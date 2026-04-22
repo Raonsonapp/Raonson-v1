@@ -7,10 +7,7 @@ import '../core/services/user_session.dart';
 
 class StoryController extends ChangeNotifier {
   final StoryRepository _repository;
-
-  StoryController(this._repository) {
-    _subscribeSocket();
-  }
+  StoryController(this._repository) { _subscribeSocket(); }
 
   List<StoryModel> _stories   = [];
   List<StoryModel> _myStories = [];
@@ -22,84 +19,75 @@ class StoryController extends ChangeNotifier {
   bool get isLoading  => _loading;
 
   void _subscribeSocket() {
-    try {
-      SocketService.instance.on('story:new', _onNewStory);
-    } catch (_) {}
+    try { SocketService.instance.on('story:new', _onNewStory); } catch (_) {}
   }
 
   void _onNewStory(dynamic data) {
     if (data is! Map<String, dynamic>) return;
     try {
-      final story = StoryModel.fromJson(data);
+      final s     = StoryModel.fromJson(data);
       final myId  = UserSession.userId ?? '';
-      if (story.user.id == myId) {
-        if (!_myStories.any((s) => s.id == story.id)) {
-          _myStories = [story, ..._myStories];
+      if (s.user.id == myId) {
+        if (!_myStories.any((x) => x.id == s.id)) {
+          _myStories = [s, ..._myStories];
           notifyListeners();
         }
       } else {
-        if (!_stories.any((s) => s.id == story.id)) {
-          _stories = [story, ..._stories];
+        if (!_stories.any((x) => x.id == s.id)) {
+          _stories = [s, ..._stories];
           notifyListeners();
         }
       }
-    } catch (e) {
-      debugPrint('[Story] socket parse: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> loadStories() async {
     _loading = true;
     notifyListeners();
     try {
-      final res = await Future.wait([
+      final res  = await Future.wait([
         _repository.fetchStories(),
         _repository.fetchMyStories(),
       ]);
       _stories   = res[0];
       _myStories = res[1];
     } catch (_) {
-      _stories   = [];
-      _myStories = [];
+      _stories = []; _myStories = [];
     } finally {
       _loading = false;
       notifyListeners();
     }
   }
 
-  /// Баъди тамошои story → ҳалқа dark green/grey мешавад
+  /// Story дида шуд — ҳамаи story-ҳои ҳамон корбар viewed=true
+  /// Ҳалқа: надида → cyan-green, дида → dark grey мисли Instagram
   Future<void> markViewed(String storyId) async {
-    try {
-      await _repository.markStoryViewed(storyId);
-    } catch (_) {}
+    // API
+    try { await _repository.markStoryViewed(storyId); } catch (_) {}
 
-    // Кадом userId story дид
+    // Кадом user story дид?
     String? userId;
     for (final s in _stories) {
       if (s.id == storyId) { userId = s.user.id; break; }
     }
-    if (userId == null) return;
+    if (userId == null) return; // story топилмад
 
-    // Ҳамаи story-ҳои ҳамон user → viewed=true
-    _stories = _stories.map((s) =>
-      s.user.id == userId ? _viewed(s) : s).toList();
+    // Ҳамаи stories-и ҳамон user → viewed=true
+    bool changed = false;
+    _stories = _stories.map((s) {
+      if (s.user.id != userId || s.viewed) return s;
+      changed = true;
+      return StoryModel(
+        id: s.id, user: s.user, mediaUrl: s.mediaUrl,
+        mediaType: s.mediaType, viewed: true,
+        isLiked: s.isLiked, likesCount: s.likesCount,
+        viewsCount: s.viewsCount, expiresAt: s.expiresAt);
+    }).toList();
 
-    notifyListeners();
+    if (changed) notifyListeners();
   }
 
-  StoryModel _viewed(StoryModel s) => StoryModel(
-    id:         s.id,
-    user:       s.user,
-    mediaUrl:   s.mediaUrl,
-    mediaType:  s.mediaType,
-    viewed:     true,
-    isLiked:    s.isLiked,
-    likesCount: s.likesCount,
-    viewsCount: s.viewsCount,
-    expiresAt:  s.expiresAt,
-  );
-
-  Future<void> viewStory(String storyId) => markViewed(storyId);
+  Future<void> viewStory(String id) => markViewed(id);
 
   @override
   void dispose() {
