@@ -12,7 +12,6 @@ List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
   return map.values.toList();
 }
 
-// ══════════════════════════════════════════════════════════════════
 class StoryBar extends StatelessWidget {
   final List<StoryModel> stories;
   final VoidCallback? onAddStory;
@@ -33,20 +32,19 @@ class StoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myId      = UserSession.userId ?? '';
-    final allGroups = groupStoriesByUser(stories);
-    final myGroup   = myStories ??
-        allGroups.where((g) => g.first.user.id == myId).firstOrNull ??
+    final myId    = UserSession.userId ?? '';
+    final groups  = groupStoriesByUser(stories);
+    final myGroup = myStories ??
+        groups.where((g) => g.first.user.id == myId).firstOrNull ??
         <StoryModel>[];
-    final others    = allGroups.where((g) => g.first.user.id != myId).toList();
+    final others  = groups.where((g) => g.first.user.id != myId).toList();
 
     return SizedBox(
       height: 108,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
         children: [
-          // ── "История шумо" ──────────────────────────────────
           _MyStoryItem(
             avatarUrl: myAvatar ?? UserSession.avatar ?? '',
             hasStory:  myGroup.isNotEmpty,
@@ -56,20 +54,16 @@ class StoryBar extends StatelessWidget {
             },
             onTapAdd: onAddStory ?? () {},
           ),
-          const SizedBox(width: 16),
-
-          // ── Дигарон ─────────────────────────────────────────
-          ...others.map((group) {
-            final anyViewed = group.any((s) => s.viewed);
+          const SizedBox(width: 18),
+          ...others.map((g) {
+            final anyViewed = g.any((s) => s.viewed);
             return Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 18),
               child: _StoryItem(
-                story: group.first,
-                viewed: anyViewed, // 1 дида → dark green мисли Instagram
-                onTap: () {
-                  if (onTapGroup != null) onTapGroup!(group, 0);
-                  else onTap?.call(group.first);
-                },
+                story: g.first,
+                viewed: anyViewed,
+                onTap: () => onTapGroup != null
+                    ? onTapGroup!(g, 0) : onTap?.call(g.first),
               ),
             );
           }),
@@ -79,7 +73,7 @@ class StoryBar extends StatelessWidget {
   }
 }
 
-// ── "История шумо" ──────────────────────────────────────────────────
+// ── «История шумо» ──────────────────────────────────────────────────
 class _MyStoryItem extends StatelessWidget {
   final String       avatarUrl;
   final bool         hasStory;
@@ -93,27 +87,23 @@ class _MyStoryItem extends StatelessWidget {
     required this.onTapAdd,
   });
 
-  // Gap-ҳо мисли Instagram:
-  // - ring border: 2px
-  // - gap байни ring ва avatar: 3px  ← ин аст муаммо
-  // - ring outer size: 74px, avatar: 62px → gap = (74-62)/2 - 2 = 4px
-
   @override
   Widget build(BuildContext context) {
-    const double outerSize  = 74;
-    const double borderW    = 2.2;
-    const double gapW       = 2.5; // масофа байни ҳалқа ва аватар
-    const double innerSize  = outerSize - (borderW + gapW) * 2;
+    // Мисли Instagram: ring 2px, gap 3px, avatar дар дохил
+    // outer=76, border=2, gap=3 → inner=76-2*2-2*3=64
+    const double outer  = 76;
+    const double border = 2.0;
+    const double gap    = 3.0;     // ← масофа байни ҳалқа ва аватар
+    const double inner  = outer - (border + gap) * 2; // = 64
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
-        width: outerSize, height: outerSize,
+        width: outer, height: outer,
         child: Stack(children: [
-          // Tap avatar → viewer / create
           GestureDetector(
             onTap: onTapAvatar,
             child: Container(
-              width: outerSize, height: outerSize,
+              width: outer, height: outer,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: hasStory
@@ -124,40 +114,31 @@ class _MyStoryItem extends StatelessWidget {
                     : null,
                 border: hasStory
                     ? null
-                    : Border.all(
-                        color: const Color(0xFF2A3A44), width: borderW),
+                    : Border.all(color: const Color(0xFF333333), width: border),
               ),
-              child: Center(
-                child: Container(
-                  width: innerSize, height: innerSize,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.bg,
-                  ),
-                  child: ClipOval(
-                    child: avatarUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: avatarUrl, fit: BoxFit.cover,
-                            width: innerSize, height: innerSize,
-                            errorWidget: (_, __, ___) => _ph())
-                        : _ph(),
-                  ),
-                ),
+              // Gap = bg-colored padding between ring and avatar
+              padding: EdgeInsets.all(hasStory ? border + gap : 0),
+              child: ClipOval(
+                child: avatarUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: avatarUrl, fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => _ph())
+                    : _ph(),
               ),
             ),
           ),
-          // "+" → create
+          // «+» badge
           Positioned(
-            bottom: 0, right: 0,
+            bottom: 0, right: 2,
             child: GestureDetector(
               onTap: onTapAdd,
               child: Container(
                 width: 22, height: 22,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1877F2),
+                  color: const Color(0xFF0095F6),
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.bg, width: 1.5)),
-                child: const Icon(Icons.add, color: Colors.white, size: 13),
+                child: const Icon(Icons.add, color: Colors.white, size: 14),
               ),
             ),
           ),
@@ -165,7 +146,7 @@ class _MyStoryItem extends StatelessWidget {
       ),
       const SizedBox(height: 5),
       SizedBox(
-        width: outerSize + 4,
+        width: outer,
         child: const Text('история шумо',
           style: TextStyle(color: AppColors.grey, fontSize: 10.5),
           maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -176,13 +157,13 @@ class _MyStoryItem extends StatelessWidget {
 
   Widget _ph() => Container(
     color: AppColors.card,
-    child: const Icon(Icons.person, color: Colors.white54, size: 28));
+    child: const Icon(Icons.person, color: Colors.white38, size: 28));
 }
 
-// ── Story item — дигар корбар ───────────────────────────────────────
+// ── Story item (дигарон) ─────────────────────────────────────────────
 class _StoryItem extends StatelessWidget {
-  final StoryModel   story;
-  final bool         viewed;
+  final StoryModel story;
+  final bool       viewed;
   final VoidCallback onTap;
 
   const _StoryItem({
@@ -193,50 +174,42 @@ class _StoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double outerSize = 72;
-    const double borderW   = 2.2;
-    const double gapW      = 2.5;
-    const double innerSize = outerSize - (borderW + gapW) * 2;
+    const double outer  = 72;
+    const double border = 2.0;
+    const double gap    = 3.0;
 
-    // Дида → dark green | Надида → cyan→green
-    final gradColors = viewed
-        ? [const Color(0xFF2E5A3A), const Color(0xFF1E3D28)]
-        : AppColors.storyGradient;
+    final colors = viewed
+        ? [const Color(0xFF3A3A3A), const Color(0xFF2A2A2A)] // dark grey
+        : AppColors.storyGradient;                            // cyan→green
 
     return GestureDetector(
       onTap: onTap,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          width: outerSize, height: outerSize,
+          width: outer, height: outer,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: gradColors,
+              colors: colors,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight),
           ),
-          child: Center(
-            child: Container(
-              width: innerSize, height: innerSize,
-              decoration: const BoxDecoration(
-                  shape: BoxShape.circle, color: AppColors.bg),
-              child: ClipOval(
-                child: story.user.avatar.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: story.user.avatar, fit: BoxFit.cover,
-                        width: innerSize, height: innerSize,
-                        errorWidget: (_, __, ___) => _ph())
-                    : _ph(),
-              ),
-            ),
+          padding: EdgeInsets.all(border + gap),
+          child: ClipOval(
+            child: story.user.avatar.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: story.user.avatar, fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => _ph())
+                : _ph(),
           ),
         ),
         const SizedBox(height: 5),
         SizedBox(
-          width: outerSize + 4,
-          child: Text(story.user.username,
+          width: outer,
+          child: Text(
+            story.user.username,
             style: TextStyle(
-              color: viewed ? const Color(0xFF4A6572) : AppColors.grey,
+              color: viewed ? const Color(0xFF666666) : AppColors.grey,
               fontSize: 10.5),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center),
@@ -247,7 +220,7 @@ class _StoryItem extends StatelessWidget {
 
   Widget _ph() => Container(
     color: AppColors.card,
-    child: const Icon(Icons.person, color: Colors.white54, size: 26));
+    child: const Icon(Icons.person, color: Colors.white38, size: 26));
 }
 
 extension _IterExt<T> on Iterable<T> {
