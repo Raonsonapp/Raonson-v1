@@ -46,10 +46,9 @@ class AppController {
       case AppRoutes.profile:
         return _page(const ProfileScreen(userId: 'me'));
 
-      // Профили дигар корбар
       case '/user-profile':
       case '/profile':
-        final uid = settings.arguments;
+        final uid    = settings.arguments;
         final userId = (uid is String && uid.isNotEmpty) ? uid : 'me';
         return _page(ProfileScreen(userId: userId));
 
@@ -58,19 +57,14 @@ class AppController {
       case AppRoutes.notifications:
         return _page(const NotificationsScreen());
 
-      // Story viewer — onComplete → markViewed
+      // Story viewer — onComplete холӣ, чунки
+      // feed_screen.dart дар _openStory баъди pop markViewed мезанад
       case '/story-viewer':
         final story = settings.arguments as StoryModel;
         return MaterialPageRoute(
-          builder: (ctx) => StoryViewer(
+          builder: (_) => StoryViewer(
             story: story,
-            onComplete: () {
-              // markViewed — story дида шуд → ҳалқа dark green
-              try {
-                final ctrl = ctx.read<StoryController>();
-                ctrl.markViewed(story.id);
-              } catch (_) {}
-            },
+            onComplete: () {},  // feed_screen handles markViewed
           ),
         );
 
