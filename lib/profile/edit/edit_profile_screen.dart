@@ -4,9 +4,11 @@ import '../../create/create_post/media_picker.dart';
 import '../../create/upload/upload_manager.dart';
 import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
+import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../../models/note_model.dart';
 import '../../chat/inbox/music_picker_sheet.dart';
+import '../profile_repository.dart';
 import 'edit_profile_controller.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -18,6 +20,7 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   late final EditProfileController _ctrl;
+  final _repo = ProfileRepository(ApiClient.instance);
   SongInfo? _bioSong;
   File?     _localAvatar;
   String?   _uploadedAvatarUrl;
@@ -71,7 +74,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _checkUsername(String val) async {
     if (!mounted) return;
     try {
-      final taken = await _ctrl.isUsernameTaken(val, _originalUsername);
+      final taken = await _repo.isUsernameTaken(val, _originalUsername);
       if (!mounted) return;
       setState(() { _checkingUsername = false; _usernameTaken = taken; _usernameError = taken ? 'Ин username аллакай банд аст' : null; });
     } catch (_) {
