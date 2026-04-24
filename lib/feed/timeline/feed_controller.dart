@@ -17,36 +17,65 @@ class FeedController extends ChangeNotifier {
   int _page = 1;
   static const int _limit = 10;
 
-  // ── Live ─────────────────────────────────────────────────────────
-  /// Новые посты, пришедшие по WebSocket — ещё не показаны в ленте
+  // Pending — постҳои нав аз WebSocket
   final List<PostModel> _pending = [];
   int get pendingCount => _pending.length;
 
+  // Polling backup — агар WebSocket кор накунад
+  Timer? _pollTimer;
+  DateTime? _lastFetchTime;
+
   FeedController(this._repository) {
     _subscribeSocket();
+    _startPolling();
   }
 
   // ── WebSocket ────────────────────────────────────────────────────
   void _subscribeSocket() {
     SocketService.instance.on('feed:new_post', _onNewPost);
+    SocketService.instance.autoConnect();
   }
 
   void _onNewPost(dynamic data) {
     if (data is! Map<String, dynamic>) return;
     try {
       final post = PostModel.fromJson(data);
-      // Агар ин пост аллакай дар лента бошад, тағир надеҳ
-      final alreadyExists = _state.posts.any((p) => p.id == post.id);
-      if (alreadyExists) return;
-
+      if (_state.posts.any((p) => p.id == post.id)) return;
+      if (_pending.any((p) => p.id == post.id)) return;
       _pending.insert(0, post);
-      notifyListeners(); // UI "N та пости нав" нишон медиҳад
+      notifyListeners();
     } catch (e) {
-      debugPrint('[Feed] WebSocket post parse error: $e');
+      debugPrint('[Feed] WS post parse error: $e');
     }
   }
 
-  /// Постҳои pending-ро ба боли лента мегузорад (вақте истифодабаранда тугмаро мезанад)
+  // ── Polling backup — ҳар 30 сония ──────────────────────────────
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (!SocketService.instance.isConnected) {
+        // WebSocket offline — polling орқали тафтиш
+        await _silentCheck();
+      }
+    });
+  }
+
+  Future<void> _silentCheck() async {
+    try {
+      final posts = await _repository.fetchFeed(
+        limit: 5, page: 1, forceRefresh: true);
+      if (posts.isEmpty) return;
+      final newPosts = posts.where((p) =>
+        !_state.posts.any((e) => e.id == p.id) &&
+        !_pending.any((e) => e.id == p.id)).toList();
+      if (newPosts.isEmpty) return;
+      for (final p in newPosts.reversed) {
+        _pending.insert(0, p);
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
   void flushPending() {
     if (_pending.isEmpty) return;
     final merged = [..._pending, ..._state.posts];
@@ -62,14 +91,11 @@ class FeedController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
-    String lastError = '';
-
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         final posts = await _repository.fetchFeed(
-          limit: _limit,
-          page: _page,
-        );
+          limit: _limit, page: _page);
+        _lastFetchTime = DateTime.now();
         _state = _state.copyWith(
           isLoading: false,
           posts: posts,
@@ -79,32 +105,24 @@ class FeedController extends ChangeNotifier {
         return;
       } on UnauthorizedException {
         _state = _state.copyWith(
-          isLoading: false,
-          hasMore: false,
-          hasError: true,
-          errorMessage: 'Лутфан дубора ворид шавед (401)',
-        );
+          isLoading: false, hasMore: false, hasError: true,
+          errorMessage: 'Лутфан дубора ворид шавед (401)');
         notifyListeners();
         onUnauthorized?.call();
         return;
       } catch (e) {
-        lastError = e.toString();
-        if (attempt < 3) {
-          await Future.delayed(const Duration(seconds: 5));
+        if (attempt < 3) await Future.delayed(const Duration(seconds: 3));
+        if (attempt == 3) {
+          _state = _state.copyWith(
+            isLoading: false, hasError: true,
+            hasMore: false, errorMessage: e.toString());
+          notifyListeners();
         }
       }
     }
-
-    _state = _state.copyWith(
-      isLoading: false,
-      hasError: true,
-      hasMore: false,
-      errorMessage: lastError,
-    );
-    notifyListeners();
   }
 
-  // ── Load more (pagination) ───────────────────────────────────────
+  // ── Load more ────────────────────────────────────────────────────
   Future<void> loadMore() async {
     if (!_state.hasMore || _state.isLoading) return;
     _state = _state.copyWith(isLoading: true);
@@ -132,28 +150,23 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
     try {
       final posts = await _repository.fetchFeed(
-          limit: _limit, page: _page, forceRefresh: true);
+        limit: _limit, page: _page, forceRefresh: true);
+      _lastFetchTime = DateTime.now();
       _state = _state.copyWith(
-        isRefreshing: false,
-        posts: posts,
-        hasMore: posts.length == _limit,
-      );
+        isRefreshing: false, posts: posts,
+        hasMore: posts.length == _limit);
     } catch (e) {
       _state = _state.copyWith(
-        isRefreshing: false,
-        hasError: true,
-        hasMore: false,
-        errorMessage: e.toString(),
-      );
+        isRefreshing: false, hasError: true,
+        hasMore: false, errorMessage: e.toString());
     }
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     SocketService.instance.off('feed:new_post');
     super.dispose();
   }
 }
-
-// UnauthorizedException дар lib/feed/feed_exceptions.dart аст
