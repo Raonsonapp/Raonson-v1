@@ -87,12 +87,12 @@ class _FeedShellState extends State<_FeedShell> {
           },
         ),
         title: const Text('Raonson', style: TextStyle(
-          fontSize: 32,
+          fontSize: 34,
           fontStyle: FontStyle.italic,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w400, // нозуктар — мисли Instagram
           color: Colors.white,
           fontFamily: 'RaonsonFont',
-          letterSpacing: -0.5,
+          letterSpacing: 0.5, // каме кушодтар мисли Billabong
         )),
         centerTitle: true,
         actions: [
@@ -119,9 +119,11 @@ class _FeedBody extends StatelessWidget {
   final VoidCallback? onCreatePost;
   const _FeedBody({this.isActive = true, required this.scroll, this.onCreatePost});
 
+  // Story кушода мешавад — viewed mark мекунем
   Future<void> _openStory(BuildContext context, StoryModel story) async {
     final storyCtrl = context.read<StoryController>();
     await Navigator.pushNamed(context, '/story-viewer', arguments: story);
+    // Баъди баргашт — viewed
     storyCtrl.markViewed(story.id);
   }
 
