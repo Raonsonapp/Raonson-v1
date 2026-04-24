@@ -637,7 +637,7 @@ class _PostCardState extends State<PostCard> {
           style: const TextStyle(color: AppColors.neonBlue, fontSize: 14));
       }
       return TextSpan(text: '$word ',
-        style: const TextStyle(color: AppColors.captionText, fontSize: 14));
+        style: const TextStyle(color: Colors.white, fontSize: 14));
     }).toList();
   }
 
@@ -691,7 +691,7 @@ class _PostCardState extends State<PostCard> {
             onTap: _showMenu,
             child: const Padding(padding: EdgeInsets.all(8),
               child: Icon(Icons.more_vert,
-                  color: AppColors.grey, size: 20)),
+                  color: Colors.white, size: 20)),
           ),
         ]),
       ),
@@ -885,7 +885,7 @@ class _StableBtn extends StatelessWidget {
             Text(
               fmt(count),
               style: const TextStyle(
-                color: AppColors.actionCount,
+                color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -919,7 +919,7 @@ class _SvgBtn extends StatelessWidget {
         if (count > 0) ...[
           const SizedBox(width: 5),
           Text(fmt(count),
-            style: const TextStyle(color: AppColors.actionCount,
+            style: const TextStyle(color: Colors.white,
                 fontSize: 14, fontWeight: FontWeight.w500)),
         ],
       ]),
