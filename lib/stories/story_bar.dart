@@ -34,10 +34,10 @@ class StoryBar extends StatelessWidget {
     final others  = groups.where((g) => g.first.user.id != myId).toList();
 
     return SizedBox(
-      height: 108,
+      height: 110,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
         children: [
           _MyItem(
             url: myAvatar ?? UserSession.avatar ?? '',
@@ -46,9 +46,9 @@ class StoryBar extends StatelessWidget {
                 ? onTap?.call(myGroup.first) : onAddStory?.call(),
             onTapAdd: onAddStory ?? () {},
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           ...others.map((g) => Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 12),
             child: _Item(
               story: g.first,
               viewed: g.any((s) => s.viewed),
@@ -63,7 +63,7 @@ class StoryBar extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// «История шумо»
+// «История шумо» — мисли Instagram
 // ═══════════════════════════════════════════════════════════════
 class _MyItem extends StatelessWidget {
   final String url;
@@ -75,24 +75,24 @@ class _MyItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ──────────────────────────────────────────────────────────
-    // Instagram: ring 2px, белый gap 3px → итого padding 5px
-    // Outer container = 76px
-    // Avatar visible size = 76 - 5*2 = 66px
-    // ──────────────────────────────────────────────────────────
-    const double outer   = 76.0;
-    const double padding = 5.0; // border(2) + gap(3)
+    // Instagram: outer 77px, ring 2.5px, gap 3px → inner padding 5.5px
+    const double outer   = 77.0;
+    const double padding = 3.0; // фосилаи байни ҳалқа ва акс
+    const double border  = 2.5; // ғафсии ҳалқа
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
         width: outer, height: outer,
         child: Stack(children: [
+          // ── Аватар бо ҳалқа ──────────────────────────────────
           GestureDetector(
             onTap: onTapAvatar,
+            behavior: HitTestBehavior.opaque,
             child: Container(
               width: outer, height: outer,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                // Ҳалқа: gradient (агар story дошта бошад) ё хокистарӣ
                 gradient: hasStory
                     ? const LinearGradient(
                         colors: AppColors.storyGradient,
@@ -100,10 +100,10 @@ class _MyItem extends StatelessWidget {
                         end: Alignment.bottomRight)
                     : null,
                 border: hasStory ? null
-                    : Border.all(color: Colors.white24, width: 1.5),
-                color: hasStory ? null : Colors.transparent,
+                    : Border.all(color: const Color(0xFF363636), width: border),
               ),
-              padding: EdgeInsets.all(hasStory ? padding : 0),
+              // Фосила байни ҳалқа ва акс — сиёҳ мисли Instagram
+              padding: EdgeInsets.all(hasStory ? border + padding : 0),
               child: ClipOval(
                 child: url.isNotEmpty
                     ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
@@ -112,35 +112,42 @@ class _MyItem extends StatelessWidget {
               ),
             ),
           ),
-          // «+» badge
-          Positioned(bottom: 1, right: 1,
+          // ── «+» badge — САФЕД мисли Instagram ───────────────
+          Positioned(
+            bottom: 1, right: 1,
             child: GestureDetector(
               onTap: onTapAdd,
+              behavior: HitTestBehavior.opaque,
               child: Container(
-                width: 22, height: 22,
+                width: 24, height: 24,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0095F6),
+                  // САФЕД — мисли Instagram
+                  color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.bg, width: 1.5)),
-                child: const Icon(Icons.add, color: Colors.white, size: 13)))),
+                  border: Border.all(color: Colors.black, width: 2)),
+                child: const Icon(Icons.add,
+                    color: Colors.black, size: 14)),
+            ),
+          ),
         ]),
       ),
-      const SizedBox(height: 4),
+      const SizedBox(height: 5),
       SizedBox(
         width: outer,
+        // «история шумо» — САФЕД мисли Instagram
         child: const Text('история шумо',
-          style: TextStyle(color: AppColors.grey, fontSize: 10.5),
+          style: TextStyle(color: Colors.white, fontSize: 11),
           maxLines: 1, overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center)),
     ]);
   }
 
-  Widget _ph() => Container(color: AppColors.card,
-      child: const Icon(Icons.person, color: Colors.white38, size: 30));
+  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+      child: const Icon(Icons.person, color: Colors.white38, size: 32));
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Story item — дигарон
+// Story item — дигарон — мисли Instagram
 // ═══════════════════════════════════════════════════════════════
 class _Item extends StatelessWidget {
   final StoryModel story;
@@ -151,16 +158,18 @@ class _Item extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double outer   = 72.0;
-    const double padding = 5.0; // border(2) + gap(3)
+    // Instagram: outer 77px, ring 2.5px, gap 3px
+    const double outer   = 77.0;
+    const double padding = 3.0;
+    const double border  = 2.5;
 
-    // Надида → cyan-green | Дида → тира хокистарӣ мисли Instagram
     final colors = viewed
         ? [const Color(0xFF555555), const Color(0xFF444444)]
-        : AppColors.storyGradient;
+        : const [Color(0xFF00C6FF), Color(0xFF00E87A)];
 
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           width: outer, height: outer,
@@ -168,7 +177,8 @@ class _Item extends StatelessWidget {
             shape: BoxShape.circle,
             gradient: LinearGradient(colors: colors,
               begin: Alignment.topLeft, end: Alignment.bottomRight)),
-          padding: const EdgeInsets.all(padding),
+          // Фосила байни ҳалқа ва акс — СИЁҲ мисли Instagram
+          padding: const EdgeInsets.all(border + padding),
           child: ClipOval(
             child: story.user.avatar.isNotEmpty
                 ? CachedNetworkImage(imageUrl: story.user.avatar,
@@ -177,21 +187,22 @@ class _Item extends StatelessWidget {
                 : _ph(),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 5),
         SizedBox(
           width: outer,
+          // Номи корбар — САФЕД (агар надидааст), хокистарӣ (агар дидааст)
           child: Text(story.user.username,
             style: TextStyle(
-              color: viewed ? const Color(0xFF666666) : AppColors.grey,
-              fontSize: 10.5),
+              color: viewed ? const Color(0xFF888888) : Colors.white,
+              fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center)),
       ]),
     );
   }
 
-  Widget _ph() => Container(color: AppColors.card,
-      child: const Icon(Icons.person, color: Colors.white38, size: 26));
+  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+      child: const Icon(Icons.person, color: Colors.white38, size: 28));
 }
 
 extension _Ext<T> on Iterable<T> {
