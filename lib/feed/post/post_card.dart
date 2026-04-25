@@ -24,16 +24,26 @@ class PostCard extends StatefulWidget {
   State<PostCard> createState() => _PostCardState();
 }
 
-class _PostCardState extends State<PostCard> {
+class _PostCardState extends State<PostCard>
+    with TickerProviderStateMixin {
   late bool   _liked;
   late bool   _saved;
   late int    _likeCount;
   late int    _commentCount;
   int         _retweetCount = 0;
+  bool        _reposted     = false;
   int         _shareCount   = 0;
   bool        _likeLoading  = false;
-  bool        _hidden       = false; // "неинтересно" зада шуд
-  late String _caption;              // редактировать мешавад
+  bool        _hidden       = false;
+  late String _caption;
+
+  // ── Like анимация — scale+bounce мисли Instagram ──────────────
+  late AnimationController _likeCtrl;
+  late Animation<double>   _likeScale;
+
+  // ── Repost анимация — rotate ──────────────────────────────────
+  late AnimationController _repostCtrl;
+  late Animation<double>   _repostRotate;
 
   // Соҳиби пост — муқоисаи дақиқ
   bool get _isOwner {
@@ -51,6 +61,31 @@ class _PostCardState extends State<PostCard> {
     _likeCount    = widget.post.likesCount;
     _commentCount = widget.post.commentsCount;
     _caption      = widget.post.caption;
+
+    // Like bounce анимация
+    _likeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _likeScale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _likeCtrl, curve: Curves.easeInOut));
+
+    // Repost rotate анимация
+    _repostCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _repostRotate = Tween(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _repostCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _likeCtrl.dispose();
+    _repostCtrl.dispose();
+    super.dispose();
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -61,6 +96,8 @@ class _PostCardState extends State<PostCard> {
     _likeLoading = true;
     final was = _liked;
     setState(() { _liked = !was; _likeCount += _liked ? 1 : -1; });
+    // Bounce анимация фақат вақти лайк гузоштан
+    if (_liked) _likeCtrl.forward(from: 0);
     try {
       final res = await ApiClient.instance
           .post('/posts/${widget.post.id}/like');
@@ -87,6 +124,24 @@ class _PostCardState extends State<PostCard> {
           .post('/posts/${widget.post.id}/save');
       if (res.statusCode >= 400) setState(() => _saved = was);
     } catch (_) { setState(() => _saved = was); }
+  }
+
+  Future<void> _toggleRepost() async {
+    if (_reposted) return; // як бор репост — дубора намешавад
+    _repostCtrl.forward(from: 0); // rotate анимация
+    setState(() {
+      _reposted = true;
+      _retweetCount++;
+    });
+    try {
+      await ApiClient.instance
+          .post('/posts/${widget.post.id}/repost');
+    } catch (_) {
+      setState(() {
+        _reposted = false;
+        _retweetCount--;
+      });
+    }
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -700,22 +755,25 @@ class _PostCardState extends State<PostCard> {
       if (post.media.isNotEmpty)
         _MediaCarousel(media: post.media, isActive: widget.isActive),
 
-      // ── ACTIONS — icon ҷойаш иваз намекунад мисли Instagram ────
+      // ── ACTIONS ──────────────────────────────────────────────────
       Padding(
         padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
         child: Row(children: [
 
-          // ♡ Like — як SVG, танҳо rang иваз мешавад
-          _StableBtn(
-            onTap: _toggleLike,
-            svgPath: 'assets/icons/heart.svg',
-            activeSvgPath: 'assets/icons/heart_filled.svg',
-            isActive: _liked,
-            activeColor: Colors.red,
-            inactiveColor: Colors.white,
-            size: 24,
-            count: _likeCount,
-            fmt: _fmt,
+          // ♡ Like — bounce анимация мисли Instagram
+          ScaleTransition(
+            scale: _likeScale,
+            child: _StableBtn(
+              onTap: _toggleLike,
+              svgPath: 'assets/icons/heart.svg',
+              activeSvgPath: 'assets/icons/heart_filled.svg',
+              isActive: _liked,
+              activeColor: Colors.red,
+              inactiveColor: Colors.white,
+              size: 24,
+              count: _likeCount,
+              fmt: _fmt,
+            ),
           ),
 
           const SizedBox(width: 4),
@@ -730,12 +788,20 @@ class _PostCardState extends State<PostCard> {
 
           const SizedBox(width: 4),
 
-          _StableBtn(
-            onTap: () => setState(() => _retweetCount++),
-            svgPath: 'assets/icons/retweet.svg',
-            size: 24,
-            count: _retweetCount,
-            fmt: _fmt,
+          // 🔁 Repost — rotate анимация, як бор
+          RotationTransition(
+            turns: _repostRotate,
+            child: _StableBtn(
+              onTap: _toggleRepost,
+              svgPath: 'assets/icons/retweet.svg',
+              activeSvgPath: 'assets/icons/retweet.svg',
+              isActive: _reposted,
+              activeColor: const Color(0xFF00E87A),
+              inactiveColor: Colors.white,
+              size: 24,
+              count: _retweetCount,
+              fmt: _fmt,
+            ),
           ),
 
           const SizedBox(width: 4),
@@ -750,7 +816,7 @@ class _PostCardState extends State<PostCard> {
 
           const Spacer(),
 
-          // 🔖 Save — ҷойаш иваз намекунад
+          // 🔖 Save
           _StableBtn(
             onTap: _toggleSave,
             svgPath: 'assets/icons/save.svg',
