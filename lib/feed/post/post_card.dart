@@ -37,13 +37,20 @@ class _PostCardState extends State<PostCard>
   bool        _hidden       = false;
   late String _caption;
 
-  // ── Like анимация — scale+bounce мисли Instagram ──────────────
+  // ── Like bounce ──────────────────────────────────────────────
   late AnimationController _likeCtrl;
   late Animation<double>   _likeScale;
 
-  // ── Repost анимация — rotate ──────────────────────────────────
+  // ── Repost rotate + checkmark ────────────────────────────────
   late AnimationController _repostCtrl;
   late Animation<double>   _repostRotate;
+
+  // ── Double-tap heart overlay — мисли Instagram ───────────────
+  late AnimationController _heartCtrl;
+  late Animation<double>   _heartScale;
+  late Animation<double>   _heartOpacity;
+  bool   _showHeart   = false;
+  Offset _heartOffset = Offset.zero;
 
   // Соҳиби пост — муқоисаи дақиқ
   bool get _isOwner {
@@ -75,16 +82,42 @@ class _PostCardState extends State<PostCard>
     // Repost rotate анимация
     _repostCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 400),
     );
     _repostRotate = Tween(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _repostCtrl, curve: Curves.easeInOut));
+
+    // Double-tap heart overlay
+    _heartCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _heartScale = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.3)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 50),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.3, end: 1.0), weight: 20),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.0), weight: 30),
+    ]).animate(_heartCtrl);
+    _heartOpacity = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 40),
+    ]).animate(_heartCtrl);
+    _heartCtrl.addStatusListener((s) {
+      if (s == AnimationStatus.completed) {
+        setState(() => _showHeart = false);
+      }
+    });
   }
 
   @override
   void dispose() {
     _likeCtrl.dispose();
     _repostCtrl.dispose();
+    _heartCtrl.dispose();
     super.dispose();
   }
 
@@ -751,9 +784,47 @@ class _PostCardState extends State<PostCard>
         ]),
       ),
 
-      // ── MEDIA ──────────────────────────────────────────────────
+      // ── MEDIA + Double-tap heart ────────────────────────────────
       if (post.media.isNotEmpty)
-        _MediaCarousel(media: post.media, isActive: widget.isActive),
+        Stack(children: [
+          GestureDetector(
+            onDoubleTapDown: (d) {
+              _heartOffset = d.localPosition;
+            },
+            onDoubleTap: () {
+              if (!_liked) _toggleLike();
+              setState(() => _showHeart = true);
+              _heartCtrl.forward(from: 0);
+            },
+            child: _MediaCarousel(
+                media: post.media, isActive: widget.isActive),
+          ),
+          // Heart overlay
+          if (_showHeart)
+            Positioned(
+              left: _heartOffset.dx - 50,
+              top:  _heartOffset.dy - 50,
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _heartCtrl,
+                  builder: (_, __) => Opacity(
+                    opacity: _heartOpacity.value,
+                    child: Transform.scale(
+                      scale: _heartScale.value,
+                      child: const Icon(
+                        Icons.favorite,
+                        color: Colors.white,
+                        size: 100,
+                        shadows: [
+                          Shadow(color: Colors.black54, blurRadius: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ]),
 
       // ── ACTIONS ──────────────────────────────────────────────────
       Padding(
@@ -788,15 +859,17 @@ class _PostCardState extends State<PostCard>
 
           const SizedBox(width: 4),
 
-          // 🔁 Repost — rotate анимация, як бор
+          // 🔁 Repost — rotate анимация, як бор, checkmark мисли Instagram
           RotationTransition(
             turns: _repostRotate,
             child: _StableBtn(
               onTap: _toggleRepost,
               svgPath: 'assets/icons/retweet.svg',
-              activeSvgPath: 'assets/icons/retweet.svg',
+              activeSvgPath: _reposted
+                  ? 'assets/icons/retweet_check.svg'
+                  : 'assets/icons/retweet.svg',
               isActive: _reposted,
-              activeColor: const Color(0xFF00E87A),
+              activeColor: Colors.white,
               inactiveColor: Colors.white,
               size: 24,
               count: _retweetCount,
