@@ -21,7 +21,9 @@ class ApiClient {
   Uri _uri(String path, [Map<String, String>? q]) =>
       Uri.parse('${AppConfig.apiBaseUrl}$path').replace(queryParameters: q);
 
-  static const _timeout = Duration(seconds: 90);
+  // ── Timeout кӯтоҳтар — суръат беҳтар ───────────────────────────
+  static const _timeout    = Duration(seconds: 15);
+  static const _longTimeout= Duration(seconds: 30); // upload
 
   Future<http.Response> get(String path, {Map<String, String>? query}) =>
       _client.get(_uri(path, query), headers: _headers()).timeout(_timeout);
@@ -36,6 +38,10 @@ class ApiClient {
 
   Future<http.Response> delete(String path) =>
       _client.delete(_uri(path), headers: _headers()).timeout(_timeout);
+
+  Future<http.Response> upload(String path, {Map<String, dynamic>? body}) =>
+      _client.post(_uri(path), headers: _headers(),
+          body: body != null ? jsonEncode(body) : null).timeout(_longTimeout);
 
   Future<http.Response> getRequest(String path, {Map<String, String>? query}) =>
       get(path, query: query);
