@@ -12,7 +12,7 @@ List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
 const double _outer = 80.0;
 const double _ring  = 2.5;
 const double _gap   = 3.0;
-const double _pad   = _ring + _gap; // 5.5px
+const double _pad   = _ring + _gap;
 
 class StoryBar extends StatelessWidget {
   final List<StoryModel> stories;
@@ -42,13 +42,18 @@ class StoryBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
-          _MyStoryItem(
-            url: myAvatar ?? UserSession.avatar ?? '',
-            hasStory: myGrp.isNotEmpty,
-            onTapAvatar: () => myGrp.isNotEmpty
-                ? onTap?.call(myGrp.first) : onAddStory?.call(),
-            onTapAdd: onAddStory ?? () {},
+          // ── «история шумо» — аватар аз ValueNotifier ──────────
+          ValueListenableBuilder<String?>(
+            valueListenable: UserSession.avatarNotifier,
+            builder: (_, liveAvatar, __) => _MyStoryItem(
+              url: liveAvatar ?? myAvatar ?? '',
+              hasStory: myGrp.isNotEmpty,
+              onTapAvatar: () => myGrp.isNotEmpty
+                  ? onTap?.call(myGrp.first) : onAddStory?.call(),
+              onTapAdd: onAddStory ?? () {},
+            ),
           ),
+          // ── Дигар корбарон ────────────────────────────────────
           ...others.map((g) => Padding(
             padding: const EdgeInsets.only(left: 14),
             child: _StoryItem(
@@ -64,6 +69,9 @@ class StoryBar extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  MY STORY ITEM
+// ═══════════════════════════════════════════════════════════════════
 class _MyStoryItem extends StatelessWidget {
   final String url;
   final bool hasStory;
@@ -83,6 +91,7 @@ class _MyStoryItem extends StatelessWidget {
         SizedBox(
           width: _outer, height: _outer,
           child: Stack(clipBehavior: Clip.none, children: [
+            // ── Ҳалқа ─────────────────────────────────────────
             Positioned.fill(
               child: CustomPaint(
                 painter: _RingPainter(
@@ -93,15 +102,19 @@ class _MyStoryItem extends StatelessWidget {
                 ),
               ),
             ),
+            // ── Акс бо gap ────────────────────────────────────
             Positioned(
               left: _pad, top: _pad, right: _pad, bottom: _pad,
               child: ClipOval(
                 child: url.isNotEmpty
-                    ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+                    ? CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
                         errorWidget: (_, __, ___) => _placeholder())
                     : _placeholder(),
               ),
             ),
+            // ── «+» badge сафед ───────────────────────────────
             Positioned(
               bottom: 0, right: 0,
               child: GestureDetector(
@@ -138,12 +151,17 @@ class _MyStoryItem extends StatelessWidget {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  STORY ITEM — дигарон
+// ═══════════════════════════════════════════════════════════════════
 class _StoryItem extends StatelessWidget {
   final StoryModel story;
   final bool viewed;
   final VoidCallback onTap;
 
-  const _StoryItem({required this.story, required this.viewed, required this.onTap});
+  const _StoryItem({
+    required this.story, required this.viewed, required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -154,6 +172,7 @@ class _StoryItem extends StatelessWidget {
         SizedBox(
           width: _outer, height: _outer,
           child: Stack(children: [
+            // ── Ҳалқа ─────────────────────────────────────────
             Positioned.fill(
               child: CustomPaint(
                 painter: _RingPainter(
@@ -164,11 +183,13 @@ class _StoryItem extends StatelessWidget {
                 ),
               ),
             ),
+            // ── Акс бо gap ────────────────────────────────────
             Positioned(
               left: _pad, top: _pad, right: _pad, bottom: _pad,
               child: ClipOval(
                 child: story.user.avatar.isNotEmpty
-                    ? CachedNetworkImage(imageUrl: story.user.avatar,
+                    ? CachedNetworkImage(
+                        imageUrl: story.user.avatar,
                         fit: BoxFit.cover,
                         errorWidget: (_, __, ___) => _placeholder())
                     : _placeholder(),
@@ -196,6 +217,9 @@ class _StoryItem extends StatelessWidget {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  RING PAINTER — ҳалқаи дақиқ, акс ҳеҷ вақт намерасад
+// ═══════════════════════════════════════════════════════════════════
 class _RingPainter extends CustomPainter {
   final List<Color> colors;
   final double ringWidth;
@@ -212,8 +236,8 @@ class _RingPainter extends CustomPainter {
       ..strokeWidth = ringWidth
       ..shader = SweepGradient(
         colors: colors,
-        startAngle: -3.14 / 2,
-        endAngle: 3.14 * 3 / 2,
+        startAngle: -3.14159 / 2,
+        endAngle: 3.14159 * 3 / 2,
       ).createShader(Rect.fromCircle(center: center, radius: radius));
 
     canvas.drawCircle(center, radius, paint);
@@ -224,7 +248,10 @@ class _RingPainter extends CustomPainter {
       old.colors != colors || old.ringWidth != ringWidth;
 }
 
-extension _Ext<T> on Iterable<T> {
+// ═══════════════════════════════════════════════════════════════════
+//  EXTENSION
+// ═══════════════════════════════════════════════════════════════════
+extension _IterableExt<T> on Iterable<T> {
   T? get firstOrNull {
     final it = iterator;
     return it.moveNext() ? it.current : null;
