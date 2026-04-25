@@ -792,7 +792,19 @@ class _PostCardState extends State<PostCard>
               _heartOffset = d.localPosition;
             },
             onDoubleTap: () {
-              if (!_liked) _toggleLike();
+              // Фавран лайк илова кун — хисоб зуд нишон деҳ
+              if (!_liked) {
+                setState(() {
+                  _liked = true;
+                  _likeCount++;
+                });
+                _likeCtrl.forward(from: 0);
+                // API-га фиристодан
+                ApiClient.instance.post('/posts/${post.id}/like')
+                    .catchError((_) {
+                  if (mounted) setState(() { _liked = false; _likeCount--; });
+                });
+              }
               setState(() => _showHeart = true);
               _heartCtrl.forward(from: 0);
             },
@@ -816,7 +828,7 @@ class _PostCardState extends State<PostCard>
                         color: Colors.white,
                         size: 100,
                         shadows: [
-                          Shadow(color: Colors.black54, blurRadius: 20),
+                          Shadow(color: Colors.black45, blurRadius: 24),
                         ],
                       ),
                     ),
