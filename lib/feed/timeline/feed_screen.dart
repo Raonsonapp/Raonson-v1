@@ -13,6 +13,7 @@ import '../../models/story_model.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_routes.dart';
 import '../../app/app_theme.dart';
+import '../../core/services/user_session.dart';
 import '../../widgets/loading_indicator.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -136,6 +137,7 @@ class _FeedBody extends StatelessWidget {
     Widget storyBar = StoryBar(
       stories:   storyCtrl.stories,
       myStories: storyCtrl.myStories,
+      myAvatar:  UserSession.avatar, // ← аватари корбар
       onTap: (s) => _openStory(context, s),
       onAddStory: () async {
         final ok = await Navigator.pushNamed(context, '/create-story');
