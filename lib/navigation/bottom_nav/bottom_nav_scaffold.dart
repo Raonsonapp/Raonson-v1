@@ -72,11 +72,14 @@ class _BottomNavViewState extends State<_BottomNavView> {
           _Tab(active: nav.currentIndex == 4, child: const ProfileScreen(userId: 'me')),
         ],
       ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: nav.currentIndex,
-        onTap: nav.setIndex,
-        avatarUrl: UserSession.avatar,
-        notifCount: 0,
+      bottomNavigationBar: ValueListenableBuilder<String?>(
+        valueListenable: UserSession.avatarNotifier,
+        builder: (_, liveAvatar, __) => BottomNavBar(
+          currentIndex: nav.currentIndex,
+          onTap: nav.setIndex,
+          avatarUrl: liveAvatar,
+          notifCount: 0,
+        ),
       ),
     );
   }
