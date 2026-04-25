@@ -57,9 +57,9 @@ class AppTheme {
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
           color: Colors.white,
-          fontSize: 28,
+          fontSize: 32,
           fontStyle: FontStyle.italic,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.600,
           fontFamily: 'RaonsonFont',
         ),
       ),
