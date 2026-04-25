@@ -86,15 +86,18 @@ class _FeedShellState extends State<_FeedShell> {
             }
           },
         ),
-        title: const Text('Raonson', style: TextStyle(
-  fontSize: 36,
-  fontStyle: FontStyle.normal,
-  fontWeight: FontWeight.w400,
-  color: Colors.white,
-  fontFamily: 'RaonsonFont',
-  letterSpacing: 0.0,
-  height: 1.0,
-)),
+        title: const Text(
+  'Raonson',
+  style: TextStyle(
+    fontSize: 32,                 // Instagram ~30–32
+    fontStyle: FontStyle.normal,
+    fontWeight: FontWeight.w400,  // script font бояд light бошад
+    color: Colors.white,
+    fontFamily: 'RaonsonFont',    // мисли Billabong
+    letterSpacing: -0.5,          // муҳим → ҳарфҳо наздиктар
+    height: 1.1,                  // каме баландӣ барои баланс
+  ),
+),
         centerTitle: true,
         actions: [
           IconButton(
