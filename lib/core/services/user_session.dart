@@ -6,7 +6,7 @@ class UserSession {
   static String? userId;
   static String? username;
 
-  // ValueNotifier — UI-ро автоматӣ rebuild мекунад
+  // ValueNotifier — Stories ва Bottom Tab автоматӣ update мешаванд
   static final ValueNotifier<String?> avatarNotifier =
       ValueNotifier<String?>(null);
 
