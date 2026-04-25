@@ -90,7 +90,7 @@ class _FeedShellState extends State<_FeedShell> {
   fontSize: 42,
   fontWeight: FontWeight.w400,
   color: Colors.white,
-  fontFamily: 'Billabong',  // ← танҳо ин ҷо
+  fontFamily: 'RaonsonFont',
   letterSpacing: 1.2,
   height: 1.0,
 )),
