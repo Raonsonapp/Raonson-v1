@@ -87,13 +87,13 @@ class _FeedShellState extends State<_FeedShell> {
           },
         ),
         title: const Text('Raonson', style: TextStyle(
-  fontSize: 42,
-  fontWeight: FontWeight.w400,
-  color: Colors.white,
-  fontFamily: 'RaonsonFont',
-  letterSpacing: 1.2,
-  height: 1.0,
-)),
+          fontSize: 38,
+          fontWeight: FontWeight.w400,
+          color: Colors.white,
+          fontFamily: 'RaonsonFont',
+          letterSpacing: 0.5,
+          height: 1.1,
+        )),
         centerTitle: true,
         actions: [
           IconButton(
