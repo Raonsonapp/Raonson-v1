@@ -89,13 +89,11 @@ class _FeedShellState extends State<_FeedShell> {
         title: const Text(
   'Raonson',
   style: TextStyle(
-    fontSize: 32,                 // Instagram ~30–32
-    fontStyle: FontStyle.normal,
-    fontWeight: FontWeight.w400,  // script font бояд light бошад
+    fontSize: 42,
+    fontFamily: 'Billabong',
     color: Colors.white,
-    fontFamily: 'RaonsonFont',    // мисли Billabong
-    letterSpacing: -0.5,          // муҳим → ҳарфҳо наздиктар
-    height: 1.1,                  // каме баландӣ барои баланс
+    letterSpacing: 1.2,
+    height: 1.0,
   ),
 ),
         centerTitle: true,
