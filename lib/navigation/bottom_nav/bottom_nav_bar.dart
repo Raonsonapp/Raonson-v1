@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/app_theme.dart';
+import '../../core/services/user_session.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -31,53 +32,40 @@ class BottomNavBar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // 🏠 Home — filled house
               _SvgNavItem(
-                index: 0,
-                currentIndex: currentIndex,
-                onTap: onTap,
+                index: 0, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_home.svg',
                 svgInactive: 'assets/icons/nav_home.svg',
                 fallback: Icons.home_rounded,
               ),
-
-              // ▶□ Reels — film strip with play
               _SvgNavItem(
-                index: 1,
-                currentIndex: currentIndex,
-                onTap: onTap,
+                index: 1, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_reels.svg',
                 svgInactive: 'assets/icons/nav_reels.svg',
                 fallback: Icons.smart_display_outlined,
               ),
-
-              // 💬 Chat — bubble бо нуқтаҳо мисли расм 2
               _SvgNavItem(
-                index: 2,
-                currentIndex: currentIndex,
-                onTap: onTap,
+                index: 2, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_chat.svg',
                 svgInactive: 'assets/icons/nav_chat.svg',
                 fallback: Icons.chat_bubble_outline_rounded,
               ),
-
-              // 🔍 Search
               _SvgNavItem(
-                index: 3,
-                currentIndex: currentIndex,
-                onTap: onTap,
+                index: 3, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_search.svg',
                 svgInactive: 'assets/icons/nav_search.svg',
                 fallback: Icons.search_rounded,
               ),
-
-              // 👤 Profile avatar доира
-              _ProfileItem(
-                index: 4,
-                currentIndex: currentIndex,
-                onTap: onTap,
-                avatarUrl: avatarUrl,
-                notifCount: notifCount,
+              // Profile — ValueListenableBuilder аватари live
+              ValueListenableBuilder<String?>(
+                valueListenable: UserSession.avatarNotifier,
+                builder: (_, liveUrl, __) => _ProfileItem(
+                  index: 4,
+                  currentIndex: currentIndex,
+                  onTap: onTap,
+                  avatarUrl: liveUrl ?? avatarUrl,
+                  notifCount: notifCount,
+                ),
               ),
             ],
           ),
