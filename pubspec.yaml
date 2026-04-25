@@ -67,7 +67,7 @@ flutter:
   fonts:
     - family: RaonsonFont
       fonts:
-        - asset: assets/fonts/Pacifico-Regular.ttf
+        - asset: assets/fonts/Billabong.ttf
 
 # ================= APP ICON =================
 flutter_launcher_icons:
