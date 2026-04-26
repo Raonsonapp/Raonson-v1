@@ -14,6 +14,13 @@ const double _ring  = 2.5;
 const double _gap   = 3.0;
 const double _pad   = _ring + _gap;
 
+// ── 3 ҳолати ҳалқа ───────────────────────────────────────────────
+enum _RingState {
+  none,      // сторис нест — ҳалқа нест
+  unseen,    // сторис ҳаст, надидааст — кабуд-сабз
+  seen,      // ҳамаро дидааст — хокистарӣ
+}
+
 class StoryBar extends StatelessWidget {
   final List<StoryModel> stories;
   final VoidCallback? onAddStory;
@@ -36,29 +43,37 @@ class StoryBar extends StatelessWidget {
         groups.where((g) => g.first.user.id == myId).firstOrNull ?? [];
     final others = groups.where((g) => g.first.user.id != myId).toList();
 
+    // Ҳолати ҳалқаи «история шумо»
+    _RingState myRing;
+    if (myGrp.isEmpty) {
+      myRing = _RingState.none;       // сторис нест — ҳалқа нест
+    } else if (myGrp.every((s) => s.viewed)) {
+      myRing = _RingState.seen;       // ҳамаро дидааст
+    } else {
+      myRing = _RingState.unseen;     // надидааст
+    }
+
     return SizedBox(
       height: 114,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
-          // ── «история шумо» — аватар аз ValueNotifier ──────────
           ValueListenableBuilder<String?>(
             valueListenable: UserSession.avatarNotifier,
             builder: (_, liveAvatar, __) => _MyStoryItem(
               url: liveAvatar ?? myAvatar ?? '',
-              hasStory: myGrp.isNotEmpty,
+              ringState: myRing,
               onTapAvatar: () => myGrp.isNotEmpty
                   ? onTap?.call(myGrp.first) : onAddStory?.call(),
               onTapAdd: onAddStory ?? () {},
             ),
           ),
-          // ── Дигар корбарон ────────────────────────────────────
           ...others.map((g) => Padding(
             padding: const EdgeInsets.only(left: 14),
             child: _StoryItem(
               story: g.first,
-              viewed: g.every((s) => s.viewed),
+              allViewed: g.every((s) => s.viewed),
               onTap: () => onTapGroup != null
                   ? onTapGroup!(g, 0) : onTap?.call(g.first),
             ),
@@ -74,11 +89,11 @@ class StoryBar extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════
 class _MyStoryItem extends StatelessWidget {
   final String url;
-  final bool hasStory;
+  final _RingState ringState;
   final VoidCallback onTapAvatar, onTapAdd;
 
   const _MyStoryItem({
-    required this.url, required this.hasStory,
+    required this.url, required this.ringState,
     required this.onTapAvatar, required this.onTapAdd,
   });
 
@@ -91,30 +106,32 @@ class _MyStoryItem extends StatelessWidget {
         SizedBox(
           width: _outer, height: _outer,
           child: Stack(clipBehavior: Clip.none, children: [
-            // ── Ҳалқа ─────────────────────────────────────────
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _RingPainter(
-                  colors: hasStory
-                      ? const [Color(0xFF00C6FF), Color(0xFF00E87A)]
-                      : const [Color(0xFF3A3A3A), Color(0xFF3A3A3A)],
-                  ringWidth: _ring,
+            // Ҳалқа — танҳо агар сторис бошад
+            if (ringState != _RingState.none)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _RingPainter(
+                    colors: ringState == _RingState.unseen
+                        ? const [Color(0xFF00C6FF), Color(0xFF00E87A)]
+                        : const [Color(0xFF555555), Color(0xFF444444)],
+                    ringWidth: _ring,
+                  ),
                 ),
               ),
-            ),
-            // ── Акс бо gap ────────────────────────────────────
+            // Акс
             Positioned(
-              left: _pad, top: _pad, right: _pad, bottom: _pad,
+              left:   ringState != _RingState.none ? _pad : 0,
+              top:    ringState != _RingState.none ? _pad : 0,
+              right:  ringState != _RingState.none ? _pad : 0,
+              bottom: ringState != _RingState.none ? _pad : 0,
               child: ClipOval(
                 child: url.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: url,
-                        fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => _placeholder())
-                    : _placeholder(),
+                    ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => _ph())
+                    : _ph(),
               ),
             ),
-            // ── «+» badge сафед ───────────────────────────────
+            // «+» badge
             Positioned(
               bottom: 0, right: 0,
               child: GestureDetector(
@@ -145,10 +162,8 @@ class _MyStoryItem extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-    color: const Color(0xFF1A1A1A),
-    child: const Icon(Icons.person, color: Colors.white38, size: 30),
-  );
+  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+      child: const Icon(Icons.person, color: Colors.white38, size: 30));
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -156,11 +171,11 @@ class _MyStoryItem extends StatelessWidget {
 // ═══════════════════════════════════════════════════════════════════
 class _StoryItem extends StatelessWidget {
   final StoryModel story;
-  final bool viewed;
+  final bool allViewed;
   final VoidCallback onTap;
 
   const _StoryItem({
-    required this.story, required this.viewed, required this.onTap,
+    required this.story, required this.allViewed, required this.onTap,
   });
 
   @override
@@ -172,27 +187,24 @@ class _StoryItem extends StatelessWidget {
         SizedBox(
           width: _outer, height: _outer,
           child: Stack(children: [
-            // ── Ҳалқа ─────────────────────────────────────────
             Positioned.fill(
               child: CustomPaint(
                 painter: _RingPainter(
-                  colors: viewed
+                  colors: allViewed
                       ? const [Color(0xFF555555), Color(0xFF444444)]
                       : const [Color(0xFF00C6FF), Color(0xFF00E87A)],
                   ringWidth: _ring,
                 ),
               ),
             ),
-            // ── Акс бо gap ────────────────────────────────────
             Positioned(
               left: _pad, top: _pad, right: _pad, bottom: _pad,
               child: ClipOval(
                 child: story.user.avatar.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: story.user.avatar,
+                    ? CachedNetworkImage(imageUrl: story.user.avatar,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => _placeholder())
-                    : _placeholder(),
+                        errorWidget: (_, __, ___) => _ph())
+                    : _ph(),
               ),
             ),
           ]),
@@ -202,7 +214,7 @@ class _StoryItem extends StatelessWidget {
           width: _outer,
           child: Text(story.user.username,
             style: TextStyle(
-              color: viewed ? const Color(0xFF888888) : Colors.white,
+              color: allViewed ? const Color(0xFF888888) : Colors.white,
               fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center),
@@ -211,26 +223,22 @@ class _StoryItem extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-    color: const Color(0xFF1A1A1A),
-    child: const Icon(Icons.person, color: Colors.white38, size: 28),
-  );
+  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+      child: const Icon(Icons.person, color: Colors.white38, size: 28));
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  RING PAINTER — ҳалқаи дақиқ, акс ҳеҷ вақт намерасад
+//  RING PAINTER
 // ═══════════════════════════════════════════════════════════════════
 class _RingPainter extends CustomPainter {
   final List<Color> colors;
   final double ringWidth;
-
   const _RingPainter({required this.colors, required this.ringWidth});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - ringWidth / 2;
-
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth
@@ -239,7 +247,6 @@ class _RingPainter extends CustomPainter {
         startAngle: -3.14159 / 2,
         endAngle: 3.14159 * 3 / 2,
       ).createShader(Rect.fromCircle(center: center, radius: radius));
-
     canvas.drawCircle(center, radius, paint);
   }
 
@@ -248,9 +255,6 @@ class _RingPainter extends CustomPainter {
       old.colors != colors || old.ringWidth != ringWidth;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  EXTENSION
-// ═══════════════════════════════════════════════════════════════════
 extension _IterableExt<T> on Iterable<T> {
   T? get firstOrNull {
     final it = iterator;
