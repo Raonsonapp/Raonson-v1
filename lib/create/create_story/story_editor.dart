@@ -307,7 +307,7 @@ class _StoryEditorState extends State<StoryEditor> {
               // Texts
               ..._texts.map((t) => Positioned(left: t.position.dx, top: t.position.dy,
                 child: GestureDetector(
-                  onPanUpdate: (d) => setState(() => t.position += d.delta),
+                  onPanUpdate: (d) => setState(() => t.position = t.position + d.delta),
                   onDoubleTap: () => setState(() => _texts.remove(t)),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -319,13 +319,13 @@ class _StoryEditorState extends State<StoryEditor> {
               // Stickers
               ..._stickers.map((s) => Positioned(left: s.position.dx, top: s.position.dy,
                 child: GestureDetector(
-                  onPanUpdate: (d) => setState(() => s.position += d.delta),
+                  onPanUpdate: (d) => setState(() { s.position = s.position + d.delta; }),
                   onDoubleTap: () => setState(() => _stickers.remove(s)),
                   child: Text(s.emoji, style: TextStyle(fontSize: s.size))))),
               // Mentions
               ..._mentions.map((m) => Positioned(left: m.position.dx, top: m.position.dy,
                 child: GestureDetector(
-                  onPanUpdate: (d) => setState(() => m.position += d.delta),
+                  onPanUpdate: (d) => setState(() { m.position = m.position + d.delta; }),
                   onDoubleTap: () => setState(() => _mentions.remove(m)),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
