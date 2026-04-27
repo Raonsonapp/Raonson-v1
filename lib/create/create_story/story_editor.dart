@@ -305,7 +305,7 @@ class _StoryEditorState extends State<StoryEditor> {
               // Drawing
               CustomPaint(painter: _DrawPainter(_drawPoints)),
               // Texts
-              ..._texts.map((t) => Positioned(left: t.position.dx, top: t.position.dy,
+              ..._texts.map<Widget>((t) => Positioned(left: t.position.dx, top: t.position.dy,
                 child: GestureDetector(
                   onPanUpdate: (d) => setState(() { t.position = t.position + d.delta; }),
                   onDoubleTap: () => setState(() => _texts.remove(t)),
@@ -315,15 +315,15 @@ class _StoryEditorState extends State<StoryEditor> {
                         borderRadius: BorderRadius.circular(6)),
                     child: Text(t.text, style: TextStyle(color: t.color,
                       fontSize: t.fontSize, fontWeight: FontWeight.bold,
-                      shadows: const [Shadow(blurRadius: 4, color: Colors.black54)]))))),
+                      shadows: const [Shadow(blurRadius: 4, color: Colors.black54)])))))).toList(),
               // Stickers
-              ..._stickers.map((s) => Positioned(left: s.position.dx, top: s.position.dy,
+              ..._stickers.map<Widget>((s) => Positioned(left: s.position.dx, top: s.position.dy,
                 child: GestureDetector(
                   onPanUpdate: (d) => setState(() { s.position = s.position + d.delta; }),
                   onDoubleTap: () => setState(() => _stickers.remove(s)),
                   child: Text(s.emoji, style: TextStyle(fontSize: s.size))))).toList(),
               // Mentions
-              ..._mentions.map((m) => Positioned(left: m.position.dx, top: m.position.dy,
+              ..._mentions.map<Widget>((m) => Positioned(left: m.position.dx, top: m.position.dy,
                 child: GestureDetector(
                   onPanUpdate: (d) => setState(() { m.position = m.position + d.delta; }),
                   onDoubleTap: () => setState(() => _mentions.remove(m)),
