@@ -321,7 +321,7 @@ class _StoryEditorState extends State<StoryEditor> {
                 child: GestureDetector(
                   onPanUpdate: (d) => setState(() { s.position = s.position + d.delta; }),
                   onDoubleTap: () => setState(() => _stickers.remove(s)),
-                  child: Text(s.emoji, style: TextStyle(fontSize: s.size))))),
+                  child: Text(s.emoji, style: TextStyle(fontSize: s.size))))).toList(),
               // Mentions
               ..._mentions.map((m) => Positioned(left: m.position.dx, top: m.position.dy,
                 child: GestureDetector(
@@ -332,7 +332,7 @@ class _StoryEditorState extends State<StoryEditor> {
                     decoration: BoxDecoration(color: Colors.white,
                         borderRadius: BorderRadius.circular(8)),
                     child: Text(m.username, style: const TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)))))),
+                      color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)))))).toList(),
             ]),
           ),
 
