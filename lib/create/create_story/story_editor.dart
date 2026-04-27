@@ -307,7 +307,7 @@ class _StoryEditorState extends State<StoryEditor> {
               // Texts
               ..._texts.map((t) => Positioned(left: t.position.dx, top: t.position.dy,
                 child: GestureDetector(
-                  onPanUpdate: (d) => setState(() => t.position = t.position + d.delta),
+                  onPanUpdate: (d) => setState(() { t.position = t.position + d.delta; }),
                   onDoubleTap: () => setState(() => _texts.remove(t)),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
