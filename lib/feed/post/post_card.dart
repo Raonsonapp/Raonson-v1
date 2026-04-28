@@ -1089,12 +1089,25 @@ class _MediaCarousel extends StatefulWidget {
 
 class _MediaCarouselState extends State<_MediaCarousel> {
   int _current = 0;
+
+  // Aspect ratio аз медиа — мисли Instagram: 1:1, 4:5, 16:9
+  double _getAspectRatio() {
+    final type = widget.media.isNotEmpty ? widget.media.first['type'] ?? 'image' : 'image';
+    final ratio = widget.media.isNotEmpty ? widget.media.first['aspectRatio'] ?? '' : '';
+    if (ratio.isNotEmpty) {
+      final r = double.tryParse(ratio);
+      if (r != null && r > 0) return r;
+    }
+    // Default: видео 16:9, расм 1:1 (мисли Instagram)
+    return type == 'video' ? 16 / 9 : 1.0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
+    final aspectRatio = _getAspectRatio();
     return Stack(alignment: Alignment.bottomCenter, children: [
-      SizedBox(
-        height: w * 0.75,
+      AspectRatio(
+        aspectRatio: aspectRatio,
         child: PageView.builder(
           onPageChanged: (i) => setState(() => _current = i),
           itemCount: widget.media.length,
@@ -1102,7 +1115,13 @@ class _MediaCarouselState extends State<_MediaCarousel> {
             final url  = widget.media[i]['url']  ?? '';
             final type = widget.media[i]['type'] ?? 'image';
             if (url.isEmpty) return Container(color: const Color(0xFF111111));
-            if (type == 'video') return _VideoItem(url: url, isActive: widget.isActive);
+            if (type == 'video') {
+              return _VideoItem(
+                url: url,
+                isActive: widget.isActive,
+                aspectRatio: aspectRatio,
+              );
+            }
             return CachedNetworkImage(
               imageUrl: url, fit: BoxFit.cover,
               width: double.infinity, height: double.infinity,
@@ -1118,8 +1137,8 @@ class _MediaCarouselState extends State<_MediaCarousel> {
         ),
       ),
       if (widget.media.length > 1)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+        Positioned(
+          bottom: 10,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(widget.media.length, (i) =>
@@ -1139,8 +1158,10 @@ class _MediaCarouselState extends State<_MediaCarousel> {
 
 // ── Video Item ─────────────────────────────────────────────────────
 class _VideoItem extends StatefulWidget {
-  final String url; final bool isActive;
-  const _VideoItem({required this.url, this.isActive = true});
+  final String url;
+  final bool isActive;
+  final double aspectRatio;
+  const _VideoItem({required this.url, this.isActive = true, this.aspectRatio = 16/9});
   @override
   State<_VideoItem> createState() => _VideoItemState();
 }
@@ -1153,9 +1174,11 @@ class _VideoItemState extends State<_VideoItem> {
     super.initState();
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..initialize().then((_) {
-        if (mounted) { setState(() => _ready = true);
+        if (mounted) {
+          setState(() => _ready = true);
           if (widget.isActive) _ctrl.play();
-          _ctrl.setLooping(true); }
+          _ctrl.setLooping(true);
+        }
       });
   }
   @override
@@ -1169,16 +1192,26 @@ class _VideoItemState extends State<_VideoItem> {
     if (!_ready) return Container(color: Colors.black,
       child: const Center(child: CircularProgressIndicator(
           strokeWidth: 2, color: Colors.white30)));
+    // Видеои аслиро бо AspectRatio-и дуруст нишон деҳ
+    final videoRatio = _ctrl.value.isInitialized
+        ? _ctrl.value.aspectRatio
+        : widget.aspectRatio;
     return GestureDetector(
       onTap: () => _ctrl.value.isPlaying ? _ctrl.pause() : _ctrl.play(),
-      child: Stack(fit: StackFit.expand, children: [
-        FittedBox(fit: BoxFit.cover,
-          child: SizedBox(width: _ctrl.value.size.width,
-              height: _ctrl.value.size.height, child: VideoPlayer(_ctrl))),
-        if (!_ctrl.value.isPlaying)
-          const Center(child: Icon(Icons.play_circle_outline_rounded,
-              color: Colors.white70, size: 56)),
-      ]),
+      child: Container(
+        color: Colors.black,
+        child: Center(
+          child: AspectRatio(
+            aspectRatio: videoRatio,
+            child: Stack(fit: StackFit.expand, children: [
+              VideoPlayer(_ctrl),
+              if (!_ctrl.value.isPlaying)
+                const Center(child: Icon(Icons.play_circle_outline_rounded,
+                    color: Colors.white70, size: 56)),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 }
