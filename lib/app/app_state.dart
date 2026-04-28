@@ -16,23 +16,21 @@ class AppState extends ChangeNotifier {
       final token = await TokenStorage.getAccessToken();
 
       if (token == null || token.isEmpty) {
-        // No token → login screen
         _isAuthenticated = false;
         _isInitialized   = true;
         notifyListeners();
         return;
       }
 
-      // Token mavjud — set it
       ApiClient.instance.setAuthToken(token);
 
-      // Restore userId from storage (no network needed)
-      final uid = await TokenStorage.getUserId();
-      if (uid != null && uid.isNotEmpty) {
-        UserSession.userId = uid;
-      }
+      // Кэшро бор кун — интернет набошад ҳам кор мекунад
+      await UserSession.loadCachedData();
 
-      // Try to load profile (with timeout)
+      // Token ҳаст — бидуни интернет ҳам logged in
+      _isAuthenticated = true;
+
+      // Профилро аз сервер бор кун (агар интернет бошад)
       try {
         final res = await ApiClient.instance
             .get('/profile/me')
@@ -41,26 +39,25 @@ class AppState extends ChangeNotifier {
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body) as Map<String, dynamic>;
           final user = data['user'] ?? data;
-          final id   = (user['_id'] ?? user['id'])?.toString() ?? '';
+          final id       = (user['_id'] ?? user['id'])?.toString() ?? '';
+          final uname    = user['username']?.toString() ?? '';
+          final avatarUrl= user['avatar']?.toString()   ?? '';
+
           if (id.isNotEmpty) {
-            UserSession.userId   = id;
-            UserSession.username = user['username']?.toString() ?? '';
-            UserSession.avatar   = user['avatar']?.toString()   ?? '';
+            // Ҳама маълумотро захира кун — кэш навсоз
+            await UserSession.saveAll(
+              id: id, uname: uname, avatarUrl: avatarUrl);
             await TokenStorage.saveUserId(id);
           }
-          _isAuthenticated = true;
         } else if (res.statusCode == 401) {
-          // Token expired
           await TokenStorage.clearTokens();
           ApiClient.instance.setAuthToken(null);
+          await UserSession.clear();
           _isAuthenticated = false;
-        } else {
-          // Server error but token exists → stay logged in
-          _isAuthenticated = true;
         }
+        // Дигар хатоҳо — кэши мавҷударо нигоҳ дор
       } catch (_) {
-        // No internet → stay logged in with saved token
-        _isAuthenticated = true;
+        // Бе интернет — аз кэш кор мекунем, ҳамон _isAuthenticated = true
       }
     } catch (_) {
       _isAuthenticated = false;
@@ -78,9 +75,7 @@ class AppState extends ChangeNotifier {
   Future<void> logout() async {
     await TokenStorage.clearTokens();
     ApiClient.instance.setAuthToken(null);
-    UserSession.userId   = null;
-    UserSession.username = null;
-    UserSession.avatar   = null;
+    await UserSession.clear();
     _isAuthenticated = false;
     notifyListeners();
   }
