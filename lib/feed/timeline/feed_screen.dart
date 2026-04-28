@@ -6,6 +6,7 @@ import '../feed_repository.dart';
 import 'feed_controller.dart';
 import 'feed_state.dart';
 import '../post/post_card.dart';
+import '../post/post_card_skeleton.dart';
 import '../../stories/story_bar.dart';
 import '../../stories/story_controller.dart';
 import '../../stories/story_repository.dart';
@@ -14,7 +15,7 @@ import '../../core/api/api_client.dart';
 import '../../app/app_routes.dart';
 import '../../app/app_theme.dart';
 import '../../core/services/user_session.dart';
-import '../../widgets/loading_indicator.dart';
+import '../../notifications/notification_badge.dart';
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -44,6 +45,7 @@ class FeedScreen extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────
 class _FeedShell extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onCreatePost;
@@ -59,6 +61,7 @@ class _FeedShellState extends State<_FeedShell> {
   void initState() {
     super.initState();
     _scroll = ScrollController()..addListener(_onScroll);
+    NotificationService.startPolling();
   }
 
   void _onScroll() {
@@ -68,64 +71,80 @@ class _FeedShellState extends State<_FeedShell> {
   }
 
   @override
-  void dispose() { _scroll.dispose(); super.dispose(); }
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.add, color: Colors.white, size: 28),
-          onPressed: () async {
-            final r = await Navigator.pushNamed(context, AppRoutes.create);
-            if (r == true && context.mounted) {
-              context.read<FeedController>().refresh();
-              widget.onCreatePost?.call();
-            }
-          },
-        ),
-        title: const Text('Raonson', style: TextStyle(
-          fontSize: 38,
-          fontWeight: FontWeight.w400,
-          color: Colors.white,
-          fontFamily: 'RaonsonFont',
-          letterSpacing: 0.5,
-          height: 1.1,
-        )),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded,
-                color: Colors.white, size: 27),
-            onPressed: () =>
-                Navigator.pushNamed(context, AppRoutes.notifications),
+      // SliverAppBar — пинҳон мешавад вақти scroll — мисли Instagram
+      body: NestedScrollView(
+        controller: _scroll,
+        headerSliverBuilder: (ctx, _) => [
+          SliverAppBar(
+            backgroundColor: AppColors.bg,
+            elevation: 0,
+            floating: true,   // зуд намоён мешавад
+            snap: true,       // яклухт пайдо мешавад
+            pinned: false,    // scroll кунӣ пинҳон мешавад
+            leading: IconButton(
+              icon: const Icon(Icons.add, color: Colors.white, size: 28),
+              onPressed: () async {
+                final r = await Navigator.pushNamed(ctx, AppRoutes.create);
+                if (r == true && ctx.mounted) {
+                  ctx.read<FeedController>().refresh();
+                  widget.onCreatePost?.call();
+                }
+              },
+            ),
+            title: const Text('Raonson', style: TextStyle(
+              fontSize: 38, fontWeight: FontWeight.w400, color: Colors.white,
+              fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1,
+            )),
+            centerTitle: true,
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: NotificationBadge(
+                  child: IconButton(
+                    icon: const Icon(Icons.notifications_none_rounded,
+                        color: Colors.white, size: 27),
+                    onPressed: () {
+                      NotificationService.markRead();
+                      Navigator.pushNamed(ctx, AppRoutes.notifications);
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
-      ),
-      body: _FeedBody(
-        scroll: _scroll,
-        isActive: widget.isActive,
-        onCreatePost: widget.onCreatePost,
+        body: _FeedBody(isActive: widget.isActive, onCreatePost: widget.onCreatePost),
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────
 class _FeedBody extends StatelessWidget {
   final bool isActive;
-  final ScrollController scroll;
   final VoidCallback? onCreatePost;
-  const _FeedBody({this.isActive = true, required this.scroll, this.onCreatePost});
+  const _FeedBody({this.isActive = true, this.onCreatePost});
 
-  // Story кушода мешавад — viewed mark мекунем
   Future<void> _openStory(BuildContext context, StoryModel story) async {
     final storyCtrl = context.read<StoryController>();
     await Navigator.pushNamed(context, '/story-viewer', arguments: story);
-    // Баъди баргашт — viewed
     storyCtrl.markViewed(story.id);
+  }
+
+  // Story bar — unseen first
+  List<StoryModel> _sortStories(List<StoryModel> stories) {
+    final unseen = stories.where((s) => !s.viewed).toList();
+    final seen   = stories.where((s) =>  s.viewed).toList();
+    return [...unseen, ...seen];
   }
 
   @override
@@ -134,10 +153,12 @@ class _FeedBody extends StatelessWidget {
     final storyCtrl = context.watch<StoryController>();
     final FeedState state = feedCtrl.state;
 
-    Widget storyBar = StoryBar(
-      stories:   storyCtrl.stories,
+    final sortedStories = _sortStories(storyCtrl.stories);
+
+    final storyBar = StoryBar(
+      stories:   sortedStories,
       myStories: storyCtrl.myStories,
-      myAvatar:  UserSession.avatar, // ← аватари корбар
+      myAvatar:  UserSession.avatar,
       onTap: (s) => _openStory(context, s),
       onAddStory: () async {
         final ok = await Navigator.pushNamed(context, '/create-story');
@@ -148,56 +169,130 @@ class _FeedBody extends StatelessWidget {
       },
     );
 
+    // ── Skeleton loading ─────────────────────────────────────────
     if (state.isLoading && state.posts.isEmpty) {
-      return Column(children: [
-        storyBar,
-        const Divider(color: Color(0xFF1A1A1A), height: 1),
-        const Expanded(child: Center(child: LoadingIndicator())),
-      ]);
+      return const SingleChildScrollView(
+        physics: NeverScrollableScrollPhysics(),
+        child: FeedSkeleton(),
+      );
     }
 
-    if (!state.isLoading && state.posts.isEmpty) {
-      return Column(children: [
-        storyBar,
-        const Divider(color: Color(0xFF1A1A1A), height: 1),
-        Expanded(
-          child: Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.photo_camera_outlined, size: 64, color: Colors.white12),
-              const SizedBox(height: 16),
-              const Text('Ҳоло постҳо нест',
-                  style: TextStyle(color: Colors.white38, fontSize: 16)),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () async {
-                  final r = await Navigator.pushNamed(context, AppRoutes.create);
-                  if (r == true && context.mounted) {
-                    context.read<FeedController>().refresh();
-                    onCreatePost?.call();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.neonBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: const Text('Пост гузор'),
+    // ── Offline banner ─────────────────────────────────────────
+    final offlineBanner = feedCtrl.isOffline
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            color: const Color(0xFF1A1A1A),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.wifi_off, color: Colors.white38, size: 14),
+              const SizedBox(width: 6),
+              const Text('Оффлайн — кэш нишон дода мешавад',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => feedCtrl.refresh(),
+                child: const Text('Такрор',
+                  style: TextStyle(color: AppColors.neonBlue,
+                      fontSize: 12, fontWeight: FontWeight.w600))),
+            ]))
+        : const SizedBox.shrink();
+
+    // ── Empty state ─────────────────────────────────────────────
+    if (!state.isLoading && state.posts.isEmpty && !state.hasError) {
+      return RefreshIndicator(
+        color: AppColors.neonBlue, backgroundColor: AppColors.surface,
+        onRefresh: () => feedCtrl.refresh(),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: storyBar),
+            const SliverToBoxAdapter(
+                child: Divider(color: Color(0xFF1A1A1A), height: 1)),
+            SliverFillRemaining(
+              child: Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.photo_camera_outlined,
+                      size: 64, color: Colors.white12),
+                  const SizedBox(height: 16),
+                  const Text('Ҳоло постҳо нест',
+                      style: TextStyle(color: Colors.white38, fontSize: 16)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final r = await Navigator.pushNamed(
+                          context, AppRoutes.create);
+                      if (r == true && context.mounted) {
+                        context.read<FeedController>().refresh();
+                        onCreatePost?.call();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neonBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12)),
+                    child: const Text('Пост гузор')),
+                ]),
               ),
-            ]),
-          ),
+            ),
+          ],
         ),
-      ]);
+      );
     }
 
+    // ── Error state бо Retry ────────────────────────────────────
+    if (state.hasError && state.posts.isEmpty) {
+      return RefreshIndicator(
+        color: AppColors.neonBlue, backgroundColor: AppColors.surface,
+        onRefresh: () => feedCtrl.refresh(),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: storyBar),
+            const SliverToBoxAdapter(
+                child: Divider(color: Color(0xFF1A1A1A), height: 1)),
+            SliverFillRemaining(
+              child: Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.cloud_off_outlined,
+                      size: 64, color: Colors.white12),
+                  const SizedBox(height: 16),
+                  const Text('Пайвастшавӣ мумкин нест',
+                    style: TextStyle(color: Colors.white38, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  const Text('Интернетро санҷед ва такрор кӯшиш кунед',
+                    style: TextStyle(color: Colors.white24, fontSize: 13),
+                    textAlign: TextAlign.center),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () => feedCtrl.loadInitialFeed(),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Такрор кӯшиш'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neonBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12))),
+                ]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Main feed ───────────────────────────────────────────────
     return RefreshIndicator(
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
       onRefresh: () => feedCtrl.refresh(),
       child: CustomScrollView(
-        controller: scroll,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          SliverToBoxAdapter(child: offlineBanner),
           SliverToBoxAdapter(child: storyBar),
           const SliverToBoxAdapter(
               child: Divider(color: Color(0xFF1A1A1A), height: 1)),
@@ -207,11 +302,7 @@ class _FeedBody extends StatelessWidget {
                 count: feedCtrl.pendingCount,
                 onTap: () {
                   feedCtrl.flushPending();
-                  if (scroll.hasClients) {
-                    scroll.animateTo(0,
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOut);
-                  }
+                  // scroll ба боло
                 },
               ),
             ),
@@ -221,7 +312,8 @@ class _FeedBody extends StatelessWidget {
                 if (index == state.posts.length) {
                   return state.hasMore
                       ? const Padding(padding: EdgeInsets.all(16),
-                          child: Center(child: LoadingIndicator()))
+                          child: Center(child: CircularProgressIndicator(
+                              color: AppColors.neonBlue, strokeWidth: 2)))
                       : const SizedBox(height: 40);
                 }
                 return PostCard(post: state.posts[index], isActive: isActive);
@@ -235,6 +327,7 @@ class _FeedBody extends StatelessWidget {
   }
 }
 
+// ── New Posts Banner ─────────────────────────────────────────────────
 class _NewPostsBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
@@ -251,10 +344,8 @@ class _NewPostsBanner extends StatelessWidget {
           gradient: const LinearGradient(
             colors: AppColors.storyGradient,
             begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-        ),
+            end: Alignment.centerRight),
+          borderRadius: BorderRadius.circular(24)),
         child: Row(mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
