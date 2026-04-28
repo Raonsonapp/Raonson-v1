@@ -14,12 +14,7 @@ const double _ring  = 2.5;
 const double _gap   = 3.0;
 const double _pad   = _ring + _gap;
 
-// ── 3 ҳолати ҳалқа ───────────────────────────────────────────────
-enum _RingState {
-  none,      // сторис нест — ҳалқа нест
-  unseen,    // сторис ҳаст, надидааст — кабуд-сабз
-  seen,      // ҳамаро дидааст — хокистарӣ
-}
+enum _RingState { none, unseen, seen }
 
 class StoryBar extends StatelessWidget {
   final List<StoryModel> stories;
@@ -43,14 +38,18 @@ class StoryBar extends StatelessWidget {
         groups.where((g) => g.first.user.id == myId).firstOrNull ?? [];
     final others = groups.where((g) => g.first.user.id != myId).toList();
 
-    // Ҳолати ҳалқаи «история шумо»
+    // ── Unseen first — мисли Instagram ───────────────────────
+    final unseenGroups = others.where((g) => !g.every((s) => s.viewed)).toList();
+    final seenGroups   = others.where((g) =>  g.every((s) => s.viewed)).toList();
+    final sortedOthers = [...unseenGroups, ...seenGroups];
+
     _RingState myRing;
     if (myGrp.isEmpty) {
-      myRing = _RingState.none;       // сторис нест — ҳалқа нест
+      myRing = _RingState.none;
     } else if (myGrp.every((s) => s.viewed)) {
-      myRing = _RingState.seen;       // ҳамаро дидааст
+      myRing = _RingState.seen;
     } else {
-      myRing = _RingState.unseen;     // надидааст
+      myRing = _RingState.unseen;
     }
 
     return SizedBox(
@@ -59,6 +58,7 @@ class StoryBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
+          // Аватари корбар ValueListenable — real-time update
           ValueListenableBuilder<String?>(
             valueListenable: UserSession.avatarNotifier,
             builder: (_, liveAvatar, __) => _MyStoryItem(
@@ -69,7 +69,7 @@ class StoryBar extends StatelessWidget {
               onTapAdd: onAddStory ?? () {},
             ),
           ),
-          ...others.map((g) => Padding(
+          ...sortedOthers.map((g) => Padding(
             padding: const EdgeInsets.only(left: 14),
             child: _StoryItem(
               story: g.first,
@@ -84,9 +84,7 @@ class StoryBar extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  MY STORY ITEM
-// ═══════════════════════════════════════════════════════════════════
+// ── MY STORY ITEM ────────────────────────────────────────────────────
 class _MyStoryItem extends StatelessWidget {
   final String url;
   final _RingState ringState;
@@ -106,7 +104,6 @@ class _MyStoryItem extends StatelessWidget {
         SizedBox(
           width: _outer, height: _outer,
           child: Stack(clipBehavior: Clip.none, children: [
-            // Ҳалқа — танҳо агар сторис бошад
             if (ringState != _RingState.none)
               Positioned.fill(
                 child: CustomPaint(
@@ -118,7 +115,6 @@ class _MyStoryItem extends StatelessWidget {
                   ),
                 ),
               ),
-            // Акс
             Positioned(
               left:   ringState != _RingState.none ? _pad : 0,
               top:    ringState != _RingState.none ? _pad : 0,
@@ -142,10 +138,8 @@ class _MyStoryItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: const Icon(Icons.add, color: Colors.black, size: 13),
-                ),
+                    border: Border.all(color: Colors.black, width: 2)),
+                  child: const Icon(Icons.add, color: Colors.black, size: 13)),
               ),
             ),
           ]),
@@ -156,8 +150,7 @@ class _MyStoryItem extends StatelessWidget {
           child: const Text('история шумо',
             style: TextStyle(color: Colors.white, fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center),
-        ),
+            textAlign: TextAlign.center)),
       ]),
     );
   }
@@ -166,17 +159,14 @@ class _MyStoryItem extends StatelessWidget {
       child: const Icon(Icons.person, color: Colors.white38, size: 30));
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  STORY ITEM — дигарон
-// ═══════════════════════════════════════════════════════════════════
+// ── STORY ITEM ───────────────────────────────────────────────────────
 class _StoryItem extends StatelessWidget {
   final StoryModel story;
   final bool allViewed;
   final VoidCallback onTap;
 
   const _StoryItem({
-    required this.story, required this.allViewed, required this.onTap,
-  });
+    required this.story, required this.allViewed, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +174,8 @@ class _StoryItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        SizedBox(
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
           width: _outer, height: _outer,
           child: Stack(children: [
             Positioned.fill(
@@ -217,8 +208,7 @@ class _StoryItem extends StatelessWidget {
               color: allViewed ? const Color(0xFF888888) : Colors.white,
               fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center),
-        ),
+            textAlign: TextAlign.center)),
       ]),
     );
   }
@@ -227,9 +217,7 @@ class _StoryItem extends StatelessWidget {
       child: const Icon(Icons.person, color: Colors.white38, size: 28));
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  RING PAINTER
-// ═══════════════════════════════════════════════════════════════════
+// ── RING PAINTER ─────────────────────────────────────────────────────
 class _RingPainter extends CustomPainter {
   final List<Color> colors;
   final double ringWidth;
