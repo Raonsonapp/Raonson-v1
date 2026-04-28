@@ -23,33 +23,67 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Фавран бе савол Галерея кушода мешавад
     WidgetsBinding.instance.addPostFrameCallback((_) => _pickFromGallery());
   }
 
-  // ── Галерея рост мекушояд — бе bottom sheet ──────────────────
+  // ── Галерея — расм ё видео интихоб ──────────────────────────
   Future<void> _pickFromGallery() async {
-    // Танҳо расм ё видео — корбар худаш интихоб мекунад
-    XFile? xf = await ImagePicker().pickMedia();
-    if (xf == null) {
-      if (mounted) Navigator.pop(context);
-      return;
+    // Корбар расм ё видео интихоб мекунад
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+                color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+          const Text('Чӣ илова кунем?',
+              style: TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.image_outlined, color: Colors.white),
+            title: const Text('Расм аз Галерея',
+                style: TextStyle(color: Colors.white, fontSize: 15)),
+            onTap: () => Navigator.pop(context, 'image'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.videocam_outlined, color: Colors.white),
+            title: const Text('Видео аз Галерея',
+                style: TextStyle(color: Colors.white, fontSize: 15)),
+            onTap: () => Navigator.pop(context, 'video'),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+
+    if (choice == null) { if (mounted) Navigator.pop(context); return; }
+
+    XFile? xf;
+    if (choice == 'image') {
+      xf = await ImagePicker().pickImage(
+          source: ImageSource.gallery, imageQuality: 90);
+    } else {
+      xf = await ImagePicker().pickVideo(source: ImageSource.gallery);
     }
 
-    final path     = xf.path.toLowerCase();
-    final isVideo  = path.endsWith('.mp4') || path.endsWith('.mov') ||
-                     path.endsWith('.avi') || path.endsWith('.mkv');
+    if (xf == null) { if (mounted) Navigator.pop(context); return; }
 
     if (mounted) {
       setState(() {
-        _file    = File(xf.path);
-        _isVideo = isVideo;
+        _file    = File(xf!.path);
+        _isVideo = choice == 'video';
         _error   = null;
       });
     }
   }
 
-  // ── Publish — Editor-дан чақирда мешавад ─────────────────────
+  // ── Publish ──────────────────────────────────────────────────
   Future<void> _publish(File capturedFile, String caption) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
@@ -63,7 +97,6 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       else if (ext == 'png') mime = MediaType('image', 'png');
       else                   mime = MediaType('image', 'jpeg');
 
-      // Upload
       final req = http.MultipartRequest(
           'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
         ..headers['Authorization'] = 'Bearer $token'
@@ -73,15 +106,12 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       final up     = await req.send().timeout(const Duration(minutes: 3));
       final upBody = await up.stream.bytesToString();
 
-      if (up.statusCode >= 400) {
-        throw Exception('Upload хато ${up.statusCode}');
-      }
+      if (up.statusCode >= 400) throw Exception('Upload хато ${up.statusCode}');
 
       final upJson   = jsonDecode(upBody) as Map<String, dynamic>;
       final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString().trim();
       if (mediaUrl.isEmpty) throw Exception('URL нест');
 
-      // POST story
       final res = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/stories/'),
         headers: {
@@ -108,7 +138,6 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Агар файл интихоб нашуда — loading
     if (_file == null) {
       return const Scaffold(
         backgroundColor: Colors.black,
@@ -117,7 +146,6 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       );
     }
 
-    // Файл интихоб шуд — StoryEditor нишон деҳ
     return StoryEditor(
       media:       _file!,
       isVideo:     _isVideo,
