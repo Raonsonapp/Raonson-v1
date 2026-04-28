@@ -62,12 +62,50 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickFromGallery() async {
-    final xf = await ImagePicker().pickMedia();
+    // Корбар расм ё видео интихоб мекунад
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(margin: const EdgeInsets.symmetric(vertical: 10),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+                color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+          const Text('Чӣ илова кунем?',
+              style: TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.image_outlined, color: Colors.white),
+            title: const Text('Расм аз Галерея',
+                style: TextStyle(color: Colors.white, fontSize: 15)),
+            onTap: () => Navigator.pop(context, 'image'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.videocam_outlined, color: Colors.white),
+            title: const Text('Видео аз Галерея',
+                style: TextStyle(color: Colors.white, fontSize: 15)),
+            onTap: () => Navigator.pop(context, 'video'),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+
+    if (choice == null) { if (mounted) Navigator.pop(context); return; }
+
+    XFile? xf;
+    if (choice == 'image') {
+      xf = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 90);
+    } else {
+      xf = await ImagePicker().pickVideo(source: ImageSource.gallery);
+    }
+
     if (xf == null) { if (mounted) Navigator.pop(context); return; }
-    final path    = xf.path.toLowerCase();
-    final isVideo = path.endsWith('.mp4') || path.endsWith('.mov') ||
-                    path.endsWith('.avi') || path.endsWith('.mkv');
-    if (mounted) setState(() { _file = File(xf.path); _isVideo = isVideo; _error = null; });
+    if (mounted) setState(() { _file = File(xf!.path); _isVideo = choice == 'video'; _error = null; });
   }
 
   Future<void> _publish(File capturedFile, String caption) async {
