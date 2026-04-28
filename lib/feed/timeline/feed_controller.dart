@@ -17,11 +17,13 @@ class FeedController extends ChangeNotifier {
   int _page = 1;
   static const int _limit = 10;
 
+  bool _isOffline = false;
+  bool get isOffline => _isOffline;
+
   // Pending — постҳои нав аз WebSocket
   final List<PostModel> _pending = [];
   int get pendingCount => _pending.length;
 
-  // Polling backup — агар WebSocket кор накунад
   Timer? _pollTimer;
   DateTime? _lastFetchTime;
 
@@ -49,12 +51,11 @@ class FeedController extends ChangeNotifier {
     }
   }
 
-  // ── Polling backup — ҳар 30 сония ──────────────────────────────
+  // ── Polling backup ───────────────────────────────────────────────
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
       if (!SocketService.instance.isConnected) {
-        // WebSocket offline — polling орқали тафтиш
         await _silentCheck();
       }
     });
@@ -69,6 +70,7 @@ class FeedController extends ChangeNotifier {
         !_state.posts.any((e) => e.id == p.id) &&
         !_pending.any((e) => e.id == p.id)).toList();
       if (newPosts.isEmpty) return;
+      _isOffline = false;
       for (final p in newPosts.reversed) {
         _pending.insert(0, p);
       }
@@ -91,31 +93,39 @@ class FeedController extends ChangeNotifier {
     _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
-    for (int attempt = 1; attempt <= 3; attempt++) {
+    for (int attempt = 1; attempt <= 2; attempt++) {
       try {
         final posts = await _repository.fetchFeed(
           limit: _limit, page: _page);
         _lastFetchTime = DateTime.now();
+        _isOffline = false;
         _state = _state.copyWith(
           isLoading: false,
           posts: posts,
           hasMore: posts.length == _limit,
+          hasError: false,
+          errorMessage: null,
         );
         notifyListeners();
         return;
       } on UnauthorizedException {
         _state = _state.copyWith(
           isLoading: false, hasMore: false, hasError: true,
-          errorMessage: 'Лутфан дубора ворид шавед (401)');
+          errorMessage: 'Лутфан дубора ворид шавед');
         notifyListeners();
         onUnauthorized?.call();
         return;
       } catch (e) {
-        if (attempt < 3) await Future.delayed(const Duration(seconds: 3));
-        if (attempt == 3) {
+        if (attempt < 2) {
+          await Future.delayed(const Duration(seconds: 2));
+        } else {
+          // Охирин кӯшиш — кэшро нишон деҳ, хато нашон надеҳ
+          _isOffline = true;
           _state = _state.copyWith(
-            isLoading: false, hasError: true,
-            hasMore: false, errorMessage: e.toString());
+            isLoading: false,
+            hasError: false, // хато нишон надеҳ — кэш нишон деҳ
+            hasMore: false,
+          );
           notifyListeners();
         }
       }
@@ -124,7 +134,7 @@ class FeedController extends ChangeNotifier {
 
   // ── Load more ────────────────────────────────────────────────────
   Future<void> loadMore() async {
-    if (!_state.hasMore || _state.isLoading) return;
+    if (!_state.hasMore || _state.isLoading || _isOffline) return;
     _state = _state.copyWith(isLoading: true);
     notifyListeners();
     try {
@@ -152,13 +162,16 @@ class FeedController extends ChangeNotifier {
       final posts = await _repository.fetchFeed(
         limit: _limit, page: _page, forceRefresh: true);
       _lastFetchTime = DateTime.now();
+      _isOffline = false;
       _state = _state.copyWith(
         isRefreshing: false, posts: posts,
-        hasMore: posts.length == _limit);
+        hasMore: posts.length == _limit,
+        hasError: false, errorMessage: null);
     } catch (e) {
+      // Offline — кэши мавҷударо нигоҳ дор, хато нишон надеҳ
+      _isOffline = true;
       _state = _state.copyWith(
-        isRefreshing: false, hasError: true,
-        hasMore: false, errorMessage: e.toString());
+        isRefreshing: false, hasError: false);
     }
     notifyListeners();
   }
