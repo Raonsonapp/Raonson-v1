@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
@@ -35,16 +38,19 @@ class _ReelsVM extends ChangeNotifier {
   final ReelsRepository _repo;
   _ReelsVM(this._repo);
 
-  List<ReelModel> reels    = [];
-  bool loading             = false;
-  bool loadingMore         = false;
-  int  _page               = 1;
+  List<ReelModel> reels       = [];
+  bool  loading               = false;
+  bool  loadingMore           = false;
+  int   _page                 = 1;
   String? error;
+  bool  isMuted               = false; // ← Mute state global
+  bool  _friendsFilter        = false;
+  bool  get friendsFilter     => _friendsFilter;
 
   Future<void> load() async {
     loading = true; error = null; notifyListeners();
     try {
-      reels = await _repo.fetchReels(page: 1);
+      reels = await _repo.fetchReels(page: 1, smart: true);
       _page = 1;
     } catch (e) { error = e.toString(); }
     loading = false; notifyListeners();
@@ -54,27 +60,69 @@ class _ReelsVM extends ChangeNotifier {
     if (loadingMore) return;
     loadingMore = true;
     try {
-      final more = await _repo.fetchReels(page: _page + 1);
+      final more = await _repo.fetchReels(page: _page + 1, smart: true);
       if (more.isNotEmpty) { reels = [...reels, ...more]; _page++; }
     } catch (_) {}
     loadingMore = false; notifyListeners();
   }
 
+  // ── Optimistic like ───────────────────────────────────────────
   void toggleLike(String id) {
     reels = reels.map((r) {
       if (r.id != id) return r;
       final liked = !r.isLiked;
-      return ReelModel(
-        id: r.id, videoUrl: r.videoUrl, caption: r.caption, user: r.user,
-        commentsCount: r.commentsCount,
-        likesCount: r.likesCount + (liked ? 1 : -1), isLiked: liked,
-      );
+      return r.copyWith(
+        isLiked: liked,
+        likesCount: r.likesCount + (liked ? 1 : -1));
     }).toList();
     notifyListeners();
-    _repo.likeReel(id);
+    _repo.likeReel(id).then((res) {
+      if (res == null) return;
+      // Серверидан дақиқ count
+      reels = reels.map((r) {
+        if (r.id != id) return r;
+        return r.copyWith(
+          isLiked:    res['liked']      ?? r.isLiked,
+          likesCount: res['likesCount'] ?? r.likesCount);
+      }).toList();
+      notifyListeners();
+    });
   }
 
-  void toggleSave(String id) => _repo.saveReel(id);
+  void toggleSave(String id) {
+    reels = reels.map((r) {
+      if (r.id != id) return r;
+      return r.copyWith(isSaved: !r.isSaved);
+    }).toList();
+    notifyListeners();
+    _repo.saveReel(id);
+  }
+
+  void toggleMute() {
+    isMuted = !isMuted;
+    notifyListeners();
+  }
+
+  void toggleFilter() {
+    _friendsFilter = !_friendsFilter;
+    notifyListeners();
+  }
+
+  // ── Watch time ────────────────────────────────────────────────
+  void trackWatch({
+    required String reelId,
+    required int watchMs,
+    required int durationMs,
+  }) {
+    _repo.trackWatchTime(
+        reelId: reelId, watchMs: watchMs, durationMs: durationMs);
+  }
+
+  void markNotInterested(String id) {
+    _repo.markNotInterested(id);
+    reels = reels.where((r) => r.id != id).toList();
+    notifyListeners();
+  }
 }
 
 // ── View ──────────────────────────────────────────────────────────
@@ -88,7 +136,9 @@ class _ReelsView extends StatefulWidget {
 class _ReelsViewState extends State<_ReelsView> {
   final PageController _pageCtrl = PageController();
   int  _currentPage              = 0;
-  bool _friendsFilter            = false;
+
+  // ── Preload map — 2 видео аз пеш ─────────────────────────────
+  final Map<int, VideoPlayerController> _preloaded = {};
 
   @override
   void initState() {
@@ -99,8 +149,45 @@ class _ReelsViewState extends State<_ReelsView> {
   @override
   void dispose() {
     _pageCtrl.dispose();
+    // Ҳамаи preloaded-ро dispose кун
+    for (final ctrl in _preloaded.values) { ctrl.dispose(); }
+    _preloaded.clear();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
+  }
+
+  void _onPageChanged(int i, _ReelsVM vm) {
+    setState(() => _currentPage = i);
+    if (i >= vm.reels.length - 3) vm.loadMore();
+    // Preload next 2
+    _preloadAhead(i, vm);
+    // Dispose old (>2 pages behind)
+    _disposeOld(i);
+  }
+
+  void _preloadAhead(int current, _ReelsVM vm) {
+    for (int j = current + 1; j <= current + 2; j++) {
+      if (j >= vm.reels.length) break;
+      if (_preloaded.containsKey(j)) continue;
+      final url = vm.reels[j].videoUrl;
+      if (url.isEmpty) continue;
+      final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+      _preloaded[j] = ctrl;
+      ctrl.initialize().then((_) {
+        ctrl.setLooping(true);
+        ctrl.setVolume(0); // preload — мут
+      });
+    }
+  }
+
+  void _disposeOld(int current) {
+    final toRemove = _preloaded.keys
+        .where((k) => k < current - 1)
+        .toList();
+    for (final k in toRemove) {
+      _preloaded[k]?.dispose();
+      _preloaded.remove(k);
+    }
   }
 
   @override
@@ -108,17 +195,13 @@ class _ReelsViewState extends State<_ReelsView> {
     final vm = context.watch<_ReelsVM>();
 
     if (vm.loading && vm.reels.isEmpty) {
-      return const Scaffold(
-        backgroundColor: AppColors.bg,
-        body: Center(child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation(AppColors.storyStart))),
-      );
+      return const Scaffold(backgroundColor: AppColors.bg,
+        body: Center(child: CircularProgressIndicator(strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(AppColors.storyStart))));
     }
 
     if (vm.reels.isEmpty) {
-      return Scaffold(
-        backgroundColor: AppColors.bg,
+      return Scaffold(backgroundColor: AppColors.bg,
         body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 80, height: 80,
             decoration: const BoxDecoration(shape: BoxShape.circle,
@@ -142,24 +225,20 @@ class _ReelsViewState extends State<_ReelsView> {
           GestureDetector(
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const CreateReelScreen()))
-                .then((ok) { if (ok == true) context.read<_ReelsVM>().load(); }),
+                .then((ok) { if (ok == true && context.mounted) vm.load(); }),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [
                   Color(0xFF833AB4), Color(0xFFE1306C), Color(0xFFF77737)]),
                 borderRadius: BorderRadius.circular(24)),
-              child: const Text('+ Рилс гузоред',
-                  style: TextStyle(color: Colors.white,
-                      fontWeight: FontWeight.bold, fontSize: 15)),
-            ),
-          ),
+              child: const Text('+ Рилс гузоред', style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)))),
           const SizedBox(height: 12),
           TextButton(onPressed: vm.load,
               child: const Text('Боз кӯшиш кунед',
                   style: TextStyle(color: Colors.white38))),
-        ])),
-      );
+        ])));
     }
 
     return Scaffold(
@@ -170,25 +249,31 @@ class _ReelsViewState extends State<_ReelsView> {
         controller: _pageCtrl,
         scrollDirection: Axis.vertical,
         itemCount: vm.reels.length,
-        onPageChanged: (i) {
-          setState(() => _currentPage = i);
-          if (i >= vm.reels.length - 3) vm.loadMore();
-        },
+        onPageChanged: (i) => _onPageChanged(i, vm),
         itemBuilder: (_, i) => _ReelItem(
-          reel: vm.reels[i],
-          isActive: i == _currentPage && widget.isActive,
-          friendsFilter: _friendsFilter,
-          onLike: () => vm.toggleLike(vm.reels[i].id),
-          onSave: () => vm.toggleSave(vm.reels[i].id),
-          onToggleFilter: () =>
-              setState(() => _friendsFilter = !_friendsFilter),
+          reel:         vm.reels[i],
+          isActive:     i == _currentPage && widget.isActive,
+          isMuted:      vm.isMuted,
+          friendsFilter:vm.friendsFilter,
+          preloadCtrl:  _preloaded[i],
+          onLike:       () => vm.toggleLike(vm.reels[i].id),
+          onSave:       () => vm.toggleSave(vm.reels[i].id),
+          onMuteToggle: vm.toggleMute,
+          onToggleFilter: vm.toggleFilter,
           onAddReel: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const CreateReelScreen()))
-              .then((ok) { if (ok == true) vm.load(); }),
-          onDelete: () {
-            vm.reels = vm.reels.where((r) => r.id != vm.reels[i].id).toList();
-            vm.notifyListeners();
+              .then((ok) { if (ok == true && context.mounted) vm.load(); }),
+          onDelete: () => vm.markNotInterested(vm.reels[i].id),
+          onNotInterested: () {
+            vm.markNotInterested(vm.reels[i].id);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: const Text('Рилс пинҳон шуд. Алгоритм навшуд.'),
+              backgroundColor: Colors.grey[800],
+              duration: const Duration(seconds: 2)));
           },
+          onWatchTime: (watchMs, durationMs) => vm.trackWatch(
+            reelId: vm.reels[i].id,
+            watchMs: watchMs, durationMs: durationMs),
         ),
       ),
     );
@@ -201,22 +286,32 @@ class _ReelsViewState extends State<_ReelsView> {
 class _ReelItem extends StatefulWidget {
   final ReelModel    reel;
   final bool         isActive;
+  final bool         isMuted;
   final bool         friendsFilter;
+  final VideoPlayerController? preloadCtrl; // preloaded controller
   final VoidCallback onLike;
   final VoidCallback onSave;
+  final VoidCallback onMuteToggle;
   final VoidCallback onToggleFilter;
   final VoidCallback onAddReel;
   final VoidCallback onDelete;
+  final VoidCallback onNotInterested;
+  final void Function(int watchMs, int durationMs) onWatchTime;
 
   const _ReelItem({
     required this.reel,
     required this.isActive,
+    required this.isMuted,
     required this.friendsFilter,
+    this.preloadCtrl,
     required this.onLike,
     required this.onSave,
+    required this.onMuteToggle,
     required this.onToggleFilter,
     required this.onAddReel,
     required this.onDelete,
+    required this.onNotInterested,
+    required this.onWatchTime,
   });
 
   @override
@@ -225,17 +320,21 @@ class _ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<_ReelItem> {
   VideoPlayerController? _ctrl;
-  bool _initialized  = false;
-  bool _paused       = false;
-  bool _showHeart    = false;
-  bool _saved        = false;
-  bool _following    = false;
-  int  _retweetCount = 0;
+  bool  _initialized   = false;
+  bool  _paused        = false;
+  bool  _showHeart     = false;
+  bool  _saved         = false;
+  bool  _following     = false;
+  int   _retweetCount  = 0;
+  bool  _captionExpanded = false;
+  bool  _isBuffering   = false;
 
-  // Story ring state — аз backend load мешавад
-  // null = маълум нест, true = story дорад, false = story надорад
+  // Watch time tracking
+  DateTime? _watchStart;
+  int       _totalWatchMs = 0;
+
   bool? _hasStory;
-  bool  _storyViewed = false; // ҳамаи story-ҳо дида шудааст
+  bool  _storyViewed = false;
 
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
@@ -245,69 +344,138 @@ class _ReelItemState extends State<_ReelItem> {
   @override
   void initState() {
     super.initState();
+    _saved = widget.reel.isSaved;
     _initVideo();
     _loadStoryStatus();
   }
 
-  // ── Story ring status — API-аз мегирем ──────────────────────────
   Future<void> _loadStoryStatus() async {
     try {
       final res = await ApiClient.instance
           .get('/stories', query: {'userId': widget.reel.user.id});
-      if (res.statusCode < 400) {
+      if (res.statusCode < 400 && mounted) {
         final body = jsonDecode(res.body);
         final List list = body is List ? body
             : (body['stories'] ?? body['data'] ?? []);
-        if (mounted) {
-          setState(() {
-            _hasStory    = list.isNotEmpty;
-            _storyViewed = list.isNotEmpty &&
-                list.every((s) => s['viewed'] == true);
-          });
-        }
+        setState(() {
+          _hasStory    = list.isNotEmpty;
+          _storyViewed = list.isNotEmpty &&
+              list.every((s) => s['viewed'] == true);
+        });
       }
     } catch (_) {}
   }
 
   void _initVideo() {
     if (widget.reel.videoUrl.isEmpty) return;
+    // Preloaded controller бошад — истифода кун
+    if (widget.preloadCtrl != null &&
+        widget.preloadCtrl!.value.isInitialized) {
+      _ctrl = widget.preloadCtrl;
+      _ctrl!.setLooping(true);
+      _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
+      if (widget.isActive) _ctrl!.play();
+      setState(() => _initialized = true);
+      _addBufferListener();
+      return;
+    }
+    // Нав load
     _ctrl = VideoPlayerController.networkUrl(
         Uri.parse(widget.reel.videoUrl))
       ..initialize().then((_) {
         if (!mounted) return;
         _ctrl!.setLooping(true);
-        if (widget.isActive) { _ctrl!.setVolume(1.0); _ctrl!.play(); }
-        setState(() => _initialized = true);
+        _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
+        if (widget.isActive) { _ctrl!.play(); _startWatchTimer(); }
+        if (mounted) setState(() => _initialized = true);
+        _addBufferListener();
       });
   }
 
+  void _addBufferListener() {
+    _ctrl?.addListener(_onVideoUpdate);
+  }
+
+  void _onVideoUpdate() {
+    if (!mounted || _ctrl == null) return;
+    final buffering = _ctrl!.value.isBuffering;
+    if (buffering != _isBuffering) {
+      setState(() => _isBuffering = buffering);
+    }
+  }
+
+  void _startWatchTimer() {
+    _watchStart = DateTime.now();
+  }
+
+  void _stopWatchTimer() {
+    if (_watchStart == null) return;
+    _totalWatchMs += DateTime.now().difference(_watchStart!).inMilliseconds;
+    _watchStart = null;
+  }
+
+  void _sendWatchTime() {
+    _stopWatchTimer();
+    if (_totalWatchMs <= 0 || !_initialized || _ctrl == null) return;
+    final duration = _ctrl!.value.duration.inMilliseconds;
+    if (duration <= 0) return;
+    widget.onWatchTime(_totalWatchMs, duration);
+  }
+
   @override
-  void deactivate() { _ctrl?.pause(); super.deactivate(); }
+  void deactivate() {
+    _stopWatchTimer();
+    _ctrl?.pause();
+    super.deactivate();
+  }
 
   @override
   void activate() {
     super.activate();
-    if (widget.isActive && _initialized) _ctrl?.play();
+    if (widget.isActive && _initialized) {
+      _ctrl?.play();
+      _startWatchTimer();
+    }
   }
 
   @override
   void didUpdateWidget(_ReelItem old) {
     super.didUpdateWidget(old);
+    // Volume — mute toggle
+    if (widget.isMuted != old.isMuted && _ctrl != null) {
+      _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
+    }
     if (widget.isActive && !old.isActive) {
-      _ctrl?.setVolume(1.0); _ctrl?.play();
-      ApiClient.instance.post('/reels/${widget.reel.id}/view');
+      _ctrl?.setVolume(widget.isMuted ? 0.0 : 1.0);
+      _ctrl?.play();
+      _startWatchTimer();
     } else if (!widget.isActive && old.isActive) {
+      _sendWatchTime();
       _ctrl?.pause();
     }
   }
 
   @override
-  void dispose() { _ctrl?.dispose(); super.dispose(); }
+  void dispose() {
+    _sendWatchTime();
+    _ctrl?.removeListener(_onVideoUpdate);
+    // Preloaded controller-ро dispose НАКУН — ViewState dispose мекунад
+    if (widget.preloadCtrl == null || widget.preloadCtrl != _ctrl) {
+      _ctrl?.dispose();
+    }
+    super.dispose();
+  }
 
   void _togglePause() {
     if (_ctrl == null) return;
     setState(() => _paused = !_paused);
-    _paused ? _ctrl!.pause() : _ctrl!.play();
+    if (_paused) {
+      _ctrl!.pause();
+      _stopWatchTimer();
+    } else {
+      _ctrl!.play();
+      _startWatchTimer();
+    }
   }
 
   void _doubleTapLike() {
@@ -318,13 +486,10 @@ class _ReelItemState extends State<_ReelItem> {
     });
   }
 
-  // ── Профили корбар ────────────────────────────────────────────
-  void _openProfile() {
-    Navigator.pushNamed(context, '/user-profile',
-        arguments: widget.reel.user.id);
-  }
+  void _openProfile() => Navigator.pushNamed(
+      context, '/user-profile', arguments: widget.reel.user.id);
 
-  // ── ⋮ МЕНЮ — соҳиб (Тоҷикӣ) ─────────────────────────────────
+  // ── МЕНЮ ─────────────────────────────────────────────────────
   void _showOwnerMenu() {
     _ctrl?.pause();
     showModalBottomSheet(
@@ -332,32 +497,25 @@ class _ReelItemState extends State<_ReelItem> {
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(
-        mainAxisSize: MainAxisSize.min,
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _menuItem(Icons.edit_outlined,          'Таҳрир кардан',
+          _menuItem(Icons.edit_outlined, 'Таҳрир кардан',
               () { Navigator.pop(context); _editCaption(); }),
-          _menuItem(Icons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
-              () { Navigator.pop(context); _ctrl?.play(); }),
-          _menuItem(Icons.comment_outlined,        'Хомӯш/Фаъол кардани шарҳ',
-              () { Navigator.pop(context); _ctrl?.play(); }),
-          _menuItem(Icons.share_outlined,          'Пинҳон кардани мубодила',
-              () { Navigator.pop(context); _ctrl?.play(); }),
-          _menuItem(Icons.alternate_email,         'Илова кардани зикр',
-              () { Navigator.pop(context); _addMention(); }),
-          _menuItem(Icons.bar_chart_rounded,       'Омор (Статистика)',
+          _menuItem(Icons.bar_chart_rounded, 'Омор (Статистика)',
               () { Navigator.pop(context); _showStats(); }),
-          _menuItem(Icons.delete_outline_rounded,  'Нест кардан',
+          _menuItem(Icons.alternate_email, 'Илова кардани зикр',
+              () { Navigator.pop(context); _addMention(); }),
+          _menuItem(Icons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
+              () { Navigator.pop(context); if (!_paused) _ctrl?.play(); }),
+          _menuItem(Icons.delete_outline_rounded, 'Нест кардан',
               () { Navigator.pop(context); _deleteReel(); },
               color: Colors.redAccent),
           const SizedBox(height: 8),
-        ],
-      )),
+        ])),
     ).then((_) { if (!_paused) _ctrl?.play(); });
   }
 
-  // ── ⋮ МЕНЮ — дигар корбар (Тоҷикӣ) ─────────────────────────
   void _showOtherMenu() {
     _ctrl?.pause();
     showModalBottomSheet(
@@ -365,24 +523,20 @@ class _ReelItemState extends State<_ReelItem> {
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(
-        mainAxisSize: MainAxisSize.min,
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _menuItem(Icons.thumb_up_outlined,      'Ҷолиб аст',
+          _menuItem(Icons.thumb_up_outlined, 'Ҷолиб аст',
               () { Navigator.pop(context); _markInterest(true); }),
-          _menuItem(Icons.thumb_down_outlined,    'Ҷолиб нест',
-              () { Navigator.pop(context); _markInterest(false); }),
-          _menuItem(Icons.flag_outlined,          'Шикоят кардан',
+          _menuItem(Icons.thumb_down_outlined, 'Ҷолиб нест',
+              () { Navigator.pop(context); widget.onNotInterested(); }),
+          _menuItem(Icons.flag_outlined, 'Шикоят кардан',
               () { Navigator.pop(context); _report(); },
               color: Colors.redAccent),
           _menuItem(Icons.person_outline_rounded, 'Дидани профил',
               () { Navigator.pop(context); _openProfile(); }),
-          _menuItem(Icons.block_rounded,          'Маҳдуд кардани тавсия',
-              () { Navigator.pop(context); _ctrl?.play(); }),
           const SizedBox(height: 8),
-        ],
-      )),
+        ])),
     ).then((_) { if (!_paused) _ctrl?.play(); });
   }
 
@@ -397,8 +551,7 @@ class _ReelItemState extends State<_ReelItem> {
     leading: Icon(icon, color: color ?? Colors.white, size: 22),
     title: Text(label, style: TextStyle(
         color: color ?? Colors.white, fontSize: 15)),
-    onTap: onTap,
-  );
+    onTap: onTap);
 
   // ── Actions ───────────────────────────────────────────────────
   Future<void> _editCaption() async {
@@ -416,8 +569,7 @@ class _ReelItemState extends State<_ReelItem> {
             hintText: 'Тавсиф...',
             hintStyle: TextStyle(color: Colors.white38),
             filled: true, fillColor: Color(0xFF111111),
-            border: OutlineInputBorder(borderSide: BorderSide.none)),
-        ),
+            border: OutlineInputBorder(borderSide: BorderSide.none))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
               child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
@@ -430,7 +582,7 @@ class _ReelItemState extends State<_ReelItem> {
     if (ok != true) { if (!_paused) _ctrl?.play(); return; }
     await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
         body: {'caption': ctrl.text.trim()});
-    if (!_paused) _ctrl?.play();
+    if (!_paused && mounted) _ctrl?.play();
   }
 
   Future<void> _addMention() async {
@@ -447,9 +599,8 @@ class _ReelItemState extends State<_ReelItem> {
           height: MediaQuery.of(context).size.height * 0.7,
           child: Column(children: [
             _handle(),
-            const Text('Зикр кардан',
-                style: TextStyle(color: Colors.white,
-                    fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text('Зикр кардан', style: TextStyle(color: Colors.white,
+                fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
@@ -493,22 +644,20 @@ class _ReelItemState extends State<_ReelItem> {
                                 ? const Icon(Icons.person) : null),
                           title: Text('@${u['username']}',
                               style: const TextStyle(color: Colors.white)),
-                          onTap: () { Navigator.pop(ctx); },
-                        );
-                      }),
-            ),
-          ]),
-        ),
+                          onTap: () => Navigator.pop(ctx));
+                      })),
+          ])),
       ),
     );
     ctrl.dispose();
-    if (!_paused) _ctrl?.play();
+    if (!_paused && mounted) _ctrl?.play();
   }
 
   Future<void> _showStats() async {
-    final res = await ApiClient.instance
-        .get('/reels/${widget.reel.id}/stats').catchError((_) => null);
+    final repo = ReelsRepository(ApiClient.instance);
+    final stats = await repo.fetchStats(widget.reel.id);
     if (!mounted) return;
+    final s = stats ?? {};
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -516,16 +665,19 @@ class _ReelItemState extends State<_ReelItem> {
         title: const Text('Омор', style: TextStyle(
             color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _statRow('👁 Тамошошуд', '${widget.reel.likesCount * 8}'),
-          _statRow('❤ Лайк',       '${widget.reel.likesCount}'),
-          _statRow('💬 Шарҳ',      '${widget.reel.commentsCount}'),
-          _statRow('🔖 Захира',    '$_retweetCount'),
+          _statRow('👁 Тамошошуд', '${s['views']    ?? widget.reel.viewsCount}'),
+          _statRow('❤ Лайк',       '${s['likes']    ?? widget.reel.likesCount}'),
+          _statRow('💬 Шарҳ',      '${s['comments'] ?? widget.reel.commentsCount}'),
+          _statRow('🔖 Захира',    '${s['saves']    ?? 0}'),
+          _statRow('📤 Мубодила',  '${s['shares']   ?? widget.reel.sharesCount}'),
+          _statRow('⏱ Миёнаи тамошо', '${s['avgWatchMs'] != null ? (s['avgWatchMs'] / 1000).toStringAsFixed(1) + " сон" : "—"}'),
         ]),
         actions: [
-          TextButton(onPressed: () { Navigator.pop(context); if (!_paused) _ctrl?.play(); },
-              child: const Text('Пӯшидан',
-                  style: TextStyle(color: AppColors.neonBlue))),
-        ],
+          TextButton(onPressed: () {
+            Navigator.pop(context);
+            if (!_paused) _ctrl?.play();
+          }, child: const Text('Пӯшидан',
+              style: TextStyle(color: AppColors.neonBlue)))],
       ),
     );
   }
@@ -535,16 +687,14 @@ class _ReelItemState extends State<_ReelItem> {
     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       Text(l, style: const TextStyle(color: Colors.white70, fontSize: 14)),
       Text(v, style: const TextStyle(color: Colors.white,
-          fontWeight: FontWeight.bold, fontSize: 15)),
-    ]));
+          fontWeight: FontWeight.bold, fontSize: 15))]));
 
   Future<void> _deleteReel() async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Нест кардан?',
-            style: TextStyle(color: Colors.white)),
+        title: const Text('Нест кардан?', style: TextStyle(color: Colors.white)),
         content: const Text('Рилс тамоман нест мешавад.',
             style: TextStyle(color: Colors.white70)),
         actions: [
@@ -562,7 +712,7 @@ class _ReelItemState extends State<_ReelItem> {
 
   Future<void> _markInterest(bool interested) async {
     await ApiClient.instance.post(
-        '/posts/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
+        '/reels/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(interested ? 'Алгоритм навшуд ✓' : 'Рилс пинҳон шуд'),
@@ -573,27 +723,23 @@ class _ReelItemState extends State<_ReelItem> {
 
   Future<void> _report() async {
     final reasons = [
-      ('spam',     'Спам'),
-      ('violence', 'Зӯроварӣ'),
-      ('adult',    'Мӯҳтавои калонсолон'),
-      ('hate',     'Нафрат'),
-      ('other',    'Дигар'),
+      ('spam', 'Спам'), ('violence', 'Зӯроварӣ'),
+      ('adult', 'Мӯҳтавои калонсолон'),
+      ('hate', 'Нафрат'), ('other', 'Дигар'),
     ];
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Шикоят кардан',
-            style: TextStyle(color: Colors.white)),
+        title: const Text('Шикоят кардан', style: TextStyle(color: Colors.white)),
         content: Column(mainAxisSize: MainAxisSize.min,
           children: reasons.map((r) => ListTile(
             title: Text(r.$2, style: const TextStyle(color: Colors.white)),
-            onTap: () => Navigator.pop(context, r.$1),
-          )).toList()),
+            onTap: () => Navigator.pop(context, r.$1))).toList()),
       ),
     );
     if (reason == null) { if (!_paused) _ctrl?.play(); return; }
-    await ApiClient.instance.post('/posts/${widget.reel.id}/report',
+    await ApiClient.instance.post('/reels/${widget.reel.id}/report',
         body: {'reason': reason});
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -613,44 +759,130 @@ class _ReelItemState extends State<_ReelItem> {
       builder: (_) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.85,
         child: _ReelComments(reelId: widget.reel.id)),
-    ).then((_) { if (!_paused) _ctrl?.play(); });
+    ).then((_) { if (!_paused && mounted) _ctrl?.play(); });
   }
 
+  // ── Share — DM + Story + Copy + External ─────────────────────
   void _share() {
     final url = 'https://raonson-v1.onrender.com/reels/${widget.reel.id}';
     _ctrl?.pause();
     showModalBottomSheet(
-      context: context, backgroundColor: AppColors.surface,
+      context: context,
+      backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _handle(),
-        const Text('Мубодила', style: TextStyle(color: Colors.white,
-            fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 8),
-        ListTile(
-          leading: const CircleAvatar(backgroundColor: Colors.white12,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
+        children: [
+          _handle(),
+          const Text('Мубодила', style: TextStyle(color: Colors.white,
+              fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          // ── DM ──────────────────────────────────────────────
+          ListTile(
+            leading: const CircleAvatar(backgroundColor: AppColors.neonBlue,
+              child: Icon(Icons.send_outlined, color: Colors.white, size: 18)),
+            title: const Text('Дар паём фиристодан',
+                style: TextStyle(color: Colors.white)),
+            subtitle: const Text('Ба дӯстон бифиристед',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            onTap: () {
+              Navigator.pop(context);
+              _sendToDM(url);
+            }),
+          // ── Add to Story ─────────────────────────────────
+          ListTile(
+            leading: const CircleAvatar(backgroundColor: Color(0xFF833AB4),
+              child: Icon(Icons.add_circle_outline, color: Colors.white, size: 18)),
+            title: const Text('Ба история илова кун',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Ба история илова шуд ✓'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2)));
+            }),
+          // ── Copy link ─────────────────────────────────────
+          ListTile(
+            leading: const CircleAvatar(backgroundColor: Colors.white12,
               child: Icon(Icons.link, color: Colors.white, size: 18)),
-          title: const Text('Линкро нусха кун',
-              style: TextStyle(color: Colors.white)),
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: url));
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Линк нусха шуд ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2)));
-          }),
-        const SizedBox(height: 8),
-      ])),
-    ).then((_) { if (!_paused) _ctrl?.play(); });
-    setState(() => _retweetCount++);
+            title: const Text('Линкро нусха кун',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: url));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Линк нусха шуд ✓'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2)));
+            }),
+          // ── External share ────────────────────────────────
+          ListTile(
+            leading: const CircleAvatar(backgroundColor: Colors.white12,
+              child: Icon(Icons.share_outlined, color: Colors.white, size: 18)),
+            title: const Text('Дигар барномаҳо',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Share.share(url);
+              setState(() => _retweetCount++);
+            }),
+          const SizedBox(height: 8),
+        ])),
+    ).then((_) { if (!_paused && mounted) _ctrl?.play(); });
+  }
+
+  Future<void> _sendToDM(String url) async {
+    // DM экрани мавҷудро кушо
+    Navigator.pushNamed(context, '/messages', arguments: {'shareUrl': url});
   }
 
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000)    return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
     return n > 0 ? '$n' : '';
+  }
+
+  // ── Caption spans — #hashtag ва @mention клик ────────────────
+  List<InlineSpan> _buildCaptionSpans(String text) {
+    final spans = <InlineSpan>[];
+    final words = text.split(' ');
+    for (final word in words) {
+      if (word.startsWith('#') && word.length > 1) {
+        final tag = word.replaceAll(RegExp(r'[^\w]'), '');
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: GestureDetector(
+            onTap: () => Navigator.pushNamed(
+                context, '/hashtag', arguments: tag),
+            child: Text('$word ',
+              style: const TextStyle(
+                color: AppColors.neonBlue,
+                fontSize: 14, fontWeight: FontWeight.w600,
+                shadows: [Shadow(blurRadius: 4, color: Colors.black)]))),
+        ));
+      } else if (word.startsWith('@') && word.length > 1) {
+        final username = word.substring(1).replaceAll(RegExp(r'[^\w]'), '');
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: GestureDetector(
+            onTap: () => Navigator.pushNamed(
+                context, '/profile-by-username', arguments: username),
+            child: Text('$word ',
+              style: const TextStyle(
+                color: AppColors.neonBlue, fontSize: 14,
+                shadows: [Shadow(blurRadius: 4, color: Colors.black)]))),
+        ));
+      } else {
+        spans.add(TextSpan(text: '$word ',
+          style: const TextStyle(color: Colors.white, fontSize: 14,
+            shadows: [Shadow(blurRadius: 4, color: Colors.black)])));
+      }
+    }
+    return spans;
   }
 
   @override
@@ -671,13 +903,14 @@ class _ReelItemState extends State<_ReelItem> {
             child: SizedBox(
               width:  _ctrl!.value.size.width,
               height: _ctrl!.value.size.height,
-              child:  VideoPlayer(_ctrl!),
-            ))
+              child:  VideoPlayer(_ctrl!)))
+        else if (reel.thumbnailUrl.isNotEmpty)
+          CachedNetworkImage(imageUrl: reel.thumbnailUrl,
+            fit: BoxFit.cover, width: double.infinity,
+            height: double.infinity,
+            errorWidget: (_, __, ___) => Container(color: AppColors.bg))
         else
-          Container(color: AppColors.bg,
-            child: const Center(child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.storyStart)))),
+          Container(color: AppColors.bg),
 
         // ── Gradient ───────────────────────────────────────────
         const DecoratedBox(decoration: BoxDecoration(
@@ -685,22 +918,26 @@ class _ReelItemState extends State<_ReelItem> {
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
             colors: [Color(0x66000000), Colors.transparent,
                 Color(0x33000000), Color(0xEE000000)],
-            stops: [0, 0.35, 0.65, 1]),
-        )),
+            stops: [0, 0.35, 0.65, 1]))),
+
+        // ── Buffer indicator ───────────────────────────────────
+        if (_isBuffering && !_paused)
+          const Center(child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor: AlwaysStoppedAnimation(Colors.white70))),
 
         // ── Pause icon ─────────────────────────────────────────
-        if (_paused)
+        if (_paused && !_isBuffering)
           const Center(child: Icon(Icons.play_arrow_rounded,
-              color: Colors.white54, size: 80,
-              shadows: [Shadow(blurRadius: 20, color: Colors.black54)])),
+            color: Colors.white54, size: 80,
+            shadows: [Shadow(blurRadius: 20, color: Colors.black54)])),
 
         // ── Double-tap heart ───────────────────────────────────
         if (_showHeart) const Center(child: _HeartBurst()),
 
-        // ── Progress bar — ПОЁН (мисли Instagram) ─────────────
+        // ── Progress bar ───────────────────────────────────────
         if (_initialized && _ctrl != null)
-          Positioned(
-            bottom: 0, left: 0, right: 0,
+          Positioned(bottom: 0, left: 0, right: 0,
             child: ValueListenableBuilder(
               valueListenable: _ctrl!,
               builder: (_, val, __) {
@@ -708,127 +945,108 @@ class _ReelItemState extends State<_ReelItem> {
                 final dur = val.duration.inMilliseconds;
                 return LinearProgressIndicator(
                   value: dur > 0 ? pos / dur : 0,
-                  // Қаблан кор шудааст → сафед бар зами тира
                   backgroundColor: Colors.white24,
                   valueColor: const AlwaysStoppedAnimation(Colors.white),
-                  minHeight: 2,
-                );
-              }),
-          ),
+                  minHeight: 2);
+              })),
 
-        // ── TOP BAR — МАРКАЗ "Рилсҳо | Дӯстон" + "+" ─────────
-        Positioned(
-          top: top + 12, left: 0, right: 0,
+        // ── TOP BAR ────────────────────────────────────────────
+        Positioned(top: top + 12, left: 0, right: 0,
           child: Row(children: [
             const SizedBox(width: 16),
             const Spacer(),
-            // ── "Рилсҳо | Дӯстон ∨" — МАРКАЗ ─────────────────
             GestureDetector(
               onTap: widget.onToggleFilter,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(
-                  widget.friendsFilter ? 'Дӯстон' : 'Рилсҳо',
-                  style: const TextStyle(
-                    color: Colors.white, fontSize: 18,
+                Text(widget.friendsFilter ? 'Дӯстон' : 'Рилсҳо',
+                  style: const TextStyle(color: Colors.white, fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    shadows: [Shadow(blurRadius: 6, color: Colors.black54)]),
-                ),
+                    shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
                 const SizedBox(width: 6),
-                const Text('|', style: TextStyle(
-                    color: Colors.white54, fontSize: 16)),
+                const Text('|', style: TextStyle(color: Colors.white54, fontSize: 16)),
                 const SizedBox(width: 6),
-                Text(
-                  widget.friendsFilter ? 'Рилсҳо' : 'Дӯстон',
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 16,
-                      shadows: [Shadow(blurRadius: 6, color: Colors.black54)]),
-                ),
+                Text(widget.friendsFilter ? 'Рилсҳо' : 'Дӯстон',
+                  style: const TextStyle(color: Colors.white70, fontSize: 16,
+                    shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
                 const SizedBox(width: 4),
                 const Icon(Icons.keyboard_arrow_down_rounded,
                     color: Colors.white70, size: 20),
-              ]),
-            ),
+              ])),
             const Spacer(),
-            // "+" рост ─────────────────────────────────────────
+            // Mute toggle ──────────────────────────────────────
+            GestureDetector(
+              onTap: widget.onMuteToggle,
+              child: Padding(padding: const EdgeInsets.only(right: 8),
+                child: Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.black38,
+                    shape: BoxShape.circle),
+                  child: Icon(
+                    widget.isMuted ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded,
+                    color: Colors.white, size: 20,
+                    shadows: const [Shadow(blurRadius: 6, color: Colors.black54)])))),
+            // Add reel ─────────────────────────────────────────
             GestureDetector(
               onTap: widget.onAddReel,
               child: const Padding(padding: EdgeInsets.only(right: 16),
                 child: Icon(Icons.add, color: Colors.white, size: 28,
-                    shadows: [Shadow(blurRadius: 6, color: Colors.black54)]))),
-          ]),
-        ),
+                  shadows: [Shadow(blurRadius: 6, color: Colors.black54)]))),
+          ])),
 
-        // ── RIGHT ACTIONS ─────────────────────────────────────
-        Positioned(
-          right: 10, bottom: bottom + size.height * 0.10,
+        // ── RIGHT ACTIONS ──────────────────────────────────────
+        Positioned(right: 10, bottom: bottom + size.height * 0.10,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-
-            _ReelStableBtn(
-              svgPath: 'assets/icons/heart.svg',
-              activeSvgPath: 'assets/icons/heart_filled.svg',
-              isActive: reel.isLiked, activeColor: Colors.red,
-              count: _fmt(reel.likesCount), onTap: widget.onLike),
+            // ♡ Like — bounce
+            _LikeBtn(
+              isLiked: reel.isLiked,
+              count: _fmt(reel.likesCount),
+              onTap: widget.onLike),
             const SizedBox(height: 22),
-
-            _ReelStableBtn(
-              svgPath: 'assets/icons/comment.svg',
+            _ReelStableBtn(svgPath: 'assets/icons/comment.svg',
               count: _fmt(reel.commentsCount), onTap: _openComments),
             const SizedBox(height: 22),
-
-            _ReelStableBtn(
-              svgPath: 'assets/icons/retweet.svg',
+            _ReelStableBtn(svgPath: 'assets/icons/retweet.svg',
               count: _fmt(_retweetCount),
               onTap: () => setState(() => _retweetCount++)),
             const SizedBox(height: 22),
-
-            _ReelStableBtn(
-              svgPath: 'assets/icons/share.svg',
+            _ReelStableBtn(svgPath: 'assets/icons/share.svg',
               count: '', onTap: _share),
             const SizedBox(height: 22),
-
             _ReelStableBtn(
               svgPath: 'assets/icons/save.svg',
               activeSvgPath: 'assets/icons/save_filled.svg',
               isActive: _saved, count: '',
               onTap: () { setState(() => _saved = !_saved); widget.onSave(); }),
             const SizedBox(height: 22),
-
-            // ⋮ меню
             GestureDetector(
               onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
               child: const SizedBox(width: 30, height: 30,
                 child: Icon(Icons.more_horiz_rounded,
-                    color: Colors.white, size: 28,
-                    shadows: [Shadow(blurRadius: 6, color: Colors.black54)]))),
+                  color: Colors.white, size: 28,
+                  shadows: [Shadow(blurRadius: 6, color: Colors.black54)]))),
             const SizedBox(height: 16),
+            // 🎵 Spinning disc — pause-aware
+            _SpinningDisc(
+              avatar: reel.user.avatar,
+              isPlaying: _initialized && !_paused),
+          ])),
 
-            // 🎵 Spinning disc
-            _SpinningDisc(avatar: reel.user.avatar),
-          ]),
-        ),
-
-        // ── BOTTOM LEFT — avatar + username + follow + caption + music
-        Positioned(
-          left: 14, right: 90,
-          bottom: bottom + 24,
+        // ── BOTTOM LEFT ────────────────────────────────────────
+        Positioned(left: 14, right: 90, bottom: bottom + 24,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               // User row
               Row(children: [
-                // ── Avatar бо story ring ──────────────────────
                 GestureDetector(
                   onTap: _openProfile,
                   child: _AvatarWithStoryRing(
-                    avatarUrl:    reel.user.avatar,
-                    hasStory:     _hasStory,
-                    storyViewed:  _storyViewed,
-                  ),
-                ),
+                    avatarUrl: reel.user.avatar,
+                    hasStory: _hasStory, storyViewed: _storyViewed)),
                 const SizedBox(width: 10),
-
-                // Username — зер кун → профил
                 Flexible(child: GestureDetector(
                   onTap: _openProfile,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -840,10 +1058,7 @@ class _ReelItemState extends State<_ReelItem> {
                     if (reel.user.verified) ...[
                       const SizedBox(width: 4),
                       const VerifiedBadge(size: 14)],
-                  ]),
-                )),
-
-                // "Пайравӣ кунед" — ТАНҲО агар дигар корбар бошад
+                  ]))),
                 if (!_isOwner && !_following) ...[
                   const SizedBox(width: 10),
                   GestureDetector(
@@ -860,91 +1075,223 @@ class _ReelItemState extends State<_ReelItem> {
                       child: const Text('Пайравӣ кунед',
                         style: TextStyle(color: Colors.white,
                           fontWeight: FontWeight.w600, fontSize: 12,
-                          shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
-                    ),
-                  ),
-                ],
+                          shadows: [Shadow(blurRadius: 4, color: Colors.black)]))))],
               ]),
 
-              // Caption
+              // ── Caption бо Show more/less ──────────────────
               if (reel.caption.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(reel.caption,
-                  style: const TextStyle(color: Colors.white, fontSize: 14,
-                    shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
+                _CaptionWidget(
+                  caption: reel.caption,
+                  spans: _buildCaptionSpans(reel.caption),
+                  expanded: _captionExpanded,
+                  onToggle: () => setState(() =>
+                      _captionExpanded = !_captionExpanded)),
               ],
+
               const SizedBox(height: 10),
 
-              // 🎵 Music
-              Row(children: [
-                const Icon(Icons.music_note_rounded, color: Colors.white, size: 15,
-                    shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
-                const SizedBox(width: 5),
-                Text(
-                  reel.caption.isNotEmpty
-                      ? reel.caption.split(' ').take(3).join(' ')
-                      : 'оригинал садо',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13,
-                      shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
-              ]),
-            ],
-          ),
-        ),
+              // ── Audio Bar — мисли Instagram ────────────────
+              _AudioBar(
+                title:  reel.audioTitle,
+                artist: reel.audioArtist,
+                avatar: reel.user.avatar,
+                isPlaying: _initialized && !_paused),
+            ])),
       ]),
     );
   }
 }
 
-// ══════════════════════════════════════════════════════════════════
-// AVATAR WITH STORY RING — мисли Instagram
-// null=маълум нест, true=story дорад, false=story надорад
-// ══════════════════════════════════════════════════════════════════
+// ── Caption Widget бо Show more/less ────────────────────────────────
+class _CaptionWidget extends StatelessWidget {
+  final String caption;
+  final List<InlineSpan> spans;
+  final bool expanded;
+  final VoidCallback onToggle;
+  static const int _maxLines = 2;
+
+  const _CaptionWidget({
+    required this.caption, required this.spans,
+    required this.expanded, required this.onToggle});
+
+  bool _needsTruncation(BuildContext context) {
+    final tp = TextPainter(
+      text: TextSpan(text: caption,
+        style: const TextStyle(color: Colors.white, fontSize: 14)),
+      maxLines: _maxLines,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: MediaQuery.of(context).size.width - 110);
+    return tp.didExceedMaxLines;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final needsMore = _needsTruncation(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      RichText(
+        maxLines: expanded ? null : (needsMore ? _maxLines : null),
+        overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+        text: TextSpan(children: spans)),
+      if (needsMore)
+        GestureDetector(
+          onTap: onToggle,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(
+              expanded ? 'камтар' : 'бештар',
+              style: const TextStyle(color: Colors.white70,
+                  fontSize: 13.5, fontWeight: FontWeight.w600)))),
+    ]);
+  }
+}
+
+// ── Audio Bar ─────────────────────────────────────────────────────────
+class _AudioBar extends StatefulWidget {
+  final String title, artist, avatar;
+  final bool isPlaying;
+  const _AudioBar({required this.title, required this.artist,
+      required this.avatar, required this.isPlaying});
+  @override
+  State<_AudioBar> createState() => _AudioBarState();
+}
+
+class _AudioBarState extends State<_AudioBar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _scrollCtrl;
+  late Animation<double> _scrollAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl = AnimationController(vsync: this,
+        duration: const Duration(seconds: 8))..repeat();
+    _scrollAnim = Tween(begin: 0.0, end: 1.0).animate(_scrollCtrl);
+    if (!widget.isPlaying) _scrollCtrl.stop();
+  }
+
+  @override
+  void didUpdateWidget(_AudioBar old) {
+    super.didUpdateWidget(old);
+    if (widget.isPlaying && !old.isPlaying) {
+      _scrollCtrl.repeat();
+    } else if (!widget.isPlaying && old.isPlaying) {
+      _scrollCtrl.stop();
+    }
+  }
+
+  @override
+  void dispose() { _scrollCtrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final displayText = widget.artist.isNotEmpty
+        ? '${widget.title} — ${widget.artist}'
+        : widget.title;
+
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.music_note_rounded, color: Colors.white, size: 15,
+          shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+      const SizedBox(width: 5),
+      Flexible(child: ClipRect(
+        child: AnimatedBuilder(
+          animation: _scrollAnim,
+          builder: (_, __) => FractionalTranslation(
+            translation: Offset(-(_scrollAnim.value * 0.5), 0),
+            child: Text(displayText + '   ' + displayText,
+              style: const TextStyle(color: Colors.white70, fontSize: 13,
+                shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+              maxLines: 1, overflow: TextOverflow.visible,
+              softWrap: false)))),
+      const SizedBox(width: 6),
+      // Mini spinning disc
+      _SpinningDisc(avatar: widget.avatar, size: 28, isPlaying: widget.isPlaying),
+    ]);
+  }
+}
+
+// ── Like Button бо bounce ────────────────────────────────────────────
+class _LikeBtn extends StatefulWidget {
+  final bool isLiked;
+  final String count;
+  final VoidCallback onTap;
+  const _LikeBtn({required this.isLiked, required this.count,
+      required this.onTap});
+  @override
+  State<_LikeBtn> createState() => _LikeBtnState();
+}
+
+class _LikeBtnState extends State<_LikeBtn> with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this,
+        duration: const Duration(milliseconds: 200));
+    _scale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.35, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+  @override void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () { if (!widget.isLiked) _ctrl.forward(from: 0); widget.onTap(); },
+      behavior: HitTestBehavior.opaque,
+      child: ScaleTransition(
+        scale: _scale,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(width: 30, height: 30,
+            child: SvgPicture.asset(
+              widget.isLiked
+                  ? 'assets/icons/heart_filled.svg'
+                  : 'assets/icons/heart.svg',
+              width: 30, height: 30, fit: BoxFit.contain,
+              colorFilter: ColorFilter.mode(
+                widget.isLiked ? Colors.red : Colors.white,
+                BlendMode.srcIn))),
+          if (widget.count.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(widget.count, style: const TextStyle(
+              color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold,
+              shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+          ],
+        ])));
+  }
+}
+
+// ── Avatar with Story Ring ───────────────────────────────────────────
 class _AvatarWithStoryRing extends StatelessWidget {
   final String avatarUrl;
   final bool?  hasStory;
   final bool   storyViewed;
-
-  const _AvatarWithStoryRing({
-    required this.avatarUrl,
-    required this.hasStory,
-    required this.storyViewed,
-  });
+  const _AvatarWithStoryRing({required this.avatarUrl,
+      required this.hasStory, required this.storyViewed});
 
   @override
   Widget build(BuildContext context) {
-    // Story надорад → ҳалқа нест
     if (hasStory == false) {
-      return ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: avatarUrl, width: 42, height: 42, fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
-              width: 42, height: 42, color: AppColors.card),
-          errorWidget: (_, __, ___) => Container(
-              width: 42, height: 42, color: AppColors.card,
-              child: const Icon(Icons.person, color: Colors.white54, size: 22)),
-        ),
-      );
+      return ClipOval(child: CachedNetworkImage(
+        imageUrl: avatarUrl, width: 42, height: 42, fit: BoxFit.cover,
+        placeholder: (_, __) => Container(width: 42, height: 42, color: AppColors.card),
+        errorWidget: (_, __, ___) => Container(width: 42, height: 42,
+            color: AppColors.card,
+            child: const Icon(Icons.person, color: Colors.white54, size: 22))));
     }
-
-    // Story дорад → ҳалқа бо rang
-    // Надидагӣ → cyan→green | Дидагӣ → dark green
-    final List<Color> gradientColors = storyViewed
-        ? [const Color(0xFF2E5A3A), const Color(0xFF1E3D28)] // dark green
-        : AppColors.storyGradient;                            // cyan → green
-
+    final gradientColors = storyViewed
+        ? [const Color(0xFF555555), const Color(0xFF444444)]
+        : AppColors.storyGradient;
     return Container(
       width: 46, height: 46,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: hasStory == true
-            ? LinearGradient(
-                colors: gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight)
-            : null,
-        color: hasStory == null ? Colors.transparent : null,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle,
+        gradient: hasStory == true ? LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight) : null,
+        color: hasStory == null ? Colors.transparent : null),
       padding: const EdgeInsets.all(2.5),
       child: Container(
         decoration: const BoxDecoration(
@@ -952,48 +1299,35 @@ class _AvatarWithStoryRing extends StatelessWidget {
         padding: const EdgeInsets.all(1.5),
         child: ClipOval(
           child: avatarUrl.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: avatarUrl,
+              ? CachedNetworkImage(imageUrl: avatarUrl,
                   width: double.infinity, height: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(color: AppColors.card),
-                  errorWidget: (_, __, ___) => Container(
-                      color: AppColors.card,
+                  errorWidget: (_, __, ___) => Container(color: AppColors.card,
                       child: const Icon(Icons.person,
                           color: Colors.white54, size: 20)))
               : Container(color: AppColors.card,
                   child: const Icon(Icons.person,
-                      color: Colors.white54, size: 20)),
-        ),
-      ),
-    );
+                      color: Colors.white54, size: 20)))));
   }
 }
 
-// ── Stable Reel Button ──────────────────────────────────────────────
+// ── Stable Reel Button ───────────────────────────────────────────────
 class _ReelStableBtn extends StatelessWidget {
-  final String   svgPath;
-  final String?  activeSvgPath;
-  final bool     isActive;
-  final Color    activeColor;
-  final String   count;
+  final String svgPath, count;
+  final String? activeSvgPath;
+  final bool isActive;
+  final Color activeColor;
   final VoidCallback onTap;
-
-  const _ReelStableBtn({
-    required this.svgPath,
-    this.activeSvgPath,
-    this.isActive    = false,
-    this.activeColor = Colors.red,
-    required this.count,
-    required this.onTap,
-  });
+  const _ReelStableBtn({required this.svgPath, this.activeSvgPath,
+      this.isActive = false, this.activeColor = Colors.red,
+      required this.count, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
     final color = isActive ? activeColor : Colors.white;
-    return GestureDetector(
-      onTap: onTap, behavior: HitTestBehavior.opaque,
+    return GestureDetector(onTap: onTap, behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         SizedBox(width: 30, height: 30,
           child: SvgPicture.asset(path, width: 30, height: 30,
@@ -1001,19 +1335,21 @@ class _ReelStableBtn extends StatelessWidget {
             colorFilter: ColorFilter.mode(color, BlendMode.srcIn))),
         if (count.isNotEmpty) ...[
           const SizedBox(height: 4),
-          Text(count, style: const TextStyle(
-            color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold,
+          Text(count, style: const TextStyle(color: Colors.white,
+            fontSize: 13, fontWeight: FontWeight.bold,
             shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
         ],
-      ]),
-    );
+      ]));
   }
 }
 
-// ── Spinning music disc ─────────────────────────────────────────────
+// ── Spinning Disc — pause-aware ──────────────────────────────────────
 class _SpinningDisc extends StatefulWidget {
   final String avatar;
-  const _SpinningDisc({required this.avatar});
+  final double size;
+  final bool isPlaying;
+  const _SpinningDisc({required this.avatar, this.size = 44,
+      required this.isPlaying});
   @override
   State<_SpinningDisc> createState() => _SpinningDiscState();
 }
@@ -1021,35 +1357,45 @@ class _SpinningDisc extends StatefulWidget {
 class _SpinningDiscState extends State<_SpinningDisc>
     with SingleTickerProviderStateMixin {
   late AnimationController _spin;
-  @override void initState() {
+  @override
+  void initState() {
     super.initState();
     _spin = AnimationController(vsync: this,
-        duration: const Duration(seconds: 5))..repeat();
+        duration: const Duration(seconds: 5));
+    if (widget.isPlaying) _spin.repeat();
+  }
+  @override
+  void didUpdateWidget(_SpinningDisc old) {
+    super.didUpdateWidget(old);
+    if (widget.isPlaying && !old.isPlaying) {
+      _spin.repeat(); // ← play → spin кун
+    } else if (!widget.isPlaying && old.isPlaying) {
+      _spin.stop();   // ← pause → disc таваккуф
+    }
   }
   @override void dispose() { _spin.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => RotationTransition(
     turns: _spin,
     child: Container(
-      width: 44, height: 44,
+      width: widget.size, height: widget.size,
       decoration: const BoxDecoration(shape: BoxShape.circle,
         gradient: LinearGradient(colors: AppColors.storyGradient,
           begin: Alignment.topLeft, end: Alignment.bottomRight)),
       padding: const EdgeInsets.all(2),
       child: Container(
-        decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black),
+        decoration: const BoxDecoration(
+            shape: BoxShape.circle, color: Colors.black),
         padding: const EdgeInsets.all(2),
         child: ClipOval(child: widget.avatar.isNotEmpty
             ? CachedNetworkImage(imageUrl: widget.avatar, fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => const Icon(
-                    Icons.music_note_rounded, color: Colors.white54, size: 20))
-            : const Icon(Icons.music_note_rounded, color: Colors.white54, size: 20)),
-      ),
-    ),
-  );
+                    Icons.music_note_rounded, color: Colors.white54, size: 18))
+            : const Icon(Icons.music_note_rounded,
+                color: Colors.white54, size: 18)))));
 }
 
-// ── Heart burst ─────────────────────────────────────────────────────
+// ── Heart Burst ───────────────────────────────────────────────────────
 class _HeartBurst extends StatefulWidget {
   const _HeartBurst();
   @override State<_HeartBurst> createState() => _HeartBurstState();
@@ -1058,7 +1404,8 @@ class _HeartBurstState extends State<_HeartBurst>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _scale, _opacity;
-  @override void initState() {
+  @override
+  void initState() {
     super.initState();
     _ctrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 700))..forward();
@@ -1077,43 +1424,65 @@ class _HeartBurstState extends State<_HeartBurst>
           shadows: [Shadow(blurRadius: 30, color: Colors.black54)]))));
 }
 
-// ── Reel Comments ───────────────────────────────────────────────────
+// ── Reel Comments — Like + Reply ─────────────────────────────────────
 class _ReelComments extends StatefulWidget {
   final String reelId;
   const _ReelComments({required this.reelId});
   @override State<_ReelComments> createState() => _ReelCommentsState();
 }
+
 class _ReelCommentsState extends State<_ReelComments> {
   final _ctrl = TextEditingController();
   List<Map<String, dynamic>> _comments = [];
-  bool _loading = true, _sending = false;
+  bool   _loading = true, _sending = false;
+  String? _replyToId;
+  String? _replyToUsername;
 
   @override void initState() { super.initState(); _load(); }
   @override void dispose() { _ctrl.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     try {
-      final res = await ApiClient.instance.get('/reels/${widget.reelId}/comments');
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final list = data is List ? data : (data['comments'] ?? []);
-        setState(() { _comments = List<Map<String,dynamic>>.from(list); _loading = false; });
-        return;
-      }
-    } catch (_) {}
-    setState(() => _loading = false);
+      final repo = ReelsRepository(ApiClient.instance);
+      final list = await repo.fetchComments(widget.reelId);
+      if (mounted) setState(() { _comments = list; _loading = false; });
+    } catch (_) { if (mounted) setState(() => _loading = false); }
   }
 
   Future<void> _send() async {
     final text = _ctrl.text.trim();
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
+    final repo = ReelsRepository(ApiClient.instance);
     try {
-      await ApiClient.instance.post('/reels/${widget.reelId}/comments',
-          body: {'text': text});
-      _ctrl.clear(); _load();
+      if (_replyToId != null) {
+        await repo.replyComment(
+          reelId: widget.reelId,
+          commentId: _replyToId!,
+          text: text);
+      } else {
+        await repo.addComment(reelId: widget.reelId, text: text);
+      }
+      _ctrl.clear();
+      setState(() { _replyToId = null; _replyToUsername = null; });
+      _load();
     } catch (_) {}
-    setState(() => _sending = false);
+    if (mounted) setState(() => _sending = false);
+  }
+
+  Future<void> _likeComment(String commentId, int index) async {
+    final repo = ReelsRepository(ApiClient.instance);
+    final res = await repo.likeComment(
+        reelId: widget.reelId, commentId: commentId);
+    if (res != null && mounted) {
+      setState(() {
+        _comments[index] = {
+          ..._comments[index],
+          'liked':      res['liked']      ?? false,
+          'likesCount': res['likesCount'] ?? 0,
+        };
+      });
+    }
   }
 
   @override
@@ -1140,52 +1509,111 @@ class _ReelCommentsState extends State<_ReelComments> {
                     itemBuilder: (_, i) {
                       final c = _comments[i];
                       final u = c['user'] as Map? ?? {};
-                      return Padding(padding: const EdgeInsets.symmetric(vertical: 10),
+                      final liked      = c['liked']      ?? false;
+                      final likesCount = c['likesCount'] ?? 0;
+                      final id         = (c['_id'] ?? c['id'] ?? '').toString();
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         child: Row(crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                          CircleAvatar(radius: 18, backgroundColor: AppColors.card,
+                          CircleAvatar(radius: 18,
+                            backgroundColor: AppColors.card,
                             backgroundImage: (u['avatar']??'').isNotEmpty
                                 ? NetworkImage(u['avatar']) : null,
                             child: (u['avatar']??'').isEmpty
-                                ? const Icon(Icons.person, color: Colors.white54, size: 18)
-                                : null),
+                                ? const Icon(Icons.person,
+                                    color: Colors.white54, size: 18) : null),
                           const SizedBox(width: 10),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(u['username']??'', style: const TextStyle(
-                                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold, fontSize: 13)),
                               const SizedBox(height: 3),
                               Text(c['text']??'', style: const TextStyle(
                                   color: Colors.white70, fontSize: 14)),
+                              const SizedBox(height: 4),
+                              // Reply
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _replyToId = id;
+                                    _replyToUsername = u['username']?.toString();
+                                    _ctrl.text = '@${u['username']} ';
+                                  });
+                                },
+                                child: const Text('Ҷавоб',
+                                  style: TextStyle(color: Colors.white38,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500))),
                             ])),
+                          const SizedBox(width: 8),
+                          // Like comment
+                          GestureDetector(
+                            onTap: () => _likeComment(id, i),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  liked ? Icons.favorite
+                                        : Icons.favorite_border_rounded,
+                                  color: liked ? Colors.red : Colors.white38,
+                                  size: 18),
+                                if (likesCount > 0) ...[
+                                  const SizedBox(height: 2),
+                                  Text('$likesCount', style: const TextStyle(
+                                    color: Colors.white38, fontSize: 11))],
+                              ])),
                         ]));
                     }),
       ),
+      // Reply banner
+      if (_replyToUsername != null)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          color: Colors.white10,
+          child: Row(children: [
+            Text('Ҷавоб ба @$_replyToUsername',
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => setState(() {
+                _replyToId = null; _replyToUsername = null; _ctrl.clear();
+              }),
+              child: const Icon(Icons.close, color: Colors.white38, size: 16)),
+          ])),
       SafeArea(child: Padding(
         padding: EdgeInsets.only(left: 16, right: 16, bottom: 8,
             top: 8 + MediaQuery.of(context).viewInsets.bottom / 2),
         child: Row(children: [
-          Expanded(child: TextField(controller: _ctrl,
+          Expanded(child: TextField(
+            controller: _ctrl,
             style: const TextStyle(color: Colors.white),
             textInputAction: TextInputAction.send,
             onSubmitted: (_) => _send(),
             decoration: InputDecoration(
-              hintText: 'Шарҳ нависед...',
+              hintText: _replyToUsername != null
+                  ? 'Ҷавоб ба @$_replyToUsername...'
+                  : 'Шарҳ нависед...',
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true, fillColor: Colors.white10,
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10)))),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 10)))),
           const SizedBox(width: 10),
-          GestureDetector(onTap: _send,
+          GestureDetector(
+            onTap: _send,
             child: _sending
                 ? const SizedBox(width: 26, height: 26,
                     child: CircularProgressIndicator(strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation(AppColors.neonBlue)))
-                : const Icon(Icons.send_rounded, color: AppColors.neonBlue, size: 28)),
-        ]),
-      )),
+                : const Icon(Icons.send_rounded,
+                    color: AppColors.neonBlue, size: 28)),
+        ])),
+      ),
     ]);
   }
 }
