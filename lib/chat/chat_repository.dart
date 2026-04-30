@@ -50,6 +50,7 @@ class ChatRepository {
   Future<MessageModel> sendMessage({
     required String toUserId,
     required String text,
+    String? replyToId,
   }) async {
     final myId = await _myId();
     final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$toUserId');
@@ -58,7 +59,7 @@ class ChatRepository {
 
     final res = await _api.postRequest(
       '${ApiEndpoints.chat}/$chatId/messages',
-      body: {'receiverId': toUserId, 'text': text},
+      body: {'receiverId': toUserId, 'text': text, if (replyToId != null) 'replyToId': replyToId},
     );
     if (res.statusCode >= 400) throw Exception('Send error');
     return MessageModel.fromRoomJson(
@@ -77,4 +78,23 @@ class ChatRepository {
   Future<void> markAsRead(String chatId) async {
     await _api.postRequest('${ApiEndpoints.chat}/$chatId/read');
   }
+  /// Alias used by chat_room_screen
+  Future<List<MessageModel>> getMessagesWithUserEx(String peerId) =>
+      getMessagesWithUser(peerId);
+
+  Future<void> deleteMessage(String messageId) async {
+    try { await _api.deleteRequest('/chat/messages/$messageId'); } catch (_) {}
+  }
+
+  Future<void> reactToMessage(String messageId, String emoji) async {
+    try {
+      await _api.postRequest(
+          '/chat/messages/$messageId/react', body: {'emoji': emoji});
+    } catch (_) {}
+  }
+
+  Future<String?> uploadMedia(dynamic file) async {
+    return null; // handled directly in screen
+  }
+
 }
