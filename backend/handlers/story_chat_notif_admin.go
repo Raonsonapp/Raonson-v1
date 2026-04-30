@@ -275,14 +275,6 @@ func MarkChatRead(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// DELETE /chat/messages/:id
-func DeleteMessage(c *gin.Context) {
-	msgID := c.Param("id")
-	myID  := mw.UID(c)
-	db.Pool.Exec(context.Background(),
-		`DELETE FROM messages WHERE id=$1 AND sender_id=$2::text`, msgID, myID)
-	c.JSON(http.StatusOK, gin.H{"deleted": true})
-}
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────
 
