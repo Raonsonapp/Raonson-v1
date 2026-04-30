@@ -110,13 +110,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Future<void> _load() async {
     try {
-      final result = await _repo.getMessagesWithUserEx(widget.peer.id);
-      _chatId = result['chatId'] as String? ?? '';
-      final msgs = result['messages'] as List<MessageModel>? ?? [];
+      final msgs = await _repo.getMessagesWithUserEx(widget.peer.id);
       if (mounted) setState(() { _messages = msgs; _loading = false; });
       _scrollBottom();
-      // Mark as read
-      if (_chatId.isNotEmpty) _repo.markAsRead(_chatId);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -252,7 +248,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       final msg = await _repo.sendMessage(
         toUserId:  widget.peer.id,
         text:      text,
-        replyToId: optimistic.replyTo?.id,
+
       );
       if (!mounted) return;
       setState(() {
@@ -273,12 +269,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // ─── Send media ──────────────────────────────────────────────
   void _onSendMedia(File file) async {
     try {
-      final url = await _repo.uploadMedia(file);
+      final url = await _repo.uploadMedia(file) ?? '';
       final msg = await _repo.sendMessage(
-        toUserId:  widget.peer.id,
-        text:      '',
-        mediaUrl:  url,
-        mediaType: 'image',
+        toUserId: widget.peer.id,
+        text:     url,
       );
       if (!mounted) return;
       setState(() => _messages.add(msg));
@@ -289,7 +283,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // ─── React ───────────────────────────────────────────────────
   void _onReact(MessageModel msg, String emoji) async {
     try {
-      await _repo.reactToMessage(msgId: msg.id, emoji: emoji);
+      await _repo.reactToMessage(msg.id, emoji);
       if (!mounted) return;
       setState(() {
         _messages = _messages.map((m) {
@@ -306,7 +300,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // ─── Delete ──────────────────────────────────────────────────
   void _onDelete(MessageModel msg) async {
     try {
-      await _repo.deleteMessage(msgId: msg.id);
+      await _repo.deleteMessage(msg.id);
       if (!mounted) return;
       setState(() {
         _messages = _messages.map((m) {
