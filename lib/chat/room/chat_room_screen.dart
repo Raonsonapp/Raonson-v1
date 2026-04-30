@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -8,11 +11,15 @@ import '../../widgets/avatar.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/webrtc_service.dart';
 import '../../core/presence_service.dart';
+import '../../core/socket_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
 import 'incoming_call_screen.dart';
 
+// ─────────────────────────────────────────────────────────────────
+//  ChatRoomScreen — 10/10 Instagram DM style
+// ─────────────────────────────────────────────────────────────────
 class ChatRoomScreen extends StatefulWidget {
   final UserModel peer;
   const ChatRoomScreen({super.key, required this.peer});
@@ -26,15 +33,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _scroll   = ScrollController();
   final _signal   = WebRTCService();
   final _presence = PresenceService();
+  final _socket   = SocketService.instance;
 
   List<MessageModel> _messages = [];
-  bool _loading = true;
+  bool   _loading     = true;
+  bool   _isPeerTyping = false;
+  String _chatId      = '';
+  String _myId        = '';
+
+  // Reply state
+  MessageModel? _replyTo;
+
+  // Offline queue
+  final List<Map<String, dynamic>> _offlineQueue = [];
+  late StreamSubscription<List<ConnectivityResult>> _connectSub;
+  bool _isOnline = true;
+
+  Timer? _typingResetTimer;
 
   @override
   void initState() {
     super.initState();
-    _load();
-    _setup();
+    _init();
   }
 
   @override
@@ -42,17 +62,140 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _scroll.dispose();
     _signal.onIncomingCall = null;
     _presence.removeListener(_onPresence);
+    _socket.off('chat:new');
+    _socket.off('chat:typing');
+    _socket.off('chat:read');
+    _socket.off('chat:reaction');
+    _socket.off('chat:delete');
+    if (_chatId.isNotEmpty) _socket.leaveChat(_chatId);
+    _typingResetTimer?.cancel();
+    _connectSub.cancel();
     super.dispose();
   }
 
-  void _onPresence() {
-    if (mounted) setState(() {});
+  Future<void> _init() async {
+    _myId = await TokenStorage.getUserId() ?? '';
+    await _load();
+    _setupSocket();
+    _setupPresence();
+    _setupConnectivity();
   }
 
-  Future<void> _setup() async {
+  void _setupConnectivity() {
+    _connectSub = Connectivity().onConnectivityChanged.listen((results) {
+      final online = results.any((r) => r != ConnectivityResult.none);
+      if (online && !_isOnline) {
+        // Back online — flush offline queue
+        _flushOfflineQueue();
+      }
+      _isOnline = online;
+    });
+  }
+
+  Future<void> _flushOfflineQueue() async {
+    final pending = List<Map<String, dynamic>>.from(_offlineQueue);
+    _offlineQueue.clear();
+    for (final item in pending) {
+      try {
+        await _repo.sendMessage(
+          toUserId: widget.peer.id,
+          text:     item['text'] as String,
+          replyToId: item['replyToId'] as String?,
+        );
+      } catch (_) {
+        _offlineQueue.add(item); // re-queue on failure
+      }
+    }
+  }
+
+  Future<void> _load() async {
+    try {
+      final result = await _repo.getMessagesWithUserEx(widget.peer.id);
+      _chatId = result['chatId'] as String? ?? '';
+      final msgs = result['messages'] as List<MessageModel>? ?? [];
+      if (mounted) setState(() { _messages = msgs; _loading = false; });
+      _scrollBottom();
+      // Mark as read
+      if (_chatId.isNotEmpty) _repo.markAsRead(_chatId);
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _setupSocket() {
+    if (!_socket.isConnected) _socket.autoConnect();
+    if (_chatId.isNotEmpty) _socket.joinChat(_chatId);
+
+    // New message
+    _socket.on('chat:new', (data) {
+      if (data is! Map<String, dynamic>) return;
+      final msg = MessageModel.fromRoomJson(data, _myId);
+      if (!mounted) return;
+      setState(() {
+        // Remove optimistic version if exists
+        _messages.removeWhere((m) => m.isOptimistic && m.text == msg.text);
+        _messages.add(msg);
+      });
+      _scrollBottom();
+      if (!msg.isMine && _chatId.isNotEmpty) _repo.markAsRead(_chatId);
+    });
+
+    // Typing
+    _socket.on('chat:typing', (data) {
+      if (!mounted) return;
+      setState(() => _isPeerTyping = true);
+      _typingResetTimer?.cancel();
+      _typingResetTimer = Timer(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _isPeerTyping = false);
+      });
+    });
+
+    // Read receipt
+    _socket.on('chat:read', (data) {
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages.map((m) {
+          if (m.isMine && m.status != MessageStatus.read) {
+            return m.copyWith(status: MessageStatus.read);
+          }
+          return m;
+        }).toList();
+      });
+    });
+
+    // Reaction
+    _socket.on('chat:reaction', (data) {
+      if (data is! Map<String, dynamic> || !mounted) return;
+      final msgId   = data['messageId']?.toString() ?? '';
+      final emoji   = data['emoji']?.toString()     ?? '';
+      final userId  = data['userId']?.toString()    ?? '';
+      setState(() {
+        _messages = _messages.map((m) {
+          if (m.id != msgId) return m;
+          final existing = List<MessageReaction>.from(m.reactions);
+          existing.removeWhere((r) => r.userId == userId);
+          existing.add(MessageReaction(emoji: emoji, userId: userId));
+          return m.copyWith(reactions: existing);
+        }).toList();
+      });
+    });
+
+    // Delete
+    _socket.on('chat:delete', (data) {
+      if (data is! Map<String, dynamic> || !mounted) return;
+      final msgId = data['messageId']?.toString() ?? '';
+      setState(() {
+        _messages = _messages.map((m) {
+          if (m.id != msgId) return m;
+          return m.copyWith(isDeleted: true, type: MessageType.deleted);
+        }).toList();
+      });
+    });
+  }
+
+  void _setupPresence() async {
     await _signal.connect();
     await _presence.connect();
-
     _presence.addListener(_onPresence);
     _presence.checkUser(widget.peer.id);
 
@@ -72,23 +215,112 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     };
   }
 
-  Future<void> _load() async {
+  void _onPresence() { if (mounted) setState(() {}); }
+
+  // ─── Send text ───────────────────────────────────────────────
+  void _onSend(String text) async {
+    if (text.trim().isEmpty) return;
+
+    // Optimistic insert
+    final optimistic = MessageModel(
+      id:           'opt_${DateTime.now().millisecondsSinceEpoch}',
+      chatId:       _chatId,
+      peer:         widget.peer,
+      text:         text,
+      createdAt:    DateTime.now(),
+      isMine:       true,
+      status:       MessageStatus.sending,
+      replyTo:      _replyTo,
+      isOptimistic: true,
+    );
+    setState(() {
+      _messages.add(optimistic);
+      _replyTo = null;
+    });
+    _scrollBottom();
+
+    // Offline
+    if (!_isOnline) {
+      _offlineQueue.add({
+        'text': text,
+        'replyToId': _replyTo?.id,
+      });
+      return;
+    }
+
     try {
-      final msgs = await _repo.getMessagesWithUser(widget.peer.id);
-      setState(() { _messages = msgs; _loading = false; });
-      _scrollBottom();
+      final msg = await _repo.sendMessage(
+        toUserId:  widget.peer.id,
+        text:      text,
+        replyToId: optimistic.replyTo?.id,
+      );
+      if (!mounted) return;
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+        if (idx >= 0) _messages[idx] = msg;
+      });
     } catch (_) {
-      setState(() => _loading = false);
+      // Mark as failed
+      if (mounted) setState(() {
+        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+        if (idx >= 0) {
+          _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
+        }
+      });
     }
   }
 
-  void _onSend(String text) async {
-    if (text.trim().isEmpty) return;
+  // ─── Send media ──────────────────────────────────────────────
+  void _onSendMedia(File file) async {
     try {
-      final msg = await _repo.sendMessage(toUserId: widget.peer.id, text: text);
+      final url = await _repo.uploadMedia(file);
+      final msg = await _repo.sendMessage(
+        toUserId:  widget.peer.id,
+        text:      '',
+        mediaUrl:  url,
+        mediaType: 'image',
+      );
+      if (!mounted) return;
       setState(() => _messages.add(msg));
       _scrollBottom();
     } catch (_) {}
+  }
+
+  // ─── React ───────────────────────────────────────────────────
+  void _onReact(MessageModel msg, String emoji) async {
+    try {
+      await _repo.reactToMessage(msgId: msg.id, emoji: emoji);
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages.map((m) {
+          if (m.id != msg.id) return m;
+          final existing = List<MessageReaction>.from(m.reactions);
+          existing.removeWhere((r) => r.userId == _myId);
+          existing.add(MessageReaction(emoji: emoji, userId: _myId));
+          return m.copyWith(reactions: existing);
+        }).toList();
+      });
+    } catch (_) {}
+  }
+
+  // ─── Delete ──────────────────────────────────────────────────
+  void _onDelete(MessageModel msg) async {
+    try {
+      await _repo.deleteMessage(msgId: msg.id);
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages.map((m) {
+          if (m.id != msg.id) return m;
+          return m.copyWith(isDeleted: true, type: MessageType.deleted);
+        }).toList();
+      });
+    } catch (_) {}
+  }
+
+  void _onTyping() {
+    if (_chatId.isNotEmpty) {
+      _socket.sendTyping(_chatId, widget.peer.id);
+    }
   }
 
   void _scrollBottom() {
@@ -96,7 +328,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (_scroll.hasClients) {
         _scroll.animateTo(
           _scroll.position.maxScrollExtent + 80,
-          duration: const Duration(milliseconds: 250),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
@@ -106,7 +338,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _startCall(CallType type) async {
     final myId   = await TokenStorage.getUserId() ?? '';
     final myData = await _repo.getMyProfile();
-
     _signal.notifyIncoming(
       toUserId:     widget.peer.id,
       fromUserId:   myId,
@@ -114,15 +345,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       fromAvatar:   myData?['avatar']   ?? '',
       isVideo:      type == CallType.video,
     );
-
     if (!mounted) return;
     Navigator.push(context, PageRouteBuilder(
-      pageBuilder: (_, __, ___) => CallScreen(
+      pageBuilder:        (_, __, ___) => CallScreen(
         peer:         widget.peer,
         callType:     type,
-        peerIsOnline: _presence.isOnline(widget.peer.id),
+        peerIsOnline: _online,
       ),
-      transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
+      transitionsBuilder: (_, a, __, c) =>
+          FadeTransition(opacity: a, child: c),
       transitionDuration: const Duration(milliseconds: 350),
     ));
   }
@@ -130,21 +361,56 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   bool   get _online => _presence.isOnline(widget.peer.id);
   String get _label  => _presence.lastSeenLabel(widget.peer.id);
 
+  // ─────────────────────────────────────────────────────────────
+  //  Build
+  // ─────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(children: [
-          // Avatar with online dot
+      backgroundColor: Colors.black,
+      appBar: _buildAppBar(),
+      body: Column(
+        children: [
+          // Typing indicator
+          if (_isPeerTyping) _TypingIndicator(name: widget.peer.username),
+
+          // Messages list
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.neonBlue))
+                : _messages.isEmpty
+                    ? _emptyState()
+                    : _messageList(),
+          ),
+
+          // Input
+          MessageInput(
+            onSend:       _onSend,
+            onSendMedia:  _onSendMedia,
+            onTyping:     _onTyping,
+            replyTo:      _replyTo,
+            onCancelReply: () => setState(() => _replyTo = null),
+          ),
+        ],
+      ),
+    );
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.black,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: Colors.white, size: 20),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: GestureDetector(
+        onTap: () {}, // open profile
+        child: Row(children: [
           Stack(clipBehavior: Clip.none, children: [
-            Avatar(imageUrl: widget.peer.avatar, size: 38, glowBorder: false),
+            Avatar(imageUrl: widget.peer.avatar, size: 36, glowBorder: false),
             if (_online)
               Positioned(
                 bottom: 0, right: 0,
@@ -153,7 +419,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00E676),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.bg, width: 2),
+                    border: Border.all(color: Colors.black, width: 2),
                   ),
                 ),
               ),
@@ -161,53 +427,78 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(widget.peer.username,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16)),
-              // Presence label
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(widget.peer.username,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15)),
+                if (widget.peer.verified) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.verified_rounded,
+                      color: AppColors.neonBlue, size: 14),
+                ],
+              ]),
               Text(
-                _label.isNotEmpty ? _label : 'профилро бинед',
+                _isPeerTyping
+                    ? 'менависад...'
+                    : (_online ? 'Онлайн' : _label),
                 style: TextStyle(
-                  color: _online
+                  color: _isPeerTyping || _online
                       ? const Color(0xFF00E676)
                       : Colors.white38,
                   fontSize: 11,
-                  fontWeight: _online ? FontWeight.w500 : FontWeight.normal,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
         ]),
-        actions: [
-          _AppBarBtn(icon: Icons.videocam_rounded, onTap: () => _startCall(CallType.video)),
-          _AppBarBtn(icon: Icons.call_rounded,     onTap: () => _startCall(CallType.voice)),
-          const SizedBox(width: 4),
-        ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.neonBlue))
-                : _messages.isEmpty
-                    ? _emptyState()
-                    : ListView.builder(
-                        controller: _scroll,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        itemCount: _messages.length,
-                        itemBuilder: (_, i) => MessageBubble(message: _messages[i]),
-                      ),
-          ),
-          MessageInput(onSend: _onSend),
-        ],
-      ),
+      actions: [
+        _AppBarBtn(
+            icon: Icons.videocam_rounded,
+            onTap: () => _startCall(CallType.video)),
+        _AppBarBtn(
+            icon: Icons.call_rounded,
+            onTap: () => _startCall(CallType.voice)),
+        const SizedBox(width: 4),
+      ],
     );
   }
+
+  Widget _messageList() {
+    return ListView.builder(
+      controller: _scroll,
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
+      itemCount: _messages.length,
+      itemBuilder: (_, i) {
+        final msg = _messages[i];
+        final prev = i > 0 ? _messages[i - 1] : null;
+
+        // Date separator
+        final showDate = prev == null ||
+            !_sameDay(prev.createdAt, msg.createdAt);
+
+        return Column(
+          children: [
+            if (showDate) DateSeparator(date: msg.createdAt),
+            MessageBubble(
+              message:  msg,
+              onReply:  () => setState(() => _replyTo = msg),
+              onReact:  (emoji) => _onReact(msg, emoji),
+              onDelete: () => _onDelete(msg),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Widget _emptyState() {
     return Center(
@@ -224,7 +515,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00E676),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.bg, width: 3),
+                    border: Border.all(color: Colors.black, width: 3),
                   ),
                 ),
               ),
@@ -236,14 +527,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   fontWeight: FontWeight.bold,
                   fontSize: 20)),
           const SizedBox(height: 4),
-          Text(
-            _label.isNotEmpty ? _label : '',
-            style: TextStyle(
-              color: _online ? const Color(0xFF00E676) : Colors.white38,
-              fontSize: 13,
-              fontWeight: _online ? FontWeight.w500 : FontWeight.normal,
-            ),
-          ),
+          if (_label.isNotEmpty)
+            Text(_label,
+                style: TextStyle(
+                  color: _online
+                      ? const Color(0xFF00E676)
+                      : Colors.white38,
+                  fontSize: 13,
+                )),
           const SizedBox(height: 20),
           const Text('Чизе гӯед! 👋',
               style: TextStyle(color: Colors.white38, fontSize: 14)),
@@ -251,10 +542,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _QuickBtn(icon: Icons.call_rounded, label: 'Зангӣ овозӣ',
+              _QuickBtn(
+                  icon: Icons.call_rounded,
+                  label: 'Зангӣ овозӣ',
                   onTap: () => _startCall(CallType.voice)),
               const SizedBox(width: 16),
-              _QuickBtn(icon: Icons.videocam_rounded, label: 'Зангӣ видео',
+              _QuickBtn(
+                  icon: Icons.videocam_rounded,
+                  label: 'Зангӣ видео',
                   onTap: () => _startCall(CallType.video)),
             ],
           ),
@@ -264,31 +559,101 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────
+//  Typing indicator (animated dots)
+// ─────────────────────────────────────────────────────────────────
+class _TypingIndicator extends StatefulWidget {
+  final String name;
+  const _TypingIndicator({required this.name});
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double>   _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1200))
+      ..repeat();
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 12, 2),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1C1C1E),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: AnimatedBuilder(
+            animation: _anim,
+            builder: (_, __) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(3, (i) {
+                final phase = ((_ctrl.value * 3) - i).clamp(0.0, 1.0);
+                final opacity = (phase < 0.5
+                    ? phase * 2
+                    : (1 - phase) * 2).clamp(0.3, 1.0);
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  width: 6, height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(opacity),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  App bar action button
+// ─────────────────────────────────────────────────────────────────
 class _AppBarBtn extends StatelessWidget {
-  final IconData icon; final VoidCallback onTap;
+  final IconData icon;
+  final VoidCallback onTap;
   const _AppBarBtn({required this.icon, required this.onTap});
+
   @override
   Widget build(BuildContext context) => IconButton(
-    icon: Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-          color: AppColors.surface, borderRadius: BorderRadius.circular(10)),
-      child: Icon(icon, color: Colors.white, size: 20),
-    ),
+    icon: Icon(icon, color: Colors.white, size: 22),
     onPressed: onTap,
   );
 }
 
 class _QuickBtn extends StatelessWidget {
-  final IconData icon; final String label; final VoidCallback onTap;
-  const _QuickBtn({required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _QuickBtn(
+      {required this.icon, required this.label, required this.onTap});
+
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
       ),
