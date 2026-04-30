@@ -43,7 +43,7 @@ class _ReelsVM extends ChangeNotifier {
   bool  loadingMore           = false;
   int   _page                 = 1;
   String? error;
-  bool  isMuted               = false; // ← Mute state global
+  bool  isMuted               = false;
   bool  _friendsFilter        = false;
   bool  get friendsFilter     => _friendsFilter;
 
@@ -66,7 +66,6 @@ class _ReelsVM extends ChangeNotifier {
     loadingMore = false; notifyListeners();
   }
 
-  // ── Optimistic like ───────────────────────────────────────────
   void toggleLike(String id) {
     reels = reels.map((r) {
       if (r.id != id) return r;
@@ -78,7 +77,6 @@ class _ReelsVM extends ChangeNotifier {
     notifyListeners();
     _repo.likeReel(id).then((res) {
       if (res == null) return;
-      // Серверидан дақиқ count
       reels = reels.map((r) {
         if (r.id != id) return r;
         return r.copyWith(
@@ -108,7 +106,6 @@ class _ReelsVM extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Watch time ────────────────────────────────────────────────
   void trackWatch({
     required String reelId,
     required int watchMs,
@@ -137,7 +134,6 @@ class _ReelsViewState extends State<_ReelsView> {
   final PageController _pageCtrl = PageController();
   int  _currentPage              = 0;
 
-  // ── Preload map — 2 видео аз пеш ─────────────────────────────
   final Map<int, VideoPlayerController> _preloaded = {};
 
   @override
@@ -149,7 +145,6 @@ class _ReelsViewState extends State<_ReelsView> {
   @override
   void dispose() {
     _pageCtrl.dispose();
-    // Ҳамаи preloaded-ро dispose кун
     for (final ctrl in _preloaded.values) { ctrl.dispose(); }
     _preloaded.clear();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -159,9 +154,7 @@ class _ReelsViewState extends State<_ReelsView> {
   void _onPageChanged(int i, _ReelsVM vm) {
     setState(() => _currentPage = i);
     if (i >= vm.reels.length - 3) vm.loadMore();
-    // Preload next 2
     _preloadAhead(i, vm);
-    // Dispose old (>2 pages behind)
     _disposeOld(i);
   }
 
@@ -175,7 +168,7 @@ class _ReelsViewState extends State<_ReelsView> {
       _preloaded[j] = ctrl;
       ctrl.initialize().then((_) {
         ctrl.setLooping(true);
-        ctrl.setVolume(0); // preload — мут
+        ctrl.setVolume(0);
       });
     }
   }
@@ -288,7 +281,7 @@ class _ReelItem extends StatefulWidget {
   final bool         isActive;
   final bool         isMuted;
   final bool         friendsFilter;
-  final VideoPlayerController? preloadCtrl; // preloaded controller
+  final VideoPlayerController? preloadCtrl;
   final VoidCallback onLike;
   final VoidCallback onSave;
   final VoidCallback onMuteToggle;
@@ -329,7 +322,6 @@ class _ReelItemState extends State<_ReelItem> {
   bool  _captionExpanded = false;
   bool  _isBuffering   = false;
 
-  // Watch time tracking
   DateTime? _watchStart;
   int       _totalWatchMs = 0;
 
@@ -368,7 +360,6 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _initVideo() {
     if (widget.reel.videoUrl.isEmpty) return;
-    // Preloaded controller бошад — истифода кун
     if (widget.preloadCtrl != null &&
         widget.preloadCtrl!.value.isInitialized) {
       _ctrl = widget.preloadCtrl;
@@ -379,7 +370,6 @@ class _ReelItemState extends State<_ReelItem> {
       _addBufferListener();
       return;
     }
-    // Нав load
     _ctrl = VideoPlayerController.networkUrl(
         Uri.parse(widget.reel.videoUrl))
       ..initialize().then((_) {
@@ -441,7 +431,6 @@ class _ReelItemState extends State<_ReelItem> {
   @override
   void didUpdateWidget(_ReelItem old) {
     super.didUpdateWidget(old);
-    // Volume — mute toggle
     if (widget.isMuted != old.isMuted && _ctrl != null) {
       _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
     }
@@ -459,7 +448,6 @@ class _ReelItemState extends State<_ReelItem> {
   void dispose() {
     _sendWatchTime();
     _ctrl?.removeListener(_onVideoUpdate);
-    // Preloaded controller-ро dispose НАКУН — ViewState dispose мекунад
     if (widget.preloadCtrl == null || widget.preloadCtrl != _ctrl) {
       _ctrl?.dispose();
     }
@@ -489,7 +477,6 @@ class _ReelItemState extends State<_ReelItem> {
   void _openProfile() => Navigator.pushNamed(
       context, '/user-profile', arguments: widget.reel.user.id);
 
-  // ── МЕНЮ ─────────────────────────────────────────────────────
   void _showOwnerMenu() {
     _ctrl?.pause();
     showModalBottomSheet(
@@ -553,7 +540,6 @@ class _ReelItemState extends State<_ReelItem> {
         color: color ?? Colors.white, fontSize: 15)),
     onTap: onTap);
 
-  // ── Actions ───────────────────────────────────────────────────
   Future<void> _editCaption() async {
     final ctrl = TextEditingController(text: widget.reel.caption);
     final ok = await showDialog<bool>(
@@ -721,21 +707,25 @@ class _ReelItemState extends State<_ReelItem> {
     if (!_paused) _ctrl?.play();
   }
 
+  // ✅ ИСЛОҲ: Record tuple синтаксис ('spam', 'Спам') → Map {'key':..., 'label':...}
   Future<void> _report() async {
     final reasons = [
-      ('spam', 'Спам'), ('violence', 'Зӯроварӣ'),
-      ('adult', 'Мӯҳтавои калонсолон'),
-      ('hate', 'Нафрат'), ('other', 'Дигар'),
+      {'key': 'spam',     'label': 'Спам'},
+      {'key': 'violence', 'label': 'Зӯроварӣ'},
+      {'key': 'adult',    'label': 'Мӯҳтавои калонсолон'},
+      {'key': 'hate',     'label': 'Нафрат'},
+      {'key': 'other',    'label': 'Дигар'},
     ];
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         title: const Text('Шикоят кардан', style: TextStyle(color: Colors.white)),
-        content: Column(mainAxisSize: MainAxisSize.min,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: reasons.map((r) => ListTile(
-            title: Text(r.$2, style: const TextStyle(color: Colors.white)),
-            onTap: () => Navigator.pop(context, r.$1))).toList()),
+            title: Text(r['label']!, style: const TextStyle(color: Colors.white)),
+            onTap: () => Navigator.pop(context, r['key']))).toList()),
       ),
     );
     if (reason == null) { if (!_paused) _ctrl?.play(); return; }
@@ -762,7 +752,6 @@ class _ReelItemState extends State<_ReelItem> {
     ).then((_) { if (!_paused && mounted) _ctrl?.play(); });
   }
 
-  // ── Share — DM + Story + Copy + External ─────────────────────
   void _share() {
     final url = 'https://raonson-v1.onrender.com/reels/${widget.reel.id}';
     _ctrl?.pause();
@@ -778,7 +767,6 @@ class _ReelItemState extends State<_ReelItem> {
           const Text('Мубодила', style: TextStyle(color: Colors.white,
               fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 8),
-          // ── DM ──────────────────────────────────────────────
           ListTile(
             leading: const CircleAvatar(backgroundColor: AppColors.neonBlue,
               child: Icon(Icons.send_outlined, color: Colors.white, size: 18)),
@@ -790,7 +778,6 @@ class _ReelItemState extends State<_ReelItem> {
               Navigator.pop(context);
               _sendToDM(url);
             }),
-          // ── Add to Story ─────────────────────────────────
           ListTile(
             leading: const CircleAvatar(backgroundColor: Color(0xFF833AB4),
               child: Icon(Icons.add_circle_outline, color: Colors.white, size: 18)),
@@ -803,7 +790,6 @@ class _ReelItemState extends State<_ReelItem> {
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 2)));
             }),
-          // ── Copy link ─────────────────────────────────────
           ListTile(
             leading: const CircleAvatar(backgroundColor: Colors.white12,
               child: Icon(Icons.link, color: Colors.white, size: 18)),
@@ -817,7 +803,6 @@ class _ReelItemState extends State<_ReelItem> {
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 2)));
             }),
-          // ── External share ────────────────────────────────
           ListTile(
             leading: const CircleAvatar(backgroundColor: Colors.white12,
               child: Icon(Icons.share_outlined, color: Colors.white, size: 18)),
@@ -834,7 +819,6 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   Future<void> _sendToDM(String url) async {
-    // DM экрани мавҷудро кушо
     Navigator.pushNamed(context, '/messages', arguments: {'shareUrl': url});
   }
 
@@ -844,7 +828,6 @@ class _ReelItemState extends State<_ReelItem> {
     return n > 0 ? '$n' : '';
   }
 
-  // ── Caption spans — #hashtag ва @mention клик ────────────────
   List<InlineSpan> _buildCaptionSpans(String text) {
     final spans = <InlineSpan>[];
     final words = text.split(' ');
@@ -897,7 +880,6 @@ class _ReelItemState extends State<_ReelItem> {
       onDoubleTap: _doubleTapLike,
       child: Stack(fit: StackFit.expand, children: [
 
-        // ── Video ──────────────────────────────────────────────
         if (_initialized && _ctrl != null)
           FittedBox(fit: BoxFit.cover,
             child: SizedBox(
@@ -912,7 +894,6 @@ class _ReelItemState extends State<_ReelItem> {
         else
           Container(color: AppColors.bg),
 
-        // ── Gradient ───────────────────────────────────────────
         const DecoratedBox(decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
@@ -920,22 +901,18 @@ class _ReelItemState extends State<_ReelItem> {
                 Color(0x33000000), Color(0xEE000000)],
             stops: [0, 0.35, 0.65, 1]))),
 
-        // ── Buffer indicator ───────────────────────────────────
         if (_isBuffering && !_paused)
           const Center(child: CircularProgressIndicator(
             strokeWidth: 2.5,
             valueColor: AlwaysStoppedAnimation(Colors.white70))),
 
-        // ── Pause icon ─────────────────────────────────────────
         if (_paused && !_isBuffering)
           const Center(child: Icon(Icons.play_arrow_rounded,
             color: Colors.white54, size: 80,
             shadows: [Shadow(blurRadius: 20, color: Colors.black54)])),
 
-        // ── Double-tap heart ───────────────────────────────────
         if (_showHeart) const Center(child: _HeartBurst()),
 
-        // ── Progress bar ───────────────────────────────────────
         if (_initialized && _ctrl != null)
           Positioned(bottom: 0, left: 0, right: 0,
             child: ValueListenableBuilder(
@@ -950,7 +927,6 @@ class _ReelItemState extends State<_ReelItem> {
                   minHeight: 2);
               })),
 
-        // ── TOP BAR ────────────────────────────────────────────
         Positioned(top: top + 12, left: 0, right: 0,
           child: Row(children: [
             const SizedBox(width: 16),
@@ -973,7 +949,6 @@ class _ReelItemState extends State<_ReelItem> {
                     color: Colors.white70, size: 20),
               ])),
             const Spacer(),
-            // Mute toggle ──────────────────────────────────────
             GestureDetector(
               onTap: widget.onMuteToggle,
               child: Padding(padding: const EdgeInsets.only(right: 8),
@@ -987,7 +962,6 @@ class _ReelItemState extends State<_ReelItem> {
                         : Icons.volume_up_rounded,
                     color: Colors.white, size: 20,
                     shadows: const [Shadow(blurRadius: 6, color: Colors.black54)])))),
-            // Add reel ─────────────────────────────────────────
             GestureDetector(
               onTap: widget.onAddReel,
               child: const Padding(padding: EdgeInsets.only(right: 16),
@@ -995,10 +969,8 @@ class _ReelItemState extends State<_ReelItem> {
                   shadows: [Shadow(blurRadius: 6, color: Colors.black54)]))),
           ])),
 
-        // ── RIGHT ACTIONS ──────────────────────────────────────
         Positioned(right: 10, bottom: bottom + size.height * 0.10,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            // ♡ Like — bounce
             _LikeBtn(
               isLiked: reel.isLiked,
               count: _fmt(reel.likesCount),
@@ -1027,19 +999,16 @@ class _ReelItemState extends State<_ReelItem> {
                   color: Colors.white, size: 28,
                   shadows: [Shadow(blurRadius: 6, color: Colors.black54)]))),
             const SizedBox(height: 16),
-            // 🎵 Spinning disc — pause-aware
             _SpinningDisc(
               avatar: reel.user.avatar,
               isPlaying: _initialized && !_paused),
           ])),
 
-        // ── BOTTOM LEFT ────────────────────────────────────────
         Positioned(left: 14, right: 90, bottom: bottom + 24,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // User row
               Row(children: [
                 GestureDetector(
                   onTap: _openProfile,
@@ -1078,7 +1047,6 @@ class _ReelItemState extends State<_ReelItem> {
                           shadows: [Shadow(blurRadius: 4, color: Colors.black)]))))],
               ]),
 
-              // ── Caption бо Show more/less ──────────────────
               if (reel.caption.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 _CaptionWidget(
@@ -1091,7 +1059,6 @@ class _ReelItemState extends State<_ReelItem> {
 
               const SizedBox(height: 10),
 
-              // ── Audio Bar — мисли Instagram ────────────────
               _AudioBar(
                 title:  reel.audioTitle,
                 artist: reel.audioArtist,
@@ -1103,7 +1070,7 @@ class _ReelItemState extends State<_ReelItem> {
   }
 }
 
-// ── Caption Widget бо Show more/less ────────────────────────────────
+// ── Caption Widget ───────────────────────────────────────────────
 class _CaptionWidget extends StatelessWidget {
   final String caption;
   final List<InlineSpan> spans;
@@ -1146,7 +1113,7 @@ class _CaptionWidget extends StatelessWidget {
   }
 }
 
-// ── Audio Bar ─────────────────────────────────────────────────────────
+// ── Audio Bar ────────────────────────────────────────────────────
 class _AudioBar extends StatefulWidget {
   final String title, artist, avatar;
   final bool isPlaying;
@@ -1204,13 +1171,12 @@ class _AudioBarState extends State<_AudioBar>
               maxLines: 1, overflow: TextOverflow.visible,
               softWrap: false)))),
       const SizedBox(width: 6),
-      // Mini spinning disc
       _SpinningDisc(avatar: widget.avatar, size: 28, isPlaying: widget.isPlaying),
     ]);
   }
 }
 
-// ── Like Button бо bounce ────────────────────────────────────────────
+// ── Like Button ──────────────────────────────────────────────────
 class _LikeBtn extends StatefulWidget {
   final bool isLiked;
   final String count;
@@ -1263,7 +1229,7 @@ class _LikeBtnState extends State<_LikeBtn> with SingleTickerProviderStateMixin 
   }
 }
 
-// ── Avatar with Story Ring ───────────────────────────────────────────
+// ── Avatar with Story Ring ───────────────────────────────────────
 class _AvatarWithStoryRing extends StatelessWidget {
   final String avatarUrl;
   final bool?  hasStory;
@@ -1312,7 +1278,7 @@ class _AvatarWithStoryRing extends StatelessWidget {
   }
 }
 
-// ── Stable Reel Button ───────────────────────────────────────────────
+// ── Stable Reel Button ───────────────────────────────────────────
 class _ReelStableBtn extends StatelessWidget {
   final String svgPath, count;
   final String? activeSvgPath;
@@ -1343,7 +1309,7 @@ class _ReelStableBtn extends StatelessWidget {
   }
 }
 
-// ── Spinning Disc — pause-aware ──────────────────────────────────────
+// ── Spinning Disc ────────────────────────────────────────────────
 class _SpinningDisc extends StatefulWidget {
   final String avatar;
   final double size;
@@ -1368,9 +1334,9 @@ class _SpinningDiscState extends State<_SpinningDisc>
   void didUpdateWidget(_SpinningDisc old) {
     super.didUpdateWidget(old);
     if (widget.isPlaying && !old.isPlaying) {
-      _spin.repeat(); // ← play → spin кун
+      _spin.repeat();
     } else if (!widget.isPlaying && old.isPlaying) {
-      _spin.stop();   // ← pause → disc таваккуф
+      _spin.stop();
     }
   }
   @override void dispose() { _spin.dispose(); super.dispose(); }
@@ -1395,7 +1361,7 @@ class _SpinningDiscState extends State<_SpinningDisc>
                 color: Colors.white54, size: 18)))));
 }
 
-// ── Heart Burst ───────────────────────────────────────────────────────
+// ── Heart Burst ──────────────────────────────────────────────────
 class _HeartBurst extends StatefulWidget {
   const _HeartBurst();
   @override State<_HeartBurst> createState() => _HeartBurstState();
@@ -1424,7 +1390,7 @@ class _HeartBurstState extends State<_HeartBurst>
           shadows: [Shadow(blurRadius: 30, color: Colors.black54)]))));
 }
 
-// ── Reel Comments — Like + Reply ─────────────────────────────────────
+// ── Reel Comments ────────────────────────────────────────────────
 class _ReelComments extends StatefulWidget {
   final String reelId;
   const _ReelComments({required this.reelId});
@@ -1534,7 +1500,6 @@ class _ReelCommentsState extends State<_ReelComments> {
                               Text(c['text']??'', style: const TextStyle(
                                   color: Colors.white70, fontSize: 14)),
                               const SizedBox(height: 4),
-                              // Reply
                               GestureDetector(
                                 onTap: () {
                                   setState(() {
@@ -1549,7 +1514,6 @@ class _ReelCommentsState extends State<_ReelComments> {
                                       fontWeight: FontWeight.w500))),
                             ])),
                           const SizedBox(width: 8),
-                          // Like comment
                           GestureDetector(
                             onTap: () => _likeComment(id, i),
                             child: Column(
@@ -1568,7 +1532,6 @@ class _ReelCommentsState extends State<_ReelComments> {
                         ]));
                     }),
       ),
-      // Reply banner
       if (_replyToUsername != null)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
