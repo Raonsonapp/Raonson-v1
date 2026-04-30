@@ -1163,13 +1163,16 @@ class _AudioBarState extends State<_AudioBar>
       Flexible(child: ClipRect(
         child: AnimatedBuilder(
           animation: _scrollAnim,
-          builder: (_, __) => FractionalTranslation(
-            translation: Offset(-(_scrollAnim.value * 0.5), 0),
-            child: Text(displayText + '   ' + displayText,
-              style: const TextStyle(color: Colors.white70, fontSize: 13,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
-              maxLines: 1, overflow: TextOverflow.visible,
-              softWrap: false)))),
+          builder: (_, __) {
+            final dx = -(_scrollAnim.value * 0.5);
+            return FractionalTranslation(
+              translation: Offset(dx, 0.0),
+              child: Text(displayText + '   ' + displayText,
+                style: const TextStyle(color: Colors.white70, fontSize: 13,
+                  shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+                maxLines: 1, overflow: TextOverflow.visible,
+                softWrap: false));
+          })),
       const SizedBox(width: 6),
       _SpinningDisc(avatar: widget.avatar, size: 28, isPlaying: widget.isPlaying),
     ]);
