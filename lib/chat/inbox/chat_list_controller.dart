@@ -56,6 +56,6 @@ class ChatListController extends ChangeNotifier {
   }
 
   int get totalUnread {
-    return _chats.where((c) => c.status != MessageStatus.read && !c.isMine).length;
+    return _chats.where((c) => !c.isMine).length;
   }
 }
