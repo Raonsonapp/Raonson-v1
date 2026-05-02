@@ -11,6 +11,7 @@ import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../create/create_post/create_post_screen.dart';
 import '../stories/story_viewer.dart';
+import '../stories/story_group_viewer.dart';
 import '../stories/story_controller.dart';
 import '../models/story_model.dart';
 import '../create/create_story/create_story_screen.dart';
@@ -60,12 +61,28 @@ class AppController {
       // Story viewer — onComplete холӣ, чунки
       // feed_screen.dart дар _openStory баъди pop markViewed мезанад
       case '/story-viewer':
+        // Legacy single-story route — wrap in StoryGroupViewer
         final story = settings.arguments as StoryModel;
-        return MaterialPageRoute(
-          builder: (_) => StoryViewer(
-            story: story,
-            onComplete: () {},  // feed_screen handles markViewed
+        return PageRouteBuilder(
+          opaque: false,
+          pageBuilder: (_, __, ___) => StoryGroupViewer(
+            groups: [[story]],
+            initialGroupIndex: 0,
           ),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+        );
+
+      case '/story-group-viewer':
+        final args = settings.arguments as Map<String, dynamic>;
+        final groups = args['groups'] as List<List<StoryModel>>;
+        final idx    = args['initialGroupIndex'] as int? ?? 0;
+        return PageRouteBuilder(
+          opaque: false,
+          pageBuilder: (_, __, ___) => StoryGroupViewer(
+            groups: groups, initialGroupIndex: idx),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
         );
 
       case '/create-story':
