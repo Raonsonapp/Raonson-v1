@@ -8,6 +8,7 @@ import 'feed_state.dart';
 import '../post/post_card.dart';
 import '../post/post_card_skeleton.dart';
 import '../../stories/story_bar.dart';
+import '../../stories/story_group_viewer.dart';
 import '../../stories/story_controller.dart';
 import '../../stories/story_repository.dart';
 import '../../models/story_model.dart';
@@ -134,10 +135,24 @@ class _FeedBody extends StatelessWidget {
   final VoidCallback? onCreatePost;
   const _FeedBody({this.isActive = true, this.onCreatePost});
 
-  Future<void> _openStory(BuildContext context, StoryModel story) async {
+  Future<void> _openStoryGroup(
+      BuildContext context,
+      List<List<StoryModel>> groups,
+      int initialGroupIndex) async {
     final storyCtrl = context.read<StoryController>();
-    await Navigator.pushNamed(context, '/story-viewer', arguments: story);
-    storyCtrl.markViewed(story.id);
+    await Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (_, __, ___) => StoryGroupViewer(
+          groups: groups,
+          initialGroupIndex: initialGroupIndex,
+          onViewed: storyCtrl.markViewed,
+        ),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
   }
 
   // Story bar — unseen first
@@ -155,11 +170,26 @@ class _FeedBody extends StatelessWidget {
 
     final sortedStories = _sortStories(storyCtrl.stories);
 
+    // Build groups for StoryGroupViewer
+    final allGroups = groupStoriesByUser(sortedStories);
+    // Add my group at front if exists
+    final myId = UserSession.userId ?? '';
+    final myGroup = storyCtrl.myStories;
+
     final storyBar = StoryBar(
       stories:   sortedStories,
       myStories: storyCtrl.myStories,
       myAvatar:  UserSession.avatar,
-      onTap: (s) => _openStory(context, s),
+      onTapGroup: (group, idx) {
+        final groups = allGroups;
+        final groupIdx = groups.indexWhere(
+            (g) => g.first.user.id == group.first.user.id);
+        _openStoryGroup(context, groups, groupIdx.clamp(0, groups.length - 1));
+      },
+      onTap: (s) {
+        // Fallback: open single story as group
+        _openStoryGroup(context, [[s]], 0);
+      },
       onAddStory: () async {
         final ok = await Navigator.pushNamed(context, '/create-story');
         if (context.mounted) {
