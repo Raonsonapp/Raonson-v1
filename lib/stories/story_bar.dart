@@ -147,7 +147,7 @@ class _MyStoryItem extends StatelessWidget {
         const SizedBox(height: 5),
         SizedBox(
           width: _outer,
-          child: const Text('история шумо',
+          child: const Text('Сториси шумо',
             style: TextStyle(color: Colors.white, fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center)),
