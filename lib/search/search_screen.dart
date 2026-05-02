@@ -321,7 +321,7 @@ class _SearchScreenState extends State<SearchScreen>
   }
 }
 
-// ── Instagram-style grid (big cell pattern) ──────────────────────────
+// ── Instagram-style grid (big cell every 7th) ────────────────────────
 class _InstagramGrid extends StatelessWidget {
   final List<PostModel> posts;
   final List reels;
@@ -331,83 +331,120 @@ class _InstagramGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <_GridItem>[];
     for (final p in posts) {
-      if (p.mediaUrl.isNotEmpty) items.add(_GridItem(url: p.mediaUrl, isReel: false, isMulti: (p.media.length) > 1));
+      if (p.mediaUrl.isNotEmpty) {
+        items.add(_GridItem(url: p.mediaUrl, isReel: false,
+            isMulti: p.media.length > 1));
+      }
     }
     for (final r in reels) {
-      final url = (r as Map)['thumbnailUrl']?.toString() ?? r['videoUrl']?.toString() ?? '';
-      if (url.isNotEmpty) items.add(_GridItem(url: url, isReel: true, isMulti: false));
+      final url = (r as Map)['thumbnailUrl']?.toString()
+          ?? r['videoUrl']?.toString() ?? '';
+      if (url.isNotEmpty) {
+        items.add(_GridItem(url: url, isReel: true));
+      }
     }
 
     if (items.isEmpty) {
       return SliverToBoxAdapter(child: Padding(
         padding: const EdgeInsets.only(top: 60),
         child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.explore_outlined, size: 52, color: Colors.white.withOpacity(0.1)),
+          Icon(Icons.explore_outlined, size: 52,
+              color: Colors.white.withOpacity(0.1)),
           const SizedBox(height: 12),
           Text('Мӯҳтаво ҳанӯз нест',
-              style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14)),
+              style: TextStyle(
+                  color: Colors.white.withOpacity(0.3), fontSize: 14)),
         ])),
       ));
     }
 
-    // Instagram pattern: every 7 items, one big cell
-    return SliverPadding(
-      padding: EdgeInsets.zero,
-      sliver: SliverGrid(
-        delegate: SliverChildBuilderDelegate(
-          (_, i) => _GridTile(item: items[i % items.length], isBig: i % 7 == 0),
-          childCount: items.length,
-        ),
-        gridDelegate: const _InstagramGridDelegate(),
-      ),
+    // Build rows manually: Instagram pattern
+    // Every 7 items: 1 big (2 cols) + 2 small on right
+    // Other rows: 3 equal columns
+    return SliverToBoxAdapter(
+      child: _InstagramGridWidget(items: items),
     );
   }
 }
 
-class _InstagramGridDelegate extends SliverGridDelegate {
-  const _InstagramGridDelegate();
+class _InstagramGridWidget extends StatelessWidget {
+  final List<_GridItem> items;
+  const _InstagramGridWidget({required this.items});
 
   @override
-  SliverGridLayout getLayout(SliverConstraints constraints) {
-    final w = constraints.crossAxisExtent;
-    final cell = w / 3;
-    return _InstagramLayout(cell: cell, total: constraints.remainingPaintExtent);
-  }
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final cell = (w - 4) / 3; // 3 columns, 2px gap
+    final bigCell = cell * 2 + 2;
 
-  @override
-  bool shouldRelayout(_InstagramGridDelegate old) => false;
-}
+    final widgets = <Widget>[];
+    int i = 0;
+    int blockCount = 0;
 
-class _InstagramLayout extends SliverGridLayout {
-  final double cell;
-  final double total;
-  const _InstagramLayout({required this.cell, required this.total});
+    while (i < items.length) {
+      // Every 3rd block (0-indexed): big layout
+      if (blockCount % 3 == 0 && i + 2 < items.length) {
+        // Big cell left + 2 small right
+        final big   = items[i];
+        final sm1   = items[i + 1];
+        final sm2   = items[i + 2];
+        widgets.add(SizedBox(
+          height: bigCell,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _GridTile(item: big, width: bigCell, height: bigCell),
+            const SizedBox(width: 2),
+            Column(children: [
+              _GridTile(item: sm1, width: cell, height: cell),
+              const SizedBox(height: 2),
+              _GridTile(item: sm2, width: cell, height: cell),
+            ]),
+          ]),
+        ));
+        widgets.add(const SizedBox(height: 2));
+        i += 3;
+        blockCount++;
+      } else if (blockCount % 3 == 1 && i + 2 < items.length) {
+        // 2 small left + big cell right
+        final sm1 = items[i];
+        final sm2 = items[i + 1];
+        final big = items[i + 2];
+        widgets.add(SizedBox(
+          height: bigCell,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Column(children: [
+              _GridTile(item: sm1, width: cell, height: cell),
+              const SizedBox(height: 2),
+              _GridTile(item: sm2, width: cell, height: cell),
+            ]),
+            const SizedBox(width: 2),
+            _GridTile(item: big, width: bigCell, height: bigCell),
+          ]),
+        ));
+        widgets.add(const SizedBox(height: 2));
+        i += 3;
+        blockCount++;
+      } else {
+        // Regular 3-column row
+        final rowItems = items.skip(i).take(3).toList();
+        widgets.add(Row(
+          children: List.generate(rowItems.length, (j) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _GridTile(item: rowItems[j], width: cell, height: cell),
+              if (j < rowItems.length - 1) const SizedBox(width: 2),
+            ],
+          )),
+        ));
+        widgets.add(const SizedBox(height: 2));
+        i += rowItems.length;
+        blockCount++;
+      }
+    }
 
-  @override
-  double computeMaxScrollOffset(int childCount) => (childCount / 3).ceil() * cell * 1.5;
-
-  @override
-  SliverGridGeometry getGeometryForChildIndex(int index) {
-    // Every 7th item → big (2x2), others → small (1x1)
-    // Simple 3-column with occasional big cell
-    final col = index % 3;
-    final row = index ~/ 3;
-    return SliverGridGeometry(
-      scrollOffset: row * (cell + 2),
-      crossAxisOffset: col * (cell + 2),
-      mainAxisExtent: cell,
-      crossAxisExtent: cell,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: widgets,
     );
-  }
-
-  @override
-  int getMinChildIndexForScrollOffset(double scrollOffset) {
-    return ((scrollOffset / (cell + 2)) * 3).floor().clamp(0, double.maxFinite.toInt());
-  }
-
-  @override
-  int getMaxChildIndexForScrollOffset(double scrollOffset) {
-    return (((scrollOffset + cell) / (cell + 2)) * 3).ceil();
   }
 }
 
@@ -455,26 +492,33 @@ class _SkeletonGridState extends State<_SkeletonGrid>
 // ── Grid tile ────────────────────────────────────────────────────────
 class _GridTile extends StatelessWidget {
   final _GridItem item;
-  final bool isBig;
-  const _GridTile({required this.item, required this.isBig});
+  final double width;
+  final double height;
+  const _GridTile({required this.item, required this.width, required this.height});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {}, // TODO: open post detail
-      child: Stack(fit: StackFit.expand, children: [
-        CachedNetworkImage(
-          imageUrl: item.url, fit: BoxFit.cover,
-          placeholder: (_, __) => Container(color: const Color(0xFF111111)),
-          errorWidget: (_, __, ___) => Container(color: const Color(0xFF111111)),
-        ),
-        if (item.isReel)
-          const Positioned(top: 6, right: 6,
-            child: Icon(Icons.play_circle_filled_rounded, color: Colors.white70, size: 18)),
-        if (item.isMulti)
-          const Positioned(top: 6, right: 6,
-            child: Icon(Icons.collections_rounded, color: Colors.white, size: 18)),
-      ]),
+      child: SizedBox(
+        width: width, height: height,
+        child: Stack(fit: StackFit.expand, children: [
+          CachedNetworkImage(
+            imageUrl: item.url, fit: BoxFit.cover,
+            placeholder: (_, __) => Container(color: const Color(0xFF111111)),
+            errorWidget: (_, __, ___) =>
+                Container(color: const Color(0xFF111111)),
+          ),
+          if (item.isReel)
+            const Positioned(top: 6, right: 6,
+              child: Icon(Icons.play_circle_filled_rounded,
+                  color: Colors.white70, size: 18)),
+          if (item.isMulti)
+            const Positioned(top: 6, right: 6,
+              child: Icon(Icons.collections_rounded,
+                  color: Colors.white, size: 18)),
+        ]),
+      ),
     );
   }
 }
