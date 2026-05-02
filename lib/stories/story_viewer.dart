@@ -132,38 +132,38 @@ class _StoryViewerState extends State<StoryViewer>
                 borderRadius: BorderRadius.circular(2))),
           // Удалить
           ListTile(
-            title: const Text('Удалить',
+            title: const Text('Нест кун',
                 style: TextStyle(color: Colors.redAccent,
                     fontSize: 17, fontWeight: FontWeight.w500)),
             onTap: () { Navigator.pop(context); _deleteStory(); },
           ),
           // Архивировать
           ListTile(
-            title: const Text('Архивировать',
+            title: const Text('Бойгонӣ',
                 style: TextStyle(color: Colors.white, fontSize: 17)),
             onTap: () { Navigator.pop(context); _resume(); },
           ),
           // Сохранить видео/фото
           ListTile(
-            title: Text(_isVideo ? 'Сохранить видео' : 'Сохранить фото',
+            title: Text(_isVideo ? 'Видео ҳифз кун' : 'Расм ҳифз кун',
                 style: const TextStyle(color: Colors.white, fontSize: 17)),
             onTap: () { Navigator.pop(context); _resume(); },
           ),
           // Отправить
           ListTile(
-            title: const Text('Отправить...',
+            title: const Text('Фиристед...',
                 style: TextStyle(color: Colors.white, fontSize: 17)),
             onTap: () { Navigator.pop(context); _shareStory(); },
           ),
           // Поделиться
           ListTile(
-            title: const Text('Поделиться',
+            title: const Text('Мубодила',
                 style: TextStyle(color: Colors.white, fontSize: 17)),
             onTap: () { Navigator.pop(context); _shareStory(); },
           ),
           // Выключить комментарии
           ListTile(
-            title: const Text('Выключить комментарии',
+            title: const Text('Шарҳро хомӯш кун',
                 style: TextStyle(color: Colors.white, fontSize: 17)),
             onTap: () { Navigator.pop(context); _resume(); },
           ),
@@ -501,27 +501,27 @@ class _StoryViewerState extends State<StoryViewer>
     return Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
       _OwnerActionBtn(
         icon: Icons.share_outlined,
-        label: 'Поделиться',
+        label: 'Мубодила',
         onTap: _shareStory,
       ),
       _OwnerActionBtn(
         icon: Icons.trending_up_rounded,
-        label: 'Продвигать',
+        label: 'Тарвиҷ',
         onTap: () {},
       ),
       _OwnerActionBtn(
         icon: Icons.favorite_border_rounded,
-        label: 'Добавить',
+        label: 'Илова',
         onTap: () {},
       ),
       _OwnerActionBtn(
         icon: Icons.alternate_email_rounded,
-        label: 'Упомянуть',
+        label: 'Зикр',
         onTap: () {},
       ),
       _OwnerActionBtn(
         icon: Icons.more_horiz_rounded,
-        label: 'Ещё',
+        label: 'Бештар',
         onTap: _showOwnerMenu,
       ),
     ]);
@@ -564,7 +564,7 @@ class _StoryViewerState extends State<StoryViewer>
                 border: Border.all(color: Colors.white38, width: 1.5),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: Text('Отправить сообщение',
+              child: Text('Паём фиристед',
                 style: TextStyle(
                     color: Colors.white.withOpacity(0.7), fontSize: 14)),
             ),
