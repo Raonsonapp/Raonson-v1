@@ -2,34 +2,31 @@ package db
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"os"
 	"time"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var Pool *pgxpool.Pool
 
-func Init() {
+func Init(maxConns int32) error {
 	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		log.Fatal("DATABASE_URL not set")
-	}
+	if dsn == "" { return fmt.Errorf("DATABASE_URL not set") }
 	cfg, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		log.Fatalf("db config error: %v", err)
-	}
-	cfg.MaxConns = 15
+	if err != nil { return err }
+	cfg.MaxConns = maxConns
 	cfg.MinConns = 2
 	cfg.MaxConnLifetime = 30 * time.Minute
 	cfg.MaxConnIdleTime = 5 * time.Minute
-	Pool, err = pgxpool.NewWithConfig(context.Background(), cfg)
-	if err != nil {
-		log.Fatalf("db connect error: %v", err)
-	}
-	if err = Pool.Ping(context.Background()); err != nil {
-		log.Fatalf("db ping failed: %v", err)
-	}
-	log.Println("✅ PostgreSQL connected")
+	cfg.HealthCheckPeriod = 30 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	Pool, err = pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil { return err }
+	return Pool.Ping(ctx)
+}
+
+func Close() {
+	if Pool != nil { Pool.Close() }
 }
