@@ -1,81 +1,105 @@
 package middleware
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"auth-service/pkg/jwt"
 	rdb "auth-service/pkg/redis"
 
+	gojwt "github.com/golang-jwt/jwt/v5"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
-// Auth — JWT-ро тасдиқ мекунад ва userID-ро set мекунад
-func Auth() gin.HandlerFunc {
+func RequestLogger(log *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		header := c.GetHeader("Authorization")
-		if header == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "No token"})
-			c.Abort()
-			return
-		}
-		parts := strings.SplitN(header, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid token format"})
-			c.Abort()
-			return
-		}
-		tokenStr := parts[1]
-		// Check blacklist
-		if rdb.Exists("blacklist:" + tokenStr) {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "Token revoked"})
-			c.Abort()
-			return
-		}
-		userID, err := jwt.ParseAccess(tokenStr)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid token"})
-			c.Abort()
-			return
-		}
-		c.Set("userID", userID)
+		start := time.Now()
+		reqID := c.GetHeader("X-Request-ID")
+		if reqID == "" { reqID = newReqID() }
+		c.Set("requestID", reqID)
+		c.Header("X-Request-ID", reqID)
+		c.Next()
+		log.Info("http",
+			zap.String("id", reqID),
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.Int("status", c.Writer.Status()),
+			zap.Duration("ms", time.Since(start)),
+			zap.String("ip", c.ClientIP()),
+		)
+	}
+}
+
+func Recovery(log *zap.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Error("panic", zap.Any("err", err))
+				c.AbortWithStatusJSON(http.StatusInternalServerError,
+					gin.H{"success": false, "error": gin.H{"message": "internal error"}})
+			}
+		}()
 		c.Next()
 	}
 }
 
-// RateLimit — per-IP, in-memory (auth endpoints учун)
-func RateLimit(limit int, window time.Duration) gin.HandlerFunc {
-	type entry struct {
-		count int
-		reset time.Time
-	}
-	store := make(map[string]*entry)
-	var mu sync.Mutex
-
+func Auth() gin.HandlerFunc {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" { secret = "change_me" }
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
-		now := time.Now()
+		if uid := c.GetHeader("X-User-ID"); uid != "" {
+			c.Set("userID", uid); c.Next(); return
+		}
+		header := c.GetHeader("Authorization")
+		if !strings.HasPrefix(header, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "error": gin.H{"message": "no token"}}); return
+		}
+		token := header[7:]
+		if rdb.Exists("blacklist:" + token) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "error": gin.H{"message": "token revoked"}}); return
+		}
+		tok, err := gojwt.Parse(token,
+			func(t *gojwt.Token) (interface{}, error) { return []byte(secret), nil },
+			gojwt.WithValidMethods([]string{"HS256"}))
+		if err != nil || !tok.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "error": gin.H{"message": "invalid token"}}); return
+		}
+		claims := tok.Claims.(gojwt.MapClaims)
+		c.Set("userID", claims["id"].(string))
+		c.Next()
+	}
+}
+
+func RateLimit(limit int, window time.Duration) gin.HandlerFunc {
+	type entry struct{ count int; reset time.Time }
+	store := map[string]*entry{}
+	var mu sync.Mutex
+	go func() {
+		t := time.NewTicker(time.Minute)
+		for range t.C {
+			now := time.Now(); mu.Lock()
+			for k, e := range store { if now.After(e.reset) { delete(store, k) } }
+			mu.Unlock()
+		}
+	}()
+	return func(c *gin.Context) {
+		ip := c.ClientIP(); now := time.Now()
 		mu.Lock()
 		e, ok := store[ip]
-		if !ok || now.After(e.reset) {
-			store[ip] = &entry{count: 1, reset: now.Add(window)}
-			mu.Unlock()
-			c.Next()
-			return
-		}
-		e.count++
-		count := e.count
-		mu.Unlock()
-		if count > limit {
+		if !ok || now.After(e.reset) { store[ip] = &entry{1, now.Add(window)}; mu.Unlock(); c.Next(); return }
+		e.count++; n := e.count; mu.Unlock()
+		if n > limit {
 			c.Header("Retry-After", "60")
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"message": "Too many requests. Please try again later.",
-			})
-			c.Abort()
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"success": false, "error": gin.H{"message": "too many requests"}})
 			return
 		}
 		c.Next()
 	}
 }
+
+func newReqID() string { b := make([]byte, 8); rand.Read(b); return hex.EncodeToString(b) }
