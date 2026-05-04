@@ -9,7 +9,7 @@ FROM alpine:3.19
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /app/service .
-RUN adduser -D -g '' appuser && chown appuser:appuser /app/service
+RUN adduser -D appuser && chown appuser /app/service
 USER appuser
 EXPOSE 8004
 CMD ["./service"]
