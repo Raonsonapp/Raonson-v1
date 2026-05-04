@@ -11,27 +11,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthHandler struct {
-	svc *service.AuthService
+type Handler struct{ svc *service.Service }
+
+func New(svc *service.Service) *Handler { return &Handler{svc: svc} }
+
+func ok(c *gin.Context, code int, data gin.H) { c.JSON(code, data) }
+func fail(c *gin.Context, code int, msg string) {
+	c.AbortWithStatusJSON(code, gin.H{"success": false, "error": gin.H{"message": msg}})
 }
 
-func NewAuthHandler(svc *service.AuthService) *AuthHandler {
-	return &AuthHandler{svc: svc}
+// GET /health
+func (h *Handler) Health(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"service": "auth-service", "status": "ok"})
 }
 
-func (h *AuthHandler) Register(c *gin.Context) {
-	var req model.RegisterRequest
+// POST /auth/register
+func (h *Handler) Register(c *gin.Context) {
+	var req model.RegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing or invalid fields", "error": err.Error()})
+		fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	pair, err := h.svc.Register(c.Request.Context(), &req)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if strings.Contains(err.Error(), "already taken") {
+		if strings.Contains(err.Error(), "taken") {
 			status = http.StatusConflict
 		}
-		c.JSON(status, gin.H{"message": err.Error()})
+		fail(c, status, err.Error())
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{
@@ -42,19 +49,20 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
-	var req model.LoginRequest
+// POST /auth/login
+func (h *Handler) Login(c *gin.Context) {
+	var req model.LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing fields"})
+		fail(c, http.StatusBadRequest, "email and password required")
 		return
 	}
 	pair, err := h.svc.Login(c.Request.Context(), &req)
 	if err != nil {
 		status := http.StatusUnauthorized
-		if strings.Contains(err.Error(), "banned") {
+		if strings.Contains(err.Error(), "suspended") {
 			status = http.StatusForbidden
 		}
-		c.JSON(status, gin.H{"message": err.Error()})
+		fail(c, status, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -65,92 +73,86 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
-func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var req model.RefreshRequest
+// POST /auth/refresh
+func (h *Handler) Refresh(c *gin.Context) {
+	var req model.RefreshReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "refreshToken required"})
+		fail(c, http.StatusBadRequest, "refreshToken required")
 		return
 	}
-	pair, err := h.svc.RefreshTokens(c.Request.Context(), req.RefreshToken)
+	pair, err := h.svc.Refresh(req.RefreshToken)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		fail(c, http.StatusUnauthorized, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
+		"success":      true,
 		"accessToken":  pair.AccessToken,
 		"refreshToken": pair.RefreshToken,
 	})
 }
 
-func (h *AuthHandler) Logout(c *gin.Context) {
-	userID, _ := c.Get("userID")
-	uid, _ := userID.(string)
-
-	// Get tokens for blacklisting
-	authHeader := c.GetHeader("Authorization")
-	accessToken := ""
-	if strings.HasPrefix(authHeader, "Bearer ") {
-		accessToken = authHeader[7:]
+// POST /auth/logout
+func (h *Handler) Logout(c *gin.Context) {
+	uid, _ := c.Get("userID")
+	auth := c.GetHeader("Authorization")
+	access := ""
+	if strings.HasPrefix(auth, "Bearer ") {
+		access = auth[7:]
 	}
-	var body struct{ RefreshToken string `json:"refreshToken"` }
-	c.ShouldBindJSON(&body)
-
-	h.svc.Logout(c.Request.Context(), uid, accessToken, body.RefreshToken)
+	var b struct{ RefreshToken string `json:"refreshToken"` }
+	c.ShouldBindJSON(&b)
+	h.svc.Logout(uid.(string), access, b.RefreshToken)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-func (h *AuthHandler) ForgotPassword(c *gin.Context) {
-	var req model.ForgotPasswordRequest
+// POST /auth/forgot-password
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req model.ForgotReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Email required"})
+		fail(c, http.StatusBadRequest, "email required")
 		return
 	}
-	otp, err := h.svc.ForgotPassword(c.Request.Context(), req.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to send reset code"})
-		return
-	}
-	resp := gin.H{"message": "If email exists, reset code sent"}
-	// Dev mode: return OTP directly
+	otp, _ := h.svc.ForgotPassword(c.Request.Context(), req.Email)
+	resp := gin.H{"success": true, "message": "If email exists, reset code sent"}
 	if os.Getenv("APP_ENV") != "production" && otp != "" {
-		resp["otp"] = otp
+		resp["otp"] = otp // Dev only
 	}
 	c.JSON(http.StatusOK, resp)
 }
 
-func (h *AuthHandler) ResetPassword(c *gin.Context) {
-	var req model.ResetPasswordRequest
+// POST /auth/reset-password
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req model.ResetReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing fields"})
+		fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := h.svc.ResetPassword(c.Request.Context(), &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Password reset successful"})
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Password updated"})
 }
 
-// ValidateToken — Nginx auth_request-и дохилӣ ин endpoint-ро меноманд
-func (h *AuthHandler) ValidateToken(c *gin.Context) {
-	tokenStr := c.GetHeader("X-Auth-Token")
-	if tokenStr == "" {
-		// Also try Authorization header
+// GET /internal/validate — nginx auth_request calls this
+func (h *Handler) ValidateToken(c *gin.Context) {
+	token := c.GetHeader("X-Auth-Token")
+	if token == "" {
 		auth := c.GetHeader("Authorization")
 		if strings.HasPrefix(auth, "Bearer ") {
-			tokenStr = auth[7:]
+			token = auth[7:]
 		}
 	}
-	if tokenStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no token"})
+	if token == "" {
+		fail(c, http.StatusUnauthorized, "no token")
 		return
 	}
-	userID, err := h.svc.ValidateToken(c.Request.Context(), tokenStr)
+	uid, err := h.svc.ValidateToken(token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		fail(c, http.StatusUnauthorized, "invalid token")
 		return
 	}
-	// Nginx auth_request passes these headers to upstream
-	c.Header("X-User-ID", userID)
-	c.JSON(http.StatusOK, gin.H{"userID": userID})
+	c.Header("X-User-ID", uid)
+	c.JSON(http.StatusOK, gin.H{"userID": uid})
 }
