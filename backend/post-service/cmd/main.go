@@ -1,41 +1,60 @@
 package main
 
 import (
-	"log"
+	"context"
 	"net/http"
 	"os"
-	"strings"
-	"sync"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"post-service/internal/handler"
+	"post-service/internal/middleware"
 	"post-service/internal/repository"
 	"post-service/internal/service"
+	"post-service/pkg/config"
 	"post-service/pkg/db"
+	"post-service/pkg/logger"
 	rdb "post-service/pkg/redis"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 func main() {
 	godotenv.Load()
-	db.Init()
-	rdb.Init()
+	logger.Init("post-service")
+	defer logger.Sync()
+
+	cfg, err := config.Load("DATABASE_URL", "JWT_SECRET")
+	if err != nil {
+		logger.Fatal("config", zap.Error(err))
+	}
+
+	if err := db.Init(20); err != nil {
+		logger.Fatal("db", zap.Error(err))
+	}
+	defer db.Close()
+
+	if err := rdb.Init(); err != nil {
+		logger.Fatal("redis", zap.Error(err))
+	}
+	defer rdb.Close()
 
 	repo := repository.NewPostRepository(db.Pool)
-	svc := service.NewPostService(repo)
+	svc := service.New(repo, cfg.FeedServiceURL, cfg.NotifServiceURL)
 	h := handler.NewPostHandler(svc)
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(middleware.RequestLogger(logger.L))
+	r.Use(middleware.Recovery(logger.L))
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Request-ID", "X-User-ID"},
 		AllowCredentials: true,
 	}))
 
@@ -43,94 +62,45 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"service": "post-service", "status": "ok"})
 	})
 
-	auth := authMiddleware()
-	rl := rateLimit(100, time.Minute)
-	uploadRL := rateLimit(20, time.Hour)
+	authMW := middleware.Auth(cfg.JWTSecret)
+	rl     := middleware.RateLimit(100, time.Minute)
+	uploadRL := middleware.RateLimit(20, time.Hour)
 
-	r.POST("/posts", auth, uploadRL, h.CreatePost)
-	r.GET("/posts/:id", auth, rl, h.GetPost)
-	r.DELETE("/posts/:id", auth, rl, h.DeletePost)
-	r.PUT("/posts/:id/caption", auth, rl, h.UpdateCaption)
-	r.POST("/posts/:id/like", auth, rl, h.ToggleLike)
-	r.POST("/posts/:id/save", auth, rl, h.ToggleSave)
-	r.POST("/posts/:id/report", auth, rl, h.ReportPost)
-	r.POST("/posts/view/:id", auth, h.TrackView)
-	r.GET("/users/:id/posts", auth, rl, h.GetUserPosts)
+	r.POST("/posts",                authMW, uploadRL, h.CreatePost)
+	r.GET("/posts/:id",             authMW, rl, h.GetPost)
+	r.DELETE("/posts/:id",          authMW, rl, h.DeletePost)
+	r.PUT("/posts/:id/caption",     authMW, rl, h.UpdateCaption)
+	r.POST("/posts/:id/like",       authMW, rl, h.ToggleLike)
+	r.POST("/posts/:id/save",       authMW, rl, h.ToggleSave)
+	r.POST("/posts/:id/report",     authMW, rl, h.ReportPost)
+	r.POST("/posts/view/:id",       authMW, h.TrackView)
+	r.GET("/users/:id/posts",       authMW, rl, h.GetUserPosts)
+	r.GET("/comments/:id",          authMW, rl, h.GetComments)
+	r.POST("/comments/:id",         authMW, rl, h.AddComment)
+	r.DELETE("/comments/:id",       authMW, rl, h.DeleteComment)
+	r.POST("/comments/:id/like",    authMW, rl, h.ToggleCommentLike)
 
-	r.GET("/comments/:id", auth, rl, h.GetComments)
-	r.POST("/comments/:id", auth, rl, h.AddComment)
-	r.DELETE("/comments/:id", auth, rl, h.DeleteComment)
-	r.POST("/comments/:id/like", auth, rl, h.ToggleCommentLike)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8002"
+	srv := &http.Server{
+		Addr:         ":" + cfg.Port,
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
-	log.Printf("📝 post-service :%s", port)
-	r.Run(":" + port)
-}
 
-func authMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if uid := c.GetHeader("X-User-ID"); uid != "" {
-			c.Set("userID", uid)
-			c.Next()
-			return
+	go func() {
+		logger.Info("post-service started", zap.String("port", cfg.Port))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("server error", zap.Error(err))
 		}
-		header := c.GetHeader("Authorization")
-		if header == "" || !strings.HasPrefix(header, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "No token"})
-			c.Abort()
-			return
-		}
-		secret := os.Getenv("JWT_SECRET")
-		if secret == "" {
-			secret = "raonson-secret-change-in-prod"
-		}
-		tok, err := jwt.Parse(header[7:],
-			func(t *jwt.Token) (interface{}, error) { return []byte(secret), nil },
-			jwt.WithValidMethods([]string{"HS256"}))
-		if err != nil || !tok.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid token"})
-			c.Abort()
-			return
-		}
-		claims := tok.Claims.(jwt.MapClaims)
-		c.Set("userID", claims["id"].(string))
-		c.Next()
-	}
-}
+	}()
 
-func rateLimit(limit int, window time.Duration) gin.HandlerFunc {
-	type entry struct {
-		count int
-		reset time.Time
-	}
-	store := map[string]*entry{}
-	var mu sync.Mutex
-	return func(c *gin.Context) {
-		key, _ := c.Get("userID")
-		k, _ := key.(string)
-		if k == "" {
-			k = c.ClientIP()
-		}
-		now := time.Now()
-		mu.Lock()
-		e, ok := store[k]
-		if !ok || now.After(e.reset) {
-			store[k] = &entry{1, now.Add(window)}
-			mu.Unlock()
-			c.Next()
-			return
-		}
-		e.count++
-		count := e.count
-		mu.Unlock()
-		if count > limit {
-			c.JSON(http.StatusTooManyRequests, gin.H{"message": "Too many requests"})
-			c.Abort()
-			return
-		}
-		c.Next()
-	}
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logger.Info("post-service shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	srv.Shutdown(ctx)
+	logger.Info("post-service stopped")
 }
