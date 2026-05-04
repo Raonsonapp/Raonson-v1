@@ -71,9 +71,11 @@ class _HlItem extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: isAdd
                   ? null
-                  : const LinearGradient(
-                      colors: [AppColors.storyBorder, AppColors.neonBlue],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  : LinearGradient(
+                      colors: [Color(0xFF1D9BF0), Color(0xFF0057FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
               color: isAdd ? AppColors.surface : null,
               border: isAdd
                   ? Border.all(color: Colors.white24, width: 1.5)
