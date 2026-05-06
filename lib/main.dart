@@ -4,11 +4,13 @@ import 'package:yandex_mobileads/mobile_ads.dart';
 import 'app/app.dart';
 import 'app/app_config.dart';
 import 'core/services/user_session.dart';
+import 'core/ads/ads_manager.dart'; // ← NEW
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Initialize Yandex Ads SDK
+  // ✅ Initialize Yandex Ads SDK (MobileAds.initialize is also called
+  //    inside AdsManager.init() — safe to call twice, SDK deduplicates)
   MobileAds.initialize();
 
   // ✅ App configuration
@@ -23,6 +25,9 @@ Future<void> main() async {
 
   // ✅ Load cached user data
   await UserSession.loadCachedData();
+
+  // ✅ Init AdsManager — preloads interstitial & rewarded in background
+  AdsManager.instance.init();
 
   // ✅ Run app
   runApp(const RaonsonApp());
