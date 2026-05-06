@@ -1,25 +1,14 @@
-import 'package:flutter/foundation.dart';
-import 'package:yandex_mobileads/interstitial.dart';
+// lib/core/ads/yandex_ads.dart
+// ──────────────────────────────────────────────────────────────
+// Legacy shim — delegates to AdsManager.
+// Kept for backward compatibility if any existing code calls it.
+// ──────────────────────────────────────────────────────────────
 
+import 'ads_manager.dart';
+
+@Deprecated('Use AdsManager.instance instead')
 class YandexAds {
-  static final String interstitialId = 'R-M-19230220-1';
-
-  static InterstitialAd? _interstitialAd;
-
   static void loadAndShowInterstitial() {
-    InterstitialAdLoader.create(
-      onAdLoaded: (InterstitialAd ad) {
-        _interstitialAd = ad;
-
-        ad.show();
-      },
-      onAdFailedToLoad: (errorInfo) {
-        debugPrint('Yandex ad error: $errorInfo');
-      },
-    ).loadAd(
-      adRequestConfiguration: const AdRequestConfiguration(
-        adUnitId: interstitialId,
-      ),
-    );
+    AdsManager.instance.showInterstitialIfReady();
   }
 }
