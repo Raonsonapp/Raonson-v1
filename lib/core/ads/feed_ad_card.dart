@@ -96,8 +96,8 @@ class _FeedAdCardState extends State<FeedAdCard>
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: isDark
                           ? AppColors.surface
@@ -118,7 +118,7 @@ class _FeedAdCardState extends State<FeedAdCard>
                 ],
               ),
             ),
-            AdWidget(ad: _bannerAd!),
+            BannerAdWidget(bannerAd: _bannerAd!),
             const SizedBox(height: 8),
           ],
         ),
