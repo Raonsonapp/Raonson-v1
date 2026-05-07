@@ -9,28 +9,24 @@ class AdBannerWidget extends StatefulWidget {
   State<AdBannerWidget> createState() => _AdBannerWidgetState();
 }
 
-class _AdBannerWidgetState extends State<AdBannerWidget>
-    with SingleTickerProviderStateMixin {
-  late final BannerAdView _bannerAdView;
+class _AdBannerWidgetState extends State<AdBannerWidget> {
+  BannerAd? _bannerAd;
   bool _isLoaded = false;
-  late AnimationController _fadeCtrl;
-  late Animation<double>   _fadeAnim;
 
   @override
-  void initState() {
-    super.initState();
-    _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bannerAd == null) _loadBanner();
+  }
 
-    _bannerAdView = BannerAdView(
+  void _loadBanner() {
+    final width = MediaQuery.of(context).size.width.round();
+    _bannerAd = BannerAd(
       adUnitId: 'R-M-19230220-3',
-      adSize: const AdSize.flexible(width: 320, height: 50),
+      adSize: BannerAdSize.sticky(width: width),
       adRequest: const AdRequest(),
       onAdLoaded: () {
-        if (!mounted) return;
-        setState(() => _isLoaded = true);
-        _fadeCtrl.forward();
+        if (mounted) setState(() => _isLoaded = true);
       },
       onAdFailedToLoad: (error) {
         debugPrint('[AdBanner] failed: $error');
@@ -40,48 +36,37 @@ class _AdBannerWidgetState extends State<AdBannerWidget>
 
   @override
   void dispose() {
-    _fadeCtrl.dispose();
+    _bannerAd?.destroy();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_isLoaded)
-          FadeTransition(
-            opacity: _fadeAnim,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(
-                  top: BorderSide(color: AppColors.divider, width: 0.5),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Advertisement',
-                      style: TextStyle(
-                        color: AppColors.grey.withOpacity(0.5),
-                        fontSize: 9,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  _bannerAdView,
-                ],
+    if (!_isLoaded || _bannerAd == null) return const SizedBox.shrink();
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          top: BorderSide(color: AppColors.divider, width: 0.5),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Advertisement',
+              style: TextStyle(
+                color: AppColors.grey.withOpacity(0.5),
+                fontSize: 9,
+                letterSpacing: 0.5,
               ),
             ),
           ),
-        // Always render the view so it can load (hidden until ready)
-        if (!_isLoaded)
-          Opacity(opacity: 0, child: SizedBox(height: 0, child: _bannerAdView)),
-      ],
+          AdWidget(ad: _bannerAd!),
+        ],
+      ),
     );
   }
 }
