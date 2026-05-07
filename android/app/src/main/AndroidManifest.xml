@@ -9,6 +9,13 @@
         android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"/>
+    <activity
+    android:name="com.yandex.mobile.ads.interstitial.InterstitialAdActivity"
+    android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
+
+    <activity
+    android:name="com.yandex.mobile.ads.rewarded.RewardedAdActivity"
+    android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/> 
         
     <application
         android:label="Raonson"
