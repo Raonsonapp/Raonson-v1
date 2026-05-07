@@ -18,7 +18,6 @@ import '../../app/app_theme.dart';
 import '../../core/services/user_session.dart';
 import '../../notifications/notification_badge.dart';
 
-// ─── Ads ────────────────────────────────────────────────────────────────────
 import '../../core/ads/ads_manager.dart';
 import '../../core/ads/feed_ad_card.dart';
 
@@ -50,7 +49,6 @@ class FeedScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _FeedShell extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onCreatePost;
@@ -61,8 +59,6 @@ class _FeedShell extends StatefulWidget {
 
 class _FeedShellState extends State<_FeedShell> {
   late final ScrollController _scroll;
-
-  /// Show a feed ad every N real posts
   static const int _adEveryNPosts = 5;
 
   @override
@@ -70,7 +66,6 @@ class _FeedShellState extends State<_FeedShell> {
     super.initState();
     _scroll = ScrollController()..addListener(_onScroll);
     NotificationService.startPolling();
-    // Ensure AdsManager is ready
     AdsManager.instance.init();
   }
 
@@ -90,27 +85,27 @@ class _FeedShellState extends State<_FeedShell> {
   Widget build(BuildContext context) {
     final feedCtrl = context.watch<FeedController>();
     final state    = feedCtrl.state;
-
-    // ── Stories ───────────────────────────────────────────────
     final storyCtrl = context.watch<StoryController>();
+
+    // Stories bar
     Widget storyBar = const SizedBox.shrink();
     if (storyCtrl.stories.isNotEmpty) {
+      final groups = groupStoriesByUser(storyCtrl.stories);
       storyBar = StoryBar(
         stories: storyCtrl.stories,
-        onTap: (StoryGroup group) {
+        onTapGroup: (groupStories, index) {
           Navigator.of(context).push(PageRouteBuilder(
             opaque: false,
-            pageBuilder: (_, __, ___) =>
-                StoryGroupViewer(group: group, stories: storyCtrl.stories),
+            pageBuilder: (_, __, ___) => StoryGroupViewer(
+              groups: groups,
+              initialGroupIndex: index,
+            ),
           ));
         },
       );
     }
 
-    // ── Offline banner ────────────────────────────────────────
-    Widget offlineBanner = const SizedBox.shrink();
-
-    // ── Loading skeleton ──────────────────────────────────────
+    // Loading
     if (state.isLoading && state.posts.isEmpty) {
       return Scaffold(
         backgroundColor: AppColors.bg,
@@ -131,8 +126,8 @@ class _FeedShellState extends State<_FeedShell> {
       );
     }
 
-    // ── Error ─────────────────────────────────────────────────
-    if (state.error != null && state.posts.isEmpty) {
+    // Error
+    if (state.hasError && state.posts.isEmpty) {
       return Scaffold(
         backgroundColor: AppColors.bg,
         body: Center(
@@ -142,12 +137,12 @@ class _FeedShellState extends State<_FeedShell> {
               const Icon(Icons.wifi_off_rounded,
                   color: AppColors.grey, size: 48),
               const SizedBox(height: 12),
-              Text(state.error!,
+              Text(state.errorMessage ?? 'Хато рӯй дод',
                   style: const TextStyle(color: AppColors.grey)),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: feedCtrl.refresh,
-                child: const Text('Retry',
+                child: const Text('Боз кӯшиш кун',
                     style: TextStyle(color: AppColors.neonBlue)),
               ),
             ],
@@ -156,12 +151,10 @@ class _FeedShellState extends State<_FeedShell> {
       );
     }
 
-    // ── Build combined post + ad list ─────────────────────────
-    // We inject a FeedAdCard after every _adEveryNPosts real posts.
-    // childCount = posts + ad slots + loader
-    final posts       = state.posts;
-    final adSlots     = posts.length ~/ _adEveryNPosts;
-    final totalItems  = posts.length + adSlots + 1; // +1 for loader/end
+    final posts      = state.posts;
+    final blockSize  = _adEveryNPosts + 1;
+    final adSlots    = posts.length ~/ _adEveryNPosts;
+    final totalItems = posts.length + adSlots + 1;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -175,7 +168,6 @@ class _FeedShellState extends State<_FeedShell> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(child: offlineBanner),
               SliverToBoxAdapter(child: storyBar),
               const SliverToBoxAdapter(
                   child: Divider(color: Color(0xFF1A1A1A), height: 1)),
@@ -189,7 +181,7 @@ class _FeedShellState extends State<_FeedShell> {
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, virtualIndex) {
-                    // ── Loader / end indicator ──────────────
+                    // Loader / end
                     if (virtualIndex == totalItems - 1) {
                       return state.hasMore
                           ? const Padding(
@@ -202,15 +194,11 @@ class _FeedShellState extends State<_FeedShell> {
                           : const SizedBox(height: 40);
                     }
 
-                    // ── Map virtual index to real post or ad ─
-                    // Every (_adEveryNPosts + 1) items: N posts + 1 ad
-                    final blockSize  = _adEveryNPosts + 1;
                     final blockIndex = virtualIndex % blockSize;
                     final blockNum   = virtualIndex ~/ blockSize;
 
-                    // Last position in each block = ad slot
+                    // Ad slot
                     if (blockIndex == _adEveryNPosts) {
-                      // Avoid showing ad after last item if posts run out
                       final postsSoFar = blockNum * _adEveryNPosts + _adEveryNPosts;
                       if (postsSoFar <= posts.length) {
                         return const FeedAdCard();
@@ -285,7 +273,6 @@ class _FeedShellState extends State<_FeedShell> {
   }
 }
 
-// ── New Posts Banner ─────────────────────────────────────────────────────────
 class _NewPostsBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
