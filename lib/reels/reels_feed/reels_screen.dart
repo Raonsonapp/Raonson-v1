@@ -1,23 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/api/api_client.dart';
-import '../../core/services/user_session.dart';
-import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
 import '../reels_repository.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 
-// ── Ads ──────────────────────────────────────────────────────────────────────
 import '../../core/ads/ads_manager.dart';
 import '../../core/ads/rewarded_ad_flow.dart';
 
@@ -105,7 +98,6 @@ class _ReelsVM extends ChangeNotifier {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 class _ReelsView extends StatefulWidget {
   final bool isActive;
   const _ReelsView({this.isActive = true});
@@ -122,7 +114,6 @@ class _ReelsViewState extends State<_ReelsView> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    // Ensure ads are initialized and preloaded
     AdsManager.instance.init();
   }
 
@@ -133,7 +124,6 @@ class _ReelsViewState extends State<_ReelsView> {
       ctrl.dispose();
     }
     _preloaded.clear();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
@@ -142,9 +132,7 @@ class _ReelsViewState extends State<_ReelsView> {
     if (i >= vm.reels.length - 3) vm.loadMore();
     _preloadAhead(i, vm);
     _disposeOld(i);
-
-    // ── Trigger interstitial ad after every N reels ──────────
-    // AdsManager handles cooldown (3 min) and frequency (every 5 reels)
+    // Trigger interstitial every 5 reels
     AdsManager.instance.onReelSwiped();
   }
 
@@ -177,76 +165,38 @@ class _ReelsViewState extends State<_ReelsView> {
 
     if (vm.loading && vm.reels.isEmpty) {
       return const Scaffold(
-          backgroundColor: AppColors.bg,
-          body: Center(
-              child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(AppColors.storyStart))));
+        backgroundColor: AppColors.bg,
+        body: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation(AppColors.storyStart),
+          ),
+        ),
+      );
     }
 
     if (vm.reels.isEmpty) {
       return Scaffold(
-          backgroundColor: AppColors.bg,
-          body: Center(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-                width: 80,
-                height: 80,
-                decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [
-                      Color(0xFF833AB4),
-                      Color(0xFFE1306C),
-                      Color(0xFFF77737)
-                    ])),
-                child: const Icon(Icons.video_collection_outlined,
-                    color: Colors.white, size: 38)),
-            const SizedBox(height: 20),
-            const Text('Рилсҳо нест',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            if (vm.error != null)
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(vm.error!,
-                      style: const TextStyle(
-                          color: Colors.redAccent, fontSize: 13),
-                      textAlign: TextAlign.center))
-            else
-              const Text('Аввалин Рилс-ро шумо гузоред!',
-                  style: TextStyle(color: Colors.white38, fontSize: 15)),
-            const SizedBox(height: 28),
-            GestureDetector(
-                onTap: () => Navigator.push(context,
-                        MaterialPageRoute(
-                            builder: (_) => const CreateReelScreen()))
-                    .then((ok) {
-                  if (ok == true && context.mounted) vm.load();
-                }),
-                child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 14),
-                    decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [
-                          Color(0xFF833AB4),
-                          Color(0xFFE1306C),
-                          Color(0xFFF77737)
-                        ]),
-                        borderRadius: BorderRadius.circular(24)),
-                    child: const Text('+ Рилс гузоред',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15)))),
-            const SizedBox(height: 12),
-            TextButton(
+        backgroundColor: AppColors.bg,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.video_collection_outlined,
+                  color: AppColors.grey, size: 48),
+              const SizedBox(height: 12),
+              const Text('Рилсҳо нест',
+                  style: TextStyle(color: Colors.white, fontSize: 18)),
+              const SizedBox(height: 16),
+              TextButton(
                 onPressed: vm.load,
-                child: const Text('Боз кӯшиш кунед',
-                    style: TextStyle(color: Colors.white38))),
-          ])));
+                child: const Text('Боз кӯшиш кун',
+                    style: TextStyle(color: AppColors.neonBlue)),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Scaffold(
@@ -262,18 +212,16 @@ class _ReelsViewState extends State<_ReelsView> {
           reel: vm.reels[i],
           isActive: i == _currentPage && widget.isActive,
           isMuted: vm.isMuted,
-          friendsFilter: vm.friendsFilter,
           preloadCtrl: _preloaded[i],
           onLike: () => vm.toggleLike(vm.reels[i].id),
           onSave: () => vm.toggleSave(vm.reels[i].id),
           onMuteToggle: vm.toggleMute,
-          onToggleFilter: vm.toggleFilter,
-          onAddReel: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const CreateReelScreen()))
-              .then((ok) {
+          onAddReel: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateReelScreen()),
+          ).then((ok) {
             if (ok == true && context.mounted) vm.load();
           }),
-          // ── Rewarded: download reel ───────────────────────
           onDownload: () => showRewardedAdFlow(
             context,
             rewardType: RewardType.videoDownload,
@@ -284,33 +232,25 @@ class _ReelsViewState extends State<_ReelsView> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _ReelItem — single reel with rewarded download button
-// (rest of your existing _ReelItem code unchanged — just add onDownload param)
-// ─────────────────────────────────────────────────────────────────────────────
 class _ReelItem extends StatefulWidget {
   final ReelModel              reel;
   final bool                   isActive;
   final bool                   isMuted;
-  final bool                   friendsFilter;
   final VideoPlayerController? preloadCtrl;
   final VoidCallback           onLike;
   final VoidCallback           onSave;
   final VoidCallback           onMuteToggle;
-  final VoidCallback           onToggleFilter;
   final VoidCallback           onAddReel;
-  final Future<bool> Function() onDownload;   // ← NEW
+  final Future<bool> Function() onDownload;
 
   const _ReelItem({
     required this.reel,
     required this.isActive,
     required this.isMuted,
-    required this.friendsFilter,
     this.preloadCtrl,
     required this.onLike,
     required this.onSave,
     required this.onMuteToggle,
-    required this.onToggleFilter,
     required this.onAddReel,
     required this.onDownload,
   });
@@ -332,7 +272,8 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   Future<void> _initVideo() async {
-    if (widget.preloadCtrl != null && widget.preloadCtrl!.value.isInitialized) {
+    if (widget.preloadCtrl != null &&
+        widget.preloadCtrl!.value.isInitialized) {
       _ctrl        = widget.preloadCtrl;
       _initialized = true;
       if (widget.isActive) _ctrl!.play();
@@ -348,7 +289,6 @@ class _ReelItemState extends State<_ReelItem> {
     _ctrl!.setLooping(true);
     _ctrl!.setVolume(widget.isMuted ? 0 : 1);
     if (widget.isActive) _ctrl!.play();
-
     if (mounted) setState(() => _initialized = true);
   }
 
@@ -365,7 +305,6 @@ class _ReelItemState extends State<_ReelItem> {
 
   @override
   void dispose() {
-    // Only dispose if we own it (not the preloaded one)
     if (widget.preloadCtrl == null) _ctrl?.dispose();
     super.dispose();
   }
@@ -373,8 +312,9 @@ class _ReelItemState extends State<_ReelItem> {
   void _onDoubleTap() {
     widget.onLike();
     setState(() => _showHeart = true);
-    Future.delayed(const Duration(milliseconds: 900),
-        () { if (mounted) setState(() => _showHeart = false); });
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _showHeart = false);
+    });
   }
 
   Future<void> _handleDownload() async {
@@ -391,7 +331,7 @@ class _ReelItemState extends State<_ReelItem> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ── Video ─────────────────────────────────────────────
+        // Video
         GestureDetector(
           onDoubleTap: _onDoubleTap,
           onTap:       widget.onMuteToggle,
@@ -407,13 +347,13 @@ class _ReelItemState extends State<_ReelItem> {
               : const ColoredBox(
                   color: Colors.black,
                   child: Center(
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white30)),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white30),
+                  ),
                 ),
         ),
 
-        // ── Double-tap heart ──────────────────────────────────
+        // Double-tap heart
         if (_showHeart)
           Center(
             child: TweenAnimationBuilder<double>(
@@ -431,7 +371,7 @@ class _ReelItemState extends State<_ReelItem> {
             ),
           ),
 
-        // ── Right action bar ──────────────────────────────────
+        // Right action bar
         Positioned(
           right: 12,
           bottom: 120,
@@ -447,13 +387,13 @@ class _ReelItemState extends State<_ReelItem> {
               ),
               const SizedBox(height: 18),
               _ActionBtn(
-                icon: Icons.comment_rounded,
+                icon:  Icons.comment_rounded,
                 count: widget.reel.commentsCount,
                 onTap: () {},
               ),
               const SizedBox(height: 18),
               _ActionBtn(
-                icon: Icons.share_rounded,
+                icon:  Icons.share_rounded,
                 onTap: () => Share.share(widget.reel.videoUrl),
               ),
               const SizedBox(height: 18),
@@ -464,28 +404,28 @@ class _ReelItemState extends State<_ReelItem> {
                 onTap: widget.onSave,
               ),
               const SizedBox(height: 18),
-              // ── Download (rewarded) ────────────────────────
+              // Download (rewarded ad)
               _ActionBtn(
-                icon: _downloading
+                icon:  _downloading
                     ? Icons.hourglass_bottom_rounded
                     : Icons.download_rounded,
-                onTap: _downloading ? null : _handleDownload,
                 color: AppColors.neonBlue,
+                onTap: _downloading ? null : _handleDownload,
               ),
             ],
           ),
         ),
 
-        // ── Bottom info ───────────────────────────────────────
+        // Bottom info
         Positioned(
-          left: 12,
-          right: 80,
+          left:   12,
+          right:  80,
           bottom: 80,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '@${widget.reel.username}',
+                '@${widget.reel.user.username}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -510,14 +450,14 @@ class _ReelItemState extends State<_ReelItem> {
           ),
         ),
 
-        // ── Mute indicator ────────────────────────────────────
+        // Mute indicator
         if (widget.isMuted)
           Positioned(
-            top: 60,
+            top:   60,
             right: 16,
             child: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.black54,
                 shape: BoxShape.circle,
               ),
@@ -530,7 +470,6 @@ class _ReelItemState extends State<_ReelItem> {
   }
 }
 
-// ── Action button ─────────────────────────────────────────────────────────────
 class _ActionBtn extends StatelessWidget {
   final IconData      icon;
   final VoidCallback? onTap;
