@@ -9,14 +9,7 @@
         android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"/>
-    <activity
-    android:name="com.yandex.mobile.ads.interstitial.InterstitialAdActivity"
-    android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
-
-    <activity
-    android:name="com.yandex.mobile.ads.rewarded.RewardedAdActivity"
-    android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/> 
-        
+    
     <application
         android:label="Raonson"
         android:icon="@mipmap/ic_launcher">
@@ -49,6 +42,20 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+         <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+
+        <!-- ✅ YANDEX ADS - ИН 2 ХАТРО ИЛОВА КУН -->
+        <activity
+            android:name="com.yandex.mobile.ads.interstitial.InterstitialAdActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
+
+        <activity
+            android:name="com.yandex.mobile.ads.rewarded.RewardedAdActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
+
+      <!-- ← ИН ХАТРО ДАСТ НАЗАН -->
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
