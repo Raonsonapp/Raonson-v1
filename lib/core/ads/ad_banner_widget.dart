@@ -64,7 +64,7 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
               ),
             ),
           ),
-          AdWidget(ad: _bannerAd!),
+          BannerAdWidget(bannerAd: _bannerAd!),
         ],
       ),
     );
