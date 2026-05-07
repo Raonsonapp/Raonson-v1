@@ -118,7 +118,7 @@ class _FeedAdCardState extends State<FeedAdCard>
                 ],
               ),
             ),
-            BannerAdWidget(bannerAd: _bannerAd!),
+            AdWidget(bannerAd: _bannerAd!),
             const SizedBox(height: 8),
           ],
         ),
