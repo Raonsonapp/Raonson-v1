@@ -1,3 +1,4 @@
+// lib/navigation/bottom_nav/bottom_nav_scaffold.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +10,7 @@ import '../../reels/reels_feed/reels_screen.dart';
 import '../../chat/inbox/chat_list_screen.dart';
 import '../../search/search_screen.dart';
 import '../../profile/profile_screen.dart';
+import '../../widgets/offline_banner.dart'; // ← НАВ
 
 class BottomNavScaffold extends StatelessWidget {
   const BottomNavScaffold({super.key});
@@ -24,61 +26,56 @@ class BottomNavScaffold extends StatelessWidget {
 
 class _BottomNavView extends StatefulWidget {
   const _BottomNavView();
-
   @override
   State<_BottomNavView> createState() => _BottomNavViewState();
 }
 
 class _BottomNavViewState extends State<_BottomNavView> {
-  // Keys for refreshing screens
-  Key _feedKey    = UniqueKey();
-  Key _storiesKey = UniqueKey();
-  Key _reelsKey   = UniqueKey();
+  Key _feedKey  = UniqueKey();
+  Key _reelsKey = UniqueKey();
 
-  void _refreshFeed() {
-    setState(() {
-      _feedKey    = UniqueKey(); // force FeedScreen rebuild → reload
-    });
-  }
-
-  void _refreshReels() {
-    setState(() => _reelsKey = UniqueKey());
-  }
+  void _refreshFeed()  => setState(() => _feedKey  = UniqueKey());
+  void _refreshReels() => setState(() => _reelsKey = UniqueKey());
 
   @override
   Widget build(BuildContext context) {
     final nav = context.watch<BottomNavController>();
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          _Tab(
-            active: nav.currentIndex == 0,
-            child: FeedScreen(
-              key: _feedKey,
-              isActive: nav.currentIndex == 0,
-              onCreatePost: _refreshFeed,
+    // ✅ OfflineBanner — барномаи пурраро мепӯшад
+    // Вақте offline → баннер дар боло пайдо мешавад
+    return OfflineBanner(
+      child: Scaffold(
+        body: Stack(
+          children: [
+            _Tab(
+              active: nav.currentIndex == 0,
+              child: FeedScreen(
+                key: _feedKey,
+                isActive: nav.currentIndex == 0,
+                onCreatePost: _refreshFeed,
+              ),
             ),
-          ),
-          _Tab(
-            active: nav.currentIndex == 1,
-            child: ReelsScreen(
-              key: _reelsKey,
-              isActive: nav.currentIndex == 1,
+            _Tab(
+              active: nav.currentIndex == 1,
+              child: ReelsScreen(
+                key: _reelsKey,
+                isActive: nav.currentIndex == 1,
+              ),
             ),
+            _Tab(active: nav.currentIndex == 2, child: const ChatListScreen()),
+            _Tab(active: nav.currentIndex == 3, child: const SearchScreen()),
+            _Tab(active: nav.currentIndex == 4,
+                child: const ProfileScreen(userId: 'me')),
+          ],
+        ),
+        bottomNavigationBar: ValueListenableBuilder<String?>(
+          valueListenable: UserSession.avatarNotifier,
+          builder: (_, liveAvatar, __) => BottomNavBar(
+            currentIndex: nav.currentIndex,
+            onTap: nav.setIndex,
+            avatarUrl: liveAvatar,
+            notifCount: 0,
           ),
-          _Tab(active: nav.currentIndex == 2, child: const ChatListScreen()),
-          _Tab(active: nav.currentIndex == 3, child: const SearchScreen()),
-          _Tab(active: nav.currentIndex == 4, child: const ProfileScreen(userId: 'me')),
-        ],
-      ),
-      bottomNavigationBar: ValueListenableBuilder<String?>(
-        valueListenable: UserSession.avatarNotifier,
-        builder: (_, liveAvatar, __) => BottomNavBar(
-          currentIndex: nav.currentIndex,
-          onTap: nav.setIndex,
-          avatarUrl: liveAvatar,
-          notifCount: 0,
         ),
       ),
     );
@@ -91,7 +88,6 @@ class _Tab extends StatelessWidget {
   const _Tab({required this.active, required this.child, super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Offstage(offstage: !active, child: child);
-  }
+  Widget build(BuildContext context) =>
+      Offstage(offstage: !active, child: child);
 }
