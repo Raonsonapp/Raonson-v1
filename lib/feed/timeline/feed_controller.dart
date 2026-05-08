@@ -20,19 +20,16 @@ class FeedController extends ChangeNotifier {
   bool _isOffline = false;
   bool get isOffline => _isOffline;
 
-  // Pending — постҳои нав аз WebSocket
   final List<PostModel> _pending = [];
   int get pendingCount => _pending.length;
 
   Timer? _pollTimer;
-  DateTime? _lastFetchTime;
 
   FeedController(this._repository) {
     _subscribeSocket();
     _startPolling();
   }
 
-  // ── WebSocket ────────────────────────────────────────────────────
   void _subscribeSocket() {
     SocketService.instance.on('feed:new_post', _onNewPost);
     SocketService.instance.autoConnect();
@@ -46,12 +43,9 @@ class FeedController extends ChangeNotifier {
       if (_pending.any((p) => p.id == post.id)) return;
       _pending.insert(0, post);
       notifyListeners();
-    } catch (e) {
-      debugPrint('[Feed] WS post parse error: $e');
-    }
+    } catch (_) {}
   }
 
-  // ── Polling backup ───────────────────────────────────────────────
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
@@ -86,53 +80,44 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Initial load ─────────────────────────────────────────────────
+  // ✅ МУШКИЛИ АСОСӢ ИСЛОҲ ШУД:
+  // loadInitialFeed → ФАВРАН кэш нишон медиҳад
+  // Корбар blank screen намебинад!
   Future<void> loadInitialFeed() async {
     _page = 1;
     _pending.clear();
     _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
-    for (int attempt = 1; attempt <= 2; attempt++) {
-      try {
-        final posts = await _repository.fetchFeed(
-          limit: _limit, page: _page);
-        _lastFetchTime = DateTime.now();
-        _isOffline = false;
-        _state = _state.copyWith(
-          isLoading: false,
-          posts: posts,
-          hasMore: posts.length == _limit,
-          hasError: false,
-          errorMessage: null,
-        );
-        notifyListeners();
-        return;
-      } on UnauthorizedException {
-        _state = _state.copyWith(
-          isLoading: false, hasMore: false, hasError: true,
-          errorMessage: 'Лутфан дубора ворид шавед');
-        notifyListeners();
-        onUnauthorized?.call();
-        return;
-      } catch (e) {
-        if (attempt < 2) {
-          await Future.delayed(const Duration(seconds: 2));
-        } else {
-          // Охирин кӯшиш — кэшро нишон деҳ, хато нашон надеҳ
-          _isOffline = true;
-          _state = _state.copyWith(
-            isLoading: false,
-            hasError: false, // хато нишон надеҳ — кэш нишон деҳ
-            hasMore: false,
-          );
-          notifyListeners();
-        }
-      }
+    try {
+      // FeedRepository аввал кэш медиҳад → ФАВРАН
+      final posts = await _repository.fetchFeed(
+        limit: _limit, page: _page);
+      _isOffline = false;
+      _state = _state.copyWith(
+        isLoading: false,
+        posts: posts,
+        hasMore: posts.length >= _limit,
+        hasError: false,
+        errorMessage: null,
+      );
+    } on UnauthorizedException {
+      _state = _state.copyWith(
+        isLoading: false, hasMore: false, hasError: true,
+        errorMessage: 'Лутфан дубора ворид шавед');
+      onUnauthorized?.call();
+    } catch (_) {
+      // ✅ Хато → offline mode, кэш нишон деҳ
+      _isOffline = true;
+      _state = _state.copyWith(
+        isLoading: false,
+        hasError: false, // хато нишон надеҳ — content нишон деҳ
+        hasMore: false,
+      );
     }
+    notifyListeners();
   }
 
-  // ── Load more ────────────────────────────────────────────────────
   Future<void> loadMore() async {
     if (!_state.hasMore || _state.isLoading || _isOffline) return;
     _state = _state.copyWith(isLoading: true);
@@ -143,7 +128,7 @@ class FeedController extends ChangeNotifier {
       _state = _state.copyWith(
         isLoading: false,
         posts: List<PostModel>.from(_state.posts)..addAll(posts),
-        hasMore: posts.length == _limit,
+        hasMore: posts.length >= _limit,
       );
     } catch (_) {
       _page--;
@@ -152,7 +137,6 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Pull-to-refresh ──────────────────────────────────────────────
   Future<void> refresh() async {
     _page = 1;
     _pending.clear();
@@ -161,14 +145,12 @@ class FeedController extends ChangeNotifier {
     try {
       final posts = await _repository.fetchFeed(
         limit: _limit, page: _page, forceRefresh: true);
-      _lastFetchTime = DateTime.now();
       _isOffline = false;
       _state = _state.copyWith(
         isRefreshing: false, posts: posts,
-        hasMore: posts.length == _limit,
+        hasMore: posts.length >= _limit,
         hasError: false, errorMessage: null);
-    } catch (e) {
-      // Offline — кэши мавҷударо нигоҳ дор, хато нишон надеҳ
+    } catch (_) {
       _isOffline = true;
       _state = _state.copyWith(
         isRefreshing: false, hasError: false);
