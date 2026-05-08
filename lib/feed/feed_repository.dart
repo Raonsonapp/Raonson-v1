@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/post_model.dart';
 import '../models/comment_model.dart';
@@ -9,11 +10,12 @@ import 'feed_exceptions.dart';
 class FeedRepository {
   final ApiClient _api = ApiClient.instance;
 
-  List<PostModel>? _memCache;
-  DateTime?        _memCacheTime;
-  static const _memCacheTTL  = Duration(minutes: 2);
-  static const _diskCacheKey = 'feed_posts_cache';
-  static const _diskCacheTTL = Duration(hours: 24);
+  // ── Memory cache ─────────────────────────────────────────────────
+  static List<PostModel>? _memCache;
+  static DateTime?        _memCacheTime;
+  static const _memCacheTTL  = Duration(minutes: 5);
+  static const _diskCacheKey = 'feed_posts_cache_v2';
+  static const _diskCacheTTL = Duration(hours: 48); // 2 рӯз нигоҳ дор
 
   bool get _memCacheValid =>
       _memCache != null &&
@@ -47,20 +49,34 @@ class FeedRepository {
     } catch (_) { return null; }
   }
 
+  // ✅ МУШКИЛИ АСОСӢ ИСЛОҲ ШУД:
+  // Аввал cache нишон деҳ → баъд network
+  // Ҳеҷ гоҳ blank нест!
   Future<List<PostModel>> fetchFeed({
     int limit = 10,
     int page = 1,
     bool forceRefresh = false,
-    bool smartFeed = true, // ← Smart Feed интеграция
+    bool smartFeed = true,
   }) async {
-    if (page == 1 && !forceRefresh && _memCacheValid) return _memCache!;
+    // ── Page 1: аввал cache ──────────────────────────────────────
+    if (page == 1 && !forceRefresh) {
+      // 1. Memory cache (тезтарин)
+      if (_memCacheValid) return _memCache!;
 
+      // 2. Disk cache (фавран аз SharedPreferences)
+      final diskCache = await _loadFromDisk();
+      if (diskCache != null && diskCache.isNotEmpty) {
+        _memCache     = diskCache;
+        _memCacheTime = DateTime.now();
+        // Background-да network refresh
+        _refreshInBackground(limit: limit, smartFeed: smartFeed);
+        return diskCache; // ← ФАВРАН cache нишон деҳ!
+      }
+    }
+
+    // ── Network fetch ─────────────────────────────────────────────
     try {
-      // Smart feed endpoint-ро аввал озмой, баъд одди
-      final endpoint = smartFeed
-          ? '/posts/smart-feed'
-          : ApiEndpoints.posts;
-
+      final endpoint = smartFeed ? '/posts/smart-feed' : ApiEndpoints.posts;
       final query = <String, String>{
         'limit': '$limit',
         'page':  '$page',
@@ -68,18 +84,18 @@ class FeedRepository {
       };
 
       final response = await _api.getRequest(endpoint, query: query)
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 401) throw const UnauthorizedException();
 
-      // Smart feed 404/405 → одди endpoint-га ироз
+      // Smart feed 404 → одди endpoint
       if (response.statusCode == 404 || response.statusCode == 405) {
         return _fetchRegularFeed(limit: limit, page: page,
             forceRefresh: forceRefresh);
       }
 
       if (response.statusCode >= 400) {
-        throw Exception('Server error ${response.statusCode}');
+        throw Exception('Server ${response.statusCode}');
       }
 
       final body = jsonDecode(response.body);
@@ -97,19 +113,47 @@ class FeedRepository {
         _saveToDisk(posts);
       }
       return posts;
+
     } on UnauthorizedException {
       rethrow;
     } catch (_) {
+      // ✅ Хато → кэш нишон деҳ, hech goh blank ne!
       if (page == 1) {
-        final diskPosts = await _loadFromDisk();
-        if (diskPosts != null && diskPosts.isNotEmpty) return diskPosts;
-        if (_memCache != null) return _memCache!;
+        if (_memCache != null && _memCache!.isNotEmpty) return _memCache!;
+        final disk = await _loadFromDisk();
+        if (disk != null && disk.isNotEmpty) return disk;
       }
       rethrow;
     }
   }
 
-  // Одди endpoint — запас
+  // ── Background refresh — UI-ро block намекунад ─────────────────
+  void _refreshInBackground({int limit = 10, bool smartFeed = true}) {
+    Future.delayed(const Duration(milliseconds: 800), () async {
+      try {
+        final endpoint = smartFeed ? '/posts/smart-feed' : ApiEndpoints.posts;
+        final query = <String, String>{'limit': '$limit', 'page': '1'};
+        final response = await _api.getRequest(endpoint, query: query)
+            .timeout(const Duration(seconds: 8));
+
+        if (response.statusCode == 200) {
+          final body = jsonDecode(response.body);
+          List list = [];
+          if (body is List)     { list = body; }
+          else if (body is Map) { list = (body['posts'] ?? body['data'] ?? []); }
+          final posts = list
+              .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+          if (posts.isNotEmpty) {
+            _memCache     = posts;
+            _memCacheTime = DateTime.now();
+            _saveToDisk(posts);
+          }
+        }
+      } catch (_) {} // Silent — кэш нигоҳ дор
+    });
+  }
+
   Future<List<PostModel>> _fetchRegularFeed({
     int limit = 10, int page = 1, bool forceRefresh = false}) async {
     final query = <String, String>{
@@ -117,12 +161,10 @@ class FeedRepository {
       if (forceRefresh) 't': '${DateTime.now().millisecondsSinceEpoch}',
     };
     final response = await _api.getRequest(ApiEndpoints.posts, query: query)
-        .timeout(const Duration(seconds: 10));
+        .timeout(const Duration(seconds: 8));
 
     if (response.statusCode == 401) throw const UnauthorizedException();
-    if (response.statusCode >= 400) {
-      throw Exception('Server error ${response.statusCode}');
-    }
+    if (response.statusCode >= 400) throw Exception('Server ${response.statusCode}');
 
     final body = jsonDecode(response.body);
     List list = [];
@@ -156,8 +198,9 @@ class FeedRepository {
       _api.deleteRequest('/posts/$postId');
 
   Future<List<CommentModel>> fetchComments(String postId) async {
-    final response = await _api.getRequest('/comments/$postId');
-    if (response.statusCode >= 400) throw Exception('Failed to load comments');
+    final response = await _api.getRequest('/comments/$postId')
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode >= 400) throw Exception('Failed comments');
     final body = jsonDecode(response.body);
     final List list = body is Map ? (body['comments'] ?? []) : body as List;
     return list
@@ -171,7 +214,7 @@ class FeedRepository {
   }) async {
     final response = await _api.postRequest(
       '/comments/$postId', body: {'text': text});
-    if (response.statusCode >= 400) throw Exception('Failed to add comment');
+    if (response.statusCode >= 400) throw Exception('Failed comment');
     return CommentModel.fromJson(
         jsonDecode(response.body) as Map<String, dynamic>);
   }
