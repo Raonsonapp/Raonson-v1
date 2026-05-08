@@ -22,19 +22,35 @@ class AppState extends ChangeNotifier {
         return;
       }
 
+      // ✅ МУШКИЛИ АСОСӢ ИСЛОҲ ШУД:
+      // Аввал кэшро бор кун — ФАВРАН, бе интернет
       ApiClient.instance.setAuthToken(token);
-
-      // Кэшро бор кун — интернет набошад ҳам кор мекунад
       await UserSession.loadCachedData();
 
-      // Token ҳаст — бидуни интернет ҳам logged in
+      // Агар userId кэш дорад → ФАВРАН logged in нишон деҳ
+      // Барнома дар 0 сония кушода мешавад!
       _isAuthenticated = true;
+      _isInitialized   = true;
+      notifyListeners(); // ← UI ФАВРАН нишон медиҳад
 
-      // Профилро аз сервер бор кун (агар интернет бошад)
+      // Баъд дар background профилро аз сервер бор кун
+      // Корбар blank screen намебинад!
+      _syncProfileInBackground();
+
+    } catch (_) {
+      _isAuthenticated = false;
+      _isInitialized   = true;
+      notifyListeners();
+    }
+  }
+
+  // ── Background sync — UI block намекунад ─────────────────────────
+  void _syncProfileInBackground() {
+    Future.delayed(const Duration(milliseconds: 500), () async {
       try {
         final res = await ApiClient.instance
             .get('/profile/me')
-            .timeout(const Duration(seconds: 8));
+            .timeout(const Duration(seconds: 10));
 
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body) as Map<String, dynamic>;
@@ -44,27 +60,23 @@ class AppState extends ChangeNotifier {
           final avatarUrl= user['avatar']?.toString()   ?? '';
 
           if (id.isNotEmpty) {
-            // Ҳама маълумотро захира кун — кэш навсоз
             await UserSession.saveAll(
               id: id, uname: uname, avatarUrl: avatarUrl);
             await TokenStorage.saveUserId(id);
           }
         } else if (res.statusCode == 401) {
+          // Token беэтибор — logout
           await TokenStorage.clearTokens();
           ApiClient.instance.setAuthToken(null);
           await UserSession.clear();
           _isAuthenticated = false;
+          notifyListeners();
         }
-        // Дигар хатоҳо — кэши мавҷударо нигоҳ дор
+        // Дигар хатоҳо — silent, кэш нигоҳ дор
       } catch (_) {
-        // Бе интернет — аз кэш кор мекунем, ҳамон _isAuthenticated = true
+        // Бе интернет — silent, кэш нигоҳ дор
       }
-    } catch (_) {
-      _isAuthenticated = false;
-    }
-
-    _isInitialized = true;
-    notifyListeners();
+    });
   }
 
   void login() {
