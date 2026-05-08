@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/reel_model.dart';
@@ -7,39 +8,132 @@ class ReelsRepository {
   final ApiClient _api;
   ReelsRepository(this._api);
 
-  // ── Smart Feed бо fallback ────────────────────────────────────
+  // ── Cache ─────────────────────────────────────────────────────
+  static List<ReelModel>? _memCache;
+  static DateTime?        _memCacheTime;
+  static const _memCacheTTL  = Duration(minutes: 10);
+  static const _diskCacheKey = 'reels_cache_v2';
+  static const _diskCacheTTL = Duration(hours: 48);
+
+  bool get _memCacheValid =>
+      _memCache != null &&
+      _memCacheTime != null &&
+      DateTime.now().difference(_memCacheTime!) < _memCacheTTL;
+
+  Future<void> _saveToDisk(List<ReelModel> reels) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = {
+        'time': DateTime.now().millisecondsSinceEpoch,
+        'reels': reels.map((r) => r.toJson()).toList(),
+      };
+      await prefs.setString(_diskCacheKey, jsonEncode(payload));
+    } catch (_) {}
+  }
+
+  Future<List<ReelModel>?> _loadFromDisk() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_diskCacheKey);
+      if (raw == null) return null;
+      final payload = jsonDecode(raw) as Map<String, dynamic>;
+      final time = payload['time'] as int;
+      final age  = DateTime.now().millisecondsSinceEpoch - time;
+      if (age > _diskCacheTTL.inMilliseconds) return null;
+      final list = payload['reels'] as List;
+      return list
+          .map((e) => ReelModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) { return null; }
+  }
+
+  // ✅ МУШКИЛИ АСОСӢ ИСЛОҲ ШУД:
+  // Page 1 → аввал кэш, баъд network background-да
   Future<List<ReelModel>> fetchReels({
     int page = 1, int limit = 20, bool smart = true}) async {
 
-    if (smart) {
-      try {
-        final res = await _api.get('/reels/smart',
-            query: {'page': '$page', 'limit': '$limit'})
-            .timeout(const Duration(seconds: 10));
+    // ── Page 1: cache аввал ──────────────────────────────────────
+    if (page == 1) {
+      if (_memCacheValid) return _memCache!;
 
-        if (res.statusCode == 200) {
-          return _parse(jsonDecode(res.body));
-        }
-        // 404/405 → fallback
-        if (res.statusCode != 404 && res.statusCode != 405) {
-          if (res.statusCode == 401) throw Exception('Unauthorized');
-          if (res.statusCode >= 400) throw Exception('Server ${res.statusCode}');
-        }
-      } catch (e) {
-        if (e.toString().contains('Unauthorized')) rethrow;
-        // Smart feed мавҷуд нест → одди
+      final disk = await _loadFromDisk();
+      if (disk != null && disk.isNotEmpty) {
+        _memCache     = disk;
+        _memCacheTime = DateTime.now();
+        // Background-да yangi reels
+        _refreshInBackground(limit: limit, smart: smart);
+        return disk; // ← ФАВРАН!
       }
     }
 
-    // Одди endpoint
-    final res = await _api.get(ApiEndpoints.reels,
-        query: {'page': '$page', 'limit': '$limit'})
-        .timeout(const Duration(seconds: 10));
+    // ── Network ──────────────────────────────────────────────────
+    try {
+      if (smart) {
+        try {
+          final res = await _api.get('/reels/smart',
+              query: {'page': '$page', 'limit': '$limit'})
+              .timeout(const Duration(seconds: 8));
 
-    if (res.statusCode == 401) throw Exception('Unauthorized');
-    if (res.statusCode >= 400) throw Exception('Server error ${res.statusCode}');
+          if (res.statusCode == 200) {
+            final reels = _parse(jsonDecode(res.body));
+            if (page == 1) {
+              _memCache     = reels;
+              _memCacheTime = DateTime.now();
+              _saveToDisk(reels);
+            }
+            return reels;
+          }
+          if (res.statusCode == 401) throw Exception('Unauthorized');
+        } catch (e) {
+          if (e.toString().contains('Unauthorized')) rethrow;
+          // Smart feed нест → одди
+        }
+      }
 
-    return _parse(jsonDecode(res.body));
+      final res = await _api.get(ApiEndpoints.reels,
+          query: {'page': '$page', 'limit': '$limit'})
+          .timeout(const Duration(seconds: 8));
+
+      if (res.statusCode == 401) throw Exception('Unauthorized');
+      if (res.statusCode >= 400) throw Exception('Server ${res.statusCode}');
+
+      final reels = _parse(jsonDecode(res.body));
+      if (page == 1) {
+        _memCache     = reels;
+        _memCacheTime = DateTime.now();
+        _saveToDisk(reels);
+      }
+      return reels;
+
+    } catch (e) {
+      if (e.toString().contains('Unauthorized')) rethrow;
+      // ✅ Хато → кэш нишон деҳ
+      if (page == 1) {
+        if (_memCache != null && _memCache!.isNotEmpty) return _memCache!;
+        final disk = await _loadFromDisk();
+        if (disk != null && disk.isNotEmpty) return disk;
+      }
+      rethrow;
+    }
+  }
+
+  void _refreshInBackground({int limit = 20, bool smart = true}) {
+    Future.delayed(const Duration(seconds: 1), () async {
+      try {
+        final endpoint = smart ? '/reels/smart' : ApiEndpoints.reels;
+        final res = await _api.get(endpoint,
+            query: {'page': '1', 'limit': '$limit'})
+            .timeout(const Duration(seconds: 8));
+        if (res.statusCode == 200) {
+          final reels = _parse(jsonDecode(res.body));
+          if (reels.isNotEmpty) {
+            _memCache     = reels;
+            _memCacheTime = DateTime.now();
+            _saveToDisk(reels);
+          }
+        }
+      } catch (_) {}
+    });
   }
 
   List<ReelModel> _parse(dynamic body) {
@@ -49,27 +143,22 @@ class ReelsRepository {
         ReelModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  // ── Like ──────────────────────────────────────────────────────
   Future<Map<String, dynamic>?> likeReel(String reelId) async {
     try {
       final res = await _api.post('${ApiEndpoints.reels}/$reelId/like');
-      if (res.statusCode < 400) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
+      if (res.statusCode < 400) return jsonDecode(res.body);
     } catch (_) {}
     return null;
   }
 
-  // ── Save ──────────────────────────────────────────────────────
   Future<void> saveReel(String reelId) async {
     try { await _api.post('${ApiEndpoints.reels}/$reelId/save'); } catch (_) {}
   }
 
-  // ── Watch Time — алгоритмга сигнал ───────────────────────────
   Future<void> trackWatchTime({
     required String reelId,
-    required int    watchMs,     // неча мс тамошо шуд
-    required int    durationMs,  // умумии вақт
+    required int    watchMs,
+    required int    durationMs,
   }) async {
     try {
       await _api.post('${ApiEndpoints.reels}/$reelId/view', body: {
@@ -79,75 +168,55 @@ class ReelsRepository {
     } catch (_) {}
   }
 
-  // ── Not Interested ────────────────────────────────────────────
   Future<void> markNotInterested(String reelId) async {
-    try {
-      await _api.post('${ApiEndpoints.reels}/$reelId/not_interest')
-          .timeout(const Duration(seconds: 5));
-    } catch (_) {}
+    try { await _api.post('${ApiEndpoints.reels}/$reelId/not_interest'); }
+    catch (_) {}
   }
 
-  // ── Real Stats ────────────────────────────────────────────────
   Future<Map<String, dynamic>?> fetchStats(String reelId) async {
     try {
       final res = await _api.get('${ApiEndpoints.reels}/$reelId/stats')
-          .timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) return jsonDecode(res.body);
     } catch (_) {}
     return null;
   }
 
-  // ── Comments ──────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> fetchComments(String reelId) async {
     try {
-      final res = await _api.get('${ApiEndpoints.reels}/$reelId/comments');
+      final res = await _api.get('${ApiEndpoints.reels}/$reelId/comments')
+          .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final list = data is List ? data : (data['comments'] ?? []);
-        return List<Map<String, dynamic>>.from(list);
+        final body = jsonDecode(res.body);
+        final List list = body is Map ? (body['comments'] ?? []) : body as List;
+        return list.cast<Map<String, dynamic>>();
       }
     } catch (_) {}
     return [];
   }
 
-  Future<Map<String, dynamic>?> addComment({
-    required String reelId, required String text}) async {
-    try {
-      final res = await _api.post('${ApiEndpoints.reels}/$reelId/comments',
-          body: {'text': text});
-      if (res.statusCode < 400) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
-    } catch (_) {}
-    return null;
+  Future<void> addComment({required String reelId, required String text}) async {
+    await _api.post('${ApiEndpoints.reels}/$reelId/comments',
+        body: {'text': text});
   }
 
-  Future<Map<String, dynamic>?> likeComment({
-    required String reelId, required String commentId}) async {
-    try {
-      final res = await _api.post(
-          '${ApiEndpoints.reels}/$reelId/comments/$commentId/like');
-      if (res.statusCode < 400) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  Future<Map<String, dynamic>?> replyComment({
+  Future<void> replyComment({
     required String reelId,
     required String commentId,
     required String text,
   }) async {
+    await _api.post('${ApiEndpoints.reels}/$reelId/comments/$commentId/reply',
+        body: {'text': text});
+  }
+
+  Future<Map<String, dynamic>?> likeComment({
+    required String reelId,
+    required String commentId,
+  }) async {
     try {
       final res = await _api.post(
-          '${ApiEndpoints.reels}/$reelId/comments/$commentId/reply',
-          body: {'text': text});
-      if (res.statusCode < 400) {
-        return jsonDecode(res.body) as Map<String, dynamic>;
-      }
+          '${ApiEndpoints.reels}/$reelId/comments/$commentId/like');
+      if (res.statusCode < 400) return jsonDecode(res.body);
     } catch (_) {}
     return null;
   }
