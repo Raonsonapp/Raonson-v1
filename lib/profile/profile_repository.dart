@@ -1,5 +1,6 @@
 // lib/profile/profile_repository.dart
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/user_model.dart';
@@ -11,14 +12,61 @@ class ProfileRepository {
   final ApiClient _api;
   ProfileRepository(this._api);
 
+  static const _diskCacheTTL = Duration(hours: 24);
+
+  String _profileKey(String id) => 'profile_cache_$id';
+  String _postsKey(String id)   => 'profile_posts_$id';
+  String _reelsKey(String id)   => 'profile_reels_$id';
+
+  Future<void> _save(String key, dynamic data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, jsonEncode({
+        'time': DateTime.now().millisecondsSinceEpoch,
+        'data': data,
+      }));
+    } catch (_) {}
+  }
+
+  Future<dynamic> _load(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(key);
+      if (raw == null) return null;
+      final payload = jsonDecode(raw) as Map<String, dynamic>;
+      final age = DateTime.now().millisecondsSinceEpoch - (payload['time'] as int);
+      if (age > _diskCacheTTL.inMilliseconds) return null;
+      return payload['data'];
+    } catch (_) { return null; }
+  }
+
+  // ✅ Cache аввал → baъд network
   Future<UserModel> getProfile(String userId) async {
     final path = userId == 'me' ? '/profile/me'
         : _isUUID(userId) ? '/users/$userId' : '/profile/$userId';
-    final res = await _api.get(path);
+    final cacheKey = _profileKey(userId);
+
+    final cached = await _load(cacheKey);
+    if (cached != null) {
+      _refreshProfile(path, cacheKey);
+      return UserModel.fromJson(cached as Map<String, dynamic>);
+    }
+    return _fetchProfile(path, cacheKey);
+  }
+
+  Future<UserModel> _fetchProfile(String path, String cacheKey) async {
+    final res = await _api.get(path).timeout(const Duration(seconds: 8));
     if (res.statusCode >= 400) throw Exception('Корбар ёфт нашуд');
     final body = jsonDecode(res.body);
     final j = (body is Map && body.containsKey('user')) ? body['user'] : body;
+    await _save(cacheKey, j);
     return UserModel.fromJson(j as Map<String, dynamic>);
+  }
+
+  void _refreshProfile(String path, String cacheKey) {
+    Future.delayed(const Duration(milliseconds: 800), () async {
+      try { await _fetchProfile(path, cacheKey); } catch (_) {}
+    });
   }
 
   Future<bool> isUsernameTaken(String username, String currentUsername) async {
@@ -48,26 +96,47 @@ class ProfileRepository {
   }
 
   Future<List<PostModel>> getUserPosts(String userId) async {
-    if (userId == 'me') {
-      final res = await _api.get('/profile/me');
+    final cacheKey = _postsKey(userId);
+    final cached = await _load(cacheKey);
+    if (cached != null) {
+      _refreshPosts(userId, cacheKey);
+      return (cached as List)
+          .map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
+    }
+    return _fetchPosts(userId, cacheKey);
+  }
+
+  Future<List<PostModel>> _fetchPosts(String userId, String cacheKey) async {
+    try {
+      if (userId == 'me') {
+        final res = await _api.get('/profile/me').timeout(const Duration(seconds: 8));
+        if (res.statusCode >= 400) return [];
+        final body = jsonDecode(res.body);
+        if (body is Map && body.containsKey('posts')) {
+          final list = body['posts'] as List;
+          await _save(cacheKey, list);
+          return list.map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
+        }
+        return [];
+      }
+      final res = await _api.get('/users/$userId/posts').timeout(const Duration(seconds: 8));
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
-      if (body is Map && body.containsKey('posts')) {
-        return (body['posts'] as List)
-            .map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
-      }
-      return [];
-    }
-    final res = await _api.get('/users/$userId/posts');
-    if (res.statusCode >= 400) return [];
-    final body = jsonDecode(res.body);
-    final list = body is List ? body : (body['posts'] ?? []) as List;
-    return list.map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
+      final raw  = body is List ? body : (body['posts'] ?? []) as List;
+      await _save(cacheKey, raw);
+      return raw.map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
+    } catch (_) { return []; }
+  }
+
+  void _refreshPosts(String userId, String cacheKey) {
+    Future.delayed(const Duration(milliseconds: 800), () async {
+      try { await _fetchPosts(userId, cacheKey); } catch (_) {}
+    });
   }
 
   Future<List<PostModel>> getTaggedPosts(String userId) async {
     try {
-      final res = await _api.get('/users/$userId/tagged');
+      final res = await _api.get('/users/$userId/tagged').timeout(const Duration(seconds: 8));
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
       final list = body is List ? body : (body['posts'] ?? []) as List;
@@ -76,18 +145,36 @@ class ProfileRepository {
   }
 
   Future<List<ReelModel>> getUserReels(String userId) async {
+    final cacheKey = _reelsKey(userId);
+    final cached = await _load(cacheKey);
+    if (cached != null) {
+      _refreshReels(userId, cacheKey);
+      return (cached as List)
+          .map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
+    }
+    return _fetchReels(userId, cacheKey);
+  }
+
+  Future<List<ReelModel>> _fetchReels(String userId, String cacheKey) async {
     try {
-      final res = await _api.get('/users/$userId/reels');
+      final res = await _api.get('/users/$userId/reels').timeout(const Duration(seconds: 8));
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
-      final list = body is List ? body : (body['reels'] ?? []) as List;
-      return list.map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
+      final raw  = body is List ? body : (body['reels'] ?? []) as List;
+      await _save(cacheKey, raw);
+      return raw.map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
     } catch (_) { return []; }
+  }
+
+  void _refreshReels(String userId, String cacheKey) {
+    Future.delayed(const Duration(milliseconds: 800), () async {
+      try { await _fetchReels(userId, cacheKey); } catch (_) {}
+    });
   }
 
   Future<List<HighlightModel>> getHighlights(String userId) async {
     try {
-      final res = await _api.get('/highlights/$userId');
+      final res = await _api.get('/highlights/$userId').timeout(const Duration(seconds: 8));
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
       final list = body is List ? body : (body['highlights'] ?? []) as List;
@@ -95,18 +182,13 @@ class ProfileRepository {
     } catch (_) { return []; }
   }
 
-  Future<void> follow(String uid)   async => _api.post(ApiEndpoints.follow(uid));
-  Future<void> unfollow(String uid) async => _api.post(ApiEndpoints.unfollow(uid));
-
-  Future<void> blockUser(String uid) async =>
-      _api.post('/users/$uid/block');
-  Future<void> unblockUser(String uid) async =>
-      _api.post('/users/$uid/unblock');
-
+  Future<void> follow(String uid)    async => _api.post(ApiEndpoints.follow(uid));
+  Future<void> unfollow(String uid)  async => _api.post(ApiEndpoints.unfollow(uid));
+  Future<void> blockUser(String uid)   async => _api.post('/users/$uid/block');
+  Future<void> unblockUser(String uid) async => _api.post('/users/$uid/unblock');
   Future<void> pinPost(String postId, bool pin) async =>
       _api.post('/posts/$postId/pin', body: {'pin': pin});
-  Future<void> deletePost(String postId) async =>
-      _api.delete('/posts/$postId');
+  Future<void> deletePost(String postId) async => _api.delete('/posts/$postId');
 
   Future<List<UserModel>> getFollowers(String uid) async {
     final res = await _api.get('/users/$uid/followers');
