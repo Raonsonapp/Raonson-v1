@@ -1,3 +1,4 @@
+// lib/app/app_state.dart
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../core/api/api_client.dart';
@@ -22,19 +23,16 @@ class AppState extends ChangeNotifier {
         return;
       }
 
-      // ✅ МУШКИЛИ АСОСӢ ИСЛОҲ ШУД:
-      // Аввал кэшро бор кун — ФАВРАН, бе интернет
+      // ✅ Token дорад → ФАВРАН login нишон деҳ аз cache
       ApiClient.instance.setAuthToken(token);
       await UserSession.loadCachedData();
 
-      // Агар userId кэш дорад → ФАВРАН logged in нишон деҳ
-      // Барнома дар 0 сония кушода мешавад!
+      // Агар userId cache дорад → ФАВРАН кушода мешавад
       _isAuthenticated = true;
       _isInitialized   = true;
-      notifyListeners(); // ← UI ФАВРАН нишон медиҳад
+      notifyListeners();
 
-      // Баъд дар background профилро аз сервер бор кун
-      // Корбар blank screen намебинад!
+      // Background-да profile sync
       _syncProfileInBackground();
 
     } catch (_) {
@@ -44,9 +42,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // ── Background sync — UI block намекунад ─────────────────────────
   void _syncProfileInBackground() {
-    Future.delayed(const Duration(milliseconds: 500), () async {
+    Future.delayed(const Duration(milliseconds: 800), () async {
       try {
         final res = await ApiClient.instance
             .get('/profile/me')
@@ -61,20 +58,18 @@ class AppState extends ChangeNotifier {
 
           if (id.isNotEmpty) {
             await UserSession.saveAll(
-              id: id, uname: uname, avatarUrl: avatarUrl);
+                id: id, uname: uname, avatarUrl: avatarUrl);
             await TokenStorage.saveUserId(id);
           }
         } else if (res.statusCode == 401) {
-          // Token беэтибор — logout
           await TokenStorage.clearTokens();
           ApiClient.instance.setAuthToken(null);
           await UserSession.clear();
           _isAuthenticated = false;
           notifyListeners();
         }
-        // Дигар хатоҳо — silent, кэш нигоҳ дор
       } catch (_) {
-        // Бе интернет — silent, кэш нигоҳ дор
+        // Бе интернет — cache нигоҳ дор, silent
       }
     });
   }
