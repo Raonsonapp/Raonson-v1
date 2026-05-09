@@ -561,12 +561,16 @@ class _PostCardState extends State<PostCard>
   }
 
   String _timeAgo(DateTime dt) {
-    final d = DateTime.now().difference(dt);
-    if (d.inMinutes < 1)  return 'ҳозир';
-    if (d.inMinutes < 60) return '${d.inMinutes} дақиқа пеш';
-    if (d.inHours   < 24) return '${d.inHours} соат пеш';
-    if (d.inDays    < 7)  return '${d.inDays} рӯз пеш';
-    return '${(d.inDays / 7).floor()} ҳафта пеш';
+    // ✅ toLocal() — server UTC вақтро маҳаллӣ мекунад
+    final d = DateTime.now().difference(dt.toLocal());
+    if (d.inSeconds < 30)  return 'ҳозир';
+    if (d.inMinutes < 1)   return '${d.inSeconds} сония пеш';
+    if (d.inMinutes < 60)  return '${d.inMinutes} дақиқа пеш';
+    if (d.inHours   < 24)  return '${d.inHours} соат пеш';
+    if (d.inDays    < 7)   return '${d.inDays} рӯз пеш';
+    if (d.inDays    < 30)  return '${(d.inDays / 7).floor()} ҳафта пеш';
+    if (d.inDays    < 365) return '${(d.inDays / 30).floor()} моҳ пеш';
+    return '${(d.inDays / 365).floor()} сол пеш';
   }
 
   String _fmt(int n) {
@@ -766,20 +770,6 @@ class _PostCardState extends State<PostCard>
           _StableBtn(onTap: _openComments,
               svgPath: 'assets/icons/comment.svg', size: 23,
               count: _commentCount, fmt: _fmt),
-
-          const SizedBox(width: 4),
-
-          RotationTransition(
-            turns: _repostRotate,
-            child: _StableBtn(
-              onTap: _toggleRepost,
-              svgPath: 'assets/icons/retweet.svg',
-              activeSvgPath: _reposted
-                  ? 'assets/icons/retweet_check.svg'
-                  : 'assets/icons/retweet.svg',
-              isActive: _reposted,
-              activeColor: Colors.white, inactiveColor: Colors.white,
-              size: 24, count: _retweetCount, fmt: _fmt)),
 
           const SizedBox(width: 4),
 
