@@ -1,3 +1,4 @@
+// lib/feed/timeline/feed_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -17,6 +18,8 @@ import '../../app/app_routes.dart';
 import '../../app/app_theme.dart';
 import '../../core/services/user_session.dart';
 import '../../notifications/notification_badge.dart';
+import '../../core/ads/ads_manager.dart';
+import '../../core/ads/feed_ad_card.dart';
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -46,7 +49,6 @@ class FeedScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────
 class _FeedShell extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onCreatePost;
@@ -63,6 +65,7 @@ class _FeedShellState extends State<_FeedShell> {
     super.initState();
     _scroll = ScrollController()..addListener(_onScroll);
     NotificationService.startPolling();
+    AdsManager.instance.init();
   }
 
   void _onScroll() {
@@ -81,16 +84,16 @@ class _FeedShellState extends State<_FeedShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      // SliverAppBar — пинҳон мешавад вақти scroll — мисли Instagram
       body: NestedScrollView(
         controller: _scroll,
         headerSliverBuilder: (ctx, _) => [
           SliverAppBar(
             backgroundColor: AppColors.bg,
             elevation: 0,
-            floating: true,   // зуд намоён мешавад
-            snap: true,       // яклухт пайдо мешавад
-            pinned: false,    // scroll кунӣ пинҳон мешавад
+            floating: true,
+            snap: true,
+            pinned: false,
+            // ✅ + icon чапда
             leading: IconButton(
               icon: const Icon(Icons.add, color: Colors.white, size: 28),
               onPressed: () async {
@@ -107,6 +110,14 @@ class _FeedShellState extends State<_FeedShell> {
             )),
             centerTitle: true,
             actions: [
+              // ✅ Friends icon (мисли Facebook)
+              IconButton(
+                icon: const Icon(Icons.people_outline_rounded,
+                    color: Colors.white, size: 26),
+                onPressed: () =>
+                    Navigator.pushNamed(ctx, '/friends'),
+              ),
+              // ✅ Notifications
               Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: NotificationBadge(
@@ -123,16 +134,17 @@ class _FeedShellState extends State<_FeedShell> {
             ],
           ),
         ],
-        body: _FeedBody(isActive: widget.isActive, onCreatePost: widget.onCreatePost),
+        body: _FeedBody(
+            isActive: widget.isActive, onCreatePost: widget.onCreatePost),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────
 class _FeedBody extends StatelessWidget {
   final bool isActive;
   final VoidCallback? onCreatePost;
+  static const int _adEvery = 5;
   const _FeedBody({this.isActive = true, this.onCreatePost});
 
   Future<void> _openStoryGroup(
@@ -155,7 +167,6 @@ class _FeedBody extends StatelessWidget {
     );
   }
 
-  // Story bar — unseen first
   List<StoryModel> _sortStories(List<StoryModel> stories) {
     final unseen = stories.where((s) => !s.viewed).toList();
     final seen   = stories.where((s) =>  s.viewed).toList();
@@ -167,29 +178,20 @@ class _FeedBody extends StatelessWidget {
     final feedCtrl  = context.watch<FeedController>();
     final storyCtrl = context.watch<StoryController>();
     final FeedState state = feedCtrl.state;
-
     final sortedStories = _sortStories(storyCtrl.stories);
-
-    // Build groups for StoryGroupViewer
     final allGroups = groupStoriesByUser(sortedStories);
-    // Add my group at front if exists
-    final myId = UserSession.userId ?? '';
-    final myGroup = storyCtrl.myStories;
 
     final storyBar = StoryBar(
       stories:   sortedStories,
       myStories: storyCtrl.myStories,
       myAvatar:  UserSession.avatar,
       onTapGroup: (group, idx) {
-        final groups = allGroups;
-        final groupIdx = groups.indexWhere(
+        final groupIdx = allGroups.indexWhere(
             (g) => g.first.user.id == group.first.user.id);
-        _openStoryGroup(context, groups, groupIdx.clamp(0, groups.length - 1));
+        _openStoryGroup(
+            context, allGroups, groupIdx.clamp(0, allGroups.length - 1));
       },
-      onTap: (s) {
-        // Fallback: open single story as group
-        _openStoryGroup(context, [[s]], 0);
-      },
+      onTap: (s) => _openStoryGroup(context, [[s]], 0),
       onAddStory: () async {
         final ok = await Navigator.pushNamed(context, '/create-story');
         if (context.mounted) {
@@ -199,7 +201,7 @@ class _FeedBody extends StatelessWidget {
       },
     );
 
-    // ── Skeleton loading ─────────────────────────────────────────
+    // ── Skeleton ─────────────────────────────────────────────────
     if (state.isLoading && state.posts.isEmpty) {
       return const SingleChildScrollView(
         physics: NeverScrollableScrollPhysics(),
@@ -207,26 +209,7 @@ class _FeedBody extends StatelessWidget {
       );
     }
 
-    // ── Offline banner ─────────────────────────────────────────
-    final offlineBanner = feedCtrl.isOffline
-        ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            color: const Color(0xFF1A1A1A),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.wifi_off, color: Colors.white38, size: 14),
-              const SizedBox(width: 6),
-              const Text('Оффлайн — кэш нишон дода мешавад',
-                style: TextStyle(color: Colors.white38, fontSize: 12)),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => feedCtrl.refresh(),
-                child: const Text('Такрор',
-                  style: TextStyle(color: AppColors.neonBlue,
-                      fontSize: 12, fontWeight: FontWeight.w600))),
-            ]))
-        : const SizedBox.shrink();
-
-    // ── Empty state ─────────────────────────────────────────────
+    // ── Empty ─────────────────────────────────────────────────────
     if (!state.isLoading && state.posts.isEmpty && !state.hasError) {
       return RefreshIndicator(
         color: AppColors.neonBlue, backgroundColor: AppColors.surface,
@@ -271,7 +254,7 @@ class _FeedBody extends StatelessWidget {
       );
     }
 
-    // ── Error state бо Retry ────────────────────────────────────
+    // ── Error ─────────────────────────────────────────────────────
     if (state.hasError && state.posts.isEmpty) {
       return RefreshIndicator(
         color: AppColors.neonBlue, backgroundColor: AppColors.surface,
@@ -289,11 +272,7 @@ class _FeedBody extends StatelessWidget {
                       size: 64, color: Colors.white12),
                   const SizedBox(height: 16),
                   const Text('Пайвастшавӣ мумкин нест',
-                    style: TextStyle(color: Colors.white38, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  const Text('Интернетро санҷед ва такрор кӯшиш кунед',
-                    style: TextStyle(color: Colors.white24, fontSize: 13),
-                    textAlign: TextAlign.center),
+                      style: TextStyle(color: Colors.white38, fontSize: 16)),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: () => feedCtrl.loadInitialFeed(),
@@ -314,7 +293,12 @@ class _FeedBody extends StatelessWidget {
       );
     }
 
-    // ── Main feed ───────────────────────────────────────────────
+    // ── Main feed бо Ad ───────────────────────────────────────────
+    final posts     = state.posts;
+    final blockSize = _adEvery + 1;
+    final adSlots   = posts.length ~/ _adEvery;
+    final total     = posts.length + adSlots + 1;
+
     return RefreshIndicator(
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
@@ -322,7 +306,6 @@ class _FeedBody extends StatelessWidget {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          SliverToBoxAdapter(child: offlineBanner),
           SliverToBoxAdapter(child: storyBar),
           const SliverToBoxAdapter(
               child: Divider(color: Color(0xFF1A1A1A), height: 1)),
@@ -330,25 +313,40 @@ class _FeedBody extends StatelessWidget {
             SliverToBoxAdapter(
               child: _NewPostsBanner(
                 count: feedCtrl.pendingCount,
-                onTap: () {
-                  feedCtrl.flushPending();
-                  // scroll ба боло
-                },
+                onTap: feedCtrl.flushPending,
               ),
             ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index == state.posts.length) {
+              (context, virtualIndex) {
+                // Loader / end
+                if (virtualIndex == total - 1) {
                   return state.hasMore
                       ? const Padding(padding: EdgeInsets.all(16),
                           child: Center(child: CircularProgressIndicator(
                               color: AppColors.neonBlue, strokeWidth: 2)))
                       : const SizedBox(height: 40);
                 }
-                return PostCard(post: state.posts[index], isActive: isActive);
+
+                final blockIndex = virtualIndex % blockSize;
+                final blockNum   = virtualIndex ~/ blockSize;
+
+                // Ad slot
+                if (blockIndex == _adEvery) {
+                  final postsSoFar = blockNum * _adEvery + _adEvery;
+                  if (postsSoFar <= posts.length) return const FeedAdCard();
+                  return const SizedBox.shrink();
+                }
+
+                final postIndex = blockNum * _adEvery + blockIndex;
+                if (postIndex >= posts.length) return const SizedBox.shrink();
+
+                return PostCard(
+                  post: posts[postIndex],
+                  isActive: isActive,
+                );
               },
-              childCount: state.posts.length + 1,
+              childCount: total,
             ),
           ),
         ],
@@ -357,7 +355,6 @@ class _FeedBody extends StatelessWidget {
   }
 }
 
-// ── New Posts Banner ─────────────────────────────────────────────────
 class _NewPostsBanner extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
@@ -379,12 +376,47 @@ class _NewPostsBanner extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 16),
+            const Icon(Icons.arrow_upward_rounded,
+                color: Colors.white, size: 16),
             const SizedBox(width: 6),
             Text(count == 1 ? '1 пости нав' : '$count та пости нав',
               style: const TextStyle(color: Colors.white,
                   fontWeight: FontWeight.w600, fontSize: 13)),
           ]),
+      ),
+    );
+  }
+}
+
+// ── Feed Skeleton ─────────────────────────────────────────────────────
+class FeedSkeleton extends StatelessWidget {
+  const FeedSkeleton({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      // Stories skeleton
+      SizedBox(height: 114, child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (_, __) => Column(mainAxisSize: MainAxisSize.min, children: [
+          _shimmer(80, 80, radius: 40),
+          const SizedBox(height: 5),
+          _shimmer(60, 10),
+        ]),
+      )),
+      const Divider(color: Color(0xFF1A1A1A), height: 1),
+      ...List.generate(3, (_) => const PostCardSkeleton()),
+    ]);
+  }
+
+  Widget _shimmer(double w, double h, {double radius = 8}) {
+    return Container(
+      width: w, height: h,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(radius),
       ),
     );
   }
