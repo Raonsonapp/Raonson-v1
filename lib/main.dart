@@ -1,23 +1,25 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
 import 'app/app.dart';
 import 'app/app_config.dart';
 import 'core/services/user_session.dart';
-import 'core/services/network_service.dart'; // ← НАВ
+import 'core/services/network_service.dart';
+import 'core/services/server_wakeup_service.dart';
 import 'core/ads/ads_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Network monitoring — АВВАЛ init кун
-  NetworkService.instance.init();
+  // ✅ 1. Status bar style
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+  ));
 
-  // ✅ Ads init
-  MobileAds.initialize();
-
-  // ✅ App config
+  // ✅ 2. AppConfig — АВВАЛ
   AppConfig.initialize(
     baseUrl: const String.fromEnvironment(
       'BASE_URL',
@@ -27,11 +29,20 @@ Future<void> main() async {
     enableLogs: true,
   );
 
-  // ✅ Cache-ро бор кун — фавран, бе интернет
+  // ✅ 3. Cache-ро ФАВРАН бор кун — бе интернет ҳам кор мекунад
   await UserSession.loadCachedData();
 
-  // ✅ Ads preload
+  // ✅ 4. Network monitoring
+  NetworkService.instance.init();
+
+  // ✅ 5. Серверро background-да бедор кун (Render.com free tier)
+  ServerWakeupService.instance.wakeUp();
+  ServerWakeupService.instance.startKeepAlive();
+
+  // ✅ 6. Ads
+  MobileAds.initialize();
   AdsManager.instance.init();
 
+  // ✅ 7. App-ро кушо — ФАВРАН, бе интернет интизор шудан
   runApp(const RaonsonApp());
 }
