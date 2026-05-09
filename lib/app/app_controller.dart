@@ -1,3 +1,4 @@
+// lib/app/app_controller.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +19,7 @@ import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../auth/login/login_screen.dart';
 import '../auth/register/register_screen.dart';
+import '../friends/friends_screen.dart'; // ✅ НАВ
 
 class AppController {
   final AppState appState;
@@ -58,10 +60,12 @@ class AppController {
       case AppRoutes.notifications:
         return _page(const NotificationsScreen());
 
-      // Story viewer — onComplete холӣ, чунки
-      // feed_screen.dart дар _openStory баъди pop markViewed мезанад
+      // ✅ Friends — мисли Facebook
+      case AppRoutes.friends:
+      case '/friends':
+        return _slide(const FriendsScreen());
+
       case '/story-viewer':
-        // Legacy single-story route — wrap in StoryGroupViewer
         final story = settings.arguments as StoryModel;
         return PageRouteBuilder(
           opaque: false,
@@ -74,7 +78,7 @@ class AppController {
         );
 
       case '/story-group-viewer':
-        final args = settings.arguments as Map<String, dynamic>;
+        final args   = settings.arguments as Map<String, dynamic>;
         final groups = args['groups'] as List<List<StoryModel>>;
         final idx    = args['initialGroupIndex'] as int? ?? 0;
         return PageRouteBuilder(
@@ -87,6 +91,7 @@ class AppController {
 
       case '/create-story':
         return _page(const CreateStoryScreen());
+
       default:
         return _page(const LoginScreen());
     }
@@ -94,4 +99,16 @@ class AppController {
 
   MaterialPageRoute _page(Widget w) =>
       MaterialPageRoute(builder: (_) => w);
+
+  // ✅ Slide animation — мисли Instagram
+  PageRouteBuilder _slide(Widget w) => PageRouteBuilder(
+    pageBuilder: (_, __, ___) => w,
+    transitionsBuilder: (_, anim, __, child) => SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(1, 0), end: Offset.zero,
+      ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+      child: child,
+    ),
+    transitionDuration: const Duration(milliseconds: 250),
+  );
 }
