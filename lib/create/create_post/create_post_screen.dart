@@ -99,7 +99,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode({
           'caption': caption,
-          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image'}],
+          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image',
+            'aspectRatio': _aspectRatio?.toStringAsFixed(4) ?? ''}],
         }),
       ).timeout(const Duration(seconds: 30));
 
