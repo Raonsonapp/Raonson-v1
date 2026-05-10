@@ -41,14 +41,20 @@ class FeedController extends ChangeNotifier {
       final post = PostModel.fromJson(data);
       if (_state.posts.any((p) => p.id == post.id)) return;
       if (_pending.any((p) => p.id == post.id)) return;
+      // ✅ Фавран ба feed илова кун — мисли Instagram
       _pending.insert(0, post);
       notifyListeners();
     } catch (_) {}
   }
 
+  // ✅ Баъди upload — фавран refresh
+  Future<void> onPostUploaded() async {
+    await refresh();
+  }
+
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
       if (!SocketService.instance.isConnected) {
         await _silentCheck();
       }
