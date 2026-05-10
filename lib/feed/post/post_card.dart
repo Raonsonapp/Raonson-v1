@@ -511,39 +511,77 @@ class _PostCardState extends State<PostCard>
   void _showShare() {
     final url = 'https://raonson-v1.onrender.com/posts/preview/${widget.post.id}';
     showModalBottomSheet(
-      context: context, backgroundColor: const Color(0xFF111111),
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
-          _handle(),
-          const Text('Мубодила', style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 4),
-          ListTile(
-            leading: const CircleAvatar(backgroundColor: Colors.white12,
-                child: Icon(Icons.link, color: Colors.white, size: 20)),
-            title: const Text('Линкро нусха кун',
-                style: TextStyle(color: Colors.white)),
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: url));
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Линк нусха шуд ✓'),
-                backgroundColor: Colors.green, duration: Duration(seconds: 2)));
-            }),
-          ListTile(
-            leading: const CircleAvatar(backgroundColor: Colors.white12,
-                child: Icon(Icons.share_outlined, color: Colors.white, size: 20)),
-            title: const Text('Дигар барномаҳо',
-                style: TextStyle(color: Colors.white)),
-            onTap: () {
-              Navigator.pop(context);
-              Share.share(url);
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        _handle(),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text('Мубодила кунед', style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
+        // ── Чат ─────────────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF0095F6),
+            child: Icon(Icons.send_rounded, color: Colors.white, size: 20)),
+          title: const Text('Ба чат фиристодан',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          subtitle: const Text('Паёми мустақим',
+              style: TextStyle(color: Colors.white38, fontSize: 12)),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/messages',
+                arguments: {'shareUrl': url, 'postId': widget.post.id});
+          }),
+        // ── Ба Story ─────────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF833AB4),
+            child: Icon(Icons.add_circle_outline_rounded,
+                color: Colors.white, size: 20)),
+          title: const Text('Ба сторис илова кун',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          onTap: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Ба сторис илова шуд ✓'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2)));
+          }),
+        // ── Линк ──────────────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF2A2A2A),
+            child: Icon(Icons.link_rounded, color: Colors.white, size: 20)),
+          title: const Text('Линкро нусха кун',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: url));
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Линк нусха шуд ✓'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2)));
+          }),
+        // ── Дигар барномаҳо ────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF2A2A2A),
+            child: Icon(Icons.ios_share_rounded, color: Colors.white, size: 20)),
+          title: const Text('Дигар барномаҳо',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          onTap: () {
+            Navigator.pop(context);
+            // ✅ Танҳо вақте корбар реально мубодила кунад шумориш
+            Share.share(url).then((_) {
               if (mounted) setState(() => _shareCount++);
-            }),
-          const SizedBox(height: 8),
-        ])),
+            });
+          }),
+        const SizedBox(height: 8),
+      ])),
     );
   }
 
@@ -561,7 +599,7 @@ class _PostCardState extends State<PostCard>
   }
 
   String _timeAgo(DateTime dt) {
-    // ✅ toLocal() — server UTC вақтро маҳаллӣ мекунад
+    // ✅ toLocal() — серверни UTC вақтини маҳаллӣ мекунад
     final d = DateTime.now().difference(dt.toLocal());
     if (d.inSeconds < 30)  return 'ҳозир';
     if (d.inMinutes < 1)   return '${d.inSeconds} сония пеш';
@@ -804,6 +842,31 @@ class _PostCardState extends State<PostCard>
         ),
 
       // ── "Намоиш ҳама N шарх" ──────────────────────────────────
+
+      // ── MUSIC BAR — мисли Instagram ──────────────────────────
+      if (widget.post.musicTitle.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.music_note_rounded,
+                  color: Colors.white70, size: 13),
+              const SizedBox(width: 5),
+              Flexible(child: Text(
+                widget.post.musicTitle +
+                    (widget.post.musicArtist.isNotEmpty
+                        ? ' — ${widget.post.musicArtist}' : ''),
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 12),
+                maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ]),
+          ),
+        ),
       if (_commentCount > 0)
         GestureDetector(
           onTap: _openComments,
@@ -1050,13 +1113,17 @@ class _MediaCarouselState extends State<_MediaCarousel> {
   int _current = 0;
 
   double _getAspectRatio() {
-    final type  = widget.media.isNotEmpty ? widget.media.first['type']  ?? 'image' : 'image';
-    final ratio = widget.media.isNotEmpty ? widget.media.first['aspectRatio'] ?? '' : '';
+    // ✅ Формати аслиро нигоҳ дор — мисли Instagram
+    if (widget.media.isEmpty) return 1.0;
+    final type  = widget.media.first['type']  ?? 'image';
+    final ratio = widget.media.first['aspectRatio'] ?? '';
     if (ratio.isNotEmpty) {
       final r = double.tryParse(ratio);
       if (r != null && r > 0) return r;
     }
-    return type == 'video' ? 16 / 9 : 1.0;
+    // Агар aspectRatio нест — аз ImageProvider бигир
+    // Default: portrait 4:5 мисли Instagram
+    return type == 'video' ? 16 / 9 : 4 / 5;
   }
 
   @override
@@ -1114,42 +1181,81 @@ class _VideoItem extends StatefulWidget {
 }
 
 class _VideoItemState extends State<_VideoItem> {
-  late VideoPlayerController _ctrl;
-  bool _ready = false;
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url))
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() => _ready = true);
-          if (widget.isActive) _ctrl.play();
-          _ctrl.setLooping(true);
-        }
-      });
+  VideoPlayerController? _ctrl;
+  bool _ready = false, _buffering = false, _paused = false, _error = false;
+
+  @override void initState() { super.initState(); _init(); }
+
+  Future<void> _init() async {
+    try {
+      final ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url),
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
+      _ctrl = ctrl;
+      await ctrl.initialize().timeout(const Duration(seconds: 30));
+      if (!mounted) return;
+      ctrl.setLooping(true);
+      ctrl.setVolume(0); // Mute дар feed мисли Instagram
+      ctrl.addListener(_onUpdate);
+      setState(() => _ready = true);
+      if (widget.isActive) ctrl.play();
+    } catch (_) { if (mounted) setState(() => _error = true); }
   }
+
+  void _onUpdate() {
+    if (!mounted || _ctrl == null) return;
+    final b = _ctrl!.value.isBuffering;
+    if (b != _buffering) setState(() => _buffering = b);
+  }
+
   @override
   void didUpdateWidget(_VideoItem old) {
     super.didUpdateWidget(old);
-    if (widget.isActive && _ready) _ctrl.play(); else _ctrl.pause();
+    if (!_ready || _ctrl == null) return;
+    if (widget.isActive && !_paused) _ctrl!.play(); else _ctrl!.pause();
   }
-  @override void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override void dispose() {
+    _ctrl?.removeListener(_onUpdate);
+    _ctrl?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_error) return Container(color: Colors.black12,
+        child: const Center(child: Column(mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.play_circle_outline, color: Colors.white30, size: 48),
+            SizedBox(height: 8),
+            Text('Видео бор намешавад',
+                style: TextStyle(color: Colors.white30, fontSize: 12)),
+          ])));
     if (!_ready) return Container(color: Colors.black,
-      child: const Center(child: CircularProgressIndicator(
-          strokeWidth: 2, color: Colors.white30)));
-    final videoRatio = _ctrl.value.isInitialized
-        ? _ctrl.value.aspectRatio : widget.aspectRatio;
+        child: const Center(child: CircularProgressIndicator(
+            strokeWidth: 2, color: Colors.white30)));
+    final videoRatio = _ctrl!.value.isInitialized
+        ? _ctrl!.value.aspectRatio : widget.aspectRatio;
     return GestureDetector(
-      onTap: () => _ctrl.value.isPlaying ? _ctrl.pause() : _ctrl.play(),
+      onTap: () { setState(() => _paused = !_paused);
+        _paused ? _ctrl!.pause() : _ctrl!.play(); },
       child: Container(color: Colors.black,
         child: Center(child: AspectRatio(aspectRatio: videoRatio,
           child: Stack(fit: StackFit.expand, children: [
-            VideoPlayer(_ctrl),
-            if (!_ctrl.value.isPlaying)
+            VideoPlayer(_ctrl!),
+            if (_buffering) const Center(child: CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white38)),
+            if (_paused && !_buffering)
               const Center(child: Icon(Icons.play_circle_outline_rounded,
                   color: Colors.white70, size: 56)),
-          ])))));
+            // Mute badge
+            Positioned(bottom: 8, right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: const BoxDecoration(
+                    color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.volume_off_rounded,
+                    color: Colors.white, size: 14))),
+          ])))),
+    );
   }
 }
