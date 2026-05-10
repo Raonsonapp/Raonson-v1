@@ -53,10 +53,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
   Future<void> _loadComments() async {
     setState(() => _loading = true);
     try {
-      final res = await ApiClient.instance.get('/comments/${widget.post.id}');
+      // ✅ /posts/:id/comments аввал — backend логига мувофиқ
+      var res = await ApiClient.instance
+          .get('/posts/${widget.post.id}/comments')
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode >= 400) {
+        res = await ApiClient.instance
+            .get('/comments/${widget.post.id}')
+            .timeout(const Duration(seconds: 8));
+      }
       if (res.statusCode < 400) {
         final body = jsonDecode(res.body);
-        final List list = body is List ? body : (body['comments'] ?? []);
+        final List list = body is List ? body : (body['comments'] ?? body['data'] ?? []);
         setState(() {
           _comments = list
               .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
@@ -104,9 +112,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
     try {
       final res = await ApiClient.instance.post(
-        '/comments/${widget.post.id}',
-        body: {'text': optimistic.text},
+        '/posts/${widget.post.id}/comments',
+        body: {'text': optimistic.text, 'postId': widget.post.id},
       );
+      if (res.statusCode >= 400) {
+        res = await ApiClient.instance.post(
+          '/comments/${widget.post.id}',
+          body: {'text': optimistic.text},
+        );
+      }
       if (res.statusCode < 400) {
         final real = CommentModel.fromJson(
             jsonDecode(res.body) as Map<String, dynamic>);
