@@ -13,6 +13,8 @@ class PostModel {
   final DateTime createdAt;
   final String       location;
   final List<String> taggedUsers;
+  final String       musicTitle;   // ✅ НАВ
+  final String       musicArtist;  // ✅ НАВ
 
   const PostModel({
     required this.id,
@@ -27,6 +29,8 @@ class PostModel {
     this.isPinned    = false,
     this.location    = '',
     this.taggedUsers = const [],
+    this.musicTitle  = '',
+    this.musicArtist = '',
   });
 
   bool get isLiked  => liked;
@@ -43,6 +47,7 @@ class PostModel {
     int? likesCount, int? commentsCount,
     bool? liked, bool? saved, bool? isPinned,
     DateTime? createdAt, String? location, List<String>? taggedUsers,
+    String? musicTitle, String? musicArtist,
   }) => PostModel(
     id:            id            ?? this.id,
     user:          user          ?? this.user,
@@ -56,6 +61,8 @@ class PostModel {
     createdAt:     createdAt     ?? this.createdAt,
     location:      location      ?? this.location,
     taggedUsers:   taggedUsers   ?? this.taggedUsers,
+    musicTitle:    musicTitle    ?? this.musicTitle,
+    musicArtist:   musicArtist   ?? this.musicArtist,
   );
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -87,6 +94,8 @@ class PostModel {
       createdAt:     DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       location:      (json['location']    ?? '').toString(),
       taggedUsers:   (json['taggedUsers'] as List? ?? []).map((e)=>e.toString()).toList(),
+      musicTitle:    (json['musicTitle']  ?? json['music']?['title'] ?? '').toString(),
+      musicArtist:   (json['musicArtist'] ?? json['music']?['artist'] ?? '').toString(),
     );
   }
 
