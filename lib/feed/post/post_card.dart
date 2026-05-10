@@ -1,1261 +1,634 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter/rendering.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-
-import '../../models/post_model.dart';
-import '../../widgets/avatar.dart';
-import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
-import '../../core/services/user_session.dart';
-import '../comments/comments_screen.dart';
-import '../../app/app_theme.dart';
+import '../../app/app_config.dart';
 
-class PostCard extends StatefulWidget {
-  final PostModel post;
-  final bool isActive;
-  final VoidCallback? onDeleted;
-  const PostCard({super.key, required this.post,
-      this.isActive = true, this.onDeleted});
-  @override
-  State<PostCard> createState() => _PostCardState();
+// ─────────────────────────────────────────────
+// DATA MODELS
+// ─────────────────────────────────────────────
+class _TextItem {
+  String text; Offset position; Color color; double fontSize;
+  _TextItem({required this.text, required this.position,
+    this.color = Colors.white, this.fontSize = 24});
+}
+class _StickerItem {
+  String emoji; Offset position; double size;
+  _StickerItem({required this.emoji, required this.position, this.size = 48});
+}
+class _MentionItem {
+  String username; Offset position;
+  _MentionItem({required this.username, required this.position});
+}
+class _DrawPoint {
+  final Offset point; final Color color; final double width; final bool isStart;
+  _DrawPoint(this.point, this.color, this.width, {this.isStart = false});
+}
+class _MusicTrack {
+  final String title, artist, previewUrl, artworkUrl;
+  _MusicTrack({required this.title, required this.artist,
+    required this.previewUrl, required this.artworkUrl});
+  factory _MusicTrack.fromJson(Map j) => _MusicTrack(
+    title: j['trackName'] ?? '', artist: j['artistName'] ?? '',
+    previewUrl: j['previewUrl'] ?? '', artworkUrl: j['artworkUrl60'] ?? '');
 }
 
-class _PostCardState extends State<PostCard>
-    with TickerProviderStateMixin {
-  late bool   _liked;
-  late bool   _saved;
-  late int    _likeCount;
-  late int    _commentCount;
-  int         _retweetCount = 0;
-  bool        _reposted     = false;
-  int         _shareCount   = 0;
-  bool        _likeLoading  = false;
-  bool        _hidden       = false;
-  late String _caption;
-  bool        _captionExpanded = false; // ← Show more/less
+// ─────────────────────────────────────────────
+// CREATE POST SCREEN
+// ─────────────────────────────────────────────
+class CreatePostScreen extends StatefulWidget {
+  const CreatePostScreen({super.key});
+  @override State<CreatePostScreen> createState() => _CreatePostScreenState();
+}
 
-  // ── Like bounce ──────────────────────────────────────────────
-  late AnimationController _likeCtrl;
-  late Animation<double>   _likeScale;
-
-  // ── Like count slide animation ───────────────────────────────
-  late AnimationController _countCtrl;
-  bool _countUp = true;
-
-  // ── Repost rotate ────────────────────────────────────────────
-  late AnimationController _repostCtrl;
-  late Animation<double>   _repostRotate;
-
-  // ── Double-tap heart overlay ─────────────────────────────────
-  late AnimationController _heartCtrl;
-  late Animation<double>   _heartScale;
-  late Animation<double>   _heartOpacity;
-  bool   _showHeart   = false;
-  Offset _heartOffset = Offset.zero;
-
-  bool get _isOwner {
-    final myId   = UserSession.userId?.trim() ?? '';
-    final postId = widget.post.user.id.trim();
-    if (myId.isEmpty || postId.isEmpty) return false;
-    return myId == postId;
-  }
-
-  static const int _captionMaxLines = 3;
+class _CreatePostScreenState extends State<CreatePostScreen> {
+  File?  _file;
+  bool   _isVideo    = false;
+  bool   _isUploading= false;
+  String?_error;
 
   @override
   void initState() {
     super.initState();
-    _liked        = widget.post.isLiked;
-    _saved        = widget.post.isSaved;
-    _likeCount    = widget.post.likesCount;
-    _commentCount = widget.post.commentsCount;
-    _caption      = widget.post.caption;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pickFromGallery());
+  }
 
-    _likeCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 200));
-    _likeScale = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _likeCtrl, curve: Curves.easeInOut));
+  Future<void> _pickFromGallery() async {
+    // Рост ба Галереяи телефон меравад — мисли Instagram
+    final xf = await ImagePicker().pickMedia();
+    if (xf == null) { if (mounted) Navigator.pop(context); return; }
+    final path    = xf.path.toLowerCase();
+    final isVideo = path.endsWith('.mp4') || path.endsWith('.mov') ||
+                    path.endsWith('.avi') || path.endsWith('.mkv');
+    if (mounted) setState(() { _file = File(xf.path); _isVideo = isVideo; _error = null; });
+  }
 
-    _countCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 250));
+  Future<void> _publish(File capturedFile, String caption) async {
+    final token = ApiClient.instance.authToken ?? '';
+    if (token.isEmpty) return;
+    setState(() { _isUploading = true; _error = null; });
+    try {
+      final ext = capturedFile.path.split('.').last.toLowerCase();
+      MediaType mime;
+      if (_isVideo)          mime = MediaType('video', 'mp4');
+      else if (ext == 'png') mime = MediaType('image', 'png');
+      else                   mime = MediaType('image', 'jpeg');
 
-    _repostCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 400));
-    _repostRotate = Tween(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _repostCtrl, curve: Curves.easeInOut));
+      final req = http.MultipartRequest('POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath('file', capturedFile.path, contentType: mime));
 
-    _heartCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 800));
-    _heartScale = TweenSequence([
-      TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.3)
-            .chain(CurveTween(curve: Curves.elasticOut)), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 20),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 30),
-    ]).animate(_heartCtrl);
-    _heartOpacity = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 40),
-    ]).animate(_heartCtrl);
-    _heartCtrl.addStatusListener((s) {
-      if (s == AnimationStatus.completed && mounted) {
-        setState(() => _showHeart = false);
-      }
-    });
+      final up   = await req.send().timeout(const Duration(minutes: 3));
+      final body = await up.stream.bytesToString();
+      if (up.statusCode >= 400) throw Exception('Upload хато ${up.statusCode}');
+
+      final upJson   = jsonDecode(body) as Map<String, dynamic>;
+      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString().trim();
+      if (mediaUrl.isEmpty) throw Exception('URL нест');
+
+      final res = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/posts/'),
+        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'caption': caption,
+          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image', 'aspectRatio': ''}],
+        }),
+      ).timeout(const Duration(seconds: 30));
+
+      if (res.statusCode >= 400) throw Exception('Пост хато ${res.statusCode}');
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) setState(() { _isUploading = false; _error = e.toString().replaceAll('Exception: ', ''); });
+    }
   }
 
   @override
-  void dispose() {
-    _likeCtrl.dispose();
-    _countCtrl.dispose();
-    _repostCtrl.dispose();
-    _heartCtrl.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    if (_file == null) {
+      return const Scaffold(backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2)));
+    }
+    return _PostEditor(
+      media: _file!, isVideo: _isVideo, isUploading: _isUploading,
+      onPublish: _publish, onCancel: () => Navigator.pop(context),
+      errorMessage: _error);
+  }
+}
+
+// ─────────────────────────────────────────────
+// POST EDITOR — мисли Story Editor
+// ─────────────────────────────────────────────
+class _PostEditor extends StatefulWidget {
+  final File media; final bool isVideo, isUploading;
+  final void Function(File, String) onPublish;
+  final VoidCallback onCancel; final String? errorMessage;
+  const _PostEditor({required this.media, required this.isVideo,
+    required this.isUploading, required this.onPublish,
+    required this.onCancel, this.errorMessage});
+  @override State<_PostEditor> createState() => _PostEditorState();
+}
+
+enum _Tool { none, text, draw, sticker, music, mention, caption }
+
+class _PostEditorState extends State<_PostEditor> {
+  final _canvasKey    = GlobalKey();
+  final _captionCtrl  = TextEditingController();
+  _Tool _tool         = _Tool.none;
+
+  final List<_TextItem>    _texts    = [];
+  final List<_StickerItem> _stickers = [];
+  final List<_MentionItem> _mentions = [];
+  final List<_DrawPoint>   _drawPoints = [];
+
+  Color  _textColor  = Colors.white;
+  double _fontSize   = 24;
+  Color  _drawColor  = Colors.white;
+  bool   _isDrawing  = false;
+  Color  _bgColor    = Colors.black;
+
+  _MusicTrack? _selectedTrack;
+  VideoPlayerController? _videoCtrl;
+  bool _videoReady = false;
+  bool _showCaption= false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isVideo) _initVideo();
+    else _detectBgColor();
   }
 
-  // ── LIKE ─────────────────────────────────────────────────────
-  Future<void> _toggleLike() async {
-    if (_likeLoading) return;
-    _likeLoading = true;
-    final was = _liked;
-    _countUp = !was; // боло агар лайк, поён агар unlике
-    setState(() { _liked = !was; _likeCount += _liked ? 1 : -1; });
-    if (_liked) _likeCtrl.forward(from: 0);
-    _countCtrl.forward(from: 0);
+  Future<void> _detectBgColor() async {
     try {
-      final res = await ApiClient.instance
-          .post('/posts/${widget.post.id}/like');
-      if (res.statusCode < 400) {
-        final b = jsonDecode(res.body);
-        if (mounted) setState(() {
-          _liked     = b['liked']      ?? _liked;
-          _likeCount = b['likesCount'] ?? _likeCount;
-        });
-      } else {
-        if (mounted) setState(() { _liked = was; _likeCount += was ? 1 : -1; });
-      }
-    } catch (_) {
-      if (mounted) setState(() { _liked = was; _likeCount += was ? 1 : -1; });
-    }
-    _likeLoading = false;
+      final bytes = await widget.media.readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 10, targetHeight: 10);
+      final frame = await codec.getNextFrame();
+      final data  = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (data == null) return;
+      final r = data.getUint8(0); final g = data.getUint8(1); final b = data.getUint8(2);
+      if (mounted) setState(() => _bgColor = Color.fromARGB(255, r, g, b));
+    } catch (_) {}
   }
 
-  Future<void> _toggleSave() async {
-    final was = _saved;
-    setState(() => _saved = !was);
-    try {
-      final res = await ApiClient.instance
-          .post('/posts/${widget.post.id}/save');
-      if (res.statusCode >= 400 && mounted) setState(() => _saved = was);
-    } catch (_) { if (mounted) setState(() => _saved = was); }
+  void _initVideo() {
+    _videoCtrl = VideoPlayerController.file(widget.media)
+      ..initialize().then((_) { if (mounted) { setState(() => _videoReady = true); _videoCtrl!..setLooping(true)..play(); } });
   }
 
-  Future<void> _toggleRepost() async {
-    if (_reposted) return;
-    _repostCtrl.forward(from: 0);
-    setState(() { _reposted = true; _retweetCount++; });
-    try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/repost');
-    } catch (_) {
-      if (mounted) setState(() { _reposted = false; _retweetCount--; });
-    }
+  @override void dispose() { _videoCtrl?.dispose(); _captionCtrl.dispose(); super.dispose(); }
+
+  Future<File> _captureCanvas() async {
+    setState(() => _tool = _Tool.none);
+    await Future.delayed(const Duration(milliseconds: 100));
+    final boundary = _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    final image    = await boundary.toImage(pixelRatio: 3.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final dir  = await getTemporaryDirectory();
+    final file = File('${dir.path}/post_${DateTime.now().millisecondsSinceEpoch}.png');
+    await file.writeAsBytes(byteData!.buffer.asUint8List());
+    return file;
   }
 
-  // ── WHO LIKED ────────────────────────────────────────────────
-  Future<void> _showWhoLiked() async {
-    if (_likeCount == 0) return;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF111111),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      isScrollControlled: true,
-      builder: (_) => _WhoLikedSheet(postId: widget.post.id),
-    );
-  }
-
-  // ── MENU ─────────────────────────────────────────────────────
-  void _showMenu() => _isOwner ? _showOwnerMenu() : _showOtherMenu();
-
-  void _showOwnerMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF111111),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
-          _handle(),
-          _MenuItem(icon: Icons.delete_outline_rounded,
-              iconColor: Colors.redAccent,
-              label: 'Ҳазф кардан', labelColor: Colors.redAccent,
-              onTap: () { Navigator.pop(context); _deletePost(); }),
-          _MenuItem(icon: Icons.edit_outlined, label: 'Таҳрир кардан',
-              onTap: () { Navigator.pop(context); _editCaption(); }),
-          _MenuItem(icon: Icons.alternate_email_rounded,
-              label: 'Упоминать кардан',
-              onTap: () { Navigator.pop(context); _mentionFriends(); }),
-          _MenuItem(icon: Icons.music_note_rounded,
-              label: 'Тағир додани мусиқа',
-              onTap: () { Navigator.pop(context); _editMusic(); }),
-          _MenuItem(icon: Icons.bar_chart_rounded, label: 'Статистика',
-              onTap: () { Navigator.pop(context); _showStats(); }),
-          const SizedBox(height: 8),
-        ])),
-    );
-  }
-
-  void _showOtherMenu() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF111111),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
-          _handle(),
-          _MenuItem(icon: Icons.flag_outlined, iconColor: Colors.redAccent,
-              label: 'Жалоб партофтан', labelColor: Colors.redAccent,
-              onTap: () { Navigator.pop(context); _reportPost(); }),
-          _MenuItem(icon: Icons.thumb_up_outlined, label: 'Интересно',
-              onTap: () { Navigator.pop(context); _markInterest(true); }),
-          _MenuItem(icon: Icons.thumb_down_outlined, label: 'Неинтересно',
-              onTap: () { Navigator.pop(context); _markInterest(false); }),
-          _MenuItem(icon: Icons.person_outline_rounded,
-              label: 'Профили @${widget.post.user.username}',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/profile',
-                    arguments: widget.post.user.id);
-              }),
-          const SizedBox(height: 8),
-        ])),
-    );
-  }
-
-  // ── ACTIONS ──────────────────────────────────────────────────
-  Future<void> _deletePost() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Ҳазф кардан?',
-            style: TextStyle(color: Colors.white)),
-        content: const Text('Пост тамоман ҳазф мешавад.',
-            style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Ҳазф', style: TextStyle(color: Colors.redAccent))),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
-    if (res.statusCode < 400) {
-      widget.onDeleted?.call();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Пост ҳазф шуд'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2)));
+  Future<void> _onPublish() async {
+    final caption = _captionCtrl.text.trim() +
+        (_selectedTrack != null ? '\n🎵 ${_selectedTrack!.title}' : '');
+    if (widget.isVideo) {
+      widget.onPublish(widget.media, caption);
+    } else {
+      final captured = await _captureCanvas();
+      widget.onPublish(captured, caption);
     }
   }
 
-  Future<void> _editCaption() async {
-    final ctrl = TextEditingController(text: _caption);
-    final newCaption = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Таҳрир кардан',
-            style: TextStyle(color: Colors.white)),
-        content: TextField(controller: ctrl, autofocus: true, maxLines: 4,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Тавсиф...', hintStyle: TextStyle(color: Colors.white38),
-            border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.neonBlue)))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-              child: const Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
-        ],
-      ),
-    );
-    ctrl.dispose();
-    if (newCaption == null || newCaption == _caption) return;
-    final res = await ApiClient.instance.put(
-      '/posts/${widget.post.id}/caption', body: {'caption': newCaption});
-    if (res.statusCode < 400 && mounted) {
-      setState(() => _caption = newCaption);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Тавсиф навшуд ✓'), backgroundColor: Colors.green,
-        duration: Duration(seconds: 2)));
-    }
-  }
-
-  Future<void> _mentionFriends() async {
+  void _showTextDialog() {
     final ctrl = TextEditingController();
-    List<dynamic> results = [];
-    bool searching = false;
-    await showModalBottomSheet(
-      context: context, isScrollControlled: true,
-      backgroundColor: const Color(0xFF111111),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => SizedBox(
-          height: MediaQuery.of(context).size.height * 0.7,
-          child: Column(children: [
-            _handle(),
-            const Text('Упоминать кардан',
-                style: TextStyle(color: Colors.white,
-                    fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: ctrl, autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Ном ё username...',
-                  hintStyle: TextStyle(color: Colors.white38),
-                  prefixIcon: Icon(Icons.search, color: Colors.white38),
-                  filled: true, fillColor: Color(0xFF1A1A1A),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide.none)),
-                onChanged: (q) async {
-                  if (q.trim().isEmpty) { setS(() => results = []); return; }
-                  setS(() => searching = true);
-                  try {
-                    final res = await ApiClient.instance
-                        .get('/search', query: {'q': q});
-                    if (res.statusCode < 400) {
-                      final b = jsonDecode(res.body);
-                      setS(() { results = b['users'] ?? []; searching = false; });
-                    }
-                  } catch (_) { setS(() => searching = false); }
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: searching
-                  ? const Center(child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white30))
-                  : ListView.builder(
-                      itemCount: results.length,
-                      itemBuilder: (_, i) {
-                        final u = results[i];
-                        final username = u['username'] ?? '';
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: (u['avatar']?.isNotEmpty == true)
-                                ? NetworkImage(u['avatar']) : null,
-                            child: (u['avatar']?.isEmpty != false)
-                                ? const Icon(Icons.person) : null),
-                          title: Text('@$username',
-                              style: const TextStyle(color: Colors.white)),
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _addMentionToCaption('@$username');
-                          },
-                        );
-                      }),
-            ),
-          ]),
-        ),
-      ),
-    );
-    ctrl.dispose();
-  }
-
-  Future<void> _addMentionToCaption(String mention) async {
-    final newCaption = '$_caption $mention'.trim();
-    final res = await ApiClient.instance.put(
-      '/posts/${widget.post.id}/caption', body: {'caption': newCaption});
-    if (res.statusCode < 400 && mounted) setState(() => _caption = newCaption);
-  }
-
-  Future<void> _editMusic() async {
-    final titleCtrl  = TextEditingController();
-    final artistCtrl = TextEditingController();
-    final urlCtrl    = TextEditingController();
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Тағир додани мусиқа',
-            style: TextStyle(color: Colors.white)),
+    showDialog(context: context, barrierColor: Colors.black87,
+      builder: (_) => StatefulBuilder(builder: (ctx, setDlg) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Матн', style: TextStyle(color: Colors.white)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _dialogField(titleCtrl,  'Номи суруд'),
-          const SizedBox(height: 8),
-          _dialogField(artistCtrl, 'Хонанда'),
-          const SizedBox(height: 8),
-          _dialogField(urlCtrl,    'URL мусиқа (ихтиёрӣ)'),
+          TextField(controller: ctrl, autofocus: true,
+            style: TextStyle(color: _textColor, fontSize: _fontSize, fontWeight: FontWeight.bold),
+            decoration: const InputDecoration(hintText: 'Матн нависед...',
+              hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none)),
+          const SizedBox(height: 12),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children:
+            [Colors.white, Colors.yellow, Colors.red, Colors.cyan, Colors.green, Colors.orange].map((c) =>
+              GestureDetector(onTap: () { setDlg(() {}); setState(() => _textColor = c); },
+                child: Container(width: 28, height: 28, decoration: BoxDecoration(color: c,
+                  shape: BoxShape.circle, border: Border.all(
+                    color: _textColor == c ? Colors.white : Colors.transparent, width: 2))))).toList()),
+          Slider(value: _fontSize, min: 14, max: 56, activeColor: Colors.white, inactiveColor: Colors.white24,
+            onChanged: (v) { setDlg(() {}); setState(() => _fontSize = v); }),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
-          TextButton(
-            onPressed: () async {
+            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            onPressed: () {
+              if (ctrl.text.trim().isNotEmpty) setState(() => _texts.add(_TextItem(
+                text: ctrl.text.trim(),
+                position: Offset(MediaQuery.of(context).size.width / 2 - 60,
+                  MediaQuery.of(context).size.height / 2 - 20),
+                color: _textColor, fontSize: _fontSize)));
               Navigator.pop(context);
-              await ApiClient.instance.put(
-                '/posts/${widget.post.id}/music',
-                body: {
-                  'musicTitle':  titleCtrl.text.trim(),
-                  'musicArtist': artistCtrl.text.trim(),
-                  'musicUrl':    urlCtrl.text.trim(),
-                });
             },
-            child: const Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
-        ],
-      ),
-    );
-    titleCtrl.dispose(); artistCtrl.dispose(); urlCtrl.dispose();
-  }
-
-  TextField _dialogField(TextEditingController c, String hint) => TextField(
-    controller: c, style: const TextStyle(color: Colors.white),
-    decoration: InputDecoration(
-      hintText: hint, hintStyle: const TextStyle(color: Colors.white38),
-      filled: true, fillColor: const Color(0xFF111111),
-      border: const OutlineInputBorder(borderSide: BorderSide.none)));
-
-  Future<void> _showStats() async {
-    final res = await ApiClient.instance.get('/posts/${widget.post.id}/stats');
-    if (res.statusCode >= 400 || !mounted) return;
-    final b = jsonDecode(res.body);
-    showDialog(context: context, builder: (_) => AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
-      title: const Text('Статистика',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        _statRow('👁 Дида шуд',  '${b['views']   ?? 0}'),
-        _statRow('❤ Лайк',       '${b['likes']   ?? 0}'),
-        _statRow('💬 Шарҳ',      '${b['comments']?? 0}'),
-        _statRow('🔖 Захира',     '${b['saves']   ?? 0}'),
-        _statRow('🚩 Жалоб',     '${b['reports'] ?? 0}'),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(context),
-          child: const Text('Пӯшидан',
-              style: TextStyle(color: AppColors.neonBlue)))],
-    ));
-  }
-
-  Widget _statRow(String label, String val) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-      Text(val, style: const TextStyle(color: Colors.white,
-          fontWeight: FontWeight.bold, fontSize: 15)),
-    ]));
-
-  Future<void> _reportPost() async {
-    final reasons = [
-      ('spam', 'Спам'), ('violence', 'Зӯроварӣ'),
-      ('adult', 'Мӯҳтавои калонсолон'),
-      ('hate', 'Нафрат'), ('other', 'Дигар'),
-    ];
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Жалоб партофтан',
-            style: TextStyle(color: Colors.white)),
-        content: Column(mainAxisSize: MainAxisSize.min,
-          children: reasons.map((r) => ListTile(
-            title: Text(r.$2, style: const TextStyle(color: Colors.white)),
-            onTap: () => Navigator.pop(context, r.$1))).toList()),
-      ),
-    );
-    if (reason == null || !mounted) return;
-    await ApiClient.instance.post(
-      '/posts/${widget.post.id}/report', body: {'reason': reason});
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Жалоб фиристода шуд. Раҳмат!'),
-      backgroundColor: Colors.green, duration: Duration(seconds: 2)));
-  }
-
-  Future<void> _markInterest(bool interested) async {
-    final endpoint = interested
-        ? '/posts/${widget.post.id}/interest'
-        : '/posts/${widget.post.id}/not_interest';
-    await ApiClient.instance.post(endpoint);
-    if (!interested && mounted) {
-      setState(() => _hidden = true);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Пост пинҳон шуд. Алгоритм навшуд.'),
-        backgroundColor: Colors.grey[800],
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(label: 'Бекор', textColor: Colors.white,
-          onPressed: () { if (mounted) setState(() => _hidden = false); }),
-      ));
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Алгоритм навшуд ✓'), backgroundColor: Colors.green,
-        duration: Duration(seconds: 2)));
-    }
-  }
-
-  void _showShare() {
-    final url = 'https://raonson-v1.onrender.com/posts/preview/${widget.post.id}';
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _handle(),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Text('Мубодила кунед', style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
-        // ── Чат ─────────────────────────────────────────────────
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF0095F6),
-            child: Icon(Icons.send_rounded, color: Colors.white, size: 20)),
-          title: const Text('Ба чат фиристодан',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
-          subtitle: const Text('Паёми мустақим',
-              style: TextStyle(color: Colors.white38, fontSize: 12)),
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/messages',
-                arguments: {'shareUrl': url, 'postId': widget.post.id});
-          }),
-        // ── Ба Story ─────────────────────────────────────────────
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF833AB4),
-            child: Icon(Icons.add_circle_outline_rounded,
-                color: Colors.white, size: 20)),
-          title: const Text('Ба сторис илова кун',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
-          onTap: () {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ба сторис илова шуд ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2)));
-          }),
-        // ── Линк ──────────────────────────────────────────────────
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF2A2A2A),
-            child: Icon(Icons.link_rounded, color: Colors.white, size: 20)),
-          title: const Text('Линкро нусха кун',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: url));
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Линк нусха шуд ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2)));
-          }),
-        // ── Дигар барномаҳо ────────────────────────────────────────
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF2A2A2A),
-            child: Icon(Icons.ios_share_rounded, color: Colors.white, size: 20)),
-          title: const Text('Дигар барномаҳо',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
-          onTap: () {
-            Navigator.pop(context);
-            // ✅ Танҳо вақте корбар реально мубодила кунад шумориш
-            Share.share(url).then((_) {
-              if (mounted) setState(() => _shareCount++);
-            });
-          }),
-        const SizedBox(height: 8),
-      ])),
-    );
-  }
-
-  void _openComments() {
-    showModalBottomSheet(
-      context: context, isScrollControlled: true,
-      backgroundColor: const Color(0xFF111111),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.85,
-        child: CommentsScreen(
-          post: widget.post,
-          onCommentAdded: () { if (mounted) setState(() => _commentCount++); })));
-  }
-
-  String _timeAgo(DateTime dt) {
-    // ✅ toLocal() — серверни UTC вақтини маҳаллӣ мекунад
-    final d = DateTime.now().difference(dt.toLocal());
-    if (d.inSeconds < 30)  return 'ҳозир';
-    if (d.inMinutes < 1)   return '${d.inSeconds} сония пеш';
-    if (d.inMinutes < 60)  return '${d.inMinutes} дақиқа пеш';
-    if (d.inHours   < 24)  return '${d.inHours} соат пеш';
-    if (d.inDays    < 7)   return '${d.inDays} рӯз пеш';
-    if (d.inDays    < 30)  return '${(d.inDays / 7).floor()} ҳафта пеш';
-    if (d.inDays    < 365) return '${(d.inDays / 30).floor()} моҳ пеш';
-    return '${(d.inDays / 365).floor()} сол пеш';
-  }
-
-  String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000)    return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
-    return '$n';
-  }
-
-  // ── Caption spans — #hashtag ва @mention клик мешаванд ───────
-  List<InlineSpan> _captionSpans(String text) {
-    final spans = <InlineSpan>[];
-    final words = text.split(' ');
-    for (final word in words) {
-      if (word.startsWith('#') && word.length > 1) {
-        final tag = word.replaceAll(RegExp(r'[^\w]'), '');
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: GestureDetector(
-            onTap: () => Navigator.pushNamed(
-              context, '/hashtag', arguments: tag),
-            child: Text('$word ',
-              style: const TextStyle(
-                color: AppColors.neonBlue,
-                fontSize: 14, fontWeight: FontWeight.w600)),
-          ),
-        ));
-      } else if (word.startsWith('@') && word.length > 1) {
-        final username = word.substring(1)
-            .replaceAll(RegExp(r'[^\w]'), '');
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: GestureDetector(
-            onTap: () => Navigator.pushNamed(
-              context, '/profile-by-username',
-              arguments: username),
-            child: Text('$word ',
-              style: const TextStyle(
-                color: AppColors.neonBlue, fontSize: 14)),
-          ),
-        ));
-      } else {
-        spans.add(TextSpan(
-          text: '$word ',
-          style: const TextStyle(color: Colors.white, fontSize: 14)));
-      }
-    }
-    return spans;
-  }
-
-  // ── Like count animated counter ───────────────────────────────
-  Widget _animatedLikeCount() {
-    if (_likeCount <= 0) return const SizedBox.shrink();
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      transitionBuilder: (child, anim) {
-        final offset = _countUp
-            ? Tween(begin: const Offset(0, 0.5), end: Offset.zero)
-            : Tween(begin: const Offset(0, -0.5), end: Offset.zero);
-        return FadeTransition(
-          opacity: anim,
-          child: SlideTransition(
-            position: offset.animate(anim), child: child));
-      },
-      child: Text(
-        _fmt(_likeCount),
-        key: ValueKey(_likeCount),
-        style: const TextStyle(
-          color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
-      ),
-    );
-  }
-
-  // ────────────────────────────────────────────────────────────────
-  // BUILD
-  // ────────────────────────────────────────────────────────────────
-  @override
-  Widget build(BuildContext context) {
-    if (_hidden) return const SizedBox.shrink();
-    final post = widget.post;
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-      // ── HEADER ────────────────────────────────────────────────
-      Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 10, 8),
-        child: Row(children: [
-          GestureDetector(
-            onTap: () => Navigator.pushNamed(
-                context, '/profile', arguments: post.user.id),
-            child: Avatar(imageUrl: post.user.avatar, size: 44, glowBorder: false)),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(children: [
-                GestureDetector(
-                  onTap: () => Navigator.pushNamed(
-                      context, '/profile', arguments: post.user.id),
-                  child: Text(post.user.username,
-                    style: const TextStyle(fontWeight: FontWeight.w700,
-                        fontSize: 15, color: Colors.white))),
-                if (post.user.verified) ...[ const SizedBox(width: 4),
-                  const VerifiedBadge(size: 16) ],
-              ]),
-              const SizedBox(height: 2),
-              // Локация — агар бошад
-              if (post.location.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 1),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.location_on_outlined,
-                        size: 11, color: AppColors.timeColor),
-                    const SizedBox(width: 2),
-                    Text(post.location,
-                        style: const TextStyle(
-                            color: AppColors.timeColor, fontSize: 11)),
-                  ]),
-                ),
-              Text(_timeAgo(post.createdAt),
-                  style: const TextStyle(color: AppColors.timeColor, fontSize: 12.5)),
-            ],
-          )),
-          GestureDetector(
-            onTap: _showMenu,
-            child: const Padding(padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_vert, color: Colors.white, size: 20))),
-        ]),
-      ),
-
-      // ── MEDIA + Double-tap heart ───────────────────────────────
-      if (post.media.isNotEmpty)
-        Stack(children: [
-          GestureDetector(
-            onDoubleTapDown: (d) => _heartOffset = d.localPosition,
-            onDoubleTap: () {
-              if (!_liked) {
-                setState(() { _liked = true; _likeCount++; _countUp = true; });
-                _likeCtrl.forward(from: 0);
-                _countCtrl.forward(from: 0);
-                ApiClient.instance.post('/posts/${post.id}/like')
-                    .catchError((_) {
-                  if (mounted) setState(() { _liked = false; _likeCount--; });
-                });
-              }
-              setState(() => _showHeart = true);
-              _heartCtrl.forward(from: 0);
-            },
-            child: _MediaCarousel(media: post.media, isActive: widget.isActive),
-          ),
-          if (_showHeart)
-            Positioned(
-              left: _heartOffset.dx - 50, top: _heartOffset.dy - 50,
-              child: IgnorePointer(
-                child: AnimatedBuilder(animation: _heartCtrl,
-                  builder: (_, __) => Opacity(
-                    opacity: _heartOpacity.value,
-                    child: Transform.scale(scale: _heartScale.value,
-                      child: const Icon(Icons.favorite, color: Colors.white,
-                        size: 100,
-                        shadows: [Shadow(color: Colors.black45, blurRadius: 24)])))))),
-        ]),
-
-      // ── ACTIONS ───────────────────────────────────────────────
-      Padding(
-        padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
-        child: Row(children: [
-          // ♡ Like — bounce + count slide animation
-          ScaleTransition(
-            scale: _likeScale,
-            child: GestureDetector(
-              onTap: _toggleLike,
-              onLongPress: _showWhoLiked,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  SizedBox(width: 24, height: 24,
-                    child: SvgPicture.asset(
-                      _liked ? 'assets/icons/heart_filled.svg'
-                             : 'assets/icons/heart.svg',
-                      width: 24, height: 24, fit: BoxFit.contain,
-                      colorFilter: ColorFilter.mode(
-                        _liked ? Colors.red : Colors.white,
-                        BlendMode.srcIn))),
-                  const SizedBox(width: 5),
-                  _animatedLikeCount(),
-                ]),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 4),
-
-          _StableBtn(onTap: _openComments,
-              svgPath: 'assets/icons/comment.svg', size: 23,
-              count: _commentCount, fmt: _fmt),
-
-          const SizedBox(width: 4),
-
-          _StableBtn(onTap: _showShare,
-              svgPath: 'assets/icons/share.svg', size: 23,
-              count: _shareCount, fmt: _fmt),
-
-          const Spacer(),
-
-          _StableBtn(
-            onTap: _toggleSave,
-            svgPath: 'assets/icons/save.svg',
-            activeSvgPath: 'assets/icons/save_filled.svg',
-            isActive: _saved, activeColor: Colors.white,
-            inactiveColor: Colors.white, size: 23, count: 0, fmt: _fmt),
-        ]),
-      ),
-
-      // ── CAPTION бо Show more / less ───────────────────────────
-      if (_caption.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 4, 14, 2),
-          child: _CaptionWidget(
-            username: post.user.username,
-            userId:   post.user.id,
-            caption:  _caption,
-            spans:    _captionSpans(_caption),
-            expanded: _captionExpanded,
-            onToggle: () => setState(() =>
-                _captionExpanded = !_captionExpanded),
-          ),
-        ),
-
-      // ── "Намоиш ҳама N шарх" ──────────────────────────────────
-
-      // ── MUSIC BAR — мисли Instagram ──────────────────────────
-      if (widget.post.musicTitle.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.music_note_rounded,
-                  color: Colors.white70, size: 13),
-              const SizedBox(width: 5),
-              Flexible(child: Text(
-                widget.post.musicTitle +
-                    (widget.post.musicArtist.isNotEmpty
-                        ? ' — ${widget.post.musicArtist}' : ''),
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 12),
-                maxLines: 1, overflow: TextOverflow.ellipsis)),
-            ]),
-          ),
-        ),
-      if (_commentCount > 0)
-        GestureDetector(
-          onTap: _openComments,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),
-            child: Text(
-              _commentCount == 1
-                  ? 'Намоиш 1 шарҳ'
-                  : 'Намоиш ҳама $_commentCount шарҳ',
-              style: const TextStyle(
-                color: AppColors.grey,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-              )),
-          ),
-        )
-      else
-        const SizedBox(height: 10),
-
-      const Divider(color: Color(0xFF1A1A1A), height: 1),
-    ]);
-  }
-}
-
-// ── Caption Widget — Show more/less ────────────────────────────────
-class _CaptionWidget extends StatelessWidget {
-  final String username, userId, caption;
-  final List<InlineSpan> spans;
-  final bool expanded;
-  final VoidCallback onToggle;
-  static const int _maxLines = 3;
-
-  const _CaptionWidget({
-    required this.username, required this.userId, required this.caption,
-    required this.spans, required this.expanded, required this.onToggle,
-  });
-
-  bool _needsTruncation(BuildContext context) {
-    final tp = TextPainter(
-      text: TextSpan(children: [
-        TextSpan(text: '$username ', style: const TextStyle(
-            fontWeight: FontWeight.w700, color: Colors.white, fontSize: 14)),
-        TextSpan(text: caption, style: const TextStyle(
-            color: Colors.white, fontSize: 14)),
-      ]),
-      maxLines: _maxLines,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: MediaQuery.of(context).size.width - 28);
-    return tp.didExceedMaxLines;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final needsMore = _needsTruncation(context);
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      RichText(
-        maxLines: expanded ? null : (needsMore ? _maxLines : null),
-        overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-        text: TextSpan(children: [
-          WidgetSpan(
-            alignment: PlaceholderAlignment.baseline,
-            baseline: TextBaseline.alphabetic,
-            child: GestureDetector(
-              onTap: () => Navigator.of(context)
-                  .pushNamed('/profile', arguments: userId),
-              child: Text('$username ',
-                style: const TextStyle(fontWeight: FontWeight.w700,
-                    color: Colors.white, fontSize: 14)),
-            ),
-          ),
-          ...spans,
-        ]),
-      ),
-      if (needsMore)
-        GestureDetector(
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Text(
-              expanded ? 'камтар нишон деҳ' : '...бештар нишон деҳ',
-              style: const TextStyle(
-                color: AppColors.grey,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-              )),
-          ),
-        ),
-    ]);
-  }
-}
-
-// ── Who Liked Sheet ─────────────────────────────────────────────────
-class _WhoLikedSheet extends StatefulWidget {
-  final String postId;
-  const _WhoLikedSheet({required this.postId});
-  @override
-  State<_WhoLikedSheet> createState() => _WhoLikedSheetState();
-}
-
-class _WhoLikedSheetState extends State<_WhoLikedSheet> {
-  List<dynamic> _users = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final res = await ApiClient.instance
-          .get('/posts/${widget.postId}/likes')
-          .timeout(const Duration(seconds: 8));
-      if (res.statusCode < 400 && mounted) {
-        final body = jsonDecode(res.body);
-        final list = body is List ? body : (body['users'] ?? []) as List;
-        setState(() { _users = list; _loading = false; });
-      } else {
-        setState(() => _loading = false);
-      }
-    } catch (_) { if (mounted) setState(() => _loading = false); }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.55,
-      child: Column(children: [
-        _handle(),
-        const Text('Лайк гузоштанд',
-            style: TextStyle(color: Colors.white,
-                fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator(
-                  color: AppColors.neonBlue, strokeWidth: 2))
-              : _users.isEmpty
-                  ? const Center(child: Text('Ҳанӯз лайк нест',
-                      style: TextStyle(color: Colors.white38)))
-                  : ListView.builder(
-                      itemCount: _users.length,
-                      itemBuilder: (_, i) {
-                        final u = _users[i];
-                        final av = (u['avatar'] ?? '').toString();
-                        final un = (u['username'] ?? '').toString();
-                        final id = (u['_id'] ?? u['id'] ?? '').toString();
-                        return ListTile(
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundImage: av.isNotEmpty
-                                ? NetworkImage(av) : null,
-                            child: av.isEmpty ? const Icon(
-                                Icons.person, color: Colors.white38) : null,
-                            backgroundColor: const Color(0xFF1A1A1A),
-                          ),
-                          title: Text('@$un',
-                              style: const TextStyle(color: Colors.white,
-                                  fontWeight: FontWeight.w600)),
-                          onTap: () {
-                            Navigator.pop(context);
-                            if (id.isNotEmpty) Navigator.pushNamed(
-                                context, '/profile', arguments: id);
-                          },
-                        );
-                      }),
-        ),
-      ]),
-    );
-  }
-}
-
-// ── Handle bar ───────────────────────────────────────────────────────
-Widget _handle() => Container(
-  margin: const EdgeInsets.symmetric(vertical: 10),
-  width: 36, height: 4,
-  decoration: BoxDecoration(color: Colors.white24,
-      borderRadius: BorderRadius.circular(2)));
-
-// ── Menu item ─────────────────────────────────────────────────────
-class _MenuItem extends StatelessWidget {
-  final IconData icon;
-  final Color? iconColor;
-  final String label;
-  final Color? labelColor;
-  final VoidCallback onTap;
-  const _MenuItem({required this.icon, this.iconColor,
-      required this.label, this.labelColor, required this.onTap});
-  @override
-  Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: iconColor ?? Colors.white, size: 22),
-    title: Text(label,
-        style: TextStyle(color: labelColor ?? Colors.white, fontSize: 15)),
-    onTap: onTap);
-}
-
-// ── Stable Button ────────────────────────────────────────────────────
-class _StableBtn extends StatelessWidget {
-  final VoidCallback onTap;
-  final String svgPath;
-  final String? activeSvgPath;
-  final bool isActive;
-  final Color activeColor, inactiveColor;
-  final double size;
-  final int count;
-  final String Function(int) fmt;
-  const _StableBtn({
-    required this.onTap, required this.svgPath, this.activeSvgPath,
-    this.isActive = false, this.activeColor = Colors.white,
-    this.inactiveColor = Colors.white, required this.size,
-    required this.count, required this.fmt});
-  @override
-  Widget build(BuildContext context) {
-    final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
-    final color = isActive ? activeColor : inactiveColor;
-    return GestureDetector(
-      onTap: onTap, behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(width: size, height: size,
-            child: SvgPicture.asset(path, width: size, height: size,
-              fit: BoxFit.contain,
-              colorFilter: ColorFilter.mode(color, BlendMode.srcIn))),
-          if (count > 0) ...[ const SizedBox(width: 5),
-            Text(fmt(count), style: const TextStyle(color: Colors.white,
-                fontSize: 14, fontWeight: FontWeight.w500))],
+            child: const Text('Илова', style: TextStyle(color: Colors.black))),
         ])));
   }
-}
 
-// ── Media Carousel ───────────────────────────────────────────────────
-class _MediaCarousel extends StatefulWidget {
-  final List<Map<String, String>> media;
-  final bool isActive;
-  const _MediaCarousel({required this.media, this.isActive = true});
-  @override
-  State<_MediaCarousel> createState() => _MediaCarouselState();
-}
-
-class _MediaCarouselState extends State<_MediaCarousel> {
-  int _current = 0;
-
-  double _getAspectRatio() {
-    // ✅ Формати аслиро нигоҳ дор — мисли Instagram
-    if (widget.media.isEmpty) return 1.0;
-    final type  = widget.media.first['type']  ?? 'image';
-    final ratio = widget.media.first['aspectRatio'] ?? '';
-    if (ratio.isNotEmpty) {
-      final r = double.tryParse(ratio);
-      if (r != null && r > 0) return r;
-    }
-    // Агар aspectRatio нест — аз ImageProvider бигир
-    // Default: portrait 4:5 мисли Instagram
-    return type == 'video' ? 16 / 9 : 4 / 5;
+  void _showMentionDialog() {
+    final ctrl = TextEditingController(text: '@');
+    showDialog(context: context, barrierColor: Colors.black87,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Зикр кунед', style: TextStyle(color: Colors.white)),
+        content: TextField(controller: ctrl, autofocus: true,
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+          decoration: const InputDecoration(hintText: '@username',
+            hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context),
+            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            onPressed: () {
+              final u = ctrl.text.trim();
+              if (u.isNotEmpty && u != '@') setState(() => _mentions.add(_MentionItem(
+                username: u,
+                position: Offset(MediaQuery.of(context).size.width / 2 - 60,
+                  MediaQuery.of(context).size.height / 2))));
+              Navigator.pop(context);
+            },
+            child: const Text('Илова', style: TextStyle(color: Colors.black))),
+        ]));
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final aspectRatio = _getAspectRatio();
-    return Stack(alignment: Alignment.bottomCenter, children: [
-      AspectRatio(
-        aspectRatio: aspectRatio,
-        child: PageView.builder(
-          onPageChanged: (i) => setState(() => _current = i),
-          itemCount: widget.media.length,
-          itemBuilder: (_, i) {
-            final url  = widget.media[i]['url']  ?? '';
-            final type = widget.media[i]['type'] ?? 'image';
-            if (url.isEmpty) return Container(color: const Color(0xFF111111));
-            if (type == 'video') return _VideoItem(
-              url: url, isActive: widget.isActive, aspectRatio: aspectRatio);
-            return CachedNetworkImage(
-              imageUrl: url, fit: BoxFit.cover,
-              width: double.infinity, height: double.infinity,
-              placeholder: (_, __) => Container(color: const Color(0xFF111111),
-                child: const Center(child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white30))),
-              errorWidget: (_, __, ___) => Container(
-                color: const Color(0xFF111111),
-                child: const Center(child: Icon(Icons.broken_image_outlined,
-                    color: Colors.white30, size: 48))));
-          }),
-      ),
-      if (widget.media.length > 1)
-        Positioned(
-          bottom: 10,
-          child: Row(mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(widget.media.length, (i) =>
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: _current == i ? 18 : 6, height: 6,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: _current == i ? Colors.white : Colors.white38)))),
-        ),
-    ]);
-  }
-}
-
-// ── Video Item ───────────────────────────────────────────────────────
-class _VideoItem extends StatefulWidget {
-  final String url;
-  final bool isActive;
-  final double aspectRatio;
-  const _VideoItem({required this.url, this.isActive = true, this.aspectRatio = 16/9});
-  @override
-  State<_VideoItem> createState() => _VideoItemState();
-}
-
-class _VideoItemState extends State<_VideoItem> {
-  VideoPlayerController? _ctrl;
-  bool _ready = false, _buffering = false, _paused = false, _error = false;
-
-  @override void initState() { super.initState(); _init(); }
-
-  Future<void> _init() async {
-    try {
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url),
-          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
-      _ctrl = ctrl;
-      await ctrl.initialize().timeout(const Duration(seconds: 30));
-      if (!mounted) return;
-      ctrl.setLooping(true);
-      ctrl.setVolume(0); // Mute дар feed мисли Instagram
-      ctrl.addListener(_onUpdate);
-      setState(() => _ready = true);
-      if (widget.isActive) ctrl.play();
-    } catch (_) { if (mounted) setState(() => _error = true); }
+  void _showStickerPanel() {
+    const emojis = ['😂','❤️','🔥','😍','👍','💯','🎉','😎','🤩','💪',
+      '🙏','✨','😭','🥰','🤣','👏','🎊','🌟','💫','🎯','🚀','💎','🌈','🦋','🌸','🍀','⚡','🌙','☀️','🎵'];
+    showModalBottomSheet(context: context,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
+          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+        const Text('Стикер', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: emojis.map((e) =>
+          GestureDetector(onTap: () {
+            setState(() => _stickers.add(_StickerItem(emoji: e,
+              position: Offset(MediaQuery.of(context).size.width / 2 - 24,
+                MediaQuery.of(context).size.height / 2 - 80))));
+            Navigator.pop(context);
+          }, child: Container(width: 52, height: 52, alignment: Alignment.center,
+            child: Text(e, style: const TextStyle(fontSize: 32))))).toList()),
+        const SizedBox(height: 16),
+      ])));
   }
 
-  void _onUpdate() {
-    if (!mounted || _ctrl == null) return;
-    final b = _ctrl!.value.isBuffering;
-    if (b != _buffering) setState(() => _buffering = b);
+  void _showMusicPanel() {
+    showModalBottomSheet(context: context, isScrollControlled: true,
+      backgroundColor: const Color(0xFF1C1C1E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _MusicPanel(onSelected: (t) => setState(() => _selectedTrack = t)));
   }
 
-  @override
-  void didUpdateWidget(_VideoItem old) {
-    super.didUpdateWidget(old);
-    if (!_ready || _ctrl == null) return;
-    if (widget.isActive && !_paused) _ctrl!.play(); else _ctrl!.pause();
+  void _onDrawStart(DragStartDetails d) {
+    if (_tool != _Tool.draw) return;
+    setState(() { _isDrawing = true;
+      _drawPoints.add(_DrawPoint(d.localPosition, _drawColor, 4, isStart: true)); });
   }
-
-  @override void dispose() {
-    _ctrl?.removeListener(_onUpdate);
-    _ctrl?.dispose();
-    super.dispose();
+  void _onDrawUpdate(DragUpdateDetails d) {
+    if (_tool != _Tool.draw || !_isDrawing) return;
+    setState(() => _drawPoints.add(_DrawPoint(d.localPosition, _drawColor, 4)));
   }
+  void _onDrawEnd(DragEndDetails _) => setState(() => _isDrawing = false);
 
   @override
   Widget build(BuildContext context) {
-    if (_error) return Container(color: Colors.black12,
-        child: const Center(child: Column(mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.play_circle_outline, color: Colors.white30, size: 48),
-            SizedBox(height: 8),
-            Text('Видео бор намешавад',
-                style: TextStyle(color: Colors.white30, fontSize: 12)),
-          ])));
-    if (!_ready) return Container(color: Colors.black,
-        child: const Center(child: CircularProgressIndicator(
-            strokeWidth: 2, color: Colors.white30)));
-    final videoRatio = _ctrl!.value.isInitialized
-        ? _ctrl!.value.aspectRatio : widget.aspectRatio;
-    return GestureDetector(
-      onTap: () { setState(() => _paused = !_paused);
-        _paused ? _ctrl!.pause() : _ctrl!.play(); },
-      child: Container(color: Colors.black,
-        child: Center(child: AspectRatio(aspectRatio: videoRatio,
-          child: Stack(fit: StackFit.expand, children: [
-            VideoPlayer(_ctrl!),
-            if (_buffering) const Center(child: CircularProgressIndicator(
-                strokeWidth: 2, color: Colors.white38)),
-            if (_paused && !_buffering)
-              const Center(child: Icon(Icons.play_circle_outline_rounded,
-                  color: Colors.white70, size: 56)),
-            // Mute badge
-            Positioned(bottom: 8, right: 8,
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onPanStart: _tool == _Tool.draw ? _onDrawStart : null,
+        onPanUpdate: _tool == _Tool.draw ? _onDrawUpdate : null,
+        onPanEnd: _tool == _Tool.draw ? _onDrawEnd : null,
+        child: Stack(fit: StackFit.expand, children: [
+
+          // ── CANVAS ──────────────────────────────
+          RepaintBoundary(
+            key: _canvasKey,
+            child: Stack(fit: StackFit.expand, children: [
+              // Background — рангу аз акс
+              Container(color: _bgColor),
+              // Media — формат нигоҳ дорад
+              Center(child: _buildMedia()),
+              // Drawing
+              CustomPaint(painter: _DrawPainter(_drawPoints)),
+              // Texts
+              ..._texts.map<Widget>((t) => Positioned(left: t.position.dx, top: t.position.dy,
+                child: GestureDetector(
+                  onPanUpdate: (d) => setState(() { t.position = t.position + d.delta; }),
+                  onDoubleTap: () => setState(() => _texts.remove(t)),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(6)),
+                    child: Text(t.text, style: TextStyle(color: t.color, fontSize: t.fontSize,
+                      fontWeight: FontWeight.bold,
+                      shadows: const [Shadow(blurRadius: 4, color: Colors.black54)])))))).toList(),
+              // Stickers
+              ..._stickers.map<Widget>((s) => Positioned(left: s.position.dx, top: s.position.dy,
+                child: GestureDetector(
+                  onPanUpdate: (d) => setState(() { s.position = s.position + d.delta; }),
+                  onDoubleTap: () => setState(() => _stickers.remove(s)),
+                  child: Text(s.emoji, style: TextStyle(fontSize: s.size))))).toList(),
+              // Mentions
+              ..._mentions.map<Widget>((m) => Positioned(left: m.position.dx, top: m.position.dy,
+                child: GestureDetector(
+                  onPanUpdate: (d) => setState(() { m.position = m.position + d.delta; }),
+                  onDoubleTap: () => setState(() => _mentions.remove(m)),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                    child: Text(m.username, style: const TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)))))).toList(),
+            ]),
+          ),
+
+          // ── Music badge ─────────────────────────
+          if (_selectedTrack != null)
+            Positioned(bottom: 130, left: 16, right: 16,
+              child: GestureDetector(onTap: _showMusicPanel,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
+                  child: Row(children: [
+                    const Icon(Icons.music_note, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text('${_selectedTrack!.title} — ${_selectedTrack!.artist}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      overflow: TextOverflow.ellipsis)),
+                    GestureDetector(onTap: () => setState(() => _selectedTrack = null),
+                      child: const Icon(Icons.close, color: Colors.white54, size: 16)),
+                  ])))),
+
+          // ── Caption overlay ─────────────────────
+          if (_showCaption)
+            Positioned(bottom: 130, left: 16, right: 16,
               child: Container(
-                padding: const EdgeInsets.all(5),
-                decoration: const BoxDecoration(
-                    color: Colors.black54, shape: BoxShape.circle),
-                child: const Icon(Icons.volume_off_rounded,
-                    color: Colors.white, size: 14))),
-          ])))),
+                decoration: BoxDecoration(color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
+                child: TextField(
+                  controller: _captionCtrl, autofocus: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  maxLines: 4, maxLength: 500,
+                  decoration: const InputDecoration(
+                    hintText: 'Тавсиф нависед...',
+                    hintStyle: TextStyle(color: Colors.white38),
+                    contentPadding: EdgeInsets.all(12),
+                    border: InputBorder.none,
+                    counterStyle: TextStyle(color: Colors.white24)),
+                  onSubmitted: (_) => setState(() => _showCaption = false),
+                ))),
+
+          // ── Draw color bar ──────────────────────
+          if (_tool == _Tool.draw)
+            Positioned(right: 12, top: 120,
+              child: Column(children:
+                [Colors.white, Colors.red, Colors.yellow, Colors.cyan, Colors.green, Colors.black].map((c) =>
+                  GestureDetector(onTap: () => setState(() => _drawColor = c),
+                    child: Container(margin: const EdgeInsets.only(bottom: 8),
+                      width: 30, height: 30,
+                      decoration: BoxDecoration(color: c, shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _drawColor == c ? Colors.white : Colors.white24, width: 2))))).toList())),
+
+          // ── Error ───────────────────────────────
+          if (widget.errorMessage != null)
+            Positioned(top: 80, left: 16, right: 16,
+              child: Container(padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.red.shade800,
+                  borderRadius: BorderRadius.circular(12)),
+                child: Text(widget.errorMessage!,
+                  style: const TextStyle(color: Colors.white, fontSize: 13)))),
+
+          // ── TOP BAR ─────────────────────────────
+          SafeArea(child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(children: [
+              IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
+                onPressed: widget.isUploading ? null : widget.onCancel),
+              const Spacer(),
+              if (_tool == _Tool.draw && _drawPoints.isNotEmpty)
+                IconButton(icon: const Icon(Icons.undo, color: Colors.white),
+                  onPressed: () => setState(() {
+                    int i = _drawPoints.length - 1;
+                    while (i > 0 && !_drawPoints[i].isStart) { i--; }
+                    _drawPoints.removeRange(i, _drawPoints.length);
+                  })),
+              TextButton(
+                onPressed: widget.isUploading ? null : _onPublish,
+                style: TextButton.styleFrom(backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8)),
+                child: widget.isUploading
+                    ? const SizedBox(width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : const Text('Нашр кун',
+                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
+            ]))),
+
+          // ── BOTTOM TOOLBAR ──────────────────────
+          Positioned(bottom: 0, left: 0, right: 0,
+            child: SafeArea(child: Container(
+              color: Colors.black54,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                _ToolBtn(icon: Icons.text_fields,         label: 'Текст',
+                  onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
+                _ToolBtn(icon: Icons.brush,               label: 'Расм',
+                  isActive: _tool == _Tool.draw,
+                  onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
+                _ToolBtn(icon: Icons.emoji_emotions_outlined, label: 'Стикер',
+                  onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
+                _ToolBtn(icon: Icons.music_note,          label: 'Мусиқӣ',
+                  onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
+                _ToolBtn(icon: Icons.alternate_email,     label: 'Зикр',
+                  onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
+                _ToolBtn(icon: Icons.edit_note,           label: 'Тавсиф',
+                  isActive: _showCaption,
+                  onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),
+              ])))),
+
+          // ── Upload overlay ──────────────────────
+          if (widget.isUploading)
+            Container(color: Colors.black54,
+              child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                SizedBox(height: 16),
+                Text('Бор мешавад...', style: TextStyle(color: Colors.white70, fontSize: 15)),
+              ]))),
+        ]),
+      ),
     );
+  }
+
+  Widget _buildMedia() {
+    if (widget.isVideo) {
+      if (_videoReady && _videoCtrl != null) {
+        return AspectRatio(aspectRatio: _videoCtrl!.value.aspectRatio,
+          child: VideoPlayer(_videoCtrl!));
+      }
+      return const CircularProgressIndicator(color: Colors.white30);
+    }
+    return Image.file(widget.media, fit: BoxFit.contain);
+  }
+}
+
+// ─────────────────────────────────────────────
+// TOOL BUTTON
+// ─────────────────────────────────────────────
+class _ToolBtn extends StatelessWidget {
+  final IconData icon; final String label;
+  final VoidCallback onTap; final bool isActive;
+  const _ToolBtn({required this.icon, required this.label,
+    required this.onTap, this.isActive = false});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.white24 : Colors.transparent,
+        borderRadius: BorderRadius.circular(16)),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: Colors.white, size: 22),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 9)),
+      ])));
+}
+
+// ─────────────────────────────────────────────
+// DRAW PAINTER
+// ─────────────────────────────────────────────
+class _DrawPainter extends CustomPainter {
+  final List<_DrawPoint> points;
+  _DrawPainter(this.points);
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (int i = 1; i < points.length; i++) {
+      if (points[i].isStart) continue;
+      canvas.drawLine(points[i-1].point, points[i].point,
+        Paint()..color = points[i].color..strokeWidth = points[i].width
+          ..strokeCap = StrokeCap.round..style = PaintingStyle.stroke);
+    }
+  }
+  @override bool shouldRepaint(_DrawPainter _) => true;
+}
+
+// ─────────────────────────────────────────────
+// MUSIC PANEL
+// ─────────────────────────────────────────────
+class _MusicPanel extends StatefulWidget {
+  final void Function(_MusicTrack) onSelected;
+  const _MusicPanel({required this.onSelected});
+  @override State<_MusicPanel> createState() => _MusicPanelState();
+}
+
+class _MusicPanelState extends State<_MusicPanel> {
+  final _ctrl   = TextEditingController();
+  final _player = AudioPlayer();
+  List<_MusicTrack> _tracks = [];
+  bool _loading = false; String? _error; String? _playingUrl;
+
+  @override void dispose() { _ctrl.dispose(); _player.dispose(); super.dispose(); }
+
+  Future<void> _togglePlay(String url) async {
+    if (_playingUrl == url) { await _player.stop(); setState(() => _playingUrl = null); }
+    else { await _player.stop(); await _player.play(UrlSource(url)); setState(() => _playingUrl = url); }
+  }
+
+  Future<void> _search(String q) async {
+    if (q.trim().isEmpty) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final res = await http.get(Uri.parse(
+        'https://itunes.apple.com/search?term=${Uri.encodeComponent(q)}&media=music&limit=20'))
+        .timeout(const Duration(seconds: 10));
+      final data = jsonDecode(res.body);
+      setState(() {
+        _tracks = (data['results'] as List)
+          .where((r) => r['previewUrl'] != null)
+          .map((r) => _MusicTrack.fromJson(r)).toList();
+        _loading = false;
+      });
+    } catch (e) { setState(() { _error = 'Хато: $e'; _loading = false; }); }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(height: MediaQuery.of(context).size.height * 0.75,
+      child: Column(children: [
+        Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
+          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+        const Text('Мусиқӣ 🎵', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TextField(controller: _ctrl, style: const TextStyle(color: Colors.white),
+            textInputAction: TextInputAction.search, onSubmitted: _search,
+            decoration: InputDecoration(
+              hintText: 'Суруд ё хонанда...', hintStyle: const TextStyle(color: Colors.white38),
+              prefixIcon: const Icon(Icons.search, color: Colors.white38),
+              suffixIcon: IconButton(icon: const Icon(Icons.send, color: Color(0xFF0095F6)),
+                onPressed: () => _search(_ctrl.text)),
+              filled: true, fillColor: Colors.white10,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
+        const SizedBox(height: 8),
+        if (_loading) const Expanded(child: Center(child: CircularProgressIndicator(color: Colors.white30))),
+        if (_error != null) Padding(padding: const EdgeInsets.all(16),
+          child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
+        if (!_loading && _tracks.isEmpty && _error == null)
+          const Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.music_note, color: Colors.white24, size: 48), SizedBox(height: 12),
+            Text('Суруд ёбед', style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
+          ]))),
+        if (!_loading && _tracks.isNotEmpty)
+          Expanded(child: ListView.builder(itemCount: _tracks.length, itemBuilder: (_, i) {
+            final t = _tracks[i];
+            return ListTile(
+              leading: t.artworkUrl.isNotEmpty
+                ? ClipRRect(borderRadius: BorderRadius.circular(6),
+                    child: Image.network(t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover))
+                : const Icon(Icons.music_note, color: Colors.white54),
+              title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(t.artist, style: const TextStyle(color: Colors.white54),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (t.previewUrl.isNotEmpty)
+                  GestureDetector(onTap: () => _togglePlay(t.previewUrl),
+                    child: Icon(_playingUrl == t.previewUrl
+                      ? Icons.stop_circle : Icons.play_circle_outline,
+                      color: Colors.white54, size: 28)),
+                const SizedBox(width: 8),
+                GestureDetector(onTap: () { _player.stop(); widget.onSelected(t); Navigator.pop(context); },
+                  child: const Icon(Icons.add_circle_outline, color: Color(0xFF0095F6), size: 28)),
+              ]),
+              onTap: () => _togglePlay(t.previewUrl));
+          })),
+      ]));
   }
 }
