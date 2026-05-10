@@ -1,4 +1,3 @@
-// lib/stories/story_bar.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/story_model.dart';
@@ -39,6 +38,7 @@ class StoryBar extends StatelessWidget {
         groups.where((g) => g.first.user.id == myId).firstOrNull ?? [];
     final others = groups.where((g) => g.first.user.id != myId).toList();
 
+    // ── Unseen first — мисли Instagram ───────────────────────
     final unseenGroups = others.where((g) => !g.every((s) => s.viewed)).toList();
     final seenGroups   = others.where((g) =>  g.every((s) => s.viewed)).toList();
     final sortedOthers = [...unseenGroups, ...seenGroups];
@@ -58,13 +58,12 @@ class StoryBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         children: [
-          // ✅ МАН — ЯКТА ITEM (2 та эмас!)
+          // Аватари корбар ValueListenable — real-time update
           ValueListenableBuilder<String?>(
             valueListenable: UserSession.avatarNotifier,
             builder: (_, liveAvatar, __) => _MyStoryItem(
               url: liveAvatar ?? myAvatar ?? '',
               ringState: myRing,
-              hasStory: myGrp.isNotEmpty,
               onTapAvatar: () => myGrp.isNotEmpty
                   ? onTap?.call(myGrp.first) : onAddStory?.call(),
               onTapAdd: onAddStory ?? () {},
@@ -85,19 +84,15 @@ class StoryBar extends StatelessWidget {
   }
 }
 
-// ── MY STORY ITEM — ЯКТА ────────────────────────────────────────────
+// ── MY STORY ITEM ────────────────────────────────────────────────────
 class _MyStoryItem extends StatelessWidget {
   final String url;
   final _RingState ringState;
-  final bool hasStory;
   final VoidCallback onTapAvatar, onTapAdd;
 
   const _MyStoryItem({
-    required this.url,
-    required this.ringState,
-    required this.hasStory,
-    required this.onTapAvatar,
-    required this.onTapAdd,
+    required this.url, required this.ringState,
+    required this.onTapAvatar, required this.onTapAdd,
   });
 
   @override
@@ -109,7 +104,6 @@ class _MyStoryItem extends StatelessWidget {
         SizedBox(
           width: _outer, height: _outer,
           child: Stack(clipBehavior: Clip.none, children: [
-            // ✅ Ring — агар story дошта бошад, gradient; агар не, ҳеҷ
             if (ringState != _RingState.none)
               Positioned.fill(
                 child: CustomPaint(
@@ -133,7 +127,7 @@ class _MyStoryItem extends StatelessWidget {
                     : _ph(),
               ),
             ),
-            // ✅ «+» badge — ҳамеша кӯчак дар поён-рост
+            // «+» badge
             Positioned(
               bottom: 0, right: 0,
               child: GestureDetector(
@@ -144,10 +138,8 @@ class _MyStoryItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2),
-                  ),
-                  child: const Icon(Icons.add, color: Colors.black, size: 13),
-                ),
+                    border: Border.all(color: Colors.black, width: 2)),
+                  child: const Icon(Icons.add, color: Colors.black, size: 13)),
               ),
             ),
           ]),
@@ -155,32 +147,26 @@ class _MyStoryItem extends StatelessWidget {
         const SizedBox(height: 5),
         SizedBox(
           width: _outer,
-          child: const Text(
-            'Сториси шумо',
+          child: const Text('Сториси шумо',
             style: TextStyle(color: Colors.white, fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
-        ),
+            textAlign: TextAlign.center)),
       ]),
     );
   }
 
-  Widget _ph() => Container(
-    color: const Color(0xFF1A1A1A),
-    child: const Icon(Icons.person, color: Colors.white38, size: 30),
-  );
+  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+      child: const Icon(Icons.person, color: Colors.white38, size: 30));
 }
 
-// ── OTHER STORY ITEM ────────────────────────────────────────────────
+// ── STORY ITEM ───────────────────────────────────────────────────────
 class _StoryItem extends StatelessWidget {
   final StoryModel story;
   final bool allViewed;
   final VoidCallback onTap;
 
   const _StoryItem({
-    required this.story, required this.allViewed, required this.onTap,
-  });
+    required this.story, required this.allViewed, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +174,6 @@ class _StoryItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        // ✅ AnimatedContainer — вақти viewed шуд, rang иваз мешавад
         AnimatedContainer(
           duration: const Duration(milliseconds: 400),
           width: _outer, height: _outer,
@@ -207,11 +192,9 @@ class _StoryItem extends StatelessWidget {
               left: _pad, top: _pad, right: _pad, bottom: _pad,
               child: ClipOval(
                 child: story.user.avatar.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: story.user.avatar,
+                    ? CachedNetworkImage(imageUrl: story.user.avatar,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => _ph(),
-                      )
+                        errorWidget: (_, __, ___) => _ph())
                     : _ph(),
               ),
             ),
@@ -220,24 +203,18 @@ class _StoryItem extends StatelessWidget {
         const SizedBox(height: 5),
         SizedBox(
           width: _outer,
-          child: Text(
-            story.user.username,
+          child: Text(story.user.username,
             style: TextStyle(
-              color: allViewed ? const Color(0xFF888888) : Colors.white,
-              fontSize: 11,
-            ),
+              color: Colors.white, // ✅ Ҳамеша сафед
+              fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-          ),
-        ),
+            textAlign: TextAlign.center)),
       ]),
     );
   }
 
-  Widget _ph() => Container(
-    color: const Color(0xFF1A1A1A),
-    child: const Icon(Icons.person, color: Colors.white38, size: 28),
-  );
+  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+      child: const Icon(Icons.person, color: Colors.white38, size: 28));
 }
 
 // ── RING PAINTER ─────────────────────────────────────────────────────
