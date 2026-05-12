@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
 
@@ -55,6 +56,17 @@ class _CommentInputState extends State<CommentInput> {
         ),
         child: Row(
           children: [
+            // GIF icon — дар comments мисли Instagram
+            GestureDetector(
+              onTap: () {}, // TODO: GIF picker
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: SvgPicture.asset('assets/icons/gif.svg',
+                  width: 22, height: 22,
+                  colorFilter: const ColorFilter.mode(
+                      AppColors.grey, BlendMode.srcIn)),
+              ),
+            ),
             Expanded(
               child: TextField(
                 controller: _controller,
@@ -62,7 +74,7 @@ class _CommentInputState extends State<CommentInput> {
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
                 decoration: const InputDecoration(
-                  hintText: 'Add a comment…',
+                  hintText: 'Шарҳ илова кунед...',
                   hintStyle: TextStyle(color: AppColors.grey),
                   border: InputBorder.none,
                 ),
@@ -78,7 +90,10 @@ class _CommentInputState extends State<CommentInput> {
                         color: AppColors.neonBlue,
                       ),
                     )
-                  : const Icon(Icons.send, color: AppColors.neonBlue),
+                  : SvgPicture.asset('assets/icons/share.svg',
+                      width: 22, height: 22,
+                      colorFilter: const ColorFilter.mode(
+                          AppColors.neonBlue, BlendMode.srcIn)),
               onPressed: _send,
             ),
           ],
