@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -47,7 +48,8 @@ class _ShareSheetState extends State<_ShareSheet> {
   Future<void> _loadFollowing() async {
     try {
       final res = await ApiClient.instance.get('/users/me/following?limit=50');
-      final list = (res['users'] ?? res['data'] ?? res ?? []) as List;
+      final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+      final list = (decoded['users'] ?? decoded['data'] ?? []) as List;
       final users = list.map<Map<String, dynamic>>((u) {
         final m = u as Map<String, dynamic>;
         return {
