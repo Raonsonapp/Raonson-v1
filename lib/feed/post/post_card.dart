@@ -9,6 +9,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/post_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
+import '../../widgets/smart_media_widget.dart';
+import '../../widgets/like_animation_overlay.dart';
+import '../../widgets/instagram_share_sheet.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../comments/comments_screen.dart';
@@ -91,17 +94,19 @@ class _PostCardState extends State<PostCard>
       CurvedAnimation(parent: _repostCtrl, curve: Curves.easeInOut));
 
     _heartCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 800));
+        duration: const Duration(milliseconds: 900));
+    // Bounce: 0→1.4→1.1→1.0 then fade out
     _heartScale = TweenSequence([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.3)
-            .chain(CurveTween(curve: Curves.elasticOut)), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 20),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 30),
+        tween: Tween(begin: 0.0, end: 1.4)
+            .chain(CurveTween(curve: Curves.elasticOut)), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.1), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 10),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 30),
     ]).animate(_heartCtrl);
     _heartOpacity = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 55),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 45),
     ]).animate(_heartCtrl);
     _heartCtrl.addStatusListener((s) {
       if (s == AnimationStatus.completed && mounted) {
@@ -188,27 +193,23 @@ class _PostCardState extends State<PostCard>
       context: context,
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text('Амалиёт', style: TextStyle(
-              color: Colors.white70, fontSize: 13, letterSpacing: 0.5))),
-          _SvgMenuItem(svgPath: 'assets/icons/delete.svg',
+          _MenuItem(icon: Icons.delete_outline_rounded,
               iconColor: Colors.redAccent,
               label: 'Ҳазф кардан', labelColor: Colors.redAccent,
               onTap: () { Navigator.pop(context); _deletePost(); }),
-          _SvgMenuItem(svgPath: 'assets/icons/edit.svg', label: 'Таҳрир кардан',
+          _MenuItem(icon: Icons.edit_outlined, label: 'Таҳрир кардан',
               onTap: () { Navigator.pop(context); _editCaption(); }),
-          _SvgMenuItem(svgPath: 'assets/icons/mention.svg',
+          _MenuItem(icon: Icons.alternate_email_rounded,
               label: 'Упоминать кардан',
               onTap: () { Navigator.pop(context); _mentionFriends(); }),
-          _SvgMenuItem(svgPath: 'assets/icons/music.svg',
+          _MenuItem(icon: Icons.music_note_rounded,
               label: 'Тағир додани мусиқа',
               onTap: () { Navigator.pop(context); _editMusic(); }),
-          _SvgMenuItem(svgPath: 'assets/icons/stats.svg', label: 'Статистика',
+          _MenuItem(icon: Icons.bar_chart_rounded, label: 'Статистика',
               onTap: () { Navigator.pop(context); _showStats(); }),
           const SizedBox(height: 8),
         ])),
@@ -220,15 +221,11 @@ class _PostCardState extends State<PostCard>
       context: context,
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text('Амалиёт', style: TextStyle(
-              color: Colors.white70, fontSize: 13, letterSpacing: 0.5))),
-          _SvgMenuItem(svgPath: 'assets/icons/delete.svg', iconColor: Colors.redAccent,
+          _MenuItem(icon: Icons.flag_outlined, iconColor: Colors.redAccent,
               label: 'Жалоб партофтан', labelColor: Colors.redAccent,
               onTap: () { Navigator.pop(context); _reportPost(); }),
           _MenuItem(icon: Icons.thumb_up_outlined, label: 'Интересно',
@@ -517,111 +514,10 @@ class _PostCardState extends State<PostCard>
   }
 
   void _showShare() {
-    final url = 'https://raonson-v1.onrender.com/posts/preview/${widget.post.id}';
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF111111),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        _handle(),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: Text('Мубодила кунед', style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17))),
-
-        // ── Social Apps Row ──────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(children: [
-            // Search people (like Instagram)
-            Expanded(child: _ShareSearchField(onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/messages',
-                  arguments: {'shareUrl': url, 'postId': widget.post.id});
-            })),
-          ]),
-        ),
-        const SizedBox(height: 20),
-
-        // ── Social platforms row ─────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-            _SocialCircleBtn(
-              color: const Color(0xFF25D366),
-              iconPath: 'W',
-              label: 'WhatsApp',
-              onTap: () { Navigator.pop(context); Share.share('WhatsApp: $url'); }),
-            _SocialCircleBtn(
-              color: const Color(0xFF2AABEE),
-              iconPath: 'T',
-              label: 'Telegram',
-              onTap: () { Navigator.pop(context); Share.share('Telegram: $url'); }),
-            _SocialCircleBtn(
-              color: const Color(0xFFE1306C),
-              iconPath: 'I',
-              label: 'Instagram',
-              onTap: () { Navigator.pop(context); Share.share(url); }),
-            _SocialCircleBtn(
-              color: const Color(0xFF1877F2),
-              iconPath: 'F',
-              label: 'Facebook',
-              onTap: () { Navigator.pop(context); Share.share('Facebook: $url'); }),
-          ]),
-        ),
-
-        const SizedBox(height: 8),
-        const Divider(color: Color(0xFF1E1E1E), height: 24),
-
-        // ── Actions list ─────────────────────────────────────────
-        _ShareListItem(
-          svgPath: 'assets/icons/add_story.svg',
-          iconBg: const Color(0xFF833AB4),
-          label: 'Ба сторис илова кун',
-          subtitle: 'Добавить в историю',
-          onTap: () {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ба сторис илова шуд ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2)));
-          }),
-        _ShareListItem(
-          svgPath: 'assets/icons/download.svg',
-          iconBg: const Color(0xFF2A2A2A),
-          label: 'Скачать',
-          subtitle: 'Сохранить на устройство',
-          onTap: () { Navigator.pop(context); }),
-        _ShareListItem(
-          svgPath: 'assets/icons/share_outline.svg',
-          iconBg: const Color(0xFF2A2A2A),
-          label: 'Мубодила кардан',
-          subtitle: 'Поделиться',
-          onTap: () {
-            Navigator.pop(context);
-            Share.share(url).then((_) {
-              if (mounted) setState(() => _shareCount++);
-            });
-          }),
-        _ShareListItem(
-          svgPath: 'assets/icons/link.svg',
-          iconBg: const Color(0xFF2A2A2A),
-          label: 'Линкро нусха кун',
-          subtitle: 'Скопировать ссылку',
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: url));
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Линк нусха шуд ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2)));
-          }),
-
-        const SizedBox(height: 8),
-      ])),
-    );
+    final url = 'https://raonson-v1.onrender.com/posts/preview/\${widget.post.id}';
+    showInstagramShareSheet(context, widget.post.id, url).then((_) {
+      if (mounted) setState(() => _shareCount++);
+    });
   }
 
   void _openComments() {
@@ -775,14 +671,12 @@ class _PostCardState extends State<PostCard>
           )),
           GestureDetector(
             onTap: _showMenu,
-            child: Padding(padding: const EdgeInsets.all(8),
-              child: SvgPicture.asset('assets/icons/more_vert.svg',
-                width: 22, height: 22,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
+            child: const Padding(padding: EdgeInsets.all(8),
+              child: Icon(Icons.more_vert, color: Colors.white, size: 20))),
         ]),
       ),
 
-      // ── MEDIA + Double-tap heart ───────────────────────────────
+      // ── MEDIA + Double-tap 👍 ─────────────────────────────────
       if (post.media.isNotEmpty)
         Stack(children: [
           GestureDetector(
@@ -798,22 +692,14 @@ class _PostCardState extends State<PostCard>
                 });
               }
               setState(() => _showHeart = true);
-              _heartCtrl.forward(from: 0);
             },
-            child: _MediaCarousel(media: post.media, isActive: widget.isActive),
+            child: SmartMediaWidget(
+                media: post.media, isActive: widget.isActive),
           ),
           if (_showHeart)
-            Positioned(
-              left: _heartOffset.dx - 50, top: _heartOffset.dy - 50,
-              child: IgnorePointer(
-                child: AnimatedBuilder(animation: _heartCtrl,
-                  builder: (_, __) => Opacity(
-                    opacity: _heartOpacity.value,
-                    child: Transform.scale(scale: _heartScale.value,
-                      child: SvgPicture.asset(
-                        'assets/icons/heart_filled.svg',
-                        width: 100, height: 100,
-                      )))))),
+            LikeAnimationOverlay(
+              position: _heartOffset,
+              onDone: () { if (mounted) setState(() => _showHeart = false); }),
         ]),
 
       // ── ACTIONS ───────────────────────────────────────────────
@@ -831,15 +717,13 @@ class _PostCardState extends State<PostCard>
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   SizedBox(width: 24, height: 24,
-                    child: _liked
-                      ? SvgPicture.asset(
-                          'assets/icons/heart_filled.svg',
-                          width: 24, height: 24, fit: BoxFit.contain)
-                      : SvgPicture.asset(
-                          'assets/icons/heart.svg',
-                          width: 24, height: 24, fit: BoxFit.contain,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn))),
+                    child: SvgPicture.asset(
+                      _liked ? 'assets/icons/heart_filled.svg'
+                             : 'assets/icons/heart.svg',
+                      width: 24, height: 24, fit: BoxFit.contain,
+                      colorFilter: ColorFilter.mode(
+                        _liked ? Colors.red : Colors.white,
+                        BlendMode.srcIn))),
                   const SizedBox(width: 5),
                   _animatedLikeCount(),
                 ]),
@@ -1087,33 +971,12 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
 
 // ── Handle bar ───────────────────────────────────────────────────────
 Widget _handle() => Container(
-  margin: const EdgeInsets.symmetric(vertical: 12),
-  width: 40, height: 4,
+  margin: const EdgeInsets.symmetric(vertical: 10),
+  width: 36, height: 4,
   decoration: BoxDecoration(color: Colors.white24,
       borderRadius: BorderRadius.circular(2)));
 
-// ── SVG Menu item ─────────────────────────────────────────────────
-class _SvgMenuItem extends StatelessWidget {
-  final String svgPath;
-  final Color? iconColor;
-  final String label;
-  final Color? labelColor;
-  final VoidCallback onTap;
-  const _SvgMenuItem({required this.svgPath, this.iconColor,
-      required this.label, this.labelColor, required this.onTap});
-  @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-    leading: SvgPicture.asset(svgPath, width: 22, height: 22,
-      colorFilter: ColorFilter.mode(
-        iconColor ?? Colors.white, BlendMode.srcIn)),
-    title: Text(label,
-        style: TextStyle(color: labelColor ?? Colors.white, fontSize: 15,
-            fontWeight: FontWeight.w500)),
-    onTap: onTap);
-}
-
-// ── Material icon Menu item ───────────────────────────────────────
+// ── Menu item ─────────────────────────────────────────────────────
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
@@ -1124,84 +987,9 @@ class _MenuItem extends StatelessWidget {
       required this.label, this.labelColor, required this.onTap});
   @override
   Widget build(BuildContext context) => ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
     leading: Icon(icon, color: iconColor ?? Colors.white, size: 22),
     title: Text(label,
-        style: TextStyle(color: labelColor ?? Colors.white, fontSize: 15,
-            fontWeight: FontWeight.w500)),
-    onTap: onTap);
-}
-
-// ── Share search field ───────────────────────────────────────────
-class _ShareSearchField extends StatelessWidget {
-  final VoidCallback onTap;
-  const _ShareSearchField({required this.onTap});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: 42,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(21),
-      ),
-      child: Row(children: [
-        const SizedBox(width: 14),
-        SvgPicture.asset('assets/icons/search_user.svg', width: 18, height: 18,
-          colorFilter: const ColorFilter.mode(Colors.white38, BlendMode.srcIn)),
-        const SizedBox(width: 8),
-        const Text('Ба дӯст фиристодан...',
-          style: TextStyle(color: Colors.white38, fontSize: 14)),
-      ]),
-    ),
-  );
-}
-
-// ── Social circle button ─────────────────────────────────────────
-class _SocialCircleBtn extends StatelessWidget {
-  final Color color;
-  final String iconPath;
-  final String label;
-  final VoidCallback onTap;
-  const _SocialCircleBtn({required this.color, required this.iconPath,
-      required this.label, required this.onTap});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        width: 58, height: 58,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        child: Center(child: Text(iconPath,
-          style: const TextStyle(color: Colors.white,
-            fontSize: 22, fontWeight: FontWeight.w800)))),
-      const SizedBox(height: 6),
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-    ]),
-  );
-}
-
-// ── Share list item ──────────────────────────────────────────────
-class _ShareListItem extends StatelessWidget {
-  final String svgPath;
-  final Color iconBg;
-  final String label;
-  final String subtitle;
-  final VoidCallback onTap;
-  const _ShareListItem({required this.svgPath, required this.iconBg,
-      required this.label, required this.subtitle, required this.onTap});
-  @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-    leading: Container(
-      width: 44, height: 44,
-      decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-      child: Center(child: SvgPicture.asset(svgPath, width: 20, height: 20,
-        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
-    title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 15,
-        fontWeight: FontWeight.w500)),
-    subtitle: Text(subtitle, style: const TextStyle(
-        color: Colors.white38, fontSize: 12)),
+        style: TextStyle(color: labelColor ?? Colors.white, fontSize: 15)),
     onTap: onTap);
 }
 
