@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 // ════════════════════════════════════════════════════════════════
 //  SmartMediaWidget  —  Instagram/TikTok style dynamic media
@@ -82,10 +81,12 @@ class _DynamicCarouselState extends State<_DynamicCarousel> {
             final m    = widget.media[i];
             final url  = m['url']  ?? '';
             final type = m['type'] ?? 'image';
-            if (url.isEmpty) return _ErrorPlaceholder();
-            if (type == 'video') return _SmartVideoPlayer(
+            if (url.isEmpty) { return _ErrorPlaceholder(); }
+            if (type == 'video') {
+              return _SmartVideoPlayer(
                 url: url, isActive: widget.isActive && i == _current,
                 aspectRatio: ratio);
+            }
             return _SmartImage(url: url);
           }),
 
