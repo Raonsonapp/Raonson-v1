@@ -1,10 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="120" height="120">
   <defs>
-    <linearGradient id="fbGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="myGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#0084ff; stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#00facd; stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00ff88; stop-opacity:1" />
     </linearGradient>
+
+    <mask id="hollowCenter">
+      <rect width="100%" height="100%" fill="white" />
+      <path fill="black" d="M10 11.5c1 0 7 0 7 4s-2 5-7 5-6-2-6-5 5-4 6-4z" />
+    </mask>
   </defs>
 
-  <path fill="url(#fbGradient)" d="M2.25 10.5a2.25 2.25 0 0 1 2.25-2.25h1.5a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-1.5a2.25 2.25 0 0 1-2.25-2.25v-9ZM13.05 3.064c.542-1.127 1.95-1.42 2.873-.553.64.6 1.042 1.442 1.042 2.374V8.25h3.402c1.391 0 2.457 1.25 2.207 2.612l-1.556 8.442c-.221 1.2-.132 2.446-1.118 2.446H9.156c-.927 0-1.802-.405-2.404-1.104l-1.502-1.751v-6.75l3.114-4.671a5.25 5.25 0 0 0 .83-2.61V3.064Z" />
-</svg>
+  <g fill="url(#myGradient)">
+    <path d="M6.633 10.25c.806 0 1.533-.446 2.0
