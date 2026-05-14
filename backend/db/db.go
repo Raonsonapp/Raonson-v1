@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,7 +20,13 @@ func Init() {
 	if err != nil {
 		log.Fatalf("❌ DB config error: %v", err)
 	}
-	cfg.MaxConns = 20
+	cfg.MaxConns = 10
+	cfg.MinConns = 2
+
+	// ✅ FIX: Supabase pgBouncer "prepared statement already exists" bug
+	// Use SimpleProtocol — no server-side prepared statements
+	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
 	Pool, err = pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		log.Fatalf("❌ DB connect error: %v", err)
