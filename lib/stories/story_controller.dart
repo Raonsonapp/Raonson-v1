@@ -66,14 +66,24 @@ class StoryController extends ChangeNotifier {
     try { await _repository.markStoryViewed(storyId); } catch (_) {}
 
     // Кадом user story дид?
+    final myId = UserSession.userId ?? '';
     String? userId;
+
+    // Аввал дар _stories меҷӯем
     for (final s in _stories) {
       if (s.id == storyId) { userId = s.user.id; break; }
     }
-    if (userId == null) return; // story топилмад
+    // Агар дар _myStories бошад (story-и худамон)
+    if (userId == null) {
+      for (final s in _myStories) {
+        if (s.id == storyId) { userId = s.user.id; break; }
+      }
+    }
+    if (userId == null) return;
 
-    // Ҳамаи stories-и ҳамон user → viewed=true
     bool changed = false;
+
+    // ── Навсозии _stories ────────────────────────────────────
     _stories = _stories.map((s) {
       if (s.user.id != userId || s.viewed) return s;
       changed = true;
@@ -83,6 +93,19 @@ class StoryController extends ChangeNotifier {
         isLiked: s.isLiked, likesCount: s.likesCount,
         viewsCount: s.viewsCount, expiresAt: s.expiresAt);
     }).toList();
+
+    // ── Навсозии _myStories (story-и худи корбар) ────────────
+    if (userId == myId) {
+      _myStories = _myStories.map((s) {
+        if (s.viewed) return s;
+        changed = true;
+        return StoryModel(
+          id: s.id, user: s.user, mediaUrl: s.mediaUrl,
+          mediaType: s.mediaType, viewed: true,
+          isLiked: s.isLiked, likesCount: s.likesCount,
+          viewsCount: s.viewsCount, expiresAt: s.expiresAt);
+      }).toList();
+    }
 
     if (changed) notifyListeners();
   }
