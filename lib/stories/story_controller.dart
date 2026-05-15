@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/services/socket_service.dart';
 import 'story_repository.dart';
@@ -7,16 +8,46 @@ import '../core/services/user_session.dart';
 
 class StoryController extends ChangeNotifier {
   final StoryRepository _repository;
-  StoryController(this._repository) { _subscribeSocket(); }
+  StoryController(this._repository) { _subscribeSocket(); _loadViewedCache(); }
 
   List<StoryModel> _stories   = [];
   List<StoryModel> _myStories = [];
   bool _loading = false;
+  // ── Локал viewed cache: storyId → viewed ────────────────────
+  final Set<String> _viewedIds = {};
+  static const _kPrefKey = 'story_viewed_ids';
 
   List<StoryModel> get stories   => _stories;
   List<StoryModel> get myStories => _myStories;
   bool get hasMyStory => _myStories.isNotEmpty;
   bool get isLoading  => _loading;
+
+  // ── Load viewed IDs from SharedPreferences ───────────────────
+  Future<void> _loadViewedCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_kPrefKey) ?? [];
+      _viewedIds.addAll(list);
+    } catch (_) {}
+  }
+
+  // ── Save viewed IDs to SharedPreferences ─────────────────────
+  Future<void> _saveViewedCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_kPrefKey, _viewedIds.toList());
+    } catch (_) {}
+  }
+
+  // ── Apply local viewed cache to stories list ─────────────────
+  List<StoryModel> _applyViewedCache(List<StoryModel> list) {
+    return list.map((s) => _viewedIds.contains(s.id)
+        ? StoryModel(id: s.id, user: s.user, mediaUrl: s.mediaUrl,
+            mediaType: s.mediaType, viewed: true,
+            isLiked: s.isLiked, likesCount: s.likesCount,
+            viewsCount: s.viewsCount, expiresAt: s.expiresAt)
+        : s).toList();
+  }
 
   void _subscribeSocket() {
     try { SocketService.instance.on('story:new', _onNewStory); } catch (_) {}
@@ -49,8 +80,9 @@ class StoryController extends ChangeNotifier {
         _repository.fetchStories(),
         _repository.fetchMyStories(),
       ]);
-      _stories   = res[0];
-      _myStories = res[1];
+      // ── Apply local viewed cache (persistent across sessions) ─
+      _stories   = _applyViewedCache(res[0]);
+      _myStories = _applyViewedCache(res[1]);
     } catch (_) {
       _stories = []; _myStories = [];
     } finally {
@@ -59,55 +91,41 @@ class StoryController extends ChangeNotifier {
     }
   }
 
-  /// Story дида шуд — ҳамаи story-ҳои ҳамон корбар viewed=true
-  /// Ҳалқа: надида → cyan-green, дида → dark grey мисли Instagram
+  /// Story дида шуд — ҳалқа хокистарӣ мешавад
+  /// Viewed state дар SharedPreferences нигаҳ мешавад (persistent!)
   Future<void> markViewed(String storyId) async {
-    // API
     try { await _repository.markStoryViewed(storyId); } catch (_) {}
 
-    // Кадом user story дид?
+    // ── Add to local cache ───────────────────────────────────
+    _viewedIds.add(storyId);
+    _saveViewedCache(); // async, бе await
+
     final myId = UserSession.userId ?? '';
-    String? userId;
 
-    // Аввал дар _stories меҷӯем
-    for (final s in _stories) {
-      if (s.id == storyId) { userId = s.user.id; break; }
-    }
-    // Агар дар _myStories бошад (story-и худамон)
-    if (userId == null) {
-      for (final s in _myStories) {
-        if (s.id == storyId) { userId = s.user.id; break; }
-      }
-    }
-    if (userId == null) return;
-
-    bool changed = false;
-
-    // ── Навсозии _stories ────────────────────────────────────
-    _stories = _stories.map((s) {
-      if (s.user.id != userId || s.viewed) return s;
-      changed = true;
+    StoryModel _markOne(StoryModel s) {
+      if (s.id != storyId && s.viewed) return s;
+      if (!_viewedIds.contains(s.id)) return s;
       return StoryModel(
         id: s.id, user: s.user, mediaUrl: s.mediaUrl,
         mediaType: s.mediaType, viewed: true,
         isLiked: s.isLiked, likesCount: s.likesCount,
         viewsCount: s.viewsCount, expiresAt: s.expiresAt);
-    }).toList();
-
-    // ── Навсозии _myStories (story-и худи корбар) ────────────
-    if (userId == myId) {
-      _myStories = _myStories.map((s) {
-        if (s.viewed) return s;
-        changed = true;
-        return StoryModel(
-          id: s.id, user: s.user, mediaUrl: s.mediaUrl,
-          mediaType: s.mediaType, viewed: true,
-          isLiked: s.isLiked, likesCount: s.likesCount,
-          viewsCount: s.viewsCount, expiresAt: s.expiresAt);
-      }).toList();
     }
 
-    if (changed) notifyListeners();
+    // ── Update _stories ──────────────────────────────────────
+    _stories = _stories.map((s) {
+      if (s.id != storyId) return s;
+      _viewedIds.add(s.id); // ба ҳамаи story-и ҳамон group
+      return _markOne(s);
+    }).toList();
+
+    // ── Update _myStories (story-и худ) ─────────────────────
+    _myStories = _myStories.map((s) {
+      if (s.id != storyId) return s;
+      return _markOne(s);
+    }).toList();
+
+    notifyListeners();
   }
 
   Future<void> viewStory(String id) => markViewed(id);
