@@ -23,7 +23,7 @@ class _ShareSheet extends StatefulWidget {
 }
 
 class _ShareSheetState extends State<_ShareSheet> {
-  final TextEditingController _search = TextEditingController();
+  final _search = TextEditingController();
   List<Map<String, dynamic>> _users = [], _filtered = [];
   bool _loading = true;
   final Set<String> _selected = {};
@@ -33,7 +33,7 @@ class _ShareSheetState extends State<_ShareSheet> {
 
   Future<void> _load() async {
     try {
-      final res = await ApiClient.instance.get('/users/me/following?limit=50');
+      final res = await ApiClient.instance.get('/users/me/following?limit=80');
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body) as Map<String, dynamic>;
         final list = (d['users'] ?? d['data'] ?? []) as List;
@@ -46,43 +46,36 @@ class _ShareSheetState extends State<_ShareSheet> {
           };
         }).toList();
         if (mounted) setState(() { _users = u; _filtered = u; _loading = false; });
-      } else {
-        if (mounted) setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+      } else { if (mounted) setState(() => _loading = false); }
+    } catch (_) { if (mounted) setState(() => _loading = false); }
   }
 
   void _filter() {
     final q = _search.text.trim().toLowerCase();
-    setState(() {
-      _filtered = q.isEmpty ? _users
-          : _users.where((u) => u['username'].toString().toLowerCase().contains(q)).toList();
-    });
+    setState(() { _filtered = q.isEmpty ? _users
+        : _users.where((u) => u['username'].toString().toLowerCase().contains(q)).toList(); });
   }
 
   void _toggleUser(String id) =>
       setState(() => _selected.contains(id) ? _selected.remove(id) : _selected.add(id));
 
-  void _sendToSelected() {
+  void _send() {
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('${_selected.length} нафарга фиристода шуд ✓'),
-      backgroundColor: Colors.green,
-      duration: const Duration(seconds: 2)));
+      backgroundColor: Colors.green, duration: const Duration(seconds: 2)));
   }
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.72,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
+      initialChildSize: 0.82,
+      minChildSize: 0.5,
+      maxChildSize: 0.97,
       builder: (_, scroll) => Container(
         decoration: const BoxDecoration(
           color: Color(0xFF111111),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
         child: Column(children: [
           // Handle
           Container(margin: const EdgeInsets.symmetric(vertical: 10),
@@ -91,69 +84,114 @@ class _ShareSheetState extends State<_ShareSheet> {
                 borderRadius: BorderRadius.circular(2))),
 
           // Title
-          const Padding(padding: EdgeInsets.only(bottom: 12),
+          const Padding(padding: EdgeInsets.only(bottom: 10),
             child: Text('Мубодила кунед',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17))),
 
-          // ── Search ───────────────────────────────────────────
+          // ── Search bar + add-user icon (мисли Instagram) ─────
           Padding(padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Container(height: 40,
-              decoration: BoxDecoration(color: const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Row(children: [
-                const SizedBox(width: 12),
-                const Icon(Icons.search_rounded, color: Colors.white38, size: 18),
-                const SizedBox(width: 8),
-                Expanded(child: TextField(controller: _search,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(
-                    hintText: 'Ҷустуҷӯ...', hintStyle: TextStyle(color: Colors.white38),
-                    border: InputBorder.none, isDense: true))),
-              ]))),
+            child: Row(children: [
+              Expanded(child: Container(height: 40,
+                decoration: BoxDecoration(color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(20)),
+                child: Row(children: [
+                  const SizedBox(width: 12),
+                  const Icon(Icons.search_rounded, color: Colors.white38, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: _search,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: const InputDecoration(
+                      hintText: 'Поиск', hintStyle: TextStyle(color: Colors.white38),
+                      border: InputBorder.none, isDense: true))),
+                ]))),
+              const SizedBox(width: 10),
+              // Add user button (мисли Instagram)
+              GestureDetector(
+                onTap: () {},
+                child: Container(width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E), shape: BoxShape.circle),
+                  child: Center(child: SvgPicture.asset(
+                    'assets/icons/search_user.svg', width: 20, height: 20,
+                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))))),
+            ])),
 
           const SizedBox(height: 12),
 
-          // ── Users horizontal scroll (мисли Instagram) ───────
-          SizedBox(height: 110,
-            child: _loading
-              ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white24))
-              : _filtered.isEmpty
-                ? const Center(child: Text('Ёфт нашуд', style: TextStyle(color: Colors.white38, fontSize: 13)))
-                : ListView.builder(
-                    controller: scroll,
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    itemCount: _filtered.length,
-                    itemBuilder: (_, i) => _UserCell(
-                      user: _filtered[i],
-                      selected: _selected.contains(_filtered[i]['id']),
-                      onTap: () => _toggleUser(_filtered[i]['id'])))),
+          // ── User grid — 3 колонна мисли Instagram ────────────
+          Expanded(child: _loading
+            ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white24))
+            : _filtered.isEmpty
+              ? const Center(child: Text('Ёфт нашуд',
+                  style: TextStyle(color: Colors.white38, fontSize: 13)))
+              : GridView.builder(
+                  controller: scroll,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 16, crossAxisSpacing: 10,
+                    childAspectRatio: 0.78),
+                  itemCount: _filtered.length,
+                  itemBuilder: (_, i) {
+                    final u = _filtered[i];
+                    final sel = _selected.contains(u['id']);
+                    return GestureDetector(
+                      onTap: () => _toggleUser(u['id']),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Stack(children: [
+                          Container(width: 68, height: 68,
+                            decoration: BoxDecoration(shape: BoxShape.circle,
+                              border: Border.all(
+                                color: sel ? const Color(0xFF0095F6) : Colors.transparent,
+                                width: 2.5)),
+                            child: ClipOval(child: u['avatar'] != ''
+                              ? CachedNetworkImage(imageUrl: u['avatar'], fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => _av())
+                              : _av())),
+                          if (sel)
+                            Positioned(bottom: 0, right: 0,
+                              child: Container(width: 22, height: 22,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF0095F6), shape: BoxShape.circle),
+                                child: const Icon(Icons.check_rounded, color: Colors.white, size: 13))),
+                        ]),
+                        const SizedBox(height: 5),
+                        Text(u['username'], maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: sel ? const Color(0xFF0095F6) : Colors.white,
+                            fontSize: 12, fontWeight: FontWeight.w500)),
+                      ]));
+                  })),
 
           // Send button
           if (_selected.isNotEmpty)
-            Padding(padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
+            Padding(padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
               child: SizedBox(width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _sendToSelected,
+                  onPressed: _send,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1D9BF0),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
+                    backgroundColor: const Color(0xFF0095F6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                    padding: const EdgeInsets.symmetric(vertical: 13)),
                   child: Text('Фиристодан (${_selected.length})',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))))),
 
-          const Divider(color: Color(0xFF1E1E1E), height: 20),
+          const SizedBox(height: 8),
+          const Divider(color: Color(0xFF222222), height: 1),
+          const SizedBox(height: 12),
 
-          // ── Action row (1 қатор, мисли Instagram) ───────────
+          // ── Bottom action row — 1 қатор horizontal scroll ────
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(children: [
-              _ActionBtn(
-                icon: Icons.add_circle_outline_rounded,
-                iconColor: Colors.white,
-                bg: const Color(0xFF2A2A2A),
-                label: 'Ба story',
+              _BottomBtn(
+                child: Container(width: 54, height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF222222), shape: BoxShape.circle),
+                  child: const Icon(Icons.add_circle_outline_rounded,
+                      color: Colors.white, size: 26)),
+                label: 'Добавить\nв историю',
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -161,12 +199,18 @@ class _ShareSheetState extends State<_ShareSheet> {
                     backgroundColor: Colors.green,
                     duration: Duration(seconds: 2)));
                 }),
-              const SizedBox(width: 16),
-              _ActionBtn(
-                icon: Icons.link_rounded,
-                iconColor: Colors.white,
-                bg: const Color(0xFF2A2A2A),
-                label: 'Линк',
+              _BottomBtn(
+                child: SvgPicture.asset('assets/icons/logo_whatsapp.svg', width: 54, height: 54),
+                label: 'WhatsApp',
+                onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
+              _BottomBtn(
+                child: Container(width: 54, height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF222222), shape: BoxShape.circle),
+                  child: Center(child: SvgPicture.asset('assets/icons/link.svg',
+                    width: 24, height: 24,
+                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
+                label: 'Копировать',
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: widget.postUrl));
                   Navigator.pop(context);
@@ -175,43 +219,35 @@ class _ShareSheetState extends State<_ShareSheet> {
                     backgroundColor: Colors.green,
                     duration: Duration(seconds: 2)));
                 }),
-              const SizedBox(width: 16),
-              _ActionBtn(
-                icon: Icons.download_rounded,
-                iconColor: Colors.white,
-                bg: const Color(0xFF2A2A2A),
+              _BottomBtn(
+                child: Container(width: 54, height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF222222), shape: BoxShape.circle),
+                  child: Center(child: SvgPicture.asset('assets/icons/download.svg',
+                    width: 24, height: 24,
+                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
                 label: 'Скачать',
                 onTap: () => Navigator.pop(context)),
-              const SizedBox(width: 16),
-              _SvgActionBtn(
-                svgPath: 'assets/icons/logo_whatsapp.svg',
-                label: 'WhatsApp',
-                bg: const Color(0xFF25D366),
-                onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
-              const SizedBox(width: 16),
-              _SvgActionBtn(
-                svgPath: 'assets/icons/logo_telegram.svg',
-                label: 'Telegram',
-                bg: const Color(0xFF2AABEE),
-                onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
-              const SizedBox(width: 16),
-              _SvgActionBtn(
-                svgPath: 'assets/icons/logo_instagram.svg',
+              _BottomBtn(
+                child: SvgPicture.asset('assets/icons/logo_instagram.svg', width: 54, height: 54),
                 label: 'Instagram',
-                bg: Colors.transparent,
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
-              const SizedBox(width: 16),
-              _SvgActionBtn(
-                svgPath: 'assets/icons/logo_facebook.svg',
+              _BottomBtn(
+                child: SvgPicture.asset('assets/icons/logo_telegram.svg', width: 54, height: 54),
+                label: 'Telegram',
+                onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
+              _BottomBtn(
+                child: SvgPicture.asset('assets/icons/logo_facebook.svg', width: 54, height: 54),
                 label: 'Facebook',
-                bg: Colors.transparent,
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
-              const SizedBox(width: 16),
-              _ActionBtn(
-                icon: Icons.more_horiz_rounded,
-                iconColor: Colors.white,
-                bg: const Color(0xFF2A2A2A),
-                label: 'Дигар',
+              _BottomBtn(
+                child: Container(width: 54, height: 54,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF222222), shape: BoxShape.circle),
+                  child: Center(child: SvgPicture.asset('assets/icons/share_outline.svg',
+                    width: 24, height: 24,
+                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
+                label: 'Поделиться',
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
             ])),
 
@@ -220,84 +256,25 @@ class _ShareSheetState extends State<_ShareSheet> {
       ),
     );
   }
-}
-
-// ── User cell (horizontal list) ──────────────────────────────────
-class _UserCell extends StatelessWidget {
-  final Map<String, dynamic> user;
-  final bool selected;
-  final VoidCallback onTap;
-  const _UserCell({required this.user, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 72, margin: const EdgeInsets.only(right: 12),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Stack(children: [
-          Container(width: 58, height: 58,
-            decoration: BoxDecoration(shape: BoxShape.circle,
-              border: Border.all(
-                color: selected ? const Color(0xFF1D9BF0) : Colors.transparent,
-                width: 2.5)),
-            child: ClipOval(child: user['avatar'] != ''
-              ? CachedNetworkImage(imageUrl: user['avatar'], fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _av())
-              : _av())),
-          if (selected)
-            Positioned(bottom: 0, right: 0,
-              child: Container(width: 20, height: 20,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1D9BF0), shape: BoxShape.circle),
-                child: const Icon(Icons.check_rounded, color: Colors.white, size: 13))),
-        ]),
-        const SizedBox(height: 5),
-        Text(user['username'], maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: selected ? const Color(0xFF1D9BF0) : Colors.white,
-            fontSize: 11, fontWeight: FontWeight.w500)),
-      ]),
-    ),
-  );
 
   Widget _av() => Container(color: const Color(0xFF1A1A1A),
-    child: const Icon(Icons.person, color: Colors.white38, size: 26));
+    child: const Icon(Icons.person, color: Colors.white38, size: 28));
 }
 
-// ── Action button (Material icon) ────────────────────────────────
-class _ActionBtn extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor, bg;
+class _BottomBtn extends StatelessWidget {
+  final Widget child;
   final String label;
   final VoidCallback onTap;
-  const _ActionBtn({required this.icon, required this.iconColor,
-      required this.bg, required this.label, required this.onTap});
+  const _BottomBtn({required this.child, required this.label, required this.onTap});
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 52, height: 52,
-        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-        child: Icon(icon, color: iconColor, size: 24)),
-      const SizedBox(height: 5),
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-    ]));
-}
-
-// ── Action button (SVG logo) ─────────────────────────────────────
-class _SvgActionBtn extends StatelessWidget {
-  final String svgPath, label;
-  final Color bg;
-  final VoidCallback onTap;
-  const _SvgActionBtn({required this.svgPath, required this.label,
-      required this.bg, required this.onTap});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      SvgPicture.asset(svgPath, width: 52, height: 52),
-      const SizedBox(height: 5),
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-    ]));
+    child: Padding(
+      padding: const EdgeInsets.only(right: 20),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child,
+        const SizedBox(height: 6),
+        Text(label, textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white70, fontSize: 11, height: 1.2)),
+      ])));
 }
