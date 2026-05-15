@@ -9,9 +9,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/post_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
-import '../../widgets/smart_media_widget.dart';
-import '../../widgets/like_animation_overlay.dart';
-import '../../widgets/instagram_share_sheet.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../comments/comments_screen.dart';
@@ -94,19 +91,17 @@ class _PostCardState extends State<PostCard>
       CurvedAnimation(parent: _repostCtrl, curve: Curves.easeInOut));
 
     _heartCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 900));
-    // Bounce: 0→1.4→1.1→1.0 then fade out
+        duration: const Duration(milliseconds: 800));
     _heartScale = TweenSequence([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: 1.4)
-            .chain(CurveTween(curve: Curves.elasticOut)), weight: 45),
-      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.1), weight: 15),
-      TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0), weight: 10),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 30),
+        tween: Tween(begin: 0.0, end: 1.3)
+            .chain(CurveTween(curve: Curves.elasticOut)), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 20),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 30),
     ]).animate(_heartCtrl);
     _heartOpacity = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 55),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.0), weight: 60),
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 40),
     ]).animate(_heartCtrl);
     _heartCtrl.addStatusListener((s) {
       if (s == AnimationStatus.completed && mounted) {
@@ -193,24 +188,31 @@ class _PostCardState extends State<PostCard>
       context: context,
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _MenuItem(icon: Icons.delete_outline_rounded,
-              iconColor: Colors.redAccent,
-              label: 'Ҳазф кардан', labelColor: Colors.redAccent,
-              onTap: () { Navigator.pop(context); _deletePost(); }),
-          _MenuItem(icon: Icons.edit_outlined, label: 'Таҳрир кардан',
-              onTap: () { Navigator.pop(context); _editCaption(); }),
-          _MenuItem(icon: Icons.alternate_email_rounded,
-              label: 'Упоминать кардан',
-              onTap: () { Navigator.pop(context); _mentionFriends(); }),
-          _MenuItem(icon: Icons.music_note_rounded,
-              label: 'Тағир додани мусиқа',
-              onTap: () { Navigator.pop(context); _editMusic(); }),
-          _MenuItem(icon: Icons.bar_chart_rounded, label: 'Статистика',
-              onTap: () { Navigator.pop(context); _showStats(); }),
+          _SvgMenuTile(
+            assetPath: 'assets/icons/delete.svg',
+            label: 'Ҳазф кардан',
+            color: Colors.redAccent,
+            onTap: () { Navigator.pop(context); _deletePost(); }),
+          _SvgMenuTile(
+            assetPath: 'assets/icons/edit.svg',
+            label: 'Таҳрир кардан',
+            onTap: () { Navigator.pop(context); _editCaption(); }),
+          _SvgMenuTile(
+            assetPath: 'assets/icons/mention.svg',
+            label: 'Упоминать кардан',
+            onTap: () { Navigator.pop(context); _mentionFriends(); }),
+          _SvgMenuTile(
+            assetPath: 'assets/icons/music.svg',
+            label: 'Тағир додани мусиқа',
+            onTap: () { Navigator.pop(context); _editMusic(); }),
+          _SvgMenuTile(
+            assetPath: 'assets/icons/stats.svg',
+            label: 'Статистика',
+            onTap: () { Navigator.pop(context); _showStats(); }),
           const SizedBox(height: 8),
         ])),
     );
@@ -514,10 +516,80 @@ class _PostCardState extends State<PostCard>
   }
 
   void _showShare() {
-    final url = 'https://raonson-v1.onrender.com/posts/preview/\${widget.post.id}';
-    showInstagramShareSheet(context, widget.post.id, url).then((_) {
-      if (mounted) setState(() => _shareCount++);
-    });
+    final url = 'https://raonson-v1.onrender.com/posts/preview/${widget.post.id}';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        _handle(),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text('Мубодила кунед', style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
+        // ── Чат ─────────────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF0095F6),
+            child: Icon(Icons.send_rounded, color: Colors.white, size: 20)),
+          title: const Text('Ба чат фиристодан',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          subtitle: const Text('Паёми мустақим',
+              style: TextStyle(color: Colors.white38, fontSize: 12)),
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/messages',
+                arguments: {'shareUrl': url, 'postId': widget.post.id});
+          }),
+        // ── Ба Story ─────────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF833AB4),
+            child: Icon(Icons.add_circle_outline_rounded,
+                color: Colors.white, size: 20)),
+          title: const Text('Ба сторис илова кун',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          onTap: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Ба сторис илова шуд ✓'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2)));
+          }),
+        // ── Линк ──────────────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF2A2A2A),
+            child: Icon(Icons.link_rounded, color: Colors.white, size: 20)),
+          title: const Text('Линкро нусха кун',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: url));
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Линк нусха шуд ✓'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2)));
+          }),
+        // ── Дигар барномаҳо ────────────────────────────────────────
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF2A2A2A),
+            child: Icon(Icons.ios_share_rounded, color: Colors.white, size: 20)),
+          title: const Text('Дигар барномаҳо',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          onTap: () {
+            Navigator.pop(context);
+            // ✅ Танҳо вақте корбар реально мубодила кунад шумориш
+            Share.share(url).then((_) {
+              if (mounted) setState(() => _shareCount++);
+            });
+          }),
+        const SizedBox(height: 8),
+      ])),
+    );
   }
 
   void _openComments() {
@@ -676,7 +748,7 @@ class _PostCardState extends State<PostCard>
         ]),
       ),
 
-      // ── MEDIA + Double-tap 👍 ─────────────────────────────────
+      // ── MEDIA + Double-tap heart ───────────────────────────────
       if (post.media.isNotEmpty)
         Stack(children: [
           GestureDetector(
@@ -690,16 +762,13 @@ class _PostCardState extends State<PostCard>
                     .catchError((_) {
                   if (mounted) setState(() { _liked = false; _likeCount--; });
                 });
+              } else {
+                _likeCtrl.forward(from: 0);
               }
-              setState(() => _showHeart = true);
             },
-            child: SmartMediaWidget(
-                media: post.media, isActive: widget.isActive),
+            child: _MediaCarousel(media: post.media, isActive: widget.isActive),
           ),
-          if (_showHeart)
-            LikeAnimationOverlay(
-              position: _heartOffset,
-              onDone: () { if (mounted) setState(() => _showHeart = false); }),
+
         ]),
 
       // ── ACTIONS ───────────────────────────────────────────────
@@ -717,13 +786,13 @@ class _PostCardState extends State<PostCard>
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   SizedBox(width: 24, height: 24,
-                    child: SvgPicture.asset(
-                      _liked ? 'assets/icons/heart_filled.svg'
-                             : 'assets/icons/heart.svg',
-                      width: 24, height: 24, fit: BoxFit.contain,
-                      colorFilter: ColorFilter.mode(
-                        _liked ? Colors.red : Colors.white,
-                        BlendMode.srcIn))),
+                    child: _liked
+                      ? SvgPicture.asset('assets/icons/heart_filled.svg',
+                          width: 24, height: 24, fit: BoxFit.contain)
+                      : SvgPicture.asset('assets/icons/heart.svg',
+                          width: 24, height: 24, fit: BoxFit.contain,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn))),
                   const SizedBox(width: 5),
                   _animatedLikeCount(),
                 ]),
@@ -976,7 +1045,29 @@ Widget _handle() => Container(
   decoration: BoxDecoration(color: Colors.white24,
       borderRadius: BorderRadius.circular(2)));
 
-// ── Menu item ─────────────────────────────────────────────────────
+// ── SVG Menu Tile — иконро аз assets/icons/ мегирад ────────────
+class _SvgMenuTile extends StatelessWidget {
+  final String assetPath;
+  final String label;
+  final Color? color;
+  final VoidCallback onTap;
+  const _SvgMenuTile({
+    required this.assetPath, required this.label,
+    this.color, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? Colors.white;
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      leading: SvgPicture.asset(assetPath, width: 22, height: 22,
+          colorFilter: ColorFilter.mode(c, BlendMode.srcIn)),
+      title: Text(label, style: TextStyle(color: c, fontSize: 16,
+          fontWeight: FontWeight.w500)),
+      onTap: onTap);
+  }
+}
+
+// ── MenuItem (Material fallback) ─────────────────────────────────
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
