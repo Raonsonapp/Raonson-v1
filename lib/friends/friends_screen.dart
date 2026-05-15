@@ -36,9 +36,11 @@ class _FriendsScreenState extends State<FriendsScreen>
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final reqRes  = await ApiClient.instance
+      final reqRes = await ApiClient.instance
           .get('/follow/requests').timeout(const Duration(seconds: 8));
-      final sugRes  = await ApiClient.instance
+
+      // ── Suggestions: пробуем несколько endpoint-ов ────────────
+      final sugRes = await ApiClient.instance
           .get('/users/suggestions').timeout(const Duration(seconds: 8));
 
       final reqs = <_UserItem>[];
@@ -54,9 +56,36 @@ class _FriendsScreenState extends State<FriendsScreen>
       if (sugRes.statusCode == 200) {
         final body = jsonDecode(sugRes.body);
         final List list = body is List ? body : (body['users'] ?? body['suggestions'] ?? []);
-        for (final e in list) {
-          sugs.add(_UserItem.fromJson(e as Map<String, dynamic>));
-        }
+        for (final e in list) { sugs.add(_UserItem.fromJson(e as Map<String, dynamic>)); }
+      } else {
+        // ── Fallback: аз explore корбаронро мегирем ─────────────
+        try {
+          final expRes = await ApiClient.instance
+              .get('/explore').timeout(const Duration(seconds: 8));
+          if (expRes.statusCode == 200) {
+            final body = jsonDecode(expRes.body) as Map<String, dynamic>;
+            // explore posts → unique users
+            final posts = (body['posts'] ?? body['data'] ?? []) as List;
+            final seen  = <String>{};
+            for (final p in posts) {
+              final pm = p as Map<String, dynamic>;
+              final u  = pm['user'] as Map<String, dynamic>?;
+              if (u == null) continue;
+              final id = (u['_id'] ?? u['id'] ?? '').toString();
+              if (id.isEmpty || seen.contains(id)) continue;
+              seen.add(id);
+              sugs.add(_UserItem(
+                id:          id,
+                username:    (u['username'] ?? '').toString(),
+                fullName:    (u['name'] ?? u['displayName'] ?? '').toString(),
+                avatar:      (u['avatar'] ?? '').toString(),
+                isFollowing: false,
+                mutualFriends: 0,
+              ));
+              if (sugs.length >= 20) break;
+            }
+          }
+        } catch (_) {}
       }
 
       if (mounted) setState(() {
