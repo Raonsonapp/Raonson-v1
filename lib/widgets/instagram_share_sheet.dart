@@ -186,12 +186,12 @@ class _ShareSheetState extends State<_ShareSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(children: [
               _BottomBtn(
+                label: 'Добавить\nв историю',
                 child: Container(width: 54, height: 54,
                   decoration: BoxDecoration(
                     color: const Color(0xFF222222), shape: BoxShape.circle),
                   child: const Icon(Icons.add_circle_outline_rounded,
                       color: Colors.white, size: 26)),
-                label: 'Добавить\nв историю',
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -200,17 +200,17 @@ class _ShareSheetState extends State<_ShareSheet> {
                     duration: Duration(seconds: 2)));
                 }),
               _BottomBtn(
-                child: SvgPicture.asset('assets/icons/logo_whatsapp.svg', width: 54, height: 54),
                 label: 'WhatsApp',
+                child: SvgPicture.asset('assets/icons/logo_whatsapp.svg', width: 54, height: 54),
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
               _BottomBtn(
+                label: 'Копировать',
                 child: Container(width: 54, height: 54,
                   decoration: BoxDecoration(
                     color: const Color(0xFF222222), shape: BoxShape.circle),
                   child: Center(child: SvgPicture.asset('assets/icons/link.svg',
                     width: 24, height: 24,
                     colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
-                label: 'Копировать',
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: widget.postUrl));
                   Navigator.pop(context);
@@ -220,34 +220,34 @@ class _ShareSheetState extends State<_ShareSheet> {
                     duration: Duration(seconds: 2)));
                 }),
               _BottomBtn(
+                label: 'Скачать',
                 child: Container(width: 54, height: 54,
                   decoration: BoxDecoration(
                     color: const Color(0xFF222222), shape: BoxShape.circle),
                   child: Center(child: SvgPicture.asset('assets/icons/download.svg',
                     width: 24, height: 24,
                     colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
-                label: 'Скачать',
                 onTap: () => Navigator.pop(context)),
               _BottomBtn(
-                child: SvgPicture.asset('assets/icons/logo_instagram.svg', width: 54, height: 54),
                 label: 'Instagram',
+                child: SvgPicture.asset('assets/icons/logo_instagram.svg', width: 54, height: 54),
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
               _BottomBtn(
-                child: SvgPicture.asset('assets/icons/logo_telegram.svg', width: 54, height: 54),
                 label: 'Telegram',
+                child: SvgPicture.asset('assets/icons/logo_telegram.svg', width: 54, height: 54),
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
               _BottomBtn(
-                child: SvgPicture.asset('assets/icons/logo_facebook.svg', width: 54, height: 54),
                 label: 'Facebook',
+                child: SvgPicture.asset('assets/icons/logo_facebook.svg', width: 54, height: 54),
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
               _BottomBtn(
+                label: 'Поделиться',
                 child: Container(width: 54, height: 54,
                   decoration: BoxDecoration(
                     color: const Color(0xFF222222), shape: BoxShape.circle),
                   child: Center(child: SvgPicture.asset('assets/icons/share_outline.svg',
                     width: 24, height: 24,
                     colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
-                label: 'Поделиться',
                 onTap: () { Navigator.pop(context); Share.share(widget.postUrl); }),
             ])),
 
