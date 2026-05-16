@@ -47,6 +47,24 @@ class FeedController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  // ✅ REALTIME: пост фавран аз feed ҳазф мешавад
+  void removePost(String postId) {
+    final newPosts = _state.posts.where((p) => p.id != postId).toList();
+    _pending.removeWhere((p) => p.id == postId);
+    _state = _state.copyWith(posts: newPosts);
+    notifyListeners();
+  }
+
+  // ✅ REALTIME: пост фавран навсозӣ мешавад
+  void updatePost(String postId, {String? caption}) {
+    final newPosts = _state.posts.map((p) {
+      if (p.id != postId) return p;
+      return p.copyWith(caption: caption ?? p.caption);
+    }).toList();
+    _state = _state.copyWith(posts: newPosts);
+    notifyListeners();
+  }
+
   // ✅ Баъди upload — фавран refresh
   Future<void> onPostUploaded() async {
     await refresh();
