@@ -34,6 +34,11 @@ class ApiClient {
         _client.get(_uri(path, query), headers: _headers()).timeout(_timeout));
   }
 
+  // ── External API (iTunes, etc.) — без Authorization header ──
+  Future<http.Response> rawGet(String fullUrl) async {
+    return _client.get(Uri.parse(fullUrl)).timeout(_timeout);
+  }
+
   Future<http.Response> post(String path, {Map<String, dynamic>? body}) async {
     return _withRetry(() =>
         _client.post(_uri(path), headers: _headers(),
