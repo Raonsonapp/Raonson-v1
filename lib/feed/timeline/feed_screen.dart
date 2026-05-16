@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
@@ -93,9 +92,7 @@ class _FeedShellState extends State<_FeedShell> {
             snap: true,       // яклухт пайдо мешавад
             pinned: false,    // scroll кунӣ пинҳон мешавад
             leading: IconButton(
-              icon: SvgPicture.asset('assets/icons/upload.svg',
-                width: 26, height: 26,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+              icon: const Icon(Icons.add, color: Colors.white, size: 28),
               onPressed: () async {
                 final r = await Navigator.pushNamed(ctx, AppRoutes.create);
                 if (r == true && ctx.mounted) {
@@ -110,20 +107,18 @@ class _FeedShellState extends State<_FeedShell> {
             )),
             centerTitle: true,
             actions: [
-              // ✅ Friends button
+              // ✅ Friends button мисли Facebook
               IconButton(
-                icon: SvgPicture.asset('assets/icons/friends.svg',
-                  width: 26, height: 26,
-                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+                icon: const Icon(Icons.people_outline_rounded,
+                    color: Colors.white, size: 26),
                 onPressed: () => Navigator.pushNamed(ctx, '/friends'),
               ),
               Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: NotificationBadge(
                   child: IconButton(
-                    icon: SvgPicture.asset('assets/icons/notifications.svg',
-                      width: 26, height: 26,
-                      colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+                    icon: const Icon(Icons.notifications_none_rounded,
+                        color: Colors.white, size: 27),
                     onPressed: () {
                       NotificationService.markRead();
                       Navigator.pushNamed(ctx, AppRoutes.notifications);
@@ -357,7 +352,12 @@ class _FeedBody extends StatelessWidget {
                               color: AppColors.neonBlue, strokeWidth: 2)))
                       : const SizedBox(height: 40);
                 }
-                return PostCard(post: state.posts[index], isActive: isActive);
+                return PostCard(
+                  post: state.posts[index],
+                  isActive: isActive,
+                  onDeleted: () => ctx.read<FeedController>()
+                      .removePost(state.posts[index].id),
+                );
               },
               childCount: state.posts.length + 1,
             ),
