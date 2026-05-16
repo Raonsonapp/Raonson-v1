@@ -62,46 +62,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickFromGallery() async {
-    // Мисли Instagram — аввал dialog мепурсем: расм ё видео?
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: const Color(0xFF111111),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(margin: const EdgeInsets.symmetric(vertical: 10),
-            width: 36, height: 4,
-            decoration: BoxDecoration(color: Colors.white24,
-                borderRadius: BorderRadius.circular(2))),
-          ListTile(
-            leading: const Icon(Icons.photo_library_rounded, color: Colors.white),
-            title: const Text('Расм', style: TextStyle(color: Colors.white, fontSize: 16)),
-            onTap: () => Navigator.pop(context, 'image')),
-          ListTile(
-            leading: const Icon(Icons.videocam_rounded, color: Colors.white),
-            title: const Text('Видео', style: TextStyle(color: Colors.white, fontSize: 16)),
-            onTap: () => Navigator.pop(context, 'video')),
-          const SizedBox(height: 8),
-        ])));
-
+    // ✅ Мустақим ба Галерия — ImagePicker.gallery мисли Instagram
+    final List<XFile> files = await ImagePicker().pickMultipleMedia();
     if (!mounted) return;
-    if (choice == null) { Navigator.pop(context); return; }
-
-    XFile? xf;
-    if (choice == 'image') {
-      xf = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 90);
-    } else {
-      xf = await ImagePicker().pickVideo(
-        source: ImageSource.gallery,
-        maxDuration: const Duration(minutes: 3));
-    }
-
-    if (xf == null) { if (mounted) Navigator.pop(context); return; }
-    final isVideo = choice == 'video';
-    if (mounted) setState(() { _file = File(xf!.path); _isVideo = isVideo; _error = null; });
+    if (files.isEmpty) { Navigator.pop(context); return; }
+    final xf = files.first;
+    final path    = xf.path.toLowerCase();
+    final isVideo = path.endsWith('.mp4') || path.endsWith('.mov') ||
+                    path.endsWith('.avi') || path.endsWith('.mkv');
+    if (mounted) setState(() { _file = File(xf.path); _isVideo = isVideo; _error = null; });
   }
 
   Future<void> _publish(File capturedFile, String caption) async {
