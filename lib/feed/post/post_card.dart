@@ -188,31 +188,24 @@ class _PostCardState extends State<PostCard>
       context: context,
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _SvgMenuTile(
-            assetPath: 'assets/icons/delete.svg',
-            label: 'Ҳазф кардан',
-            color: Colors.redAccent,
-            onTap: () { Navigator.pop(context); _deletePost(); }),
-          _SvgMenuTile(
-            assetPath: 'assets/icons/edit.svg',
-            label: 'Таҳрир кардан',
-            onTap: () { Navigator.pop(context); _editCaption(); }),
-          _SvgMenuTile(
-            assetPath: 'assets/icons/mention.svg',
-            label: 'Упоминать кардан',
-            onTap: () { Navigator.pop(context); _mentionFriends(); }),
-          _SvgMenuTile(
-            assetPath: 'assets/icons/music.svg',
-            label: 'Тағир додани мусиқа',
-            onTap: () { Navigator.pop(context); _editMusic(); }),
-          _SvgMenuTile(
-            assetPath: 'assets/icons/stats.svg',
-            label: 'Статистика',
-            onTap: () { Navigator.pop(context); _showStats(); }),
+          _MenuItem(icon: Icons.delete_outline_rounded,
+              iconColor: Colors.redAccent,
+              label: 'Ҳазф кардан', labelColor: Colors.redAccent,
+              onTap: () { Navigator.pop(context); _deletePost(); }),
+          _MenuItem(icon: Icons.edit_outlined, label: 'Таҳрир кардан',
+              onTap: () { Navigator.pop(context); _editCaption(); }),
+          _MenuItem(icon: Icons.alternate_email_rounded,
+              label: 'Упоминать кардан',
+              onTap: () { Navigator.pop(context); _mentionFriends(); }),
+          _MenuItem(icon: Icons.music_note_rounded,
+              label: 'Тағир додани мусиқа',
+              onTap: () { Navigator.pop(context); _editMusic(); }),
+          _MenuItem(icon: Icons.bar_chart_rounded, label: 'Статистика',
+              onTap: () { Navigator.pop(context); _showStats(); }),
           const SizedBox(height: 8),
         ])),
     );
@@ -277,37 +270,60 @@ class _PostCardState extends State<PostCard>
 
   Future<void> _editCaption() async {
     final ctrl = TextEditingController(text: _caption);
-    final newCaption = await showDialog<String>(
+    await showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Таҳрир кардан',
-            style: TextStyle(color: Colors.white)),
-        content: TextField(controller: ctrl, autofocus: true, maxLines: 4,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Тавсиф...', hintStyle: TextStyle(color: Colors.white38),
-            border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.neonBlue)))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            left: 16, right: 16, top: 8),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2))),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            TextButton(onPressed: () { ctrl.dispose(); Navigator.pop(ctx); },
               child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-              child: const Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
-        ],
-      ),
-    );
-    ctrl.dispose();
-    if (newCaption == null || newCaption == _caption) return;
-    final res = await ApiClient.instance.put(
-      '/posts/${widget.post.id}/caption', body: {'caption': newCaption});
-    if (res.statusCode < 400 && mounted) {
-      setState(() => _caption = newCaption);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Тавсиф навшуд ✓'), backgroundColor: Colors.green,
-        duration: Duration(seconds: 2)));
-    }
+            const Text('Таҳрир кардан',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+            TextButton(
+              onPressed: () async {
+                final newCaption = ctrl.text.trim();
+                Navigator.pop(ctx);
+                if (newCaption == _caption) return;
+                final res = await ApiClient.instance.put(
+                  '/posts/\${widget.post.id}/caption', body: {'caption': newCaption});
+                if (res.statusCode < 400 && mounted) {
+                  setState(() => _caption = newCaption);
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Навшуд ✓'), backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2)));
+                }
+              },
+              child: const Text('Захира', style: TextStyle(
+                  color: AppColors.neonBlue, fontWeight: FontWeight.w600))),
+          ]),
+          const SizedBox(height: 8),
+          // Preview thumbnail
+          if (widget.post.media.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: widget.post.media.first['url'] ?? '',
+                height: 120, width: double.infinity, fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => const SizedBox.shrink())),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ctrl, autofocus: true, maxLines: 6, maxLength: 2200,
+            style: const TextStyle(color: Colors.white, fontSize: 15),
+            decoration: const InputDecoration(
+              hintText: 'Тавсиф ё матн...', hintStyle: TextStyle(color: Colors.white38),
+              border: InputBorder.none,
+              counterStyle: TextStyle(color: Colors.white38))),
+        ])));
   }
 
   Future<void> _mentionFriends() async {
@@ -395,41 +411,113 @@ class _PostCardState extends State<PostCard>
   }
 
   Future<void> _editMusic() async {
-    final titleCtrl  = TextEditingController();
-    final artistCtrl = TextEditingController();
-    final urlCtrl    = TextEditingController();
-    await showDialog(
+    final ctrl = TextEditingController();
+    List<Map<String, dynamic>> tracks = [];
+    bool searching = false;
+
+    // iTunes Search API — бепул ва бе токен
+    Future<void> search(String q, Function setState) async {
+      if (q.trim().isEmpty) { setState(() => tracks = []); return; }
+      setState(() => searching = true);
+      try {
+        final uri = Uri.parse(
+          'https://itunes.apple.com/search?term=\${Uri.encodeComponent(q)}&media=music&limit=25');
+        final res = await ApiClient.instance.rawGet(uri.toString());
+        if (res.statusCode == 200) {
+          final b = jsonDecode(res.body);
+          final results = (b['results'] ?? []) as List;
+          setState(() {
+            tracks = results.map<Map<String, dynamic>>((t) => {
+              'title':   t['trackName'] ?? '',
+              'artist':  t['artistName'] ?? '',
+              'artwork': t['artworkUrl60'] ?? '',
+              'preview': t['previewUrl'] ?? '',
+            }).toList();
+            searching = false;
+          });
+        } else { setState(() => searching = false); }
+      } catch (_) { setState(() => searching = false); }
+    }
+
+    await showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Тағир додани мусиқа',
-            style: TextStyle(color: Colors.white)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _dialogField(titleCtrl,  'Номи суруд'),
-          const SizedBox(height: 8),
-          _dialogField(artistCtrl, 'Хонанда'),
-          const SizedBox(height: 8),
-          _dialogField(urlCtrl,    'URL мусиқа (ихтиёрӣ)'),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ApiClient.instance.put(
-                '/posts/${widget.post.id}/music',
-                body: {
-                  'musicTitle':  titleCtrl.text.trim(),
-                  'musicArtist': artistCtrl.text.trim(),
-                  'musicUrl':    urlCtrl.text.trim(),
-                });
-            },
-            child: const Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
-        ],
-      ),
-    );
-    titleCtrl.dispose(); artistCtrl.dispose(); urlCtrl.dispose();
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setS) => SizedBox(
+          height: MediaQuery.of(context).size.height * 0.85,
+          child: Column(children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+            const Text('Мусиқа', style: TextStyle(color: Colors.white,
+                fontWeight: FontWeight.w700, fontSize: 17)),
+            const SizedBox(height: 12),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Container(height: 40,
+                decoration: BoxDecoration(color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(20)),
+                child: Row(children: [
+                  const SizedBox(width: 12),
+                  const Icon(Icons.search_rounded, color: Colors.white38, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: ctrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: const InputDecoration(
+                      hintText: 'Суруд ё хонанда...',
+                      hintStyle: TextStyle(color: Colors.white38),
+                      border: InputBorder.none, isDense: true),
+                    onChanged: (q) => search(q, setS))),
+                ]))),
+            const SizedBox(height: 8),
+            Expanded(child: searching
+              ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30))
+              : tracks.isEmpty
+                ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.music_note_rounded, color: Colors.white24, size: 48),
+                    const SizedBox(height: 8),
+                    const Text('Нависед суруд ё хонандаро',
+                      style: TextStyle(color: Colors.white38, fontSize: 13))]))
+                : ListView.builder(
+                    itemCount: tracks.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    itemBuilder: (_, i) {
+                      final t = tracks[i];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: CachedNetworkImage(
+                            imageUrl: t['artwork'], width: 48, height: 48,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Container(
+                              width: 48, height: 48, color: const Color(0xFF1E1E1E),
+                              child: const Icon(Icons.music_note, color: Colors.white38)))),
+                        title: Text(t['title'], maxLines: 1,
+                          style: const TextStyle(color: Colors.white, fontSize: 14,
+                              fontWeight: FontWeight.w500)),
+                        subtitle: Text(t['artist'], maxLines: 1,
+                          style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        trailing: const Icon(Icons.add_circle_outline_rounded,
+                            color: AppColors.neonBlue, size: 22),
+                        onTap: () async {
+                          Navigator.pop(ctx2);
+                          await ApiClient.instance.put('/posts/\${widget.post.id}/music',
+                            body: {
+                              'musicTitle':  t['title'],
+                              'musicArtist': t['artist'],
+                              'musicUrl':    t['preview'],
+                            });
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('"\${t['title']}" илова шуд ✓'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2)));
+                        });
+                    })),
+          ]))));
+    ctrl.dispose();
   }
 
   TextField _dialogField(TextEditingController c, String hint) => TextField(
@@ -440,32 +528,85 @@ class _PostCardState extends State<PostCard>
       border: const OutlineInputBorder(borderSide: BorderSide.none)));
 
   Future<void> _showStats() async {
-    final res = await ApiClient.instance.get('/posts/${widget.post.id}/stats');
-    if (res.statusCode >= 400 || !mounted) return;
-    final b = jsonDecode(res.body);
-    showDialog(context: context, builder: (_) => AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
-      title: const Text('Статистика',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        _statRow('👁 Дида шуд',  '${b['views']   ?? 0}'),
-        _statRow('❤ Лайк',       '${b['likes']   ?? 0}'),
-        _statRow('💬 Шарҳ',      '${b['comments']?? 0}'),
-        _statRow('🔖 Захира',     '${b['saves']   ?? 0}'),
-        _statRow('🚩 Жалоб',     '${b['reports'] ?? 0}'),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(context),
+    final res = await ApiClient.instance.get('/posts/\${widget.post.id}/stats');
+    if (!mounted) return;
+    final b = res.statusCode < 400 ? jsonDecode(res.body) as Map<String, dynamic> : <String, dynamic>{};
+    final views    = (b['views']    ?? 0) as int;
+    final likes    = (b['likes']    ?? _likeCount) as int;
+    final comments = (b['comments'] ?? _commentCount) as int;
+    final saves    = (b['saves']    ?? 0) as int;
+    final shares   = (b['shares']   ?? _shareCount) as int;
+    final followers= (b['fromFollowers'] ?? 0) as int;
+    final others   = (b['fromOthers']    ?? 0) as int;
+    final total    = followers + others;
+    final fPct     = total > 0 ? (followers / total * 100).round() : 0;
+    final oPct     = total > 0 ? 100 - fPct : 0;
+
+    if (!mounted) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        leading: const BackButton(color: Colors.white),
+        title: const Text('Статистика', style: TextStyle(color: Colors.white,
+            fontWeight: FontWeight.w700)),
+        centerTitle: true),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // ── Thumbnail ──────────────────────────────────────────
+          if (widget.post.media.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: widget.post.media.first['url'] ?? '',
+                height: 180, width: double.infinity, fit: BoxFit.cover)),
+
+          const SizedBox(height: 20),
+
+          // ── Big numbers ────────────────────────────────────────
+          Row(children: [
+            _BigStat('👁', views,    'Кӯринишҳо'),
+            _BigStat('❤️', likes,    'Лайкҳо'),
+            _BigStat('💬', comments, 'Шарҳҳо'),
+            _BigStat('🔁', shares,   'Улашиш'),
+          ]),
+
+          const SizedBox(height: 24),
+
+          // ── Audience breakdown ────────────────────────────────
+          _SectionTitle('Аудитория'),
+          const SizedBox(height: 12),
+          _AudienceBar(label: 'Обунашудагон', pct: fPct, color: const Color(0xFF00C6FF)),
+          const SizedBox(height: 8),
+          _AudienceBar(label: 'Дигарон', pct: oPct, color: const Color(0xFF00E87A)),
+
+          const SizedBox(height: 24),
+
+          // ── Engagement bars ───────────────────────────────────
+          _SectionTitle('Амалиётҳо'),
+          const SizedBox(height: 12),
+          ...[
+            _EngRow('❤️ Лайк',    likes,    const Color(0xFFFF6B6B)),
+            _EngRow('💬 Шарҳ',    comments, const Color(0xFF00C6FF)),
+            _EngRow('🔖 Захира',  saves,    const Color(0xFFFFD700)),
+            _EngRow('🔁 Улашиш', shares,   const Color(0xFF00E87A)),
+          ].map((w) => Padding(padding: const EdgeInsets.only(bottom: 10), child: w)),
+
+          const SizedBox(height: 16),
+        ]))),
+    )));
+  }
           child: const Text('Пӯшидан',
               style: TextStyle(color: AppColors.neonBlue)))],
     ));
   }
 
   Widget _statRow(String label, String val) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
+    padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
       Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-      Text(val, style: const TextStyle(color: Colors.white,
-          fontWeight: FontWeight.bold, fontSize: 15)),
+      Text(val,   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
     ]));
 
   Future<void> _reportPost() async {
@@ -762,13 +903,23 @@ class _PostCardState extends State<PostCard>
                     .catchError((_) {
                   if (mounted) setState(() { _liked = false; _likeCount--; });
                 });
-              } else {
-                _likeCtrl.forward(from: 0);
               }
+              setState(() => _showHeart = true);
+              _heartCtrl.forward(from: 0);
             },
             child: _MediaCarousel(media: post.media, isActive: widget.isActive),
           ),
-
+          if (_showHeart)
+            Positioned(
+              left: _heartOffset.dx - 50, top: _heartOffset.dy - 50,
+              child: IgnorePointer(
+                child: AnimatedBuilder(animation: _heartCtrl,
+                  builder: (_, __) => Opacity(
+                    opacity: _heartOpacity.value,
+                    child: Transform.scale(scale: _heartScale.value,
+                      child: const Icon(Icons.favorite, color: Colors.white,
+                        size: 100,
+                        shadows: [Shadow(color: Colors.black45, blurRadius: 24)])))))),
         ]),
 
       // ── ACTIONS ───────────────────────────────────────────────
@@ -1045,29 +1196,7 @@ Widget _handle() => Container(
   decoration: BoxDecoration(color: Colors.white24,
       borderRadius: BorderRadius.circular(2)));
 
-// ── SVG Menu Tile — иконро аз assets/icons/ мегирад ────────────
-class _SvgMenuTile extends StatelessWidget {
-  final String assetPath;
-  final String label;
-  final Color? color;
-  final VoidCallback onTap;
-  const _SvgMenuTile({
-    required this.assetPath, required this.label,
-    this.color, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? Colors.white;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      leading: SvgPicture.asset(assetPath, width: 22, height: 22,
-          colorFilter: ColorFilter.mode(c, BlendMode.srcIn)),
-      title: Text(label, style: TextStyle(color: c, fontSize: 16,
-          fontWeight: FontWeight.w500)),
-      onTap: onTap);
-  }
-}
-
-// ── MenuItem (Material fallback) ─────────────────────────────────
+// ── Menu item ─────────────────────────────────────────────────────
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
@@ -1118,6 +1247,80 @@ class _StableBtn extends StatelessWidget {
         ])));
   }
 }
+
+// ── Stats helper widgets ─────────────────────────────────────────
+class _BigStat extends StatelessWidget {
+  final String emoji;
+  final int value;
+  final String label;
+  const _BigStat(this.emoji, this.value, this.label);
+  @override
+  Widget build(BuildContext context) => Expanded(child: Container(
+    margin: const EdgeInsets.all(4),
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    decoration: BoxDecoration(color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12)),
+    child: Column(children: [
+      Text(emoji, style: const TextStyle(fontSize: 20)),
+      const SizedBox(height: 4),
+      Text('$value', style: const TextStyle(color: Colors.white,
+          fontSize: 18, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 2),
+      Text(label, textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white54, fontSize: 10)),
+    ])));
+}
+
+class _AudienceBar extends StatelessWidget {
+  final String label;
+  final int pct;
+  final Color color;
+  const _AudienceBar({required this.label, required this.pct, required this.color});
+  @override
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+      Text('$pct%', style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+    ]),
+    const SizedBox(height: 6),
+    ClipRRect(borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: pct / 100,
+        backgroundColor: const Color(0xFF2A2A2A),
+        valueColor: AlwaysStoppedAnimation(color),
+        minHeight: 8)),
+  ]);
+}
+
+class _EngRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+  const _EngRow(this.label, this.value, this.color);
+  @override
+  Widget build(BuildContext context) => Row(children: [
+    SizedBox(width: 110, child: Text(label,
+        style: const TextStyle(color: Colors.white70, fontSize: 13))),
+    Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: value > 0 ? (value / (value + 1)).clamp(0.1, 1.0) : 0,
+        backgroundColor: const Color(0xFF2A2A2A),
+        valueColor: AlwaysStoppedAnimation(color),
+        minHeight: 8))),
+    const SizedBox(width: 8),
+    Text('$value', style: const TextStyle(color: Colors.white,
+        fontWeight: FontWeight.w600, fontSize: 13)),
+  ]);
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  const _SectionTitle(this.title);
+  @override
+  Widget build(BuildContext context) => Text(title,
+    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16));
+}
+
 
 // ── Media Carousel ───────────────────────────────────────────────────
 class _MediaCarousel extends StatefulWidget {
