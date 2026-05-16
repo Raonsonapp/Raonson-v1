@@ -4,11 +4,9 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../models/story_model.dart';
 import '../core/api/api_client.dart';
@@ -34,7 +32,8 @@ class StoryGroupViewer extends StatefulWidget {
 class _StoryGroupViewerState extends State<StoryGroupViewer> {
   late PageController _pageCtrl;
   late int _groupIdx;
-  late int _storyIdx;
+  late // ignore: unused_field
+  int _storyIdx;
 
   @override
   void initState() {
@@ -165,7 +164,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   void _initVideo() {
     _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(_current.mediaUrl))
       ..initialize().then((_) {
-        if (!mounted) return;
+        if (!mounted) { return; }
         setState(() => _videoReady = true);
         _videoCtrl!.play();
         final dur = _videoCtrl!.value.duration;
@@ -182,7 +181,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   void _pause() {
-    if (_paused) return;
+    if (_paused) { return; }
     _progressCtrl.stop();
     _timer?.cancel();
     _videoCtrl?.pause();
@@ -190,7 +189,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   void _resume() {
-    if (!_paused) return;
+    if (!_paused) { return; }
     final remaining = _progressCtrl.duration! * (1 - _progressCtrl.value);
     _progressCtrl.forward();
     _timer = Timer(remaining, _nextStory);
@@ -281,9 +280,9 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         ],
       ),
     );
-    if (ok != true) { _resume(); return; }
+    if (ok != true) { { _resume(); } return; }
     await ApiClient.instance.delete('/stories/${_current.id}');
-    if (mounted) widget.onNext();
+    if (mounted) { widget.onNext(); }
   }
 
   void _shareStory() {
@@ -293,8 +292,9 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _toggleLike() {
     setState(() => _liked = !_liked);
-    ApiClient.instance.post('/stories/${_current.id}/like').catchError((_) {});
-    if (_liked) _showHeartAnim();
+    ApiClient.instance.post('/stories/${_current.id}/like').catchError((_) {return null;
+});
+    if (_liked) { _showHeartAnim(); }
   }
 
   void _showHeartAnim() {
@@ -306,20 +306,21 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   Future<void> _sendReply() async {
     final text = _replyCtrl.text.trim();
-    if (text.isEmpty || _sendingReply) return;
+    if (text.isEmpty || _sendingReply) { return; }
     setState(() => _sendingReply = true);
     try {
       await ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': text});
       _replyCtrl.clear();
-      if (mounted) { setState(() { _showReply = false; _sendingReply = false; }); _resume(); }
+      if (mounted) { { setState(() { _showReply = false; } _sendingReply = false; }); _resume(); }
     } catch (_) {
-      if (mounted) setState(() => _sendingReply = false);
+      if (mounted) { setState(() => _sendingReply = false); }
     }
   }
 
   void _sendEmoji(String emoji) {
     _resume();
-    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).catchError((_) {});
+    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).catchError((_) {return null;
+});
     _showFloatingEmoji(emoji);
   }
 
@@ -340,12 +341,12 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         onLongPressStart: (_) => _pause(),
         onLongPressEnd:   (_) => _resume(),
         onTapUp: (d) {
-          if (_showReply) return;
+          if (_showReply) { return; }
           final x = d.globalPosition.dx;
           final w = MediaQuery.of(context).size.width;
-          if (x < w * 0.33) _prevStory();
-          else if (x > w * 0.67) _nextStory();
-          else _paused ? _resume() : _pause();
+          if (x < w * 0.33) { _prevStory(); }
+          else if (x > w * 0.67) { _nextStory(); }
+          else { _paused ? _resume() : _pause(); }
         },
         child: Stack(fit: StackFit.expand, children: [
           // ── Media ──────────────────────────────────────────────
@@ -521,7 +522,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   Widget _buildImage() {
-    if (_current.mediaUrl.isEmpty) return Container(color: Colors.black);
+    if (_current.mediaUrl.isEmpty) { return Container(color: Colors.black); }
     return CachedNetworkImage(
       imageUrl: _current.mediaUrl, fit: BoxFit.cover,
       width: double.infinity, height: double.infinity,
@@ -532,8 +533,8 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   Widget _buildVideo() {
-    if (!_videoReady) return const Center(
-        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30));
+    if (!_videoReady) { return const Center(
+        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)); }
     return FittedBox(
       fit: BoxFit.cover,
       child: SizedBox(
@@ -545,9 +546,9 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   String _timeAgo() {
     final created = _current.expiresAt.subtract(const Duration(hours: 24));
     final diff = DateTime.now().difference(created);
-    if (diff.inMinutes < 1)  return 'ҳозир';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} дақ';
-    if (diff.inHours   < 24) return '${diff.inHours} соат';
+    if (diff.inMinutes < 1) { return 'ҳозир'; }
+    if (diff.inMinutes < 60) { return '${diff.inMinutes} дақ'; }
+    if (diff.inHours   < 24) { return '${diff.inHours} соат'; }
     return '${diff.inDays} рӯз';
   }
 }
@@ -606,7 +607,7 @@ class _HeartOverlayState extends State<_HeartOverlay>
     _scale   = Tween(begin: 0.5, end: 1.3).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
     _opacity = Tween(begin: 1.0, end: 0.0).animate(
         CurvedAnimation(parent: _ctrl, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)));
-    _ctrl.addStatusListener((s) { if (s == AnimationStatus.completed) widget.onDone(); });
+    _ctrl.addStatusListener((s) { if (s == AnimationStatus.completed) { widget.onDone(); } });
   }
   @override void dispose() { _ctrl.dispose(); super.dispose(); }
   @override
@@ -637,7 +638,7 @@ class _FloatingEmojiState extends State<_FloatingEmoji>
     _y       = Tween(begin: 0.0, end: -200.0).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     _opacity = Tween(begin: 1.0, end: 0.0).animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.5, 1.0)));
     _scale   = Tween(begin: 1.0, end: 1.5).animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0.0, 0.3, curve: Curves.elasticOut)));
-    _ctrl.addStatusListener((s) { if (s == AnimationStatus.completed) widget.onDone(); });
+    _ctrl.addStatusListener((s) { if (s == AnimationStatus.completed) { widget.onDone(); } });
   }
   @override void dispose() { _ctrl.dispose(); super.dispose(); }
   @override
