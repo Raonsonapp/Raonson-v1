@@ -33,6 +33,7 @@ class _StoryGroupViewerState extends State<StoryGroupViewer> {
   late PageController _pageCtrl;
   late int _groupIdx;
   late // ignore: unused_field
+  // ignore: unused_field
   int _storyIdx;
 
   @override
@@ -292,8 +293,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _toggleLike() {
     setState(() => _liked = !_liked);
-    ApiClient.instance.post('/stories/${_current.id}/like').catchError((_) {return null;
-});
+    ApiClient.instance.post('/stories/${_current.id}/like').catchError((_) => http.Response('', 500));
     if (_liked) { _showHeartAnim(); }
   }
 
@@ -311,7 +311,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     try {
       await ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': text});
       _replyCtrl.clear();
-      if (mounted) { { setState(() { _showReply = false; } _sendingReply = false; }); _resume(); }
+      if (mounted) { setState(() { _showReply = false; _sendingReply = false; }); _resume(); }
     } catch (_) {
       if (mounted) { setState(() => _sendingReply = false); }
     }
@@ -319,8 +319,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _sendEmoji(String emoji) {
     _resume();
-    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).catchError((_) {return null;
-});
+    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).catchError((_) => http.Response('', 500));
     _showFloatingEmoji(emoji);
   }
 
