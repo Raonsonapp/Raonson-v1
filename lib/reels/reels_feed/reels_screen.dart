@@ -249,7 +249,7 @@ class _ReelsViewState extends State<_ReelsView> {
                         MaterialPageRoute(
                             builder: (_) => const CreateReelScreen()))
                     .then((ok) {
-                  if (ok == true && context.mounted) vm.load();
+                  if (ok == true && context.mounted) { vm.load(); }
                 }),
                 child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -296,7 +296,7 @@ class _ReelsViewState extends State<_ReelsView> {
           onAddReel: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const CreateReelScreen()))
               .then((ok) {
-            if (ok == true && context.mounted) vm.load();
+            if (ok == true && context.mounted) { vm.load(); }
           }),
           onDelete: () => vm.markNotInterested(vm.reels[i].id),
           onNotInterested: () {
@@ -522,7 +522,7 @@ class _ReelItemState extends State<_ReelItem> {
     if (!widget.reel.isLiked) { widget.onLike(); }
     setState(() => _showHeart = true);
     Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) setState(() => _showHeart = false);
+      if (mounted) { setState(() => _showHeart = false); }
     });
   }
 
@@ -539,7 +539,7 @@ class _ReelItemState extends State<_ReelItem> {
     } finally {
       if (mounted) {
         setState(() => _downloading = false);
-        if (!_paused) _ctrl?.play();
+        if (!_paused) { _ctrl?.play(); }
       }
     }
   }
@@ -572,7 +572,7 @@ class _ReelItemState extends State<_ReelItem> {
         _menuItem(Icons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
             () {
           Navigator.pop(context);
-          if (!_paused) _ctrl?.play();
+          if (!_paused) { _ctrl?.play(); }
         }),
         _menuItem(Icons.delete_outline_rounded, 'Нест кардан', () {
           Navigator.pop(context);
@@ -581,7 +581,7 @@ class _ReelItemState extends State<_ReelItem> {
         const SizedBox(height: 8),
       ])),
     ).then((_) {
-      if (!_paused) _ctrl?.play();
+      if (!_paused) { _ctrl?.play(); }
     });
   }
 
@@ -624,7 +624,7 @@ class _ReelItemState extends State<_ReelItem> {
         const SizedBox(height: 8),
       ])),
     ).then((_) {
-      if (!_paused) _ctrl?.play();
+      if (!_paused) { _ctrl?.play(); }
     });
   }
 
@@ -682,7 +682,7 @@ class _ReelItemState extends State<_ReelItem> {
     }
     await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
         body: {'caption': ctrl.text.trim()});
-    if (!_paused && mounted) _ctrl?.play();
+    if (!_paused && mounted) { _ctrl?.play(); }
   }
 
   Future<void> _addMention() async {
@@ -775,7 +775,7 @@ class _ReelItemState extends State<_ReelItem> {
       ),
     );
     ctrl.dispose();
-    if (!_paused && mounted) _ctrl?.play();
+    if (!_paused && mounted) { _ctrl?.play(); }
   }
 
   Future<void> _showStats() async {
@@ -808,7 +808,7 @@ class _ReelItemState extends State<_ReelItem> {
           TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                if (!_paused) _ctrl?.play();
+                if (!_paused) { _ctrl?.play(); }
               },
               child: const Text('Пӯшидан',
                   style: TextStyle(color: AppColors.neonBlue)))
@@ -871,7 +871,7 @@ class _ReelItemState extends State<_ReelItem> {
         backgroundColor:
             interested ? Colors.green : Colors.grey[800],
         duration: const Duration(seconds: 2)));
-    if (!_paused) _ctrl?.play();
+    if (!_paused) { _ctrl?.play(); }
   }
 
   Future<void> _report() async {
@@ -912,7 +912,7 @@ class _ReelItemState extends State<_ReelItem> {
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2)));
     }
-    if (!_paused) _ctrl?.play();
+    if (!_paused) { _ctrl?.play(); }
   }
 
   void _openComments() {
@@ -927,7 +927,7 @@ class _ReelItemState extends State<_ReelItem> {
           height: MediaQuery.of(context).size.height * 0.85,
           child: _ReelComments(reelId: widget.reel.id)),
     ).then((_) {
-      if (!_paused && mounted) _ctrl?.play();
+      if (!_paused && mounted) { _ctrl?.play(); }
     });
   }
 
@@ -1006,7 +1006,7 @@ class _ReelItemState extends State<_ReelItem> {
         const SizedBox(height: 8),
       ])),
     ).then((_) {
-      if (!_paused && mounted) _ctrl?.play();
+      if (!_paused && mounted) { _ctrl?.play(); }
     });
   }
 
@@ -1476,7 +1476,7 @@ class _AudioBarState extends State<_AudioBar>
         vsync: this, duration: const Duration(seconds: 8))
       ..repeat();
     _scrollAnim = Tween(begin: 0.0, end: 1.0).animate(_scrollCtrl);
-    if (!widget.isPlaying) _scrollCtrl.stop();
+    if (!widget.isPlaying) { _scrollCtrl.stop(); }
   }
 
   @override
@@ -1516,7 +1516,7 @@ class _AudioBarState extends State<_AudioBar>
               return FractionalTranslation(
                 translation: Offset(dx, 0.0),
                 child: Text(
-                  displayText + '${displayText}',
+                  '$displayText   $displayText',
                   style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -1754,7 +1754,7 @@ class _SpinningDiscState extends State<_SpinningDisc>
     super.initState();
     _spin = AnimationController(
         vsync: this, duration: const Duration(seconds: 5));
-    if (widget.isPlaying) _spin.repeat();
+    if (widget.isPlaying) { _spin.repeat(); }
   }
 
   @override
@@ -1884,7 +1884,7 @@ class _ReelCommentsState extends State<_ReelComments> {
         _loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) { setState(() => _loading = false); }
     }
   }
 
@@ -1909,7 +1909,7 @@ class _ReelCommentsState extends State<_ReelComments> {
       });
       _load();
     } catch (_) {}
-    if (mounted) setState(() => _sending = false);
+    if (mounted) { setState(() => _sending = false); }
   }
 
   Future<void> _likeComment(String commentId, int index) async {
