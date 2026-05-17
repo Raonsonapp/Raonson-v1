@@ -62,7 +62,7 @@ class _ReelsVM extends ChangeNotifier {
   }
 
   Future<void> loadMore() async {
-    if (loadingMore) return;
+    if (loadingMore) { return; }
     loadingMore = true;
     try {
       final more = await _repo.fetchReels(page: _page + 1, smart: true);
@@ -77,16 +77,16 @@ class _ReelsVM extends ChangeNotifier {
 
   void toggleLike(String id) {
     reels = reels.map((r) {
-      if (r.id != id) return r;
+      if (r.id != id) { return r; }
       final liked = !r.isLiked;
       return r.copyWith(
           isLiked: liked, likesCount: r.likesCount + (liked ? 1 : -1));
     }).toList();
     notifyListeners();
     _repo.likeReel(id).then((res) {
-      if (res == null) return;
+      if (res == null) { return; }
       reels = reels.map((r) {
-        if (r.id != id) return r;
+        if (r.id != id) { return r; }
         return r.copyWith(
             isLiked: res['liked'] ?? r.isLiked,
             likesCount: res['likesCount'] ?? r.likesCount);
@@ -97,7 +97,7 @@ class _ReelsVM extends ChangeNotifier {
 
   void toggleSave(String id) {
     reels = reels.map((r) {
-      if (r.id != id) return r;
+      if (r.id != id) { return r; }
       return r.copyWith(isSaved: !r.isSaved);
     }).toList();
     notifyListeners();
@@ -163,7 +163,7 @@ class _ReelsViewState extends State<_ReelsView> {
 
   void _onPageChanged(int i, _ReelsVM vm) {
     setState(() => _currentPage = i);
-    if (i >= vm.reels.length - 3) vm.loadMore();
+    if (i >= vm.reels.length - 3) { vm.loadMore(); }
     _preloadAhead(i, vm);
     _disposeOld(i);
     // ── АД: ҳар 5 рилс interstitial нишон медиҳад (1 хати нав) ─
@@ -172,10 +172,10 @@ class _ReelsViewState extends State<_ReelsView> {
 
   void _preloadAhead(int current, _ReelsVM vm) {
     for (int j = current + 1; j <= current + 2; j++) {
-      if (j >= vm.reels.length) break;
+      if (j >= vm.reels.length) { break; }
       if (_preloaded.containsKey(j)) continue;
       final url = vm.reels[j].videoUrl;
-      if (url.isEmpty) continue;
+      if (url.isEmpty) { continue; }
       final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       _preloaded[j] = ctrl;
       ctrl.initialize().then((_) {
@@ -408,27 +408,27 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _initVideo() {
-    if (widget.reel.videoUrl.isEmpty) return;
+    if (widget.reel.videoUrl.isEmpty) { return; }
     if (widget.preloadCtrl != null &&
         widget.preloadCtrl!.value.isInitialized) {
       _ctrl = widget.preloadCtrl;
       _ctrl!.setLooping(true);
       _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
-      if (widget.isActive) _ctrl!.play();
+      if (widget.isActive) { _ctrl!.play(); }
       setState(() => _initialized = true);
       _addBufferListener();
       return;
     }
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.reel.videoUrl))
       ..initialize().then((_) {
-        if (!mounted) return;
+        if (!mounted) { return; }
         _ctrl!.setLooping(true);
         _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
         if (widget.isActive) {
           _ctrl!.play();
           _startWatchTimer();
         }
-        if (mounted) setState(() => _initialized = true);
+        if (mounted) { setState(() => _initialized = true); }
         _addBufferListener();
       });
   }
@@ -438,7 +438,7 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _onVideoUpdate() {
-    if (!mounted || _ctrl == null) return;
+    if (!mounted || _ctrl == null) { return; }
     final buffering = _ctrl!.value.isBuffering;
     if (buffering != _isBuffering) {
       setState(() => _isBuffering = buffering);
@@ -450,7 +450,7 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _stopWatchTimer() {
-    if (_watchStart == null) return;
+    if (_watchStart == null) { return; }
     _totalWatchMs +=
         DateTime.now().difference(_watchStart!).inMilliseconds;
     _watchStart = null;
@@ -458,9 +458,9 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _sendWatchTime() {
     _stopWatchTimer();
-    if (_totalWatchMs <= 0 || !_initialized || _ctrl == null) return;
+    if (_totalWatchMs <= 0 || !_initialized || _ctrl == null) { return; }
     final duration = _ctrl!.value.duration.inMilliseconds;
-    if (duration <= 0) return;
+    if (duration <= 0) { return; }
     widget.onWatchTime(_totalWatchMs, duration);
   }
 
@@ -507,7 +507,7 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _togglePause() {
-    if (_ctrl == null) return;
+    if (_ctrl == null) { return; }
     setState(() => _paused = !_paused);
     if (_paused) {
       _ctrl!.pause();
@@ -519,7 +519,7 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _doubleTapLike() {
-    if (!widget.reel.isLiked) widget.onLike();
+    if (!widget.reel.isLiked) { widget.onLike(); }
     setState(() => _showHeart = true);
     Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted) setState(() => _showHeart = false);
@@ -677,7 +677,7 @@ class _ReelItemState extends State<_ReelItem> {
     );
     ctrl.dispose();
     if (ok != true) {
-      if (!_paused) _ctrl?.play();
+      if (!_paused) { _ctrl?.play(); }
       return;
     }
     await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
@@ -781,7 +781,7 @@ class _ReelItemState extends State<_ReelItem> {
   Future<void> _showStats() async {
     final repo = ReelsRepository(ApiClient.instance);
     final stats = await repo.fetchStats(widget.reel.id);
-    if (!mounted) return;
+    if (!mounted) { return; }
     final s = stats ?? {};
     showDialog(
       context: context,
@@ -854,7 +854,7 @@ class _ReelItemState extends State<_ReelItem> {
       ),
     );
     if (ok != true) {
-      if (!_paused) _ctrl?.play();
+      if (!_paused) { _ctrl?.play(); }
       return;
     }
     await ApiClient.instance.delete('/reels/${widget.reel.id}');
@@ -864,7 +864,7 @@ class _ReelItemState extends State<_ReelItem> {
   Future<void> _markInterest(bool interested) async {
     await ApiClient.instance.post(
         '/reels/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
-    if (!mounted) return;
+    if (!mounted) { return; }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
             interested ? 'Алгоритм навшуд ✓' : 'Рилс пинҳон шуд'),
@@ -901,7 +901,7 @@ class _ReelItemState extends State<_ReelItem> {
       ),
     );
     if (reason == null) {
-      if (!_paused) _ctrl?.play();
+      if (!_paused) { _ctrl?.play(); }
       return;
     }
     await ApiClient.instance
@@ -1016,9 +1016,8 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000)
-      return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
+    if (n >= 1000000) { return '${(n / 1000000).toStringAsFixed(1)}M'; }
+    if (n >= 1000) { return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K'; }
     return n > 0 ? '$n' : '';
   }
 
@@ -1517,7 +1516,7 @@ class _AudioBarState extends State<_AudioBar>
               return FractionalTranslation(
                 translation: Offset(dx, 0.0),
                 child: Text(
-                  displayText + '   ' + displayText,
+                  displayText + '${displayText}',
                   style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -1583,7 +1582,7 @@ class _LikeBtnState extends State<_LikeBtn>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if (!widget.isLiked) _ctrl.forward(from: 0);
+        if (!widget.isLiked) { _ctrl.forward(from: 0); }
         widget.onTap();
       },
       behavior: HitTestBehavior.opaque,
@@ -1891,7 +1890,7 @@ class _ReelCommentsState extends State<_ReelComments> {
 
   Future<void> _send() async {
     final text = _ctrl.text.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty || _sending) { return; }
     setState(() => _sending = true);
     final repo = ReelsRepository(ApiClient.instance);
     try {
