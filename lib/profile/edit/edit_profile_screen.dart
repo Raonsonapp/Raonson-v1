@@ -72,10 +72,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _checkUsername(String val) async {
-    if (!mounted) return;
+    if (!mounted) { return; }
     try {
       final taken = await _repo.isUsernameTaken(val, _originalUsername);
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() { _checkingUsername = false; _usernameTaken = taken; _usernameError = taken ? 'Ин username аллакай банд аст' : null; });
     } catch (_) {
       if (mounted) setState(() { _checkingUsername = false; });
@@ -84,11 +84,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickAvatar() async {
     final file = await MediaPicker.pickImageOnly();
-    if (file == null || !mounted) return;
+    if (file == null || !mounted) { return; }
     setState(() { _localAvatar = file; _uploadingAvatar = true; });
     try {
       final url = await UploadManager().uploadAvatar(file);
-      if (mounted) setState(() { _uploadedAvatarUrl = url; _uploadingAvatar = false; });
+      if (mounted) { setState(() { _uploadedAvatarUrl = url; } _uploadingAvatar = false; });
     } catch (e) {
       if (mounted) { setState(() => _uploadingAvatar = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Расм бор нашуд: $e'), backgroundColor: Colors.red.shade800)); }
@@ -112,10 +112,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Лутфан интизор шавед...'), backgroundColor: Colors.orange)); return;
     }
     final ok = await _ctrl.save(bioSong: _bioSong, avatarUrl: _uploadedAvatarUrl);
-    if (!mounted) return;
+    if (!mounted) { return; }
     if (ok) {
       UserSession.username = _ctrl.usernameController.text.trim();
-      if (_uploadedAvatarUrl?.isNotEmpty == true) UserSession.avatar = _uploadedAvatarUrl;
+      if (_uploadedAvatarUrl?.isNotEmpty == true) { UserSession.avatar = _uploadedAvatarUrl; }
       Navigator.pop(context, true);
     } else {
       final err = _ctrl.error ?? 'Хатогӣ';
@@ -213,8 +213,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget _buildUsernameField() {
     Color border = Colors.white.withOpacity(0.08);
     if (_usernameTaken || (_usernameError != null && !_isOriginal)) border = Colors.red.withOpacity(0.7);
-    else if (!_checkingUsername && !_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null)
-      border = Colors.green.withOpacity(0.6);
+    else if (!_checkingUsername && !_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) { border = Colors.green.withOpacity(0.6); }
 
     Widget? suffix;
     if (_checkingUsername)
@@ -222,8 +221,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38)));
     else if (_usernameTaken || (_usernameError != null && !_isOriginal))
       suffix = const Icon(Icons.close_rounded, color: Colors.red, size: 20);
-    else if (!_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null)
-      suffix = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20);
+    else if (!_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) { suffix = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20); }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
