@@ -42,7 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         _ctrl.loadTaggedPosts();
       }
     });
-    _ctrl.addListener(() { if (mounted) setState(() {}); });
+    _ctrl.addListener(() { if (mounted) { setState(() {}); } });
   }
 
   @override
@@ -313,7 +313,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         final ok = await Navigator.push<bool>(context,
                             MaterialPageRoute(builder: (_) =>
                                 EditProfileScreen(userId: widget.userId)));
-                        if (ok == true && mounted) _ctrl.loadProfile();
+                        if (ok == true && mounted) { _ctrl.loadProfile(); }
                       },
                       onShare: _share,
                       onVerify: !user.verified ? _verifySheet : null)
@@ -654,7 +654,7 @@ class _TaggedGridState extends State<_TaggedGrid> {
 
   @override
   void dispose() { widget.ctrl.removeListener(_refresh); super.dispose(); }
-  void _refresh() { if (mounted) setState(() {}); }
+  void _refresh() { if (mounted) { setState(() {}); } }
 
   @override
   Widget build(BuildContext context) {
@@ -797,7 +797,7 @@ class _UserListSheetState extends State<_UserListSheet> {
     final list = widget.isFollowers
         ? await _repo.getFollowers(widget.userId)
         : await _repo.getFollowing(widget.userId);
-    if (mounted) { setState(() { _list = list; } _loading = false; });
+    if (mounted) { setState(() { _list = list; _loading = false; }); }
   }
 
   @override
