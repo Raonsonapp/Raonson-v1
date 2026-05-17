@@ -48,13 +48,13 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 // This file is a reference patch — see comments above.
 // The actual implementation requires editing reels_screen.dart directly.
 
 /// Mixin to add ad trigger to any PageView-based screen
 mixin ReelsAdMixin<T extends StatefulWidget> on State<T> {
+  // ignore: unused_field
   int _reelsAdCounter = 0;
 
   /// Call this in onPageChanged
