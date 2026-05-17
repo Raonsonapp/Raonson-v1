@@ -60,7 +60,7 @@ class _PostCardState extends State<PostCard>
   bool get _isOwner {
     final myId   = UserSession.userId?.trim() ?? '';
     final postId = widget.post.user.id.trim();
-    if (myId.isEmpty || postId.isEmpty) return false;
+    if (myId.isEmpty || postId.isEmpty) { return false; }
     return myId == postId;
   }
 
@@ -126,7 +126,7 @@ class _PostCardState extends State<PostCard>
     final was = _liked;
     _countUp = !was; // боло агар лайк, поён агар unlике
     setState(() { _liked = !was; _likeCount += _liked ? 1 : -1; });
-    if (_liked) _likeCtrl.forward(from: 0);
+    if (_liked) { _likeCtrl.forward(from: 0); }
     _countCtrl.forward(from: 0);
     try {
       final res = await ApiClient.instance
@@ -749,19 +749,19 @@ class _PostCardState extends State<PostCard>
   String _timeAgo(DateTime dt) {
     // ✅ toLocal() — серверни UTC вақтини маҳаллӣ мекунад
     final d = DateTime.now().difference(dt.toLocal());
-    if (d.inSeconds < 30)  return 'ҳозир';
-    if (d.inMinutes < 1)   return '${d.inSeconds} сония пеш';
-    if (d.inMinutes < 60)  return '${d.inMinutes} дақиқа пеш';
-    if (d.inHours   < 24)  return '${d.inHours} соат пеш';
-    if (d.inDays    < 7)   return '${d.inDays} рӯз пеш';
-    if (d.inDays    < 30)  return '${(d.inDays / 7).floor()} ҳафта пеш';
-    if (d.inDays    < 365) return '${(d.inDays / 30).floor()} моҳ пеш';
+    if (d.inSeconds < 30) { return 'ҳозир'; }
+    if (d.inMinutes < 1) { return '${d.inSeconds} сония пеш'; }
+    if (d.inMinutes < 60) { return '${d.inMinutes} дақиқа пеш'; }
+    if (d.inHours   < 24) { return '${d.inHours} соат пеш'; }
+    if (d.inDays    < 7) { return '${d.inDays} рӯз пеш'; }
+    if (d.inDays    < 30) { return '${(d.inDays / 7).floor()} ҳафта пеш'; }
+    if (d.inDays    < 365) { return '${(d.inDays / 30).floor()} моҳ пеш'; }
     return '${(d.inDays / 365).floor()} сол пеш';
   }
 
   String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000)    return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
+    if (n >= 1000000) { return '${(n / 1000000).toStringAsFixed(1)}M'; }
+    if (n >= 1000) { return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K'; }
     return '$n';
   }
 
@@ -810,7 +810,7 @@ class _PostCardState extends State<PostCard>
 
   // ── Like count animated counter ───────────────────────────────
   Widget _animatedLikeCount() {
-    if (_likeCount <= 0) return const SizedBox.shrink();
+    if (_likeCount <= 0) { return const SizedBox.shrink(); }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
       transitionBuilder: (child, anim) {
@@ -836,7 +836,7 @@ class _PostCardState extends State<PostCard>
   // ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    if (_hidden) return const SizedBox.shrink();
+    if (_hidden) { return const SizedBox.shrink(); }
     final post = widget.post;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1167,11 +1167,11 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                         return ListTile(
                           leading: CircleAvatar(
                             radius: 20,
+                            backgroundColor: const Color(0xFF1A1A1A),
                             backgroundImage: av.isNotEmpty
                                 ? NetworkImage(av) : null,
                             child: av.isEmpty ? const Icon(
                                 Icons.person, color: Colors.white38) : null,
-                            backgroundColor: const Color(0xFF1A1A1A),
                           ),
                           title: Text('@$un',
                               style: const TextStyle(color: Colors.white,
@@ -1336,7 +1336,7 @@ class _MediaCarouselState extends State<_MediaCarousel> {
 
   double _getAspectRatio() {
     // ✅ Формати аслиро нигоҳ дор — мисли Instagram
-    if (widget.media.isEmpty) return 1.0;
+    if (widget.media.isEmpty) { return 1.0; }
     final type  = widget.media.first['type']  ?? 'image';
     final ratio = widget.media.first['aspectRatio'] ?? '';
     if (ratio.isNotEmpty) {
@@ -1360,9 +1360,9 @@ class _MediaCarouselState extends State<_MediaCarousel> {
           itemBuilder: (_, i) {
             final url  = widget.media[i]['url']  ?? '';
             final type = widget.media[i]['type'] ?? 'image';
-            if (url.isEmpty) return Container(color: const Color(0xFF111111));
-            if (type == 'video') return _VideoItem(
-              url: url, isActive: widget.isActive, aspectRatio: aspectRatio);
+            if (url.isEmpty) { return Container(color: const Color(0xFF111111)); }
+            if (type == 'video') { return _VideoItem(
+              url: url, isActive: widget.isActive, aspectRatio: aspectRatio); }
             return CachedNetworkImage(
               imageUrl: url, fit: BoxFit.cover,
               width: double.infinity, height: double.infinity,
@@ -1432,8 +1432,8 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   void didUpdateWidget(_VideoItem old) {
     super.didUpdateWidget(old);
-    if (!_ready || _ctrl == null) return;
-    if (widget.isActive && !_paused) _ctrl!.play(); else _ctrl!.pause();
+    if (!_ready || _ctrl == null) { return; }
+    if (widget.isActive && !_paused) { _ctrl!.play(); } else { _ctrl!.pause(); }
   }
 
   @override void dispose() {
@@ -1452,9 +1452,9 @@ class _VideoItemState extends State<_VideoItem> {
             Text('Видео бор намешавад',
                 style: TextStyle(color: Colors.white30, fontSize: 12)),
           ])));
-    if (!_ready) return Container(color: Colors.black,
+    if (!_ready) { return Container(color: Colors.black,
         child: const Center(child: CircularProgressIndicator(
-            strokeWidth: 2, color: Colors.white30)));
+            strokeWidth: 2, color: Colors.white30))); }
     final videoRatio = _ctrl!.value.isInitialized
         ? _ctrl!.value.aspectRatio : widget.aspectRatio;
     return GestureDetector(
