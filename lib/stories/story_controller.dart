@@ -100,9 +100,7 @@ class StoryController extends ChangeNotifier {
     _viewedIds.add(storyId);
     _saveViewedCache(); // async, бе await
 
-    final myId = UserSession.userId ?? '';
-
-    StoryModel _markOne(StoryModel s) {
+    StoryModel markOne(StoryModel s) {
       if (s.id != storyId && s.viewed) return s;
       if (!_viewedIds.contains(s.id)) return s;
       return StoryModel(
@@ -116,13 +114,13 @@ class StoryController extends ChangeNotifier {
     _stories = _stories.map((s) {
       if (s.id != storyId) return s;
       _viewedIds.add(s.id); // ба ҳамаи story-и ҳамон group
-      return _markOne(s);
+      return markOne(s);
     }).toList();
 
     // ── Update _myStories (story-и худ) ─────────────────────
     _myStories = _myStories.map((s) {
       if (s.id != storyId) return s;
-      return _markOne(s);
+      return markOne(s);
     }).toList();
 
     notifyListeners();
