@@ -55,7 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ── Top bar actions ─────────────────────────────────────────────
   void _share() {
     final u = _ctrl.profile;
-    if (u == null) return;
+    if (u == null) { return; }
     Clipboard.setData(ClipboardData(text: 'raonson://profile/${u.username}'));
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Профил нусхабардорӣ шуд'),
@@ -64,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _showOtherMenu() {
     final u = _ctrl.profile;
-    if (u == null) return;
+    if (u == null) { return; }
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1C1C1E),
@@ -129,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ── Post context menu ────────────────────────────────────────────
   void _showPostMenu(PostModel post) {
-    if (!_isMe) return;
+    if (!_isMe) { return; }
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1C1C1E),
@@ -173,9 +173,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ── Mutual followers text ────────────────────────────────────────
   String _mutualText(UserModel u) {
-    if (u.mutualCount == 0) return '';
-    if (u.mutualNames.isEmpty) return '${u.mutualCount} умумӣ пайрав';
-    if (u.mutualCount == 1) return '${u.mutualNames.first} пайрав мешавад';
+    if (u.mutualCount == 0) { return ''; }
+    if (u.mutualNames.isEmpty) { return '${u.mutualCount} умумӣ пайрав'; }
+    if (u.mutualCount == 1) { return '${u.mutualNames.first} пайрав мешавад'; }
     if (u.mutualCount == 2) {
       return '${u.mutualNames.first} ва ${u.mutualNames.last} пайрав мешаванд';
     }
@@ -185,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_ctrl.isLoading) return const ProfileSkeleton();
+    if (_ctrl.isLoading) { return const ProfileSkeleton(); }
 
     final user = _ctrl.profile;
     if (user == null) {
@@ -408,8 +408,8 @@ class _Stat extends StatelessWidget {
   final int count; final String label; final VoidCallback? onTap;
   const _Stat({required this.count, required this.label, this.onTap});
   String _f(int n) {
-    if (n >= 1000000) return '${(n / 1e6).toStringAsFixed(1)}M';
-    if (n >= 1000)    return '${(n / 1000).toStringAsFixed(1)}K';
+    if (n >= 1000000) { return '${(n / 1e6).toStringAsFixed(1)}M'; }
+    if (n >= 1000) { return '${(n / 1000).toStringAsFixed(1)}K'; }
     return '$n';
   }
   @override
@@ -464,18 +464,18 @@ class _OtherBtns extends StatelessWidget {
   });
 
   String get _label {
-    if (isFollowing) return 'Пайравишуда';
-    if (followRequestSent) return 'Дархост фиристода шуд';
+    if (isFollowing) { return 'Пайравишуда'; }
+    if (followRequestSent) { return 'Дархост фиристода шуд'; }
     return 'Пайравӣ';
   }
 
   Color get _bg {
-    if (isFollowing || followRequestSent) return Colors.transparent;
+    if (isFollowing || followRequestSent) { return Colors.transparent; }
     return Colors.white;
   }
 
   Color get _textColor {
-    if (isFollowing || followRequestSent) return Colors.white54;
+    if (isFollowing || followRequestSent) { return Colors.white54; }
     return Colors.black;
   }
 
@@ -629,8 +629,8 @@ class _ReelGrid extends StatelessWidget {
   }
 
   String _fmt(int n) {
-    if (n >= 1000000) return '${(n/1e6).toStringAsFixed(1)}M';
-    if (n >= 1000)    return '${(n/1000).toStringAsFixed(1)}K';
+    if (n >= 1000000) { return '${(n/1e6).toStringAsFixed(1)}M'; }
+    if (n >= 1000) { return '${(n/1000).toStringAsFixed(1)}K'; }
     return '$n';
   }
 }
@@ -648,7 +648,7 @@ class _TaggedGridState extends State<_TaggedGrid> {
   @override
   void initState() {
     super.initState();
-    if (widget.ctrl.taggedPosts.isEmpty) widget.ctrl.loadTaggedPosts();
+    if (widget.ctrl.taggedPosts.isEmpty) { widget.ctrl.loadTaggedPosts(); }
     widget.ctrl.addListener(_refresh);
   }
 
@@ -727,13 +727,13 @@ class _PostSheetState extends State<_PostSheet> {
                 const Icon(Icons.favorite_border_rounded,
                     color: Colors.white54, size: 20),
                 const SizedBox(width: 6),
-                Text('${p.likesCount}',
+                Text('p.likesCount',
                     style: const TextStyle(color: Colors.white54)),
                 const SizedBox(width: 16),
                 const Icon(Icons.chat_bubble_outline_rounded,
                     color: Colors.white54, size: 18),
                 const SizedBox(width: 6),
-                Text('${p.commentsCount}',
+                Text('p.commentsCount',
                     style: const TextStyle(color: Colors.white54)),
               ])),
           ]));
@@ -797,7 +797,7 @@ class _UserListSheetState extends State<_UserListSheet> {
     final list = widget.isFollowers
         ? await _repo.getFollowers(widget.userId)
         : await _repo.getFollowing(widget.userId);
-    if (mounted) setState(() { _list = list; _loading = false; });
+    if (mounted) { setState(() { _list = list; } _loading = false; });
   }
 
   @override
