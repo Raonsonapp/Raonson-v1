@@ -82,7 +82,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                 isFollowing: false,
                 mutualFriends: 0,
               ));
-              if (sugs.length >= 20) break;
+              if (sugs.length >= 20) { break; }
             }
           }
         } catch (_) {}
