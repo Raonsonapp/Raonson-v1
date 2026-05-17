@@ -1,4 +1,3 @@
-import '../../models/note_model.dart';
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 import '../../models/user_model.dart';
