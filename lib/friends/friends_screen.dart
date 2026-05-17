@@ -70,7 +70,7 @@ class _FriendsScreenState extends State<FriendsScreen>
             for (final p in posts) {
               final pm = p as Map<String, dynamic>;
               final u  = pm['user'] as Map<String, dynamic>?;
-              if (u == null) continue;
+              if (u == null) { continue; }
               final id = (u['_id'] ?? u['id'] ?? '').toString();
               if (id.isEmpty || seen.contains(id)) continue;
               seen.add(id);
@@ -94,7 +94,7 @@ class _FriendsScreenState extends State<FriendsScreen>
         _loading     = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) { setState(() => _loading = false); }
     }
   }
 
