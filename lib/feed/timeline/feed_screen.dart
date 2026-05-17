@@ -179,8 +179,6 @@ class _FeedBody extends StatelessWidget {
     // Build groups for StoryGroupViewer
     final allGroups = groupStoriesByUser(sortedStories);
     // Add my group at front if exists
-    final myId = UserSession.userId ?? '';
-    final myGroup = storyCtrl.myStories;
 
     final storyBar = StoryBar(
       stories:   sortedStories,
@@ -355,7 +353,7 @@ class _FeedBody extends StatelessWidget {
                 return PostCard(
                   post: state.posts[index],
                   isActive: isActive,
-                  onDeleted: () => ctx.read<FeedController>()
+                  onDeleted: () => context.read<FeedController>()
                       .removePost(state.posts[index].id),
                 );
               },
