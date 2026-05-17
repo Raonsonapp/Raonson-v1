@@ -40,7 +40,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _ctrl.loadCurrentProfile(widget.userId).then((_) {
       _originalUsername = _ctrl.usernameController.text;
     });
-    _ctrl.addListener(() { if (mounted) setState(() {}); });
+    _ctrl.addListener(() { if (mounted) { setState(() {}); } });
     _ctrl.usernameController.addListener(_onUsernameChanged);
   }
 
@@ -78,7 +78,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) { return; }
       setState(() { _checkingUsername = false; _usernameTaken = taken; _usernameError = taken ? 'Ин username аллакай банд аст' : null; });
     } catch (_) {
-      if (mounted) setState(() { _checkingUsername = false; });
+      if (mounted) { setState(() { _checkingUsername = false; } });
     }
   }
 
@@ -100,7 +100,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
       builder: (_) => MusicPickerSheet(initial: _bioSong));
-    if (result != null && mounted) setState(() => _bioSong = result);
+    if (result != null && mounted) { setState(() => _bioSong = result); }
   }
 
   Future<void> _save() async {
