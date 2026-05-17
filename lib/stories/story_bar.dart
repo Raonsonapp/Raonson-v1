@@ -5,7 +5,7 @@ import '../core/services/user_session.dart';
 
 List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
   final Map<String, List<StoryModel>> map = {};
-  for (final s in stories) map.putIfAbsent(s.user.id, () => []).add(s);
+  for (final s in stories) { map.putIfAbsent(s.user.id, () => []).add(s); }
   return map.values.toList();
 }
 
