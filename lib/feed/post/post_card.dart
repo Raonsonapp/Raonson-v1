@@ -30,7 +30,6 @@ class _PostCardState extends State<PostCard>
   late bool   _saved;
   late int    _likeCount;
   late int    _commentCount;
-  int         _retweetCount = 0;
   bool        _reposted     = false;
   int         _shareCount   = 0;
   bool        _likeLoading  = false;
@@ -48,7 +47,6 @@ class _PostCardState extends State<PostCard>
 
   // ── Repost rotate ────────────────────────────────────────────
   late AnimationController _repostCtrl;
-  late Animation<double>   _repostRotate;
 
   // ── Double-tap heart overlay ─────────────────────────────────
   late AnimationController _heartCtrl;
@@ -64,7 +62,6 @@ class _PostCardState extends State<PostCard>
     return myId == postId;
   }
 
-  static const int _captionMaxLines = 3;
 
   @override
   void initState() {
@@ -87,8 +84,6 @@ class _PostCardState extends State<PostCard>
 
     _repostCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 400));
-    _repostRotate = Tween(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _repostCtrl, curve: Curves.easeInOut));
 
     _heartCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 800));
@@ -154,17 +149,6 @@ class _PostCardState extends State<PostCard>
           .post('/posts/${widget.post.id}/save');
       if (res.statusCode >= 400 && mounted) setState(() => _saved = was);
     } catch (_) { if (mounted) setState(() => _saved = was); }
-  }
-
-  Future<void> _toggleRepost() async {
-    if (_reposted) return;
-    _repostCtrl.forward(from: 0);
-    setState(() { _reposted = true; _retweetCount++; });
-    try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/repost');
-    } catch (_) {
-      if (mounted) setState(() { _reposted = false; _retweetCount--; });
-    }
   }
 
   // ── WHO LIKED ────────────────────────────────────────────────
@@ -374,6 +358,53 @@ class _PostCardState extends State<PostCard>
       filled: true, fillColor: const Color(0xFF111111),
       border: const OutlineInputBorder(borderSide: BorderSide.none)));
 
+
+  Future<void> _mentionFriends() async {
+    final ctrl = TextEditingController();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+            left: 16, right: 16, top: 8),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2))),
+          const Text('Зикр кардан', style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: ctrl, autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: '@username',
+              hintStyle: TextStyle(color: Colors.white38),
+              filled: true, fillColor: Color(0xFF1A1A1A),
+              border: OutlineInputBorder(borderSide: BorderSide.none))),
+          const SizedBox(height: 12),
+          SizedBox(width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.neonBlue,
+                  foregroundColor: Colors.white),
+              onPressed: () async {
+                final mention = ctrl.text.trim();
+                Navigator.pop(ctx);
+                if (mention.isEmpty) return;
+                await ApiClient.instance.post(
+                  '/posts/${widget.post.id}/mention',
+                  body: {'username': mention.replaceAll('@', '')});
+              },
+              child: const Text('Зикр кун'))),
+        ])));
+    ctrl.dispose();
+  }
+
   Future<void> _showStats() async {
     final res = await ApiClient.instance.get('/posts/${widget.post.id}/stats');
     if (!mounted) return;
@@ -435,14 +466,6 @@ class _PostCardState extends State<PostCard>
         ])),
     )));
   }
-
-  Widget _statRow(String label, String val) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-      Text(val, style: const TextStyle(color: Colors.white,
-          fontWeight: FontWeight.bold, fontSize: 15)),
-    ]));
 
   Future<void> _reportPost() async {
     final reasons = [
