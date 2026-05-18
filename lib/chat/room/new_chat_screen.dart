@@ -1,7 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
@@ -22,7 +20,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
   List<UserModel> _results = [];
   bool _loading = false;
   String _lastQuery = '';
-  String? _debounceQuery;
 
   @override
   void dispose() {
