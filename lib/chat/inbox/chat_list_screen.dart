@@ -30,7 +30,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final _presence = PresenceService();
   final _notes    = NoteService();
   final _searchCtrl = TextEditingController();
-  bool  _searchFocused = false;
   String _myAvatar = '';
 
   @override
