@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
 class AdsManager {
