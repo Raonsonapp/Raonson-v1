@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../models/story_model.dart';
 import '../core/api/api_client.dart';
@@ -34,7 +33,8 @@ class StoryGroupViewer extends StatefulWidget {
 class _StoryGroupViewerState extends State<StoryGroupViewer> {
   late PageController _pageCtrl;
   late int _groupIdx;
-  late int _storyIdx;
+  late // ignore: unused_field
+ int _storyIdx;
 
   @override
   void initState() {
@@ -293,7 +293,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _toggleLike() {
     setState(() => _liked = !_liked);
-    ApiClient.instance.post('/stories/${_current.id}/like').catchError((_) => http.Response('', 500));
+    ApiClient.instance.post('/stories/${_current.id}/like').catchError((_) {});
     if (_liked) _showHeartAnim();
   }
 
@@ -319,7 +319,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _sendEmoji(String emoji) {
     _resume();
-    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).catchError((_) => http.Response('', 500));
+    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).catchError((_) {});
     _showFloatingEmoji(emoji);
   }
 
@@ -343,8 +343,8 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           if (_showReply) return;
           final x = d.globalPosition.dx;
           final w = MediaQuery.of(context).size.width;
-          if (x < w * 0.33) _prevStory();
-          else if (x > w * 0.67) _nextStory();
+          if (x < w * 0.33) { _prevStory(); }
+          else if (x > w * 0.67) { _nextStory(); }
           else { _paused ? _resume() : _pause(); }
         },
         child: Stack(fit: StackFit.expand, children: [
@@ -532,8 +532,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   Widget _buildVideo() {
-    if (!_videoReady) return const Center(
-        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30));
+    if (!_videoReady) { return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)); }
     return FittedBox(
       fit: BoxFit.cover,
       child: SizedBox(
