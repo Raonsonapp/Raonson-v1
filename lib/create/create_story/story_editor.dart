@@ -59,7 +59,7 @@ class StoryEditor extends StatefulWidget {
   State<StoryEditor> createState() => _StoryEditorState();
 }
 
-enum _Tool { none, text, draw, sticker, music, mention }
+enum _Tool { none, draw }
 
 class _StoryEditorState extends State<StoryEditor> {
   final _canvasKey = GlobalKey();
@@ -283,7 +283,6 @@ class _StoryEditorState extends State<StoryEditor> {
   // ── BUILD ────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: Colors.black,
