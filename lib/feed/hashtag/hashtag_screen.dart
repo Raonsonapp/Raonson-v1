@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_theme.dart';
 import '../../models/post_model.dart';
