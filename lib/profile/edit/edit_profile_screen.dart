@@ -88,7 +88,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() { _localAvatar = file; _uploadingAvatar = true; });
     try {
       final url = await UploadManager().uploadAvatar(file);
-      if (mounted) { setState(() { _uploadedAvatarUrl = url; } _uploadingAvatar = false; });
+      if (mounted) { setState(() { _uploadedAvatarUrl = url; _uploadingAvatar = false; }); }
     } catch (e) {
       if (mounted) { setState(() => _uploadingAvatar = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Расм бор нашуд: $e'), backgroundColor: Colors.red.shade800)); }
