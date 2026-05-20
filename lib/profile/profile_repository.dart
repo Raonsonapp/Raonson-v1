@@ -214,9 +214,11 @@ class ProfileRepository {
   Future<String> getUserIdByUsername(String username) async {
     try {
       final resp = await _api.get('/users/by-username/$username');
-      return resp['id'] as String? ?? username;
+      if (resp.statusCode >= 400) return username;
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      return (body['id'] ?? body['_id'] ?? username) as String;
     } catch (_) {
-      return username; // fallback: try using username as ID
+      return username;
     }
   }
 }
