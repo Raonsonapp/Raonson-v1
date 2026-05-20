@@ -1390,9 +1390,11 @@ class _VideoItemState extends State<_VideoItem> {
             Text('Видео бор намешавад',
                 style: TextStyle(color: Colors.white30, fontSize: 12)),
           ])));
-    if (!_ready) return Container(color: Colors.black,
-        child: const Center(child: CircularProgressIndicator(
-            strokeWidth: 2, color: Colors.white30)));
+    if (!_ready) {
+      return Container(color: Colors.black,
+          child: const Center(child: CircularProgressIndicator(
+              strokeWidth: 2, color: Colors.white30)));
+    }
     final videoRatio = _ctrl!.value.isInitialized
         ? _ctrl!.value.aspectRatio : widget.aspectRatio;
     return GestureDetector(
