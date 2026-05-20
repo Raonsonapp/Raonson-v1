@@ -138,7 +138,7 @@ class _PostEditor extends StatefulWidget {
   @override State<_PostEditor> createState() => _PostEditorState();
 }
 
-enum _Tool { none, text, draw, sticker, music, mention, caption }
+enum _Tool { none, draw }
 
 class _PostEditorState extends State<_PostEditor> {
   final _canvasKey    = GlobalKey();
