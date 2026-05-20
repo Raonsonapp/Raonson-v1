@@ -259,11 +259,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       // Mark as failed
       if (mounted) {
         setState(() {
-        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
-        if (idx >= 0) {
-          _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
-        }
-      });
+          final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+          if (idx >= 0) {
+            _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
+          }
+        });
+      }
     }
   }
 
