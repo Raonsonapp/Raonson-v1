@@ -209,4 +209,14 @@ class ProfileRepository {
   bool _isUUID(String s) =>
       RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
              r'[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(s);
+
+  /// Resolve @username → userId via API
+  Future<String> getUserIdByUsername(String username) async {
+    try {
+      final resp = await _api.get('/users/by-username/$username');
+      return resp['id'] as String? ?? username;
+    } catch (_) {
+      return username; // fallback: try using username as ID
+    }
+  }
 }
