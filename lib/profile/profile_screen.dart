@@ -619,7 +619,7 @@ class _ReelGrid extends StatelessWidget {
           Positioned(bottom: 5, left: 5, child: Row(children: [
             const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 14),
             const SizedBox(width: 2),
-            Text('${_fmt(r.viewsCount ?? r.likesCount)}',
+            Text(_fmt(r.viewsCount),
                 style: const TextStyle(color: Colors.white, fontSize: 11,
                     fontWeight: FontWeight.bold,
                     shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
