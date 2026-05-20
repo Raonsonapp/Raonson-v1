@@ -35,7 +35,6 @@ class _BottomNavViewState extends State<_BottomNavView> {
   Key _reelsKey = UniqueKey();
 
   void _refreshFeed()  => setState(() => _feedKey  = UniqueKey());
-  void _refreshReels() => setState(() => _reelsKey = UniqueKey());
 
   @override
   Widget build(BuildContext context) {
