@@ -3,7 +3,6 @@
 // Groups = List<List<StoryModel>>, navigate between users with swipe
 
 import 'dart:async';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
@@ -40,7 +39,6 @@ class _StoryGroupViewerState extends State<StoryGroupViewer> {
   void initState() {
     super.initState();
     _groupIdx = widget.initialGroupIndex.clamp(0, widget.groups.length - 1);
-    _storyIdx = 0;
     _pageCtrl = PageController(initialPage: _groupIdx);
   }
 
@@ -53,8 +51,7 @@ class _StoryGroupViewerState extends State<StoryGroupViewer> {
   void _nextGroup() {
     if (_groupIdx < widget.groups.length - 1) {
       _groupIdx++;
-      _storyIdx = 0;
-      _pageCtrl.nextPage(
+        _pageCtrl.nextPage(
           duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else {
       Navigator.of(context).pop();
@@ -64,8 +61,7 @@ class _StoryGroupViewerState extends State<StoryGroupViewer> {
   void _prevGroup() {
     if (_groupIdx > 0) {
       _groupIdx--;
-      _storyIdx = 0;
-      _pageCtrl.previousPage(
+        _pageCtrl.previousPage(
           duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
   }
@@ -293,7 +289,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _toggleLike() {
     setState(() => _liked = !_liked);
-    ApiClient.instance.post('/stories/${_current.id}/like').catchError((_) {});
+    ApiClient.instance.post('/stories/${_current.id}/like').then((_) {}).catchError((e) => e);
     if (_liked) _showHeartAnim();
   }
 
@@ -319,7 +315,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _sendEmoji(String emoji) {
     _resume();
-    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).catchError((_) {});
+    ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': emoji}).then((_) {}).catchError((e) => e);
     _showFloatingEmoji(emoji);
   }
 
