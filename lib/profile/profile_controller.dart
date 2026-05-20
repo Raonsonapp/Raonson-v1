@@ -10,9 +10,10 @@ import 'highlight_model.dart';
 
 class ProfileController extends ChangeNotifier {
   final String userId;
+  final bool byUsername;
   final ProfileRepository _repo = ProfileRepository(ApiClient.instance);
 
-  ProfileController({required this.userId});
+  ProfileController({required this.userId, this.byUsername = false});
 
   bool get isOwnProfile =>
       userId == 'me' ||
@@ -38,7 +39,11 @@ class ProfileController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     try {
-      profile    = await _repo.getProfile(userId);
+      // If byUsername, resolve username to userId first
+      final resolvedId = byUsername
+          ? await _repo.getUserIdByUsername(userId)
+          : userId;
+      profile    = await _repo.getProfile(resolvedId);
       posts      = await _repo.getUserPosts(profile?.id ?? userId);
       reels      = await _repo.getUserReels(profile?.id ?? userId);
       highlights = await _repo.getHighlights(profile?.id ?? userId);
