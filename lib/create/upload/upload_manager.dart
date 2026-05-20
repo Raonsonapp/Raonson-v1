@@ -20,8 +20,9 @@ class UploadManager {
 
   MediaType _mime(File f) {
     final e = _ext(f);
-    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(e))
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(e)) {
       return MediaType('video', 'mp4');
+    }
     if (e == 'png') return MediaType('image', 'png');
     return MediaType('image', 'jpeg');
   }
