@@ -1016,8 +1016,9 @@ class _ReelItemState extends State<_ReelItem> {
 
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000)
+    if (n >= 1000) {
       return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
+    }
     return n > 0 ? '$n' : '';
   }
 
@@ -1516,7 +1517,7 @@ class _AudioBarState extends State<_AudioBar>
               return FractionalTranslation(
                 translation: Offset(dx, 0.0),
                 child: Text(
-                  displayText + '   ' + displayText,
+                  '$displayText   $displayText',
                   style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -1879,10 +1880,12 @@ class _ReelCommentsState extends State<_ReelComments> {
     try {
       final repo = ReelsRepository(ApiClient.instance);
       final list = await repo.fetchComments(widget.reelId);
-      if (mounted) setState(() {
-        _comments = list;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _comments = list;
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) { setState(() => _loading = false); }
     }
