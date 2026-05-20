@@ -21,7 +21,8 @@ import '../settings/settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
-  const ProfileScreen({super.key, required this.userId});
+  final bool byUsername;
+  const ProfileScreen({super.key, required this.userId, this.byUsername = false});
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -34,7 +35,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _ctrl = ProfileController(userId: widget.userId);
+    _ctrl = ProfileController(
+      userId: widget.userId,
+      byUsername: widget.byUsername,
+    );
     _ctrl.loadProfile();
     _tab = TabController(length: 3, vsync: this);
     _tab.addListener(() {
@@ -542,10 +546,8 @@ class _PostGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (posts.isEmpty) {
-      return const _EmptyState(
-          icon: Icons.grid_off_rounded, label: 'Ҳанӯз пост нест');
-    }
+    if (posts.isEmpty) return const _EmptyState(
+        icon: Icons.grid_off_rounded, label: 'Ҳанӯз пост нест');
 
     return GridView.builder(
       padding: EdgeInsets.zero,
@@ -590,10 +592,8 @@ class _ReelGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (reels.isEmpty) {
-      return const _EmptyState(
-          icon: Icons.videocam_off_rounded, label: 'Ҳанӯз рил нест');
-    }
+    if (reels.isEmpty) return const _EmptyState(
+        icon: Icons.videocam_off_rounded, label: 'Ҳанӯз рил нест');
 
     return GridView.builder(
       padding: EdgeInsets.zero,
@@ -623,7 +623,7 @@ class _ReelGrid extends StatelessWidget {
           Positioned(bottom: 5, left: 5, child: Row(children: [
             const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 14),
             const SizedBox(width: 2),
-            Text(_fmt(r.viewsCount),
+            Text('${_fmt(r.viewsCount ?? r.likesCount)}',
                 style: const TextStyle(color: Colors.white, fontSize: 11,
                     fontWeight: FontWeight.bold,
                     shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
@@ -663,10 +663,8 @@ class _TaggedGridState extends State<_TaggedGrid> {
   @override
   Widget build(BuildContext context) {
     final posts = widget.ctrl.taggedPosts;
-    if (posts.isEmpty) {
-      return const _EmptyState(
-          icon: Icons.person_pin_outlined, label: 'Ҳанӯз зикр нашудааст');
-    }
+    if (posts.isEmpty) return const _EmptyState(
+        icon: Icons.person_pin_outlined, label: 'Ҳанӯз зикр нашудааст');
 
     return GridView.builder(
       padding: EdgeInsets.zero,
