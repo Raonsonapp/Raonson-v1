@@ -88,11 +88,13 @@ class _FriendsScreenState extends State<FriendsScreen>
         } catch (_) {}
       }
 
-      if (mounted) setState(() {
-        _requests    = reqs;
-        _suggestions = sugs;
-        _loading     = false;
-      });
+      if (mounted) {
+        setState(() {
+          _requests    = reqs;
+          _suggestions = sugs;
+          _loading     = false;
+        });
+      }
     } catch (_) {
       if (mounted) { setState(() => _loading = false); }
     }
