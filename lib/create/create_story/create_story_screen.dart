@@ -47,9 +47,9 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     try {
       final ext  = capturedFile.path.split('.').last.toLowerCase();
       MediaType mime;
-      if (_isVideo)          mime = MediaType('video', 'mp4');
-      else if (ext == 'png') mime = MediaType('image', 'png');
-      else                   mime = MediaType('image', 'jpeg');
+      if (_isVideo) { mime = MediaType('video', 'mp4'); }
+      else if (ext == 'png') { mime = MediaType('image', 'png'); }
+      else { mime = MediaType('image', 'jpeg'); }
 
       final req = http.MultipartRequest('POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
         ..headers['Authorization'] = 'Bearer $token'
