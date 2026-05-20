@@ -78,7 +78,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) { return; }
       setState(() { _checkingUsername = false; _usernameTaken = taken; _usernameError = taken ? 'Ин username аллакай банд аст' : null; });
     } catch (_) {
-      if (mounted) { setState(() { _checkingUsername = false; } });
+      if (mounted) { setState(() { _checkingUsername = false; }); }
     }
   }
 
