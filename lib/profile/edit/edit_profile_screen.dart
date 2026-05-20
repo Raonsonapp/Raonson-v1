@@ -212,15 +212,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _buildUsernameField() {
     Color border = Colors.white.withOpacity(0.08);
-    if (_usernameTaken || (_usernameError != null && !_isOriginal)) border = Colors.red.withOpacity(0.7);
-    else if (!_checkingUsername && !_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) { border = Colors.green.withOpacity(0.6); }
+    if (_usernameTaken || (_usernameError != null && !_isOriginal)) {
+      border = Colors.red.withOpacity(0.7);
+    } else if (!_checkingUsername && !_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) {
+      border = Colors.green.withOpacity(0.6);
+    }
 
     Widget? suffix;
-    if (_checkingUsername)
+    if (_checkingUsername) {
       suffix = const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16,
           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38)));
-    else if (_usernameTaken || (_usernameError != null && !_isOriginal))
+    }
+    else if (_usernameTaken || (_usernameError != null && !_isOriginal)) {
       suffix = const Icon(Icons.close_rounded, color: Colors.red, size: 20);
+    }
     else if (!_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) { suffix = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20); }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
