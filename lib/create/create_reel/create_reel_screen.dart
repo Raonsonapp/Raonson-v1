@@ -103,13 +103,14 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       if (mounted) Navigator.of(context).pop(true);
 
     } catch (e) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _busy     = false;
         _error    = e.toString().replaceAll('Exception: ', '');
         _status   = '';
         _progress = 0;
-      });
-    }
+        });
+      }
   }
 
   @override
