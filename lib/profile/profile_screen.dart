@@ -542,8 +542,10 @@ class _PostGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (posts.isEmpty) return const _EmptyState(
-        icon: Icons.grid_off_rounded, label: 'Ҳанӯз пост нест');
+    if (posts.isEmpty) {
+      return const _EmptyState(
+          icon: Icons.grid_off_rounded, label: 'Ҳанӯз пост нест');
+    }
 
     return GridView.builder(
       padding: EdgeInsets.zero,
@@ -588,8 +590,10 @@ class _ReelGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (reels.isEmpty) return const _EmptyState(
-        icon: Icons.videocam_off_rounded, label: 'Ҳанӯз рил нест');
+    if (reels.isEmpty) {
+      return const _EmptyState(
+          icon: Icons.videocam_off_rounded, label: 'Ҳанӯз рил нест');
+    }
 
     return GridView.builder(
       padding: EdgeInsets.zero,
@@ -659,8 +663,10 @@ class _TaggedGridState extends State<_TaggedGrid> {
   @override
   Widget build(BuildContext context) {
     final posts = widget.ctrl.taggedPosts;
-    if (posts.isEmpty) return const _EmptyState(
-        icon: Icons.person_pin_outlined, label: 'Ҳанӯз зикр нашудааст');
+    if (posts.isEmpty) {
+      return const _EmptyState(
+          icon: Icons.person_pin_outlined, label: 'Ҳанӯз зикр нашудааст');
+    }
 
     return GridView.builder(
       padding: EdgeInsets.zero,
