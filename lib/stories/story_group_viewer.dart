@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
@@ -118,6 +119,11 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   final _replyCtrl    = TextEditingController();
   bool _showReply     = false;
   bool _sendingReply  = false;
+
+  // ── Story viewers/likes list ───────────────────────────────
+  bool _showViewerSheet = false;
+  List<Map<String,dynamic>> _viewerList = [];
+  bool _loadingViewers = false;
 
   StoryModel get _current => widget.stories[_idx];
   bool get _isVideo  => _current.mediaType == 'video';
@@ -418,15 +424,22 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 90,
               left: 0, right: 0,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.keyboard_arrow_up, color: Colors.white70, size: 22),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.remove_red_eye_outlined, color: Colors.white70, size: 14),
-                  const SizedBox(width: 4),
-                  Text('${_current.viewsCount} кас дид',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                ]),
-              ])),
+              child: GestureDetector(
+                onTap: _showViewersSheet,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.keyboard_arrow_up, color: Colors.white70, size: 22),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.remove_red_eye_outlined, color: Colors.white70, size: 14),
+                    const SizedBox(width: 4),
+                    Text('${_current.viewsCount} кас дид',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.favorite, color: Colors.red, size: 14),
+                    const SizedBox(width: 4),
+                    Text('${_current.likesCount}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  ]),
+                ]))),
 
           // ── Bottom actions ─────────────────────────────────────
           Positioned(
@@ -439,10 +452,128 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     );
   }
 
+  Future<void> _loadViewers() async {
+    if (_loadingViewers) return;
+    setState(() => _loadingViewers = true);
+    try {
+      final resp = await ApiClient.instance.get('/stories/${_current.id}/viewers');
+      if (mounted) {
+        final list = (resp['viewers'] as List? ?? [])
+            .map((v) => v as Map<String, dynamic>).toList();
+        setState(() { _viewerList = list; _loadingViewers = false; });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _loadingViewers = false; });
+    }
+  }
+
+  void _showViewersSheet() {
+    _pause();
+    _loadViewers();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      onClosing: _resume,
+    ).whenComplete(_resume);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.95,
+          minChildSize: 0.35,
+          expand: false,
+          builder: (_, scrollCtrl) => Column(children: [
+            // Handle
+            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(children: [
+                Expanded(child: Row(children: [
+                  const Icon(Icons.remove_red_eye_outlined,
+                      color: Colors.white70, size: 18),
+                  const SizedBox(width: 8),
+                  Text('${_current.viewsCount} кас дид',
+                      style: const TextStyle(color: Colors.white,
+                          fontWeight: FontWeight.w600, fontSize: 16)),
+                ])),
+                Row(children: [
+                  const Icon(Icons.favorite, color: Colors.red, size: 18),
+                  const SizedBox(width: 6),
+                  Text('${_current.likesCount} лайк',
+                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                ]),
+              ])),
+            const Divider(color: Colors.white12),
+            // Viewer list
+            Expanded(child: _loadingViewers
+              ? const Center(child: CircularProgressIndicator(
+                  color: Colors.white30, strokeWidth: 2))
+              : _viewerList.isEmpty
+                ? const Center(child: Text('Ҳанӯз касе надидааст',
+                    style: TextStyle(color: Colors.white38)))
+                : ListView.builder(
+                    controller: scrollCtrl,
+                    itemCount: _viewerList.length,
+                    itemBuilder: (_, i) {
+                      final v = _viewerList[i];
+                      final hasLiked = v['liked'] == true;
+                      return ListTile(
+                        leading: CircleAvatar(
+                          radius: 22,
+                          backgroundColor: Colors.white12,
+                          backgroundImage: (v['avatar'] ?? '').isNotEmpty
+                              ? NetworkImage(v['avatar']) : null,
+                          child: (v['avatar'] ?? '').isEmpty
+                              ? Text((v['username'] ?? '?')[0].toUpperCase(),
+                                  style: const TextStyle(color: Colors.white))
+                              : null),
+                        title: Text(v['username'] ?? '',
+                            style: const TextStyle(color: Colors.white,
+                                fontWeight: FontWeight.w500)),
+                        subtitle: Text(v['fullName'] ?? '',
+                            style: const TextStyle(color: Colors.white38,
+                                fontSize: 12)),
+                        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (hasLiked)
+                            const Icon(Icons.favorite, color: Colors.red, size: 18),
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              // Send DM to viewer
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.white30),
+                                borderRadius: BorderRadius.circular(8)),
+                              child: const Text('Паём',
+                                  style: TextStyle(color: Colors.white,
+                                      fontSize: 12)))),
+                        ]),
+                      );
+                    })),
+          ])),
+      ),
+    ).whenComplete(_resume);
+  }
+
   Widget _buildActions() {
     if (_isOwner) {
       return Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _ActionBtn(icon: Icons.share_outlined, label: 'Мубодила', onTap: _shareStory),
+        _ActionBtn(svgPath: 'assets/icons/share.svg', label: 'Мубодила', onTap: _shareStory),
         _ActionBtn(icon: Icons.delete_outline, label: 'Нест кун',
             onTap: _deleteStory, color: Colors.redAccent),
         _ActionBtn(icon: Icons.more_horiz_rounded, label: 'Бештар', onTap: _showOwnerMenu),
@@ -561,11 +692,12 @@ class _ProgressBar extends StatelessWidget {
 
 // ── Action button for owner ──────────────────────────────────────────
 class _ActionBtn extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final String? svgPath;
   final String label;
   final VoidCallback onTap;
   final Color? color;
-  const _ActionBtn({required this.icon, required this.label,
+  const _ActionBtn({this.icon, this.svgPath, required this.label,
       required this.onTap, this.color});
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -573,8 +705,11 @@ class _ActionBtn extends StatelessWidget {
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Container(
         width: 48, height: 48,
-        decoration: BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
-        child: Icon(icon, color: color ?? Colors.white, size: 22)),
+        decoration: const BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
+        child: Center(child: svgPath != null
+          ? SvgPicture.asset(svgPath!, width: 22, height: 22,
+              colorFilter: ColorFilter.mode(color ?? Colors.white, BlendMode.srcIn))
+          : Icon(icon, color: color ?? Colors.white, size: 22))),
       const SizedBox(height: 4),
       Text(label, style: TextStyle(color: color ?? Colors.white70, fontSize: 10)),
     ]));
