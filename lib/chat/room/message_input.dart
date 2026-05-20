@@ -58,7 +58,7 @@ class _MessageInputState extends State<MessageInput>
     final has = _ctrl.text.trim().isNotEmpty;
     if (has != _hasText) {
       setState(() => _hasText = has);
-      if (has) _sendAnim.forward(); else _sendAnim.reverse();
+      if (has) { _sendAnim.forward(); } else { _sendAnim.reverse(); }
     }
     // Typing debounce — emit at most every 1s
     _typingDebounce?.cancel();
