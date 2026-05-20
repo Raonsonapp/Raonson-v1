@@ -32,8 +32,6 @@ class StoryGroupViewer extends StatefulWidget {
 class _StoryGroupViewerState extends State<StoryGroupViewer> {
   late PageController _pageCtrl;
   late int _groupIdx;
-  late // ignore: unused_field
- int _storyIdx;
 
   @override
   void initState() {
@@ -71,7 +69,7 @@ class _StoryGroupViewerState extends State<StoryGroupViewer> {
     return PageView.builder(
       controller: _pageCtrl,
       itemCount: widget.groups.length,
-      onPageChanged: (i) => setState(() { _groupIdx = i; _storyIdx = 0; }),
+      onPageChanged: (i) => setState(() { _groupIdx = i; }),
       itemBuilder: (_, i) {
         return KeyedSubtree(
           key: ValueKey('group_$i'),
