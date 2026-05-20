@@ -80,9 +80,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     try {
       final ext = capturedFile.path.split('.').last.toLowerCase();
       MediaType mime;
-      if (_isVideo)          mime = MediaType('video', 'mp4');
-      else if (ext == 'png') mime = MediaType('image', 'png');
-      else                   mime = MediaType('image', 'jpeg');
+      if (_isVideo) { mime = MediaType('video', 'mp4'); }
+      else if (ext == 'png') { mime = MediaType('image', 'png'); }
+      else { mime = MediaType('image', 'jpeg'); }
 
       final req = http.MultipartRequest('POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
         ..headers['Authorization'] = 'Bearer $token'
@@ -138,7 +138,7 @@ class _PostEditor extends StatefulWidget {
   @override State<_PostEditor> createState() => _PostEditorState();
 }
 
-enum _Tool { none, draw }
+enum _Tool { none, text, draw, sticker, music, mention, caption }
 
 class _PostEditorState extends State<_PostEditor> {
   final _canvasKey    = GlobalKey();
@@ -164,8 +164,8 @@ class _PostEditorState extends State<_PostEditor> {
   @override
   void initState() {
     super.initState();
-    if (widget.isVideo) _initVideo();
-    else _detectBgColor();
+    if (widget.isVideo) { _initVideo(); }
+    else { _detectBgColor(); }
   }
 
   Future<void> _detectBgColor() async {
@@ -238,11 +238,11 @@ class _PostEditorState extends State<_PostEditor> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
-              if (ctrl.text.trim().isNotEmpty) setState(() => _texts.add(_TextItem(
+              if (ctrl.text.trim().isNotEmpty) { setState(() => _texts.add(_TextItem(
                 text: ctrl.text.trim(),
                 position: Offset(MediaQuery.of(context).size.width / 2 - 60,
                   MediaQuery.of(context).size.height / 2 - 20),
-                color: _textColor, fontSize: _fontSize)));
+                color: _textColor, fontSize: _fontSize))); }
               Navigator.pop(context);
             },
             child: const Text('Илова', style: TextStyle(color: Colors.black))),
@@ -267,10 +267,10 @@ class _PostEditorState extends State<_PostEditor> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
               final u = ctrl.text.trim();
-              if (u.isNotEmpty && u != '@') setState(() => _mentions.add(_MentionItem(
+              if (u.isNotEmpty && u != '@') { setState(() => _mentions.add(_MentionItem(
                 username: u,
                 position: Offset(MediaQuery.of(context).size.width / 2 - 60,
-                  MediaQuery.of(context).size.height / 2))));
+                  MediaQuery.of(context).size.height / 2)))); }
               Navigator.pop(context);
             },
             child: const Text('Илова', style: TextStyle(color: Colors.black))),
