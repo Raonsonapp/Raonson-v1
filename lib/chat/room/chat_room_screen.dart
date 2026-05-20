@@ -38,7 +38,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   List<MessageModel> _messages = [];
   bool   _loading     = true;
   bool   _isPeerTyping = false;
-  String _chatId      = '';
+  final String _chatId      = '';
   String _myId        = '';
 
   // Reply state
@@ -257,7 +257,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
     } catch (_) {
       // Mark as failed
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         final idx = _messages.indexWhere((m) => m.id == optimistic.id);
         if (idx >= 0) {
           _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
