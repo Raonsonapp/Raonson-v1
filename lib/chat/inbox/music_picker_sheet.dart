@@ -1042,7 +1042,7 @@ class _DurationBadge extends StatelessWidget {
           ],
         ),
         child: Center(
-          child: Text('${_secs}с',
+          child: Text('$_secsс',
               style: const TextStyle(
                 color: Colors.white, fontSize: 13,
                 fontWeight: FontWeight.bold)),
