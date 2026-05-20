@@ -3,6 +3,7 @@
 // Groups = List<List<StoryModel>>, navigate between users with swipe
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -121,7 +122,6 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   bool _sendingReply  = false;
 
   // ── Story viewers/likes list ───────────────────────────────
-  bool _showViewerSheet = false;
   List<Map<String,dynamic>> _viewerList = [];
   bool _loadingViewers = false;
 
@@ -458,26 +458,20 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     try {
       final resp = await ApiClient.instance.get('/stories/${_current.id}/viewers');
       if (mounted) {
-        final list = (resp['viewers'] as List? ?? [])
+        if (resp.statusCode >= 400) { setState(() => _loadingViewers = false); return; }
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final list = (body['viewers'] as List? ?? [])
             .map((v) => v as Map<String, dynamic>).toList();
         setState(() { _viewerList = list; _loadingViewers = false; });
       }
     } catch (_) {
-      if (mounted) setState(() { _loadingViewers = false; });
+      if (mounted) { setState(() { _loadingViewers = false; }); }
     }
   }
 
   void _showViewersSheet() {
     _pause();
     _loadViewers();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1A1A1A),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      onClosing: _resume,
-    ).whenComplete(_resume);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -533,15 +527,15 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                           radius: 22,
                           backgroundColor: Colors.white12,
                           backgroundImage: (v['avatar'] ?? '').isNotEmpty
-                              ? NetworkImage(v['avatar']) : null,
+                              ? NetworkImage(v['avatar'] as String) : null,
                           child: (v['avatar'] ?? '').isEmpty
-                              ? Text((v['username'] ?? '?')[0].toUpperCase(),
+                              ? Text(((v['username'] ?? '?') as String)[0].toUpperCase(),
                                   style: const TextStyle(color: Colors.white))
                               : null),
-                        title: Text(v['username'] ?? '',
+                        title: Text(v['username'] as String? ?? '',
                             style: const TextStyle(color: Colors.white,
                                 fontWeight: FontWeight.w500)),
-                        subtitle: Text(v['fullName'] ?? '',
+                        subtitle: Text(v['fullName'] as String? ?? '',
                             style: const TextStyle(color: Colors.white38,
                                 fontSize: 12)),
                         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -549,10 +543,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                             const Icon(Icons.favorite, color: Colors.red, size: 18),
                           const SizedBox(width: 12),
                           GestureDetector(
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              // Send DM to viewer
-                            },
+                            onTap: () => Navigator.pop(ctx),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 6),
@@ -565,10 +556,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                         ]),
                       );
                     })),
-          ])),
-      ),
+          ]))),
     ).whenComplete(_resume);
   }
+
 
   Widget _buildActions() {
     if (_isOwner) {
