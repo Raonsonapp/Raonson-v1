@@ -105,12 +105,13 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-        _busy     = false;
-        _error    = e.toString().replaceAll('Exception: ', '');
-        _status   = '';
-        _progress = 0;
+          _busy     = false;
+          _error    = e.toString().replaceAll('Exception: ', '');
+          _status   = '';
+          _progress = 0;
         });
       }
+    }
   }
 
   @override
