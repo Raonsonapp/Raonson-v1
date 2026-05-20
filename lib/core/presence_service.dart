@@ -80,5 +80,5 @@ class PresenceService extends ChangeNotifier {
     }
   }
 
-  void checkUsers(List<String> ids) { for (final id in ids) checkUser(id); }
+  void checkUsers(List<String> ids) { for (final id in ids) { checkUser(id); } }
 }
