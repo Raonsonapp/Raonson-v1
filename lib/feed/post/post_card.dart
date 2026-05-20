@@ -30,7 +30,6 @@ class _PostCardState extends State<PostCard>
   late bool   _saved;
   late int    _likeCount;
   late int    _commentCount;
-  bool        _reposted     = false;
   int         _shareCount   = 0;
   bool        _likeLoading  = false;
   bool        _hidden       = false;
@@ -52,8 +51,11 @@ class _PostCardState extends State<PostCard>
   late AnimationController _heartCtrl;
   late Animation<double>   _heartScale;
   late Animation<double>   _heartOpacity;
+  late Animation<double>   _heartMoveX;
   bool   _showHeart   = false;
   Offset _heartOffset = Offset.zero;
+  Color  _heartColor  = Colors.white;
+  double _heartDx     = 0;
 
   bool get _isOwner {
     final myId   = UserSession.userId?.trim() ?? '';
@@ -62,6 +64,13 @@ class _PostCardState extends State<PostCard>
     return myId == postId;
   }
 
+  static const int _captionMaxLines = 3;
+
+
+  static const List<Color> _heartColors = [
+    Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
+    Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
+  ];
 
   @override
   void initState() {
@@ -87,6 +96,8 @@ class _PostCardState extends State<PostCard>
 
     _heartCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 800));
+    _heartMoveX = Tween(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _heartCtrl, curve: Curves.easeOut));
     _heartScale = TweenSequence([
       TweenSequenceItem(
         tween: Tween(begin: 0.0, end: 1.3)
@@ -121,7 +132,7 @@ class _PostCardState extends State<PostCard>
     final was = _liked;
     _countUp = !was; // боло агар лайк, поён агар unlике
     setState(() { _liked = !was; _likeCount += _liked ? 1 : -1; });
-    if (_liked) { _likeCtrl.forward(from: 0); }
+    if (_liked) _likeCtrl.forward(from: 0);
     _countCtrl.forward(from: 0);
     try {
       final res = await ApiClient.instance
@@ -373,8 +384,7 @@ class _PostCardState extends State<PostCard>
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
             left: 16, right: 16, top: 8),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(color: Colors.white24,
                 borderRadius: BorderRadius.circular(2))),
           const Text('Зикр кардан',
@@ -525,72 +535,112 @@ class _PostCardState extends State<PostCard>
       backgroundColor: const Color(0xFF1A1A1A),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
         const Padding(
-          padding: EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.only(bottom: 8),
           child: Text('Мубодила кунед', style: TextStyle(
               color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
-        // ── Чат ─────────────────────────────────────────────────
+
+        // ── Search bar (Instagram style) ───────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white12, borderRadius: BorderRadius.circular(10)),
+            child: const Row(children: [
+              SizedBox(width: 10),
+              Icon(Icons.search, color: Colors.white38, size: 18),
+              SizedBox(width: 6),
+              Text('Ҷустуҷӯ...', style: TextStyle(color: Colors.white38, fontSize: 14)),
+            ]))),
+
+        // ── Quick actions row ───────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+            // Add to Story
+            _ShareAction(
+              icon: Icons.add_circle_outline_rounded,
+              color: const Color(0xFF833AB4),
+              label: 'Сторис',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                Navigator.pushNamed(context, '/create-story',
+                    arguments: {'repostUrl': url});
+              }),
+            // Copy link
+            _ShareAction(
+              icon: Icons.link_rounded,
+              color: const Color(0xFF2A2A2A),
+              label: 'Линк',
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: url));
+                Navigator.pop(sheetCtx);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Линк нусха шуд ✓'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2)));
+              }),
+            // Download
+            _ShareAction(
+              icon: Icons.download_rounded,
+              color: const Color(0xFF2A2A2A),
+              label: 'Зеркашӣ',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Зеркашӣ оғоз шуд...'),
+                  duration: Duration(seconds: 2)));
+              }),
+            // Share to other apps
+            _ShareAction(
+              icon: Icons.ios_share_rounded,
+              color: const Color(0xFF2A2A2A),
+              label: 'Бештар',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                Share.share(url).then((_) {
+                  if (mounted) setState(() => _shareCount++);
+                });
+              }),
+            // Report
+            _ShareAction(
+              icon: Icons.flag_outlined,
+              color: const Color(0xFF2A2A2A),
+              label: 'Хабар',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Шикоят фиристода шуд'),
+                  duration: Duration(seconds: 2)));
+              }),
+          ])),
+
+        const Divider(color: Colors.white12, height: 1),
+
+        // ── Send to chat ────────────────────────────────────────
         ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF0095F6),
-            child: Icon(Icons.send_rounded, color: Colors.white, size: 20)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          leading: Container(
+            width: 44, height: 44,
+            decoration: const BoxDecoration(
+                color: Color(0xFF0095F6), shape: BoxShape.circle),
+            child: const Icon(Icons.send_rounded, color: Colors.white, size: 20)),
           title: const Text('Ба чат фиристодан',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
+              style: TextStyle(color: Colors.white, fontSize: 15,
+                  fontWeight: FontWeight.w500)),
           subtitle: const Text('Паёми мустақим',
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () {
-            Navigator.pop(context);
+            Navigator.pop(sheetCtx);
             Navigator.pushNamed(context, '/messages',
                 arguments: {'shareUrl': url, 'postId': widget.post.id});
           }),
-        // ── Ба Story ─────────────────────────────────────────────
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF833AB4),
-            child: Icon(Icons.add_circle_outline_rounded,
-                color: Colors.white, size: 20)),
-          title: const Text('Ба сторис илова кун',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
-          onTap: () {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ба сторис илова шуд ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2)));
-          }),
-        // ── Линк ──────────────────────────────────────────────────
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF2A2A2A),
-            child: Icon(Icons.link_rounded, color: Colors.white, size: 20)),
-          title: const Text('Линкро нусха кун',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
-          onTap: () {
-            Clipboard.setData(ClipboardData(text: url));
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Линк нусха шуд ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2)));
-          }),
-        // ── Дигар барномаҳо ────────────────────────────────────────
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF2A2A2A),
-            child: Icon(Icons.ios_share_rounded, color: Colors.white, size: 20)),
-          title: const Text('Дигар барномаҳо',
-              style: TextStyle(color: Colors.white, fontSize: 15)),
-          onTap: () {
-            Navigator.pop(context);
-            // ✅ Танҳо вақте корбар реально мубодила кунад шумориш
-            Share.share(url).then((_) {
-              if (mounted) setState(() => _shareCount++);
-            });
-          }),
-        const SizedBox(height: 8),
+
+        const SizedBox(height: 12),
       ])),
     );
   }
@@ -757,14 +807,18 @@ class _PostCardState extends State<PostCard>
           GestureDetector(
             onDoubleTapDown: (d) => _heartOffset = d.localPosition,
             onDoubleTap: () {
+              final rng = Random();
+              setState(() {
+                _heartColor = _heartColors[rng.nextInt(_heartColors.length)];
+                _heartDx = (rng.nextDouble() - 0.5) * 80;
+              });
               if (!_liked) {
                 setState(() { _liked = true; _likeCount++; _countUp = true; });
                 _likeCtrl.forward(from: 0);
                 _countCtrl.forward(from: 0);
                 ApiClient.instance.post('/posts/${post.id}/like')
-                    .then((_) {}).catchError((e) {
+                    .catchError((_) {
                   if (mounted) setState(() { _liked = false; _likeCount--; });
-                  return e;
                 });
               }
               setState(() => _showHeart = true);
@@ -773,16 +827,19 @@ class _PostCardState extends State<PostCard>
             child: _MediaCarousel(media: post.media, isActive: widget.isActive),
           ),
           if (_showHeart)
-            Positioned(
-              left: _heartOffset.dx - 50, top: _heartOffset.dy - 50,
-              child: IgnorePointer(
-                child: AnimatedBuilder(animation: _heartCtrl,
-                  builder: (_, __) => Opacity(
+            AnimatedBuilder(animation: _heartCtrl,
+              builder: (_, __) => Positioned(
+                left: _heartOffset.dx - 50 + (_heartDx * _heartMoveX.value),
+                top: _heartOffset.dy - 50,
+                child: IgnorePointer(
+                  child: Opacity(
                     opacity: _heartOpacity.value,
                     child: Transform.scale(scale: _heartScale.value,
-                      child: const Icon(Icons.favorite, color: Colors.white,
-                        size: 100,
-                        shadows: [Shadow(color: Colors.black45, blurRadius: 24)])))))),
+                      child: Icon(Icons.favorite, color: _heartColor, size: 100,
+                        shadows: [
+                          Shadow(color: _heartColor.withOpacity(0.5), blurRadius: 20),
+                          const Shadow(color: Colors.black45, blurRadius: 8),
+                        ])))))),
         ]),
 
       // ── ACTIONS ───────────────────────────────────────────────
@@ -981,6 +1038,12 @@ class _WhoLikedSheet extends StatefulWidget {
 class _WhoLikedSheetState extends State<_WhoLikedSheet> {
   List<dynamic> _users = [];
   bool _loading = true;
+
+
+  static const List<Color> _heartColors = [
+    Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
+    Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
+  ];
 
   @override
   void initState() {
@@ -1347,9 +1410,9 @@ class _VideoItemState extends State<_VideoItem> {
             // Mute badge
             Positioned(bottom: 8, right: 8,
               child: Container(
+                padding: const EdgeInsets.all(5),
                 decoration: const BoxDecoration(
                     color: Colors.black54, shape: BoxShape.circle),
-                padding: const EdgeInsets.all(5),
                 child: const Icon(Icons.volume_off_rounded,
                     color: Colors.white, size: 14))),
           ])))),
