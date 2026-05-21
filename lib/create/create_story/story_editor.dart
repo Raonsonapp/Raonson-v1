@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:http/http.dart' as http;
@@ -59,7 +61,7 @@ class StoryEditor extends StatefulWidget {
   State<StoryEditor> createState() => _StoryEditorState();
 }
 
-enum _Tool { none, draw }
+enum _Tool { none, text, draw, sticker, music, mention }
 
 class _StoryEditorState extends State<StoryEditor> {
   final _canvasKey = GlobalKey();
@@ -283,6 +285,7 @@ class _StoryEditorState extends State<StoryEditor> {
   // ── BUILD ────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -416,18 +419,59 @@ class _StoryEditorState extends State<StoryEditor> {
                 ])),
             ]))),
 
-          // ── BOTTOM TOOLBAR ──────────────────────
+          // ── RIGHT SIDEBAR TOOLBAR (Instagram style) ────────
+          Positioned(top: 80, right: 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _SideBtn(svgPath: 'assets/icons/upload.svg', label: 'Текст',
+                  isText: true,
+                  onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
+                const SizedBox(height: 2),
+                _SideBtn(svgPath: 'assets/icons/sticker.svg', label: 'Стикерҳо',
+                  onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
+                const SizedBox(height: 2),
+                _SideBtn(svgPath: 'assets/icons/music.svg', label: 'Мусиқӣ',
+                  onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
+                const SizedBox(height: 2),
+                _SideBtn(svgPath: 'assets/icons/draw.svg', label: 'Рисунок',
+                  isActive: _tool == _Tool.draw,
+                  onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
+                const SizedBox(height: 2),
+                _SideBtn(svgPath: 'assets/icons/mention.svg', label: 'Зикр',
+                  onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
+                const SizedBox(height: 2),
+                _SideBtn(icon: Icons.download_rounded, label: 'Захира',
+                  onTap: () {}),
+                const SizedBox(height: 2),
+                _SideBtn(icon: Icons.more_horiz_rounded, label: 'Боз',
+                  onTap: () {}),
+                const SizedBox(height: 2),
+                _SideBtn(icon: Icons.expand_less_rounded, label: '',
+                  small: true,
+                  onTap: () {}),
+              ])),
+
+          // ── BOTTOM: audience + caption + next ────────────────
           Positioned(bottom: 0, left: 0, right: 0,
-            child: SafeArea(child: Container(
-              color: Colors.black45,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                _ToolBtn(icon: Icons.text_fields,  label: 'Текст',   onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
-                _ToolBtn(icon: Icons.brush,         label: 'Расм',    onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw), isActive: _tool == _Tool.draw),
-                _ToolBtn(icon: Icons.emoji_emotions_outlined, label: 'Стикер', onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
-                _ToolBtn(icon: Icons.music_note,    label: 'Мусиқӣ', onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
-                _ToolBtn(icon: Icons.alternate_email, label: 'Зикр', onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
-              ])))),
+            child: SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              // Caption field (placeholder)
+              if (_tool != _Tool.draw)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white24)),
+                    child: const Row(children: [
+                      Icon(Icons.text_fields, color: Colors.white38, size: 16),
+                      SizedBox(width: 8),
+                      Text('Зернавис илова кунед...',
+                          style: TextStyle(color: Colors.white38, fontSize: 13)),
+                    ]))),
+            ]))),
 
           // ── Upload overlay ──────────────────────
           if (widget.isUploading)
