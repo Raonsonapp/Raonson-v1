@@ -80,13 +80,16 @@ func main() {
 	// ── USERS ────────────────────────────────────────────────────
 	u := r.Group("/users", auth, rl100)
 	{
-		u.GET("/:id",           handlers.GetUserByID)
-		u.PUT("/",              handlers.UpdateUser)
-		u.DELETE("/",           handlers.DeleteUser)
-		u.GET("/:id/posts",     handlers.GetUserPosts)
-		u.GET("/:id/reels",     handlers.GetUserReels)
-		u.GET("/:id/followers", handlers.GetFollowers)
-		u.GET("/:id/following", handlers.GetFollowing)
+		u.GET("/by-username/:username", handlers.GetUserByUsername)  // @mention клик
+		u.POST("/find-by-contacts",     handlers.FindUsersByContacts) // Контактҳо
+		u.GET("/suggestions",           handlers.GetSuggestions)     // Пешниҳодҳо
+		u.GET("/:id",                   handlers.GetUserByID)
+		u.PUT("/",                       handlers.UpdateUser)
+		u.DELETE("/",                    handlers.DeleteUser)
+		u.GET("/:id/posts",             handlers.GetUserPosts)
+		u.GET("/:id/reels",             handlers.GetUserReels)
+		u.GET("/:id/followers",         handlers.GetFollowers)
+		u.GET("/:id/following",         handlers.GetFollowing)
 	}
 
 	// ── PROFILE ──────────────────────────────────────────────────
@@ -140,6 +143,7 @@ func main() {
 	// ── FOLLOW ───────────────────────────────────────────────────
 	fo := r.Group("/follow", auth, rl100)
 	{
+		fo.GET("/requests",              handlers.GetFollowRequests) // Дархостҳо
 		fo.POST("/:id",                  handlers.FollowUser)
 		fo.DELETE("/:id",                handlers.UnfollowUser)
 		fo.GET("/:id/followers",         handlers.GetFollowers)
@@ -188,11 +192,12 @@ func main() {
 	// ── NOTIFICATIONS ─────────────────────────────────────────────
 	no := r.Group("/notifications", auth, rl100)
 	{
-		no.GET("/",            handlers.GetNotifications)
-		no.POST("/push-token", handlers.SavePushToken)
-		no.POST("/read-all",   handlers.MarkAllNotifsRead)
-		no.POST("/:id/read",   handlers.MarkNotifRead)
-		no.DELETE("/:id",      handlers.DeleteNotification)
+		no.GET("/",             handlers.GetNotifications)
+		no.GET("/unread-count", handlers.GetUnreadNotifCount) // ✅ аввал
+		no.POST("/push-token",  handlers.SavePushToken)
+		no.POST("/read-all",    handlers.MarkAllNotifsRead)
+		no.POST("/:id/read",    handlers.MarkNotifRead)
+		no.DELETE("/:id",       handlers.DeleteNotification)
 	}
 
 	// ── SEARCH ────────────────────────────────────────────────────
