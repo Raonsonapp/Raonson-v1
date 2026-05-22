@@ -17,13 +17,12 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Танзими ном ва email барои Git
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Action"
           
-          # Тоза кардани пайвастҳои кӯҳна ва илова кардани линки нав бо Токен
+          # Пайвастшавӣ бе ниёз ба навиштани логини дастӣ
           git remote rm hf || true
-          git remote add hf https://mahmadmurodov:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
+          git remote add hf https://x:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
           
-          # Маҷбуран партофтани бянчи main
+          # Маҷбуран партофтани код
           git push hf main --force
