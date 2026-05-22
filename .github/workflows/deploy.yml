@@ -19,6 +19,4 @@ jobs:
         run: |
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Action"
-          
-          # Боркунии мустақим тавассути Токени бехатар
           git push --force https://Mahmadmurodov:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson main:main
