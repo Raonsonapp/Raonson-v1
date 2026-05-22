@@ -113,7 +113,8 @@ class _FriendsScreenState extends State<FriendsScreen>
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         final List list = body is List ? body : (body['users'] ?? []);
-        final items = list.map((e) => _UserItem.fromJson(e as Map<String, dynamic>)).toList();
+        final items = list.map((e) =>
+            _UserItem.fromJson(e as Map<String, dynamic>)).toList();
         if (mounted) setState(() { _contactUsers = items; });
       }
     } catch (_) {}
@@ -218,7 +219,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                           ),
                         ),
                       ),
-              // ── Контактҳо ────────────────────────────────────
+              // ── Контактҳо ────────────────────────────────
               _ContactsTab(
                 users: _contactUsers,
                 loading: _loadingContacts,
@@ -421,4 +422,54 @@ class _UserItem {
     mutualFriends: mutualFriends,
     isFollowing: isFollowing ?? this.isFollowing,
   );
+}
+
+// ── Contacts tab widget (top-level) ──────────────────────────
+class _ContactsTab extends StatelessWidget {
+  final List<_UserItem> users;
+  final bool loading;
+  final VoidCallback onLoad;
+  final void Function(String) onFollow;
+  const _ContactsTab({required this.users, required this.loading,
+      required this.onLoad, required this.onFollow});
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator(
+          color: AppColors.neonBlue, strokeWidth: 2));
+    }
+    if (users.isEmpty) {
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.contacts_outlined, color: Colors.white24, size: 64),
+        const SizedBox(height: 16),
+        const Text('Дӯстони шумо аз контактҳо',
+            style: TextStyle(color: Colors.white, fontSize: 16,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        const Text('Мо контактҳои шуморо меёбем',
+            style: TextStyle(color: Colors.white38, fontSize: 13)),
+        const SizedBox(height: 24),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.neonBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12))),
+          onPressed: onLoad,
+          icon: const Icon(Icons.contacts_rounded, size: 18),
+          label: const Text('Ёфтани дӯстон аз контактҳо')),
+      ]));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: users.length,
+      itemBuilder: (_, i) => _SuggestionCard(
+        user: users[i],
+        onFollow: () => onFollow(users[i].id),
+        onRemove: () {},
+      ),
+    );
+  }
 }
