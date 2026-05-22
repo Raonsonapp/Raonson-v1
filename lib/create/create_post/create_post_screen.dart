@@ -69,18 +69,33 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+          decoration: BoxDecoration(color: Colors.white24,
+              borderRadius: BorderRadius.circular(2))),
+        const Padding(padding: EdgeInsets.only(bottom: 12),
+          child: Text('Чӣ илова мекунед?',
+              style: TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.w700, fontSize: 16))),
         ListTile(
-          leading: const CircleAvatar(backgroundColor: Color(0xFF0095F6),
-              child: Icon(Icons.image_outlined, color: Colors.white)),
-          title: const Text('Расм', style: TextStyle(color: Colors.white, fontSize: 16)),
+          leading: Container(width: 44, height: 44,
+            decoration: const BoxDecoration(
+                color: Color(0xFF0095F6), shape: BoxShape.circle),
+            child: const Icon(Icons.image_outlined, color: Colors.white, size: 22)),
+          title: const Text('Расм', style: TextStyle(color: Colors.white, fontSize: 16,
+              fontWeight: FontWeight.w500)),
+          subtitle: const Text('Аз галерея',
+              style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () => Navigator.pop(_, 'image')),
         ListTile(
-          leading: const CircleAvatar(backgroundColor: Color(0xFF833AB4),
-              child: Icon(Icons.videocam_outlined, color: Colors.white)),
-          title: const Text('Видео', style: TextStyle(color: Colors.white, fontSize: 16)),
+          leading: Container(width: 44, height: 44,
+            decoration: const BoxDecoration(
+                color: Color(0xFF833AB4), shape: BoxShape.circle),
+            child: const Icon(Icons.videocam_outlined, color: Colors.white, size: 22)),
+          title: const Text('Видео', style: TextStyle(color: Colors.white, fontSize: 16,
+              fontWeight: FontWeight.w500)),
+          subtitle: const Text('Аз галерея',
+              style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () => Navigator.pop(_, 'video')),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
       ])));
     if (!mounted) return;
     if (choice == null) { Navigator.pop(context); return; }
