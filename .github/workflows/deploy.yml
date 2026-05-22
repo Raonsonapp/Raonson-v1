@@ -18,4 +18,4 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git remote set-url origin https://x:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
-          git push --force origin main
+          git push --force origin main:main
