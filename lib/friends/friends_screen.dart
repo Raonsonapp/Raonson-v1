@@ -461,8 +461,7 @@ class _ContactsTab extends StatelessWidget {
             style: TextStyle(color: Colors.white,
                 fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        const Text('Мо ба контактҳои шумо назар меандозем
-ва дӯстони шуморо меёбем',
+        const Text('Мо ба контактҳои шумо назар меандозем\nва дӯстони шуморо меёбем',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white38, fontSize: 13)),
         const SizedBox(height: 24),
