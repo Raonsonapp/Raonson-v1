@@ -31,7 +31,6 @@ class _PostCardState extends State<PostCard>
   late bool   _saved;
   late int    _likeCount;
   late int    _commentCount;
-  int         _retweetCount = 0;
   bool        _reposted     = false;
   int         _shareCount   = 0;
   bool        _likeLoading  = false;
@@ -49,7 +48,6 @@ class _PostCardState extends State<PostCard>
 
   // ── Repost rotate ────────────────────────────────────────────
   late AnimationController _repostCtrl;
-  late Animation<double>   _repostRotate;
 
   // ── Double-tap heart overlay ─────────────────────────────────
   late AnimationController _heartCtrl;
@@ -68,12 +66,13 @@ class _PostCardState extends State<PostCard>
     return myId == postId;
   }
 
+  static const int _captionMaxLines = 3;
+
 
   static const List<Color> _heartColors = [
     Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
     Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
   ];
-
   @override
   void initState() {
     super.initState();
@@ -95,8 +94,6 @@ class _PostCardState extends State<PostCard>
 
     _repostCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 400));
-    _repostRotate = Tween(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _repostCtrl, curve: Curves.easeInOut));
 
     _heartCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 800));
@@ -166,16 +163,6 @@ class _PostCardState extends State<PostCard>
     } catch (_) { if (mounted) setState(() => _saved = was); }
   }
 
-  Future<void> _toggleRepost() async {
-    if (_reposted) return;
-    _repostCtrl.forward(from: 0);
-    setState(() { _reposted = true; _retweetCount++; });
-    try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/repost');
-    } catch (_) {
-      if (mounted) setState(() { _reposted = false; _retweetCount--; });
-    }
-  }
 
   // ── WHO LIKED ────────────────────────────────────────────────
   Future<void> _showWhoLiked() async {
@@ -488,13 +475,6 @@ class _PostCardState extends State<PostCard>
     )));
   }
 
-  Widget _statRow(String label, String val) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-      Text(val, style: const TextStyle(color: Colors.white,
-          fontWeight: FontWeight.bold, fontSize: 15)),
-    ]));
 
   Future<void> _reportPost() async {
     final reasons = [
@@ -1011,7 +991,6 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
     Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
     Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
   ];
-
   @override
   void initState() {
     super.initState();
