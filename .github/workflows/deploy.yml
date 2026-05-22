@@ -19,4 +19,15 @@ jobs:
         run: |
           git config --global user.email "bot@github.com"
           git config --global user.name "GitHub Action"
+          
+          # Танзими Git LFS барои суратҳо ва шрифтҳо
+          git lfs install
+          git lfs track "*.png"
+          git lfs track "*.ttf"
+          git add .gitattributes
+          
+          # Агар ягон тағйирот бошад, сабт мекунад
+          git commit -m "Configure LFS for binaries" || true
+          
+          # Боркунии ниҳоӣ
           git push --force https://Mahmadmurodov:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson main:main
