@@ -1,4 +1,4 @@
-name: Sync to Hugging Face Spaces
+name: Sync Backend to Hugging Face
 
 on:
   push:
@@ -10,18 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # 1. Танзими Java ва Flutter барои Сборка
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      # 2. Тайёр кардани файлҳои Веб
-      - name: Build Flutter Web
-        run: |
-          flutter pub get
-          flutter build web --release
-
-      # 3. Танзими Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -30,8 +18,7 @@ jobs:
       - name: Install Hugging Face Hub
         run: pip install huggingface_hub
 
-      # 4. Фристодани ТАНҲО папкаи тайёри Веб ба Hugging Face
-      - name: Upload to Hugging Face via API
+      - name: Upload Backend to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
@@ -39,8 +26,8 @@ jobs:
           from huggingface_hub import HfApi
           api = HfApi()
           api.upload_folder(
-              folder_path='build/web',
-              repo_id='Mahmadmurodov/raonson-web',
+              folder_path='backend',
+              repo_id='Mahmadmurodov/raonson',
               repo_type='space',
               token='${{ secrets.HF_TOKEN }}'
           )
