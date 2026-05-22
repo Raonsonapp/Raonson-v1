@@ -13,12 +13,12 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Install Hugging Face CLI
+        run: pip install huggingface_hub
+
       - name: Push to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git config --global user.email "bot@github.com"
-          git config --global user.name "GitHub Action"
-          
-          # Боркунии мустақим бо Токен бе ниёз ба сохтани remote-ҳои кӯҳна
-          git push --force https://Mahmadmurodov:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson main
+          # Боркунии мустақим тавассути воситаи расмии Hugging Face
+          huggingface-cli upload Mahmadmurodov/raonson . . --repo-type=space --token=$HF_TOKEN
