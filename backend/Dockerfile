@@ -2,7 +2,8 @@
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-COPY go.mod go.sum ./
+# Ислоҳ: Агар go.sum набошад ҳам, Docker хатогӣ намекунад
+COPY go.mod go.su[m] ./
 RUN go mod download
 
 COPY . .
