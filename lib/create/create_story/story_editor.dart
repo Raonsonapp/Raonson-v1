@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -61,7 +60,7 @@ class StoryEditor extends StatefulWidget {
   State<StoryEditor> createState() => _StoryEditorState();
 }
 
-enum _Tool { none, text, draw, sticker, music, mention }
+enum _Tool { none, draw }
 
 class _StoryEditorState extends State<StoryEditor> {
   final _canvasKey = GlobalKey();
@@ -285,7 +284,6 @@ class _StoryEditorState extends State<StoryEditor> {
   // ── BUILD ────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -421,57 +419,49 @@ class _StoryEditorState extends State<StoryEditor> {
 
           // ── RIGHT SIDEBAR TOOLBAR (Instagram style) ────────
           Positioned(top: 80, right: 12,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _SideBtn(svgPath: 'assets/icons/upload.svg', label: 'Текст',
-                  isText: true,
-                  onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
-                const SizedBox(height: 2),
-                _SideBtn(svgPath: 'assets/icons/sticker.svg', label: 'Стикерҳо',
-                  onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
-                const SizedBox(height: 2),
-                _SideBtn(svgPath: 'assets/icons/music.svg', label: 'Мусиқӣ',
-                  onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
-                const SizedBox(height: 2),
-                _SideBtn(svgPath: 'assets/icons/draw.svg', label: 'Рисунок',
-                  isActive: _tool == _Tool.draw,
-                  onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
-                const SizedBox(height: 2),
-                _SideBtn(svgPath: 'assets/icons/mention.svg', label: 'Зикр',
-                  onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
-                const SizedBox(height: 2),
-                _SideBtn(icon: Icons.download_rounded, label: 'Захира',
-                  onTap: () {}),
-                const SizedBox(height: 2),
-                _SideBtn(icon: Icons.more_horiz_rounded, label: 'Боз',
-                  onTap: () {}),
-                const SizedBox(height: 2),
-                _SideBtn(icon: Icons.expand_less_rounded, label: '',
-                  small: true,
-                  onTap: () {}),
-              ])),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              _SideBtn(isText: true, label: 'Текст',
+                onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
+              const SizedBox(height: 2),
+              _SideBtn(svgPath: 'assets/icons/sticker.svg', label: 'Стикерҳо',
+                onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
+              const SizedBox(height: 2),
+              _SideBtn(svgPath: 'assets/icons/music.svg', label: 'Мусиқӣ',
+                onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
+              const SizedBox(height: 2),
+              _SideBtn(svgPath: 'assets/icons/draw.svg', label: 'Рисунок',
+                isActive: _tool == _Tool.draw,
+                onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
+              const SizedBox(height: 2),
+              _SideBtn(svgPath: 'assets/icons/mention.svg', label: 'Зикр',
+                onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
+              const SizedBox(height: 2),
+              _SideBtn(icon: Icons.download_rounded, label: 'Захира',
+                onTap: () {}),
+              const SizedBox(height: 2),
+              _SideBtn(icon: Icons.more_horiz_rounded, label: 'Боз',
+                onTap: () {}),
+              const SizedBox(height: 2),
+              _SideBtn(icon: Icons.expand_less_rounded, label: '',
+                small: true, onTap: () {}),
+            ])),
 
-          // ── BOTTOM: audience + caption + next ────────────────
+          // ── BOTTOM: caption placeholder ──────────────────────
           Positioned(bottom: 0, left: 0, right: 0,
-            child: SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Caption field (placeholder)
-              if (_tool != _Tool.draw)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white24)),
-                    child: const Row(children: [
-                      Icon(Icons.text_fields, color: Colors.white38, size: 16),
-                      SizedBox(width: 8),
-                      Text('Зернавис илова кунед...',
-                          style: TextStyle(color: Colors.white38, fontSize: 13)),
-                    ]))),
-            ]))),
+            child: SafeArea(child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 80, 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white24)),
+                child: const Row(children: [
+                  Icon(Icons.text_fields, color: Colors.white38, size: 16),
+                  SizedBox(width: 8),
+                  Text('Зернавис илова кунед...',
+                      style: TextStyle(color: Colors.white38, fontSize: 13)),
+                ]))))),
 
           // ── Upload overlay ──────────────────────
           if (widget.isUploading)
@@ -504,26 +494,6 @@ class _StoryEditorState extends State<StoryEditor> {
 // ─────────────────────────────────────────────
 // TOOL BUTTON
 // ─────────────────────────────────────────────
-class _ToolBtn extends StatelessWidget {
-  final IconData icon; final String label;
-  final VoidCallback onTap; final bool isActive;
-  const _ToolBtn({required this.icon, required this.label,
-    required this.onTap, this.isActive = false});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isActive ? Colors.white24 : Colors.transparent,
-        borderRadius: BorderRadius.circular(20)),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: Colors.white, size: 24),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 10)),
-      ])));
-}
 
 // ─────────────────────────────────────────────
 // DRAW PAINTER
@@ -637,5 +607,53 @@ class _MusicPanelState extends State<_MusicPanel> {
               onTap: () => _togglePlay(t.previewUrl));
           })),
       ]));
+  }
+}
+
+// ── Instagram-style sidebar button ────────────────────────────────
+class _SideBtn extends StatelessWidget {
+  final String? svgPath;
+  final IconData? icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isActive;
+  final bool isText;
+  final bool small;
+  const _SideBtn({
+    this.svgPath, this.icon, required this.label,
+    required this.onTap, this.isActive = false,
+    this.isText = false, this.small = false,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final size = small ? 32.0 : 44.0;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: size, height: size,
+          decoration: BoxDecoration(
+            color: isActive
+                ? Colors.white.withOpacity(0.3)
+                : Colors.black.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(size / 2),
+            border: Border.all(color: Colors.white.withOpacity(0.25), width: 1)),
+          child: Center(child: isText
+            ? const Text('Aa',
+                style: TextStyle(color: Colors.white,
+                    fontWeight: FontWeight.bold, fontSize: 16))
+            : svgPath != null
+              ? SvgPicture.asset(svgPath!, width: 22, height: 22,
+                  colorFilter: const ColorFilter.mode(
+                      Colors.white, BlendMode.srcIn))
+              : Icon(icon, color: Colors.white, size: 22))),
+        if (label.isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Text(label,
+              style: const TextStyle(color: Colors.white70, fontSize: 10,
+                  shadows: [Shadow(color: Colors.black45, blurRadius: 4)])),
+        ],
+      ]),
+    );
   }
 }
