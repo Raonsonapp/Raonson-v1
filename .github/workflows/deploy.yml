@@ -1,33 +1,47 @@
-name: Sync to Hugging Face Spaces
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          lfs: true
-
-      - name: Push to Hugging Face
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git config --global user.email "bot@github.com"
-          git config --global user.name "GitHub Action"
-          
-          # Танзими Git LFS барои суратҳо ва шрифтҳо
-          git lfs install
-          git lfs track "*.png"
-          git lfs track "*.ttf"
-          git add .gitattributes
-          
-          # Агар ягон тағйирот бошад, сабт мекунад
-          git commit -m "Configure LFS for binaries" || true
-          
-          # Боркунии ниҳоӣ
-          git push --force https://Mahmadmurodov:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson main:main
+Skip to content
+Raonson-v1
+Repository navigation
+Code
+Issues
+Actions
+Sync to Hugging Face Spaces
+Update deploy.yml #22
+Annotations
+1 error and 1 warning
+deploy
+failed now in 6s
+1s
+2s
+2s
+Run git config --global user.email "bot@github.com"
+Updated Git hooks.
+Git LFS initialized.
+Tracking "*.png"
+Tracking "*.ttf"
+[main fe30914d] Configure LFS for binaries
+ 1 file changed, 2 insertions(+)
+ create mode 100644 .gitattributes
+remote: -------------------------------------------------------------------------        
+remote: Your push was rejected because it contains binary files.        
+remote: Please use https://huggingface.co/docs/hub/xet to store binary files.        
+remote: See also: https://huggingface.co/docs/hub/xet/using-xet-storage#git        
+remote:         
+remote: Offending files:        
+remote:   - android/app/src/main/res/mipmap-hdpi/ic_launcher.png (ref: refs/heads/main)        
+remote:   - assets/fonts/Billabong.ttf (ref: refs/heads/main)        
+remote:   - macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png (ref: refs/heads/main)        
+remote:   - assets/icon.png (ref: refs/heads/main)        
+remote:   - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png (ref: refs/heads/main)        
+remote:   - assets/icon/logo.png (ref: refs/heads/main)        
+remote:   - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png (ref: refs/heads/main)        
+remote:   - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png (ref: refs/heads/main)        
+remote:   - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png (ref: refs/heads/main)        
+remote:   - android/app/src/main/res/mipmap-hdpi/ic_launcher.png (ref: refs/heads/main)        
+remote:   - assets/logo.png (ref: refs/heads/main)        
+remote: -------------------------------------------------------------------------        
+To https://huggingface.co/spaces/Mahmadmurodov/raonson
+ ! [remote rejected]   main -> main (pre-receive hook declined)
+error: failed to push some refs to 'https://huggingface.co/spaces/Mahmadmurodov/raonson'
+Error: Process completed with exit code 1.
+0s
+0s
