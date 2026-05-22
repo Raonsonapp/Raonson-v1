@@ -3,6 +3,6 @@ title: Raonson
 emoji: 🚀
 colorFrom: blue
 colorTo: green
-sdk: static
+sdk: docker
 pinned: false
 ---
