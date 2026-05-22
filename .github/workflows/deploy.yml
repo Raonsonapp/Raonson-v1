@@ -17,8 +17,13 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Илова кардани линки Hugging Face ҳамчун репозиторияи алоҳида бо номи 'hf'
-          git remote add hf https://x:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
+          # Танзими ном ва email барои Git
+          git config --global user.email "bot@github.com"
+          git config --global user.name "GitHub Action"
           
-          # Маҷбуран партофтани бранчи main ба Hugging Face
-          git push --force hf main
+          # Тоза кардани пайвастҳои кӯҳна ва илова кардани линки нав бо Токен
+          git remote rm hf || true
+          git remote add hf https://mahmadmurodov:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
+          
+          # Маҷбуран партофтани бянчи main
+          git push hf main --force
