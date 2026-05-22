@@ -14,15 +14,10 @@ jobs:
           lfs: true
 
       - name: Push to Hugging Face
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git config --global user.email "bot@github.com"
-          git config --global user.name "GitHub Action"
-          
-          # Пайвастшавӣ бе ниёз ба навиштани логини дастӣ
-          git remote rm hf || true
-          git remote add hf https://x:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
-          
-          # Маҷбуран партофтани код
-          git push hf main --force
+        uses: CustomSparks/hf-spaces-sync@v1.0.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          hf_token: ${{ secrets.HF_TOKEN }}
+          hf_username: Mahmadmurodov
+          hf_space_name: raonson
+          hf_space_type: space
