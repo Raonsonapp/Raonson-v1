@@ -17,5 +17,8 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git remote set-url origin https://x:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
-          git push --force origin main:main
+          # Илова кардани линки Hugging Face ҳамчун репозиторияи алоҳида бо номи 'hf'
+          git remote add hf https://x:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
+          
+          # Маҷбуран партофтани бранчи main ба Hugging Face
+          git push --force hf main
