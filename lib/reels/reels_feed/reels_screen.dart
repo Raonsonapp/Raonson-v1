@@ -932,7 +932,7 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _share() {
     final url =
-        'https://raonson-v1.onrender.com/reels/${widget.reel.id}';
+        'https://mahmadmurodov-raonson.hf.space/reels/${widget.reel.id}';
     _ctrl?.pause();
     showModalBottomSheet(
       context: context,
