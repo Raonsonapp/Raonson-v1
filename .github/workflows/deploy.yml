@@ -13,12 +13,9 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Install Hugging Face CLI
-        run: pip install huggingface_hub
-
       - name: Push to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Боркунии мустақим тавассути воситаи расмии Hugging Face
-          huggingface-cli upload Mahmadmurodov/raonson . . --repo-type=space --token=$HF_TOKEN
+          # Боркунии мустақим тавассути утилитаи нави 'hf'
+          hf upload Mahmadmurodov/raonson . . --repo-type=space --token=$HF_TOKEN
