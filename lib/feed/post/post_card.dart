@@ -31,7 +31,6 @@ class _PostCardState extends State<PostCard>
   late bool   _saved;
   late int    _likeCount;
   late int    _commentCount;
-  bool        _reposted     = false;
   int         _shareCount   = 0;
   bool        _likeLoading  = false;
   bool        _hidden       = false;
@@ -66,13 +65,12 @@ class _PostCardState extends State<PostCard>
     return myId == postId;
   }
 
-  static const int _captionMaxLines = 3;
-
 
   static const List<Color> _heartColors = [
     Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
     Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
   ];
+
   @override
   void initState() {
     super.initState();
@@ -375,8 +373,7 @@ class _PostCardState extends State<PostCard>
   Future<void> _mentionFriends() async {
     final ctrl = TextEditingController();
     await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
+      context: context, isScrollControlled: true,
       backgroundColor: const Color(0xFF111111),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
@@ -385,11 +382,12 @@ class _PostCardState extends State<PostCard>
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
             left: 16, right: 16, top: 8),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+          Container(width: 40, height: 4,
+            margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(color: Colors.white24,
                 borderRadius: BorderRadius.circular(2))),
-          const Text('Зикр кардан',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+          const Text('Зикр кардан', style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 12),
           TextField(controller: ctrl, autofocus: true,
             style: const TextStyle(color: Colors.white),
@@ -401,13 +399,15 @@ class _PostCardState extends State<PostCard>
           SizedBox(width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.neonBlue, foregroundColor: Colors.white),
+                  backgroundColor: AppColors.neonBlue,
+                  foregroundColor: Colors.white),
               onPressed: () async {
-                final mention = ctrl.text.trim();
+                final m = ctrl.text.trim();
                 Navigator.pop(ctx);
-                if (mention.isEmpty) return;
-                await ApiClient.instance.post('/posts/${widget.post.id}/mention',
-                  body: {'username': mention.replaceAll('@', '')});
+                if (m.isEmpty) return;
+                await ApiClient.instance.post(
+                  '/posts/${widget.post.id}/mention',
+                  body: {'username': m.replaceAll('@', '')});
               },
               child: const Text('Зикр кун'))),
         ])));
@@ -524,18 +524,17 @@ class _PostCardState extends State<PostCard>
   }
 
   void _showShare() {
-    final url = 'https://raonson-v1.onrender.com/posts/preview/${widget.post.id}';
+    final url = 'https://mahmadmurodov-raonson.hf.space/posts/preview/\${widget.post.id}';
     showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      context: context, backgroundColor: const Color(0xFF1A1A1A),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetCtx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
         const Padding(padding: EdgeInsets.only(bottom: 8),
-          child: Text('Мубодила кунед',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
+          child: Text('Мубодила кунед', style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Container(height: 36,
@@ -560,7 +559,8 @@ class _PostCardState extends State<PostCard>
                 Clipboard.setData(ClipboardData(text: url));
                 Navigator.pop(sheetCtx);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Линк нусха шуд ✓'), backgroundColor: Colors.green,
+                  content: Text('Линк нусха шуд ✓'),
+                  backgroundColor: Colors.green,
                   duration: Duration(seconds: 2))); }),
             _ShareActionBtn(icon: Icons.download_rounded,
               color: const Color(0xFF2A2A2A), label: 'Зеркашӣ',
@@ -580,8 +580,8 @@ class _PostCardState extends State<PostCard>
           leading: Container(width: 44, height: 44,
             decoration: const BoxDecoration(color: Color(0xFF0095F6), shape: BoxShape.circle),
             child: const Icon(Icons.send_rounded, color: Colors.white, size: 20)),
-          title: const Text('Ба чат фиристодан',
-              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+          title: const Text('Ба чат фиристодан', style: TextStyle(
+              color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
           subtitle: const Text('Паёми мустақим',
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () { Navigator.pop(sheetCtx);
@@ -991,6 +991,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
     Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
     Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
   ];
+
   @override
   void initState() {
     super.initState();
