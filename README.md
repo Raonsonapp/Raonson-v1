@@ -1,4 +1,4 @@
-# raonson_v1
+# raonson
 
 Raonson social app (Flutter + backend).
 
@@ -20,3 +20,11 @@ Check your versions:
 ```bash
 flutter --version
 dart --version
+---
+title: Raonson
+emoji: 🚀
+colorFrom: blue
+colorTo: gree
+sdk: docker
+pinned: false
+---
