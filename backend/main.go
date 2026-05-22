@@ -25,7 +25,7 @@ func main() {
 	jobs.StartJobs()
 
 	port := os.Getenv("PORT")
-	if port == "" { port = "7860" }
+	if port == "" { port = "7860" } // HuggingFace Spaces requires port 7860
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
