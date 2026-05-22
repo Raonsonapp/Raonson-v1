@@ -16,4 +16,6 @@ jobs:
       - name: Push to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push --force https://Mahmadmurodov:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson main
+        run: |
+          git remote set-url origin https://x:$HF_TOKEN@huggingface.co/spaces/Mahmadmurodov/raonson
+          git push --force origin main
