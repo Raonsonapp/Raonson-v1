@@ -1,6 +1,5 @@
 // lib/friends/friends_screen.dart
 import 'dart:convert';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/api/api_client.dart';
@@ -91,11 +90,13 @@ class _FriendsScreenState extends State<FriendsScreen>
         } catch (_) {}
       }
 
-      if (mounted) setState(() {
-        _requests    = reqs;
-        _suggestions = sugs;
-        _loading     = false;
-      });
+      if (mounted) {
+        setState(() {
+          _requests    = reqs;
+          _suggestions = sugs;
+          _loading     = false;
+        });
+      }
     } catch (_) {
       if (mounted) { setState(() => _loading = false); }
     }
@@ -106,18 +107,6 @@ class _FriendsScreenState extends State<FriendsScreen>
     if (_loadingContacts) return;
     setState(() => _loadingContacts = true);
     try {
-      // Request phone permission
-      final status = await Permission.contacts.request();
-      if (!status.isGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Иҷозати дастрасӣ ба контактҳо лозим аст'),
-            duration: Duration(seconds: 3)));
-        }
-        setState(() => _loadingContacts = false);
-        return;
-      }
-      // Call backend with contact lookup
       final res = await ApiClient.instance
           .get('/users/find-by-contacts')
           .timeout(const Duration(seconds: 8));
@@ -130,7 +119,6 @@ class _FriendsScreenState extends State<FriendsScreen>
     } catch (_) {}
     if (mounted) setState(() => _loadingContacts = false);
   }
-
   Future<void> _accept(String userId) async {
     try {
       await ApiClient.instance.post('/follow/$userId/accept');
@@ -230,8 +218,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                           ),
                         ),
                       ),
-
-              // ── Аз Контакт ───────────────────────────────────
+              // ── Контактҳо ────────────────────────────────────
               _ContactsTab(
                 users: _contactUsers,
                 loading: _loadingContacts,
@@ -434,56 +421,4 @@ class _UserItem {
     mutualFriends: mutualFriends,
     isFollowing: isFollowing ?? this.isFollowing,
   );
-}
-
-// ══════════════════════════════════════════════════════════
-// CONTACTS TAB — аз контакти телефон
-// ══════════════════════════════════════════════════════════
-class _ContactsTab extends StatelessWidget {
-  final List<_UserItem> users;
-  final bool loading;
-  final VoidCallback onLoad;
-  final void Function(String) onFollow;
-  const _ContactsTab({required this.users, required this.loading,
-      required this.onLoad, required this.onFollow});
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const Center(child: CircularProgressIndicator(
-          color: AppColors.neonBlue, strokeWidth: 2));
-    }
-    if (users.isEmpty) {
-      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.contacts_outlined, color: Colors.white24, size: 64),
-        const SizedBox(height: 16),
-        const Text('Дӯстони шумо аз контактҳо',
-            style: TextStyle(color: Colors.white,
-                fontSize: 16, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        const Text('Мо ба контактҳои шумо назар меандозем\nва дӯстони шуморо меёбем',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white38, fontSize: 13)),
-        const SizedBox(height: 24),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.neonBlue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-          onPressed: onLoad,
-          icon: const Icon(Icons.contacts_rounded, size: 18),
-          label: const Text('Ёфтани дӯстон аз контактҳо')),
-      ]));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: users.length,
-      itemBuilder: (_, i) => _SuggestionCard(
-        user: users[i],
-        onFollow: () => onFollow(users[i].id),
-        onRemove: () {},
-      ),
-    );
-  }
 }
