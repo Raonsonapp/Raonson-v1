@@ -27,7 +27,7 @@ jobs:
           api = HfApi()
           api.upload_folder(
               folder_path='.',
-              repo_id='Mahmadmurodov/raonson',
+              repo_id='Mahmadmurodov/raonson-web',
               repo_type='space',
               token='${{ secrets.HF_TOKEN }}'
           )
