@@ -4,10 +4,10 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-# Copy everything first
+# Кӯчонидани тамоми файлҳо
 COPY . .
 
-# Then generate go.sum and download deps
+# Танзим ва боркунии вобастагиҳо
 RUN go mod tidy && \
     go mod download && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o raonson .
@@ -15,8 +15,14 @@ RUN go mod tidy && \
 FROM alpine:3.19
 RUN apk --no-cache add ca-certificates tzdata wget
 WORKDIR /app
+
+# Кӯчонидани файли иҷрошаванда
 COPY --from=builder /app/raonson .
-EXPOSE 10000
+
+# Hugging Face ҳатман порти 7860-ро талаб мекунад!
+EXPOSE 7860
+
 HEALTHCHECK --interval=30s --timeout=5s \
-  CMD wget -qO- http://localhost:10000/health || exit 1
+  CMD wget -qO- http://localhost:7860/health || exit 1
+
 CMD ["./raonson"]
