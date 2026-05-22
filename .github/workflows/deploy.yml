@@ -14,8 +14,8 @@ jobs:
           lfs: true
 
       - name: Push to Hugging Face
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          # Боркунии мустақим тавассути утилитаи нави 'hf'
-          hf upload Mahmadmurodov/raonson . . --repo-type=space --token=$HF_TOKEN
+        uses: huggingface/github-action@v3
+        with:
+          hf_token: ${{ secrets.HF_TOKEN }}
+          repo_id: Mahmadmurodov/raonson
+          repo_type: space
