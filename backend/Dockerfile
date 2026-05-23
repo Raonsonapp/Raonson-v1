@@ -5,17 +5,13 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-# Танҳо go.mod - go.sum набошад ҳам кор мекунад
-COPY go.mod ./
-
-# Агар go.sum бошад copy мекунем, набошад - мушкил нест
-COPY go.su[m] ./
-
-# go mod tidy go.sum-ро худаш месозад
-RUN go mod tidy
-
+# АВВАЛ ҳамаи кодро copy мекунем
 COPY . .
 
+# Баъд go mod tidy - акнун ҳамаи файлҳоро мебинад ва go.sum месозад
+RUN go mod tidy
+
+# Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o raonson-api ./main.go
 
 # ── Run stage ────────────────────────────────────────────────────
