@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/story_model.dart';
 import '../core/services/user_session.dart';
@@ -109,7 +110,7 @@ class _MyStoryItem extends StatelessWidget {
                 child: CustomPaint(
                   painter: _RingPainter(
                     colors: ringState == _RingState.unseen
-                        ? const [Color(0xFF00C6FF), Color(0xFF00E87A)]
+                        ? AppColors.storyGradient
                         : const [Color(0xFF555555), Color(0xFF444444)],
                     ringWidth: _ring,
                   ),
@@ -183,7 +184,7 @@ class _StoryItem extends StatelessWidget {
                 painter: _RingPainter(
                   colors: allViewed
                       ? const [Color(0xFF555555), Color(0xFF444444)]
-                      : const [Color(0xFF00C6FF), Color(0xFF00E87A)],
+                      : AppColors.storyGradient,
                   ringWidth: _ring,
                 ),
               ),
