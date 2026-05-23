@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/post_model.dart';
@@ -56,11 +55,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
     try {
       // ✅ Ду endpoint санҷед
       var res = await ApiClient.instance
-          .get('/posts/\${widget.post.id}/comments')
+          .get('/posts/${widget.post.id}/comments')
           .timeout(const Duration(seconds: 8));
       if (res.statusCode >= 400) {
         res = await ApiClient.instance
-            .get('/comments/\${widget.post.id}')
+            .get('/comments/${widget.post.id}')
             .timeout(const Duration(seconds: 8));
       }
       if (res.statusCode < 400) {
@@ -116,12 +115,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
     try {
       // ✅ Ду endpoint санҷед
       var res = await ApiClient.instance.post(
-        '/posts/\${widget.post.id}/comments',
+        '/posts/${widget.post.id}/comments',
         body: {'text': optimistic.text},
       );
       if (res.statusCode >= 400) {
         res = await ApiClient.instance.post(
-          '/comments/\${widget.post.id}',
+          '/comments/${widget.post.id}',
           body: {'text': optimistic.text},
         );
       }
@@ -186,7 +185,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(
-          'Шарҳҳо',
+          'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
           style: const TextStyle(color: Colors.white,
               fontWeight: FontWeight.bold, fontSize: 16)),
       ),
@@ -224,25 +223,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.white10))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // ── Quick emoji reactions ────────────────────────────
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(children: ['❤️','🙌','🔥','👏','😢','😍','😮','😂']
-              .map((e) => GestureDetector(
-                onTap: () {
-                  _ctrl.text = e;
-                  _send();
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white10,
-                    borderRadius: BorderRadius.circular(20)),
-                  child: Text(e, style: const TextStyle(fontSize: 20)))))
-              .toList())),
-
           // Reply hint
           if (_replyTo != null)
             Container(
@@ -291,15 +271,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     border: InputBorder.none),
                 ),
               ),
-              // GIF button
-              IconButton(
-                icon: SvgPicture.asset('assets/icons/gift.svg', width: 22, height: 22,
-                    colorFilter: const ColorFilter.mode(Colors.white54, BlendMode.srcIn)),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Подарк тез омада истодааст 🎁'),
-                    duration: Duration(seconds: 2)));
-                }),
               _sending
                   ? const Padding(padding: EdgeInsets.all(10),
                       child: SizedBox(width: 20, height: 20,
