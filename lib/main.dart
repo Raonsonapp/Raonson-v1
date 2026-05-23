@@ -23,7 +23,7 @@ Future<void> main() async {
   AppConfig.initialize(
     baseUrl: const String.fromEnvironment(
       'BASE_URL',
-      defaultValue: 'https://raonson-v1-go.onrender.com',
+      defaultValue: 'https://mahmadmurodov-raonson.hf.space',
     ),
     appName: 'Raonson',
     enableLogs: true,
@@ -34,10 +34,6 @@ Future<void> main() async {
 
   // ✅ 4. Network monitoring
   NetworkService.instance.init();
-
-  // ✅ 5. Серверро background-да бедор кун (Render.com free tier)
-  ServerWakeupService.instance.wakeUp();
-  ServerWakeupService.instance.startKeepAlive();
 
   // ✅ 6. Ads
   MobileAds.initialize();
