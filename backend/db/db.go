@@ -218,6 +218,14 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_comments ON reel_comments(reel_id, created_at);
 
+	CREATE TABLE IF NOT EXISTS reel_views (
+		user_id TEXT NOT NULL,
+		reel_id TEXT NOT NULL,
+		viewed_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, reel_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_reel_views_user ON reel_views(user_id, viewed_at);
+
 	CREATE TABLE IF NOT EXISTS messages (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
 		chat_id VARCHAR(120) NOT NULL,
