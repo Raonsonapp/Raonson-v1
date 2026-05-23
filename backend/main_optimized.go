@@ -171,9 +171,10 @@ func main() {
 	re := r.Group("/reels", auth, rl100)
 	{
 		re.GET("/",              cache30s, handlers.GetReels)
+		re.GET("/smart",         handlers.GetSmartReels)   // Instagram algorithm
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)
-		re.POST("/:id/view",     handlers.AddReelView)
+		re.POST("/:id/view",     handlers.TrackReelView)   // view dedup tracking
 		re.POST("/:id/like",     handlers.ToggleReelLike)
 		re.POST("/:id/save",     handlers.ToggleReelSave)
 		re.GET("/:id/comments",  cache30s, handlers.GetReelComments)
