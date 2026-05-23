@@ -2,32 +2,38 @@
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-# Ислоҳ: Агар go.sum набошад ҳам, Docker хатогӣ намекунад
-COPY go.mod go.su[m] ./
-RUN go mod download
+
+# Install git (needed for go mod download)
+RUN apk add --no-cache git
+
+COPY go.mod go.sum ./
+
+# Download + verify all dependencies (fixes missing go.sum entries)
+RUN go mod download && go mod verify
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o raonson-api ./main.go
+
+# Tidy ensures go.sum is complete, then build
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -o raonson-api ./main.go
 
 # ── Run stage ────────────────────────────────────────────────────
 FROM alpine:3.19
 
-# HuggingFace Spaces runs as non-root user
+RUN apk add --no-cache ca-certificates tzdata
+
+# HuggingFace runs as non-root
 RUN addgroup -S app && adduser -S app -G app
 
 WORKDIR /app
 
-# Copy binary
 COPY --from=builder /app/raonson-api .
 
-# Create empty templates dir to prevent panic if LoadHTMLGlob is called
-RUN mkdir -p templates && \
-    echo '<html></html>' > templates/empty.html
+# Create empty templates dir (prevents LoadHTMLGlob panic if called anywhere)
+RUN mkdir -p templates && echo '<html></html>' > templates/empty.html
 
-# Make binary executable
 RUN chmod +x raonson-api
 
-# Switch to non-root user
 USER app
 
 # HuggingFace Spaces REQUIRES port 7860
