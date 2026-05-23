@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,30 +21,35 @@ func Init() {
 	if err != nil {
 		log.Fatalf("❌ DB config error: %v", err)
 	}
-	cfg.MaxConns = 10
-	cfg.MinConns = 2
 
-	// ✅ FIX: Supabase pgBouncer "prepared statement already exists" bug
-	// Use SimpleProtocol — no server-side prepared statements
+	// ── Оптимизатсияи пул барои HuggingFace (2 CPU, 16GB RAM) ──
+	cfg.MaxConns          = 25            // ↑ аз 10 то 25
+	cfg.MinConns          = 5             // ↑ аз 2 то 5 (пешакӣ омода)
+	cfg.MaxConnLifetime   = 30 * time.Minute
+	cfg.MaxConnIdleTime   = 5 * time.Minute
+	cfg.HealthCheckPeriod = 30 * time.Second
+
+	// Supabase pgBouncer: SimpleProtocol барои prepared statement bug
 	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	// Timeout барои пешгирии freeze
+	cfg.ConnConfig.ConnectConfig.ConnectTimeout = 10 * time.Second
 
 	Pool, err = pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		log.Fatalf("❌ DB connect error: %v", err)
 	}
-	if err = Pool.Ping(context.Background()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err = Pool.Ping(ctx); err != nil {
 		log.Fatalf("❌ DB ping failed: %v", err)
 	}
 	migrate()
-	log.Println("✅ PostgreSQL connected (Supabase)")
+	log.Println("✅ PostgreSQL connected (Supabase) — pool: 5-25 conns")
 }
 
 func migrate() {
 	ctx := context.Background()
-
-	// ⚠️ DROP хориҷ шуд — маълумот нест намешавад!
-	// Танҳо CREATE IF NOT EXISTS — mavjud bo'lsa skip qiladi
-
 	sql := `
 	CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -85,6 +91,8 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW(),
 		PRIMARY KEY (follower_id, following_id)
 	);
+	CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id);
+	CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
 
 	CREATE TABLE IF NOT EXISTS follow_requests (
 		requester_id TEXT NOT NULL,
@@ -104,6 +112,7 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
 	CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_posts_likes ON posts(likes_count DESC);
 
 	CREATE TABLE IF NOT EXISTS post_media (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -112,6 +121,7 @@ func migrate() {
 		type VARCHAR(10) DEFAULT 'image',
 		position INTEGER DEFAULT 0
 	);
+	CREATE INDEX IF NOT EXISTS idx_post_media_post ON post_media(post_id, position);
 
 	CREATE TABLE IF NOT EXISTS post_likes (
 		user_id TEXT NOT NULL,
@@ -119,6 +129,7 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW(),
 		PRIMARY KEY (user_id, post_id)
 	);
+	CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
 
 	CREATE TABLE IF NOT EXISTS post_saves (
 		user_id TEXT NOT NULL,
@@ -141,7 +152,7 @@ func migrate() {
 		likes_count INTEGER DEFAULT 0,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
-	CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
+	CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at);
 
 	CREATE TABLE IF NOT EXISTS comment_likes (
 		user_id TEXT NOT NULL,
@@ -159,6 +170,7 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_stories_user ON stories(user_id);
+	CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at);
 
 	CREATE TABLE IF NOT EXISTS story_views (
 		user_id TEXT NOT NULL,
@@ -183,6 +195,7 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_reels_user ON reels(user_id);
+	CREATE INDEX IF NOT EXISTS idx_reels_created ON reels(created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,
@@ -203,6 +216,7 @@ func migrate() {
 		text TEXT NOT NULL,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
+	CREATE INDEX IF NOT EXISTS idx_reel_comments ON reel_comments(reel_id, created_at);
 
 	CREATE TABLE IF NOT EXISTS messages (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -215,6 +229,7 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, created_at);
+	CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id, read);
 
 	CREATE TABLE IF NOT EXISTS notifications (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -223,9 +238,11 @@ func migrate() {
 		type VARCHAR(50) NOT NULL,
 		target_id TEXT,
 		read BOOLEAN DEFAULT FALSE,
+		is_read BOOLEAN DEFAULT FALSE,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(user_id, read);
 
 	CREATE TABLE IF NOT EXISTS likes (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -250,7 +267,6 @@ func migrate() {
 		UNIQUE(user_id, platform)
 	);
 	`
-
 	if _, err := Pool.Exec(ctx, sql); err != nil {
 		log.Fatalf("❌ Migration failed: %v", err)
 	}
