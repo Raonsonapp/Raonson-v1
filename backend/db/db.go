@@ -33,7 +33,7 @@ func Init() {
 	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 	// Timeout барои пешгирии freeze
-	cfg.ConnConfig.ConnectConfig.ConnectTimeout = 10 * time.Second
+	cfg.ConnConfig.ConnectTimeout = 10 * time.Second
 
 	Pool, err = pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
