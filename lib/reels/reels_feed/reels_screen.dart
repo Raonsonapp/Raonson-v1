@@ -1016,9 +1016,8 @@ class _ReelItemState extends State<_ReelItem> {
 
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) {
+    if (n >= 1000)
       return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
-    }
     return n > 0 ? '$n' : '';
   }
 
@@ -1219,9 +1218,7 @@ class _ReelItemState extends State<_ReelItem> {
                               color: Colors.black38,
                               shape: BoxShape.circle),
                           child: Icon(
-                              widget.isMuted
-                                  ? Icons.volume_off_rounded
-                                  : Icons.volume_up_rounded,
+                              widget.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                               color: Colors.white,
                               size: 20,
                               shadows: const [
@@ -1231,14 +1228,11 @@ class _ReelItemState extends State<_ReelItem> {
                               ])))),
               GestureDetector(
                   onTap: widget.onAddReel,
-                  child: const Padding(
-                      padding: EdgeInsets.only(right: 16),
-                      child: Icon(Icons.add,
-                          color: Colors.white,
-                          size: 28,
-                          shadows: [
-                            Shadow(blurRadius: 6, color: Colors.black54)
-                          ]))),
+                  child: Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: SvgPicture.asset('assets/icons/upload.svg',
+                          width: 26, height: 26,
+                          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
             ])),
 
         Positioned(
@@ -1255,11 +1249,6 @@ class _ReelItemState extends State<_ReelItem> {
                   svgPath: 'assets/icons/comment.svg',
                   count: _fmt(reel.commentsCount),
                   onTap: _openComments),
-              const SizedBox(height: 22),
-              _ReelStableBtn(
-                  svgPath: 'assets/icons/retweet.svg',
-                  count: _fmt(_retweetCount),
-                  onTap: () => setState(() => _retweetCount++)),
               const SizedBox(height: 22),
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',
@@ -1517,7 +1506,7 @@ class _AudioBarState extends State<_AudioBar>
               return FractionalTranslation(
                 translation: Offset(dx, 0.0),
                 child: Text(
-                  '$displayText   $displayText',
+                  displayText + '   ' + displayText,
                   style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
@@ -1880,12 +1869,10 @@ class _ReelCommentsState extends State<_ReelComments> {
     try {
       final repo = ReelsRepository(ApiClient.instance);
       final list = await repo.fetchComments(widget.reelId);
-      if (mounted) {
-        setState(() {
-          _comments = list;
-          _loading = false;
-        });
-      }
+      if (mounted) setState(() {
+        _comments = list;
+        _loading = false;
+      });
     } catch (_) {
       if (mounted) { setState(() => _loading = false); }
     }
