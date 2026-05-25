@@ -1712,36 +1712,9 @@ class _SpinningDisc extends StatefulWidget {
 
 class _SpinningDiscState extends State<_SpinningDisc>
     with SingleTickerProviderStateMixin {
-  late AnimationController _spin;
 
   @override
-  void initState() {
-    super.initState();
-    _spin = AnimationController(
-        vsync: this, duration: const Duration(seconds: 5));
-    if (widget.isPlaying) _spin.repeat();
-  }
-
-  @override
-  void didUpdateWidget(_SpinningDisc old) {
-    super.didUpdateWidget(old);
-    if (widget.isPlaying && !old.isPlaying) {
-      _spin.repeat();
-    } else if (!widget.isPlaying && old.isPlaying) {
-      _spin.stop();
-    }
-  }
-
-  @override
-  void dispose() {
-    _spin.dispose();
-    super.dispose();
-  }
-
-  @override
-    @override
   Widget build(BuildContext context) {
-    // Instagram style: rounded square music badge (4 corners)
     final r = widget.size * 0.22;
     return Container(
         width: widget.size,
@@ -1756,12 +1729,15 @@ class _SpinningDiscState extends State<_SpinningDisc>
                 ? CachedNetworkImage(
                     imageUrl: widget.avatar,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
-                        const Icon(Icons.music_note,
-                            color: Colors.white54, size: 16))
-                : const Icon(Icons.music_note,
-                    color: Colors.white54, size: 16)));
+                    errorWidget: (_, __, ___) => const Icon(
+                        Icons.music_note_rounded,
+                        color: Colors.white54, size: 18))
+                : const Icon(Icons.music_note_rounded,
+                    color: Colors.white54, size: 18)));
   }
+}
+
+
 class _HeartBurst extends StatefulWidget {
   const _HeartBurst();
   @override
