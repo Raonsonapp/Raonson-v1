@@ -1128,6 +1128,22 @@ class _ReelItemState extends State<_ReelItem> {
                   valueColor:
                       AlwaysStoppedAnimation(Colors.white70))),
 
+        // ── Mute button ABOVE center (Instagram style) ─────
+        Positioned(
+            top: size.height * 0.45 - 55,
+            left: size.width / 2 - 18,
+            child: GestureDetector(
+                onTap: widget.onMuteToggle,
+                child: Container(
+                    width: 36, height: 36,
+                    decoration: const BoxDecoration(
+                        color: Colors.black54, shape: BoxShape.circle),
+                    child: Icon(
+                        widget.isMuted
+                            ? Icons.volume_off_rounded
+                            : Icons.volume_up_rounded,
+                        color: Colors.white, size: 20)))),
+
         if (_paused && !_isBuffering)
           const Center(
               child: Icon(Icons.play_arrow_rounded,
@@ -1163,76 +1179,45 @@ class _ReelItemState extends State<_ReelItem> {
             right: 0,
             child: Row(children: [
               const SizedBox(width: 16),
+              // ── Upload icon (left) ─────────────────────────
+              GestureDetector(
+                  onTap: widget.onAddReel,
+                  child: Transform.rotate(
+                    angle: -1.5708, // 90° дар тарафи чап
+                    child: SvgPicture.asset('assets/icons/upload.svg',
+                        width: 26, height: 26,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn)))),
               const Spacer(),
+              // ── CENTER: Рилсҳо | Дӯстон ────────────────────
               GestureDetector(
                   onTap: widget.onToggleFilter,
                   child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                            widget.friendsFilter
-                                ? 'Дӯстон'
-                                : 'Рилсҳо',
+                            widget.friendsFilter ? 'Дӯстон' : 'Рилсҳо',
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(
-                                      blurRadius: 6,
-                                      color: Colors.black54)
-                                ])),
+                                shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
                         const SizedBox(width: 6),
                         const Text('|',
-                            style: TextStyle(
-                                color: Colors.white54,
-                                fontSize: 16)),
+                            style: TextStyle(color: Colors.white54, fontSize: 16)),
                         const SizedBox(width: 6),
                         Text(
-                            widget.friendsFilter
-                                ? 'Рилсҳо'
-                                : 'Дӯстон',
+                            widget.friendsFilter ? 'Рилсҳо' : 'Дӯстон',
                             style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                                shadows: [
-                                  Shadow(
-                                      blurRadius: 6,
-                                      color: Colors.black54)
-                                ])),
+                                color: Colors.white70, fontSize: 16,
+                                shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
                         const SizedBox(width: 4),
-                        const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white70,
-                            size: 20),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white70, size: 20),
                       ])),
               const Spacer(),
-              GestureDetector(
-                  onTap: widget.onMuteToggle,
-                  child: Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                              color: Colors.black38,
-                              shape: BoxShape.circle),
-                          child: Icon(
-                              widget.isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                              color: Colors.white,
-                              size: 20,
-                              shadows: const [
-                                Shadow(
-                                    blurRadius: 6,
-                                    color: Colors.black54)
-                              ])))),
-              GestureDetector(
-                  onTap: widget.onAddReel,
-                  child: Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: SvgPicture.asset('assets/icons/upload.svg',
-                          width: 26, height: 26,
-                          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)))),
+              // mute moved to above play button
+              const SizedBox(width: 8),
             ])),
 
         Positioned(
@@ -1244,17 +1229,17 @@ class _ReelItemState extends State<_ReelItem> {
                   isLiked: reel.isLiked,
                   count: _fmt(reel.likesCount),
                   onTap: widget.onLike),
-              const SizedBox(height: 22),
+              const SizedBox(height: 20),
               _ReelStableBtn(
                   svgPath: 'assets/icons/comment.svg',
                   count: _fmt(reel.commentsCount),
                   onTap: _openComments),
-              const SizedBox(height: 22),
+              const SizedBox(height: 20),
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',
                   count: '',
                   onTap: _share),
-              const SizedBox(height: 22),
+              const SizedBox(height: 20),
               _ReelStableBtn(
                   svgPath: 'assets/icons/save.svg',
                   activeSvgPath: 'assets/icons/save_filled.svg',
@@ -1264,33 +1249,13 @@ class _ReelItemState extends State<_ReelItem> {
                     setState(() => _saved = !_saved);
                     widget.onSave();
                   }),
-              const SizedBox(height: 22),
-              // ── АД: Download button ──────────────────────────
-              GestureDetector(
-                onTap: _downloading ? null : _handleDownload,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(
-                    _downloading
-                        ? Icons.hourglass_bottom_rounded
-                        : Icons.download_rounded,
-                    color: AppColors.neonBlue,
-                    size: 28,
-                    shadows: const [Shadow(blurRadius: 6, color: Colors.black54)],
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 20),
               GestureDetector(
                   onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
-                  child: const SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: Icon(Icons.more_horiz_rounded,
-                          color: Colors.white,
-                          size: 28,
-                          shadows: [
-                            Shadow(blurRadius: 6, color: Colors.black54)
-                          ]))),
+                  child: SvgPicture.asset('assets/icons/more_vert.svg',
+                      width: 24, height: 24,
+                      colorFilter: const ColorFilter.mode(
+                          Colors.white, BlendMode.srcIn))),
               const SizedBox(height: 16),
               _SpinningDisc(
                   avatar: reel.user.avatar,
@@ -1307,7 +1272,16 @@ class _ReelItemState extends State<_ReelItem> {
                 children: [
                   Row(children: [
                     GestureDetector(
-                        onTap: _openProfile,
+                        onTap: () {
+                          // Аксро зер кун → сторис
+                          if (_hasStory == true) {
+                            Navigator.pushNamed(context,
+                                '/stories',
+                                arguments: reel.user.id);
+                          } else {
+                            _openProfile();
+                          }
+                        },
                         child: _AvatarWithStoryRing(
                             avatarUrl: reel.user.avatar,
                             hasStory: _hasStory,
@@ -1315,7 +1289,7 @@ class _ReelItemState extends State<_ReelItem> {
                     const SizedBox(width: 10),
                     Flexible(
                         child: GestureDetector(
-                            onTap: _openProfile,
+                            onTap: _openProfile, // username → profile
                             child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1682,6 +1656,7 @@ class _ReelStableBtn extends StatelessWidget {
   final bool isActive;
   final Color activeColor;
   final VoidCallback onTap;
+  static const double _iconSize = 24.0; // ← uniform 24x24
   const _ReelStableBtn(
       {required this.svgPath,
       this.activeSvgPath,
@@ -1764,35 +1739,29 @@ class _SpinningDiscState extends State<_SpinningDisc>
   }
 
   @override
-  Widget build(BuildContext context) => RotationTransition(
-      turns: _spin,
-      child: Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                  colors: AppColors.storyGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight)),
-          padding: const EdgeInsets.all(2),
-          child: Container(
-              decoration: const BoxDecoration(
-                  shape: BoxShape.circle, color: Colors.black),
-              padding: const EdgeInsets.all(2),
-              child: ClipOval(
-                  child: widget.avatar.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: widget.avatar,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(
-                              Icons.music_note_rounded,
-                              color: Colors.white54,
-                              size: 18))
-                      : const Icon(Icons.music_note_rounded,
-                          color: Colors.white54, size: 18)))));
-}
-
+    @override
+  Widget build(BuildContext context) {
+    // Instagram style: rounded square music badge (4 corners)
+    final r = widget.size * 0.22;
+    return Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(r),
+            border: Border.all(color: Colors.white30, width: 1.5),
+            color: Colors.black45),
+        child: ClipRRect(
+            borderRadius: BorderRadius.circular(r - 1),
+            child: widget.avatar.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: widget.avatar,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) =>
+                        const Icon(Icons.music_note,
+                            color: Colors.white54, size: 16))
+                : const Icon(Icons.music_note,
+                    color: Colors.white54, size: 16)));
+  }
 class _HeartBurst extends StatefulWidget {
   const _HeartBurst();
   @override
