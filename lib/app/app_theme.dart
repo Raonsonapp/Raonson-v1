@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppColors {
-  static const Color bg          = Color(0xFF000000);
-  static const Color surface     = Color(0xFF0A0A0A);
-  static const Color card        = Color(0xFF111111);
-  static const Color divider     = Color(0xFF1A1A1A);
+  // Instagram Dark Mode palette
+  static const Color bg          = Color(0xFF000000); // pure black (video bg)
+  static const Color surface     = Color(0xFF121212); // Instagram dark bg
+  static const Color card        = Color(0xFF1C1C1C); // card bg
+  static const Color divider     = Color(0xFF262626); // divider
 
   static const Color storyStart  = Color(0xFF00C6FF);
   static const Color storyEnd    = Color(0xFF00E87A);
