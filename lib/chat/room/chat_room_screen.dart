@@ -38,7 +38,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   List<MessageModel> _messages = [];
   bool   _loading     = true;
   bool   _isPeerTyping = false;
-  final String _chatId      = '';
+  String _chatId      = '';
   String _myId        = '';
 
   // Reply state
@@ -257,14 +257,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
     } catch (_) {
       // Mark as failed
-      if (mounted) {
-        setState(() {
-          final idx = _messages.indexWhere((m) => m.id == optimistic.id);
-          if (idx >= 0) {
-            _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
-          }
-        });
-      }
+      if (mounted) setState(() {
+        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+        if (idx >= 0) {
+          _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
+        }
+      });
     }
   }
 
@@ -363,7 +361,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF000000),
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -395,7 +393,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF000000),
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -596,20 +594,25 @@ class _TypingIndicatorState extends State<_TypingIndicator>
             borderRadius: BorderRadius.circular(18),
           ),
           child: AnimatedBuilder(
-            animation: _anim,
+            animation: _ctrl,
             builder: (_, __) => Row(
               mainAxisSize: MainAxisSize.min,
               children: List.generate(3, (i) {
-                final phase = ((_ctrl.value * 3) - i).clamp(0.0, 1.0);
-                final opacity = (phase < 0.5
-                    ? phase * 2
-                    : (1 - phase) * 2).clamp(0.3, 1.0);
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  width: 6, height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(opacity),
+                // Bouncing up/down like Instagram
+                final delay = i / 3.0;
+                final t = ((_ctrl.value - delay) % 1.0 + 1.0) % 1.0;
+                final dy = t < 0.5
+                    ? -6.0 * (t * 2)
+                    : -6.0 * (1 - (t - 0.5) * 2);
+                return Transform.translate(
+                  offset: Offset(0, dy),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: 7, height: 7,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white70,
+                    ),
                   ),
                 );
               }),
