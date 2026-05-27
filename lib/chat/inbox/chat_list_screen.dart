@@ -30,7 +30,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final _presence = PresenceService();
   final _notes    = NoteService();
   final _searchCtrl = TextEditingController();
-  bool  _searchFocused = false;
   String _myAvatar = '';
 
   @override
@@ -117,7 +116,7 @@ class _ChatView extends StatelessWidget {
     final notes = context.watch<NoteService>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,7 +255,7 @@ class _TabBarState extends State<_TabBar> {
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
             decoration: BoxDecoration(
-              color: selected ? Colors.white : const Color(0xFF262626),
+              color: selected ? Colors.white : const Color(0xFF1C1C1E),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
