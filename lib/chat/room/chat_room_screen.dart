@@ -38,7 +38,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   List<MessageModel> _messages = [];
   bool   _loading     = true;
   bool   _isPeerTyping = false;
-  String _chatId      = '';
+  final String _chatId      = '';
   String _myId        = '';
 
   // Reply state
@@ -257,12 +257,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
     } catch (_) {
       // Mark as failed
-      if (mounted) setState(() {
-        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
-        if (idx >= 0) {
-          _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
-        }
-      });
+      if (mounted) {
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+          if (idx >= 0) {
+            _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
+          }
+        });
+      }
     }
   }
 
@@ -567,7 +569,6 @@ class _TypingIndicator extends StatefulWidget {
 class _TypingIndicatorState extends State<_TypingIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double>   _anim;
 
   @override
   void initState() {
@@ -575,7 +576,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     _ctrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1200))
       ..repeat();
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
   }
 
   @override
