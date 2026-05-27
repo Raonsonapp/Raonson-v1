@@ -7,7 +7,6 @@ import 'app/app.dart';
 import 'app/app_config.dart';
 import 'core/services/user_session.dart';
 import 'core/services/network_service.dart';
-import 'core/services/server_wakeup_service.dart';
 import 'core/ads/ads_manager.dart';
 
 Future<void> main() async {
