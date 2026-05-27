@@ -1128,30 +1128,32 @@ class _ReelItemState extends State<_ReelItem> {
                   valueColor:
                       AlwaysStoppedAnimation(Colors.white70))),
 
-        // ── Mute button ABOVE center (Instagram style) ─────
-        Positioned(
-            top: size.height * 0.45 - 55,
-            left: size.width / 2 - 18,
-            child: GestureDetector(
+        if (_paused && !_isBuffering)
+          Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              // Mute button above play (Instagram style)
+              GestureDetector(
                 onTap: widget.onMuteToggle,
                 child: Container(
-                    width: 36, height: 36,
-                    decoration: const BoxDecoration(
-                        color: Colors.black54, shape: BoxShape.circle),
-                    child: Icon(
-                        widget.isMuted
-                            ? Icons.volume_off_rounded
-                            : Icons.volume_up_rounded,
-                        color: Colors.white, size: 20)))),
-
-        if (_paused && !_isBuffering)
-          const Center(
-              child: Icon(Icons.play_arrow_rounded,
-                  color: Colors.white54,
-                  size: 80,
-                  shadows: [
-                    Shadow(blurRadius: 20, color: Colors.black54)
-                  ])),
+                  width: 36, height: 36,
+                  decoration: const BoxDecoration(
+                      color: Colors.black54, shape: BoxShape.circle),
+                  child: Icon(
+                      widget.isMuted
+                          ? Icons.volume_off_rounded
+                          : Icons.volume_up_rounded,
+                      color: Colors.white, size: 20))),
+              const SizedBox(height: 10),
+              // Play button
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 20)]),
+                padding: const EdgeInsets.all(16),
+                child: const Icon(Icons.play_arrow_rounded,
+                    color: Colors.white, size: 48)),
+            ])),
 
         if (_showHeart) const Center(child: _HeartBurst()),
 
@@ -1179,45 +1181,61 @@ class _ReelItemState extends State<_ReelItem> {
             right: 0,
             child: Row(children: [
               const SizedBox(width: 16),
-              // ── Upload icon (left) ─────────────────────────
-              GestureDetector(
-                  onTap: widget.onAddReel,
-                  child: Transform.rotate(
-                    angle: -1.5708, // 90° дар тарафи чап
-                    child: SvgPicture.asset('assets/icons/upload.svg',
-                        width: 26, height: 26,
-                        colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn)))),
               const Spacer(),
-              // ── CENTER: Рилсҳо | Дӯстон ────────────────────
               GestureDetector(
                   onTap: widget.onToggleFilter,
                   child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                            widget.friendsFilter ? 'Дӯстон' : 'Рилсҳо',
+                            widget.friendsFilter
+                                ? 'Дӯстон'
+                                : 'Рилсҳо',
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
+                                shadows: [
+                                  Shadow(
+                                      blurRadius: 6,
+                                      color: Colors.black54)
+                                ])),
                         const SizedBox(width: 6),
                         const Text('|',
-                            style: TextStyle(color: Colors.white54, fontSize: 16)),
+                            style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 16)),
                         const SizedBox(width: 6),
                         Text(
-                            widget.friendsFilter ? 'Рилсҳо' : 'Дӯстон',
+                            widget.friendsFilter
+                                ? 'Рилсҳо'
+                                : 'Дӯстон',
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 16,
-                                shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
+                                color: Colors.white70,
+                                fontSize: 16,
+                                shadows: [
+                                  Shadow(
+                                      blurRadius: 6,
+                                      color: Colors.black54)
+                                ])),
                         const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white70, size: 20),
+                        const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white70,
+                            size: 20),
                       ])),
               const Spacer(),
-              // mute moved to above play button
-              const SizedBox(width: 8),
+              const SizedBox(width: 8) // mute shown with play button,
+              GestureDetector(
+                  onTap: widget.onAddReel,
+                  child: const Padding(
+                      padding: EdgeInsets.only(right: 16),
+                      child: Icon(Icons.add,
+                          color: Colors.white,
+                          size: 28,
+                          shadows: [
+                            Shadow(blurRadius: 6, color: Colors.black54)
+                          ]))),
             ])),
 
         Positioned(
@@ -1229,33 +1247,39 @@ class _ReelItemState extends State<_ReelItem> {
                   isLiked: reel.isLiked,
                   count: _fmt(reel.likesCount),
                   onTap: widget.onLike),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               _ReelStableBtn(
                   svgPath: 'assets/icons/comment.svg',
                   count: _fmt(reel.commentsCount),
                   onTap: _openComments),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',
                   count: '',
                   onTap: _share),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               _ReelStableBtn(
                   svgPath: 'assets/icons/save.svg',
                   activeSvgPath: 'assets/icons/save_filled.svg',
                   isActive: _saved,
+                  activeColor: Colors.white,
                   count: '',
                   onTap: () {
                     setState(() => _saved = !_saved);
                     widget.onSave();
                   }),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               GestureDetector(
                   onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
-                  child: SvgPicture.asset('assets/icons/more_vert.svg',
-                      width: 24, height: 24,
-                      colorFilter: const ColorFilter.mode(
-                          Colors.white, BlendMode.srcIn))),
+                  child: const SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: Icon(Icons.more_horiz_rounded,
+                          color: Colors.white,
+                          size: 28,
+                          shadows: [
+                            Shadow(blurRadius: 6, color: Colors.black54)
+                          ]))),
               const SizedBox(height: 16),
               _SpinningDisc(
                   avatar: reel.user.avatar,
@@ -1272,16 +1296,7 @@ class _ReelItemState extends State<_ReelItem> {
                 children: [
                   Row(children: [
                     GestureDetector(
-                        onTap: () {
-                          // Аксро зер кун → сторис
-                          if (_hasStory == true) {
-                            Navigator.pushNamed(context,
-                                '/stories',
-                                arguments: reel.user.id);
-                          } else {
-                            _openProfile();
-                          }
-                        },
+                        onTap: _openProfile,
                         child: _AvatarWithStoryRing(
                             avatarUrl: reel.user.avatar,
                             hasStory: _hasStory,
@@ -1289,7 +1304,7 @@ class _ReelItemState extends State<_ReelItem> {
                     const SizedBox(width: 10),
                     Flexible(
                         child: GestureDetector(
-                            onTap: _openProfile, // username → profile
+                            onTap: _openProfile,
                             child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1496,11 +1511,6 @@ class _AudioBarState extends State<_AudioBar>
           ),
         ),
       ),
-      const SizedBox(width: 6),
-      _SpinningDisc(
-          avatar: widget.avatar,
-          size: 28,
-          isPlaying: widget.isPlaying),
     ]);
   }
 }
@@ -1656,7 +1666,6 @@ class _ReelStableBtn extends StatelessWidget {
   final bool isActive;
   final Color activeColor;
   final VoidCallback onTap;
-  static const double _iconSize = 24.0; // ← uniform 24x24
   const _ReelStableBtn(
       {required this.svgPath,
       this.activeSvgPath,
@@ -1736,7 +1745,6 @@ class _SpinningDiscState extends State<_SpinningDisc>
                     color: Colors.white54, size: 18)));
   }
 }
-
 
 class _HeartBurst extends StatefulWidget {
   const _HeartBurst();
