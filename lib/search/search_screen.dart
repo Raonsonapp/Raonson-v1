@@ -321,9 +321,7 @@ class _SearchScreenState extends State<SearchScreen>
               // Explore grid header
               const SliverToBoxAdapter(child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Text('Кашф кун',
-                    style: TextStyle(color: Colors.white,
-                        fontSize: 16, fontWeight: FontWeight.w700)),
+                child: const SizedBox.shrink(), // No header like Instagram
               )),
 
               // Instagram-style grid
@@ -516,7 +514,12 @@ class _GridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {}, // TODO: open post detail
+      onTap: () {
+        if (item.postId.isNotEmpty) {
+          Navigator.pushNamed(context, '/post-detail',
+              arguments: item.postId);
+        }
+      },
       child: SizedBox(
         width: width, height: height,
         child: Stack(fit: StackFit.expand, children: [
@@ -730,6 +733,8 @@ class _UserRowState extends State<_UserRow> {
         await ApiClient.instance.post('/follow/${widget.user.id}');
       }
       if (mounted) setState(() { _following = !_following; _loading = false; });
+      // Invalidate profile cache after follow change
+      // (counter updates on next profile load)
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
