@@ -48,12 +48,13 @@ class _SearchScreenState extends State<SearchScreen>
   String?         _error;
 
   late final TabController _tabs;
-  static const _tabLabels = ['Ҳама', 'Корбарон', 'Постҳо', 'Рилҳо', 'Мусиқӣ', 'Хэштег'];
+  // Instagram-style 4 tabs when searching
+  static const _tabLabels = ['Барои шумо', 'Аккаунтҳо', 'Аудио', 'Тегҳо'];
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: _tabLabels.length, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     _loadHistory();
     _loadExplore();
   }
@@ -173,7 +174,7 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF000000),
       body: SafeArea(child: Column(children: [
         // ── Search bar ───────────────────────────────────────────
         Padding(
@@ -183,9 +184,9 @@ class _SearchScreenState extends State<SearchScreen>
               child: Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111111),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  color: const Color(0xFF262626),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.transparent),
                 ),
                 child: TextField(
                   controller: _ctrl,
@@ -193,7 +194,7 @@ class _SearchScreenState extends State<SearchScreen>
                   onChanged: _onChanged,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Ҷустуҷӯ...',
+                    hintText: 'Ҷустуҷӯ',
                     hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
                     prefixIcon: _searching
                         ? const Padding(padding: EdgeInsets.all(12),
@@ -217,7 +218,15 @@ class _SearchScreenState extends State<SearchScreen>
                 onTap: _clearSearch,
                 child: const Text('Бекор',
                     style: TextStyle(color: AppColors.neonBlue,
-                        fontSize: 13, fontWeight: FontWeight.w500)),
+                        fontSize: 14, fontWeight: FontWeight.w500)),
+              ),
+            ] else if (_focus.hasFocus) ...[
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () { _focus.unfocus(); _clearSearch(); },
+                child: const Text('Бекор',
+                    style: TextStyle(color: AppColors.neonBlue,
+                        fontSize: 14, fontWeight: FontWeight.w500)),
               ),
             ],
           ]),
@@ -229,10 +238,11 @@ class _SearchScreenState extends State<SearchScreen>
             controller: _tabs,
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            indicatorColor: AppColors.neonBlue,
+            indicatorColor: Colors.white,
             indicatorWeight: 2,
             indicatorSize: TabBarIndicatorSize.label,
             labelColor: Colors.white,
+            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             unselectedLabelColor: Colors.white38,
             labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             dividerColor: Colors.transparent,
@@ -246,12 +256,14 @@ class _SearchScreenState extends State<SearchScreen>
                 : TabBarView(
                     controller: _tabs,
                     children: [
+                      // 1. Барои шумо - posts + reels grid (like Instagram)
                       _AllTab(users: _users, posts: _posts, reels: _reels,
                           music: _music, loading: _searching, onUserTap: _openProfile),
+                      // 2. Аккаунтҳо
                       _UsersTab(users: _users, loading: _searching, onTap: _openProfile),
-                      _PostsTab(posts: _posts, loading: _searching),
-                      _ReelsTab(reels: _reels, loading: _searching),
+                      // 3. Аудио
                       _MusicTab(music: _music, loading: _searching),
+                      // 4. Тегҳо
                       _HashtagTab(hashtags: _hashtags, loading: _searching),
                     ],
                   ),
@@ -265,17 +277,18 @@ class _SearchScreenState extends State<SearchScreen>
                 SliverToBoxAdapter(child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
                   child: Row(children: [
-                    const Text('Ҷустуҷӯи охирин',
+                    const Text('Охирин',
                         style: TextStyle(color: Colors.white,
-                            fontSize: 15, fontWeight: FontWeight.bold)),
+                            fontSize: 16, fontWeight: FontWeight.w700)),
                     const Spacer(),
                     GestureDetector(
                       onTap: () async {
                         await SearchHistory.clear();
                         _loadHistory();
                       },
-                      child: const Text('Тоза',
-                          style: TextStyle(color: AppColors.neonBlue, fontSize: 13)),
+                      child: const Text('Ҳамаро тоза кун',
+                          style: TextStyle(color: AppColors.neonBlue,
+                              fontSize: 13, fontWeight: FontWeight.w500)),
                     ),
                   ]),
                 )),
@@ -283,7 +296,12 @@ class _SearchScreenState extends State<SearchScreen>
                   (_, i) {
                     final q = _history[i];
                     return ListTile(
-                      leading: const Icon(Icons.history, color: Colors.white38, size: 20),
+                      leading: Container(
+                          width: 44, height: 44,
+                          decoration: const BoxDecoration(
+                              color: Color(0xFF1C1C1C), shape: BoxShape.circle),
+                          child: const Icon(Icons.history,
+                              color: Colors.white38, size: 20)),
                       title: Text(q, style: const TextStyle(color: Colors.white, fontSize: 14)),
                       trailing: IconButton(
                         icon: const Icon(Icons.close, color: Colors.white24, size: 18),
@@ -306,7 +324,7 @@ class _SearchScreenState extends State<SearchScreen>
                 padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text('Кашф кун',
                     style: TextStyle(color: Colors.white,
-                        fontSize: 15, fontWeight: FontWeight.bold)),
+                        fontSize: 16, fontWeight: FontWeight.w700)),
               )),
 
               // Instagram-style grid
