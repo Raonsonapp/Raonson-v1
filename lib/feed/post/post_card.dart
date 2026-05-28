@@ -25,6 +25,12 @@ class PostCard extends StatefulWidget {
   State<PostCard> createState() => _PostCardState();
 }
 
+// Instagram heart colors
+const List<Color> _kHeartColors = [
+  Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
+  Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
+];
+
 class _PostCardState extends State<PostCard>
     with TickerProviderStateMixin {
   late bool   _liked;
@@ -65,11 +71,6 @@ class _PostCardState extends State<PostCard>
     return myId == postId;
   }
 
-
-  static const List<Color> _heartColors = [
-    Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
-    Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
-  ];
 
   @override
   void initState() {
@@ -755,7 +756,7 @@ class _PostCardState extends State<PostCard>
             onDoubleTap: () {
               final rng = Random();
               setState(() {
-                _heartColor = _heartColors[rng.nextInt(_heartColors.length)];
+                _heartColor = _kHeartColors[rng.nextInt(_kHeartColors.length)];
                 _heartDx = (rng.nextDouble() - 0.5) * 80;
               });
               if (!_liked) {
@@ -986,11 +987,6 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
   List<dynamic> _users = [];
   bool _loading = true;
 
-
-  static const List<Color> _heartColors = [
-    Color(0xFFFF3040), Color(0xFFFF6B35), Color(0xFFFFD700),
-    Color(0xFF00C9A7), Color(0xFF6C63FF), Color(0xFF00B4D8), Color(0xFFFF85A1),
-  ];
 
   @override
   void initState() {
