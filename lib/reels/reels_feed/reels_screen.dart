@@ -1180,63 +1180,39 @@ class _ReelItemState extends State<_ReelItem> {
             top: top + 12,
             left: 0,
             right: 0,
-            child: Row(children: [
-              const SizedBox(width: 16),
-              const Spacer(),
+            child: Stack(alignment: Alignment.center, children: [
+              // ── CENTER: Рилсҳо | Дӯстон (точно по середине) ──
               GestureDetector(
                   onTap: widget.onToggleFilter,
-                  child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                            widget.friendsFilter
-                                ? 'Дӯстон'
-                                : 'Рилсҳо',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(
-                                      blurRadius: 6,
-                                      color: Colors.black54)
-                                ])),
-                        const SizedBox(width: 6),
-                        const Text('|',
-                            style: TextStyle(
-                                color: Colors.white54,
-                                fontSize: 16)),
-                        const SizedBox(width: 6),
-                        Text(
-                            widget.friendsFilter
-                                ? 'Рилсҳо'
-                                : 'Дӯстон',
-                            style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                                shadows: [
-                                  Shadow(
-                                      blurRadius: 6,
-                                      color: Colors.black54)
-                                ])),
-                        const SizedBox(width: 4),
-                        const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white70,
-                            size: 20),
-                      ])),
-              const Spacer(),
-              const SizedBox(width: 8), // mute shown with play button
-              GestureDetector(
-                  onTap: widget.onAddReel,
-                  child: const Padding(
-                      padding: EdgeInsets.only(right: 16),
-                      child: Icon(Icons.add,
-                          color: Colors.white,
-                          size: 28,
-                          shadows: [
-                            Shadow(blurRadius: 6, color: Colors.black54)
-                          ]))),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text(
+                        widget.friendsFilter ? 'Дӯстон' : 'Рилсҳо',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
+                    const SizedBox(width: 6),
+                    const Text('|',
+                        style: TextStyle(color: Colors.white54, fontSize: 15)),
+                    const SizedBox(width: 6),
+                    Text(
+                        widget.friendsFilter ? 'Рилсҳо' : 'Дӯстон',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 15,
+                            shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: Colors.white70, size: 18),
+                  ])),
+              // ── RIGHT: Upload SVG icon ────────────────────────
+              Positioned(
+                  right: 16,
+                  child: GestureDetector(
+                      onTap: widget.onAddReel,
+                      child: SvgPicture.asset('assets/icons/upload.svg',
+                          width: 26, height: 26,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn)))),
             ])),
 
         Positioned(
