@@ -244,7 +244,6 @@ class _SearchScreenState extends State<SearchScreen>
             labelColor: Colors.white,
             labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             unselectedLabelColor: Colors.white38,
-            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             dividerColor: Colors.transparent,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             tabs: _tabLabels.map((l) => Tab(text: l)).toList(),
