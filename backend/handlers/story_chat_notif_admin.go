@@ -361,7 +361,8 @@ func ExploreGrid(c *gin.Context) {
 		                json_build_object('url',m.url,'type',m.type)
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
-		       u.id, u.username, u.avatar
+		       u.id, u.username, u.avatar,
+		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`)
 	posts := []gin.H{}
@@ -370,10 +371,12 @@ func ExploreGrid(c *gin.Context) {
 		for pRows.Next() {
 			var pid, uid, uname, uavatar string
 			var likes int
+			var views int64
 			var createdAt, media interface{}
-			pRows.Scan(&pid, &likes, &createdAt, &media, &uid, &uname, &uavatar)
+			pRows.Scan(&pid, &likes, &createdAt, &media, &uid, &uname, &uavatar, &views)
 			posts = append(posts, gin.H{
-				"_id": pid, "likesCount": likes, "createdAt": createdAt,
+				"_id": pid, "likesCount": likes, "viewsCount": views,
+				"createdAt": createdAt,
 				"media": nilToEmpty(media),
 				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar},
 			})
@@ -381,16 +384,21 @@ func ExploreGrid(c *gin.Context) {
 	}
 
 	rRows, _ := db.Pool.Query(context.Background(), `
-		SELECT id,video_url,likes_count FROM reels
+		SELECT id, video_url, likes_count, views_count
+		FROM reels
 		ORDER BY likes_count DESC LIMIT 20`)
 	reels := []gin.H{}
 	if rRows != nil {
 		defer rRows.Close()
 		for rRows.Next() {
 			var rid, vurl string
-			var likes int
-			rRows.Scan(&rid, &vurl, &likes)
-			reels = append(reels, gin.H{"_id": rid, "videoUrl": vurl, "likesCount": likes})
+			var likes, views int
+			rRows.Scan(&rid, &vurl, &likes, &views)
+			reels = append(reels, gin.H{
+				"_id": rid, "videoUrl": vurl,
+				"thumbnailUrl": vurl, // use video URL as thumbnail fallback
+				"likesCount": likes, "viewsCount": views,
+			})
 		}
 	}
 	result := gin.H{"posts": posts, "reels": reels}
