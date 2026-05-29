@@ -321,7 +321,7 @@ class _SearchScreenState extends State<SearchScreen>
               // Explore grid header
               const SliverToBoxAdapter(child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: const SizedBox.shrink(), // No header like Instagram
+                child: const SizedBox.shrink(),
               )),
 
               // Instagram-style grid
@@ -963,7 +963,10 @@ class _ErrView extends StatelessWidget {
 
 class _GridItem {
   final String url;
+  final String postId;
   final bool isReel;
   final bool isMulti;
-  const _GridItem({required this.url, required this.isReel, this.isMulti = false});
+  final int views;
+  const _GridItem({required this.url, this.postId = '',
+      required this.isReel, this.isMulti = false, this.views = 0});
 }
