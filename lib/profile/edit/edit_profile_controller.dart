@@ -1,38 +1,43 @@
+// lib/profile/edit/edit_profile_controller.dart
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 import '../../models/user_model.dart';
 import '../profile_repository.dart';
 
 class EditProfileController extends ChangeNotifier {
-  final ProfileRepository _repo =
-      ProfileRepository(ApiClient.instance);
+  final ProfileRepository _repo = ProfileRepository(ApiClient.instance);
 
+  final nameController     = TextEditingController();
   final usernameController = TextEditingController();
-  final bioController = TextEditingController();
+  final bioController      = TextEditingController();
+  final websiteController  = TextEditingController();
+  final locationController = TextEditingController();
 
-  bool isPrivate = false;
-  bool isLoading = false;
-  bool isSaving = false;
-  String? error;
+  String?   gender;
+  DateTime? birthday;
+  bool      isPrivate = false;
+  bool      isLoading = false;
+  bool      isSaving  = false;
+  String?   error;
 
   late UserModel _original;
-
-  String? get currentAvatarUrl => _original.avatar.isNotEmpty ? _original.avatar : null;
+  String? get currentAvatarUrl =>
+      _original.avatar.isNotEmpty ? _original.avatar : null;
 
   Future<void> loadCurrentProfile(String userId) async {
     isLoading = true;
     notifyListeners();
-
     try {
       _original = await _repo.getProfile(userId);
+      nameController.text     = _original.fullName ?? '';
       usernameController.text = _original.username;
-      bioController.text = _original.bio ?? '';
-      isPrivate = _original.isPrivate;
+      bioController.text      = _original.bio      ?? '';
+      websiteController.text  = _original.website  ?? '';
+      isPrivate               = _original.isPrivate;
       error = null;
     } catch (e) {
       error = e.toString();
     }
-
     isLoading = false;
     notifyListeners();
   }
@@ -42,16 +47,23 @@ class EditProfileController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> save({dynamic bioSong, String? avatarUrl}) async {
+  Future<bool> save({
+    String?  avatarUrl,
+    bool     removeAvatar = false,
+  }) async {
     isSaving = true;
     notifyListeners();
-
     try {
       await _repo.updateProfile(
         username:  usernameController.text.trim(),
+        fullName:  nameController.text.trim(),
         bio:       bioController.text.trim(),
+        website:   websiteController.text.trim(),
         isPrivate: isPrivate,
-        avatar:    avatarUrl,
+        gender:    gender,
+        location:  locationController.text.trim(),
+        birthday:  birthday?.toIso8601String().substring(0, 10),
+        avatar:    removeAvatar ? '' : avatarUrl,
       );
       return true;
     } catch (e) {
@@ -65,8 +77,11 @@ class EditProfileController extends ChangeNotifier {
 
   @override
   void dispose() {
+    nameController.dispose();
     usernameController.dispose();
     bioController.dispose();
+    websiteController.dispose();
+    locationController.dispose();
     super.dispose();
   }
 }
