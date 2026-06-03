@@ -12,7 +12,6 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../models/post_model.dart';
-import '../models/reel_model.dart';
 import '../models/user_model.dart';
 import '../profile/profile_screen.dart';
 import '../widgets/avatar.dart';
