@@ -7,6 +7,7 @@ import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/user_model.dart';
 import 'profile_repository.dart';
+import '../create/upload/upload_manager.dart';
 import 'highlight_model.dart';
 
 class ProfileController extends ChangeNotifier {
@@ -72,10 +73,15 @@ class ProfileController extends ChangeNotifier {
 
   Future<void> uploadAvatar(File file) async {
     try {
-      final url = await _repo.uploadAvatar(file);
+      final url = await UploadManager().uploadAvatar(file);
       if (url.isNotEmpty && profile != null) {
         profile = profile!.copyWith(avatar: url);
         UserSession.avatar = url;
+        // Persist via API
+        await _repo.updateProfile(
+          username: profile!.username,
+          avatar:   url,
+        );
         notifyListeners();
       }
     } catch (_) {}
