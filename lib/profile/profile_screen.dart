@@ -1,5 +1,5 @@
 // lib/profile/profile_screen.dart — Part 1 FIXED
-// NO image_cropper (not in pubspec). Uses image_picker only.
+
 // NO qr_flutter. Share via share_plus.
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
