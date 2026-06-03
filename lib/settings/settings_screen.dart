@@ -728,10 +728,10 @@ class _CPState extends State<ChangePasswordScreen> {
 class TwoFactorScreen extends StatefulWidget {
   const TwoFactorScreen({super.key});
   @override
-  State<TwoFactorScreen> createState() => _2FAState();
+  State<TwoFactorScreen> createState() => TwoFAState();
 }
 
-class _2FAState extends State<TwoFactorScreen> {
+class TwoFAState extends State<TwoFactorScreen> {
   bool _enabled = false;
   bool _loading = true;
 
