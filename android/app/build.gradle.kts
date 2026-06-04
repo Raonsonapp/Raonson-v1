@@ -12,7 +12,7 @@ android {
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.example.raonson"
+        applicationId = "com.raonson.app"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
 
