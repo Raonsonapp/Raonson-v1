@@ -1,4 +1,4 @@
-package com.example.raonson
+package com.raonson.app
 
 import io.flutter.embedding.android.FlutterActivity
 
