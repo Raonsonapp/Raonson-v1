@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.raonson"
+    namespace = "com.raonson.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
