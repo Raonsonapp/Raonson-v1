@@ -75,6 +75,12 @@ jobs:
         run: flutter build apk --release
 
       # =============================
+      # 8.1 BUILD AAB (RELEASE)
+      # =============================
+      - name: Build AAB (release)
+        run: flutter build appbundle --release
+
+      # =============================
       # 9. UPLOAD APK ARTIFACT
       # =============================
       - name: Upload APK
@@ -82,3 +88,12 @@ jobs:
         with:
           name: raonson-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      # =============================
+      # 9.1 UPLOAD AAB ARTIFACT
+      # =============================
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: raonson-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
