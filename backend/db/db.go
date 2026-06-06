@@ -338,6 +338,37 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_msg_reactions_msg ON message_reactions(message_id);
 
+	-- ── Tables/columns for newly-connected features ──
+	ALTER TABLE reel_comments ADD COLUMN IF NOT EXISTS parent_id   TEXT;
+	ALTER TABLE users         ADD COLUMN IF NOT EXISTS notif_prefs JSONB DEFAULT '{}';
+
+	CREATE TABLE IF NOT EXISTS reel_reports (
+		reel_id    TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		reason     TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (reel_id, user_id)
+	);
+	CREATE TABLE IF NOT EXISTS reel_not_interested (
+		reel_id    TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (reel_id, user_id)
+	);
+	CREATE TABLE IF NOT EXISTS reel_comment_likes (
+		comment_id TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		PRIMARY KEY (comment_id, user_id)
+	);
+	CREATE TABLE IF NOT EXISTS story_replies (
+		id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		story_id     TEXT NOT NULL,
+		from_user_id TEXT NOT NULL,
+		text         TEXT NOT NULL,
+		created_at   TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_story_replies_story ON story_replies(story_id);
+
 	-- ── Performance indexes on hot reverse-lookup columns ──
 	CREATE INDEX IF NOT EXISTS idx_users_phone       ON users(phone);
 	CREATE INDEX IF NOT EXISTS idx_post_saves_post   ON post_saves(post_id);

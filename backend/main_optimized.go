@@ -104,6 +104,9 @@ func main() {
 		u.GET("/by-username/:username", handlers.GetUserByUsername)
 		u.POST("/find-by-contacts",     handlers.FindUsersByContacts)
 		u.GET("/suggestions",           cache5m, handlers.GetSuggestions)
+		u.GET("/blocked",               handlers.GetBlockedUsers)
+		u.POST("/:id/block",            handlers.BlockUser)
+		u.POST("/:id/unblock",          handlers.UnblockUser)
 		u.GET("/:id",                   cache30s, handlers.GetUserByID)
 		u.PUT("/",                       handlers.UpdateUser)
 		u.DELETE("/",                    handlers.DeleteUser)
@@ -123,6 +126,9 @@ func main() {
 		p.PUT("/",              handlers.UpdateProfile)
 		p.PUT("/settings",      handlers.UpdateSettings)
 		p.GET("/saved",         handlers.GetSavedPosts)
+		p.GET("/notifications", handlers.GetNotifPrefs)
+		p.PUT("/notifications", handlers.UpdateNotifPrefs)
+		p.DELETE("/avatar",     handlers.DeleteAvatar)
 		p.GET("/:username",     cache30s, handlers.GetProfile)
 	}
 
@@ -133,7 +139,11 @@ func main() {
 		po.GET("/",                  cache30s, handlers.GetFeed)
 		po.GET("/feed",              cache30s, handlers.GetFeed)
 		po.GET("/smart-feed",        handlers.GetSmartFeed) // has own cache
+		po.GET("/hashtag/:tag",      cache30s, handlers.HashtagPosts)
 		po.GET("/:id",               cache30s, handlers.GetPost)
+		po.GET("/:id/likes",         handlers.GetPostLikers)
+		po.GET("/:id/comments",      cache30s, handlers.GetComments)
+		po.POST("/:id/comments",     handlers.AddComment)
 		po.DELETE("/:id",            handlers.DeletePost)
 		po.POST("/:id/like",         handlers.TogglePostLike)
 		po.POST("/:id/save",         handlers.TogglePostSave)
@@ -184,6 +194,11 @@ func main() {
 		re.POST("/:id/save",     handlers.ToggleReelSave)
 		re.GET("/:id/comments",  cache30s, handlers.GetReelComments)
 		re.POST("/:id/comments", handlers.AddReelComment)
+		re.POST("/:id/report",       handlers.ReportReel)
+		re.POST("/:id/not_interest", handlers.MarkReelNotInterested)
+		re.GET("/:id/stats",         handlers.GetReelStats)
+		re.POST("/:id/comments/:commentId/like",  handlers.LikeReelComment)
+		re.POST("/:id/comments/:commentId/reply", handlers.ReplyReelComment)
 	}
 
 	st := r.Group("/stories", auth, rl100)
@@ -194,6 +209,7 @@ func main() {
 		st.DELETE("/:id",      handlers.DeleteStory)
 		st.POST("/:id/view",   handlers.ViewStory)
 		st.POST("/:id/like",   handlers.LikeStory)
+		st.POST("/:id/reply",  handlers.ReplyStory)
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
 	}
 
@@ -213,6 +229,7 @@ func main() {
 		ch.POST("/:chatId/messages", handlers.SendMessage)
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
+		ch.POST("/messages/:id/react", handlers.ReactToMessage)
 	}
 
 	no := r.Group("/notifications", auth, rl100)

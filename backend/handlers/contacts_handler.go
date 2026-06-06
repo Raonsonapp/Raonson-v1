@@ -206,7 +206,7 @@ func GetUnreadNotifCount(c *gin.Context) {
 
 	var count int
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND is_read=false`,
+		`SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND read=false`,
 		myID).Scan(&count)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"count": 0})
