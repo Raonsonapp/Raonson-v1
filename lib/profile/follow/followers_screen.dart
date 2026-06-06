@@ -70,8 +70,8 @@ class _FollowersScreenState extends State<FollowersScreen> {
                       title: Text(user.username),
                       trailing: user.isVerified
                           ? const Icon(
-                              Icons.verified,
-                              color: Colors.blue,
+                              Icons.verified_rounded,
+                              color: Color(0xFF00C853),
                               size: 18,
                             )
                           : null,

@@ -893,7 +893,7 @@ class _FeedCard extends StatelessWidget {
                 if (item.postData!.user.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(Icons.verified_rounded,
-                      color: AppColors.neonBlue, size: 14),
+                      color: Color(0xFF00C853), size: 14),
                 ],
                 const SizedBox(width: 10),
                 _FollowChip(),
@@ -1246,7 +1246,7 @@ class _UserRowState extends State<_UserRow> {
                 if (widget.user.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(Icons.verified_rounded,
-                      color: AppColors.neonBlue, size: 14),
+                      color: Color(0xFF00C853), size: 14),
                 ],
               ]),
               if ((widget.user.bio ?? '').isNotEmpty) ...[
