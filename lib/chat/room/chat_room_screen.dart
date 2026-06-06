@@ -431,7 +431,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15)),
-                if (widget.peer.verified) ...[
+                if (widget.peer.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(Icons.verified_rounded,
                       color: AppColors.neonBlue, size: 14),

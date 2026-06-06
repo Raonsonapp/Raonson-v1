@@ -278,7 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         style: const TextStyle(color: Colors.white,
                             fontSize: 18, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis)),
-                    if (user.verified) ...[
+                    if (user.isVerified) ...[
                       const SizedBox(width: 5),
                       const Icon(Icons.verified_rounded,
                           color: Color(0xFF00C853), size: 16),
@@ -371,8 +371,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                           }
                         },
                         onShare:  _shareProfile,
-                        verified: user.verified,
-                        onVerify: user.verified ? null : _verifySheet)
+                        verified: user.isVerified,
+                        onVerify: user.isVerified ? null : _verifySheet)
                     : _OtherBtns(
                         isFollowing:       user.isFollowing,
                         isPrivate:         user.isPrivate,
@@ -861,7 +861,7 @@ class _ULS extends State<_UserListSheet> {
                     title: Row(children: [
                       Text(u.username, style: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.w600)),
-                      if (u.verified) ...[
+                      if (u.isVerified) ...[
                         const SizedBox(width: 4),
                         const VerifiedBadge(size: 14),
                       ],

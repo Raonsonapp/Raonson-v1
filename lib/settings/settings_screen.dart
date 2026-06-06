@@ -7,78 +7,18 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app/app_state.dart';
+import '../app/app_settings.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import '../core/i18n/strings.dart';
 import '../core/services/user_session.dart';
 import '../profile/edit/edit_profile_screen.dart';
 
-// ════════════════════════════════════════════════════════════════════
-//  AppSettingsState — realtime theme + language
-//  Singleton ChangeNotifier: wrap MaterialApp with ListenableBuilder
-// ════════════════════════════════════════════════════════════════════
-class AppSettingsState extends ChangeNotifier {
-  static final AppSettingsState _instance = AppSettingsState._();
-  static AppSettingsState get instance => _instance;
-  AppSettingsState._();
-
-  ThemeMode _theme = ThemeMode.dark;
-  String    _lang  = 'tj';
-
-  ThemeMode get theme => _theme;
-  String    get lang  => _lang;
-
-  static const _kTheme = 'setting_theme';
-  static const _kLang  = 'setting_lang';
-
-  Future<void> init() async {
-    final p = await SharedPreferences.getInstance();
-    final t = p.getString(_kTheme) ?? 'dark';
-    _theme = (t == 'light') ? ThemeMode.light : ThemeMode.dark;
-    _lang  = p.getString(_kLang) ?? 'tj';
-    notifyListeners();
-  }
-
-  Future<void> setTheme(ThemeMode m) async {
-    if (_theme == m) return;
-    _theme = m;
-    notifyListeners();
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_kTheme, m == ThemeMode.light ? 'light' : 'dark');
-    _pushServer();
-  }
-
-  Future<void> setLang(String l) async {
-    if (_lang == l) return;
-    _lang = l;
-    notifyListeners();
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_kLang, l);
-    _pushServer();
-  }
-
-  void _pushServer() {
-    try {
-      ApiClient.instance.put('/profile/settings', body: {
-        'theme': _theme == ThemeMode.light ? 'light' : 'dark',
-        'language': _lang,
-      });
-    } catch (_) {}
-  }
-
-  static String themeLabel(ThemeMode m) =>
-      m == ThemeMode.light ? 'Равшан' : 'Торик';
-
-  static String langLabel(String l) {
-    switch (l) {
-      case 'ru': return 'Русский';
-      case 'en': return 'English';
-      default:   return 'Тоҷикӣ';
-    }
-  }
-}
+/// Theme label in the active language.
+String _themeLabel(ThemeMode m) =>
+    m == ThemeMode.light ? tr('theme.light') : tr('theme.dark');
 
 // ════════════════════════════════════════════════════════════════════
 //  SETTINGS SCREEN
@@ -94,79 +34,79 @@ class SettingsScreen extends StatelessWidget {
         final s = AppSettingsState.instance;
         return Scaffold(
           backgroundColor: AppColors.bg,
-          appBar: _appBar(ctx, 'Танзимот',
+          appBar: _appBar(ctx, tr('settings.title'),
               showBack: Navigator.canPop(ctx)),
           body: ListView(
             padding: const EdgeInsets.only(bottom: 50),
             children: [
 
               // ── ACCOUNT ───────────────────────────────────────────
-              _Hdr('Аккаунт'),
+              _Hdr(tr('section.account')),
               _NavTile(
                 icon:  Icons.person_outline_rounded,
-                title: 'Таҳрири профил',
+                title: tr('account.editProfile'),
                 onTap: () => _go(ctx,
                     EditProfileScreen(
                         userId: UserSession.userId ?? 'me')),
               ),
               _NavTile(
                 icon:  Icons.lock_outline_rounded,
-                title: 'Иваз кардани рамз',
+                title: tr('account.changePassword'),
                 onTap: () => _go(ctx, const ChangePasswordScreen()),
               ),
               _NavTile(
                 icon:  Icons.email_outlined,
-                title: 'Почтаи электронӣ',
-                sub:   'Почтаро тағир диҳ',
+                title: tr('account.email'),
+                sub:   tr('account.emailSub'),
                 onTap: () => _go(ctx,
-                    const _SimpleScreen(title: 'Почтаи электронӣ')),
+                    _SimpleScreen(title: tr('account.email'))),
               ),
               _NavTile(
                 icon:  Icons.phone_outlined,
-                title: 'Рақами телефон',
+                title: tr('account.phone'),
                 onTap: () => _go(ctx,
-                    const _SimpleScreen(title: 'Рақами телефон')),
+                    _SimpleScreen(title: tr('account.phone'))),
               ),
 
               // ── APPEARANCE ────────────────────────────────────────
-              _Hdr('Намуд'),
+              _Hdr(tr('section.appearance')),
               _NavTile(
                 icon:  Icons.palette_outlined,
-                title: 'Мавзӯъ',
-                sub:   AppSettingsState.themeLabel(s.theme),
+                title: tr('appearance.theme'),
+                sub:   _themeLabel(s.theme),
                 onTap: () => _go(ctx, const AppearanceScreen()),
               ),
 
               // ── LANGUAGE ──────────────────────────────────────────
-              _Hdr('Забон'),
+              _Hdr(tr('section.language')),
               _NavTile(
                 icon:  Icons.language_rounded,
-                title: 'Забони барнома',
-                sub:   AppSettingsState.langLabel(s.lang),
+                title: tr('language.app'),
+                sub:   langDisplayName(s.lang),
                 onTap: () => _go(ctx, const LanguageScreen()),
               ),
 
               // ── PRIVACY ───────────────────────────────────────────
-              _Hdr('Махфият'),
+              _Hdr(tr('section.privacy')),
               _NavTile(
                 icon:  Icons.privacy_tip_outlined,
-                title: 'Танзимоти махфият',
+                title: tr('privacy.settings'),
                 onTap: () => _go(ctx, const PrivacyScreen()),
               ),
 
               // ── NOTIFICATIONS ─────────────────────────────────────
-              _Hdr('Огоҳиҳо'),
+              _Hdr(tr('section.notifications')),
               _NavTile(
                 icon:  Icons.notifications_outlined,
-                title: 'Огоҳиҳои барнома',
+                title: tr('notifications.app'),
                 onTap: () => _go(ctx, const NotificationsScreen()),
               ),
 
               // ── SECURITY ──────────────────────────────────────────
-              _Hdr('Амнияти аккаунт'),
+              _Hdr(tr('section.security')),
               _NavTile(
                 icon:  Icons.security_outlined,
-                title: 'Танзимоти амният',
+                title: tr('security.settings'),
                 onTap: () => _go(ctx, const SecurityScreen()),
               ),
 
@@ -174,13 +114,13 @@ class SettingsScreen extends StatelessWidget {
               _Hdr(''),
               _DangerTile(
                 icon:  Icons.logout_rounded,
-                title: 'Хуруҷ аз аккаунт',
+                title: tr('account.logout'),
                 onTap: () => _confirmLogout(ctx),
               ),
               const _ThinDiv(),
               _DangerTile(
                 icon:  Icons.delete_forever_rounded,
-                title: 'Аккаунтро нест кун',
+                title: tr('account.delete'),
                 onTap: () => _confirmDelete(ctx),
               ),
             ],
@@ -197,9 +137,9 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: ctx,
       builder: (_) => _Dialog(
-        title:        'Хуруҷ аз аккаунт?',
-        body:         'Шумо аз аккаунти худ мебароед.',
-        actionLabel:  'Хуруҷ',
+        title:        tr('logout.title'),
+        body:         tr('logout.body'),
+        actionLabel:  tr('logout.action'),
         onAction: () {
           Navigator.pop(ctx);
           ctx.read<AppState>().logout();
@@ -212,9 +152,9 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: ctx,
       builder: (_) => _Dialog(
-        title:       'Аккаунтро нест кунем?',
-        body:        'Ин амал бебозгашт аст. Ҳама маълумот нест мешавад.',
-        actionLabel: 'Нест кун',
+        title:       tr('delete.title'),
+        body:        tr('delete.body'),
+        actionLabel: tr('delete.action'),
         onAction: () async {
           Navigator.pop(ctx);
           try {
@@ -241,20 +181,20 @@ class AppearanceScreen extends StatelessWidget {
         final s = AppSettingsState.instance;
         return Scaffold(
           backgroundColor: AppColors.bg,
-          appBar: _appBar(ctx, 'Намуд'),
+          appBar: _appBar(ctx, tr('section.appearance')),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
             children: [
               _ChoiceCard(
                 icon:     Icons.dark_mode_rounded,
-                label:    'Торик',
+                label:    tr('theme.dark'),
                 selected: s.theme == ThemeMode.dark,
                 onTap:    () => s.setTheme(ThemeMode.dark),
               ),
               const SizedBox(height: 12),
               _ChoiceCard(
                 icon:     Icons.light_mode_rounded,
-                label:    'Равшан',
+                label:    tr('theme.light'),
                 selected: s.theme == ThemeMode.light,
                 onTap:    () => s.setTheme(ThemeMode.light),
               ),
@@ -286,7 +226,7 @@ class LanguageScreen extends StatelessWidget {
         final s = AppSettingsState.instance;
         return Scaffold(
           backgroundColor: AppColors.bg,
-          appBar: _appBar(ctx, 'Забон'),
+          appBar: _appBar(ctx, tr('section.language')),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
             children: _langs.map((l) {
@@ -1249,8 +1189,8 @@ class _Dialog extends StatelessWidget {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор',
-                style: TextStyle(color: Colors.white54))),
+            child: Text(tr('common.cancel'),
+                style: const TextStyle(color: Colors.white54))),
         TextButton(
             onPressed: onAction,
             child: Text(actionLabel,

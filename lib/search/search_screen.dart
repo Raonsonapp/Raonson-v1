@@ -890,7 +890,7 @@ class _FeedCard extends StatelessWidget {
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600, fontSize: 14)),
-                if (item.postData!.user.verified) ...[
+                if (item.postData!.user.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(Icons.verified_rounded,
                       color: AppColors.neonBlue, size: 14),
@@ -1243,7 +1243,7 @@ class _UserRowState extends State<_UserRow> {
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600, fontSize: 14)),
-                if (widget.user.verified) ...[
+                if (widget.user.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(Icons.verified_rounded,
                       color: AppColors.neonBlue, size: 14),

@@ -506,7 +506,7 @@ class _CommentItemState extends State<_CommentItem> {
                     color: Colors.white, fontWeight: FontWeight.w700,
                     fontSize: 13),
               ),
-              if (c.user.verified)
+              if (c.user.isVerified)
                 const WidgetSpan(child: Padding(
                   padding: EdgeInsets.only(right: 4),
                   child: VerifiedBadge(size: 12))),

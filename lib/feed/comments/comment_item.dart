@@ -85,7 +85,7 @@ class _CommentItemState extends State<CommentItem> {
                   style: const TextStyle(
                       fontWeight: FontWeight.w600, color: Colors.white,
                       fontSize: 13)),
-              if (widget.comment.user.verified) ...[
+              if (widget.comment.user.isVerified) ...[
                 const SizedBox(width: 4),
                 const VerifiedBadge(size: 12),
               ],

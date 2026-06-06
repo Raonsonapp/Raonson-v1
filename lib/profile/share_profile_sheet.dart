@@ -82,7 +82,7 @@ class _ShareState extends State<ShareProfileSheet> {
                           style: TextStyle(
                               color: _dark ? Colors.white : Colors.black,
                               fontSize: 15, fontWeight: FontWeight.bold))),
-                      if (widget.user.verified) ...[
+                      if (widget.user.isVerified) ...[
                         const SizedBox(width: 5),
                         const Icon(Icons.verified_rounded,
                             color: Color(0xFF00C853), size: 14),

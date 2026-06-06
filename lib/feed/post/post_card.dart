@@ -720,7 +720,7 @@ class _PostCardState extends State<PostCard>
                   child: Text(post.user.username,
                     style: const TextStyle(fontWeight: FontWeight.w700,
                         fontSize: 15, color: Colors.white))),
-                if (post.user.verified) ...[ const SizedBox(width: 4),
+                if (post.user.isVerified) ...[ const SizedBox(width: 4),
                   const VerifiedBadge(size: 16) ],
               ]),
               const SizedBox(height: 2),

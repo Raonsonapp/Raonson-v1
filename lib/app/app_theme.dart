@@ -63,5 +63,46 @@ class AppTheme {
       ),
     );
   }
-  static ThemeData light() => dark();
+  // ── Light theme — genuine light palette (no longer an alias of dark) ──
+  static const Color lightBg      = Color(0xFFFFFFFF);
+  static const Color lightSurface = Color(0xFFFAFAFA);
+  static const Color lightCard    = Color(0xFFF2F2F2);
+  static const Color lightDivider = Color(0xFFDBDBDB);
+  static const Color lightText    = Color(0xFF111111);
+  static const Color lightSubtext = Color(0xFF555555);
+
+  static ThemeData light() {
+    return ThemeData(
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: lightBg,
+      primaryColor: AppColors.neonBlue,
+      colorScheme: const ColorScheme.light(
+        primary:   AppColors.neonBlue,
+        secondary: AppColors.storyStart,
+        surface:   lightBg,
+        onPrimary: Colors.white,
+        onSurface: lightText,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: lightBg,
+        elevation: 0,
+        centerTitle: true,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        iconTheme: IconThemeData(color: lightText),
+        titleTextStyle: TextStyle(
+          color: lightText,
+          fontSize: 32,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      iconTheme:    const IconThemeData(color: lightText),
+      dividerColor: lightDivider,
+      textTheme: const TextTheme(
+        bodyLarge:  TextStyle(color: lightText),
+        bodyMedium: TextStyle(color: lightSubtext),
+        bodySmall:  TextStyle(color: lightSubtext),
+        titleLarge: TextStyle(color: lightText, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
 }

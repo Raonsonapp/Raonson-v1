@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app_state.dart';
+import 'app_settings.dart';
 import 'app_controller.dart';
 import 'app_theme.dart';
 import 'app_config.dart';
@@ -22,17 +23,27 @@ class RaonsonApp extends StatelessWidget {
           final state      = context.watch<AppState>();
           final controller = AppController(state);
 
-          return MaterialApp(
-            title: AppConfig.appName,
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.dark(),
-            // ✅ Splash — blank spinner ўрнига чиройли loading
-            home: !state.isInitialized
-                ? const AppSplash()
-                : (state.isAuthenticated
-                    ? const BottomNavScaffold()
-                    : const LoginScreen()),
-            onGenerateRoute: controller.onGenerateRoute,
+          // ✅ MaterialApp listens to AppSettingsState → theme & language
+          //    changes apply INSTANTLY across the whole app (realtime).
+          return AnimatedBuilder(
+            animation: AppSettingsState.instance,
+            builder: (context, _) {
+              final settings = AppSettingsState.instance;
+              return MaterialApp(
+                title: AppConfig.appName,
+                debugShowCheckedModeBanner: false,
+                theme:      AppTheme.light(),
+                darkTheme:  AppTheme.dark(),
+                themeMode:  settings.theme,
+                // ✅ Splash — blank spinner ўрнига чиройли loading
+                home: !state.isInitialized
+                    ? const AppSplash()
+                    : (state.isAuthenticated
+                        ? const BottomNavScaffold()
+                        : const LoginScreen()),
+                onGenerateRoute: controller.onGenerateRoute,
+              );
+            },
           );
         },
       ),

@@ -32,7 +32,7 @@ class ProfileHeader extends StatelessWidget {
                       profile.username,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    if (profile.verified)
+                    if (profile.isVerified)
                       const Padding(
                         padding: EdgeInsets.only(left: 6),
                         child: VerifiedBadge(),

@@ -68,7 +68,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
                             : null,
                       ),
                       title: Text(user.username),
-                      trailing: user.verified
+                      trailing: user.isVerified
                           ? const Icon(
                               Icons.verified,
                               color: Colors.blue,
