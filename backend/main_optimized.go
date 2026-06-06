@@ -119,6 +119,7 @@ func main() {
 		p.GET("/notes/friends", cache30s, handlers.GetFriendsNotes)
 		p.POST("/note",         handlers.SetNote)
 		p.PUT("/",              handlers.UpdateProfile)
+		p.PUT("/settings",      handlers.UpdateSettings)
 		p.GET("/:username",     cache30s, handlers.GetProfile)
 	}
 
@@ -227,9 +228,13 @@ func main() {
 
 	ad := r.Group("/admin", auth, admin)
 	{
-		ad.GET("/stats",      handlers.AdminStats)
-		ad.POST("/ban/:id",   handlers.BanUser)
-		ad.POST("/unban/:id", handlers.UnbanUser)
+		ad.GET("/stats",        handlers.AdminStats)
+		ad.GET("/users",        handlers.AdminListUsers)
+		ad.POST("/ban/:id",     handlers.BanUser)
+		ad.POST("/unban/:id",   handlers.UnbanUser)
+		ad.POST("/verify/:id",   handlers.VerifyUser)
+		ad.POST("/unverify/:id", handlers.UnverifyUser)
+		ad.DELETE("/users/:id", handlers.AdminDeleteUser)
 	}
 
 	log.Printf("🚀 Raonson Go | Port:%s | PostgreSQL+R2+Redis | GZIP ON", port)

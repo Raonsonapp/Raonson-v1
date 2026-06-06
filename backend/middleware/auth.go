@@ -1,9 +1,12 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"strings"
+
+	"raonson/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -43,14 +46,22 @@ func Auth() gin.HandlerFunc {
 	}
 }
 
+// AdminOnly — нақшро аз DB мегирад (JWT нақшро надорад), то соҳиби
+// барнома (@raonson) ва ҳар admin-и дигар ҳамеша дастрасӣ дошта бошад.
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		role, _ := c.Get("role")
+		uid := UID(c)
+		var role string
+		if uid != "" {
+			db.Pool.QueryRow(context.Background(),
+				`SELECT COALESCE(role,'user') FROM users WHERE id=$1`, uid).Scan(&role)
+		}
 		if role != "admin" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
 			c.Abort()
 			return
 		}
+		c.Set("role", role)
 		c.Next()
 	}
 }

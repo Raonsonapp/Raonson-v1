@@ -274,6 +274,14 @@ func migrate() {
 		updated_at TIMESTAMPTZ DEFAULT NOW(),
 		UNIQUE(user_id, platform)
 	);
+
+	-- ── App settings persistence (theme / language) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS theme    VARCHAR(10) DEFAULT 'dark';
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(5)  DEFAULT 'tj';
+
+	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
+	UPDATE users SET role='admin', verified=TRUE
+	WHERE LOWER(username)='raonson';
 	`
 	if _, err := Pool.Exec(ctx, sql); err != nil {
 		log.Fatalf("❌ Migration failed: %v", err)

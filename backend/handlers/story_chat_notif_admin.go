@@ -443,5 +443,74 @@ func UnbanUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"banned": false})
 }
 
+// POST /admin/verify/:id — галочка медиҳад (admin only)
+func VerifyUser(c *gin.Context) {
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET verified=TRUE WHERE id=$1`, c.Param("id"))
+	c.JSON(http.StatusOK, gin.H{"verified": true})
+}
+
+// POST /admin/unverify/:id — галочкаро мегирад (admin only).
+// Аккаунти соҳиби барнома (@raonson) ҳеҷ гоҳ галочкаашро гум намекунад.
+func UnverifyUser(c *gin.Context) {
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET verified=FALSE
+		 WHERE id=$1 AND LOWER(username) <> 'raonson'`, c.Param("id"))
+	c.JSON(http.StatusOK, gin.H{"verified": false})
+}
+
+// DELETE /admin/users/:id — аккаунтро пурра нест мекунад (admin only).
+// Соҳиби барнома (@raonson) нест карда намешавад.
+func AdminDeleteUser(c *gin.Context) {
+	id := c.Param("id")
+	var uname string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT username FROM users WHERE id=$1`, id).Scan(&uname)
+	if uname == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	if uname == "raonson" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Owner account cannot be deleted"})
+		return
+	}
+	if _, err := db.Pool.Exec(context.Background(),
+		`DELETE FROM users WHERE id=$1`, id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+// GET /admin/users?q=<query> — рӯйхати корбарон барои admin (ҷустуҷӯ)
+func AdminListUsers(c *gin.Context) {
+	q := c.Query("q")
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT id, username, COALESCE(avatar,''),
+		       COALESCE(verified,false), COALESCE(banned,false),
+		       COALESCE(role,'user')
+		FROM users
+		WHERE ($1 = '' OR username ILIKE '%' || $1 || '%')
+		ORDER BY (LOWER(username)='raonson') DESC, username ASC
+		LIMIT 50`, q)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Query failed"})
+		return
+	}
+	defer rows.Close()
+	out := []gin.H{}
+	for rows.Next() {
+		var id, username, avatar, role string
+		var verified, banned bool
+		if rows.Scan(&id, &username, &avatar, &verified, &banned, &role) == nil {
+			out = append(out, gin.H{
+				"_id": id, "id": id, "username": username, "avatar": avatar,
+				"verified": verified, "banned": banned, "role": role,
+			})
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"users": out})
+}
+
 var _ = sort.Strings
 var _ = time.Now
