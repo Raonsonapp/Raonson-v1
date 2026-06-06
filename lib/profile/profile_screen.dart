@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +12,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
+import '../create/upload/upload_manager.dart';
+import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/user_model.dart';
@@ -126,6 +129,70 @@ class _ProfileScreenState extends State<ProfileScreen>
       context: context, backgroundColor: Colors.transparent,
       builder: (_) => HighlightOptionsSheet(
           highlight: h, onDelete: () => _ctrl.deleteHighlight(h.id)));
+  }
+
+  // ── Create highlight (Актуальный) ────────────────────────────────
+  Future<void> _createHighlight() async {
+    final picked = await ImagePicker()
+        .pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null || !mounted) return;
+
+    final title = await _askHighlightTitle();
+    if (title == null || title.trim().isEmpty || !mounted) return;
+
+    // Loading overlay
+    showDialog(
+      context: context, barrierDismissible: false,
+      builder: (_) => const Center(
+          child: CircularProgressIndicator(
+              color: AppColors.neonBlue, strokeWidth: 2)),
+    );
+    String coverUrl = '';
+    try {
+      coverUrl = await UploadManager().uploadFile(File(picked.path));
+    } catch (_) {}
+    await _ctrl.createHighlight(title.trim(), coverUrl, const []);
+    if (mounted) Navigator.pop(context); // close loading
+  }
+
+  Future<String?> _askHighlightTitle() {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
+        title: const Text('Актуальни нав',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 20,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Ном...',
+            hintStyle: TextStyle(color: Colors.white38),
+            counterStyle: TextStyle(color: Colors.white24),
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white24)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: AppColors.neonBlue)),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Бекор',
+                  style: TextStyle(color: Colors.white54))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, ctrl.text),
+              child: const Text('Эҷод',
+                  style: TextStyle(
+                      color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
   }
 
   // ── Other user menu ───────────────────────────────────────────────
@@ -256,7 +323,15 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: NestedScrollView(
+      body: RefreshIndicator(
+        color: AppColors.neonBlue,
+        backgroundColor: AppColors.card,
+        onRefresh: () async {
+          await _ctrl.loadProfile();
+          if (_tab.index == 2) await _ctrl.loadTaggedPosts();
+          if (_isMe && _tab.index == 3) await _ctrl.loadSavedPosts();
+        },
+        child: NestedScrollView(
         headerSliverBuilder: (_, __) => [
           SliverToBoxAdapter(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,7 +429,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               HighlightsRow(
                 highlights:  _ctrl.highlights,
                 isMe:        _isMe,
-                onAdd:       _isMe ? () {} : null,
+                onAdd:       _isMe ? _createHighlight : null,
                 onLongPress: _isMe ? _hlLongPress : null,
               ),
 
@@ -399,7 +474,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 controller: _tab,
                 tabs: [
                   const Tab(icon: Icon(Icons.grid_on_rounded)),
-                  const Tab(icon: Icon(Icons.slow_motion_video_rounded)),
+                  Tab(icon: SvgPicture.asset('assets/icons/nav_reels.svg',
+                      width: 22, height: 22,
+                      colorFilter: const ColorFilter.mode(
+                          Colors.white, BlendMode.srcIn))),
                   const Tab(icon: Icon(Icons.person_pin_outlined)),
                   if (_isMe)
                     const Tab(icon: Icon(Icons.bookmark_border_rounded)),
@@ -416,11 +494,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           _PostGrid(
               posts:       _ctrl.sortedPosts,
               isMe:        _isMe,
-              onLongPress: _postMenu),
+              onLongPress: _postMenu,
+              onRemoved:   (id) => _ctrl.removePostById(id)),
           _ReelGrid(reels: _ctrl.reels),
           _TaggedGrid(ctrl: _ctrl),
           if (_isMe) _SavedGrid(ctrl: _ctrl),
         ]),
+        ),
       ),
     );
   }
@@ -584,8 +664,9 @@ class _PostGrid extends StatelessWidget {
   final List<PostModel> posts;
   final bool isMe;
   final void Function(PostModel) onLongPress;
+  final void Function(String id)? onRemoved;
   const _PostGrid({required this.posts, required this.isMe,
-      required this.onLongPress});
+      required this.onLongPress, this.onRemoved});
   String _f(int v) {
     if (v >= 1000000) return '${(v/1e6).toStringAsFixed(1)}M';
     if (v >= 1000)    return '${(v/1000).toStringAsFixed(1)}K';
@@ -606,9 +687,10 @@ class _PostGrid extends StatelessWidget {
         final p   = posts[i];
         final url = p.media.isNotEmpty ? (p.media.first['url'] ?? '') : '';
         return GestureDetector(
-          onTap: () => showModalBottomSheet(context: ctx,
-              isScrollControlled: true, backgroundColor: Colors.transparent,
-              builder: (_) => _PostSheet(posts: posts, idx: i)),
+          onTap: () => Navigator.push(ctx, MaterialPageRoute(
+              builder: (_) => PostDetailScreen(
+                  posts: posts, initialIndex: i, title: 'Постҳо',
+                  onPostDeleted: (post) => onRemoved?.call(post.id)))),
           onLongPress: isMe ? () => onLongPress(p) : null,
           child: Stack(fit: StackFit.expand, children: [
             url.isNotEmpty
@@ -677,9 +759,9 @@ class _ReelGrid extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter, end: Alignment.topCenter,
                 colors: [Colors.black.withOpacity(0.7), Colors.transparent])))),
-          const Positioned(top: 6, right: 6, child: Icon(
-              Icons.slow_motion_video_rounded, color: Colors.white, size: 16,
-              shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
+          Positioned(top: 6, right: 6, child: SvgPicture.asset(
+              'assets/icons/nav_reels.svg', width: 16, height: 16,
+              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))),
           Positioned(bottom: 5, left: 5,
             child: Row(children: [
               const Icon(Icons.remove_red_eye_rounded, color: Colors.white,
@@ -717,10 +799,14 @@ class _TGS extends State<_TaggedGrid> {
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
           childAspectRatio: 1.0),
       itemCount: posts.length,
-      itemBuilder: (_, i) => CachedNetworkImage(
-          imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
-          placeholder: (_, __) => Container(color: AppColors.card),
-          errorWidget: (_, __, ___) => Container(color: AppColors.card)));
+      itemBuilder: (ctx, i) => GestureDetector(
+        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+            builder: (_) => PostDetailScreen(
+                posts: posts, initialIndex: i, title: 'Зикршуда'))),
+        child: CachedNetworkImage(
+            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
+            placeholder: (_, __) => Container(color: AppColors.card),
+            errorWidget: (_, __, ___) => Container(color: AppColors.card))));
   }
 }
 
@@ -747,67 +833,15 @@ class _SGS extends State<_SavedGrid> {
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
           childAspectRatio: 1.0),
       itemCount: posts.length,
-      itemBuilder: (_, i) => CachedNetworkImage(
-          imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
-          placeholder: (_, __) => Container(color: AppColors.card),
-          errorWidget: (_, __, ___) => Container(color: AppColors.card)));
+      itemBuilder: (ctx, i) => GestureDetector(
+        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+            builder: (_) => PostDetailScreen(
+                posts: posts, initialIndex: i, title: 'Сохташуда'))),
+        child: CachedNetworkImage(
+            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
+            placeholder: (_, __) => Container(color: AppColors.card),
+            errorWidget: (_, __, ___) => Container(color: AppColors.card))));
   }
-}
-
-// ─── Post Sheet ─────────────────────────────────────────────────────────
-class _PostSheet extends StatefulWidget {
-  final List<PostModel> posts; final int idx;
-  const _PostSheet({required this.posts, required this.idx});
-  @override State<_PostSheet> createState() => _PSS();
-}
-class _PSS extends State<_PostSheet> {
-  late final PageController _pg;
-  @override void initState() { super.initState(); _pg = PageController(initialPage: widget.idx); }
-  @override void dispose()   { _pg.dispose(); super.dispose(); }
-  @override
-  Widget build(BuildContext context) => Container(
-    height: MediaQuery.of(context).size.height * 0.92,
-    decoration: const BoxDecoration(color: Color(0xFF0A0A0A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    child: Column(children: [
-      Center(child: Container(width: 36, height: 4,
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: Colors.white24,
-            borderRadius: BorderRadius.circular(2)))),
-      Expanded(child: PageView.builder(
-        controller: _pg, itemCount: widget.posts.length,
-        itemBuilder: (_, i) {
-          final p   = widget.posts[i];
-          final url = p.mediaUrl;
-          return SingleChildScrollView(child: Column(children: [
-            url.isNotEmpty
-                ? CachedNetworkImage(imageUrl: url,
-                    width: double.infinity, fit: BoxFit.contain,
-                    placeholder: (_, __) => Container(height: 300, color: AppColors.card),
-                    errorWidget: (_, __, ___) => Container(height: 300, color: AppColors.card))
-                : Container(height: 300, color: AppColors.card),
-            if (p.caption.isNotEmpty)
-              Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-                child: Align(alignment: Alignment.centerLeft,
-                  child: Text(p.caption,
-                      style: const TextStyle(color: Colors.white, fontSize: 14)))),
-            Padding(padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-              child: Row(children: [
-                const Icon(Icons.favorite_border_rounded,
-                    color: Colors.white54, size: 20),
-                const SizedBox(width: 6),
-                Text('${p.likesCount}',
-                    style: const TextStyle(color: Colors.white54)),
-                const SizedBox(width: 16),
-                const Icon(Icons.chat_bubble_outline_rounded,
-                    color: Colors.white54, size: 18),
-                const SizedBox(width: 6),
-                Text('${p.commentsCount}',
-                    style: const TextStyle(color: Colors.white54)),
-              ])),
-          ]));
-        })),
-    ]));
 }
 
 // ─── User List Sheet ────────────────────────────────────────────────────

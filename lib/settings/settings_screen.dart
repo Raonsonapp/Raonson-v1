@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
 import '../app/app_settings.dart';
 import '../app/app_theme.dart';
@@ -109,6 +110,18 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('security.settings'),
                 onTap: () => _go(ctx, const SecurityScreen()),
               ),
+
+              // ── ADMIN (танҳо барои соҳиби барнома @raonson) ──────
+              if ((UserSession.username ?? '').trim().toLowerCase()
+                  == 'raonson') ...[
+                _Hdr(tr('section.admin')),
+                _NavTile(
+                  icon:  Icons.admin_panel_settings_outlined,
+                  title: tr('admin.panel'),
+                  sub:   tr('admin.panelSub'),
+                  onTap: () => _go(ctx, const AdminPanelScreen()),
+                ),
+              ],
 
               // ── DANGER ZONE ───────────────────────────────────────
               _Hdr(''),
