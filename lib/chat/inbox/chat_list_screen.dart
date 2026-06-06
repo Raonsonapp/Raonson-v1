@@ -144,7 +144,11 @@ class _ChatView extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.video_call_outlined,
                       color: Colors.white, size: 26),
-                  onPressed: () {},
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Занги видеоӣ ба зудӣ илова мешавад'),
+                        duration: Duration(seconds: 2)),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined,

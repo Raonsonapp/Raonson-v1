@@ -403,7 +403,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       title: GestureDetector(
-        onTap: () {}, // open profile
+        onTap: () => Navigator.pushNamed(
+            context, '/user-profile', arguments: widget.peer.id),
         child: Row(children: [
           Stack(clipBehavior: Clip.none, children: [
             Avatar(imageUrl: widget.peer.avatar, size: 36, glowBorder: false),
