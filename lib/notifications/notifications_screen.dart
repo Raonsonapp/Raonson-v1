@@ -26,18 +26,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     setState(() => _loading = true);
     try {
       final data = await _repo.fetchNotifications();
+      if (!mounted) return;
       setState(() {
         _notifications = data['notifications'] as List<NotificationModel>;
         _unreadCount = data['unreadCount'] as int;
         _loading = false;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
 
   Future<void> _markAllRead() async {
     await _repo.markAllAsRead();
+    if (!mounted) return;
     setState(() {
       _notifications = _notifications.map((e) => e.copyWith(read: true)).toList();
       _unreadCount = 0;
@@ -47,6 +50,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _onTap(NotificationModel n) async {
     if (!n.isRead) {
       await _repo.markAsRead(n.id);
+      if (!mounted) return;
       setState(() {
         _notifications = _notifications
             .map((e) => e.id == n.id ? e.copyWith(read: true) : e)

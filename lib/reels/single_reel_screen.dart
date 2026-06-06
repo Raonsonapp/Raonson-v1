@@ -19,9 +19,9 @@ class _SingleReelScreenState extends State<SingleReelScreen> {
   void initState() {
     super.initState();
     // Ҳисоби бинандаҳо (1 бор аз ҳар user — backend dedup мекунад)
-    try {
-      ApiClient.instance.post('/reels/${widget.reel.id}/view');
-    } catch (_) {}
+    ApiClient.instance
+        .post('/reels/${widget.reel.id}/view')
+        .then((_) {}, onError: (_) {});
   }
 
   @override
@@ -34,9 +34,9 @@ class _SingleReelScreenState extends State<SingleReelScreen> {
             child: ReelPlayer(
               reel: widget.reel,
               onLike: () {
-                try {
-                  ApiClient.instance.post('/reels/${widget.reel.id}/like');
-                } catch (_) {}
+                ApiClient.instance
+                    .post('/reels/${widget.reel.id}/like')
+                    .then((_) {}, onError: (_) {});
               },
             ),
           ),

@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
 	"raonson/db"
+	mw "raonson/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -319,8 +319,7 @@ func nullIfEmpty(s string) interface{} {
 
 func parseToken(s string) string {
 	if s == "" { return "" }
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" { secret = "RAONSON_SECRET" }
+	secret := mw.JWTSecret()
 	tok, err := jwt.Parse(s, func(t *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	}, jwt.WithValidMethods([]string{"HS256"}))

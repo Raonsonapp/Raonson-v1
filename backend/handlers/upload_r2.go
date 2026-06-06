@@ -18,12 +18,13 @@ import (
 )
 
 func getR2Client() *s3.Client {
+	// Credentials come ONLY from env (set in Render). Never hardcode secrets.
 	accountID := os.Getenv("CF_ACCOUNT_ID")
 	accessKey  := os.Getenv("CF_R2_ACCESS_KEY")
 	secretKey  := os.Getenv("CF_R2_SECRET_KEY")
-	if accountID == "" { accountID = "4362a439e21a5c003fe9a49560b370b6" }
-	if accessKey  == "" { accessKey  = "fed4dc11c0cedd66329d545cc5e286a1" }
-	if secretKey  == "" { secretKey  = "49aa55246ee4c4423946217f9b5127672d4555f09b6116fbdf45a12beeb74297" }
+	if accountID == "" || accessKey == "" || secretKey == "" {
+		fmt.Println("⚠️  R2 credentials missing (CF_ACCOUNT_ID/CF_R2_ACCESS_KEY/CF_R2_SECRET_KEY) — uploads will fail")
+	}
 
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)
 

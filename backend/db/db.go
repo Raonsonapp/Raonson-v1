@@ -297,6 +297,56 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_highlights_user ON highlights(user_id, created_at);
 
+	-- ════════════════════════════════════════════════════════════════
+	-- Columns/tables referenced by handlers but missing from migrate()
+	-- (schema.sql is NOT executed at boot — only this migrate() runs).
+	-- ════════════════════════════════════════════════════════════════
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS hidden         BOOLEAN DEFAULT FALSE;
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS interest_score INTEGER DEFAULT 0;
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_title    TEXT DEFAULT '';
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_artist   TEXT DEFAULT '';
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_url      TEXT DEFAULT '';
+	ALTER TABLE comments ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ DEFAULT NOW();
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS type           VARCHAR(16) DEFAULT 'text';
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id    TEXT;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted     BOOLEAN DEFAULT FALSE;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ DEFAULT NOW();
+
+	CREATE TABLE IF NOT EXISTS post_reports (
+		post_id    TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		reason     TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (post_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_post_reports_post ON post_reports(post_id);
+
+	CREATE TABLE IF NOT EXISTS post_interests (
+		post_id    TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		interested BOOLEAN DEFAULT TRUE,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (post_id, user_id)
+	);
+
+	CREATE TABLE IF NOT EXISTS message_reactions (
+		message_id TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		emoji      TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (message_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_msg_reactions_msg ON message_reactions(message_id);
+
+	-- ── Performance indexes on hot reverse-lookup columns ──
+	CREATE INDEX IF NOT EXISTS idx_users_phone       ON users(phone);
+	CREATE INDEX IF NOT EXISTS idx_post_saves_post   ON post_saves(post_id);
+	CREATE INDEX IF NOT EXISTS idx_post_views_post   ON post_views(post_id);
+	CREATE INDEX IF NOT EXISTS idx_reel_likes_reel   ON reel_likes(reel_id);
+	CREATE INDEX IF NOT EXISTS idx_reel_saves_reel   ON reel_saves(reel_id);
+	CREATE INDEX IF NOT EXISTS idx_comment_likes_cmt ON comment_likes(comment_id);
+	CREATE INDEX IF NOT EXISTS idx_story_views_story ON story_views(story_id);
+
 	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE
 	WHERE LOWER(username)='raonson';

@@ -16,6 +16,9 @@ import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../auth/login/login_screen.dart';
 import '../auth/register/register_flow_screen.dart';
+import '../auth/password/forgot_password_screen.dart';
+import '../auth/password/reset_password_screen.dart';
+import '../feed/hashtag/hashtag_screen.dart';
 import '../friends/friends_screen.dart'; // ✅ НАВ
 
 class AppController {
@@ -92,6 +95,18 @@ class AppController {
 
       case '/create-story':
         return _page(const CreateStoryScreen());
+
+      // ── Password recovery ──
+      case AppRoutes.forgotPassword:
+        return _page(const ForgotPasswordScreen());
+      case AppRoutes.resetPassword:
+        return _page(ResetPasswordScreen(
+            email: settings.arguments as String? ?? ''));
+
+      // ── Hashtag feed ──
+      case '/hashtag':
+        return _slide(
+            HashtagScreen(hashtag: settings.arguments as String? ?? ''));
 
       default:
         return _page(const LoginScreen());
