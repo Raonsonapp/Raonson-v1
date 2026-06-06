@@ -11,8 +11,10 @@ COPY . .
 # Баъд go mod tidy - акнун ҳамаи файлҳоро мебинад ва go.sum месозад
 RUN go mod tidy
 
-# Build — тамоми package (main_optimized.go ва ҳамаи файлҳо), на танҳо main.go
-RUN CGO_ENABLED=0 GOOS=linux go build -o raonson-api .
+# Build — entrypoint-и аслӣ main_optimized.go.
+# Эзоҳ: дар HF Space як main.go-и кӯҳна монда метавонад; бо нишон додани
+# файли мушаххас онро нодида мегирем (вагарна "main redeclared" хато медиҳад).
+RUN CGO_ENABLED=0 GOOS=linux go build -o raonson-api ./main_optimized.go
 
 # ── Run stage ────────────────────────────────────────────────────
 FROM alpine:3.19
