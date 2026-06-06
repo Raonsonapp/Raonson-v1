@@ -279,6 +279,20 @@ func migrate() {
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS theme    VARCHAR(10) DEFAULT 'dark';
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(5)  DEFAULT 'tj';
 
+	-- ── Pinned posts ──
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
+
+	-- ── Highlights (Актуальный) ──
+	CREATE TABLE IF NOT EXISTS highlights (
+		id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id    TEXT NOT NULL,
+		title      TEXT DEFAULT '',
+		cover_url  TEXT DEFAULT '',
+		story_ids  TEXT[] DEFAULT '{}',
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_highlights_user ON highlights(user_id, created_at);
+
 	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE
 	WHERE LOWER(username)='raonson';
