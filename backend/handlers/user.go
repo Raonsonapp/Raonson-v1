@@ -68,25 +68,24 @@ func DeleteUser(c *gin.Context) {
 // GET /users/:id/posts
 func GetUserPosts(c *gin.Context) {
 	id     := c.Param("id")
+	myID   := mw.UID(c)
 	page   := toInt(c.Query("page"), 1)
 	limit  := toInt(c.Query("limit"), 24)
 	offset := (page - 1) * limit
 
-	rows, err := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
-		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type)
-		                ORDER BY m.position),'[]'::json)
-		        FROM post_media m WHERE m.post_id=p.id)
-		FROM posts p WHERE p.user_id=$1
-		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`,
-		id, limit, offset)
+	// Постҳои pinned аввал, баъд аз рӯи сана. Бо маълумоти корбар +
+	// liked/saved/isPinned — то дар экрани кушодашуда (мисли home) кор кунад.
+	rows, err := db.Pool.Query(context.Background(),
+		feedPostCols+`
+		WHERE p.user_id=$2
+		ORDER BY COALESCE(p.is_pinned,false) DESC, p.created_at DESC
+		LIMIT $3 OFFSET $4`,
+		myID, id, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get posts failed"})
 		return
 	}
-	defer rows.Close()
-	c.JSON(http.StatusOK, scanPostRows(rows, ""))
+	c.JSON(http.StatusOK, gin.H{"posts": scanFeedPosts(rows)})
 }
 
 // GET /users/:id/reels

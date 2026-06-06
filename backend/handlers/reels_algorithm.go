@@ -136,16 +136,20 @@ func TrackReelView(c *gin.Context) {
 	rid  := c.Param("id")
 	myID := mw.UID(c)
 
-	db.Pool.Exec(context.Background(), `
+	// Ҳар як user танҳо 1 маротиба ҳисоб мешавад.
+	// DO NOTHING → RowsAffected танҳо ҳангоми дидани АВВАЛИН > 0 мешавад.
+	ct, err := db.Pool.Exec(context.Background(), `
 		INSERT INTO reel_views (user_id, reel_id, viewed_at)
 		VALUES ($1, $2, NOW())
-		ON CONFLICT (user_id, reel_id) DO UPDATE SET viewed_at=NOW()
+		ON CONFLICT (user_id, reel_id) DO NOTHING
 	`, myID, rid)
 
-	// Шумораи views зиёд мешавад
-	db.Pool.Exec(context.Background(), `
-		UPDATE reels SET views_count=views_count+1 WHERE id=$1
-	`, rid)
+	// Шумораи views танҳо ҳангоми бори АВВАЛ зиёд мешавад
+	if err == nil && ct.RowsAffected() > 0 {
+		db.Pool.Exec(context.Background(), `
+			UPDATE reels SET views_count=views_count+1 WHERE id=$1
+		`, rid)
+	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

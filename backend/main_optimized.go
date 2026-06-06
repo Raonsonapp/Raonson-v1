@@ -107,6 +107,7 @@ func main() {
 		u.PUT("/",                       handlers.UpdateUser)
 		u.DELETE("/",                    handlers.DeleteUser)
 		u.GET("/:id/posts",             cache30s, handlers.GetUserPosts)
+		u.GET("/:id/tagged",            cache30s, handlers.GetTaggedPosts)
 		u.GET("/:id/reels",             cache30s, handlers.GetUserReels)
 		u.GET("/:id/followers",         handlers.GetFollowers)
 		u.GET("/:id/following",         handlers.GetFollowing)
@@ -119,6 +120,8 @@ func main() {
 		p.GET("/notes/friends", cache30s, handlers.GetFriendsNotes)
 		p.POST("/note",         handlers.SetNote)
 		p.PUT("/",              handlers.UpdateProfile)
+		p.PUT("/settings",      handlers.UpdateSettings)
+		p.GET("/saved",         handlers.GetSavedPosts)
 		p.GET("/:username",     cache30s, handlers.GetProfile)
 	}
 
@@ -136,6 +139,7 @@ func main() {
 		po.POST("/:id/report",       handlers.ReportPost)
 		po.POST("/:id/interest",     handlers.MarkInterest)
 		po.POST("/:id/not_interest", handlers.MarkNotInterest)
+		po.POST("/:id/pin",          handlers.PinPost)
 		po.PUT("/:id/caption",       handlers.UpdatePostCaption)
 		po.PUT("/:id/music",         handlers.UpdatePostMusic)
 		po.GET("/:id/stats",         handlers.GetPostStats)
@@ -192,6 +196,14 @@ func main() {
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
 	}
 
+	// ── HIGHLIGHTS (Актуальный) ──
+	hl := r.Group("/highlights", auth, rl100)
+	{
+		hl.POST("/",      handlers.CreateHighlight)
+		hl.GET("/:id",    cache30s, handlers.GetHighlights)
+		hl.DELETE("/:id", handlers.DeleteHighlight)
+	}
+
 	ch := r.Group("/chat", auth, rl100)
 	{
 		ch.GET("/",                  handlers.GetChats)
@@ -227,9 +239,13 @@ func main() {
 
 	ad := r.Group("/admin", auth, admin)
 	{
-		ad.GET("/stats",      handlers.AdminStats)
-		ad.POST("/ban/:id",   handlers.BanUser)
-		ad.POST("/unban/:id", handlers.UnbanUser)
+		ad.GET("/stats",        handlers.AdminStats)
+		ad.GET("/users",        handlers.AdminListUsers)
+		ad.POST("/ban/:id",     handlers.BanUser)
+		ad.POST("/unban/:id",   handlers.UnbanUser)
+		ad.POST("/verify/:id",   handlers.VerifyUser)
+		ad.POST("/unverify/:id", handlers.UnverifyUser)
+		ad.DELETE("/users/:id", handlers.AdminDeleteUser)
 	}
 
 	log.Printf("🚀 Raonson Go | Port:%s | PostgreSQL+R2+Redis | GZIP ON", port)

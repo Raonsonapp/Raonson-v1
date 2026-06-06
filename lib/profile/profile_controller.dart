@@ -158,6 +158,15 @@ class ProfileController extends ChangeNotifier {
     catch (_) { posts.add(post); notifyListeners(); }
   }
 
+  /// UI-only: пост аллакай дар сервер нест шуд (аз экрани кушодашуда).
+  /// Танҳо рӯйхатҳоро навсозӣ мекунем — realtime, бе дубора API.
+  void removePostById(String id) {
+    posts.removeWhere((p) => p.id == id);
+    savedPosts.removeWhere((p) => p.id == id);
+    taggedPosts.removeWhere((p) => p.id == id);
+    notifyListeners();
+  }
+
   // Highlights CRUD
   Future<void> createHighlight(String title, String coverUrl,
       List<String> storyIds) async {

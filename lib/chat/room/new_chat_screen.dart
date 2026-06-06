@@ -150,7 +150,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                       fontWeight: FontWeight.w600,
                                       fontSize: 15),
                                 ),
-                                if (user.verified) ...[
+                                if (user.isVerified) ...[
                                   const SizedBox(width: 4),
                                   const VerifiedBadge(size: 14),
                                 ],

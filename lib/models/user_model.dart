@@ -38,8 +38,17 @@ class UserModel {
   });
 
   String get avatarUrl => avatar;
-  bool   get isVerified => verified;
   bool   get isMe => id == 'me';
+
+  /// Соҳиби барнома — аккаунти @raonson ҳамеша ва бе харид галочка дорад
+  /// ва ба ҳама имконот дастрасӣ дорад (admin).
+  static const String ownerUsername = 'raonson';
+  bool get isOwner =>
+      username.trim().toLowerCase() == ownerUsername;
+  bool get isAdmin => isOwner; // ягона admin — соҳиби барнома
+
+  /// Галочка: тасдиқшуда ё соҳиби барнома
+  bool get isVerified => verified || isOwner;
 
   factory UserModel.fromJson(Map<String, dynamic> j) => UserModel(
     id:               (j['_id'] ?? j['id'] ?? '').toString(),

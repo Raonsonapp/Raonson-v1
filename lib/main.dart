@@ -5,6 +5,7 @@ import 'package:yandex_mobileads/mobile_ads.dart';
 
 import 'app/app.dart';
 import 'app/app_config.dart';
+import 'app/app_settings.dart';
 import 'core/services/user_session.dart';
 import 'core/services/network_service.dart';
 import 'core/ads/ads_manager.dart';
@@ -30,6 +31,9 @@ Future<void> main() async {
 
   // ✅ 3. Cache-ро ФАВРАН бор кун — бе интернет ҳам кор мекунад
   await UserSession.loadCachedData();
+
+  // ✅ 3.1 Theme + language preferences — то app кушода шавад
+  await AppSettingsState.instance.init();
 
   // ✅ 4. Network monitoring
   NetworkService.instance.init();

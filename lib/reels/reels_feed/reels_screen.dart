@@ -1300,7 +1300,7 @@ class _ReelItemState extends State<_ReelItem> {
                                           maxLines: 1,
                                           overflow:
                                               TextOverflow.ellipsis)),
-                                  if (reel.user.verified) ...[
+                                  if (reel.user.isVerified) ...[
                                     const SizedBox(width: 4),
                                     const VerifiedBadge(size: 14)
                                   ],

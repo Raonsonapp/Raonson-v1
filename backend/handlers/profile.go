@@ -123,6 +123,31 @@ func UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": u})
 }
 
+// PUT /profile/settings — theme + language нигоҳ медорад (cross-device sync)
+func UpdateSettings(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Theme    *string `json:"theme"`
+		Language *string `json:"language"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
+		return
+	}
+	_, err := db.Pool.Exec(context.Background(), `
+		UPDATE users SET
+		  theme      = COALESCE($1, theme),
+		  language   = COALESCE($2, language),
+		  updated_at = NOW()
+		WHERE id=$3`, b.Theme, b.Language, myID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+	mw.CacheDel("profile:me:" + myID)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 func SetNote(c *gin.Context) {
 	myID := mw.UID(c)
 	var b struct {
