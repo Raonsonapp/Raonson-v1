@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'login/login_screen.dart';
-import 'register/register_screen.dart';
+import 'register/register_flow_screen.dart';
 import 'password/forgot_password_screen.dart';
 import 'password/reset_password_screen.dart';
 

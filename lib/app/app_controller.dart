@@ -15,7 +15,7 @@ import '../models/story_model.dart';
 import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../auth/login/login_screen.dart';
-import '../auth/register/register_screen.dart';
+import '../auth/register/register_flow_screen.dart';
 import '../friends/friends_screen.dart'; // ✅ НАВ
 
 class AppController {

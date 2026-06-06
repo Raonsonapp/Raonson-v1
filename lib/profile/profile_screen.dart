@@ -17,6 +17,7 @@ import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/user_model.dart';
+import '../reels/single_reel_screen.dart';
 import '../widgets/verified_badge.dart';
 import 'edit/edit_profile_screen.dart';
 import 'highlight_model.dart';
@@ -753,10 +754,13 @@ class _ReelGrid extends StatelessWidget {
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
           childAspectRatio: 0.65),
       itemCount: reels.length,
-      itemBuilder: (_, i) {
+      itemBuilder: (ctx, i) {
         final r     = reels[i];
         final thumb = r.thumbnailUrl.isNotEmpty ? r.thumbnailUrl : r.videoUrl;
-        return Stack(fit: StackFit.expand, children: [
+        return GestureDetector(
+          onTap: () => Navigator.push(ctx, MaterialPageRoute(
+              builder: (_) => SingleReelScreen(reel: r))),
+          child: Stack(fit: StackFit.expand, children: [
           thumb.isNotEmpty
               ? CachedNetworkImage(imageUrl: thumb, fit: BoxFit.cover,
                   placeholder: (_, __) => Container(color: AppColors.card),
@@ -779,7 +783,7 @@ class _ReelGrid extends StatelessWidget {
                   color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold,
                   shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
             ])),
-        ]);
+        ]));
       });
   }
 }

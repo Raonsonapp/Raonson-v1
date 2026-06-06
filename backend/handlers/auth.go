@@ -33,6 +33,8 @@ func Register(c *gin.Context) {
 		Username string `json:"username" binding:"required"`
 		Email    string `json:"email"    binding:"required"`
 		Password string `json:"password" binding:"required"`
+		FullName string `json:"fullName"`
+		Phone    string `json:"phone"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing fields"})
@@ -40,6 +42,8 @@ func Register(c *gin.Context) {
 	}
 	b.Username = strings.ToLower(strings.TrimSpace(b.Username))
 	b.Email    = strings.ToLower(strings.TrimSpace(b.Email))
+	b.FullName = strings.TrimSpace(b.FullName)
+	b.Phone    = strings.TrimSpace(b.Phone)
 
 	// Validate username: only a-z, 0-9, _ and .
 	validUsername := regexp.MustCompile(`^[a-z0-9_.]{3,30}$`)
@@ -67,8 +71,9 @@ func Register(c *gin.Context) {
 
 	var id, username, email string
 	err = db.Pool.QueryRow(context.Background(),
-		`INSERT INTO users(username,email,password) VALUES($1,$2,$3) RETURNING id,username,email`,
-		b.Username, b.Email, string(hash)).Scan(&id, &username, &email)
+		`INSERT INTO users(username,email,password,full_name,phone)
+		 VALUES($1,$2,$3,$4,$5) RETURNING id,username,email`,
+		b.Username, b.Email, string(hash), b.FullName, b.Phone).Scan(&id, &username, &email)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"message": "Username or email already taken"})
 		return
@@ -78,6 +83,20 @@ func Register(c *gin.Context) {
 		"success": true,
 		"user":    gin.H{"id": id, "username": username, "email": email},
 	})
+}
+
+// GET /auth/check-username/:username — оё номи корбар озод аст
+func CheckUsername(c *gin.Context) {
+	uname := strings.ToLower(strings.TrimSpace(c.Param("username")))
+	valid := regexp.MustCompile(`^[a-z0-9_.]{3,30}$`).MatchString(uname)
+	if !valid {
+		c.JSON(http.StatusOK, gin.H{"valid": false, "available": false})
+		return
+	}
+	var exists bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE username=$1)`, uname).Scan(&exists)
+	c.JSON(http.StatusOK, gin.H{"valid": true, "available": !exists})
 }
 
 // POST /auth/login
@@ -92,9 +111,10 @@ func Login(c *gin.Context) {
 	}
 	b.Email = strings.ToLower(strings.TrimSpace(b.Email))
 
+	// Логин бо почта Ё номи корбар
 	var id, username, email, hash string
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id,username,email,password FROM users WHERE email=$1`,
+		`SELECT id,username,email,password FROM users WHERE email=$1 OR username=$1`,
 		b.Email).Scan(&id, &username, &email, &hash)
 	if err != nil {
 		log.Printf("[Login] User not found: email=%s err=%v", b.Email, err)

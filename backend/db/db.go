@@ -279,6 +279,10 @@ func migrate() {
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS theme    VARCHAR(10) DEFAULT 'dark';
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(5)  DEFAULT 'tj';
 
+	-- ── Registration profile fields ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100) DEFAULT '';
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS phone     VARCHAR(20)  DEFAULT '';
+
 	-- ── Pinned posts ──
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
 
