@@ -6,12 +6,17 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../models/post_model.dart';
+import '../../models/user_model.dart';
 import 'post_card.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final List<PostModel> posts;
   final int    initialIndex;
   final String title;
+
+  /// Агар пост user-и холӣ дошта бошад (backend кӯҳна), ин user истифода
+  /// мешавад — то аватар/ном/галочка нишон дода шавад.
+  final UserModel? fallbackUser;
 
   /// Вақте ки пост нест карда мешавад (барои навсозии profile).
   final void Function(PostModel post)? onPostDeleted;
@@ -21,6 +26,7 @@ class PostDetailScreen extends StatefulWidget {
     required this.posts,
     this.initialIndex = 0,
     this.title        = 'Постҳо',
+    this.fallbackUser,
     this.onPostDeleted,
   });
 
@@ -36,7 +42,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _posts = List<PostModel>.of(widget.posts);
+    _posts = widget.posts.map((p) {
+      if ((p.user.id.isEmpty || p.user.username.isEmpty) &&
+          widget.fallbackUser != null) {
+        return p.copyWith(user: widget.fallbackUser);
+      }
+      return p;
+    }).toList();
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToInitial());
   }
 

@@ -13,9 +13,9 @@ import (
 
 // ── COMMENTS ─────────────────────────────────────────────────────
 
-// POST /posts/:postId/comments
+// POST /comments/:id  (id = postID)
 func AddComment(c *gin.Context) {
-	postID := c.Param("postId")
+	postID := c.Param("id")
 	myID   := mw.UID(c)
 	var b struct{ Text string `json:"text"` }
 	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
@@ -52,9 +52,9 @@ func AddComment(c *gin.Context) {
 	})
 }
 
-// GET /posts/:postId/comments
+// GET /comments/:id  (id = postID)
 func GetComments(c *gin.Context) {
-	postID := c.Param("postId")
+	postID := c.Param("id")
 	myID   := mw.UID(c)
 	page   := toInt(c.Query("page"), 1)
 	limit  := toInt(c.Query("limit"), 20)

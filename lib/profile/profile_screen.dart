@@ -474,10 +474,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 controller: _tab,
                 tabs: [
                   const Tab(icon: Icon(Icons.grid_on_rounded)),
-                  Tab(icon: SvgPicture.asset('assets/icons/nav_reels.svg',
-                      width: 22, height: 22,
-                      colorFilter: const ColorFilter.mode(
-                          Colors.white, BlendMode.srcIn))),
+                  Tab(icon: AnimatedBuilder(
+                    animation: _tab,
+                    builder: (_, __) => SvgPicture.asset(
+                        'assets/icons/nav_reels.svg',
+                        width: 22, height: 22,
+                        colorFilter: ColorFilter.mode(
+                            _tab.index == 1 ? Colors.white : Colors.white24,
+                            BlendMode.srcIn)),
+                  )),
                   const Tab(icon: Icon(Icons.person_pin_outlined)),
                   if (_isMe)
                     const Tab(icon: Icon(Icons.bookmark_border_rounded)),
@@ -494,6 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _PostGrid(
               posts:       _ctrl.sortedPosts,
               isMe:        _isMe,
+              owner:       _ctrl.profile,
               onLongPress: _postMenu,
               onRemoved:   (id) => _ctrl.removePostById(id)),
           _ReelGrid(reels: _ctrl.reels),
@@ -663,10 +669,11 @@ class _Btn extends StatelessWidget {
 class _PostGrid extends StatelessWidget {
   final List<PostModel> posts;
   final bool isMe;
+  final UserModel? owner;
   final void Function(PostModel) onLongPress;
   final void Function(String id)? onRemoved;
   const _PostGrid({required this.posts, required this.isMe,
-      required this.onLongPress, this.onRemoved});
+      required this.onLongPress, this.owner, this.onRemoved});
   String _f(int v) {
     if (v >= 1000000) return '${(v/1e6).toStringAsFixed(1)}M';
     if (v >= 1000)    return '${(v/1000).toStringAsFixed(1)}K';
@@ -690,6 +697,7 @@ class _PostGrid extends StatelessWidget {
           onTap: () => Navigator.push(ctx, MaterialPageRoute(
               builder: (_) => PostDetailScreen(
                   posts: posts, initialIndex: i, title: 'Постҳо',
+                  fallbackUser: owner,
                   onPostDeleted: (post) => onRemoved?.call(post.id)))),
           onLongPress: isMe ? () => onLongPress(p) : null,
           child: Stack(fit: StackFit.expand, children: [
