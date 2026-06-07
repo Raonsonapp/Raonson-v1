@@ -69,6 +69,17 @@ func GetSmartReels(c *gin.Context) {
 		      WHERE rv.reel_id=r.id AND rv.user_id=$1
 		      AND rv.viewed_at > NOW() - INTERVAL '24 hours'
 		    )
+		    -- Корбари блокшуда
+		    AND NOT EXISTS (
+		      SELECT 1 FROM blocks b
+		      WHERE (b.blocker_id=$1 AND b.blocked_id=r.user_id)
+		         OR (b.blocker_id=r.user_id AND b.blocked_id=$1)
+		    )
+		    -- "Маро шавқманд намекунад"
+		    AND NOT EXISTS (
+		      SELECT 1 FROM reel_not_interested rni
+		      WHERE rni.reel_id=r.id AND rni.user_id=$1
+		    )
 		)
 		SELECT id, video_url, caption, views_count, likes_count,
 		       comments_count, created_at, uid, username, avatar,
