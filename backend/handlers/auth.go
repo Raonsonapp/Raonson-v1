@@ -81,7 +81,10 @@ func Register(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
-		"user":    gin.H{"id": id, "username": username, "email": email},
+		"user": gin.H{
+			"id": id, "username": username, "email": email,
+			"avatar": "", "fullName": b.FullName,
+		},
 	})
 }
 
@@ -112,10 +115,11 @@ func Login(c *gin.Context) {
 	b.Email = strings.ToLower(strings.TrimSpace(b.Email))
 
 	// Логин бо почта Ё номи корбар
-	var id, username, email, hash string
+	var id, username, email, hash, avatar, fullName string
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id,username,email,password FROM users WHERE email=$1 OR username=$1`,
-		b.Email).Scan(&id, &username, &email, &hash)
+		`SELECT id,username,email,password,COALESCE(avatar,''),COALESCE(full_name,'')
+		 FROM users WHERE email=$1 OR username=$1`,
+		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName)
 	if err != nil {
 		log.Printf("[Login] User not found: email=%s err=%v", b.Email, err)
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
@@ -133,7 +137,10 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken":  makeJWT(id, secret, 7*24*time.Hour),
 		"refreshToken": makeJWT(id, refreshSecret, 30*24*time.Hour),
-		"user":         gin.H{"id": id, "username": username, "email": email},
+		"user": gin.H{
+			"id": id, "username": username, "email": email,
+			"avatar": avatar, "fullName": fullName,
+		},
 	})
 }
 
