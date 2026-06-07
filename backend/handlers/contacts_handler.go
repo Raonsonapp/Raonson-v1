@@ -27,12 +27,20 @@ func FindUsersByContacts(c *gin.Context) {
 		return
 	}
 
-	// Рақамҳоро тоза мекунем (+, пробелҳо)
+	// Рақамҳоро тоза мекунем ва ба 9 рақами охир меорем — то новобаста аз
+	// рамзи кишвар (+992, 0…) мувофиқат кунанд (мисли TikTok/Facebook).
 	cleaned := make([]string, 0, len(body.Phones))
+	seen := map[string]bool{}
 	for _, p := range body.Phones {
 		n := cleanPhone(p)
 		if len(n) >= 7 {
-			cleaned = append(cleaned, n)
+			if len(n) > 9 {
+				n = n[len(n)-9:]
+			}
+			if !seen[n] {
+				seen[n] = true
+				cleaned = append(cleaned, n)
+			}
 		}
 	}
 	if len(cleaned) == 0 {
@@ -40,10 +48,8 @@ func FindUsersByContacts(c *gin.Context) {
 		return
 	}
 
-	// Корбаронеро меёбем, ки:
-	// 1. Рақамашон дар рӯйхат аст
-	// 2. Худи man не
-	// 3. Дигар пайрав нашудаем
+	// Корбаронеро меёбем, ки рақамашон (9 рақами охир) дар рӯйхат аст,
+	// худи ман не, ва ҳоло пайрав нашудаем.
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id, u.username, u.avatar, u.verified, u.bio,
 		       EXISTS(
@@ -51,7 +57,8 @@ func FindUsersByContacts(c *gin.Context) {
 		           WHERE follower_id=$1 AND following_id=u.id
 		       ) AS is_following
 		FROM users u
-		WHERE u.phone = ANY($2::text[])
+		WHERE u.phone <> ''
+		  AND RIGHT(regexp_replace(u.phone,'[^0-9]','','g'), 9) = ANY($2::text[])
 		  AND u.id <> $1
 		ORDER BY u.username
 		LIMIT 100

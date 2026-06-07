@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
 
@@ -107,14 +108,40 @@ class _FriendsScreenState extends State<FriendsScreen>
     if (_loadingContacts) return;
     setState(() => _loadingContacts = true);
     try {
+      // 1. Иҷозат пурсем ва контактҳои дастгоҳро хонем
+      final granted = await FlutterContacts.requestPermission(readonly: true);
+      if (!granted) {
+        if (mounted) {
+          setState(() => _loadingContacts = false);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Барои ёфтани дӯстон иҷозати контактҳо лозим аст')));
+        }
+        return;
+      }
+      final contacts =
+          await FlutterContacts.getContacts(withProperties: true);
+      final phones = <String>{};
+      for (final ct in contacts) {
+        for (final p in ct.phones) {
+          final n = p.number.replaceAll(RegExp(r'[^0-9]'), '');
+          if (n.length >= 7) phones.add(n);
+        }
+      }
+      if (phones.isEmpty) {
+        if (mounted) setState(() => _loadingContacts = false);
+        return;
+      }
+
+      // 2. Рақамҳоро ба сервер фиристем → корбарони мувофиқро бармегардонад
       final res = await ApiClient.instance
-          .get('/users/find-by-contacts')
-          .timeout(const Duration(seconds: 8));
+          .post('/users/find-by-contacts', body: {'phones': phones.toList()})
+          .timeout(const Duration(seconds: 12));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         final List list = body is List ? body : (body['users'] ?? []);
-        final items = list.map((e) =>
-            _UserItem.fromJson(e as Map<String, dynamic>)).toList();
+        final items = list
+            .map((e) => _UserItem.fromJson(e as Map<String, dynamic>))
+            .toList();
         if (mounted) setState(() { _contactUsers = items; });
       }
     } catch (_) {}
