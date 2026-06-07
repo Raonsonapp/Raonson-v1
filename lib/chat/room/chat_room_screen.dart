@@ -15,7 +15,6 @@ import '../../core/socket_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
-import 'incoming_call_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -60,7 +59,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   void dispose() {
     _scroll.dispose();
-    _signal.onIncomingCall = null;
+    // onIncomingCall ба таври глобалӣ дар BottomNavScaffold идора мешавад —
+    // ин ҷо null намекунем, вагарна занг берун аз чат қабул намешавад.
     _presence.removeListener(_onPresence);
     _socket.off('chat:new');
     _socket.off('chat:typing');
@@ -194,21 +194,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     await _presence.connect();
     _presence.addListener(_onPresence);
     _presence.checkUser(widget.peer.id);
-
-    _signal.onIncomingCall = (from, fromUsername, fromAvatar, callType) {
-      if (!mounted) return;
-      final ct = callType == 'video' ? CallType.video : CallType.voice;
-      final caller = UserModel(
-        id: from,
-        username: fromUsername.isNotEmpty ? fromUsername : widget.peer.username,
-        avatar:   fromAvatar.isNotEmpty   ? fromAvatar   : widget.peer.avatar,
-        verified: false, isPrivate: false,
-        postsCount: 0, followersCount: 0, followingCount: 0,
-      );
-      Navigator.push(context, MaterialPageRoute(
-        builder: (_) => IncomingCallScreen(caller: caller, callType: ct),
-      ));
-    };
+    // Зангҳои воридшаванда ба таври глобалӣ дар BottomNavScaffold идора мешаванд.
   }
 
   void _onPresence() { if (mounted) setState(() {}); }

@@ -11,6 +11,10 @@ import '../../chat/inbox/chat_list_screen.dart';
 import '../../search/search_screen.dart';
 import '../../profile/profile_screen.dart';
 import '../../widgets/offline_banner.dart'; // ← НАВ
+import '../../core/webrtc_service.dart';
+import '../../chat/room/incoming_call_screen.dart';
+import '../../chat/room/call_screen.dart';
+import '../../models/user_model.dart';
 
 class BottomNavScaffold extends StatelessWidget {
   const BottomNavScaffold({super.key});
@@ -33,6 +37,38 @@ class _BottomNavView extends StatefulWidget {
 class _BottomNavViewState extends State<_BottomNavView> {
   Key _feedKey  = UniqueKey();
   Key _reelsKey = UniqueKey();
+  final _signal = WebRTCService();
+
+  @override
+  void initState() {
+    super.initState();
+    _setupGlobalCalls();
+  }
+
+  // Зангҳои воридшаванда дар тамоми барнома қабул мешаванд (на танҳо дар чат).
+  Future<void> _setupGlobalCalls() async {
+    await _signal.connect();
+    _signal.onIncomingCall = (from, fromUsername, fromAvatar, callType) {
+      if (!mounted) return;
+      final ct = callType == 'video' ? CallType.video : CallType.voice;
+      final caller = UserModel(
+        id: from,
+        username: fromUsername.isNotEmpty ? fromUsername : 'Корбар',
+        avatar: fromAvatar,
+        verified: false, isPrivate: false,
+        postsCount: 0, followersCount: 0, followingCount: 0,
+      );
+      Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+        builder: (_) => IncomingCallScreen(caller: caller, callType: ct),
+      ));
+    };
+  }
+
+  @override
+  void dispose() {
+    _signal.onIncomingCall = null;
+    super.dispose();
+  }
 
   void _refreshFeed()  => setState(() => _feedKey  = UniqueKey());
 
