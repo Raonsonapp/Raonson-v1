@@ -46,21 +46,30 @@ func GetSmartFeed(c *gin.Context) {
 		   FROM post_media m WHERE m.post_id=p.id) AS media,
 		  EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1) AS liked,
 		  EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1) AS saved,
-		  -- Score: following bonus + recency + likes
+		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
+		  --   + interest score − ҷарима барои дидашуда
 		  (CASE WHEN f.following_id IS NOT NULL THEN 100 ELSE 0 END
 		   + GREATEST(0, 50 - EXTRACT(EPOCH FROM (NOW()-p.created_at))/3600)
 		   + LEAST(50, p.likes_count)
+		   + LEAST(30, p.comments_count*2)
+		   + LEAST(40, COALESCE(p.interest_score,0))
+		   - CASE WHEN pv.post_id IS NOT NULL THEN 45 ELSE 0 END
 		  ) AS score
 		FROM posts p
 		JOIN users u ON u.id=p.user_id
-		LEFT JOIN follows f ON f.follower_id=$1 AND f.following_id=p.user_id
+		LEFT JOIN follows     f  ON f.follower_id=$1 AND f.following_id=p.user_id
+		LEFT JOIN post_views  pv ON pv.post_id=p.id AND pv.user_id=$1
 		WHERE
 		  u.banned = FALSE
+		  AND COALESCE(p.hidden,false) = FALSE
+		  AND NOT EXISTS(SELECT 1 FROM blocks b
+		        WHERE (b.blocker_id=$1 AND b.blocked_id=p.user_id)
+		           OR (b.blocker_id=p.user_id AND b.blocked_id=$1))
+		  AND NOT EXISTS(SELECT 1 FROM post_interests pi
+		        WHERE pi.post_id=p.id AND pi.user_id=$1 AND pi.interested=FALSE)
 		  AND (
-		    -- Following posts last 7 days
 		    (f.following_id IS NOT NULL AND p.created_at > NOW() - INTERVAL '7 days')
 		    OR
-		    -- Popular posts last 3 days
 		    (p.likes_count >= 3 AND p.created_at > NOW() - INTERVAL '3 days')
 		  )
 		ORDER BY score DESC, p.created_at DESC
@@ -113,8 +122,8 @@ func GetSmartFeed(c *gin.Context) {
 func TrackPostView(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
-	// Fire and forget — no need to wait
-	go db.Pool.Exec(context.Background(),
+	// Synchronous — query is tiny; avoids unbounded goroutine spawn under load
+	db.Pool.Exec(context.Background(),
 		`INSERT INTO post_views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 		myID, pid)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
