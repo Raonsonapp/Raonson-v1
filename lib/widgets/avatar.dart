@@ -66,37 +66,26 @@ class Avatar extends StatelessWidget {
         : GestureDetector(onTap: onTap, child: avatar);
   }
 
-  // Аватари зебо мисли Telegram/Instagram — доираи градиентӣ бо ҳарфи аввал.
+  // Аватари пешфарз — иконкаи одами тоза (мисли Instagram), на ҳарф.
   Widget _placeholder() {
-    final initial = defaultAvatarInitial(name);
-    final colors = defaultAvatarGradient(name.isNotEmpty ? name : imageUrl);
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [Color(0xFF3A3A3C), Color(0xFF2A2A2C)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
       ),
-      child: initial.isNotEmpty
-          ? Text(
-              initial,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: size * 0.42,
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          : Icon(Icons.person_rounded,
-              size: size * 0.58, color: Colors.white.withOpacity(0.92)),
+      child: Icon(Icons.person_rounded,
+          size: size * 0.62, color: Colors.white.withOpacity(0.85)),
     );
   }
 }
 
-/// Ҳарфи аввали зебо барои аватари пешфарз.
+// Барои мутобиқати рамзӣ нигоҳ дошта мешавад (дигар истифода намешавад).
 String defaultAvatarInitial(String name) {
   final t = name.trim().replaceAll('@', '');
   if (t.isEmpty) return '';
