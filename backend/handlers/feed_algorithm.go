@@ -46,6 +46,8 @@ func GetSmartFeed(c *gin.Context) {
 		   FROM post_media m WHERE m.post_id=p.id) AS media,
 		  EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1) AS liked,
 		  EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1) AS saved,
+		  COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
 		  (CASE WHEN f.following_id IS NOT NULL THEN 100 ELSE 0 END
@@ -89,13 +91,18 @@ func GetSmartFeed(c *gin.Context) {
 		var likes, comms int
 		var verified, liked, saved bool
 		var createdAt, media interface{}
+		var musicTitle, musicArtist, location string
+		var tagged []string
 		var score float64
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
-			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &score)
+			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
+			&musicTitle, &musicArtist, &location, &tagged, &score)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
 			"media": nilToEmpty(media), "liked": liked, "saved": saved,
+			"musicTitle": musicTitle, "musicArtist": musicArtist,
+			"location": location, "taggedUsers": tagged,
 			"user": gin.H{
 				"_id": uid, "username": uname,
 				"avatar": uavatar, "verified": verified,

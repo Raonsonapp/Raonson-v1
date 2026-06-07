@@ -622,6 +622,41 @@ class _PostCardState extends State<PostCard>
           onCommentAdded: () { if (mounted) setState(() => _commentCount++); })));
   }
 
+  void _showTaggedUsers(List<String> users) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text('Дар ин пост зикршудагон',
+                style: TextStyle(color: Colors.white,
+                    fontWeight: FontWeight.w600, fontSize: 15)),
+          ),
+          ...users.map((u) => ListTile(
+                leading: const Icon(Icons.alternate_email_rounded,
+                    color: Colors.white54, size: 20),
+                title: Text('@$u',
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/profile-by-username',
+                      arguments: u);
+                },
+              )),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
   String _timeAgo(DateTime dt) {
     // ✅ toLocal() — серверни UTC вақтини маҳаллӣ мекунад
     final d = DateTime.now().difference(dt.toLocal());
@@ -791,6 +826,33 @@ class _PostCardState extends State<PostCard>
             },
             child: _MediaCarousel(media: post.media, isActive: widget.isActive),
           ),
+
+          // ── Music / mention chips (мисли Instagram) ──
+          // расми оддӣ → ягон icon нест; музика → icon-и музика;
+          // mention → icon-и одам; ҳарду → ҳарду.
+          if (post.musicTitle.isNotEmpty || post.taggedUsers.isNotEmpty)
+            Positioned(
+              left: 10, bottom: 10, right: 10,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (post.musicTitle.isNotEmpty)
+                  Flexible(
+                    child: _MediaChip(
+                      icon: Icons.music_note_rounded,
+                      label: post.musicArtist.isNotEmpty
+                          ? '${post.musicTitle} • ${post.musicArtist}'
+                          : post.musicTitle),
+                  ),
+                if (post.musicTitle.isNotEmpty && post.taggedUsers.isNotEmpty)
+                  const SizedBox(width: 6),
+                if (post.taggedUsers.isNotEmpty)
+                  _MediaChip(
+                    icon: Icons.person_rounded,
+                    label: post.taggedUsers.length == 1
+                        ? '@${post.taggedUsers.first}'
+                        : '${post.taggedUsers.length}',
+                    onTap: () => _showTaggedUsers(post.taggedUsers)),
+              ]),
+            ),
           if (_showHeart)
             AnimatedBuilder(animation: _heartCtrl,
               builder: (_, __) => Positioned(
@@ -1378,6 +1440,41 @@ class _VideoItemState extends State<_VideoItem> {
                 child: const Icon(Icons.volume_off_rounded,
                     color: Colors.white, size: 14))),
           ])))),
+    );
+  }
+}
+
+// Instagram-монанд chip-и музика/зикр болои расм.
+class _MediaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  const _MediaChip({required this.icon, required this.label, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.55),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
+          ),
+        ]),
+      ),
     );
   }
 }

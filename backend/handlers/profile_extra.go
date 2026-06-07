@@ -23,14 +23,19 @@ func scanFeedPosts(rows interface {
 		var likes, comms int
 		var verified, liked, saved, pinned bool
 		var createdAt, media interface{}
+		var musicTitle, musicArtist, location string
+		var tagged []string
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
-			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned); err != nil {
+			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
+			&musicTitle, &musicArtist, &location, &tagged); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes, "commentsCount": comms,
 			"createdAt": createdAt, "media": nilToEmpty(media),
 			"liked": liked, "saved": saved, "isPinned": pinned,
+			"musicTitle": musicTitle, "musicArtist": musicArtist,
+			"location": location, "taggedUsers": tagged,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
@@ -46,7 +51,9 @@ const feedPostCols = `
 	        FROM post_media m WHERE m.post_id=p.id),
 	       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1::text),
 	       EXISTS(SELECT 1 FROM post_saves WHERE post_id=p.id AND user_id=$1::text),
-	       COALESCE(p.is_pinned,false)
+	       COALESCE(p.is_pinned,false),
+	       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}')
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)
