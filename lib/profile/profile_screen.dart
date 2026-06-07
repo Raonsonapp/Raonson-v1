@@ -742,6 +742,15 @@ class _ReelGrid extends StatelessWidget {
     if (v >= 1000)    return '${(v/1000).toStringAsFixed(1)}K';
     return '$v';
   }
+  Widget _reelPlaceholder() => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF2C2C2E), Color(0xFF1A1A1C)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight)),
+        child: const Center(
+          child: Icon(Icons.play_circle_outline_rounded,
+              color: Colors.white38, size: 30)),
+      );
   @override
   Widget build(BuildContext context) {
     if (reels.isEmpty) {
@@ -756,7 +765,9 @@ class _ReelGrid extends StatelessWidget {
       itemCount: reels.length,
       itemBuilder: (ctx, i) {
         final r     = reels[i];
-        final thumb = r.thumbnailUrl.isNotEmpty ? r.thumbnailUrl : r.videoUrl;
+        // Танҳо thumbnail-и воқеӣ ҳамчун расм (видео URL-ро ҳамчун расм
+        // бор накунем — он шикаста менамуд). Вагарна placeholder + play.
+        final thumb = r.thumbnailUrl;
         return GestureDetector(
           onTap: () => Navigator.push(ctx, MaterialPageRoute(
               builder: (_) => SingleReelScreen(reel: r))),
@@ -764,8 +775,8 @@ class _ReelGrid extends StatelessWidget {
           thumb.isNotEmpty
               ? CachedNetworkImage(imageUrl: thumb, fit: BoxFit.cover,
                   placeholder: (_, __) => Container(color: AppColors.card),
-                  errorWidget: (_, __, ___) => Container(color: AppColors.card))
-              : Container(color: AppColors.card),
+                  errorWidget: (_, __, ___) => _reelPlaceholder())
+              : _reelPlaceholder(),
           Positioned(bottom: 0, left: 0, right: 0, height: 44,
             child: DecoratedBox(decoration: BoxDecoration(
               gradient: LinearGradient(
