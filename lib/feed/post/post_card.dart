@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -565,7 +566,16 @@ class _PostCardState extends State<PostCard>
                   duration: Duration(seconds: 2))); }),
             _ShareActionBtn(icon: Icons.download_rounded,
               color: const Color(0xFF2A2A2A), label: 'Зеркашӣ',
-              onTap: () { Navigator.pop(sheetCtx); }),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                final media = widget.post.media.isNotEmpty
+                    ? (widget.post.media.first['url']?.toString() ?? '')
+                    : '';
+                if (media.isNotEmpty) {
+                  launchUrl(Uri.parse(media),
+                      mode: LaunchMode.externalApplication);
+                }
+              }),
             _ShareActionBtn(icon: Icons.ios_share_rounded,
               color: const Color(0xFF2A2A2A), label: 'Бештар',
               onTap: () { Navigator.pop(sheetCtx);
@@ -573,7 +583,15 @@ class _PostCardState extends State<PostCard>
                   if (mounted) setState(() => _shareCount++); }); }),
             _ShareActionBtn(icon: Icons.flag_outlined,
               color: const Color(0xFF2A2A2A), label: 'Хабар',
-              onTap: () { Navigator.pop(sheetCtx); }),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                ApiClient.instance
+                    .post('/posts/${widget.post.id}/report')
+                    .then((_) {}, onError: (_) {});
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Хабар фиристода шуд. Ташаккур!'),
+                    duration: Duration(seconds: 2)));
+              }),
           ])),
         const Divider(color: Colors.white12, height: 1),
         ListTile(
@@ -586,8 +604,7 @@ class _PostCardState extends State<PostCard>
           subtitle: const Text('Паёми мустақим',
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () { Navigator.pop(sheetCtx);
-            Navigator.pushNamed(context, '/messages',
-                arguments: {'shareUrl': url, 'postId': widget.post.id}); }),
+            Navigator.pushNamed(context, '/chat'); }),
         const SizedBox(height: 12),
       ])));
   }

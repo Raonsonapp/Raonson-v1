@@ -2,6 +2,8 @@
      
      <!-- ✅ INTERNET PERMISSION (ҶОЙИ ДУРУСТ) -->
     <uses-permission android:name="android.permission.INTERNET"/>
+     <!-- ✅ КОНТАКТҲО — ёфтани дӯстон (мисли TikTok/Facebook) -->
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
      <!-- ✅ МЕДИА ИҶОЗАТҲО (НАВ) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>

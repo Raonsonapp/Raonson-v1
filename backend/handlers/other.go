@@ -39,6 +39,12 @@ func AddComment(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`UPDATE posts SET comments_count=comments_count+1 WHERE id=$1`, postID)
 
+	// Огоҳии соҳиби пост
+	var postOwner string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&postOwner)
+	notify(postOwner, myID, "comment", postID)
+
 	var uname, uavatar string
 	var verified bool
 	db.Pool.QueryRow(context.Background(),
@@ -194,6 +200,7 @@ func FollowUser(c *gin.Context) {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO follow_requests(requester_id,target_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 			myID, targetID)
+		notify(targetID, myID, "follow_request", myID)
 		c.JSON(http.StatusOK, gin.H{"requested": true})
 		return
 	}
@@ -204,6 +211,7 @@ func FollowUser(c *gin.Context) {
 		`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET following_count=following_count+1 WHERE id=$1`, myID)
+	notify(targetID, myID, "follow", myID)
 
 	// Push notification to target
 	go func() {
@@ -452,6 +460,10 @@ func ToggleReelLike(c *gin.Context) {
 			`INSERT INTO reel_likes(reel_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
 		db.Pool.Exec(context.Background(),
 			`UPDATE reels SET likes_count=likes_count+1 WHERE id=$1`, rid)
+		var owner string
+		db.Pool.QueryRow(context.Background(),
+			`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
+		notify(owner, myID, "reel_like", rid)
 	}
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }
@@ -524,5 +536,11 @@ func AddReelComment(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`INSERT INTO reel_comments(reel_id,user_id,text) VALUES($1,$2,$3) RETURNING id`,
 		rid, myID, b.Text).Scan(&cid)
+	db.Pool.Exec(context.Background(),
+		`UPDATE reels SET comments_count=comments_count+1 WHERE id=$1`, rid)
+	var owner string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
+	notify(owner, myID, "reel_comment", rid)
 	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
 }

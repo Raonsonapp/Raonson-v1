@@ -9,6 +9,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/story_model.dart';
 import '../core/api/api_client.dart';
@@ -240,13 +241,13 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         ListTile(
           leading: const Icon(Icons.archive_outlined, color: Colors.white),
           title: const Text('Бойгонӣ', style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _resume(); }),
+          onTap: () { Navigator.pop(context); _resume(); _toast('Бойгонӣ ба зудӣ илова мешавад'); }),
         ListTile(
           leading: Icon(_isVideo ? Icons.video_collection_outlined : Icons.save_alt_outlined,
               color: Colors.white),
           title: Text(_isVideo ? 'Видео ҳифз кун' : 'Расм ҳифз кун',
               style: const TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _resume(); }),
+          onTap: () { Navigator.pop(context); _resume(); _saveMedia(); }),
         ListTile(
           leading: const Icon(Icons.share_outlined, color: Colors.white),
           title: const Text('Мубодила кун', style: TextStyle(color: Colors.white, fontSize: 17)),
@@ -255,7 +256,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           leading: const Icon(Icons.comment_bank_outlined, color: Colors.white),
           title: const Text('Шарҳро хомӯш кун',
               style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _resume(); }),
+          onTap: () { Navigator.pop(context); _resume(); _toast('Ин хосият ба зудӣ илова мешавад'); }),
         const SizedBox(height: 8),
       ])),
     ).then((_) => _resume());
@@ -285,6 +286,19 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   void _shareStory() {
     Share.share('Raonson Story: ${_current.mediaUrl}');
     _resume();
+  }
+
+  void _saveMedia() {
+    final u = _current.mediaUrl;
+    if (u.isNotEmpty) {
+      launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
   }
 
   void _toggleLike() {
