@@ -382,6 +382,9 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_story_replies_story ON story_replies(story_id);
 
+	-- Барои тартиби бинандагони story (Instagram "seen by")
+	ALTER TABLE story_views ADD COLUMN IF NOT EXISTS viewed_at TIMESTAMPTZ DEFAULT NOW();
+
 	-- ── Performance indexes on hot reverse-lookup columns ──
 	CREATE INDEX IF NOT EXISTS idx_users_phone       ON users(phone);
 	CREATE INDEX IF NOT EXISTS idx_post_saves_post   ON post_saves(post_id);

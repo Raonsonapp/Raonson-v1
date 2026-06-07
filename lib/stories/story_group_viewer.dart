@@ -121,10 +121,6 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   bool _showReply     = false;
   bool _sendingReply  = false;
 
-  // ── Story viewers/likes list ───────────────────────────────
-  List<Map<String,dynamic>> _viewerList = [];
-  bool _loadingViewers = false;
-
   StoryModel get _current => widget.stories[_idx];
   bool get _isVideo  => _current.mediaType == 'video';
   bool get _isOwner  => UserSession.userId == _current.user.id;
@@ -452,111 +448,15 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     );
   }
 
-  Future<void> _loadViewers() async {
-    if (_loadingViewers) return;
-    setState(() => _loadingViewers = true);
-    try {
-      final resp = await ApiClient.instance.get('/stories/${_current.id}/viewers');
-      if (mounted) {
-        if (resp.statusCode >= 400) { setState(() => _loadingViewers = false); return; }
-        final body = jsonDecode(resp.body) as Map<String, dynamic>;
-        final list = (body['viewers'] as List? ?? [])
-            .map((v) => v as Map<String, dynamic>).toList();
-        setState(() { _viewerList = list; _loadingViewers = false; });
-      }
-    } catch (_) {
-      if (mounted) { setState(() { _loadingViewers = false; }); }
-    }
-  }
-
   void _showViewersSheet() {
     _pause();
-    _loadViewers();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xFF1A1A1A),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          maxChildSize: 0.95,
-          minChildSize: 0.35,
-          expand: false,
-          builder: (_, scrollCtrl) => Column(children: [
-            // Handle
-            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2))),
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Row(children: [
-                Expanded(child: Row(children: [
-                  const Icon(Icons.remove_red_eye_outlined,
-                      color: Colors.white70, size: 18),
-                  const SizedBox(width: 8),
-                  Text('${_current.viewsCount} кас дид',
-                      style: const TextStyle(color: Colors.white,
-                          fontWeight: FontWeight.w600, fontSize: 16)),
-                ])),
-                Row(children: [
-                  const Icon(Icons.favorite, color: Colors.red, size: 18),
-                  const SizedBox(width: 6),
-                  Text('${_current.likesCount} лайк',
-                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                ]),
-              ])),
-            const Divider(color: Colors.white12),
-            // Viewer list
-            Expanded(child: _loadingViewers
-              ? const Center(child: CircularProgressIndicator(
-                  color: Colors.white30, strokeWidth: 2))
-              : _viewerList.isEmpty
-                ? const Center(child: Text('Ҳанӯз касе надидааст',
-                    style: TextStyle(color: Colors.white38)))
-                : ListView.builder(
-                    controller: scrollCtrl,
-                    itemCount: _viewerList.length,
-                    itemBuilder: (_, i) {
-                      final v = _viewerList[i];
-                      final hasLiked = v['liked'] == true;
-                      return ListTile(
-                        leading: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: Colors.white12,
-                          backgroundImage: (v['avatar'] ?? '').isNotEmpty
-                              ? NetworkImage(v['avatar'] as String) : null,
-                          child: (v['avatar'] ?? '').isEmpty
-                              ? Text(((v['username'] ?? '?') as String)[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white))
-                              : null),
-                        title: Text(v['username'] as String? ?? '',
-                            style: const TextStyle(color: Colors.white,
-                                fontWeight: FontWeight.w500)),
-                        subtitle: Text(v['fullName'] as String? ?? '',
-                            style: const TextStyle(color: Colors.white38,
-                                fontSize: 12)),
-                        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                          if (hasLiked)
-                            const Icon(Icons.favorite, color: Colors.red, size: 18),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () => Navigator.pop(ctx),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.white30),
-                                borderRadius: BorderRadius.circular(8)),
-                              child: const Text('Паём',
-                                  style: TextStyle(color: Colors.white,
-                                      fontSize: 12)))),
-                        ]),
-                      );
-                    })),
-          ]))),
+      builder: (_) => StoryInsightsSheet(storyId: _current.id),
     ).whenComplete(_resume);
   }
 
@@ -767,4 +667,157 @@ class _FloatingEmojiState extends State<_FloatingEmoji>
         child: Opacity(opacity: _opacity.value,
           child: Transform.scale(scale: _scale.value,
             child: Center(child: Text(widget.emoji, style: const TextStyle(fontSize: 48))))))));
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Story insights / "seen by" sheet — мисли Instagram.
+// Худаш маълумотро бор мекунад, то ҳамеша дуруст навсозӣ шавад.
+// ─────────────────────────────────────────────────────────────────
+class StoryInsightsSheet extends StatefulWidget {
+  final String storyId;
+  const StoryInsightsSheet({super.key, required this.storyId});
+
+  @override
+  State<StoryInsightsSheet> createState() => _StoryInsightsSheetState();
+}
+
+class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
+  bool _loading = true;
+  int _views = 0, _likes = 0, _replies = 0, _interactions = 0;
+  List<Map<String, dynamic>> _viewers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    try {
+      final resp =
+          await ApiClient.instance.get('/stories/${widget.storyId}/viewers');
+      if (!mounted) return;
+      if (resp.statusCode >= 400) {
+        setState(() => _loading = false);
+        return;
+      }
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      final list = (body['viewers'] as List? ?? [])
+          .map((v) => v as Map<String, dynamic>)
+          .toList();
+      setState(() {
+        _viewers = list;
+        _views = (body['viewsCount'] as num?)?.toInt() ?? list.length;
+        _likes = (body['likesCount'] as num?)?.toInt() ?? 0;
+        _replies = (body['repliesCount'] as num?)?.toInt() ?? 0;
+        _interactions = (body['interactions'] as num?)?.toInt() ??
+            (_likes + _replies);
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.62,
+      maxChildSize: 0.95,
+      minChildSize: 0.35,
+      expand: false,
+      builder: (_, scrollCtrl) => Column(children: [
+        Container(
+          width: 40, height: 4,
+          margin: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+              color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+        ),
+
+        // ── Обзор / Insights ──
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Row(children: [
+            Expanded(child: _stat(Icons.remove_red_eye_outlined, '$_views', 'Бинандагон')),
+            _divider(),
+            Expanded(child: _stat(Icons.bolt_rounded, '$_interactions', 'Ҳамкориҳо')),
+            _divider(),
+            Expanded(child: _stat(Icons.favorite, '$_likes', 'Лайкҳо', color: Colors.red)),
+            _divider(),
+            Expanded(child: _stat(Icons.chat_bubble_outline_rounded, '$_replies', 'Ҷавобҳо')),
+          ]),
+        ),
+        const Divider(color: Colors.white12, height: 1),
+
+        // ── Seen-by list ──
+        Expanded(
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                      color: Colors.white30, strokeWidth: 2))
+              : _viewers.isEmpty
+                  ? const Center(
+                      child: Text('Ҳанӯз касе надидааст',
+                          style: TextStyle(color: Colors.white38)))
+                  : ListView.builder(
+                      controller: scrollCtrl,
+                      padding: const EdgeInsets.only(top: 4, bottom: 16),
+                      itemCount: _viewers.length,
+                      itemBuilder: (_, i) {
+                        final v = _viewers[i];
+                        final avatar = (v['avatar'] ?? '').toString();
+                        final uname = (v['username'] ?? '').toString();
+                        final name = (v['fullName'] ?? '').toString();
+                        final liked = v['liked'] == true;
+                        return ListTile(
+                          leading: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Colors.white12,
+                            backgroundImage: avatar.isNotEmpty
+                                ? CachedNetworkImageProvider(avatar)
+                                : null,
+                            child: avatar.isEmpty
+                                ? Text(
+                                    uname.isNotEmpty
+                                        ? uname[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(color: Colors.white))
+                                : null,
+                          ),
+                          title: Text(uname,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500)),
+                          subtitle: name.isEmpty
+                              ? null
+                              : Text(name,
+                                  style: const TextStyle(
+                                      color: Colors.white38, fontSize: 12)),
+                          trailing: liked
+                              ? const Icon(Icons.favorite,
+                                  color: Colors.red, size: 18)
+                              : null,
+                        );
+                      }),
+        ),
+      ]),
+    );
+  }
+
+  Widget _stat(IconData icon, String value, String label, {Color? color}) {
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, color: color ?? Colors.white70, size: 20),
+      const SizedBox(height: 6),
+      Text(value,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 2),
+      Text(label,
+          style: const TextStyle(color: Colors.white38, fontSize: 11)),
+    ]);
+  }
+
+  Widget _divider() => Container(
+      width: 1, height: 34, color: Colors.white12,
+      margin: const EdgeInsets.symmetric(horizontal: 4));
 }

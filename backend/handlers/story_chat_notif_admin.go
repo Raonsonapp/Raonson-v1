@@ -101,12 +101,45 @@ func GetStoryViewers(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Not authorized"})
 		return
 	}
-	var viewCount, likeCount int
+	var viewCount, likeCount, replyCount int
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COUNT(*) FROM story_views WHERE story_id=$1::text`, sid).Scan(&viewCount)
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COUNT(*) FROM story_likes WHERE story_id=$1::text`, sid).Scan(&likeCount)
-	c.JSON(http.StatusOK, gin.H{"viewsCount": viewCount, "likesCount": likeCount})
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM story_replies WHERE story_id=$1::text`, sid).Scan(&replyCount)
+
+	// Рӯйхати воқеии бинандагон + оё лайк кардаанд (Instagram "seen by")
+	viewers := []gin.H{}
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT u.id, u.username, COALESCE(u.avatar,''),
+		       COALESCE(u.verified,false), COALESCE(u.full_name,''),
+		       EXISTS(SELECT 1 FROM story_likes sl
+		              WHERE sl.story_id=$1::text AND sl.user_id=u.id) AS liked
+		FROM story_views sv JOIN users u ON u.id=sv.user_id
+		WHERE sv.story_id=$1::text
+		ORDER BY sv.viewed_at DESC NULLS LAST
+		LIMIT 500`, sid)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id, uname, avatar, fullName string
+			var verified, liked bool
+			rows.Scan(&id, &uname, &avatar, &verified, &fullName, &liked)
+			viewers = append(viewers, gin.H{
+				"_id": id, "id": id, "username": uname, "avatar": avatar,
+				"verified": verified, "fullName": fullName, "liked": liked,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"viewsCount":   viewCount,
+		"likesCount":   likeCount,
+		"repliesCount": replyCount,
+		"interactions": likeCount + replyCount,
+		"viewers":      viewers,
+	})
 }
 
 // DELETE /stories/:id
