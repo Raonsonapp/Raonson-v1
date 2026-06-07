@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -11,6 +12,16 @@ import (
 )
 
 var Pool *pgxpool.Pool
+
+// envInt — танзими адад аз env (барои миқёскунӣ бе тағйири код).
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return def
+}
 
 func Init() {
 	dsn := os.Getenv("DATABASE_URL")
@@ -23,8 +34,10 @@ func Init() {
 	}
 
 	// ── Оптимизатсияи пул барои HuggingFace (2 CPU, 16GB RAM) ──
-	cfg.MaxConns          = 25            // ↑ аз 10 то 25
-	cfg.MinConns          = 5             // ↑ аз 2 то 5 (пешакӣ омода)
+	// Барои horizontal scaling: DB_MAX_CONNS/DB_MIN_CONNS-ро дар ҳар нусха
+	// танзим кунед (default 25/5). Маҷмӯъ аз ҳади DB-и шумо камтар бошад.
+	cfg.MaxConns          = int32(envInt("DB_MAX_CONNS", 25))
+	cfg.MinConns          = int32(envInt("DB_MIN_CONNS", 5))
 	cfg.MaxConnLifetime   = 30 * time.Minute
 	cfg.MaxConnIdleTime   = 5 * time.Minute
 	cfg.HealthCheckPeriod = 30 * time.Second
