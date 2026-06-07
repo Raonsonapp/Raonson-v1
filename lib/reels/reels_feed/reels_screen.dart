@@ -1453,9 +1453,12 @@ class _AudioBarState extends State<_AudioBar>
 
   @override
   Widget build(BuildContext context) {
-    final displayText = widget.artist.isNotEmpty
-        ? '${widget.title} — ${widget.artist}'
-        : widget.title;
+    // Музика → ном • хонанда; вагарна «Аудиои оригиналӣ» (мисли Instagram)
+    final displayText = widget.title.trim().isEmpty
+        ? 'Аудиои оригиналӣ'
+        : (widget.artist.isNotEmpty
+            ? '${widget.title} — ${widget.artist}'
+            : widget.title);
 
     return Row(mainAxisSize: MainAxisSize.min, children: [
       const Icon(Icons.music_note_rounded,
