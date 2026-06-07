@@ -137,12 +137,29 @@ func GetStoryViewers(c *gin.Context) {
 		}
 	}
 
+	// Омори подписчикон: чанд нафар аз пайравон диданд
+	var followersTotal, followersViewed int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(followers_count,0) FROM users WHERE id=$1`,
+		ownerID).Scan(&followersTotal)
+	db.Pool.QueryRow(context.Background(), `
+		SELECT COUNT(*) FROM story_views sv
+		JOIN follows f ON f.follower_id=sv.user_id AND f.following_id=$2
+		WHERE sv.story_id=$1`, sid, ownerID).Scan(&followersViewed)
+	notFollowers := viewCount - followersViewed
+	if notFollowers < 0 {
+		notFollowers = 0
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"viewsCount":   viewCount,
-		"likesCount":   likeCount,
-		"repliesCount": replyCount,
-		"interactions": likeCount + replyCount,
-		"viewers":      viewers,
+		"viewsCount":      viewCount,
+		"likesCount":      likeCount,
+		"repliesCount":    replyCount,
+		"interactions":    likeCount + replyCount,
+		"followersTotal":  followersTotal,
+		"followersViewed": followersViewed,
+		"nonFollowers":    notFollowers,
+		"viewers":         viewers,
 	})
 }
 

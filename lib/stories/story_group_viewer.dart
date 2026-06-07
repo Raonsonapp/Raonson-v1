@@ -357,6 +357,20 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           else if (x > w * 0.67) { _nextStory(); }
           else { _paused ? _resume() : _pause(); }
         },
+        // Instagram-монанд: боло кашидан → статистика/ҷавоб, поён → пӯшидан
+        onVerticalDragEnd: (d) {
+          final v = d.primaryVelocity ?? 0;
+          if (v < -250) {
+            if (_isOwner) {
+              _showViewersSheet();
+            } else {
+              _pause();
+              setState(() => _showReply = true);
+            }
+          } else if (v > 300) {
+            Navigator.of(context).pop();
+          }
+        },
         child: Stack(fit: StackFit.expand, children: [
           // ── Media ──────────────────────────────────────────────
           _isVideo ? _buildVideo() : _buildImage(),
@@ -698,6 +712,7 @@ class StoryInsightsSheet extends StatefulWidget {
 class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
   bool _loading = true;
   int _views = 0, _likes = 0, _replies = 0, _interactions = 0;
+  int _folViewed = 0, _folTotal = 0, _nonFol = 0;
   List<Map<String, dynamic>> _viewers = [];
 
   @override
@@ -726,6 +741,9 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
         _replies = (body['repliesCount'] as num?)?.toInt() ?? 0;
         _interactions = (body['interactions'] as num?)?.toInt() ??
             (_likes + _replies);
+        _folViewed = (body['followersViewed'] as num?)?.toInt() ?? 0;
+        _folTotal  = (body['followersTotal']  as num?)?.toInt() ?? 0;
+        _nonFol    = (body['nonFollowers']     as num?)?.toInt() ?? 0;
         _loading = false;
       });
     } catch (_) {
@@ -761,6 +779,27 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
             Expanded(child: _stat(Icons.chat_bubble_outline_rounded, '$_replies', 'Ҷавобҳо')),
           ]),
         ),
+        // ── Омори пайравон ──
+        if (!_loading && _views > 0)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(children: [
+              const Icon(Icons.group_rounded, color: Colors.white54, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '$_folViewed аз ${_folTotal == 0 ? _folViewed : _folTotal} пайрав дид'
+                  '${_nonFol > 0 ? '  ·  $_nonFol ғайри пайрав' : ''}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ),
+            ]),
+          ),
         const Divider(color: Colors.white12, height: 1),
 
         // ── Seen-by list ──
