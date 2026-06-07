@@ -113,7 +113,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() { _file = File(xf!.path); _isVideo = isVideo; _error = null; });
   }
 
-  Future<void> _publish(File capturedFile, String caption) async {
+  Future<void> _publish(File capturedFile, String caption,
+      {String musicTitle = '',
+      String musicArtist = '',
+      List<String> taggedUsers = const []}) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });
@@ -142,6 +145,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         body: jsonEncode({
           'caption': caption,
           'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image', 'aspectRatio': ''}],
+          'musicTitle' : musicTitle,
+          'musicArtist': musicArtist,
+          'taggedUsers': taggedUsers,
         }),
       ).timeout(const Duration(seconds: 30));
 
@@ -170,7 +176,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 // ─────────────────────────────────────────────
 class _PostEditor extends StatefulWidget {
   final File media; final bool isVideo, isUploading;
-  final void Function(File, String) onPublish;
+  final void Function(File, String,
+      {String musicTitle, String musicArtist, List<String> taggedUsers}) onPublish;
   final VoidCallback onCancel; final String? errorMessage;
   const _PostEditor({required this.media, required this.isVideo,
     required this.isUploading, required this.onPublish,
@@ -240,13 +247,20 @@ class _PostEditorState extends State<_PostEditor> {
   }
 
   Future<void> _onPublish() async {
-    final caption = _captionCtrl.text.trim() +
-        (_selectedTrack != null ? '\n🎵 ${_selectedTrack!.title}' : '');
+    final caption = _captionCtrl.text.trim();
+    final tagged = _mentions
+        .map((m) => m.username.replaceAll('@', '').trim())
+        .where((u) => u.isNotEmpty)
+        .toList();
+    final mt = _selectedTrack?.title  ?? '';
+    final ma = _selectedTrack?.artist ?? '';
     if (widget.isVideo) {
-      widget.onPublish(widget.media, caption);
+      widget.onPublish(widget.media, caption,
+          musicTitle: mt, musicArtist: ma, taggedUsers: tagged);
     } else {
       final captured = await _captureCanvas();
-      widget.onPublish(captured, caption);
+      widget.onPublish(captured, caption,
+          musicTitle: mt, musicArtist: ma, taggedUsers: tagged);
     }
   }
 
