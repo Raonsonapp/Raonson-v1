@@ -25,7 +25,8 @@ const userSelectSQL = `
 	       COALESCE(note_song_art_url,''), COALESCE(note_song_preview_url,''),
 	       COALESCE(note_song_track_ms,0), COALESCE(note_song_start_ms,0),
 	       COALESCE(note_song_end_ms,30000),
-	       COALESCE(website,''), COALESCE(location,'')
+	       COALESCE(website,''), COALESCE(location,''),
+	       COALESCE(full_name,''), COALESCE(phone,'')
 	FROM users`
 
 func scanFullUser(row pgx.Row) (gin.H, error) {
@@ -39,6 +40,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		stTitle, stArtist, stArtUrl, stPreviewUrl string
 		stTrackMs, stStartMs, stEndMs   int
 		website, location               string
+		fullName, phone                 string
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -46,7 +48,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&banned, &note, &noteExpiresAt,
 		&stTitle, &stArtist, &stArtUrl, &stPreviewUrl,
 		&stTrackMs, &stStartMs, &stEndMs,
-		&website, &location,
+		&website, &location, &fullName, &phone,
 	)
 	if err != nil {
 		log.Printf("[scanFullUser] error: %v", err)
@@ -63,6 +65,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"lastSeen": lastSeen,
 		"isFollowing": false,
 		"website": website, "location": location,
+		"fullName": fullName, "phone": phone,
 		"note": note, "noteExpiresAt": noteExpiresAt,
 		"noteSong": gin.H{
 			"title": stTitle, "artist": stArtist,

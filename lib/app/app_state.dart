@@ -57,8 +57,11 @@ class AppState extends ChangeNotifier {
           final avatarUrl= user['avatar']?.toString()   ?? '';
 
           if (id.isNotEmpty) {
+            // Аватари холиро ба ҷои аватари кэшшуда нанависем
+            final keepAvatar =
+                avatarUrl.isNotEmpty ? avatarUrl : (UserSession.avatar ?? '');
             await UserSession.saveAll(
-                id: id, uname: uname, avatarUrl: avatarUrl);
+                id: id, uname: uname, avatarUrl: keepAvatar);
             await TokenStorage.saveUserId(id);
           }
         } else if (res.statusCode == 401) {

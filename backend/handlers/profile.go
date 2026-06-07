@@ -92,6 +92,8 @@ func UpdateProfile(c *gin.Context) {
 		Username  *string `json:"username"`
 		Website   *string `json:"website"`
 		Location  *string `json:"location"`
+		FullName  *string `json:"fullName"`
+		Phone     *string `json:"phone"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
@@ -105,10 +107,12 @@ func UpdateProfile(c *gin.Context) {
 		  username   = COALESCE($4, username),
 		  website    = COALESCE($5, website),
 		  location   = COALESCE($6, location),
+		  full_name  = COALESCE($7, full_name),
+		  phone      = COALESCE($8, phone),
 		  updated_at = NOW()
-		WHERE id=$7`,
+		WHERE id=$9`,
 		b.Bio, b.Avatar, b.IsPrivate, b.Username,
-		b.Website, b.Location, myID)
+		b.Website, b.Location, b.FullName, b.Phone, myID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return

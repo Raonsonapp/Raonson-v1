@@ -155,6 +155,44 @@ func RateLimit(limit int, windowSec int) gin.HandlerFunc {
 	}
 }
 
+// init launches a background janitor that prunes stale entries from the
+// in-memory anti-spam / anti-abuse / rate-limit maps so they can't grow
+// unbounded (every unique IP+path / userID would otherwise leak forever).
+func init() {
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			now := time.Now()
+
+			spamMu.Lock()
+			for k, e := range spamMap {
+				if now.Sub(e.last) > 2*time.Minute {
+					delete(spamMap, k)
+				}
+			}
+			spamMu.Unlock()
+
+			abuseMu.Lock()
+			for k, e := range abuseMap {
+				if now.Sub(e.start) > 24*time.Hour {
+					delete(abuseMap, k)
+				}
+			}
+			abuseMu.Unlock()
+
+			rlMu.Lock()
+			for k, times := range rlMap {
+				if len(times) == 0 ||
+					now.Sub(times[len(times)-1]) > 10*time.Minute {
+					delete(rlMap, k)
+				}
+			}
+			rlMu.Unlock()
+		}
+	}()
+}
+
 func clientIP(c *gin.Context) string {
 	if fwd := c.GetHeader("X-Forwarded-For"); fwd != "" {
 		return fwd

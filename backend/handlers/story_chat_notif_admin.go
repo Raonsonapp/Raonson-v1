@@ -158,15 +158,24 @@ func GetOrCreateChat(c *gin.Context) {
 // GET /chat
 func GetChats(c *gin.Context) {
 	myID := mw.UID(c)
+	// One row per conversation (latest message), newest first — DISTINCT ON
+	// avoids the old "one row per message" duplication + 100-message truncation.
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
-		       s.username,s.avatar,s.verified,
-		       r.username,r.avatar,r.verified
-		FROM messages m
-		JOIN users s ON s.id=m.sender_id
-		JOIN users r ON r.id=m.receiver_id
-		WHERE (m.sender_id=$1 OR m.receiver_id=$1)
-		ORDER BY m.created_at DESC LIMIT 100`, myID)
+		SELECT id,chat_id,sender_id,receiver_id,text,read,created_at,
+		       s_username,s_avatar,s_verified,r_username,r_avatar,r_verified
+		FROM (
+			SELECT DISTINCT ON (m.chat_id)
+			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
+			       s.username AS s_username,s.avatar AS s_avatar,s.verified AS s_verified,
+			       r.username AS r_username,r.avatar AS r_avatar,r.verified AS r_verified
+			FROM messages m
+			JOIN users s ON s.id=m.sender_id
+			JOIN users r ON r.id=m.receiver_id
+			WHERE (m.sender_id=$1 OR m.receiver_id=$1)
+			ORDER BY m.chat_id, m.created_at DESC
+		) sub
+		ORDER BY created_at DESC
+		LIMIT 100`, myID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get chats failed"})
 		return

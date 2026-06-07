@@ -1163,7 +1163,9 @@ class _HashtagTab extends StatelessWidget {
         final tag = h['tag']?.toString() ?? '';
         final cnt = (h['postsCount'] as num?)?.toInt() ?? 0;
         return InkWell(
-          onTap: () {},
+          onTap: tag.isEmpty
+              ? null
+              : () => Navigator.pushNamed(context, '/hashtag', arguments: tag),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Row(children: [

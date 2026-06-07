@@ -2,6 +2,9 @@ package middleware
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -10,6 +13,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+)
+
+// randomSecret returns a process-unique 32-byte hex secret. Used only as a
+// safety fallback when JWT env vars are unset — never a known hardcoded value.
+func randomSecret() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "raonson-" + hex.EncodeToString([]byte("fallback"))
+	}
+	return hex.EncodeToString(b)
+}
+
+var (
+	fallbackAccessSecret  = randomSecret()
+	fallbackRefreshSecret = randomSecret()
 )
 
 func Auth() gin.HandlerFunc {
@@ -76,14 +94,16 @@ func jwtSecret() string {
 	if s := os.Getenv("JWT_SECRET"); s != "" {
 		return s
 	}
-	return "RAONSON_SECRET"
+	log.Println("⚠️  JWT_SECRET unset — using ephemeral random secret")
+	return fallbackAccessSecret
 }
 
 func RefreshSecret() string {
 	if s := os.Getenv("JWT_REFRESH_SECRET"); s != "" {
 		return s
 	}
-	return "RAONSON_REFRESH_SECRET"
+	log.Println("⚠️  JWT_REFRESH_SECRET unset — using ephemeral random secret")
+	return fallbackRefreshSecret
 }
 
 func JWTSecret() string { return jwtSecret() }
