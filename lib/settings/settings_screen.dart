@@ -123,6 +123,15 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
 
+              // ── ABOUT ─────────────────────────────────────────────
+              _Hdr('Маълумот'),
+              _NavTile(
+                icon:  Icons.info_outline_rounded,
+                title: 'Дар бораи барнома',
+                sub:   'Версия, муаллиф ва маълумот',
+                onTap: () => _go(ctx, const AboutScreen()),
+              ),
+
               // ── DANGER ZONE ───────────────────────────────────────
               _Hdr(''),
               _DangerTile(
@@ -947,6 +956,121 @@ class _BUSState extends State<BlockedUsersScreen> {
                                   color: AppColors.neonBlue))),
                     );
                   }),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ABOUT SCREEN — Дар бораи барнома
+// ════════════════════════════════════════════════════════════════════
+class AboutScreen extends StatelessWidget {
+  const AboutScreen({super.key});
+
+  static const String _version = '1.0.0';
+  static const String _year    = '2026';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: _appBar(context, 'Дар бораи барнома'),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        children: [
+          // Logo + name
+          Center(
+            child: Container(
+              width: 96, height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.neonBlue, Color(0xFF00E87A)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.neonBlue.withOpacity(0.35),
+                    blurRadius: 24, spreadRadius: 1),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Image.asset('assets/icon.png', height: 60,
+                  errorBuilder: (_, __, ___) => const Icon(
+                      Icons.bolt_rounded, color: Colors.white, size: 48)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Center(
+            child: Text('Raonson',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 4),
+          Center(
+            child: Text('Версия $_version',
+                style: const TextStyle(color: Colors.white38, fontSize: 13)),
+          ),
+          const SizedBox(height: 28),
+
+          const _AboutRow(
+              icon: Icons.calendar_today_rounded,
+              label: 'Сол сохта шуд',
+              value: _year),
+          const _AboutRow(
+              icon: Icons.person_rounded,
+              label: 'Муаллиф',
+              value: 'Raonson Team'),
+          const _AboutRow(
+              icon: Icons.public_rounded,
+              label: 'Кишвар',
+              value: 'Тоҷикистон 🇹🇯'),
+          const _AboutRow(
+              icon: Icons.code_rounded,
+              label: 'Технология',
+              value: 'Flutter • Go • PostgreSQL'),
+
+          const SizedBox(height: 24),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'Raonson — шабакаи иҷтимоии тоҷикӣ барои мубодилаи аксҳо, '
+              'видеоҳо, стори ва паёмҳо. Бо муҳаббат дар Тоҷикистон сохта шудааст.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+            ),
+          ),
+          const SizedBox(height: 28),
+          Center(
+            child: Text('© $_year Raonson. Ҳамаи ҳуқуқҳо ҳифз шудаанд.',
+                style: const TextStyle(color: Colors.white24, fontSize: 11)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _AboutRow(
+      {required this.icon, required this.label, required this.value});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(children: [
+        Icon(icon, color: Colors.white54, size: 20),
+        const SizedBox(width: 16),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 14)),
+        const Spacer(),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+      ]),
     );
   }
 }
