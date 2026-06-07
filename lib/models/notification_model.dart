@@ -26,6 +26,9 @@ class NotificationModel {
       case 'follow': return 'шуморо пайравӣ кард';
       case 'follow_request': return 'дархости пайравӣ фиристод';
       case 'reel_like': return 'Reels-атро писанд кард';
+      case 'reel_comment': return 'ба Reels-ат шарҳ навишт';
+      case 'story_like': return 'Сторисататро писанд кард';
+      case 'story_reply': return 'ба Сторисат ҷавоб дод';
       case 'story_view': return 'Сторисататро дид';
       case 'message': return 'паём фиристод';
       default: return 'бо шумо амал кард';

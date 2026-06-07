@@ -83,6 +83,10 @@ func LikeStory(c *gin.Context) {
 	} else {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO story_likes(story_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, sid, myID)
+		var owner string
+		db.Pool.QueryRow(context.Background(),
+			`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
+		notify(owner, myID, "story_like", sid)
 	}
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }

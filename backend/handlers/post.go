@@ -217,6 +217,10 @@ func TogglePostLike(c *gin.Context) {
 			`INSERT INTO post_likes(post_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, pid, myID)
 		db.Pool.Exec(context.Background(),
 			`UPDATE posts SET likes_count=likes_count+1 WHERE id=$1`, pid)
+		var owner string
+		db.Pool.QueryRow(context.Background(),
+			`SELECT user_id FROM posts WHERE id=$1`, pid).Scan(&owner)
+		notify(owner, myID, "like", pid)
 	}
 
 	var cnt int

@@ -15,11 +15,14 @@ class NotificationItem extends StatelessWidget {
   Color get _typeColor {
     switch (notification.type) {
       case 'like':
-      case 'reel_like': return const Color(0xFFFF3040);
-      case 'comment': return const Color(0xFF0095F6);
+      case 'reel_like':
+      case 'story_like': return const Color(0xFFFF3040);
+      case 'comment':
+      case 'reel_comment': return const Color(0xFF0095F6);
       case 'follow':
       case 'follow_request': return const Color(0xFF00D084);
-      case 'story_view': return const Color(0xFFFF8C00);
+      case 'story_view':
+      case 'story_reply': return const Color(0xFFFF8C00);
       default: return Colors.white54;
     }
   }
@@ -27,11 +30,14 @@ class NotificationItem extends StatelessWidget {
   IconData get _typeIcon {
     switch (notification.type) {
       case 'like':
-      case 'reel_like': return Icons.favorite;
-      case 'comment': return Icons.mode_comment_rounded;
+      case 'reel_like':
+      case 'story_like': return Icons.favorite;
+      case 'comment':
+      case 'reel_comment': return Icons.mode_comment_rounded;
       case 'follow':
       case 'follow_request': return Icons.person_add_rounded;
       case 'story_view': return Icons.remove_red_eye_rounded;
+      case 'story_reply':
       case 'message': return Icons.send_rounded;
       default: return Icons.notifications_rounded;
     }
