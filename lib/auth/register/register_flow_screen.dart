@@ -15,6 +15,7 @@ import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/account_manager.dart';
 import '../../core/storage/token_storage.dart';
 import '../../create/upload/upload_manager.dart';
 import '../widgets/auth_kit.dart';
@@ -169,6 +170,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               await TokenStorage.saveUserId(uid);
               UserSession.userId   = uid;
               UserSession.username = uname;
+              await AccountManager.upsertCurrent(
+                userId: uid, username: uname, avatar: '',
+                token: token, refreshToken: refresh);
             }
           }
         }

@@ -7,6 +7,7 @@ import 'app/app.dart';
 import 'app/app_config.dart';
 import 'app/app_settings.dart';
 import 'core/services/user_session.dart';
+import 'core/services/account_manager.dart';
 import 'core/services/network_service.dart';
 import 'core/ads/ads_manager.dart';
 
@@ -31,6 +32,7 @@ Future<void> main() async {
 
   // ✅ 3. Cache-ро ФАВРАН бор кун — бе интернет ҳам кор мекунад
   await UserSession.loadCachedData();
+  await AccountManager.load(); // multi-account рӯйхатро бор мекунад
 
   // ✅ 3.1 Theme + language preferences — то app кушода шавад
   await AppSettingsState.instance.init();

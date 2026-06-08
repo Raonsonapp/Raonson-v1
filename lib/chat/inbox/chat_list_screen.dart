@@ -14,6 +14,7 @@ import '../../app/app_theme.dart';
 import '../../core/presence_service.dart';
 import '../../core/note_service.dart';
 import '../../core/services/user_session.dart';
+import '../../widgets/account_switcher.dart';
 import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 
@@ -133,25 +134,29 @@ class _ChatView extends StatelessWidget {
                 ),
                 Expanded(
                   child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            (UserSession.username?.isNotEmpty ?? false)
-                                ? UserSession.username!
-                                : 'Паёмҳо',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            )),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down_rounded,
-                            color: Colors.white, size: 22),
-                      ],
+                    child: GestureDetector(
+                      onTap: () => showAccountSwitcher(context),
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              (UserSession.username?.isNotEmpty ?? false)
+                                  ? UserSession.username!
+                                  : 'Паёмҳо',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              )),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.keyboard_arrow_down_rounded,
+                              color: Colors.white, size: 22),
+                        ],
+                      ),
                     ),
                   ),
                 ),
