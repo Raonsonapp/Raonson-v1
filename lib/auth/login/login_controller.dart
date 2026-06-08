@@ -4,6 +4,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/account_manager.dart';
 
 class LoginState {
   final String email;
@@ -84,6 +85,14 @@ class LoginController extends ChangeNotifier {
           UserSession.userId   = uid;
           UserSession.username = (user['username'] ?? '').toString();
           UserSession.avatar   = (user['avatar']   ?? '').toString();
+          // Multi-account: аккаунтро сабт мекунем
+          await AccountManager.upsertCurrent(
+            userId: uid,
+            username: (user['username'] ?? '').toString(),
+            avatar: (user['avatar'] ?? '').toString(),
+            token: token,
+            refreshToken: refresh,
+          );
         }
       }
 
