@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math' show Random;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,7 +40,9 @@ class _PostCardState extends State<PostCard>
   late int    _likeCount;
   late int    _commentCount;
   int         _shareCount   = 0;
-  bool        _likeLoading  = false;
+  Timer?      _likeDebounce;
+  late bool   _serverLiked; // ҳолати тасдиқшудаи сервер
+  bool        _likeSyncing  = false;
   bool        _hidden       = false;
   late String _caption;
   bool        _captionExpanded = false; // ← Show more/less
@@ -77,6 +80,7 @@ class _PostCardState extends State<PostCard>
   void initState() {
     super.initState();
     _liked        = widget.post.isLiked;
+    _serverLiked  = widget.post.isLiked;
     _saved        = widget.post.isSaved;
     _likeCount    = widget.post.likesCount;
     _commentCount = widget.post.commentsCount;
@@ -119,6 +123,7 @@ class _PostCardState extends State<PostCard>
 
   @override
   void dispose() {
+    _likeDebounce?.cancel();
     _likeCtrl.dispose();
     _countCtrl.dispose();
     _repostCtrl.dispose();
@@ -127,30 +132,46 @@ class _PostCardState extends State<PostCard>
   }
 
   // ── LIKE ─────────────────────────────────────────────────────
-  Future<void> _toggleLike() async {
-    if (_likeLoading) return;
-    _likeLoading = true;
-    final was = _liked;
-    _countUp = !was; // боло агар лайк, поён агар unlике
-    setState(() { _liked = !was; _likeCount += _liked ? 1 : -1; });
-    if (_liked) { _likeCtrl.forward(from: 0); }
+  // Like-и ФАВРӢ (мисли Instagram): UI дарҳол тағйир меёбад, ҳеҷ гоҳ блок
+  // намешавад. Дархости шабака debounce мешавад — танҳо ҳолати НИҲОӢ
+  // фиристода мешавад, пас зуд like/unlike барномаро шах намекунад.
+  void _toggleLike() {
+    setState(() {
+      _liked = !_liked;
+      _countUp = _liked;
+      _likeCount += _liked ? 1 : -1;
+      if (_likeCount < 0) _likeCount = 0;
+    });
+    if (_liked) _likeCtrl.forward(from: 0);
     _countCtrl.forward(from: 0);
+
+    _likeDebounce?.cancel();
+    _likeDebounce =
+        Timer(const Duration(milliseconds: 500), _syncLike);
+  }
+
+  Future<void> _syncLike() async {
+    if (_likeSyncing) return;
+    if (_liked == _serverLiked) return; // тағйири холис нест
+    _likeSyncing = true;
+    final target = _liked;
     try {
       final res = await ApiClient.instance
           .post('/posts/${widget.post.id}/like');
       if (res.statusCode < 400) {
         final b = jsonDecode(res.body);
-        if (mounted) setState(() {
-          _liked     = b['liked']      ?? _liked;
-          _likeCount = b['likesCount'] ?? _likeCount;
-        });
-      } else {
-        if (mounted) setState(() { _liked = was; _likeCount += was ? 1 : -1; });
+        _serverLiked = (b['liked'] as bool?) ?? target;
+        if (mounted && (b['likesCount'] is int) && _liked == _serverLiked) {
+          setState(() => _likeCount = b['likesCount'] as int);
+        }
       }
-    } catch (_) {
-      if (mounted) setState(() { _liked = was; _likeCount += was ? 1 : -1; });
+    } catch (_) {}
+    _likeSyncing = false;
+    // Агар корбар дар вақти дархост боз тағйир дод — дубора синхрон кун
+    if (_liked != _serverLiked) {
+      _likeDebounce?.cancel();
+      _likeDebounce = Timer(const Duration(milliseconds: 300), _syncLike);
     }
-    _likeLoading = false;
   }
 
   Future<void> _toggleSave() async {
@@ -816,14 +837,8 @@ class _PostCardState extends State<PostCard>
                 _heartDx = (rng.nextDouble() - 0.5) * 80;
               });
               if (!_liked) {
-                setState(() { _liked = true; _likeCount++; _countUp = true; });
-                _likeCtrl.forward(from: 0);
-                _countCtrl.forward(from: 0);
-                ApiClient.instance.post('/posts/${post.id}/like')
-                    .then((_) {}).catchError((e) {
-                  if (mounted) setState(() { _liked = false; _likeCount--; });
-                  return e;
-                });
+                // Ҳамон роҳи debounce-ро истифода мебарад (бе шахшавӣ)
+                _toggleLike();
               }
               setState(() => _showHeart = true);
               _heartCtrl.forward(from: 0);
