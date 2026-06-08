@@ -71,10 +71,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _tabChanged() {
     if (!mounted) return;
-    if (_tab.index == 2 && _ctrl.taggedPosts.isEmpty) {
+    // Ҳар бор кушодан → нав мекунем (то посте, ки ҳозир сев/таг шуд,
+    // фавран пайдо шавад, на баъди 1-2 дақиқа).
+    if (_tab.index == 2) {
       _ctrl.loadTaggedPosts();
     }
-    if (_isMe && _tab.index == 3 && _ctrl.savedPosts.isEmpty) {
+    if (_isMe && _tab.index == 3) {
       _ctrl.loadSavedPosts();
     }
   }
