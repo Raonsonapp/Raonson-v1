@@ -506,11 +506,29 @@ func UnbanUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"banned": false})
 }
 
-// POST /admin/verify/:id — галочка медиҳад (admin only)
+// POST /admin/verify/:id — галочка медиҳад (admin only).
+// Body: {"months": 1..12} → то N моҳ; {"months": 0} ё холӣ → беохир (бе мӯҳлат).
 func VerifyUser(c *gin.Context) {
+	var b struct {
+		Months int `json:"months"`
+	}
+	c.ShouldBindJSON(&b)
+	if b.Months > 0 {
+		if b.Months > 12 {
+			b.Months = 12
+		}
+		db.Pool.Exec(context.Background(),
+			`UPDATE users SET verified=TRUE,
+			        verified_until = NOW() + ($2 * INTERVAL '1 month')
+			 WHERE id=$1`, c.Param("id"), b.Months)
+		c.JSON(http.StatusOK, gin.H{"verified": true, "months": b.Months})
+		return
+	}
+	// Беохир
 	db.Pool.Exec(context.Background(),
-		`UPDATE users SET verified=TRUE WHERE id=$1`, c.Param("id"))
-	c.JSON(http.StatusOK, gin.H{"verified": true})
+		`UPDATE users SET verified=TRUE, verified_until=NULL WHERE id=$1`,
+		c.Param("id"))
+	c.JSON(http.StatusOK, gin.H{"verified": true, "months": 0})
 }
 
 // POST /admin/unverify/:id — галочкаро мегирад (admin only).

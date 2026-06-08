@@ -63,16 +63,59 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Future<void> _setVerified(Map<String, dynamic> u, bool verify) async {
     final id = (u['_id'] ?? u['id']).toString();
+    int months = 0; // барои verify: 0 = беохир
+    if (verify) {
+      final chosen = await _pickDuration();
+      if (chosen == null) return; // бекор шуд
+      months = chosen;
+    }
     setState(() => _busy.add(id));
     try {
-      final res = await ApiClient.instance
-          .post('/admin/${verify ? 'verify' : 'unverify'}/$id');
+      final res = await ApiClient.instance.post(
+          '/admin/${verify ? 'verify' : 'unverify'}/$id',
+          body: verify ? {'months': months} : null);
       if (res.statusCode == 200 && mounted) {
         setState(() => u['verified'] = verify);
       }
     } catch (_) {} finally {
       if (mounted) setState(() => _busy.remove(id));
     }
+  }
+
+  // Интихоби мӯҳлати галочка: 1–12 моҳ ё беохир.
+  Future<int?> _pickDuration() {
+    const options = <(String, int)>[
+      ('1 моҳ', 1), ('3 моҳ', 3), ('6 моҳ', 6),
+      ('1 сол', 12), ('Беохир (бе мӯҳлат)', 0),
+    ];
+    return showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+          const Padding(padding: EdgeInsets.only(bottom: 8),
+            child: Text('Мӯҳлати галочка',
+                style: TextStyle(color: Colors.white,
+                    fontWeight: FontWeight.w600, fontSize: 15))),
+          ...options.map((o) => ListTile(
+                leading: Icon(
+                    o.$2 == 0 ? Icons.all_inclusive_rounded
+                              : Icons.schedule_rounded,
+                    color: AppColors.verified, size: 20),
+                title: Text(o.$1,
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () => Navigator.pop(ctx, o.$2),
+              )),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
   }
 
   Future<void> _deleteUser(Map<String, dynamic> u) async {

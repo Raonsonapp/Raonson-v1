@@ -80,8 +80,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('New Message',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Паёми нав',
+            style: TextStyle(color: Colors.white,
+                fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: Column(
         children: [
@@ -99,7 +100,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
-                  hintText: 'Search users...',
+                  hintText: 'Ҷустуҷӯи корбарон...',
                   hintStyle: TextStyle(color: Colors.white38),
                   prefixIcon:
                       Icon(Icons.search, color: Colors.white38, size: 20),
@@ -126,7 +127,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                     ? Center(
                         child: Text(
                           _lastQuery.isEmpty
-                              ? 'Search for someone to message'
+                              ? 'Касеро барои паём ҷустуҷӯ кунед'
                               : 'No users found',
                           style: const TextStyle(
                               color: Colors.white38, fontSize: 14),
@@ -180,7 +181,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                     )
                                   ],
                                 ),
-                                child: const Text('Message',
+                                child: const Text('Паём',
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
