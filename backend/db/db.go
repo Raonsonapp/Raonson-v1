@@ -59,6 +59,23 @@ func Init() {
 	}
 	migrate()
 	log.Println("✅ PostgreSQL connected (Supabase) — pool: 5-25 conns")
+
+	// Галочкаҳои мӯҳлаташон гузаштаро ҳар соат хомӯш мекунад (@raonson истисно).
+	go func() {
+		expire := func() {
+			Pool.Exec(context.Background(), `
+				UPDATE users SET verified=FALSE
+				WHERE verified=TRUE AND verified_until IS NOT NULL
+				  AND verified_until < NOW()
+				  AND LOWER(username) <> 'raonson'`)
+		}
+		expire()
+		t := time.NewTicker(1 * time.Hour)
+		defer t.Stop()
+		for range t.C {
+			expire()
+		}
+	}()
 }
 
 func migrate() {
@@ -295,6 +312,9 @@ func migrate() {
 	-- ── Registration profile fields ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100) DEFAULT '';
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS phone     VARCHAR(20)  DEFAULT '';
+
+	-- ── Verification expiry (NULL = беохир) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_until TIMESTAMPTZ;
 
 	-- ── Pinned posts ──
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
