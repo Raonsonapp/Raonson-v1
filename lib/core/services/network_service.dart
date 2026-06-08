@@ -13,27 +13,38 @@ class NetworkService {
 
   StreamSubscription? _sub;
   Timer? _checkTimer;
+  int _offlineStrikes = 0; // флипи офлайн танҳо баъди 2 хатои пай дар пай
 
   void init() {
-    // Connectivity stream-ро tinglash
     _sub = Connectivity().onConnectivityChanged.listen((results) async {
       if (results.contains(ConnectivityResult.none)) {
+        // Дастгоҳ умуман шабака надорад → дарҳол офлайн
+        _offlineStrikes = 2;
         _setOnline(false);
       } else {
-        // Connectivity bor, lekin haqiqiy internet bormi?
-        final online = await _checkInternet();
-        _setOnline(online);
+        _applyCheck(await _checkInternet());
       }
     });
 
-    // Har 15 soniyada tekshir
-    _checkTimer = Timer.periodic(const Duration(seconds: 15), (_) async {
-      final online = await _checkInternet();
-      _setOnline(online);
+    // Ҳар 20 сония санҷиш
+    _checkTimer = Timer.periodic(const Duration(seconds: 20), (_) async {
+      _applyCheck(await _checkInternet());
     });
 
-    // Dastlabki holat
-    _checkInternet().then(_setOnline);
+    // Ҳолати ибтидоӣ
+    _checkInternet().then(_applyCheck);
+  }
+
+  // Дебаунс: танҳо баъди 2 хатои пай дар пай офлайн нишон медиҳем,
+  // то бо як timeout-и тасодуфӣ банер начаспад.
+  void _applyCheck(bool online) {
+    if (online) {
+      _offlineStrikes = 0;
+      _setOnline(true);
+    } else {
+      _offlineStrikes++;
+      if (_offlineStrikes >= 2) _setOnline(false);
+    }
   }
 
   void _setOnline(bool online) {
@@ -43,14 +54,25 @@ class NetworkService {
     }
   }
 
+  // Онлайн ҳисобида мешавад, агар ягон host ҳал шавад (на танҳо google).
+  // Аввал host-и худи backend, баъд DNS-и боэътимоди ҷаҳонӣ.
   Future<bool> _checkInternet() async {
-    try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 4));
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } catch (_) {
-      return false;
+    const hosts = <String>[
+      'mahmadmurodov-raonson.hf.space', // backend-и худи барнома
+      'cloudflare.com',
+      'one.one.one.one', // 1.1.1.1
+      'google.com',
+    ];
+    for (final h in hosts) {
+      try {
+        final r = await InternetAddress.lookup(h)
+            .timeout(const Duration(seconds: 6));
+        if (r.isNotEmpty && r[0].rawAddress.isNotEmpty) return true;
+      } catch (_) {
+        // ин host нашуд — host-и навбатиро месанҷем
+      }
     }
+    return false;
   }
 
   void dispose() {
