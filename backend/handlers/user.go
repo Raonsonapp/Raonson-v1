@@ -69,6 +69,7 @@ func DeleteUser(c *gin.Context) {
 func GetUserPosts(c *gin.Context) {
 	id     := c.Param("id")
 	myID   := mw.UID(c)
+	if id == "me" { id = myID }
 	page   := toInt(c.Query("page"), 1)
 	limit  := toInt(c.Query("limit"), 24)
 	offset := (page - 1) * limit
@@ -91,6 +92,7 @@ func GetUserPosts(c *gin.Context) {
 // GET /users/:id/reels
 func GetUserReels(c *gin.Context) {
 	id     := c.Param("id")
+	if id == "me" { id = mw.UID(c) }
 	page   := toInt(c.Query("page"), 1)
 	limit  := toInt(c.Query("limit"), 24)
 	offset := (page - 1) * limit
