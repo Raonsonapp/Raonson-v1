@@ -1297,19 +1297,22 @@ class _MediaCarousel extends StatefulWidget {
 
 class _MediaCarouselState extends State<_MediaCarousel> {
   int _current = 0;
+  double? _videoRatio; // ратиои аслии видео (вақте маълум шуд)
 
   double _getAspectRatio() {
-    // ✅ Формати аслиро нигоҳ дор — мисли Instagram
+    // ✅ Формати аслиро нигоҳ дор — мисли Instagram (4:5 … 1.91:1)
     if (widget.media.isEmpty) return 1.0;
     final type  = widget.media.first['type']  ?? 'image';
     final ratio = widget.media.first['aspectRatio'] ?? '';
     if (ratio.isNotEmpty) {
       final r = double.tryParse(ratio);
-      if (r != null && r > 0) return r;
+      if (r != null && r > 0) return r.clamp(0.5, 1.91);
     }
-    // Агар aspectRatio нест — аз ImageProvider бигир
+    if (type == 'video' && _videoRatio != null) {
+      return _videoRatio!.clamp(0.5, 1.91);
+    }
     // Default: portrait 4:5 мисли Instagram
-    return type == 'video' ? 16 / 9 : 4 / 5;
+    return 4 / 5;
   }
 
   @override
@@ -1326,7 +1329,12 @@ class _MediaCarouselState extends State<_MediaCarousel> {
             final type = widget.media[i]['type'] ?? 'image';
             if (url.isEmpty) return Container(color: const Color(0xFF111111));
             if (type == 'video') return _VideoItem(
-              url: url, isActive: widget.isActive, aspectRatio: aspectRatio);
+              url: url, isActive: widget.isActive, aspectRatio: aspectRatio,
+              onRatio: (r) {
+                if (mounted && _videoRatio == null) {
+                  setState(() => _videoRatio = r);
+                }
+              });
             return CachedNetworkImage(
               imageUrl: url, fit: BoxFit.cover,
               width: double.infinity, height: double.infinity,
@@ -1361,7 +1369,9 @@ class _VideoItem extends StatefulWidget {
   final String url;
   final bool isActive;
   final double aspectRatio;
-  const _VideoItem({required this.url, this.isActive = true, this.aspectRatio = 16/9});
+  final void Function(double)? onRatio;
+  const _VideoItem({required this.url, this.isActive = true,
+      this.aspectRatio = 16/9, this.onRatio});
   @override
   State<_VideoItem> createState() => _VideoItemState();
 }
@@ -1382,6 +1392,9 @@ class _VideoItemState extends State<_VideoItem> {
       ctrl.setLooping(true);
       ctrl.setVolume(0); // Mute дар feed мисли Instagram
       ctrl.addListener(_onUpdate);
+      if (ctrl.value.isInitialized && ctrl.value.aspectRatio > 0) {
+        widget.onRatio?.call(ctrl.value.aspectRatio);
+      }
       setState(() => _ready = true);
       if (widget.isActive) ctrl.play();
     } catch (_) { if (mounted) setState(() => _error = true); }
