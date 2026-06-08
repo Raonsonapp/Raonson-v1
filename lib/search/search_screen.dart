@@ -10,6 +10,8 @@ import 'package:http/http.dart' as http;
 
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import 'package:video_player/video_player.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/services/user_session.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
@@ -837,46 +839,133 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
   }
 }
 
-// Single card in the explore feed (image or reel cover)
-class _FeedCard extends StatelessWidget {
+// Single card in the explore feed (image OR playing video/reel)
+class _FeedCard extends StatefulWidget {
   final _ExploreItem item;
   const _FeedCard({required this.item});
+  @override
+  State<_FeedCard> createState() => _FeedCardState();
+}
+
+class _FeedCardState extends State<_FeedCard> {
+  VideoPlayerController? _video;
+  bool _ready = false;
+  bool _liked = false, _saved = false;
+
+  bool get _isVideo =>
+      widget.item.type == _ItemType.video || widget.item.type == _ItemType.reel;
+  bool get _isReel => widget.item.type == _ItemType.reel;
+  String get _id => widget.item.id;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isVideo) _initVideo();
+  }
+
+  Future<void> _initVideo() async {
+    try {
+      final c = VideoPlayerController.networkUrl(Uri.parse(widget.item.url));
+      _video = c;
+      await c.initialize();
+      if (!mounted) return;
+      c..setLooping(true)..play();
+      setState(() => _ready = true);
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _video?.dispose();
+    super.dispose();
+  }
+
+  void _toggleLike() {
+    setState(() => _liked = !_liked);
+    ApiClient.instance
+        .post(_isReel ? '/reels/$_id/like' : '/posts/$_id/like')
+        .then((_) {}, onError: (_) {});
+  }
+
+  void _toggleSave() {
+    setState(() => _saved = !_saved);
+    ApiClient.instance
+        .post(_isReel ? '/reels/$_id/save' : '/posts/$_id/save')
+        .then((_) {}, onError: (_) {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return Stack(fit: StackFit.expand, children: [
-      CachedNetworkImage(
-        imageUrl: item.url,
-        fit:      BoxFit.cover,
-        placeholder: (_, __) => Container(color: Colors.black),
-        errorWidget: (_, __, ___) => Container(color: Colors.black),
-      ),
+      // ── Media: видеоро бозӣ мекунад, на ҳамчун расм (боги сиёҳ ислоҳ шуд) ──
+      if (_isVideo)
+        (_ready && _video != null
+            ? GestureDetector(
+                onTap: () => setState(() =>
+                    _video!.value.isPlaying ? _video!.pause() : _video!.play()),
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _video!.value.size.width,
+                    height: _video!.value.size.height,
+                    child: VideoPlayer(_video!),
+                  ),
+                ),
+              )
+            : Container(
+                color: Colors.black,
+                child: const Center(
+                    child: CircularProgressIndicator(
+                        color: Colors.white24, strokeWidth: 2))))
+      else
+        CachedNetworkImage(
+          imageUrl: widget.item.url,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(color: Colors.black),
+          errorWidget: (_, __, ___) => Container(color: Colors.black),
+        ),
       // Gradient overlay
       Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
-            end:   Alignment.bottomCenter,
+            end: Alignment.bottomCenter,
             stops: [0.55, 1.0],
             colors: [Colors.transparent, Colors.black87],
           ),
         ),
       ),
-      // Right side actions
+      // Right side actions — акнун кор мекунанд
       Positioned(
         right: 12, bottom: 120,
         child: Column(children: [
-          _ActionBtn(icon: Icons.favorite_border_rounded, label: ''),
+          _ActionBtn(
+              icon: _liked
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              color: _liked ? Colors.red : Colors.white,
+              onTap: _toggleLike),
           const SizedBox(height: 20),
-          _ActionBtn(icon: Icons.chat_bubble_outline_rounded, label: ''),
+          _ActionBtn(icon: Icons.chat_bubble_outline_rounded, onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Шарҳҳо ба зудӣ дар ин ҷо',
+                    style: TextStyle(fontSize: 13)),
+                duration: Duration(seconds: 1)));
+          }),
           const SizedBox(height: 20),
-          _ActionBtn(icon: Icons.send_rounded, label: ''),
+          _ActionBtn(
+              icon: Icons.send_rounded,
+              onTap: () => Share.share(widget.item.url)),
           const SizedBox(height: 20),
-          _ActionBtn(icon: Icons.bookmark_border_rounded, label: ''),
+          _ActionBtn(
+              icon: _saved
+                  ? Icons.bookmark_rounded
+                  : Icons.bookmark_border_rounded,
+              onTap: _toggleSave),
         ]),
       ),
       // Bottom info
-      if (item.postData != null)
+      if (widget.item.postData != null)
         Positioned(
           left: 14, right: 80, bottom: 40,
           child: Column(
@@ -884,13 +973,13 @@ class _FeedCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(children: [
-                Avatar(imageUrl: item.postData!.user.avatar, size: 32),
+                Avatar(imageUrl: widget.item.postData!.user.avatar, size: 32),
                 const SizedBox(width: 8),
-                Text(item.postData!.user.username,
+                Text(widget.item.postData!.user.username,
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600, fontSize: 14)),
-                if (item.postData!.user.isVerified) ...[
+                if (widget.item.postData!.user.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(Icons.verified_rounded,
                       color: Color(0xFF00C853), size: 14),
@@ -898,13 +987,11 @@ class _FeedCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 _FollowChip(),
               ]),
-              if (item.postData!.caption.isNotEmpty) ...[
+              if (widget.item.postData!.caption.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(item.postData!.caption,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
+                Text(widget.item.postData!.caption,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
               ],
             ],
           ),
@@ -915,21 +1002,17 @@ class _FeedCard extends StatelessWidget {
 
 class _ActionBtn extends StatelessWidget {
   final IconData icon;
-  final String label;
-  const _ActionBtn({required this.icon, required this.label});
+  final VoidCallback? onTap;
+  final Color color;
+  const _ActionBtn({required this.icon, this.onTap, this.color = Colors.white});
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Icon(icon, color: Colors.white, size: 28,
+    return GestureDetector(
+      onTap: onTap,
+      child: Icon(icon, color: color, size: 28,
           shadows: const [Shadow(blurRadius: 8, color: Colors.black)]),
-      if (label.isNotEmpty) ...[
-        const SizedBox(height: 4),
-        Text(label,
-            style: const TextStyle(color: Colors.white, fontSize: 12,
-                shadows: [Shadow(blurRadius: 6, color: Colors.black)])),
-      ],
-    ]);
+    );
   }
 }
 
