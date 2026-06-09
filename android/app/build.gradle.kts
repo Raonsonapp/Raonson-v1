@@ -20,17 +20,17 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "com.raonson.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 35
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.raonson.app"
         minSdk = 23
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 35   // Google Play талаб мекунад: ≥ 35
 
         // ✅ Kotlin DSL: MUST be function calls
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     compileOptions {
