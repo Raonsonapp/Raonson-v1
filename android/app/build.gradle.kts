@@ -28,9 +28,10 @@ android {
         minSdk = 23
         targetSdk = 35   // Google Play талаб мекунад: ≥ 35
 
-        // ✅ Kotlin DSL: MUST be function calls
-        versionCode = 2
-        versionName = "1.0.1"
+        // versionCode худкор аз CI (APP_VERSION_CODE) — ҳамеша беназир ва
+        // афзоянда, то дигар "version code already used" набошад.
+        versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 3
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.1"
     }
 
     compileOptions {

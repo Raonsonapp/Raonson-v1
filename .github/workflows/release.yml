@@ -46,6 +46,11 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Compute unique version code
+        run: |
+          echo "APP_VERSION_CODE=$((1000 + ${{ github.run_number }}))" >> $GITHUB_ENV
+          echo "✅ versionCode = $((1000 + ${{ github.run_number }}))"
+
       - name: Build signed release AAB
         run: flutter build appbundle --release
 
