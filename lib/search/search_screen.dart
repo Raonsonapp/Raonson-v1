@@ -12,6 +12,7 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../core/services/user_session.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
@@ -935,18 +936,18 @@ class _FeedCardState extends State<_FeedCard> {
           ),
         ),
       ),
-      // Right side actions — акнун кор мекунанд
+      // Right side actions — иконкаҳои худамон (assets/icons), мисли home
       Positioned(
         right: 12, bottom: 120,
         child: Column(children: [
           _ActionBtn(
-              icon: _liked
-                  ? Icons.favorite_rounded
-                  : Icons.favorite_border_rounded,
-              color: _liked ? Colors.red : Colors.white,
+              svg: _liked
+                  ? 'assets/icons/heart_filled.svg'
+                  : 'assets/icons/heart.svg',
+              color: _liked ? const Color(0xFFFF3040) : Colors.white,
               onTap: _toggleLike),
           const SizedBox(height: 20),
-          _ActionBtn(icon: Icons.chat_bubble_outline_rounded, onTap: () {
+          _ActionBtn(svg: 'assets/icons/comment.svg', onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                 content: Text('Шарҳҳо ба зудӣ дар ин ҷо',
                     style: TextStyle(fontSize: 13)),
@@ -954,13 +955,13 @@ class _FeedCardState extends State<_FeedCard> {
           }),
           const SizedBox(height: 20),
           _ActionBtn(
-              icon: Icons.send_rounded,
+              svg: 'assets/icons/share.svg',
               onTap: () => Share.share(widget.item.url)),
           const SizedBox(height: 20),
           _ActionBtn(
-              icon: _saved
-                  ? Icons.bookmark_rounded
-                  : Icons.bookmark_border_rounded,
+              svg: _saved
+                  ? 'assets/icons/save_filled.svg'
+                  : 'assets/icons/save.svg',
               onTap: _toggleSave),
         ]),
       ),
@@ -1001,17 +1002,21 @@ class _FeedCardState extends State<_FeedCard> {
 }
 
 class _ActionBtn extends StatelessWidget {
-  final IconData icon;
+  final String svg;
   final VoidCallback? onTap;
   final Color color;
-  const _ActionBtn({required this.icon, this.onTap, this.color = Colors.white});
+  const _ActionBtn({required this.svg, this.onTap, this.color = Colors.white});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Icon(icon, color: color, size: 28,
-          shadows: const [Shadow(blurRadius: 8, color: Colors.black)]),
+      behavior: HitTestBehavior.opaque,
+      child: SvgPicture.asset(
+        svg,
+        width: 30, height: 30,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      ),
     );
   }
 }
