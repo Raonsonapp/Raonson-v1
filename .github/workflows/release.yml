@@ -23,6 +23,14 @@ jobs:
           flutter-version: '3.22.2'
           channel: 'stable'
 
+      - name: Check secrets are set
+        run: |
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "::error::KEYSTORE_BASE64 secret НЕСТ! Settings → Secrets and variables → Actions → New repository secret → KEYSTORE_BASE64-ро илова кунед (+ STORE_PASSWORD, KEY_PASSWORD, KEY_ALIAS)."
+            exit 1
+          fi
+          echo "✅ Secrets мавҷуданд"
+
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/raonson-release.jks
 
