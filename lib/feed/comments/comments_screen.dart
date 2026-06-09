@@ -464,12 +464,14 @@ class _CommentItemState extends State<_CommentItem> {
         borderRadius: BorderRadius.circular(2)));
 
   String _timeAgo() {
-    final d = DateTime.now().difference(widget.comment.createdAt);
-    if (d.inMinutes < 1)  return 'ҳозир';
-    if (d.inMinutes < 60) return '${d.inMinutes}д';
-    if (d.inHours   < 24) return '${d.inHours}с';
-    if (d.inDays    < 7)  return '${d.inDays}р';
-    return '${(d.inDays / 7).floor()}ҳ';
+    final d = DateTime.now().difference(widget.comment.createdAt.toLocal());
+    if (d.inSeconds < 60) return '${d.inSeconds} сония пеш';
+    if (d.inMinutes < 60) return '${d.inMinutes} дақиқа пеш';
+    if (d.inHours   < 24) return '${d.inHours} соат пеш';
+    if (d.inDays    < 7)  return '${d.inDays} рӯз пеш';
+    if (d.inDays    < 30) return '${(d.inDays / 7).floor()} ҳафта пеш';
+    if (d.inDays    < 365) return '${(d.inDays / 30).floor()} моҳ пеш';
+    return '${(d.inDays / 365).floor()} сол пеш';
   }
 
   @override
@@ -498,22 +500,24 @@ class _CommentItemState extends State<_CommentItem> {
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Username + text
-            RichText(text: TextSpan(children: [
-              TextSpan(
-                text: '${c.user.username} ',
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w700,
-                    fontSize: 13),
+            // Ном (бо галочка) — болои сатр
+            Row(children: [
+              Flexible(
+                child: Text(c.user.username,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w700,
+                        fontSize: 13)),
               ),
-              if (c.user.isVerified)
-                const WidgetSpan(child: Padding(
-                  padding: EdgeInsets.only(right: 4),
-                  child: VerifiedBadge(size: 12))),
-              TextSpan(
-                text: c.text,
+              if (c.user.isVerified) ...[
+                const SizedBox(width: 4),
+                const VerifiedBadge(size: 12),
+              ],
+            ]),
+            const SizedBox(height: 2),
+            // Матни коммент — ЗЕРИ ном (мисли Instagram)
+            Text(c.text,
                 style: const TextStyle(color: Colors.white, fontSize: 14)),
-            ])),
             const SizedBox(height: 6),
 
             // ── Нижняя строка: время · лайков · Ответить · ⋮ ──
