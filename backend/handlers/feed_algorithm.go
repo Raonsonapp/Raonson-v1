@@ -48,6 +48,7 @@ func GetSmartFeed(c *gin.Context) {
 		  EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1) AS saved,
 		  COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
+		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW()),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
 		  (CASE WHEN f.following_id IS NOT NULL THEN 100 ELSE 0 END
@@ -93,10 +94,11 @@ func GetSmartFeed(c *gin.Context) {
 		var createdAt, media interface{}
 		var musicTitle, musicArtist, location string
 		var tagged []string
+		var hasStory bool
 		var score float64
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
-			&musicTitle, &musicArtist, &location, &tagged, &score)
+			&musicTitle, &musicArtist, &location, &tagged, &hasStory, &score)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
@@ -105,7 +107,7 @@ func GetSmartFeed(c *gin.Context) {
 			"location": location, "taggedUsers": tagged,
 			"user": gin.H{
 				"_id": uid, "username": uname,
-				"avatar": uavatar, "verified": verified,
+				"avatar": uavatar, "verified": verified, "hasStory": hasStory,
 			},
 		})
 	}

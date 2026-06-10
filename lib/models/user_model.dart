@@ -17,6 +17,7 @@ class UserModel {
   final bool    followRequestSent;
   final int     mutualCount;
   final List<String> mutualNames;
+  final bool    hasStory; // story-и фаъол дорад?
 
   const UserModel({
     required this.id,
@@ -35,6 +36,7 @@ class UserModel {
     this.followRequestSent = false,
     this.mutualCount       = 0,
     this.mutualNames       = const [],
+    this.hasStory          = false,
   });
 
   String get avatarUrl => avatar;
@@ -68,6 +70,7 @@ class UserModel {
     mutualCount:      _int(j['mutualCount']),
     mutualNames:      (j['mutualNames'] as List? ?? [])
         .map((e) => e.toString()).toList(),
+    hasStory:         j['hasStory'] == true,
   );
 
   factory UserModel.fromMinJson(Map<String, dynamic> j) => UserModel(
@@ -78,6 +81,7 @@ class UserModel {
     isPrivate:     false,
     postsCount:    0, followersCount: 0, followingCount: 0,
     bio:           j['bio']?.toString(),
+    hasStory:      j['hasStory'] == true,
   );
 
   UserModel copyWith({
@@ -86,6 +90,7 @@ class UserModel {
     int? postsCount, int? followersCount, int? followingCount,
     String? bio, bool? isFollowing, bool? isBlocked,
     bool? followRequestSent, int? mutualCount, List<String>? mutualNames,
+    bool? hasStory,
   }) => UserModel(
     id: id, username: username,
     avatar:          avatar          ?? this.avatar,
@@ -102,6 +107,7 @@ class UserModel {
     followRequestSent: followRequestSent ?? this.followRequestSent,
     mutualCount:     mutualCount     ?? this.mutualCount,
     mutualNames:     mutualNames     ?? this.mutualNames,
+    hasStory:        hasStory        ?? this.hasStory,
   );
 
   static int _int(dynamic v) => (v as num?)?.toInt() ?? 0;

@@ -25,9 +25,10 @@ func scanFeedPosts(rows interface {
 		var createdAt, media interface{}
 		var musicTitle, musicArtist, location string
 		var tagged []string
+		var hasStory bool
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
-			&musicTitle, &musicArtist, &location, &tagged); err != nil {
+			&musicTitle, &musicArtist, &location, &tagged, &hasStory); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
@@ -36,7 +37,8 @@ func scanFeedPosts(rows interface {
 			"liked": liked, "saved": saved, "isPinned": pinned,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
 			"location": location, "taggedUsers": tagged,
-			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
+			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
+				"verified": verified, "hasStory": hasStory},
 		})
 	}
 	return posts
@@ -53,7 +55,8 @@ const feedPostCols = `
 	       EXISTS(SELECT 1 FROM post_saves WHERE post_id=p.id AND user_id=$1::text),
 	       COALESCE(p.is_pinned,false),
 	       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
-	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}')
+	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
+	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW())
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)
