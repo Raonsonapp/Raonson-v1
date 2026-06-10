@@ -749,9 +749,12 @@ class _ReelGrid extends StatelessWidget {
           gradient: LinearGradient(
             colors: [Color(0xFF2C2C2E), Color(0xFF1A1A1C)],
             begin: Alignment.topLeft, end: Alignment.bottomRight)),
-        child: const Center(
-          child: Icon(Icons.play_circle_outline_rounded,
-              color: Colors.white38, size: 30)),
+        child: Center(
+          child: SvgPicture.asset('assets/icons/nav_reels.svg',
+              width: 30, height: 30,
+              colorFilter: const ColorFilter.mode(
+                  Colors.white38, BlendMode.srcIn)),
+        ),
       );
   @override
   Widget build(BuildContext context) {

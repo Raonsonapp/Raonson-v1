@@ -996,6 +996,49 @@ class _FeedCardState extends State<_FeedCard> {
               ],
             ],
           ),
+        )
+      // Reel: user/ном/галочка/caption (мисли пост)
+      else if (widget.item.reelData != null)
+        Positioned(
+          left: 14, right: 80, bottom: 40,
+          child: Builder(builder: (_) {
+            final u = (widget.item.reelData!['user'] ?? {}) as Map;
+            final uname = (u['username'] ?? '').toString();
+            final avatar = (u['avatar'] ?? '').toString();
+            final verified = u['verified'] == true;
+            final caption =
+                (widget.item.reelData!['caption'] ?? '').toString();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  Avatar(imageUrl: avatar, size: 32, name: uname),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(uname,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600, fontSize: 14)),
+                  ),
+                  if (verified) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified_rounded,
+                        color: Color(0xFF00C853), size: 14),
+                  ],
+                  const SizedBox(width: 10),
+                  _FollowChip(),
+                ]),
+                if (caption.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(caption,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+              ],
+            );
+          }),
         ),
     ]);
   }
