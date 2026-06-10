@@ -10,6 +10,7 @@ import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/post_model.dart';
+import '../../models/story_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
@@ -634,6 +635,40 @@ class _PostCardState extends State<PostCard>
       ])));
   }
 
+  // Тапи аватар: агар story дошта бошад → story кушояд, вагарна → профил.
+  Future<void> _openAvatarTap() async {
+    final post = widget.post;
+    if (!post.user.hasStory) {
+      Navigator.pushNamed(context, '/profile', arguments: post.user.id);
+      return;
+    }
+    try {
+      final res = await ApiClient.instance.get('/stories/');
+      if (res.statusCode < 400) {
+        final body = jsonDecode(res.body);
+        final list = (body is List
+            ? body
+            : (body['stories'] ?? body['data'] ?? [])) as List;
+        final mine = list.where((s) {
+          final su = (s['user'] ?? {}) as Map;
+          final sid =
+              (su['_id'] ?? su['id'] ?? s['userId'] ?? '').toString();
+          return sid == post.user.id;
+        }).map((s) => StoryModel.fromJson(s as Map<String, dynamic>)).toList();
+        if (mounted && mine.isNotEmpty) {
+          Navigator.pushNamed(context, '/story-group-viewer', arguments: {
+            'groups': <List<StoryModel>>[mine],
+            'initialGroupIndex': 0,
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+    if (mounted) {
+      Navigator.pushNamed(context, '/profile', arguments: post.user.id);
+    }
+  }
+
   void _openComments() {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
@@ -782,9 +817,10 @@ class _PostCardState extends State<PostCard>
         padding: const EdgeInsets.fromLTRB(14, 14, 10, 8),
         child: Row(children: [
           GestureDetector(
-            onTap: () => Navigator.pushNamed(
-                context, '/profile', arguments: post.user.id),
-            child: Avatar(imageUrl: post.user.avatar, size: 44, glowBorder: false)),
+            onTap: _openAvatarTap,
+            child: Avatar(imageUrl: post.user.avatar, size: 44,
+                name: post.user.username,
+                glowBorder: post.user.hasStory)),
           const SizedBox(width: 10),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
