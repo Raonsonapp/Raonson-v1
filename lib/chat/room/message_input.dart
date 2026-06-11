@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:record/record.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../app/app_theme.dart';
 import '../../models/message_model.dart';
 
 // ─────────────────────────────────────────────────────────────────
-//  MessageInput — 10/10 Instagram style (матн + медиа + овоз)
+//  MessageInput — 10/10 Instagram style (матн + медиа)
 // ─────────────────────────────────────────────────────────────────
 class MessageInput extends StatefulWidget {
   final void Function(String text)  onSend;
@@ -40,14 +38,6 @@ class _MessageInputState extends State<MessageInput>
   Timer? _typingDebounce;
   late AnimationController _sendAnim;
 
-  // ── Voice recording ──
-  final _recorder = AudioRecorder();
-  bool _recording   = false;
-  bool _cancelArmed = false;
-  Duration _recordDur = Duration.zero;
-  Timer? _recordTimer;
-  String? _recordPath;
-
   @override
   void initState() {
     super.initState();
@@ -62,8 +52,6 @@ class _MessageInputState extends State<MessageInput>
     _ctrl.dispose();
     _focus.dispose();
     _typingDebounce?.cancel();
-    _recordTimer?.cancel();
-    _recorder.dispose();
     _sendAnim.dispose();
     super.dispose();
   }
@@ -146,57 +134,6 @@ class _MessageInputState extends State<MessageInput>
     if (picked != null) widget.onSendMedia?.call(File(picked.path));
   }
 
-  // ── Сабти овоз (нигоҳ доред барои сабт) ─────────────────────
-  Future<void> _startRecording() async {
-    try {
-      if (!await _recorder.hasPermission()) return;
-      final dir  = await getTemporaryDirectory();
-      final path =
-          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      await _recorder.start(
-          const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
-      _recordPath  = path;
-      _recordDur   = Duration.zero;
-      _cancelArmed = false;
-      setState(() => _recording = true);
-      _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() => _recordDur += const Duration(seconds: 1));
-      });
-    } catch (_) {
-      _recording = false;
-    }
-  }
-
-  Future<void> _stopRecording({required bool send}) async {
-    _recordTimer?.cancel();
-    String? path;
-    try { path = await _recorder.stop(); } catch (_) {}
-    path ??= _recordPath;
-    final dur = _recordDur;
-    if (mounted) setState(() => _recording = false);
-    if (!send || _cancelArmed) {
-      if (path != null) { try { File(path).deleteSync(); } catch (_) {} }
-      return;
-    }
-    // Сабти хеле кӯтоҳро рад мекунем
-    if (dur.inMilliseconds < 800 || path == null) {
-      if (path != null) { try { File(path).deleteSync(); } catch (_) {} }
-      return;
-    }
-    widget.onSendVoice?.call(File(path));
-  }
-
-  void _onRecordDrag(double dx) {
-    final armed = dx < -90;
-    if (armed != _cancelArmed) setState(() => _cancelArmed = armed);
-  }
-
-  String _fmtDur(Duration d) {
-    final m = d.inMinutes.toString().padLeft(1, '0');
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -216,42 +153,13 @@ class _MessageInputState extends State<MessageInput>
               color: Colors.black,
               border: Border(top: BorderSide(color: Color(0xFF1C1C1E))),
             ),
-            child: _recording ? _recordingBar() : _inputBar(),
+            child: _inputBar(),
           ),
         ),
       ],
     );
   }
 
-  // ── Recording overlay bar ──
-  Widget _recordingBar() {
-    return Row(
-      children: [
-        const SizedBox(width: 4),
-        const _PulsingDot(),
-        const SizedBox(width: 10),
-        Text(_fmtDur(_recordDur),
-            style: const TextStyle(
-                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            _cancelArmed ? 'Сар диҳед барои бекор кардан' : '‹ Ба чап кашед барои бекор',
-            style: TextStyle(
-                color: _cancelArmed ? const Color(0xFFFF3040) : Colors.white38,
-                fontSize: 13),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        Icon(Icons.mic_rounded,
-            color: _cancelArmed ? const Color(0xFFFF3040) : AppColors.neonBlue,
-            size: 26),
-        const SizedBox(width: 6),
-      ],
-    );
-  }
-
-  // ── Normal input bar ──
   Widget _inputBar() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -311,71 +219,27 @@ class _MessageInputState extends State<MessageInput>
 
         const SizedBox(width: 8),
 
-        // Send / Mic (hold to record) / Like
-        _hasText
-            ? GestureDetector(
-                onTap: _send,
-                child: Container(
-                  width: 44, height: 44,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.neonBlue,
-                  ),
-                  child: const Center(
-                      child: Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20)),
-                ),
-              )
-            : GestureDetector(
-                onLongPressStart:      (_) => _startRecording(),
-                onLongPressMoveUpdate: (d) =>
-                    _onRecordDrag(d.offsetFromOrigin.dx),
-                onLongPressEnd:        (_) => _stopRecording(send: true),
-                onTap: () {
-                  // Tap бе матн → like эмодзи (мисли Instagram)
-                  widget.onSend('👍');
-                },
-                child: Container(
-                  width: 44, height: 44,
-                  decoration: const BoxDecoration(shape: BoxShape.circle),
-                  child: const Center(
-                      child: Icon(Icons.mic_rounded,
-                          color: Colors.white70, size: 26)),
-                ),
-              ),
+        // Send / like button
+        GestureDetector(
+          onTap: _hasText ? _send : () => widget.onSend('👍'),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _hasText ? AppColors.neonBlue : Colors.transparent,
+            ),
+            child: Center(
+              child: _hasText
+                  ? const Icon(Icons.send_rounded,
+                      color: Colors.white, size: 20)
+                  : const Text('👍', style: TextStyle(fontSize: 26)),
+            ),
+          ),
+        ),
       ],
     );
   }
-}
-
-// ── Pulsing red dot (recording indicator) ──
-class _PulsingDot extends StatefulWidget {
-  const _PulsingDot();
-  @override
-  State<_PulsingDot> createState() => _PulsingDotState();
-}
-
-class _PulsingDotState extends State<_PulsingDot>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _c;
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 800))
-      ..repeat(reverse: true);
-  }
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
-  @override
-  Widget build(BuildContext context) => FadeTransition(
-        opacity: Tween(begin: 0.3, end: 1.0).animate(_c),
-        child: Container(
-          width: 11, height: 11,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFF3040), shape: BoxShape.circle),
-        ),
-      );
 }
 
 // ── Attachment tile ──
