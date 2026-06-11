@@ -95,6 +95,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      // Online статуси ҳамсӯҳбатро тоза нигоҳ медорад (бе broadcast-и глобалӣ).
+      _presence.checkUser(widget.peer.id);
       if (!_socket.isConnected) _pollRefresh();
     });
   }
