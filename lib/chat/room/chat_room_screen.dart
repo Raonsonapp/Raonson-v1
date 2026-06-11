@@ -296,18 +296,65 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
-  // ─── Send media ──────────────────────────────────────────────
-  void _onSendMedia(File file) async {
+  // ─── Send media (акс/видео) ─────────────────────────────────
+  void _onSendMedia(File file) => _uploadAndSend(file, _typeByExt(file.path));
+
+  // ─── Send voice (паёми овозӣ) ───────────────────────────────
+  void _onSendVoice(File file) => _uploadAndSend(file, 'audio');
+
+  String _typeByExt(String path) {
+    final e = path.split('.').last.toLowerCase();
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'].contains(e)) return 'video';
+    if (['m4a', 'aac', 'mp3', 'ogg', 'opus', 'wav'].contains(e)) return 'audio';
+    return 'image';
+  }
+
+  Future<void> _uploadAndSend(File file, String type) async {
+    // Optimistic "uploading" bubble
+    final optimistic = MessageModel(
+      id:           'opt_${DateTime.now().millisecondsSinceEpoch}',
+      chatId:       _chatId,
+      peer:         widget.peer,
+      text:         '',
+      createdAt:    DateTime.now(),
+      isMine:       true,
+      status:       MessageStatus.sending,
+      isOptimistic: true,
+      type:         type == 'image'
+          ? MessageType.image
+          : type == 'video'
+              ? MessageType.video
+              : type == 'audio'
+                  ? MessageType.audio
+                  : MessageType.file,
+    );
+    setState(() => _messages.add(optimistic));
+    _scrollBottom();
     try {
-      final url = await _repo.uploadMedia(file) ?? '';
+      final url = await _repo.uploadMedia(file);
+      if (url == null || url.isEmpty) throw Exception('upload failed');
       final msg = await _repo.sendMessage(
-        toUserId: widget.peer.id,
-        text:     url,
+        toUserId:  widget.peer.id,
+        text:      '',
+        chatId:    _chatId,
+        mediaUrl:  url,
+        mediaType: type,
       );
       if (!mounted) return;
-      setState(() => _messages.add(msg));
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+        if (idx >= 0) { _messages[idx] = msg; } else { _messages.add(msg); }
+      });
       _scrollBottom();
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        setState(() =>
+            _messages.removeWhere((m) => m.id == optimistic.id));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Фиристодан нашуд'),
+            duration: Duration(seconds: 2)));
+      }
+    }
   }
 
   // ─── React ───────────────────────────────────────────────────
@@ -412,6 +459,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           MessageInput(
             onSend:       _onSend,
             onSendMedia:  _onSendMedia,
+            onSendVoice:  _onSendVoice,
             onTyping:     _onTyping,
             replyTo:      _replyTo,
             onCancelReply: () => setState(() => _replyTo = null),

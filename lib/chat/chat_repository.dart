@@ -1,10 +1,12 @@
 // lib/chat/chat_repository.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/storage/token_storage.dart';
+import '../create/upload/upload_manager.dart';
 import '../models/message_model.dart';
 
 class ChatRepository {
@@ -154,12 +156,14 @@ class ChatRepository {
     } catch (_) { return []; }
   }
 
-  // ── Send message бо pending queue ──────────────────────────
+  // ── Send message бо pending queue (матн ё медиа) ────────────
   Future<MessageModel> sendMessage({
     required String toUserId,
     required String text,
     String? replyToId,
     String? chatId,
+    String? mediaUrl,
+    String? mediaType, // "image" | "video" | "audio" | "file"
   }) async {
     final myId = await _myId();
     var cid = chatId;
@@ -172,9 +176,14 @@ class ChatRepository {
 
     final res = await _api.postRequest(
       '${ApiEndpoints.chat}/$cid/messages',
-      body: {'receiverId': toUserId, 'text': text,
-             if (replyToId != null) 'replyToId': replyToId},
-    ).timeout(const Duration(seconds: 8));
+      body: {
+        'receiverId': toUserId,
+        'text': text,
+        if (replyToId != null) 'replyToId': replyToId,
+        if (mediaUrl != null && mediaUrl.isNotEmpty) 'mediaUrl': mediaUrl,
+        if (mediaType != null && mediaType.isNotEmpty) 'type': mediaType,
+      },
+    ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 400) throw Exception('Send error');
     return MessageModel.fromRoomJson(
         jsonDecode(res.body) as Map<String, dynamic>, myId);
@@ -207,5 +216,11 @@ class ChatRepository {
     } catch (_) {}
   }
 
-  Future<String?> uploadMedia(dynamic file) async => null;
+  // Медиаро (акс/видео/овоз) ба R2 бор мекунад ва URL-ро бармегардонад.
+  Future<String?> uploadMedia(dynamic file) async {
+    try {
+      if (file is! File) return null;
+      return await UploadManager().uploadFile(file);
+    } catch (_) { return null; }
+  }
 }
