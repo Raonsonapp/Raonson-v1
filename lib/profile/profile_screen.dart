@@ -18,10 +18,12 @@ import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/user_model.dart';
 import '../reels/single_reel_screen.dart';
+import '../chat/room/chat_room_screen.dart';
 import '../widgets/verified_badge.dart';
 import '../widgets/account_switcher.dart';
 import 'edit/edit_profile_screen.dart';
 import 'highlight_model.dart';
+import 'highlight_viewer.dart';
 import 'highlights_row.dart';
 import 'profile_controller.dart';
 import 'profile_repository.dart';
@@ -127,6 +129,27 @@ class _ProfileScreenState extends State<ProfileScreen>
               imageUrl: url, width: 280, height: 280, fit: BoxFit.cover))))));
   }
 
+  // ── Highlight tap → viewer ───────────────────────────────────────
+  void _openHighlight(HighlightModel h) {
+    if (h.items.isEmpty) {
+      // Highlight-и кӯҳна (бе items) — танҳо ба соҳиб имкони танзим.
+      if (_isMe) _hlLongPress(h);
+      return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => HighlightViewer(
+        highlight: h,
+        isOwner: _isMe,
+        onRename: (title) => _ctrl.renameHighlight(h.id, title),
+        onDeleteHighlight: () => _ctrl.deleteHighlight(h.id),
+        onItemsChanged: (items) async {
+          await _ctrl.updateHighlightItems(h.id, items);
+        },
+      ),
+    ));
+  }
+
   // ── Highlight long press ─────────────────────────────────────────
   void _hlLongPress(HighlightModel h) {
     showModalBottomSheet(
@@ -137,9 +160,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ── Create highlight (Актуальный) ────────────────────────────────
   Future<void> _createHighlight() async {
-    final picked = await ImagePicker()
-        .pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (picked == null || !mounted) return;
+    // Якчанд расм интихоб мекунем (мисли Instagram — маҷмӯаи актуалӣ).
+    final picked = await ImagePicker().pickMultiImage(imageQuality: 80);
+    if (picked.isEmpty || !mounted) return;
 
     final title = await _askHighlightTitle();
     if (title == null || title.trim().isEmpty || !mounted) return;
@@ -151,11 +174,15 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: CircularProgressIndicator(
               color: AppColors.neonBlue, strokeWidth: 2)),
     );
-    String coverUrl = '';
-    try {
-      coverUrl = await UploadManager().uploadFile(File(picked.path));
-    } catch (_) {}
-    await _ctrl.createHighlight(title.trim(), coverUrl, const []);
+    final items = <HighlightItem>[];
+    for (final p in picked) {
+      try {
+        final url = await UploadManager().uploadFile(File(p.path));
+        if (url.isNotEmpty) items.add(HighlightItem(url: url, type: 'image'));
+      } catch (_) {}
+    }
+    final coverUrl = items.isNotEmpty ? items.first.url : '';
+    await _ctrl.createHighlight(title.trim(), coverUrl, const [], items: items);
     if (mounted) Navigator.pop(context); // close loading
   }
 
@@ -442,6 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 highlights:  _ctrl.highlights,
                 isMe:        _isMe,
                 onAdd:       _isMe ? _createHighlight : null,
+                onOpen:      _openHighlight,
                 onLongPress: _isMe ? _hlLongPress : null,
               ),
 
@@ -465,7 +493,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                         isPrivate:         user.isPrivate,
                         followRequestSent: user.followRequestSent,
                         onFollow:  _ctrl.toggleFollow,
-                        onMessage: () {})),
+                        onMessage: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => ChatRoomScreen(peer: user))))),
 
               // ── MUTUAL ──────────────────────────────────────────────
               if (!_isMe && _mutualTxt(user).isNotEmpty)
@@ -634,30 +664,34 @@ class _OtherBtns extends StatelessWidget {
     return 'Пайравӣ';
   }
   @override
-  Widget build(BuildContext context) => Row(children: [
-    Expanded(child: GestureDetector(
-      onTap: followRequestSent ? null : onFollow,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 36,
-        decoration: BoxDecoration(
-          color: (isFollowing || followRequestSent)
-              ? Colors.transparent : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: (isFollowing || followRequestSent)
-              ? Border.all(color: Colors.white24) : null),
-        child: Center(child: Text(_label, style: TextStyle(
-          color: (isFollowing || followRequestSent)
-              ? Colors.white54 : Colors.black,
-          fontWeight: FontWeight.bold, fontSize: 13.5)))))),
-    const SizedBox(width: 8),
-    GestureDetector(onTap: onMessage,
-      child: Container(height: 36, width: 36,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
-          color: AppColors.surface, border: Border.all(color: Colors.white12)),
-        child: const Icon(Icons.chat_bubble_outline_rounded,
-            color: Colors.white70, size: 18))),
-  ]);
+  Widget build(BuildContext context) {
+    final muted = isFollowing || followRequestSent;
+    return Row(children: [
+      // ── Пайравӣ / Пайравишуда ──
+      Expanded(child: GestureDetector(
+        onTap: followRequestSent ? null : onFollow,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 34,
+          decoration: BoxDecoration(
+            color: muted ? AppColors.surface : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: muted ? Border.all(color: Colors.white12) : null),
+          child: Center(child: Text(_label, style: TextStyle(
+            color: muted ? Colors.white : Colors.black,
+            fontWeight: FontWeight.bold, fontSize: 13.5)))))),
+      const SizedBox(width: 8),
+      // ── Паём (баробар бо тугмаи боло, бе icon) ──
+      Expanded(child: GestureDetector(onTap: onMessage,
+        behavior: HitTestBehavior.opaque,
+        child: Container(height: 34,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
+            color: AppColors.surface, border: Border.all(color: Colors.white12)),
+          child: const Center(child: Text('Паём', style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold,
+              fontSize: 13.5)))))),
+    ]);
+  }
 }
 
 class _Btn extends StatelessWidget {

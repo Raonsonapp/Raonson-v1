@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:video_player/video_player.dart';
 import '../../models/message_model.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
@@ -192,8 +195,23 @@ class _BubbleBody extends StatelessWidget {
       );
     }
 
+    // Медиа дар ҳолати боркунӣ (optimistic — ҳанӯз URL нест)
+    final isMedia = m.type == MessageType.image ||
+        m.type == MessageType.video ||
+        m.type == MessageType.audio ||
+        m.type == MessageType.file;
+    if (isMedia && (m.mediaUrl == null || m.mediaUrl!.isEmpty)) {
+      return _UploadingBubble(isMine: isMine);
+    }
+
     if (m.type == MessageType.image && m.mediaUrl != null) {
       return _ImageBubble(url: m.mediaUrl!, isMine: isMine);
+    }
+    if (m.type == MessageType.audio && m.mediaUrl != null) {
+      return _AudioBubble(url: m.mediaUrl!, isMine: isMine);
+    }
+    if (m.type == MessageType.video && m.mediaUrl != null) {
+      return _VideoBubble(url: m.mediaUrl!, isMine: isMine);
     }
 
     // Text bubble
@@ -261,6 +279,209 @@ class _ImageBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Uploading placeholder (медиа дар ҳолати боркунӣ)
+// ─────────────────────────────────────────────────────────────────
+class _UploadingBubble extends StatelessWidget {
+  final bool isMine;
+  const _UploadingBubble({required this.isMine});
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 180, height: 120,
+    decoration: BoxDecoration(
+      color: const Color(0xFF1C1C1E),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: const Center(
+        child: CircularProgressIndicator(
+            color: AppColors.neonBlue, strokeWidth: 2)),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Audio bubble — паёми овозӣ (play/pause + progress)
+// ─────────────────────────────────────────────────────────────────
+class _AudioBubble extends StatefulWidget {
+  final String url;
+  final bool   isMine;
+  const _AudioBubble({required this.url, required this.isMine});
+  @override
+  State<_AudioBubble> createState() => _AudioBubbleState();
+}
+
+class _AudioBubbleState extends State<_AudioBubble> {
+  final AudioPlayer _player = AudioPlayer();
+  bool _playing = false;
+  Duration _pos = Duration.zero;
+  Duration _dur = Duration.zero;
+  late final List<StreamSubscription> _subs;
+
+  @override
+  void initState() {
+    super.initState();
+    _subs = [
+      _player.onPositionChanged.listen((p) {
+        if (mounted) setState(() => _pos = p);
+      }),
+      _player.onDurationChanged.listen((d) {
+        if (mounted) setState(() => _dur = d);
+      }),
+      _player.onPlayerComplete.listen((_) {
+        if (mounted) setState(() { _playing = false; _pos = Duration.zero; });
+      }),
+    ];
+  }
+
+  @override
+  void dispose() {
+    for (final s in _subs) { s.cancel(); }
+    _player.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    if (_playing) {
+      await _player.pause();
+      if (mounted) setState(() => _playing = false);
+    } else {
+      await _player.play(UrlSource(widget.url));
+      if (mounted) setState(() => _playing = true);
+    }
+  }
+
+  String _fmt(Duration d) {
+    final m = d.inMinutes.toString();
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = _dur.inMilliseconds == 0 ? 1.0 : _dur.inMilliseconds.toDouble();
+    final progress = (_pos.inMilliseconds / total).clamp(0.0, 1.0);
+    final accent = widget.isMine ? Colors.white : AppColors.neonBlue;
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: widget.isMine ? AppColors.neonBlue : const Color(0xFF1C1C1E),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(children: [
+        GestureDetector(
+          onTap: _toggle,
+          child: Icon(
+            _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            color: widget.isMine ? AppColors.neonBlue : Colors.white,
+            size: 26),
+        ),
+        const SizedBox(width: 4),
+        Container(
+          width: 28, height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: widget.isMine ? Colors.white : AppColors.neonBlue,
+            shape: BoxShape.circle),
+          child: Icon(Icons.mic_rounded,
+              color: widget.isMine ? AppColors.neonBlue : Colors.white,
+              size: 16),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 3,
+                  backgroundColor: accent.withOpacity(0.25),
+                  valueColor: AlwaysStoppedAnimation(accent),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                _pos.inMilliseconds > 0 ? _fmt(_pos) : _fmt(_dur),
+                style: TextStyle(
+                    color: widget.isMine ? Colors.white70 : Colors.white54,
+                    fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Video bubble — tap барои пахши пурраи экран
+// ─────────────────────────────────────────────────────────────────
+class _VideoBubble extends StatelessWidget {
+  final String url;
+  final bool   isMine;
+  const _VideoBubble({required this.url, required this.isMine});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => _ChatVideoScreen(url: url))),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 220, height: 260,
+          color: const Color(0xFF1C1C1E),
+          child: const Center(
+            child: CircleAvatar(
+              radius: 26,
+              backgroundColor: Colors.black54,
+              child: Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 34),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatVideoScreen extends StatefulWidget {
+  final String url;
+  const _ChatVideoScreen({required this.url});
+  @override
+  State<_ChatVideoScreen> createState() => _ChatVideoScreenState();
+}
+
+class _ChatVideoScreenState extends State<_ChatVideoScreen> {
+  late final VideoPlayerController _c;
+  @override
+  void initState() {
+    super.initState();
+    _c = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+      ..initialize().then((_) {
+        _c..setLooping(true)..play();
+        if (mounted) setState(() {});
+      });
+  }
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      iconTheme: const IconThemeData(color: Colors.white),
+    ),
+    body: Center(
+      child: _c.value.isInitialized
+          ? AspectRatio(aspectRatio: _c.value.aspectRatio, child: VideoPlayer(_c))
+          : const CircularProgressIndicator(color: Colors.white),
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────

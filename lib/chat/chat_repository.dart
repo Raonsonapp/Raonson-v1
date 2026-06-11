@@ -1,10 +1,12 @@
 // lib/chat/chat_repository.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/storage/token_storage.dart';
+import '../create/upload/upload_manager.dart';
 import '../models/message_model.dart';
 
 class ChatRepository {
@@ -130,23 +132,58 @@ class ChatRepository {
     });
   }
 
-  // ── Send message бо pending queue ──────────────────────────
+  // ── chatId-и сӯҳбат бо як корбарро ҳал мекунад ──────────────
+  Future<String?> resolveChatId(String peerId) async {
+    try {
+      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId')
+          .timeout(const Duration(seconds: 8));
+      if (cr.statusCode >= 400) return null;
+      return (jsonDecode(cr.body) as Map)['chatId'] as String?;
+    } catch (_) { return null; }
+  }
+
+  // ── Fetch-и мустақим аз шабака (бе cache) — барои auto-refresh ──
+  Future<List<MessageModel>> fetchFreshByChatId(String chatId) async {
+    try {
+      final myId = await _myId();
+      final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages')
+          .timeout(const Duration(seconds: 8));
+      if (mr.statusCode >= 400) return [];
+      final body = jsonDecode(mr.body);
+      final List data = body is Map ? (body['messages'] ?? []) : body as List;
+      return data.map((e) =>
+          MessageModel.fromRoomJson(e as Map<String,dynamic>, myId)).toList();
+    } catch (_) { return []; }
+  }
+
+  // ── Send message бо pending queue (матн ё медиа) ────────────
   Future<MessageModel> sendMessage({
     required String toUserId,
     required String text,
     String? replyToId,
+    String? chatId,
+    String? mediaUrl,
+    String? mediaType, // "image" | "video" | "audio" | "file"
   }) async {
     final myId = await _myId();
-    final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$toUserId')
-        .timeout(const Duration(seconds: 8));
-    if (cr.statusCode >= 400) throw Exception('Chat error');
-    final chatId = (jsonDecode(cr.body) as Map)['chatId'] as String;
+    var cid = chatId;
+    if (cid == null || cid.isEmpty) {
+      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$toUserId')
+          .timeout(const Duration(seconds: 8));
+      if (cr.statusCode >= 400) throw Exception('Chat error');
+      cid = (jsonDecode(cr.body) as Map)['chatId'] as String;
+    }
 
     final res = await _api.postRequest(
-      '${ApiEndpoints.chat}/$chatId/messages',
-      body: {'receiverId': toUserId, 'text': text,
-             if (replyToId != null) 'replyToId': replyToId},
-    ).timeout(const Duration(seconds: 8));
+      '${ApiEndpoints.chat}/$cid/messages',
+      body: {
+        'receiverId': toUserId,
+        'text': text,
+        if (replyToId != null) 'replyToId': replyToId,
+        if (mediaUrl != null && mediaUrl.isNotEmpty) 'mediaUrl': mediaUrl,
+        if (mediaType != null && mediaType.isNotEmpty) 'type': mediaType,
+      },
+    ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 400) throw Exception('Send error');
     return MessageModel.fromRoomJson(
         jsonDecode(res.body) as Map<String, dynamic>, myId);
@@ -179,5 +216,11 @@ class ChatRepository {
     } catch (_) {}
   }
 
-  Future<String?> uploadMedia(dynamic file) async => null;
+  // Медиаро (акс/видео/овоз) ба R2 бор мекунад ва URL-ро бармегардонад.
+  Future<String?> uploadMedia(dynamic file) async {
+    try {
+      if (file is! File) return null;
+      return await UploadManager().uploadFile(file);
+    } catch (_) { return null; }
+  }
 }

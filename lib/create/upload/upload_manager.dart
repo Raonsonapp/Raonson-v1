@@ -23,7 +23,12 @@ class UploadManager {
     if (['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(e)) {
       return MediaType('video', 'mp4');
     }
-    if (e == 'png') return MediaType('image', 'png');
+    // Паёмҳои овозӣ
+    if (e == 'm4a' || e == 'aac' || e == 'mp4a') return MediaType('audio', 'mp4');
+    if (e == 'mp3')  return MediaType('audio', 'mpeg');
+    if (e == 'ogg' || e == 'opus') return MediaType('audio', 'ogg');
+    if (e == 'wav')  return MediaType('audio', 'wav');
+    if (e == 'png')  return MediaType('image', 'png');
     return MediaType('image', 'jpeg');
   }
 

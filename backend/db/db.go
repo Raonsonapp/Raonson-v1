@@ -329,6 +329,9 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_highlights_user ON highlights(user_id, created_at);
+	-- items: [{"url":"...","type":"image|video"}] — медиа дар худи highlight нигоҳ
+	-- дошта мешавад, то баъди тамом шудани story ҳам намонад (мисли Instagram).
+	ALTER TABLE highlights ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb;
 
 	-- ════════════════════════════════════════════════════════════════
 	-- Columns/tables referenced by handlers but missing from migrate()

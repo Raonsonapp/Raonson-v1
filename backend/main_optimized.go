@@ -216,9 +216,10 @@ func main() {
 	// ── HIGHLIGHTS (Актуальный) ──
 	hl := r.Group("/highlights", auth, rl100)
 	{
-		hl.POST("/",      handlers.CreateHighlight)
-		hl.GET("/:id",    cache30s, handlers.GetHighlights)
-		hl.DELETE("/:id", handlers.DeleteHighlight)
+		hl.POST("/",       handlers.CreateHighlight)
+		hl.GET("/:id",     cache30s, handlers.GetHighlights)
+		hl.PATCH("/:id",   handlers.UpdateHighlight)
+		hl.DELETE("/:id",  handlers.DeleteHighlight)
 	}
 
 	ch := r.Group("/chat", auth, rl100)

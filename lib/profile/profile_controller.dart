@@ -169,13 +169,34 @@ class ProfileController extends ChangeNotifier {
 
   // Highlights CRUD
   Future<void> createHighlight(String title, String coverUrl,
-      List<String> storyIds) async {
+      List<String> storyIds, {List<HighlightItem> items = const []}) async {
     try {
       final h = await _repo.createHighlight(
-          title: title, coverUrl: coverUrl, storyIds: storyIds);
+          title: title, coverUrl: coverUrl, storyIds: storyIds, items: items);
       highlights.add(h);
       notifyListeners();
     } catch (_) {}
+  }
+
+  Future<void> renameHighlight(String id, String title) async {
+    final idx = highlights.indexWhere((h) => h.id == id);
+    if (idx >= 0) {
+      highlights[idx] = highlights[idx].copyWith(title: title);
+      notifyListeners();
+    }
+    await _repo.updateHighlight(id, title: title);
+  }
+
+  Future<void> updateHighlightItems(String id, List<HighlightItem> items) async {
+    final idx = highlights.indexWhere((h) => h.id == id);
+    if (idx >= 0) {
+      highlights[idx] = highlights[idx].copyWith(
+          items: items,
+          coverUrl: items.isNotEmpty ? items.first.url : '');
+      notifyListeners();
+    }
+    await _repo.updateHighlight(id,
+        items: items, coverUrl: items.isNotEmpty ? items.first.url : '');
   }
 
   Future<void> deleteHighlight(String id) async {

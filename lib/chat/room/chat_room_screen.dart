@@ -37,8 +37,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   List<MessageModel> _messages = [];
   bool   _loading     = true;
   bool   _isPeerTyping = false;
-  final String _chatId      = '';
+  String _chatId      = '';
   String _myId        = '';
+
+  // Auto-refresh (safety net дар сурати кор накардани socket дар баъзе шабакаҳо)
+  Timer? _pollTimer;
 
   // Reply state
   MessageModel? _replyTo;
@@ -69,16 +72,52 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _socket.off('chat:delete');
     if (_chatId.isNotEmpty) _socket.leaveChat(_chatId);
     _typingResetTimer?.cancel();
+    _pollTimer?.cancel();
     _connectSub.cancel();
     super.dispose();
   }
 
   Future<void> _init() async {
     _myId = await TokenStorage.getUserId() ?? '';
+    // chatId-и воқеиро ҳал мекунем, то ба ҳуҷраи socket ҳамроҳ шавем
+    // ва typing/read кор кунад (пеш аз ин _chatId доимо холӣ буд).
+    _chatId = await _repo.resolveChatId(widget.peer.id) ?? '';
     await _load();
     _setupSocket();
     _setupPresence();
     _setupConnectivity();
+    _startPolling();
+  }
+
+  // Ҳар 3 сония паёмҳои нав мегирад ва ҳамроҳ мекунад — чат худаш
+  // рефреш мешавад ва паём дар лаҳза мерасад, ҳатто агар socket
+  // дар шабакаи корбар кор накунад.
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _pollRefresh());
+  }
+
+  Future<void> _pollRefresh() async {
+    if (_chatId.isEmpty || !mounted) return;
+    final fresh = await _repo.fetchFreshByChatId(_chatId);
+    if (!mounted || fresh.isEmpty) return;
+    // Паёмҳои ҳанӯз нафиристодашуда (optimistic)-ро нигоҳ медорем.
+    final pending = _messages.where((m) => m.isOptimistic).toList();
+    final freshIds = fresh.map((m) => m.id).toSet();
+    final hadNew = fresh.length != (_messages.length - pending.length) ||
+        fresh.any((m) => !_messages.any((o) => o.id == m.id));
+    // Reaction/read статусҳои локалиро аз даст надиҳем — танҳо вақте
+    // тағйир ҳаст setState мекунем.
+    if (!hadNew) return;
+    final nearBottom = _scroll.hasClients &&
+        (_scroll.position.maxScrollExtent - _scroll.position.pixels) < 240;
+    setState(() {
+      _messages = [
+        ...fresh,
+        ...pending.where((m) => !freshIds.contains(m.id)),
+      ];
+    });
+    if (nearBottom) _scrollBottom();
   }
 
   void _setupConnectivity() {
@@ -130,7 +169,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       setState(() {
         // Remove optimistic version if exists
         _messages.removeWhere((m) => m.isOptimistic && m.text == msg.text);
-        _messages.add(msg);
+        // Дубликат набошад (poll-refresh аллакай оварда бошад)
+        if (!_messages.any((m) => m.id == msg.id)) _messages.add(msg);
       });
       _scrollBottom();
       if (!msg.isMine && _chatId.isNotEmpty) _repo.markAsRead(_chatId);
@@ -203,6 +243,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _onSend(String text) async {
     if (text.trim().isEmpty) return;
 
+    final replyTo = _replyTo; // пеш аз null кардан нигоҳ медорем
     // Optimistic insert
     final optimistic = MessageModel(
       id:           'opt_${DateTime.now().millisecondsSinceEpoch}',
@@ -212,7 +253,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       createdAt:    DateTime.now(),
       isMine:       true,
       status:       MessageStatus.sending,
-      replyTo:      _replyTo,
+      replyTo:      replyTo,
       isOptimistic: true,
     );
     setState(() {
@@ -225,7 +266,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (!_isOnline) {
       _offlineQueue.add({
         'text': text,
-        'replyToId': _replyTo?.id,
+        'replyToId': replyTo?.id,
       });
       return;
     }
@@ -234,7 +275,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       final msg = await _repo.sendMessage(
         toUserId:  widget.peer.id,
         text:      text,
-
+        replyToId: replyTo?.id,
+        chatId:    _chatId,
       );
       if (!mounted) return;
       setState(() {
@@ -254,18 +296,65 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
-  // ─── Send media ──────────────────────────────────────────────
-  void _onSendMedia(File file) async {
+  // ─── Send media (акс/видео) ─────────────────────────────────
+  void _onSendMedia(File file) => _uploadAndSend(file, _typeByExt(file.path));
+
+  // ─── Send voice (паёми овозӣ) ───────────────────────────────
+  void _onSendVoice(File file) => _uploadAndSend(file, 'audio');
+
+  String _typeByExt(String path) {
+    final e = path.split('.').last.toLowerCase();
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'].contains(e)) return 'video';
+    if (['m4a', 'aac', 'mp3', 'ogg', 'opus', 'wav'].contains(e)) return 'audio';
+    return 'image';
+  }
+
+  Future<void> _uploadAndSend(File file, String type) async {
+    // Optimistic "uploading" bubble
+    final optimistic = MessageModel(
+      id:           'opt_${DateTime.now().millisecondsSinceEpoch}',
+      chatId:       _chatId,
+      peer:         widget.peer,
+      text:         '',
+      createdAt:    DateTime.now(),
+      isMine:       true,
+      status:       MessageStatus.sending,
+      isOptimistic: true,
+      type:         type == 'image'
+          ? MessageType.image
+          : type == 'video'
+              ? MessageType.video
+              : type == 'audio'
+                  ? MessageType.audio
+                  : MessageType.file,
+    );
+    setState(() => _messages.add(optimistic));
+    _scrollBottom();
     try {
-      final url = await _repo.uploadMedia(file) ?? '';
+      final url = await _repo.uploadMedia(file);
+      if (url == null || url.isEmpty) throw Exception('upload failed');
       final msg = await _repo.sendMessage(
-        toUserId: widget.peer.id,
-        text:     url,
+        toUserId:  widget.peer.id,
+        text:      '',
+        chatId:    _chatId,
+        mediaUrl:  url,
+        mediaType: type,
       );
       if (!mounted) return;
-      setState(() => _messages.add(msg));
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+        if (idx >= 0) { _messages[idx] = msg; } else { _messages.add(msg); }
+      });
       _scrollBottom();
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) {
+        setState(() =>
+            _messages.removeWhere((m) => m.id == optimistic.id));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Фиристодан нашуд'),
+            duration: Duration(seconds: 2)));
+      }
+    }
   }
 
   // ─── React ───────────────────────────────────────────────────
@@ -370,6 +459,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           MessageInput(
             onSend:       _onSend,
             onSendMedia:  _onSendMedia,
+            onSendVoice:  _onSendVoice,
             onTyping:     _onTyping,
             replyTo:      _replyTo,
             onCancelReply: () => setState(() => _replyTo = null),

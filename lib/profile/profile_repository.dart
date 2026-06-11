@@ -261,13 +261,27 @@ extension ProfileRepositoryExt on ProfileRepository {
     required String title,
     required String coverUrl,
     required List<String> storyIds,
+    List<HighlightItem> items = const [],
   }) async {
     final res = await _api.post('/highlights/', body: {
       'title': title, 'coverUrl': coverUrl, 'storyIds': storyIds,
+      'items': items.map((e) => e.toJson()).toList(),
     });
     if (res.statusCode >= 400) throw Exception('Create highlight failed');
     return HighlightModel.fromJson(
         jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// Rename / update highlight (title, cover, items)
+  Future<void> updateHighlight(String id,
+      {String? title, String? coverUrl, List<HighlightItem>? items}) async {
+    try {
+      await _api.patch('/highlights/$id', body: {
+        if (title != null) 'title': title,
+        if (coverUrl != null) 'coverUrl': coverUrl,
+        if (items != null) 'items': items.map((e) => e.toJson()).toList(),
+      });
+    } catch (_) {}
   }
 
   /// Delete highlight

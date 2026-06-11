@@ -7,6 +7,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/sockets"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,12 +38,13 @@ func ReactToMessage(c *gin.Context) {
 		return
 	}
 
-	// Broadcast via WebSocket hub (if hub is accessible)
-	broadcastChatEvent("chat:reaction", map[string]interface{}{
+	// Push to both participants in real time
+	sender, receiver := participantsOf(msgID)
+	emitChat("chat:reaction", map[string]interface{}{
 		"messageId": msgID,
 		"emoji":     body.Emoji,
 		"userId":    myID,
-	})
+	}, sender, receiver)
 
 	c.JSON(http.StatusOK, gin.H{"reacted": true, "emoji": body.Emoji})
 }
@@ -55,9 +57,10 @@ func DeleteMessage(c *gin.Context) {
 	myID  := mw.UID(c)
 
 	// Only sender can delete
-	var senderID string
+	var senderID, receiverID string
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT sender_id FROM messages WHERE id=$1`, msgID).Scan(&senderID)
+		`SELECT sender_id, COALESCE(receiver_id,'') FROM messages WHERE id=$1`,
+		msgID).Scan(&senderID, &receiverID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "message not found"})
 		return
@@ -76,23 +79,36 @@ func DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	// Broadcast deletion
-	broadcastChatEvent("chat:delete", map[string]interface{}{
+	// Push deletion to both participants in real time
+	emitChat("chat:delete", map[string]interface{}{
 		"messageId": msgID,
-	})
+	}, senderID, receiverID)
 
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Broadcast helper (stub — replace with your actual WS hub call)
+//  Real-time push helper — fires the event over the WS hub to each
+//  participant (deduplicated). Бе ин, паёмҳои бо REST фиристодашуда
+//  ба тарафи дигар фавран намерасиданд (таъхири чанддақиқагӣ).
 // ─────────────────────────────────────────────────────────────────
-func broadcastChatEvent(event string, data interface{}) {
-	// TODO: call your WebSocket hub here, e.g.:
-	// hub.Broadcast(event, data)
-	// This stub avoids import cycles — wire up as needed.
-	_ = event
-	_ = data
+func emitChat(event string, data interface{}, userIDs ...string) {
+	seen := map[string]bool{}
+	for _, uid := range userIDs {
+		if uid == "" || seen[uid] {
+			continue
+		}
+		seen[uid] = true
+		sockets.EmitToUser(uid, event, data)
+	}
+}
+
+// participantsOf — sender_id ва receiver_id-и як паёмро бармегардонад.
+func participantsOf(msgID string) (sender, receiver string) {
+	db.Pool.QueryRow(context.Background(),
+		`SELECT sender_id, COALESCE(receiver_id,'') FROM messages WHERE id=$1`,
+		msgID).Scan(&sender, &receiver)
+	return
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -149,8 +165,9 @@ func SendMessageExt(c *gin.Context) {
 		return
 	}
 
-	// Broadcast to chat room
-	broadcastChatEvent("chat:new", msg)
+	// Push to the receiver in real time (sender already has it via this
+	// response / optimistic insert). Бе ин таъхири чанддақиқагӣ мешуд.
+	emitChat("chat:new", msg, body.ReceiverID)
 
 	c.JSON(http.StatusCreated, msg)
 }
