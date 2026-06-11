@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:convert';
 
 import '../../models/reel_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
+import '../../core/api/api_client.dart';
 
-class ReelControls extends StatelessWidget {
+// Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
+class ReelControls extends StatefulWidget {
   final ReelModel reel;
   final bool isPlaying;
 
@@ -15,96 +20,360 @@ class ReelControls extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      right: 12,
-      bottom: 80,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // ---------- USER AVATAR ----------
-          Avatar(
-            imageUrl: reel.user.avatar, // ✅ ИСЛОҲ: avatarUrl → avatar
-            size: 48,
+  State<ReelControls> createState() => _ReelControlsState();
+}
+
+class _ReelControlsState extends State<ReelControls> {
+  late bool _liked;
+  late bool _saved;
+  late int  _likeCount;
+  late int  _commentCount;
+
+  ReelModel get reel => widget.reel;
+
+  @override
+  void initState() {
+    super.initState();
+    _liked = reel.isLiked;
+    _saved = reel.isSaved;
+    _likeCount = reel.likesCount;
+    _commentCount = reel.commentsCount;
+  }
+
+  void _toggleLike() {
+    setState(() {
+      _liked = !_liked;
+      _likeCount += _liked ? 1 : -1;
+      if (_likeCount < 0) _likeCount = 0;
+    });
+    ApiClient.instance.post('/reels/${reel.id}/like').then((_) {}, onError: (_) {});
+  }
+
+  void _toggleSave() {
+    setState(() => _saved = !_saved);
+    ApiClient.instance.post('/reels/${reel.id}/save').then((_) {}, onError: (_) {});
+  }
+
+  void _share() => Share.share('Raonson Reel: ${reel.videoUrl}');
+
+  void _openProfile() =>
+      Navigator.pushNamed(context, '/user-profile', arguments: reel.user.id);
+
+  void _more() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+          ListTile(
+            leading: const Icon(Icons.flag_outlined, color: Colors.white),
+            title: const Text('Хабар додан',
+                style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(ctx);
+              ApiClient.instance
+                  .post('/reels/${reel.id}/report')
+                  .then((_) {}, onError: (_) {});
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Хабар фиристода шуд'),
+                  duration: Duration(seconds: 2)));
+            },
           ),
-
-          const SizedBox(height: 6),
-
-          // ---------- VERIFIED BADGE ----------
-          if (reel.user.verified) // ✅ ИСЛОҲ: isVerified → verified
-            const VerifiedBadge(),
-
-          const SizedBox(height: 20),
-
-          // ---------- LIKES ----------
-          _IconWithCount(
-            icon: Icons.favorite,
-            count: reel.likesCount,
-            active: reel.isLiked,
+          ListTile(
+            leading: const Icon(Icons.link_rounded, color: Colors.white),
+            title: const Text('Нусхаи линк',
+                style: TextStyle(color: Colors.white)),
+            onTap: () { Navigator.pop(ctx); _share(); },
           ),
-
-          const SizedBox(height: 16),
-
-          // ---------- COMMENTS ----------
-          _IconWithCount(
-            icon: Icons.comment,
-            count: reel.commentsCount,
-          ),
-
-          const SizedBox(height: 16),
-
-          // ---------- SHARE ----------
-          const Icon(
-            Icons.share,
-            color: Colors.white,
-            size: 28,
-          ),
-
-          const SizedBox(height: 24),
-
-          // ---------- PLAY / PAUSE ----------
-          Icon(
-            isPlaying ? Icons.pause_circle : Icons.play_circle,
-            color: Colors.white,
-            size: 28,
-          ),
-        ],
+          const SizedBox(height: 8),
+        ]),
       ),
+    );
+  }
+
+  void _openComments() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _ReelCommentsSheet(
+        reelId: reel.id,
+        onAdded: () { if (mounted) setState(() => _commentCount++); },
+      ),
+    );
+  }
+
+  String _fmt(int v) {
+    if (v >= 1000000) return '${(v / 1e6).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
+    return '$v';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(children: [
+      // ── Тугмаҳои рост ──
+      Positioned(
+        right: 10,
+        bottom: 90,
+        child: Column(children: [
+          _SvgBtn(
+              asset: _liked
+                  ? 'assets/icons/heart_filled.svg'
+                  : 'assets/icons/heart.svg',
+              color: _liked ? const Color(0xFFFF3040) : Colors.white,
+              label: _fmt(_likeCount),
+              onTap: _toggleLike),
+          const SizedBox(height: 18),
+          _SvgBtn(
+              asset: 'assets/icons/comment.svg',
+              label: _fmt(_commentCount),
+              onTap: _openComments),
+          const SizedBox(height: 18),
+          _SvgBtn(asset: 'assets/icons/share.svg', onTap: _share),
+          const SizedBox(height: 18),
+          _SvgBtn(
+              asset: _saved
+                  ? 'assets/icons/save_filled.svg'
+                  : 'assets/icons/save.svg',
+              onTap: _toggleSave),
+          const SizedBox(height: 18),
+          GestureDetector(
+            onTap: _more,
+            child: const Icon(Icons.more_vert, color: Colors.white, size: 26),
+          ),
+        ]),
+      ),
+
+      // ── Маълумоти корбар (поён-чап) ──
+      Positioned(
+        left: 14, right: 80, bottom: 80,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(children: [
+              GestureDetector(
+                onTap: _openProfile,
+                child: Avatar(
+                  imageUrl: reel.user.avatar,
+                  name: reel.user.username,
+                  size: 34,
+                  glowBorder: reel.user.hasStory,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _openProfile,
+                child: Text(reel.user.username,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+              if (reel.user.verified) ...[
+                const SizedBox(width: 4),
+                const VerifiedBadge(size: 14),
+              ],
+            ]),
+            if (reel.caption.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(reel.caption,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+            ],
+            const SizedBox(height: 8),
+            Row(children: [
+              SvgPicture.asset('assets/icons/music.svg',
+                  width: 13, height: 13,
+                  colorFilter: const ColorFilter.mode(
+                      Colors.white, BlendMode.srcIn)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  reel.audioTitle.isNotEmpty
+                      ? (reel.audioArtist.isNotEmpty
+                          ? '${reel.audioTitle} • ${reel.audioArtist}'
+                          : reel.audioTitle)
+                      : 'Аудиои оригиналӣ',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    ]);
+  }
+}
+
+class _SvgBtn extends StatelessWidget {
+  final String asset;
+  final String? label;
+  final Color color;
+  final VoidCallback onTap;
+  const _SvgBtn(
+      {required this.asset, this.label, this.color = Colors.white, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(children: [
+        SvgPicture.asset(asset, width: 30, height: 30,
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn)),
+        if (label != null && label!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(label!,
+              style: const TextStyle(color: Colors.white, fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ]),
     );
   }
 }
 
-// ======================================================
+// ── Шарҳҳои reel — bottom sheet ──
+class _ReelCommentsSheet extends StatefulWidget {
+  final String reelId;
+  final VoidCallback onAdded;
+  const _ReelCommentsSheet({required this.reelId, required this.onAdded});
+  @override
+  State<_ReelCommentsSheet> createState() => _ReelCommentsSheetState();
+}
 
-class _IconWithCount extends StatelessWidget {
-  final IconData icon;
-  final int count;
-  final bool active;
+class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
+  final _ctrl = TextEditingController();
+  List<Map<String, dynamic>> _comments = [];
+  bool _loading = true;
 
-  const _IconWithCount({
-    required this.icon,
-    required this.count,
-    this.active = false,
-  });
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  Future<void> _load() async {
+    try {
+      final res =
+          await ApiClient.instance.get('/reels/${widget.reelId}/comments');
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final list = (body is List ? body : (body['comments'] ?? [])) as List;
+        setState(() {
+          _comments = list.cast<Map<String, dynamic>>();
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _send() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    _ctrl.clear();
+    setState(() => _comments.insert(0, {
+          'text': text,
+          'user': {'username': 'шумо'},
+        }));
+    widget.onAdded();
+    try {
+      await ApiClient.instance
+          .post('/reels/${widget.reelId}/comments', body: {'text': text});
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: active ? Colors.red : Colors.white,
-          size: 30,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          count.toString(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
+    return Padding(
+      padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(children: [
+          Container(width: 40, height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+          const Text('Шарҳҳо',
+              style: TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.w600, fontSize: 15)),
+          const Divider(color: Colors.white12),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                        color: Colors.white30, strokeWidth: 2))
+                : _comments.isEmpty
+                    ? const Center(
+                        child: Text('Ҳанӯз шарҳ нест',
+                            style: TextStyle(color: Colors.white38)))
+                    : ListView.builder(
+                        itemCount: _comments.length,
+                        itemBuilder: (_, i) {
+                          final c = _comments[i];
+                          final u = (c['user'] ?? {}) as Map;
+                          return ListTile(
+                            leading: Avatar(
+                                imageUrl: (u['avatar'] ?? '').toString(),
+                                name: (u['username'] ?? '').toString(),
+                                size: 34),
+                            title: Text((u['username'] ?? '').toString(),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13)),
+                            subtitle: Text((c['text'] ?? '').toString(),
+                                style: const TextStyle(color: Colors.white)),
+                          );
+                        }),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Шарҳ нависед...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: Colors.white12,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                  ),
+                  onSubmitted: (_) => _send(),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send_rounded, color: Color(0xFF1D9BF0)),
+                onPressed: _send,
+              ),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }
