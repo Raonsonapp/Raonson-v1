@@ -9,6 +9,7 @@ class HighlightsRow extends StatelessWidget {
   final List<HighlightModel> highlights;
   final bool                  isMe;
   final VoidCallback?         onAdd;
+  final void Function(HighlightModel)? onOpen;
   final void Function(HighlightModel)? onLongPress;
 
   const HighlightsRow({
@@ -16,6 +17,7 @@ class HighlightsRow extends StatelessWidget {
     required this.highlights,
     this.isMe       = false,
     this.onAdd,
+    this.onOpen,
     this.onLongPress,
   });
 
@@ -38,7 +40,7 @@ class HighlightsRow extends StatelessWidget {
           ...highlights.map((h) => _HlItem(
             label:    h.title,
             coverUrl: h.coverUrl,
-            onTap:    () {},
+            onTap:    onOpen != null ? () => onOpen!(h) : () {},
             onLongPress: onLongPress != null ? () => onLongPress!(h) : null,
           )),
         ],
@@ -74,16 +76,11 @@ class _HlItem extends StatelessWidget {
           Container(
             width: 64, height: 64,
             decoration: BoxDecoration(
-              shape:    BoxShape.circle,
-              gradient: isAdd ? null : const LinearGradient(
-                colors: [AppColors.storyStart, AppColors.storyEnd],
-                begin:  Alignment.topLeft,
-                end:    Alignment.bottomRight,
-              ),
+              shape:  BoxShape.circle,
+              // Актуалӣ ҳалқаи story надорад — танҳо доираи оддӣ (мисли Instagram)
               color:  isAdd ? AppColors.surface : null,
-              border: isAdd
-                  ? Border.all(color: Colors.white24, width: 1.5)
-                  : null,
+              border: Border.all(
+                  color: Colors.white24, width: 1.5),
             ),
             padding: isAdd ? null : const EdgeInsets.all(2.5),
             child: isAdd

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"raonson/db"
@@ -121,7 +122,8 @@ func GetHighlights(c *gin.Context) {
 		uid = mw.UID(c)
 	}
 	rows, err := db.Pool.Query(context.Background(),
-		`SELECT id, title, COALESCE(cover_url,''), COALESCE(story_ids,'{}')
+		`SELECT id, title, COALESCE(cover_url,''), COALESCE(story_ids,'{}'),
+		        COALESCE(items,'[]'::jsonb)
 		 FROM highlights WHERE user_id=$1 ORDER BY created_at ASC`, uid)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"highlights": []gin.H{}})
@@ -132,9 +134,15 @@ func GetHighlights(c *gin.Context) {
 	for rows.Next() {
 		var id, title, cover string
 		var storyIDs []string
-		if rows.Scan(&id, &title, &cover, &storyIDs) == nil {
+		var itemsRaw []byte
+		if rows.Scan(&id, &title, &cover, &storyIDs, &itemsRaw) == nil {
+			items := []map[string]interface{}{}
+			if len(itemsRaw) > 0 {
+				json.Unmarshal(itemsRaw, &items)
+			}
 			out = append(out, gin.H{
-				"_id": id, "title": title, "coverUrl": cover, "storyIds": storyIDs,
+				"_id": id, "title": title, "coverUrl": cover,
+				"storyIds": storyIDs, "items": items,
 			})
 		}
 	}
@@ -145,9 +153,10 @@ func GetHighlights(c *gin.Context) {
 func CreateHighlight(c *gin.Context) {
 	myID := mw.UID(c)
 	var b struct {
-		Title    string   `json:"title"`
-		CoverURL string   `json:"coverUrl"`
-		StoryIDs []string `json:"storyIds"`
+		Title    string                   `json:"title"`
+		CoverURL string                   `json:"coverUrl"`
+		StoryIDs []string                 `json:"storyIds"`
+		Items    []map[string]interface{} `json:"items"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
@@ -156,18 +165,60 @@ func CreateHighlight(c *gin.Context) {
 	if b.StoryIDs == nil {
 		b.StoryIDs = []string{}
 	}
+	if b.Items == nil {
+		b.Items = []map[string]interface{}{}
+	}
+	// Cover-ро аз items-и аввал мегирем, агар надода бошанд.
+	if b.CoverURL == "" && len(b.Items) > 0 {
+		if u, ok := b.Items[0]["url"].(string); ok {
+			b.CoverURL = u
+		}
+	}
+	itemsJSON, _ := json.Marshal(b.Items)
 	var id string
 	err := db.Pool.QueryRow(context.Background(),
-		`INSERT INTO highlights (user_id, title, cover_url, story_ids)
-		 VALUES ($1,$2,$3,$4) RETURNING id`,
-		myID, b.Title, b.CoverURL, b.StoryIDs).Scan(&id)
+		`INSERT INTO highlights (user_id, title, cover_url, story_ids, items)
+		 VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+		myID, b.Title, b.CoverURL, b.StoryIDs, itemsJSON).Scan(&id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create failed"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"_id": id, "title": b.Title, "coverUrl": b.CoverURL, "storyIds": b.StoryIDs,
+		"_id": id, "title": b.Title, "coverUrl": b.CoverURL,
+		"storyIds": b.StoryIDs, "items": b.Items,
 	})
+}
+
+// PATCH /highlights/:id — номро тағйир медиҳад ва/ё items-ро нав мекунад.
+func UpdateHighlight(c *gin.Context) {
+	myID := mw.UID(c)
+	id := c.Param("id")
+	var b struct {
+		Title    *string                   `json:"title"`
+		CoverURL *string                   `json:"coverUrl"`
+		Items    *[]map[string]interface{} `json:"items"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
+		return
+	}
+	var itemsJSON []byte
+	if b.Items != nil {
+		itemsJSON, _ = json.Marshal(*b.Items)
+	}
+	_, err := db.Pool.Exec(context.Background(), `
+		UPDATE highlights SET
+		  title     = COALESCE($1, title),
+		  cover_url = COALESCE($2, cover_url),
+		  items     = COALESCE($3::jsonb, items)
+		WHERE id=$4 AND user_id=$5::text`,
+		b.Title, b.CoverURL, itemsJSON, id, myID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"updated": true})
 }
 
 // DELETE /highlights/:id

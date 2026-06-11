@@ -50,6 +50,12 @@ class ApiClient {
             body: body != null ? jsonEncode(body) : null).timeout(_timeout));
   }
 
+  Future<http.Response> patch(String path, {Map<String, dynamic>? body}) async {
+    return _withRetry(() =>
+        _client.patch(_uri(path), headers: _headers(),
+            body: body != null ? jsonEncode(body) : null).timeout(_timeout));
+  }
+
   Future<http.Response> delete(String path) async {
     return _withRetry(() =>
         _client.delete(_uri(path), headers: _headers()).timeout(_timeout));

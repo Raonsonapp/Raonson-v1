@@ -23,6 +23,7 @@ import '../widgets/verified_badge.dart';
 import '../widgets/account_switcher.dart';
 import 'edit/edit_profile_screen.dart';
 import 'highlight_model.dart';
+import 'highlight_viewer.dart';
 import 'highlights_row.dart';
 import 'profile_controller.dart';
 import 'profile_repository.dart';
@@ -128,6 +129,27 @@ class _ProfileScreenState extends State<ProfileScreen>
               imageUrl: url, width: 280, height: 280, fit: BoxFit.cover))))));
   }
 
+  // ── Highlight tap → viewer ───────────────────────────────────────
+  void _openHighlight(HighlightModel h) {
+    if (h.items.isEmpty) {
+      // Highlight-и кӯҳна (бе items) — танҳо ба соҳиб имкони танзим.
+      if (_isMe) _hlLongPress(h);
+      return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => HighlightViewer(
+        highlight: h,
+        isOwner: _isMe,
+        onRename: (title) => _ctrl.renameHighlight(h.id, title),
+        onDeleteHighlight: () => _ctrl.deleteHighlight(h.id),
+        onItemsChanged: (items) async {
+          await _ctrl.updateHighlightItems(h.id, items);
+        },
+      ),
+    ));
+  }
+
   // ── Highlight long press ─────────────────────────────────────────
   void _hlLongPress(HighlightModel h) {
     showModalBottomSheet(
@@ -138,9 +160,9 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ── Create highlight (Актуальный) ────────────────────────────────
   Future<void> _createHighlight() async {
-    final picked = await ImagePicker()
-        .pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (picked == null || !mounted) return;
+    // Якчанд расм интихоб мекунем (мисли Instagram — маҷмӯаи актуалӣ).
+    final picked = await ImagePicker().pickMultiImage(imageQuality: 80);
+    if (picked.isEmpty || !mounted) return;
 
     final title = await _askHighlightTitle();
     if (title == null || title.trim().isEmpty || !mounted) return;
@@ -152,11 +174,15 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: CircularProgressIndicator(
               color: AppColors.neonBlue, strokeWidth: 2)),
     );
-    String coverUrl = '';
-    try {
-      coverUrl = await UploadManager().uploadFile(File(picked.path));
-    } catch (_) {}
-    await _ctrl.createHighlight(title.trim(), coverUrl, const []);
+    final items = <HighlightItem>[];
+    for (final p in picked) {
+      try {
+        final url = await UploadManager().uploadFile(File(p.path));
+        if (url.isNotEmpty) items.add(HighlightItem(url: url, type: 'image'));
+      } catch (_) {}
+    }
+    final coverUrl = items.isNotEmpty ? items.first.url : '';
+    await _ctrl.createHighlight(title.trim(), coverUrl, const [], items: items);
     if (mounted) Navigator.pop(context); // close loading
   }
 
@@ -443,6 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 highlights:  _ctrl.highlights,
                 isMe:        _isMe,
                 onAdd:       _isMe ? _createHighlight : null,
+                onOpen:      _openHighlight,
                 onLongPress: _isMe ? _hlLongPress : null,
               ),
 
