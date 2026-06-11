@@ -130,20 +130,48 @@ class ChatRepository {
     });
   }
 
+  // ── chatId-и сӯҳбат бо як корбарро ҳал мекунад ──────────────
+  Future<String?> resolveChatId(String peerId) async {
+    try {
+      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId')
+          .timeout(const Duration(seconds: 8));
+      if (cr.statusCode >= 400) return null;
+      return (jsonDecode(cr.body) as Map)['chatId'] as String?;
+    } catch (_) { return null; }
+  }
+
+  // ── Fetch-и мустақим аз шабака (бе cache) — барои auto-refresh ──
+  Future<List<MessageModel>> fetchFreshByChatId(String chatId) async {
+    try {
+      final myId = await _myId();
+      final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages')
+          .timeout(const Duration(seconds: 8));
+      if (mr.statusCode >= 400) return [];
+      final body = jsonDecode(mr.body);
+      final List data = body is Map ? (body['messages'] ?? []) : body as List;
+      return data.map((e) =>
+          MessageModel.fromRoomJson(e as Map<String,dynamic>, myId)).toList();
+    } catch (_) { return []; }
+  }
+
   // ── Send message бо pending queue ──────────────────────────
   Future<MessageModel> sendMessage({
     required String toUserId,
     required String text,
     String? replyToId,
+    String? chatId,
   }) async {
     final myId = await _myId();
-    final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$toUserId')
-        .timeout(const Duration(seconds: 8));
-    if (cr.statusCode >= 400) throw Exception('Chat error');
-    final chatId = (jsonDecode(cr.body) as Map)['chatId'] as String;
+    var cid = chatId;
+    if (cid == null || cid.isEmpty) {
+      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$toUserId')
+          .timeout(const Duration(seconds: 8));
+      if (cr.statusCode >= 400) throw Exception('Chat error');
+      cid = (jsonDecode(cr.body) as Map)['chatId'] as String;
+    }
 
     final res = await _api.postRequest(
-      '${ApiEndpoints.chat}/$chatId/messages',
+      '${ApiEndpoints.chat}/$cid/messages',
       body: {'receiverId': toUserId, 'text': text,
              if (replyToId != null) 'replyToId': replyToId},
     ).timeout(const Duration(seconds: 8));
