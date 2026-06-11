@@ -180,7 +180,7 @@ class _ReelControlsState extends State<ReelControls> {
               ),
               if (reel.user.verified) ...[
                 const SizedBox(width: 4),
-                const VerifiedBadge(size: 14),
+                const VerifiedBadge(size: 14, color: Colors.white),
               ],
             ]),
             if (reel.caption.isNotEmpty) ...[

@@ -227,7 +227,7 @@ func main() {
 		ch.GET("/",                  handlers.GetChats)
 		ch.GET("/with/:userId",      handlers.GetOrCreateChat)
 		ch.GET("/:chatId/messages",  handlers.GetMessages)
-		ch.POST("/:chatId/messages", handlers.SendMessage)
+		ch.POST("/:chatId/messages", handlers.SendMessageExt)
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)

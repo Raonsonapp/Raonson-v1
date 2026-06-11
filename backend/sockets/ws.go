@@ -78,6 +78,37 @@ func emit(userID, event string, data interface{}) {
 	}
 }
 
+// emitToOnlineFollowers — рӯйдодро танҳо ба пайравоне мефиристад, ки
+// ҳозир online ҳастанд. Барои миқёс (presence) ба ҷои broadcast ба ҳама.
+func emitToOnlineFollowers(userID, event string, data interface{}) {
+	// Аввал рӯйхати userID-и пайравони онлайнро мегирем (бе блоки дароз).
+	mu.RLock()
+	online := make(map[string]bool, len(clients))
+	for id := range clients {
+		online[id] = true
+	}
+	mu.RUnlock()
+	if len(online) == 0 {
+		return
+	}
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT follower_id FROM follows WHERE following_id=$1`, userID)
+	if err != nil {
+		return
+	}
+	targets := []string{}
+	for rows.Next() {
+		var fid string
+		if rows.Scan(&fid) == nil && online[fid] {
+			targets = append(targets, fid)
+		}
+	}
+	rows.Close()
+	for _, fid := range targets {
+		emit(fid, event, data)
+	}
+}
+
 func broadcast(event string, data interface{}) {
 	b, _ := json.Marshal(wsMsg{Event: event, Data: toRaw(data)})
 	mu.RLock()
@@ -114,10 +145,12 @@ func Handler(c *gin.Context) {
 	clients[userID] = cl
 	mu.Unlock()
 
-	// Online
+	// Online — танҳо ба пайравони ONLINE мефиристем (на ба ҳама).
+	// Дар миқёси 20k+ корбар, broadcast ба ҳама O(N²) мешуд ва серверро
+	// шах мекард. Ин роҳ корро бо шумораи пайравони онлайн маҳдуд мекунад.
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET last_seen=NULL WHERE id=$1`, userID)
-	broadcast("presence:update", map[string]interface{}{
+	go emitToOnlineFollowers(userID, "presence:update", map[string]interface{}{
 		"userId": userID, "status": "online", "lastSeen": nil})
 	log.Printf("[WS] %s online", userID)
 
@@ -130,7 +163,7 @@ func Handler(c *gin.Context) {
 		now := time.Now()
 		db.Pool.Exec(context.Background(),
 			`UPDATE users SET last_seen=$1 WHERE id=$2`, now, userID)
-		broadcast("presence:update", map[string]interface{}{
+		go emitToOnlineFollowers(userID, "presence:update", map[string]interface{}{
 			"userId": userID, "status": "offline",
 			"lastSeen": now.Format(time.RFC3339)})
 		log.Printf("[WS] %s offline", userID)
@@ -168,7 +201,7 @@ func dispatch(cl *client, raw []byte) {
 		uid := p.UserID
 		if uid == "" { uid = cl.userID }
 		db.Pool.Exec(context.Background(), `UPDATE users SET last_seen=NULL WHERE id=$1`, uid)
-		broadcast("presence:update", map[string]interface{}{
+		go emitToOnlineFollowers(uid, "presence:update", map[string]interface{}{
 			"userId": uid, "status": "online", "lastSeen": nil})
 
 	case "presence:check":
