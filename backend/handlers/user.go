@@ -93,15 +93,23 @@ func GetUserPosts(c *gin.Context) {
 func GetUserReels(c *gin.Context) {
 	id     := c.Param("id")
 	if id == "me" { id = mw.UID(c) }
+	myID   := mw.UID(c)
 	page   := toInt(c.Query("page"), 1)
 	limit  := toInt(c.Query("limit"), 24)
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT id, video_url, caption, views_count, likes_count, created_at
-		FROM reels WHERE user_id=$1
-		ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-		id, limit, offset)
+		SELECT r.id, r.video_url, r.caption,
+		       COALESCE(r.views_count,0), COALESCE(r.likes_count,0),
+		       COALESCE(r.comments_count,0), r.created_at,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
+		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$4),
+		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$4),
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW())
+		FROM reels r JOIN users u ON u.id=r.user_id
+		WHERE r.user_id=$1
+		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
+		id, limit, offset, myID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get reels failed"})
 		return
@@ -110,13 +118,21 @@ func GetUserReels(c *gin.Context) {
 
 	out := []gin.H{}
 	for rows.Next() {
-		var rid, vurl, cap string
-		var views, likes int
+		var rid, vurl, cap, uid, uname, uavatar string
+		var views, likes, comments int
+		var verified, liked, saved, hasStory bool
 		var createdAt interface{}
-		rows.Scan(&rid, &vurl, &cap, &views, &likes, &createdAt)
+		rows.Scan(&rid, &vurl, &cap, &views, &likes, &comments, &createdAt,
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &hasStory)
 		out = append(out, gin.H{
 			"_id": rid, "videoUrl": vurl, "caption": cap,
-			"views": views, "likesCount": likes, "createdAt": createdAt,
+			"views": views, "viewsCount": views,
+			"likesCount": likes, "commentsCount": comments,
+			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
+			"user": gin.H{
+				"_id": uid, "id": uid, "username": uname, "avatar": uavatar,
+				"verified": verified, "hasStory": hasStory,
+			},
 		})
 	}
 	c.JSON(http.StatusOK, out)
