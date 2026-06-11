@@ -251,7 +251,11 @@ class _ImageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => _ChatImageScreen(url: url))),
+      child: ClipRRect(
       borderRadius: BorderRadius.only(
         topLeft:     const Radius.circular(18),
         topRight:    const Radius.circular(18),
@@ -277,8 +281,34 @@ class _ImageBubble extends StatelessWidget {
               color: Colors.white30, size: 40),
         ),
       ),
-    );
+    ));
   }
+}
+
+// Фуллскрин расм — zoom (мисли Instagram)
+class _ChatImageScreen extends StatelessWidget {
+  final String url;
+  const _ChatImageScreen({required this.url});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      iconTheme: const IconThemeData(color: Colors.white),
+    ),
+    body: Center(
+      child: InteractiveViewer(
+        minScale: 1, maxScale: 4,
+        child: CachedNetworkImage(
+          imageUrl: url, fit: BoxFit.contain,
+          placeholder: (_, __) => const CircularProgressIndicator(
+              color: Colors.white30, strokeWidth: 2),
+          errorWidget: (_, __, ___) => const Icon(
+              Icons.broken_image_rounded, color: Colors.white38, size: 64),
+        ),
+      ),
+    ),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
