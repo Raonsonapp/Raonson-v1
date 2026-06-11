@@ -19,6 +19,7 @@ import '../models/reel_model.dart';
 import '../models/user_model.dart';
 import '../reels/single_reel_screen.dart';
 import '../widgets/verified_badge.dart';
+import '../widgets/account_switcher.dart';
 import 'edit/edit_profile_screen.dart';
 import 'highlight_model.dart';
 import 'highlights_row.dart';
@@ -351,7 +352,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       onPressed: () => Navigator.maybePop(context))
                   else
                     const SizedBox(width: 8),
-                  Expanded(child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Expanded(child: GestureDetector(
+                    onTap: _isMe ? () => showAccountSwitcher(context) : null,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Flexible(child: Text(user.username,
                         style: const TextStyle(color: Colors.white,
                             fontSize: 18, fontWeight: FontWeight.bold),
@@ -361,7 +365,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const Icon(Icons.verified_rounded,
                           color: Color(0xFF00C853), size: 16),
                     ],
-                  ])),
+                    if (_isMe) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white, size: 22),
+                    ],
+                  ]))),
                   IconButton(icon: const Icon(Icons.share_outlined,
                       color: Colors.white, size: 20),
                       onPressed: _shareProfile),
