@@ -134,7 +134,8 @@ class _MessageInputState extends State<MessageInput>
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: source, imageQuality: 80);
+    final picked = await picker.pickImage(
+        source: source, maxWidth: 1440, maxHeight: 1440, imageQuality: 80);
     if (picked != null) widget.onSendMedia?.call(File(picked.path));
   }
 

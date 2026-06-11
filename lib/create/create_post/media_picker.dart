@@ -12,9 +12,10 @@ class MediaPicker {
       if (file == null) return null;
       return File(file.path);
     } catch (_) {
-      // Fallback
+      // Fallback — maxWidth/maxHeight то расм UI-ро шах накунад
       final XFile? file = await _picker.pickImage(
         source: ImageSource.gallery,
+        maxWidth: 1440, maxHeight: 1440,
         imageQuality: 85,
       );
       if (file == null) return null;
@@ -25,6 +26,7 @@ class MediaPicker {
   static Future<File?> pickImageOnly() async {
     final XFile? file = await _picker.pickImage(
       source: ImageSource.gallery,
+      maxWidth: 1440, maxHeight: 1440,
       imageQuality: 85,
     );
     if (file == null) return null;

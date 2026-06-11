@@ -65,8 +65,25 @@ android {
                 signingConfigs.getByName("release")
             else
                 signingConfigs.getByName("debug")
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8 + хурдкунии resource — ҳаҷми APK/AAB-ро ба таври ҷиддӣ кам
+            // мекунад ва иҷроро тезтар мекунад.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    // Ҳар ABI APK-и ҷудогона (барои тест берун аз Play хурдтар);
+    // дар AAB Play худаш тақсим мекунад.
+    splits {
+        abi {
+            isEnable = (System.getenv("SPLIT_PER_ABI") == "true")
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = false
         }
     }
 }

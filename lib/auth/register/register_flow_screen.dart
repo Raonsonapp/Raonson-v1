@@ -186,8 +186,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // ── STEP 3 avatar ──
   Future<void> _pickAvatar() async {
-    final x = await ImagePicker()
-        .pickImage(source: ImageSource.gallery, imageQuality: 85);
+    // maxWidth/maxHeight — расмро ҳангоми интихоб хурд мекунад, то UI шах
+    // нашавад (расми пурраи телефон 4000x3000 ≈ 48MB bitmap → шах).
+    final x = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1080, maxHeight: 1080, imageQuality: 85);
     if (x != null && mounted) setState(() => _avatar = File(x.path));
   }
 

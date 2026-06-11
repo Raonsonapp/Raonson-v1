@@ -161,7 +161,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ── Create highlight (Актуальный) ────────────────────────────────
   Future<void> _createHighlight() async {
     // Якчанд расм интихоб мекунем (мисли Instagram — маҷмӯаи актуалӣ).
-    final picked = await ImagePicker().pickMultiImage(imageQuality: 80);
+    final picked = await ImagePicker()
+        .pickMultiImage(maxWidth: 1080, maxHeight: 1080, imageQuality: 80);
     if (picked.isEmpty || !mounted) return;
 
     final title = await _askHighlightTitle();

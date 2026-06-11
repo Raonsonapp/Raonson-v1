@@ -101,7 +101,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (choice == null) { Navigator.pop(context); return; }
     XFile? xf;
     if (choice == 'image') {
-      xf = await ImagePicker().pickImage(source: ImageSource.gallery);
+      xf = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1440, maxHeight: 1440, imageQuality: 85);
     } else {
       xf = await ImagePicker().pickVideo(source: ImageSource.gallery);
     }
