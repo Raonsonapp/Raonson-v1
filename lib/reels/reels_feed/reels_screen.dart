@@ -1302,7 +1302,7 @@ class _ReelItemState extends State<_ReelItem> {
                                               TextOverflow.ellipsis)),
                                   if (reel.user.isVerified) ...[
                                     const SizedBox(width: 4),
-                                    const VerifiedBadge(size: 14)
+                                    const VerifiedBadge(size: 14, color: Colors.white)
                                   ],
                                 ]))),
                     if (!_isOwner && !_following) ...[

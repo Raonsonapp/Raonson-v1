@@ -418,6 +418,18 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_comment_likes_cmt ON comment_likes(comment_id);
 	CREATE INDEX IF NOT EXISTS idx_story_views_story ON story_views(story_id);
 
+	-- ── Composite indexes барои EXISTS-и isLiked/isSaved/isFollowing ──
+	-- Дар feed/reels ин санҷишҳо барои ҲАР пост/reel иҷро мешаванд; индекси
+	-- мураккаб онро ба як ҷустуҷӯи индекс табдил медиҳад (барои 20k+ муҳим).
+	CREATE INDEX IF NOT EXISTS idx_post_likes_post_user   ON post_likes(post_id, user_id);
+	CREATE INDEX IF NOT EXISTS idx_post_saves_post_user   ON post_saves(post_id, user_id);
+	CREATE INDEX IF NOT EXISTS idx_reel_likes_reel_user   ON reel_likes(reel_id, user_id);
+	CREATE INDEX IF NOT EXISTS idx_reel_saves_reel_user   ON reel_saves(reel_id, user_id);
+	CREATE INDEX IF NOT EXISTS idx_story_likes_story_user ON story_likes(story_id, user_id);
+	CREATE INDEX IF NOT EXISTS idx_story_views_story_user ON story_views(story_id, user_id);
+	CREATE INDEX IF NOT EXISTS idx_follows_pair           ON follows(follower_id, following_id);
+	CREATE INDEX IF NOT EXISTS idx_comment_likes_cmt_user ON comment_likes(comment_id, user_id);
+
 	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE
 	WHERE LOWER(username)='raonson';

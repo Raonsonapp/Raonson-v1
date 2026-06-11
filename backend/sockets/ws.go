@@ -150,7 +150,7 @@ func Handler(c *gin.Context) {
 	// шах мекард. Ин роҳ корро бо шумораи пайравони онлайн маҳдуд мекунад.
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET last_seen=NULL WHERE id=$1`, userID)
-	emitToOnlineFollowers(userID, "presence:update", map[string]interface{}{
+	go emitToOnlineFollowers(userID, "presence:update", map[string]interface{}{
 		"userId": userID, "status": "online", "lastSeen": nil})
 	log.Printf("[WS] %s online", userID)
 
@@ -163,7 +163,7 @@ func Handler(c *gin.Context) {
 		now := time.Now()
 		db.Pool.Exec(context.Background(),
 			`UPDATE users SET last_seen=$1 WHERE id=$2`, now, userID)
-		emitToOnlineFollowers(userID, "presence:update", map[string]interface{}{
+		go emitToOnlineFollowers(userID, "presence:update", map[string]interface{}{
 			"userId": userID, "status": "offline",
 			"lastSeen": now.Format(time.RFC3339)})
 		log.Printf("[WS] %s offline", userID)
@@ -201,7 +201,7 @@ func dispatch(cl *client, raw []byte) {
 		uid := p.UserID
 		if uid == "" { uid = cl.userID }
 		db.Pool.Exec(context.Background(), `UPDATE users SET last_seen=NULL WHERE id=$1`, uid)
-		emitToOnlineFollowers(uid, "presence:update", map[string]interface{}{
+		go emitToOnlineFollowers(uid, "presence:update", map[string]interface{}{
 			"userId": uid, "status": "online", "lastSeen": nil})
 
 	case "presence:check":

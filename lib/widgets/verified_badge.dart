@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 
-/// Verified badge — САБЗ бо checkmark мисли расм
+/// Verified badge — checkmark. Ранг default сабз, вале метавон сафед кард
+/// (дар сторис ва reels болои тасвир сафед хубтар дида мешавад).
 class VerifiedBadge extends StatelessWidget {
   final double size;
-  const VerifiedBadge({super.key, this.size = 16});
+  final Color? color;
+  const VerifiedBadge({super.key, this.size = 16, this.color});
 
   @override
   Widget build(BuildContext context) {
-    // Галочкаи сабзи мавҷакмавҷак (мисли profile) — на давраи одди
     return Icon(
       Icons.verified_rounded,
       size: size,
-      color: AppColors.verified,
+      color: color ?? AppColors.verified,
     );
   }
 }

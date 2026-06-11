@@ -420,10 +420,18 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
               ),
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_current.user.username,
-                    style: const TextStyle(color: Colors.white,
-                        fontWeight: FontWeight.bold, fontSize: 14,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Flexible(child: Text(_current.user.username,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white,
+                          fontWeight: FontWeight.bold, fontSize: 14,
+                          shadows: [Shadow(blurRadius: 4, color: Colors.black54)]))),
+                  if (_current.user.isVerified) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified_rounded,
+                        color: Colors.white, size: 14),
+                  ],
+                ]),
                 Text(_timeAgo(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
               ])),
               if (_isOwner)
