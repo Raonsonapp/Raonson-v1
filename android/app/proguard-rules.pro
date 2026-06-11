@@ -7,6 +7,14 @@
 -keep class io.flutter.plugins.** { *; }
 -dontwarn io.flutter.embedding.**
 
+# Play Core / deferred components — FlutterPlayStoreSplitApplication ба
+# синфҳои Play Core ишора мекунад, ки дар dep tree нестанд → R8 шикаст
+# мехӯрад. Ин ислоҳи расмии Flutter аст.
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }
+-keep class io.flutter.app.FlutterPlayStoreSplitApplication { *; }
+-keep class io.flutter.embedding.android.FlutterPlayStoreSplitApplication { *; }
+
 # ── Plugins (reflection / native) ────────────────────────────────
 # video_player (ExoPlayer / media3)
 -keep class androidx.media3.** { *; }
