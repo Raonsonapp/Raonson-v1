@@ -268,11 +268,19 @@ func GetChats(c *gin.Context) {
 // GET /chat/:chatId/messages
 func GetMessages(c *gin.Context) {
 	chatID := c.Param("chatId")
+	// 100 паёми ОХИРИНро мегирем (на аввалин), вале бо тартиби афзоянда
+	// бармегардонем — то дар чатҳои дароз ҳам зуд ва дуруст бошад.
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT m.id,m.chat_id,m.sender_id,m.text,m.media_url,m.read,m.created_at,
-		       u.username,u.avatar,u.verified
-		FROM messages m JOIN users u ON u.id=m.sender_id
-		WHERE m.chat_id=$1 ORDER BY m.created_at ASC LIMIT 100`, chatID)
+		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
+		       is_deleted,read,created_at,username,avatar,verified
+		FROM (
+		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
+		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
+		         COALESCE(m.is_deleted,false) is_deleted,m.read,m.created_at,
+		         u.username,u.avatar,u.verified
+		  FROM messages m JOIN users u ON u.id=m.sender_id
+		  WHERE m.chat_id=$1 ORDER BY m.created_at DESC LIMIT 100
+		) sub ORDER BY created_at ASC`, chatID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get messages failed"})
 		return
@@ -281,14 +289,16 @@ func GetMessages(c *gin.Context) {
 
 	messages := []gin.H{}
 	for rows.Next() {
-		var mid, cid, sid, text, murl string
-		var read bool
+		var mid, cid, sid, text, murl, mtype, replyTo string
+		var read, isDeleted bool
 		var createdAt interface{}
 		var uname, uavatar string
 		var verified bool
-		rows.Scan(&mid, &cid, &sid, &text, &murl, &read, &createdAt, &uname, &uavatar, &verified)
+		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
+			&read, &createdAt, &uname, &uavatar, &verified)
 		messages = append(messages, gin.H{
 			"_id": mid, "chatId": cid, "text": text, "mediaUrl": murl,
+			"type": mtype, "replyToId": replyTo, "isDeleted": isDeleted,
 			"read": read, "createdAt": createdAt,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})

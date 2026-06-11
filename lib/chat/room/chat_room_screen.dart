@@ -89,12 +89,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _startPolling();
   }
 
-  // Ҳар 3 сония паёмҳои нав мегирад ва ҳамроҳ мекунад — чат худаш
-  // рефреш мешавад ва паём дар лаҳза мерасад, ҳатто агар socket
-  // дар шабакаи корбар кор накунад.
+  // Real-time бо WebSocket (chat:new) меояд — он барои 20k+ корбар миқёспазир
+  // аст. Polling танҳо як fallback аст: вақте socket пайваст НЕСТ кор мекунад,
+  // то дар шабакаҳои сахт ҳам паём ба зудӣ ояд (на ҳамеша — то сервер шах нашавад).
   void _startPolling() {
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _pollRefresh());
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_socket.isConnected) _pollRefresh();
+    });
   }
 
   Future<void> _pollRefresh() async {
