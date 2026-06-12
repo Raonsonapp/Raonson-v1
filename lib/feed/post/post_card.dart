@@ -814,11 +814,11 @@ class _PostCardState extends State<PostCard>
 
       // ── HEADER ────────────────────────────────────────────────
       Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 10, 8),
+        padding: const EdgeInsets.fromLTRB(12, 10, 6, 8),
         child: Row(children: [
           GestureDetector(
             onTap: _openAvatarTap,
-            child: Avatar(imageUrl: post.user.avatar, size: 44,
+            child: Avatar(imageUrl: post.user.avatar, size: 38,
                 name: post.user.username,
                 glowBorder: post.user.hasStory)),
           const SizedBox(width: 10),
@@ -831,10 +831,10 @@ class _PostCardState extends State<PostCard>
                   onTap: () => Navigator.pushNamed(
                       context, '/profile', arguments: post.user.id),
                   child: Text(post.user.username,
-                    style: const TextStyle(fontWeight: FontWeight.w700,
-                        fontSize: 15, color: Colors.white))),
+                    style: const TextStyle(fontWeight: FontWeight.w600,
+                        fontSize: 14, color: Colors.white))),
                 if (post.user.isVerified) ...[ const SizedBox(width: 4),
-                  const VerifiedBadge(size: 16) ],
+                  const VerifiedBadge(size: 15) ],
               ]),
               const SizedBox(height: 2),
               // Локация — агар бошад
@@ -857,7 +857,7 @@ class _PostCardState extends State<PostCard>
           GestureDetector(
             onTap: _showMenu,
             child: const Padding(padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_vert, color: Colors.white, size: 20))),
+              child: Icon(Icons.more_horiz, color: Colors.white, size: 22))),
         ]),
       ),
 
@@ -937,33 +937,29 @@ class _PostCardState extends State<PostCard>
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  SizedBox(width: 24, height: 24,
-                    child: _liked
-                      ? SvgPicture.asset('assets/icons/heart_filled.svg',
-                          width: 24, height: 24, fit: BoxFit.contain)
-                      : SvgPicture.asset('assets/icons/heart.svg',
-                          width: 24, height: 24, fit: BoxFit.contain,
-                          colorFilter: const ColorFilter.mode(
-                              Colors.white, BlendMode.srcIn))),
-                  const SizedBox(width: 5),
-                  _animatedLikeCount(),
-                ]),
+                child: SizedBox(width: 26, height: 26,
+                  child: _liked
+                    ? SvgPicture.asset('assets/icons/heart_filled.svg',
+                        width: 26, height: 26, fit: BoxFit.contain)
+                    : SvgPicture.asset('assets/icons/heart.svg',
+                        width: 26, height: 26, fit: BoxFit.contain,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn))),
               ),
             ),
           ),
 
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
 
           _StableBtn(onTap: _openComments,
-              svgPath: 'assets/icons/comment.svg', size: 23,
-              count: _commentCount, fmt: _fmt),
+              svgPath: 'assets/icons/comment.svg', size: 25,
+              count: 0, fmt: _fmt),
 
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
 
           _StableBtn(onTap: _showShare,
-              svgPath: 'assets/icons/share.svg', size: 23,
-              count: _shareCount, fmt: _fmt),
+              svgPath: 'assets/icons/share.svg', size: 25,
+              count: 0, fmt: _fmt),
 
           const Spacer(),
 
@@ -972,9 +968,24 @@ class _PostCardState extends State<PostCard>
             svgPath: 'assets/icons/save.svg',
             activeSvgPath: 'assets/icons/save_filled.svg',
             isActive: _saved, activeColor: Colors.white,
-            inactiveColor: Colors.white, size: 23, count: 0, fmt: _fmt),
+            inactiveColor: Colors.white, size: 25, count: 0, fmt: _fmt),
         ]),
       ),
+
+      // ── N ЛАЙК (bold, мисли Instagram) ────────────────────────
+      if (_likeCount > 0)
+        GestureDetector(
+          onTap: _showWhoLiked,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 2),
+            child: Text(
+              _likeCount == 1 ? '1 лайк' : '${_fmt(_likeCount)} лайк',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700, fontSize: 14)),
+          ),
+        ),
 
       // ── CAPTION бо Show more / less ───────────────────────────
       if (_caption.isNotEmpty)
