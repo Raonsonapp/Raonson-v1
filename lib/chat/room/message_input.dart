@@ -43,7 +43,6 @@ class _MessageInputState extends State<MessageInput>
   // ── Voice recording ──
   final _recorder = AudioRecorder();
   bool _recording   = false;
-  bool _cancelArmed = false;
   Duration _recordDur = Duration.zero;
   Timer? _recordTimer;
   String? _recordPath;
@@ -158,7 +157,6 @@ class _MessageInputState extends State<MessageInput>
           const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
       _recordPath  = path;
       _recordDur   = Duration.zero;
-      _cancelArmed = false;
       setState(() => _recording = true);
       _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _recordDur += const Duration(seconds: 1));
@@ -175,18 +173,12 @@ class _MessageInputState extends State<MessageInput>
     try { path = await _recorder.stop(); } catch (_) {}
     path ??= _recordPath;
     final dur = _recordDur;
-    final cancelled = !send || _cancelArmed;
     if (mounted) setState(() => _recording = false);
-    if (cancelled || dur.inMilliseconds < 800 || path == null) {
+    if (!send || dur.inMilliseconds < 800 || path == null) {
       if (path != null) { try { File(path).deleteSync(); } catch (_) {} }
       return;
     }
     widget.onSendVoice?.call(File(path));
-  }
-
-  void _onRecordDrag(double dx) {
-    final armed = dx < -90;
-    if (armed != _cancelArmed) setState(() => _cancelArmed = armed);
   }
 
   String _fmtDur(Duration d) {
@@ -221,30 +213,42 @@ class _MessageInputState extends State<MessageInput>
     );
   }
 
-  // ── Recording overlay bar ──
+  // ── Recording overlay bar (тугмаҳои возеҳ: нест кардан + фиристодан) ──
   Widget _recordingBar() {
     return Row(
       children: [
-        const SizedBox(width: 4),
+        // Нест кардан (бекор)
+        GestureDetector(
+          onTap: () => _stopRecording(send: false),
+          behavior: HitTestBehavior.opaque,
+          child: const Padding(
+            padding: EdgeInsets.all(6),
+            child: Icon(Icons.delete_outline_rounded,
+                color: Color(0xFFFF3040), size: 28)),
+        ),
+        const SizedBox(width: 10),
         const _PulsingDot(),
         const SizedBox(width: 10),
         Text(_fmtDur(_recordDur),
             style: const TextStyle(
                 color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            _cancelArmed ? 'Сар диҳед барои бекор кардан' : '‹ Ба чап кашед барои бекор',
-            style: TextStyle(
-                color: _cancelArmed ? const Color(0xFFFF3040) : Colors.white38,
-                fontSize: 13),
-            overflow: TextOverflow.ellipsis,
+        const Expanded(
+          child: Text('  Сабти овоз...',
+              style: TextStyle(color: Colors.white38, fontSize: 13),
+              overflow: TextOverflow.ellipsis),
+        ),
+        // Фиристодан
+        GestureDetector(
+          onTap: () => _stopRecording(send: true),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 44, height: 44,
+            decoration: const BoxDecoration(
+                shape: BoxShape.circle, color: AppColors.neonBlue),
+            child: const Center(
+                child: Icon(Icons.send_rounded, color: Colors.white, size: 20)),
           ),
         ),
-        Icon(Icons.mic_rounded,
-            color: _cancelArmed ? const Color(0xFFFF3040) : AppColors.neonBlue,
-            size: 26),
-        const SizedBox(width: 6),
       ],
     );
   }
@@ -325,12 +329,8 @@ class _MessageInputState extends State<MessageInput>
                 ),
               )
             : GestureDetector(
-                onLongPressStart:      (_) => _startRecording(),
-                onLongPressMoveUpdate: (d) =>
-                    _onRecordDrag(d.offsetFromOrigin.dx),
-                onLongPressEnd:        (_) => _stopRecording(send: true),
-                onLongPressCancel:     () => _stopRecording(send: false),
-                onTap: () => widget.onSend('👍'),
+                onTap: _startRecording, // зер кунед → сабт оғоз мешавад
+                behavior: HitTestBehavior.opaque,
                 child: Container(
                   width: 44, height: 44,
                   decoration: const BoxDecoration(shape: BoxShape.circle),

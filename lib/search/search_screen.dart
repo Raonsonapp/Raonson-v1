@@ -851,7 +851,8 @@ class _FeedCard extends StatefulWidget {
 class _FeedCardState extends State<_FeedCard> {
   VideoPlayerController? _video;
   bool _ready = false;
-  bool _liked = false, _saved = false;
+  bool _liked = false, _saved = false, _muted = false;
+  int  _likeCount = 0, _commentCount = 0;
 
   bool get _isVideo =>
       widget.item.type == _ItemType.video || widget.item.type == _ItemType.reel;
@@ -861,6 +862,17 @@ class _FeedCardState extends State<_FeedCard> {
   @override
   void initState() {
     super.initState();
+    final r = widget.item.reelData;
+    final p = widget.item.postData;
+    if (r != null) {
+      _liked = r['isLiked'] == true;
+      _saved = r['isSaved'] == true;
+      _likeCount = (r['likesCount'] as num?)?.toInt() ?? 0;
+      _commentCount = (r['commentsCount'] as num?)?.toInt() ?? 0;
+    } else if (p != null) {
+      _liked = p.liked; _saved = p.saved;
+      _likeCount = p.likesCount; _commentCount = p.commentsCount;
+    }
     if (_isVideo) _initVideo();
   }
 
@@ -881,8 +893,18 @@ class _FeedCardState extends State<_FeedCard> {
     super.dispose();
   }
 
+  String _fmt(int v) {
+    if (v >= 1000000) return '${(v / 1e6).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
+    return '$v';
+  }
+
   void _toggleLike() {
-    setState(() => _liked = !_liked);
+    setState(() {
+      _liked = !_liked;
+      _likeCount += _liked ? 1 : -1;
+      if (_likeCount < 0) _likeCount = 0;
+    });
     ApiClient.instance
         .post(_isReel ? '/reels/$_id/like' : '/posts/$_id/like')
         .then((_) {}, onError: (_) {});
@@ -893,6 +915,25 @@ class _FeedCardState extends State<_FeedCard> {
     ApiClient.instance
         .post(_isReel ? '/reels/$_id/save' : '/posts/$_id/save')
         .then((_) {}, onError: (_) {});
+  }
+
+  void _toggleMute() {
+    setState(() => _muted = !_muted);
+    _video?.setVolume(_muted ? 0 : 1);
+  }
+
+  void _openComments() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF111111),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _ExploreCommentsSheet(
+        id: _id, isReel: _isReel,
+        onAdded: () { if (mounted) setState(() => _commentCount++); },
+      ),
+    );
   }
 
   @override
@@ -936,7 +977,7 @@ class _FeedCardState extends State<_FeedCard> {
           ),
         ),
       ),
-      // Right side actions — иконкаҳои худамон (assets/icons), мисли home
+      // Right side actions — иконкаҳои худамон (assets/icons), мисли reels
       Positioned(
         right: 12, bottom: 120,
         child: Column(children: [
@@ -945,24 +986,33 @@ class _FeedCardState extends State<_FeedCard> {
                   ? 'assets/icons/heart_filled.svg'
                   : 'assets/icons/heart.svg',
               color: _liked ? const Color(0xFFFF3040) : Colors.white,
+              label: _likeCount > 0 ? _fmt(_likeCount) : null,
               onTap: _toggleLike),
-          const SizedBox(height: 20),
-          _ActionBtn(svg: 'assets/icons/comment.svg', onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Шарҳҳо ба зудӣ дар ин ҷо',
-                    style: TextStyle(fontSize: 13)),
-                duration: Duration(seconds: 1)));
-          }),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
+          _ActionBtn(
+              svg: 'assets/icons/comment.svg',
+              label: _commentCount > 0 ? _fmt(_commentCount) : null,
+              onTap: _openComments),
+          const SizedBox(height: 18),
           _ActionBtn(
               svg: 'assets/icons/share.svg',
               onTap: () => Share.share(widget.item.url)),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           _ActionBtn(
               svg: _saved
                   ? 'assets/icons/save_filled.svg'
                   : 'assets/icons/save.svg',
               onTap: _toggleSave),
+          if (_isVideo) ...[
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: _toggleMute,
+              behavior: HitTestBehavior.opaque,
+              child: Icon(
+                  _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                  color: Colors.white, size: 26),
+            ),
+          ],
         ]),
       ),
       // Bottom info
@@ -983,7 +1033,7 @@ class _FeedCardState extends State<_FeedCard> {
                 if (widget.item.postData!.user.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(Icons.verified_rounded,
-                      color: Color(0xFF00C853), size: 14),
+                      color: Colors.white, size: 14),
                 ],
                 const SizedBox(width: 10),
                 _FollowChip(),
@@ -1025,7 +1075,7 @@ class _FeedCardState extends State<_FeedCard> {
                   if (verified) ...[
                     const SizedBox(width: 4),
                     const Icon(Icons.verified_rounded,
-                        color: Color(0xFF00C853), size: 14),
+                        color: Colors.white, size: 14),
                   ],
                   const SizedBox(width: 10),
                   _FollowChip(),
@@ -1048,18 +1098,29 @@ class _ActionBtn extends StatelessWidget {
   final String svg;
   final VoidCallback? onTap;
   final Color color;
-  const _ActionBtn({required this.svg, this.onTap, this.color = Colors.white});
+  final String? label;
+  const _ActionBtn(
+      {required this.svg, this.onTap, this.color = Colors.white, this.label});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SvgPicture.asset(
-        svg,
-        width: 30, height: 30,
-        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        SvgPicture.asset(
+          svg,
+          width: 30, height: 30,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        ),
+        if (label != null && label!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(label!,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ]),
     );
   }
 }
@@ -1607,4 +1668,131 @@ class _ErrView extends StatelessWidget {
       ]),
     ),
   );
+}
+
+// ── Шарҳҳои explore (reel/post) — мисли reels ──────────────────────
+class _ExploreCommentsSheet extends StatefulWidget {
+  final String id;
+  final bool isReel;
+  final VoidCallback onAdded;
+  const _ExploreCommentsSheet(
+      {required this.id, required this.isReel, required this.onAdded});
+  @override
+  State<_ExploreCommentsSheet> createState() => _ExploreCommentsSheetState();
+}
+
+class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
+  final _ctrl = TextEditingController();
+  List<Map<String, dynamic>> _comments = [];
+  bool _loading = true;
+
+  String get _base => widget.isReel ? '/reels' : '/posts';
+
+  @override
+  void initState() { super.initState(); _load(); }
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  Future<void> _load() async {
+    try {
+      final res = await ApiClient.instance.get('$_base/${widget.id}/comments');
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final list = (body is List ? body : (body['comments'] ?? [])) as List;
+        setState(() {
+          _comments = list.cast<Map<String, dynamic>>();
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (_) { if (mounted) setState(() => _loading = false); }
+  }
+
+  Future<void> _send() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    _ctrl.clear();
+    setState(() => _comments.insert(0, {
+          'text': text,
+          'user': {'username': UserSession.username ?? 'шумо'},
+        }));
+    widget.onAdded();
+    try {
+      await ApiClient.instance
+          .post('$_base/${widget.id}/comments', body: {'text': text});
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(children: [
+          Container(width: 40, height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2))),
+          const Text('Шарҳҳо',
+              style: TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.w600, fontSize: 15)),
+          const Divider(color: Colors.white12),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(
+                    color: Colors.white30, strokeWidth: 2))
+                : _comments.isEmpty
+                    ? const Center(child: Text('Ҳанӯз шарҳ нест',
+                        style: TextStyle(color: Colors.white38)))
+                    : ListView.builder(
+                        itemCount: _comments.length,
+                        itemBuilder: (_, i) {
+                          final c = _comments[i];
+                          final u = (c['user'] ?? {}) as Map;
+                          return ListTile(
+                            leading: Avatar(
+                                imageUrl: (u['avatar'] ?? '').toString(),
+                                name: (u['username'] ?? '').toString(),
+                                size: 34),
+                            title: Text((u['username'] ?? '').toString(),
+                                style: const TextStyle(color: Colors.white,
+                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                            subtitle: Text((c['text'] ?? '').toString(),
+                                style: const TextStyle(color: Colors.white)),
+                          );
+                        }),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Шарҳ нависед...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true, fillColor: Colors.white12,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                  ),
+                  onSubmitted: (_) => _send(),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send_rounded, color: Color(0xFF1D9BF0)),
+                onPressed: _send,
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
 }
