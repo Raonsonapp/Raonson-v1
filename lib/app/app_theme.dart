@@ -8,16 +8,10 @@ class AppColors {
   static const Color card        = Color(0xFF1C1C1C); // card bg
   static const Color divider     = Color(0xFF262626); // divider
 
-  // Instagram story ring — ҳалқаи расмии Instagram (зард→норинҷӣ→гулобӣ→бунафш)
-  static const Color storyStart  = Color(0xFFFEDA75);
-  static const Color storyEnd    = Color(0xFFD62976);
-  static const List<Color> storyGradient = [
-    Color(0xFFFEDA75), // зард
-    Color(0xFFFA7E1E), // норинҷӣ
-    Color(0xFFD62976), // гулобӣ
-    Color(0xFF962FBF), // бунафш
-    Color(0xFF4F5BD5), // кабуд-бунафш
-  ];
+  // Ҳалқаи story — ранги бренди Raonson (нигоҳ дошта мешавад, тағйир намеёбад)
+  static const Color storyStart  = Color(0xFF00C6FF);
+  static const Color storyEnd    = Color(0xFF00E87A);
+  static const List<Color> storyGradient = [Color(0xFF00C6FF), Color(0xFF00E87A)];
 
   // Instagram primary blue (#0095F6) — тугмаҳо, линкҳо, фиристодан
   static const Color neonBlue    = Color(0xFF0095F6);
