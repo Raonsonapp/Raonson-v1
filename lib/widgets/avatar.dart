@@ -29,24 +29,23 @@ class Avatar extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: (showBorder || glowBorder)
             ? const LinearGradient(
-                colors: [AppColors.neonBlue, Color(0xFF0057FF)],
+                colors: AppColors.storyGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               )
             : null,
-        boxShadow: glowBorder
-            ? [
-                BoxShadow(
-                  color: AppColors.neonBlue.withOpacity(0.6),
-                  blurRadius: 10,
-                  spreadRadius: 1,
-                ),
-              ]
-            : null,
       ),
       child: Padding(
         padding: EdgeInsets.all(showBorder || glowBorder ? 2.5 : 0),
-        child: ClipOval(
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // Ҳалқаи сафед дар дохили градиент — айнан мисли Instagram
+            border: (showBorder || glowBorder)
+                ? Border.all(color: AppColors.bg, width: 2)
+                : null,
+          ),
+          child: ClipOval(
           child: imageUrl.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: imageUrl,
@@ -57,6 +56,7 @@ class Avatar extends StatelessWidget {
                   errorWidget: (_, __, ___) => _placeholder(),
                 )
               : _placeholder(),
+          ),
         ),
       ),
     );
