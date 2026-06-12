@@ -67,9 +67,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
+        centerTitle: false, // сарлавҳа ба чап — мисли Instagram
         title: const Text('Огоҳиномаҳо',
             style: TextStyle(color: Colors.white,
-                fontWeight: FontWeight.bold, fontSize: 18)),
+                fontWeight: FontWeight.bold, fontSize: 22)),
         actions: [
           if (_unreadCount > 0)
             TextButton(
@@ -84,20 +85,63 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               color: Colors.white30, strokeWidth: 2))
           : _notifications.isEmpty
               ? _buildEmpty()
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: Colors.white,
-                  backgroundColor: Colors.black,
-                  child: ListView.builder(
-                    itemCount: _notifications.length,
-                    itemBuilder: (_, i) => NotificationItem(
-                      notification: _notifications[i],
-                      onTap: () => _onTap(_notifications[i]),
-                    ),
-                  ),
-                ),
+              : _buildGroupedList(),
     );
   }
+
+  // ── Гурӯҳбандӣ аз рӯи вақт — мисли Instagram ──────────────────
+  Widget _buildGroupedList() {
+    final now = DateTime.now();
+    final yDay = now.subtract(const Duration(days: 1));
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+
+    final today = <NotificationModel>[];
+    final yesterday = <NotificationModel>[];
+    final week = <NotificationModel>[];
+    final earlier = <NotificationModel>[];
+    for (final n in _notifications) {
+      final d = n.createdAt.toLocal();
+      if (sameDay(d, now)) {
+        today.add(n);
+      } else if (sameDay(d, yDay)) {
+        yesterday.add(n);
+      } else if (now.difference(d).inDays < 7) {
+        week.add(n);
+      } else {
+        earlier.add(n);
+      }
+    }
+
+    final children = <Widget>[];
+    void section(String title, List<NotificationModel> items) {
+      if (items.isEmpty) return;
+      children.add(_sectionHeader(title));
+      children.addAll(items.map((n) =>
+          NotificationItem(notification: n, onTap: () => _onTap(n))));
+    }
+
+    section('Имрӯз', today);
+    section('Дирӯз', yesterday);
+    section('7 рӯзи охир', week);
+    section('Қаблтар', earlier);
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: Colors.white,
+      backgroundColor: Colors.black,
+      child: ListView(padding: const EdgeInsets.only(top: 4), children: children),
+    );
+  }
+
+  Widget _sectionHeader(String title) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+        child: Text(title,
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15)),
+      );
 
   Widget _buildEmpty() {
     return Center(
