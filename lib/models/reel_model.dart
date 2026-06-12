@@ -3,6 +3,7 @@ import 'user_model.dart';
 class ReelModel {
   final String    id;
   final String    videoUrl;
+  final String    videoUrlLow;   // ← сифати паст (480p) барои интернети суст
   final String    thumbnailUrl;  // ← нав
   final String    caption;
   final UserModel user;
@@ -22,6 +23,7 @@ class ReelModel {
   const ReelModel({
     required this.id,
     required this.videoUrl,
+    this.videoUrlLow   = '',
     this.thumbnailUrl  = '',
     required this.caption,
     required this.user,
@@ -43,6 +45,7 @@ class ReelModel {
   ReelModel copyWith({
     String?    id,
     String?    videoUrl,
+    String?    videoUrlLow,
     String?    thumbnailUrl,
     String?    caption,
     UserModel? user,
@@ -62,6 +65,7 @@ class ReelModel {
     return ReelModel(
       id:            id            ?? this.id,
       videoUrl:      videoUrl      ?? this.videoUrl,
+      videoUrlLow:   videoUrlLow   ?? this.videoUrlLow,
       thumbnailUrl:  thumbnailUrl  ?? this.thumbnailUrl,
       caption:       caption       ?? this.caption,
       user:          user          ?? this.user,
@@ -87,6 +91,7 @@ class ReelModel {
     return ReelModel(
       id:            (json['_id'] ?? json['id'] ?? '').toString(),
       videoUrl:      (json['videoUrl'] ?? json['video_url'] ?? '').toString(),
+      videoUrlLow:   (json['videoUrlLow'] ?? json['video_url_low'] ?? '').toString(),
       thumbnailUrl:  (json['thumbnailUrl'] ?? json['thumbnail'] ?? '').toString(),
       caption:       (json['caption'] ?? '').toString(),
       user: json['user'] != null
@@ -114,6 +119,7 @@ class ReelModel {
   Map<String, dynamic> toJson() => {
     '_id':          id,
     'videoUrl':     videoUrl,
+    'videoUrlLow':  videoUrlLow,
     'thumbnailUrl': thumbnailUrl,
     'caption':      caption,
     'likesCount':   likesCount,

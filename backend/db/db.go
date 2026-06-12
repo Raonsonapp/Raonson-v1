@@ -226,6 +226,8 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_reels_user ON reels(user_id);
 	CREATE INDEX IF NOT EXISTS idx_reels_created ON reels(created_at DESC);
+	-- Сифати паст (480p) барои интернети суст — пахши адаптивӣ.
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS video_url_low TEXT DEFAULT '';
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,

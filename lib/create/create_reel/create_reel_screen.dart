@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/api/api_client.dart';
+import '../../core/utils/media_compressor.dart';
+import '../upload/upload_manager.dart';
 import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 
@@ -50,32 +51,27 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       _busy     = true;
       _error    = null;
       _progress = 0.05;
-      _status   = 'Видео бор мешавад...';
+      _status   = 'Видео фишурда мешавад...';
     });
 
     try {
-      // ── 1. Upload ─────────────────────────────────────────────
-      final req = http.MultipartRequest(
-          'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
-        ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath(
-            'file', _file!.path,
-            contentType: MediaType('video', 'mp4')));
+      // ── 1. Compress (сифати баланд ~720p) + upload ────────────
+      final high = await MediaCompressor.compressVideo(_file!);
+      setState(() { _status = 'Видео бор мешавад...'; _progress = 0.35; });
+      final videoUrl = await UploadManager().uploadFile(high);
+      if (videoUrl.isEmpty) throw Exception('Сервер URL нафиристод');
 
-      final up    = await req.send().timeout(const Duration(minutes: 5));
-      final upStr = await up.stream.bytesToString();
-      setState(() => _progress = 0.75);
-
-      if (up.statusCode >= 400) {
-        throw Exception('Upload хато ${up.statusCode}: $upStr');
-      }
-
-      final upJson   = jsonDecode(upStr) as Map<String, dynamic>;
-      final videoUrl = (upJson['url'] ?? upJson['secure_url'] ?? '')
-          .toString().trim();
-      if (videoUrl.isEmpty) {
-        throw Exception('Сервер URL нафиристод: $upStr');
-      }
+      // ── 1b. Сифати ПАСТ (~480p) барои интернети суст — адаптивӣ ──
+      // best-effort: агар нашавад, танҳо сифати баланд мемонад.
+      String videoUrlLow = '';
+      try {
+        setState(() {
+          _status = 'Барои интернети суст омода мешавад...';
+          _progress = 0.65;
+        });
+        final low = await MediaCompressor.compressVideoLow(_file!);
+        if (low != null) videoUrlLow = await UploadManager().uploadFile(low);
+      } catch (_) {}
 
       // ── 2. POST /reels (БЕ slash!) ────────────────────────────
       setState(() { _status = 'Reel сохта мешавад...'; _progress = 0.9; });
@@ -88,6 +84,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         },
         body: jsonEncode({
           'videoUrl': videoUrl,
+          if (videoUrlLow.isNotEmpty) 'videoUrlLow': videoUrlLow,
           'caption' : _caption.text.trim(),
         }),
       ).timeout(const Duration(seconds: 30));
