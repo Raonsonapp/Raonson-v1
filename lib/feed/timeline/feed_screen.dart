@@ -92,26 +92,24 @@ class _FeedShellState extends State<_FeedShell> {
             floating: true,   // зуд намоён мешавад
             snap: true,       // яклухт пайдо мешавад
             pinned: false,    // scroll кунӣ пинҳон мешавад
-            titleSpacing: 16,
+            leading: IconButton(
+              icon: SvgPicture.asset('assets/icons/upload.svg',
+                width: 26, height: 26,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+              onPressed: () async {
+                final r = await Navigator.pushNamed(ctx, AppRoutes.create);
+                if (r == true && ctx.mounted) {
+                  ctx.read<FeedController>().refresh();
+                  widget.onCreatePost?.call();
+                }
+              },
+            ),
             title: const Text('Raonson', style: TextStyle(
-              fontSize: 32, fontWeight: FontWeight.w400, color: Colors.white,
+              fontSize: 30, fontWeight: FontWeight.w400, color: Colors.white,
               fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1,
             )),
-            centerTitle: false, // лого ба чап — мисли Instagram
+            centerTitle: true, // лого дар марказ — мисли скриншоти Instagram
             actions: [
-              // + сохтан (create)
-              IconButton(
-                icon: SvgPicture.asset('assets/icons/upload.svg',
-                  width: 26, height: 26,
-                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
-                onPressed: () async {
-                  final r = await Navigator.pushNamed(ctx, AppRoutes.create);
-                  if (r == true && ctx.mounted) {
-                    ctx.read<FeedController>().refresh();
-                    widget.onCreatePost?.call();
-                  }
-                },
-              ),
               IconButton(
                 icon: SvgPicture.asset('assets/icons/friends.svg',
                     width: 25, height: 25,
