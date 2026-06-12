@@ -133,7 +133,8 @@ class _ChatView extends StatelessWidget {
                   onPressed: () => Navigator.maybePop(context),
                 ),
                 Expanded(
-                  child: Center(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
                     child: GestureDetector(
                       onTap: () => showAccountSwitcher(context),
                       behavior: HitTestBehavior.opaque,
@@ -147,14 +148,14 @@ class _ChatView extends StatelessWidget {
                                   : 'Паёмҳо',
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 20,
+                                fontSize: 22,
                                 color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                               )),
                           ),
                           const SizedBox(width: 4),
                           const Icon(Icons.keyboard_arrow_down_rounded,
-                              color: Colors.white, size: 22),
+                              color: Colors.white, size: 24),
                         ],
                       ),
                     ),
