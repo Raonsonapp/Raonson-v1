@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../models/reel_model.dart';
+import '../../core/services/network_quality.dart';
 import 'reel_controls.dart';
 import 'reel_gestures.dart';
 
@@ -27,7 +28,8 @@ class _ReelPlayerState extends State<ReelPlayer>
   void initState() {
     super.initState();
     _videoController = VideoPlayerController.networkUrl(
-      Uri.parse(widget.reel.videoUrl),
+      Uri.parse(NetworkQuality.pick(
+          widget.reel.videoUrl, widget.reel.videoUrlLow)),
     )
       ..initialize().then((_) {
         _videoController

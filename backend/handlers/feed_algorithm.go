@@ -37,6 +37,18 @@ func GetSmartFeed(c *gin.Context) {
 	// Priority 2: Popular posts (likes > 5, last 7 days)
 	// Exclude: already seen (post_views table)
 	rows, err := db.Pool.Query(context.Background(), `
+		WITH paff AS (
+		  -- Завқи корбар: эҷодкороне, ки постҳояшонро лайк/сейв кардааст.
+		  SELECT creator_id, SUM(w)::int AS aff FROM (
+		    SELECT p2.user_id AS creator_id, 3 AS w
+		      FROM post_likes pl2 JOIN posts p2 ON p2.id=pl2.post_id
+		      WHERE pl2.user_id=$1
+		    UNION ALL
+		    SELECT p3.user_id, 5
+		      FROM post_saves ps3 JOIN posts p3 ON p3.id=ps3.post_id
+		      WHERE ps3.user_id=$1
+		  ) t GROUP BY creator_id
+		)
 		SELECT DISTINCT
 		  p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
 		  u.id, u.username, u.avatar, u.verified,
@@ -56,12 +68,14 @@ func GetSmartFeed(c *gin.Context) {
 		   + LEAST(50, p.likes_count)
 		   + LEAST(30, p.comments_count*2)
 		   + LEAST(40, COALESCE(p.interest_score,0))
+		   + LEAST(45, COALESCE(pa.aff,0) * 6)
 		   - CASE WHEN pv.post_id IS NOT NULL THEN 45 ELSE 0 END
 		  ) AS score
 		FROM posts p
 		JOIN users u ON u.id=p.user_id
 		LEFT JOIN follows     f  ON f.follower_id=$1 AND f.following_id=p.user_id
 		LEFT JOIN post_views  pv ON pv.post_id=p.id AND pv.user_id=$1
+		LEFT JOIN paff        pa ON pa.creator_id=p.user_id
 		WHERE
 		  u.banned = FALSE
 		  AND COALESCE(p.hidden,false) = FALSE

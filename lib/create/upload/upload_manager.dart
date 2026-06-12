@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 
@@ -34,11 +36,33 @@ class UploadManager {
 
   String get _token => ApiClient.instance.authToken ?? '';
 
+  bool _isImage(File f) =>
+      ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].contains(_ext(f));
+
+  // Расмро пеш аз бор кардан фишурда мекунад (ҳаҷм + трафик кам).
+  // Видео/аудио дар create-flow алоҳида фишурда мешавад.
+  Future<File> _maybeCompressImage(File file) async {
+    if (!_isImage(file)) return file;
+    try {
+      final dir = await getTemporaryDirectory();
+      final out =
+          '${dir.path}/cmp_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final result = await FlutterImageCompress.compressAndGetFile(
+        file.absolute.path, out,
+        quality: 72, minWidth: 1080, minHeight: 1080,
+        format: CompressFormat.jpeg,
+      );
+      if (result != null) return File(result.path);
+    } catch (_) {}
+    return file;
+  }
+
   // ── Upload file to R2 ─────────────────────────────────────────
-  Future<String> _uploadFile(File file) async {
+  Future<String> _uploadFile(File rawFile) async {
     final token = _token;
     if (token.isEmpty) throw Exception('Токен нест');
 
+    final file = await _maybeCompressImage(rawFile);
     final req = http.MultipartRequest(
         'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
       ..headers['Authorization'] = 'Bearer $token'

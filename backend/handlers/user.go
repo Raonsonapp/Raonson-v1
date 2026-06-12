@@ -99,7 +99,7 @@ func GetUserReels(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT r.id, r.video_url, r.caption,
+		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''), r.caption,
 		       COALESCE(r.views_count,0), COALESCE(r.likes_count,0),
 		       COALESCE(r.comments_count,0), r.created_at,
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
@@ -118,14 +118,14 @@ func GetUserReels(c *gin.Context) {
 
 	out := []gin.H{}
 	for rows.Next() {
-		var rid, vurl, cap, uid, uname, uavatar string
+		var rid, vurl, vurlLow, cap, uid, uname, uavatar string
 		var views, likes, comments int
 		var verified, liked, saved, hasStory bool
 		var createdAt interface{}
-		rows.Scan(&rid, &vurl, &cap, &views, &likes, &comments, &createdAt,
+		rows.Scan(&rid, &vurl, &vurlLow, &cap, &views, &likes, &comments, &createdAt,
 			&uid, &uname, &uavatar, &verified, &liked, &saved, &hasStory)
 		out = append(out, gin.H{
-			"_id": rid, "videoUrl": vurl, "caption": cap,
+			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow, "caption": cap,
 			"views": views, "viewsCount": views,
 			"likesCount": likes, "commentsCount": comments,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,

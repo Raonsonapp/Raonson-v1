@@ -35,9 +35,23 @@ func GetSmartReels(c *gin.Context) {
 	}
 
 	rows, err := db.Pool.Query(context.Background(), `
-		WITH scored AS (
+		WITH aff AS (
+		  -- Завқи корбар: эҷодкороне, ки реалҳояшонро лайк/сейв кардааст.
+		  -- like=3 балл, save=5 балл (save сигнали қавитар).
+		  SELECT creator_id, SUM(w)::int AS aff FROM (
+		    SELECT r2.user_id AS creator_id, 3 AS w
+		      FROM reel_likes rl2 JOIN reels r2 ON r2.id=rl2.reel_id
+		      WHERE rl2.user_id=$1
+		    UNION ALL
+		    SELECT r3.user_id, 5
+		      FROM reel_saves rs3 JOIN reels r3 ON r3.id=rs3.reel_id
+		      WHERE rs3.user_id=$1
+		  ) t GROUP BY creator_id
+		),
+		scored AS (
 		  SELECT
-		    r.id, r.video_url, r.caption, r.views_count,
+		    r.id, r.video_url, COALESCE(r.video_url_low,'') AS video_url_low,
+		    r.caption, r.views_count,
 		    r.likes_count, r.comments_count, r.created_at,
 		    u.id AS uid, u.username, u.avatar, u.verified,
 		    EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1) AS liked,
@@ -54,12 +68,15 @@ func GetSmartReels(c *gin.Context) {
 		      + LEAST(10, r.comments_count)
 		      -- 5. Trending: views > 100 = +15
 		      + CASE WHEN r.views_count > 100 THEN 15 ELSE 0 END
-		      -- 6. Тасодуфӣ барои variety (0-10)
-		      + (RANDOM() * 10)
+		      -- 6. Завқ (taste): эҷодкори маҳбуб — то +50
+		      + LEAST(50, COALESCE(af.aff,0) * 6)
+		      -- 7. Тасодуфӣ барои variety (0-8)
+		      + (RANDOM() * 8)
 		    ) AS score
 		  FROM reels r
 		  JOIN users u ON u.id=r.user_id
 		  LEFT JOIN follows f ON f.follower_id=$1 AND f.following_id=r.user_id
+		  LEFT JOIN aff af ON af.creator_id = u.id
 		  WHERE
 		    u.banned = FALSE
 		    AND r.created_at > NOW() - INTERVAL '30 days'
@@ -81,7 +98,7 @@ func GetSmartReels(c *gin.Context) {
 		      WHERE rni.reel_id=r.id AND rni.user_id=$1
 		    )
 		)
-		SELECT id, video_url, caption, views_count, likes_count,
+		SELECT id, video_url, video_url_low, caption, views_count, likes_count,
 		       comments_count, created_at, uid, username, avatar,
 		       verified, liked, saved, score
 		FROM scored
@@ -98,20 +115,20 @@ func GetSmartReels(c *gin.Context) {
 
 	reels := []gin.H{}
 	for rows.Next() {
-		var id, videoURL, cap, uid, uname, uavatar string
+		var id, videoURL, videoURLLow, cap, uid, uname, uavatar string
 		var views, likes, comms int
 		var verified, liked, saved bool
 		var createdAt interface{}
 		var score float64
 
-		if err := rows.Scan(&id, &videoURL, &cap, &views, &likes,
+		if err := rows.Scan(&id, &videoURL, &videoURLLow, &cap, &views, &likes,
 			&comms, &createdAt, &uid, &uname, &uavatar,
 			&verified, &liked, &saved, &score); err != nil {
 			continue
 		}
 		reels = append(reels, gin.H{
 			"id": id, "_id": id,
-			"videoUrl": videoURL, "caption": cap,
+			"videoUrl": videoURL, "videoUrlLow": videoURLLow, "caption": cap,
 			"viewsCount": views, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
 			"isLiked": liked, "isSaved": saved,

@@ -54,6 +54,21 @@ class MediaCompressor {
     return compSize < origSize ? info.file! : file;
   }
 
+  // ── Видеои сифати ПАСТ (480p) — барои интернети суст (адаптивӣ) ──
+  // Бармегардонад null агар компресс нашавад (вақте видеоУрли паст лозим нест).
+  static Future<File?> compressVideoLow(File file) async {
+    try {
+      final info = await VideoCompress.compressVideo(
+        file.path,
+        quality:      VideoQuality.Res640x480Quality, // ~480p
+        deleteOrigin: false,
+        includeAudio: true,
+        frameRate:    30,
+      );
+      return info?.file;
+    } catch (_) { return null; }
+  }
+
   // ── Автоматӣ — расм ё видео тафриқ мекунад ────────────────────
   static Future<File> compress(File file) async {
     final ext = p.extension(file.path).toLowerCase();

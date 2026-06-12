@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/network_quality.dart';
 import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
 import '../reels_repository.dart';
@@ -173,7 +174,8 @@ class _ReelsViewState extends State<_ReelsView> {
     for (int j = current + 1; j <= current + 2; j++) {
       if (j >= vm.reels.length) break;
       if (_preloaded.containsKey(j)) continue;
-      final url = vm.reels[j].videoUrl;
+      final url = NetworkQuality.pick(
+          vm.reels[j].videoUrl, vm.reels[j].videoUrlLow);
       if (url.isEmpty) continue;
       final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       _preloaded[j] = ctrl;
@@ -418,7 +420,8 @@ class _ReelItemState extends State<_ReelItem> {
       _addBufferListener();
       return;
     }
-    _ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.reel.videoUrl))
+    _ctrl = VideoPlayerController.networkUrl(Uri.parse(
+        NetworkQuality.pick(widget.reel.videoUrl, widget.reel.videoUrlLow)))
       ..initialize().then((_) {
         if (!mounted) return;
         _ctrl!.setLooping(true);
