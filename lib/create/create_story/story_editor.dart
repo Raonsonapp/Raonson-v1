@@ -381,7 +381,7 @@ class _StoryEditorState extends State<StoryEditor> {
           SafeArea(child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(children: [
-              IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
+              IconButton(icon: const Icon(Icons.close, color: Colors.white, size: 28),
                 onPressed: widget.isUploading ? null : widget.onCancel),
               const Spacer(),
               if (_tool == _Tool.draw && _drawPoints.isNotEmpty)
@@ -391,30 +391,8 @@ class _StoryEditorState extends State<StoryEditor> {
                     while (i > 0 && !_drawPoints[i].isStart) { i--; }
                     _drawPoints.removeRange(i, _drawPoints.length);
                   })),
-              // Нашр кун
-              TextButton(
-                onPressed: widget.isUploading ? null : _onPublish,
-                style: TextButton.styleFrom(backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                child: widget.isUploading
-                    ? const SizedBox(width: 18, height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : const Text('Нашр кун',
-                        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
-              const SizedBox(width: 4),
-              // «Ваша история» + «Близкие друзья» — мисли Instagram
-              TextButton(
-                onPressed: widget.isUploading ? null : _onPublish,
-                style: TextButton.styleFrom(backgroundColor: const Color(0xFF1A1A1A),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Colors.white24)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.star, color: Color(0xFF4AC959), size: 16),
-                  SizedBox(width: 4),
-                  Text('Наздикон', style: TextStyle(color: Colors.white, fontSize: 12)),
-                ])),
+              IconButton(icon: const Icon(Icons.download_rounded, color: Colors.white, size: 26),
+                onPressed: () {}),
             ]))),
 
           // ── RIGHT SIDEBAR TOOLBAR (Instagram style) ────────
@@ -446,22 +424,58 @@ class _StoryEditorState extends State<StoryEditor> {
                 small: true, onTap: () {}),
             ])),
 
-          // ── BOTTOM: caption placeholder ──────────────────────
+          // ── BOTTOM: тугмаҳои нашр (мисли Instagram — поён) ────
           Positioned(bottom: 0, left: 0, right: 0,
             child: SafeArea(child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 80, 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black45,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white24)),
-                child: const Row(children: [
-                  Icon(Icons.text_fields, color: Colors.white38, size: 16),
-                  SizedBox(width: 8),
-                  Text('Зернавис илова кунед...',
-                      style: TextStyle(color: Colors.white38, fontSize: 13)),
-                ]))))),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: Row(children: [
+                // «Сторис шумо» — нашри оддӣ
+                Expanded(child: GestureDetector(
+                  onTap: widget.isUploading ? null : _onPublish,
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF262626),
+                      borderRadius: BorderRadius.circular(24)),
+                    child: const Row(mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_circle, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text('Сторис шумо',
+                          style: TextStyle(color: Colors.white,
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      ])))),
+                const SizedBox(width: 10),
+                // «Наздикон» — close friends
+                GestureDetector(
+                  onTap: widget.isUploading ? null : _onPublish,
+                  child: Container(
+                    height: 48, padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF262626),
+                      borderRadius: BorderRadius.circular(24)),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.star, color: Color(0xFF4AC959), size: 18),
+                      SizedBox(width: 6),
+                      Text('Наздикон',
+                        style: TextStyle(color: Colors.white,
+                            fontWeight: FontWeight.w600, fontSize: 14)),
+                    ]))),
+                const SizedBox(width: 10),
+                // Send → (нашр)
+                GestureDetector(
+                  onTap: widget.isUploading ? null : _onPublish,
+                  child: Container(
+                    width: 48, height: 48,
+                    decoration: const BoxDecoration(
+                      color: Colors.white, shape: BoxShape.circle),
+                    child: widget.isUploading
+                        ? const Padding(padding: EdgeInsets.all(14),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.black))
+                        : const Icon(Icons.arrow_forward_rounded,
+                            color: Colors.black, size: 24))),
+              ])))),
 
           // ── Upload overlay ──────────────────────
           if (widget.isUploading)
