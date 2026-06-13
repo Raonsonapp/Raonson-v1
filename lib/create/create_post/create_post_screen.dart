@@ -129,7 +129,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       {String musicTitle = '',
       String musicArtist = '',
       String location = '',
-      List<String> taggedUsers = const []}) {
+      List<String> taggedUsers = const [],
+      List<String> collaborators = const []}) {
     PostUploadService.instance.publishPost(
       file: capturedFile,
       isVideo: _isVideo,
@@ -138,6 +139,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       musicArtist: musicArtist,
       location: location,
       taggedUsers: taggedUsers,
+      collaborators: collaborators,
     );
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -162,7 +164,7 @@ class _PostEditor extends StatefulWidget {
   final File media; final bool isVideo, isUploading;
   final void Function(File, String,
       {String musicTitle, String musicArtist, String location,
-       List<String> taggedUsers}) onPublish;
+       List<String> taggedUsers, List<String> collaborators}) onPublish;
   final VoidCallback onCancel; final String? errorMessage;
   const _PostEditor({required this.media, required this.isVideo,
     required this.isUploading, required this.onPublish,
@@ -190,6 +192,7 @@ class _PostEditorState extends State<_PostEditor> {
 
   _MusicTrack? _selectedTrack;
   String _location = '';
+  final List<String> _collaborators = [];
   VideoPlayerController? _videoCtrl;
   bool _videoReady = false;
   bool _showCaption= false;
@@ -242,7 +245,8 @@ class _PostEditorState extends State<_PostEditor> {
     final ma = _selectedTrack?.artist ?? '';
     if (widget.isVideo) {
       widget.onPublish(widget.media, caption,
-          musicTitle: mt, musicArtist: ma, location: _location, taggedUsers: tagged);
+          musicTitle: mt, musicArtist: ma, location: _location,
+          taggedUsers: tagged, collaborators: _collaborators);
     } else {
       // Агар ягон overlay (матн/стикер/зикр/расм) НЕСТ → расми аслиро мегузорем,
       // то формат/нисбати тарафҳо нигоҳ дошта шавад (бе хатти ранга дар боло/поён).
@@ -250,8 +254,68 @@ class _PostEditorState extends State<_PostEditor> {
           _mentions.isNotEmpty || _drawPoints.isNotEmpty;
       final fileToPost = hasOverlays ? await _captureCanvas() : widget.media;
       widget.onPublish(fileToPost, caption,
-          musicTitle: mt, musicArtist: ma, location: _location, taggedUsers: tagged);
+          musicTitle: mt, musicArtist: ma, location: _location,
+          taggedUsers: tagged, collaborators: _collaborators);
     }
+  }
+
+  // ── Соавтор (2 user 1 публикатсия) — мисли Instagram ────────
+  void _showCollaboratorDialog() {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(builder: (ctx, setDlg) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.group_add_rounded, color: Color(0xFF0095F6), size: 20),
+          SizedBox(width: 8),
+          Text('Соавтор', style: TextStyle(color: Colors.white)),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: ctrl, autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: '@номи корбар',
+              hintStyle: TextStyle(color: Colors.white38),
+              enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white24)),
+              focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF0095F6))),
+            ),
+            onSubmitted: (_) {
+              final u = ctrl.text.replaceAll('@', '').trim();
+              if (u.isNotEmpty && !_collaborators.contains(u)) {
+                setDlg(() => _collaborators.add(u));
+                setState(() {});
+              }
+              ctrl.clear();
+            },
+          ),
+          if (_collaborators.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 6, runSpacing: 6, children: _collaborators
+                .map((u) => Chip(
+                      backgroundColor: const Color(0xFF2A2A2C),
+                      label: Text('@$u',
+                          style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white54),
+                      onDeleted: () {
+                        setDlg(() => _collaborators.remove(u));
+                        setState(() {});
+                      },
+                    ))
+                .toList()),
+          ],
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context),
+              child: const Text('Тайёр',
+                  style: TextStyle(color: Color(0xFF0095F6), fontWeight: FontWeight.bold))),
+        ],
+      )),
+    );
   }
 
   // ── Ҷойгиршавӣ (геолокатсия) — мисли Instagram ──────────────
@@ -553,6 +617,9 @@ class _PostEditorState extends State<_PostEditor> {
                   onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
                 _ToolBtn(icon: Icons.alternate_email,     label: 'Зикр',
                   onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
+                _ToolBtn(icon: Icons.group_add_outlined,  label: 'Соавтор',
+                  isActive: _collaborators.isNotEmpty,
+                  onTap: () { setState(() => _tool = _Tool.none); _showCollaboratorDialog(); }),
                 _ToolBtn(icon: Icons.location_on_outlined, label: 'Ҷой',
                   isActive: _location.isNotEmpty,
                   onTap: () { setState(() => _tool = _Tool.none); _showLocationDialog(); }),

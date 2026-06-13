@@ -72,8 +72,12 @@ class _PostCardState extends State<PostCard>
   bool get _isOwner {
     final myId   = UserSession.userId?.trim() ?? '';
     final postId = widget.post.user.id.trim();
-    if (myId.isEmpty || postId.isEmpty) return false;
-    return myId == postId;
+    if (myId.isNotEmpty && postId.isNotEmpty && myId == postId) return true;
+    // Fallback аз рӯи username — то пости худи корбар ҳамеша «мои» ҳисоб шавад.
+    final myName   = (UserSession.username ?? '').trim().toLowerCase();
+    final postName = widget.post.user.username.trim().toLowerCase();
+    if (myName.isNotEmpty && postName.isNotEmpty && myName == postName) return true;
+    return false;
   }
 
 
@@ -827,14 +831,27 @@ class _PostCardState extends State<PostCard>
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(children: [
-                GestureDetector(
+                Flexible(child: GestureDetector(
                   onTap: () => Navigator.pushNamed(
                       context, '/profile', arguments: post.user.id),
                   child: Text(post.user.username,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w600,
-                        fontSize: 14, color: Colors.white))),
+                        fontSize: 14, color: Colors.white)))),
                 if (post.user.isVerified) ...[ const SizedBox(width: 4),
                   const VerifiedBadge(size: 15) ],
+                // Соавтор (2 user 1 публикатсия) — мисли Instagram
+                if (post.collaborators.isNotEmpty) ...[
+                  const Text(' ва ',
+                      style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Flexible(child: GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/profile-by-username',
+                        arguments: post.collaborators.first),
+                    child: Text(post.collaborators.first,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600,
+                            fontSize: 14, color: Colors.white)))),
+                ],
               ]),
               const SizedBox(height: 2),
               // Локация — агар бошад

@@ -124,7 +124,14 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   StoryModel get _current => widget.stories[_idx];
   bool get _isVideo  => _current.mediaType == 'video';
-  bool get _isOwner  => UserSession.userId == _current.user.id;
+  bool get _isOwner {
+    final myId = (UserSession.userId ?? '').trim();
+    final sid  = _current.user.id.trim();
+    if (myId.isNotEmpty && sid.isNotEmpty && myId == sid) return true;
+    final myName = (UserSession.username ?? '').trim().toLowerCase();
+    final sName  = _current.user.username.trim().toLowerCase();
+    return myName.isNotEmpty && sName.isNotEmpty && myName == sName;
+  }
 
   static const List<String> _emojis = ['❤️', '🔥', '😍', '😂', '😮', '😢', '👏', '🙏'];
   static const Duration _imageDuration = Duration(seconds: 6);
