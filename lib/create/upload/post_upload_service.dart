@@ -36,6 +36,7 @@ class PostUploadService {
     String musicArtist = '',
     String location = '',
     List<String> taggedUsers = const [],
+    List<String> collaborators = const [],
   }) async {
     state.value = UploadState(thumb: file, progress: 0.08);
     try {
@@ -60,6 +61,7 @@ class PostUploadService {
         'musicArtist': musicArtist,
         'location': location,
         'taggedUsers': taggedUsers,
+        'collaborators': collaborators,
       });
       if (res.statusCode >= 400) {
         throw Exception(_msg(res.body, res.statusCode));

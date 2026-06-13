@@ -18,12 +18,13 @@ import (
 func CreatePost(c *gin.Context) {
 	myID := mw.UID(c)
 	var b struct {
-		Caption     string                   `json:"caption"`
-		Media       []map[string]interface{} `json:"media"`
-		MusicTitle  string                   `json:"musicTitle"`
-		MusicArtist string                   `json:"musicArtist"`
-		Location    string                   `json:"location"`
-		TaggedUsers []string                 `json:"taggedUsers"`
+		Caption       string                   `json:"caption"`
+		Media         []map[string]interface{} `json:"media"`
+		MusicTitle    string                   `json:"musicTitle"`
+		MusicArtist   string                   `json:"musicArtist"`
+		Location      string                   `json:"location"`
+		TaggedUsers   []string                 `json:"taggedUsers"`
+		Collaborators []string                 `json:"collaborators"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || len(b.Media) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "At least one media item required"})
@@ -31,6 +32,9 @@ func CreatePost(c *gin.Context) {
 	}
 	if b.TaggedUsers == nil {
 		b.TaggedUsers = []string{}
+	}
+	if b.Collaborators == nil {
+		b.Collaborators = []string{}
 	}
 
 	tx, err := db.Pool.Begin(context.Background())
@@ -42,9 +46,9 @@ func CreatePost(c *gin.Context) {
 
 	var postID string
 	if err = tx.QueryRow(context.Background(),
-		`INSERT INTO posts(user_id,caption,music_title,music_artist,location,tagged_users)
-		 VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
-		myID, b.Caption, b.MusicTitle, b.MusicArtist, b.Location, b.TaggedUsers).Scan(&postID); err != nil {
+		`INSERT INTO posts(user_id,caption,music_title,music_artist,location,tagged_users,collaborators)
+		 VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+		myID, b.Caption, b.MusicTitle, b.MusicArtist, b.Location, b.TaggedUsers, b.Collaborators).Scan(&postID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
 		return
 	}
@@ -85,6 +89,7 @@ wsPost := gin.H{
 	"musicArtist":   b.MusicArtist,
 	"location":      b.Location,
 	"taggedUsers":   b.TaggedUsers,
+	"collaborators": b.Collaborators,
 	"createdAt":     time.Now().Format(time.RFC3339),
 	"user": gin.H{
 		"_id":      myID,

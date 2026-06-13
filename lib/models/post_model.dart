@@ -13,6 +13,7 @@ class PostModel {
   final DateTime createdAt;
   final String       location;
   final List<String> taggedUsers;
+  final List<String> collaborators;
   final String       musicTitle;   // ✅ НАВ
   final String       musicArtist;  // ✅ НАВ
 
@@ -29,6 +30,7 @@ class PostModel {
     this.isPinned    = false,
     this.location    = '',
     this.taggedUsers = const [],
+    this.collaborators = const [],
     this.musicTitle  = '',
     this.musicArtist = '',
   });
@@ -47,6 +49,7 @@ class PostModel {
     int? likesCount, int? commentsCount,
     bool? liked, bool? saved, bool? isPinned,
     DateTime? createdAt, String? location, List<String>? taggedUsers,
+    List<String>? collaborators,
     String? musicTitle, String? musicArtist,
   }) => PostModel(
     id:            id            ?? this.id,
@@ -61,6 +64,7 @@ class PostModel {
     createdAt:     createdAt     ?? this.createdAt,
     location:      location      ?? this.location,
     taggedUsers:   taggedUsers   ?? this.taggedUsers,
+    collaborators: collaborators ?? this.collaborators,
     musicTitle:    musicTitle    ?? this.musicTitle,
     musicArtist:   musicArtist   ?? this.musicArtist,
   );
@@ -94,6 +98,7 @@ class PostModel {
       createdAt:     DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       location:      (json['location']    ?? '').toString(),
       taggedUsers:   (json['taggedUsers'] as List? ?? []).map((e)=>e.toString()).toList(),
+      collaborators: (json['collaborators'] as List? ?? []).map((e)=>e.toString()).toList(),
       musicTitle:    (json['musicTitle']  ?? json['music']?['title'] ?? '').toString(),
       musicArtist:   (json['musicArtist'] ?? json['music']?['artist'] ?? '').toString(),
     );
@@ -105,6 +110,7 @@ class PostModel {
     'liked': liked, 'saved': saved, 'isPinned': isPinned,
     'createdAt': createdAt.toIso8601String(),
     'location': location, 'taggedUsers': taggedUsers,
+    'collaborators': collaborators,
     'user': {'_id':user.id,'username':user.username,'avatar':user.avatar,
       'verified':user.verified,'isPrivate':user.isPrivate,
       'postsCount':user.postsCount,'followersCount':user.followersCount,

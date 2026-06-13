@@ -26,10 +26,11 @@ func scanFeedPosts(rows interface {
 		var createdAt, media interface{}
 		var musicTitle, musicArtist, location string
 		var tagged []string
+		var collaborators []string
 		var hasStory bool
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
-			&musicTitle, &musicArtist, &location, &tagged, &hasStory); err != nil {
+			&musicTitle, &musicArtist, &location, &tagged, &collaborators, &hasStory); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
@@ -38,6 +39,7 @@ func scanFeedPosts(rows interface {
 			"liked": liked, "saved": saved, "isPinned": pinned,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
 			"location": location, "taggedUsers": tagged,
+			"collaborators": collaborators,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 				"verified": verified, "hasStory": hasStory},
 		})
@@ -57,6 +59,7 @@ const feedPostCols = `
 	       COALESCE(p.is_pinned,false),
 	       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
+	       COALESCE(p.collaborators,'{}'),
 	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW())
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
