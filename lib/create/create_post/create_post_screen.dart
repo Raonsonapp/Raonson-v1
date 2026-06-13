@@ -244,8 +244,12 @@ class _PostEditorState extends State<_PostEditor> {
       widget.onPublish(widget.media, caption,
           musicTitle: mt, musicArtist: ma, location: _location, taggedUsers: tagged);
     } else {
-      final captured = await _captureCanvas();
-      widget.onPublish(captured, caption,
+      // Агар ягон overlay (матн/стикер/зикр/расм) НЕСТ → расми аслиро мегузорем,
+      // то формат/нисбати тарафҳо нигоҳ дошта шавад (бе хатти ранга дар боло/поён).
+      final hasOverlays = _texts.isNotEmpty || _stickers.isNotEmpty ||
+          _mentions.isNotEmpty || _drawPoints.isNotEmpty;
+      final fileToPost = hasOverlays ? await _captureCanvas() : widget.media;
+      widget.onPublish(fileToPost, caption,
           musicTitle: mt, musicArtist: ma, location: _location, taggedUsers: tagged);
     }
   }
