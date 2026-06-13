@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'create_post/create_post_screen.dart';
 import 'create_reel/create_reel_screen.dart';
@@ -76,8 +77,27 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
 
   Future<void> _onPick(AssetEntity a) async {
     final file = await a.file;
-    if (file == null || !mounted) return;
-    final isVideo = a.type == AssetType.video;
+    if (file == null) return;
+    _openEditor(file, a.type == AssetType.video);
+  }
+
+  // Камера — гирифтани акс/видеои нав (мисли Instagram)
+  Future<void> _openCamera() async {
+    final picker = ImagePicker();
+    XFile? xf;
+    if (_mode == CreateMode.reel) {
+      xf = await picker.pickVideo(source: ImageSource.camera);
+    } else {
+      xf = await picker.pickImage(
+          source: ImageSource.camera,
+          maxWidth: 1600, maxHeight: 1600, imageQuality: 90);
+    }
+    if (xf == null) return;
+    _openEditor(File(xf.path), _mode == CreateMode.reel);
+  }
+
+  Future<void> _openEditor(File file, bool isVideo) async {
+    if (!mounted) return;
     Widget editor;
     switch (_mode) {
       case CreateMode.post:
@@ -155,9 +175,12 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
       padding: EdgeInsets.zero,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4, mainAxisSpacing: 2, crossAxisSpacing: 2),
-      itemCount: _assets.length,
-      itemBuilder: (_, i) =>
-          _AssetTile(asset: _assets[i], onTap: () => _onPick(_assets[i])),
+      itemCount: _assets.length + 1,
+      itemBuilder: (_, i) {
+        if (i == 0) return _CameraTile(onTap: _openCamera);
+        final a = _assets[i - 1];
+        return _AssetTile(asset: a, onTap: () => _onPick(a));
+      },
     );
   }
 
@@ -231,5 +254,30 @@ class _AssetTile extends StatelessWidget {
     final m = d.inMinutes;
     final s = (d.inSeconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
+  }
+}
+
+// Камераи нав — катаки якуми тӯр (мисли Instagram)
+class _CameraTile extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CameraTile({required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        color: const Color(0xFF1C1C1C),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.photo_camera_rounded, color: Colors.white, size: 26),
+            SizedBox(height: 4),
+            Text('Камера',
+                style: TextStyle(color: Colors.white70, fontSize: 11)),
+          ],
+        ),
+      ),
+    );
   }
 }
