@@ -10,6 +10,7 @@ import '../chat/inbox/chat_list_screen.dart';
 import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 import '../create/create_post/create_post_screen.dart';
+import '../create/gallery_picker_screen.dart';
 import '../stories/story_group_viewer.dart';
 import '../models/story_model.dart';
 import '../create/create_story/create_story_screen.dart';
@@ -39,7 +40,7 @@ class AppController {
       case AppRoutes.home:
         return _page(const BottomNavScaffold());
       case '/create-reel':
-        return _page(const CreateReelScreen());
+        return _page(const GalleryPickerScreen(initialMode: CreateMode.reel));
       case AppRoutes.reels:
         return _page(const ReelsScreen());
       case AppRoutes.chat:
@@ -60,7 +61,7 @@ class AppController {
         return _page(ProfileScreen(userId: uname, byUsername: true));
 
       case AppRoutes.create:
-        return _page(const CreatePostScreen());
+        return _page(const GalleryPickerScreen());
       case AppRoutes.notifications:
         return _page(const NotificationsScreen());
 
@@ -94,7 +95,7 @@ class AppController {
         );
 
       case '/create-story':
-        return _page(const CreateStoryScreen());
+        return _page(const GalleryPickerScreen(initialMode: CreateMode.story));
 
       // ── Password recovery ──
       case AppRoutes.forgotPassword:

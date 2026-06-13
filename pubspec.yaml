@@ -25,6 +25,7 @@ dependencies:
 
   video_player: ^2.8.6
   image_picker: ^1.0.7
+  photo_manager: ^3.6.4
   flutter_svg: ^2.0.9
   cached_network_image: ^3.3.1
 
