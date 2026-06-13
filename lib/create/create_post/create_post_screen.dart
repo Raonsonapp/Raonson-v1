@@ -125,6 +125,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _publish(File capturedFile, String caption,
       {String musicTitle = '',
       String musicArtist = '',
+      String location = '',
       List<String> taggedUsers = const []}) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
@@ -156,6 +157,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image', 'aspectRatio': ''}],
           'musicTitle' : musicTitle,
           'musicArtist': musicArtist,
+          'location'   : location,
           'taggedUsers': taggedUsers,
         }),
       ).timeout(const Duration(seconds: 30));
@@ -186,7 +188,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 class _PostEditor extends StatefulWidget {
   final File media; final bool isVideo, isUploading;
   final void Function(File, String,
-      {String musicTitle, String musicArtist, List<String> taggedUsers}) onPublish;
+      {String musicTitle, String musicArtist, String location,
+       List<String> taggedUsers}) onPublish;
   final VoidCallback onCancel; final String? errorMessage;
   const _PostEditor({required this.media, required this.isVideo,
     required this.isUploading, required this.onPublish,
@@ -213,6 +216,7 @@ class _PostEditorState extends State<_PostEditor> {
   Color  _bgColor    = Colors.black;
 
   _MusicTrack? _selectedTrack;
+  String _location = '';
   VideoPlayerController? _videoCtrl;
   bool _videoReady = false;
   bool _showCaption= false;
@@ -265,12 +269,52 @@ class _PostEditorState extends State<_PostEditor> {
     final ma = _selectedTrack?.artist ?? '';
     if (widget.isVideo) {
       widget.onPublish(widget.media, caption,
-          musicTitle: mt, musicArtist: ma, taggedUsers: tagged);
+          musicTitle: mt, musicArtist: ma, location: _location, taggedUsers: tagged);
     } else {
       final captured = await _captureCanvas();
       widget.onPublish(captured, caption,
-          musicTitle: mt, musicArtist: ma, taggedUsers: tagged);
+          musicTitle: mt, musicArtist: ma, location: _location, taggedUsers: tagged);
     }
+  }
+
+  // ── Ҷойгиршавӣ (геолокатсия) — мисли Instagram ──────────────
+  void _showLocationDialog() {
+    final ctrl = TextEditingController(text: _location);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.location_on, color: Color(0xFFFF3040), size: 20),
+          SizedBox(width: 8),
+          Text('Ҷойгиршавӣ', style: TextStyle(color: Colors.white)),
+        ]),
+        content: TextField(
+          controller: ctrl, autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Ҷойро нависед...',
+            hintStyle: TextStyle(color: Colors.white38),
+            enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white24)),
+            focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Color(0xFF0095F6))),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context),
+              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+          TextButton(
+              onPressed: () {
+                setState(() => _location = ctrl.text.trim());
+                Navigator.pop(context);
+              },
+              child: const Text('Илова',
+                  style: TextStyle(color: Color(0xFF0095F6), fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
   }
 
   void _showTextDialog() {
@@ -532,18 +576,32 @@ class _PostEditorState extends State<_PostEditor> {
                   onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
                 _ToolBtn(icon: Icons.alternate_email,     label: 'Зикр',
                   onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
+                _ToolBtn(icon: Icons.location_on_outlined, label: 'Ҷой',
+                  isActive: _location.isNotEmpty,
+                  onTap: () { setState(() => _tool = _Tool.none); _showLocationDialog(); }),
                 _ToolBtn(icon: Icons.edit_note,           label: 'Тавсиф',
                   isActive: _showCaption,
                   onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),
               ])))),
 
-          // ── Upload overlay ──────────────────────
+          // ── Upload overlay (загрузка кабуд+сабз — ранги бренд) ──
           if (widget.isUploading)
             Container(color: Colors.black54,
-              child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                SizedBox(height: 16),
-                Text('Бор мешавад...', style: TextStyle(color: Colors.white70, fontSize: 15)),
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                ShaderMask(
+                  shaderCallback: (rect) => const LinearGradient(
+                    colors: [Color(0xFF00C6FF), Color(0xFF00E87A)],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ).createShader(rect),
+                  child: const SizedBox(
+                    width: 44, height: 44,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 3),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('Бор мешавад...',
+                    style: TextStyle(color: Colors.white70, fontSize: 15)),
               ]))),
         ]),
       ),
