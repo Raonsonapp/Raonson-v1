@@ -5,6 +5,7 @@ import '../../core/services/socket_service.dart';
 import '../feed_repository.dart';
 import '../feed_exceptions.dart';
 import 'feed_state.dart';
+import '../../create/upload/post_upload_service.dart';
 
 class FeedController extends ChangeNotifier {
   final FeedRepository _repository;
@@ -28,6 +29,8 @@ class FeedController extends ChangeNotifier {
   FeedController(this._repository) {
     _subscribeSocket();
     _startPolling();
+    // Баъди загрузкаи фонии пост — феедро нав мекунад.
+    PostUploadService.instance.onPublished = () => onPostUploaded();
   }
 
   void _subscribeSocket() {
