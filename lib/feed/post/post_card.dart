@@ -72,8 +72,12 @@ class _PostCardState extends State<PostCard>
   bool get _isOwner {
     final myId   = UserSession.userId?.trim() ?? '';
     final postId = widget.post.user.id.trim();
-    if (myId.isEmpty || postId.isEmpty) return false;
-    return myId == postId;
+    if (myId.isNotEmpty && postId.isNotEmpty && myId == postId) return true;
+    // Fallback аз рӯи username — то пости худи корбар ҳамеша «мои» ҳисоб шавад.
+    final myName   = (UserSession.username ?? '').trim().toLowerCase();
+    final postName = widget.post.user.username.trim().toLowerCase();
+    if (myName.isNotEmpty && postName.isNotEmpty && myName == postName) return true;
+    return false;
   }
 
 
