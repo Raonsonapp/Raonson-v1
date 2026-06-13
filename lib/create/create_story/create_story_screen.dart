@@ -9,7 +9,9 @@ import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 
 class CreateStoryScreen extends StatefulWidget {
-  const CreateStoryScreen({super.key});
+  final File? initialFile;
+  final bool  initialIsVideo;
+  const CreateStoryScreen({super.key, this.initialFile, this.initialIsVideo = false});
   @override
   State<CreateStoryScreen> createState() => _CreateStoryScreenState();
 }
@@ -23,8 +25,13 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Рост ба Галереяи телефон — мисли Instagram
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pickFromGallery());
+    if (widget.initialFile != null) {
+      _file = widget.initialFile;
+      _isVideo = widget.initialIsVideo;
+    } else {
+      // Рост ба Галереяи телефон — мисли Instagram
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pickFromGallery());
+    }
   }
 
   // ── Рост ба Галерея — бе савол, мисли Instagram ──────────────

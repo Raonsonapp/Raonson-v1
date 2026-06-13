@@ -45,7 +45,9 @@ class _MusicTrack {
 // CREATE POST SCREEN
 // ─────────────────────────────────────────────
 class CreatePostScreen extends StatefulWidget {
-  const CreatePostScreen({super.key});
+  final File? initialFile;
+  final bool  initialIsVideo;
+  const CreatePostScreen({super.key, this.initialFile, this.initialIsVideo = false});
   @override State<CreatePostScreen> createState() => _CreatePostScreenState();
 }
 
@@ -58,7 +60,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pickFromGallery());
+    if (widget.initialFile != null) {
+      _file = widget.initialFile;
+      _isVideo = widget.initialIsVideo;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pickFromGallery());
+    }
   }
 
   Future<void> _pickFromGallery() async {

@@ -10,7 +10,8 @@ import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 
 class CreateReelScreen extends StatefulWidget {
-  const CreateReelScreen({super.key});
+  final File? initialFile;
+  const CreateReelScreen({super.key, this.initialFile});
   @override
   State<CreateReelScreen> createState() => _CreateReelScreenState();
 }
@@ -26,7 +27,11 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pick());
+    if (widget.initialFile != null) {
+      _file = widget.initialFile;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pick());
+    }
   }
 
   @override
