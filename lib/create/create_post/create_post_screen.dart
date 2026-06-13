@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
+import '../upload/post_upload_service.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -122,51 +123,23 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() { _file = File(xf!.path); _isVideo = isVideo; _error = null; });
   }
 
-  Future<void> _publish(File capturedFile, String caption,
+  // Загрузкаи фонӣ: корбар фавран ба Home бармегардад, бор кардан дар
+  // фон давом мекунад ва progress дар боли Home нишон дода мешавад.
+  void _publish(File capturedFile, String caption,
       {String musicTitle = '',
       String musicArtist = '',
       String location = '',
-      List<String> taggedUsers = const []}) async {
-    final token = ApiClient.instance.authToken ?? '';
-    if (token.isEmpty) return;
-    setState(() { _isUploading = true; _error = null; });
-    try {
-      final ext = capturedFile.path.split('.').last.toLowerCase();
-      MediaType mime;
-      if (_isVideo) { mime = MediaType('video', 'mp4'); }
-      else if (ext == 'png') { mime = MediaType('image', 'png'); }
-      else { mime = MediaType('image', 'jpeg'); }
-
-      final req = http.MultipartRequest('POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
-        ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath('file', capturedFile.path, contentType: mime));
-
-      final up   = await req.send().timeout(const Duration(minutes: 3));
-      final body = await up.stream.bytesToString();
-      if (up.statusCode >= 400) throw Exception('Upload хато ${up.statusCode}');
-
-      final upJson   = jsonDecode(body) as Map<String, dynamic>;
-      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString().trim();
-      if (mediaUrl.isEmpty) throw Exception('URL нест');
-
-      final res = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/posts/'),
-        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'caption': caption,
-          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image', 'aspectRatio': ''}],
-          'musicTitle' : musicTitle,
-          'musicArtist': musicArtist,
-          'location'   : location,
-          'taggedUsers': taggedUsers,
-        }),
-      ).timeout(const Duration(seconds: 30));
-
-      if (res.statusCode >= 400) throw Exception('Пост хато ${res.statusCode}');
-      if (mounted) Navigator.of(context).pop(true);
-    } catch (e) {
-      if (mounted) setState(() { _isUploading = false; _error = e.toString().replaceAll('Exception: ', ''); });
-    }
+      List<String> taggedUsers = const []}) {
+    PostUploadService.instance.publishPost(
+      file: capturedFile,
+      isVideo: _isVideo,
+      caption: caption,
+      musicTitle: musicTitle,
+      musicArtist: musicArtist,
+      location: location,
+      taggedUsers: taggedUsers,
+    );
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override

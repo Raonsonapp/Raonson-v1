@@ -10,6 +10,7 @@ import '../../reels/reels_feed/reels_screen.dart';
 import '../../chat/inbox/chat_list_screen.dart';
 import '../../search/search_screen.dart';
 import '../../profile/profile_screen.dart';
+import '../../create/upload/upload_progress_bar.dart';
 import '../../widgets/offline_banner.dart'; // ← НАВ
 import '../../core/webrtc_service.dart';
 import '../../chat/room/incoming_call_screen.dart';
@@ -101,6 +102,11 @@ class _BottomNavViewState extends State<_BottomNavView> {
             _Tab(active: nav.currentIndex == 3, child: const SearchScreen()),
             _Tab(active: nav.currentIndex == 4,
                 child: const ProfileScreen(userId: 'me')),
+            // Загрузкаи фонии пост — progress дар боли Home (мисли Instagram)
+            const Positioned(
+              top: 0, left: 0, right: 0,
+              child: SafeArea(bottom: false, child: UploadProgressBar()),
+            ),
           ],
         ),
         bottomNavigationBar: ValueListenableBuilder<String?>(
