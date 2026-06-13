@@ -344,6 +344,7 @@ func migrate() {
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_title    TEXT DEFAULT '';
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_artist   TEXT DEFAULT '';
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_url      TEXT DEFAULT '';
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS location       TEXT DEFAULT '';
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS tagged_users   TEXT[] DEFAULT '{}';
 	ALTER TABLE comments ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ DEFAULT NOW();
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS type           VARCHAR(16) DEFAULT 'text';
