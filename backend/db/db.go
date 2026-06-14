@@ -434,6 +434,25 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_follows_pair           ON follows(follower_id, following_id);
 	CREATE INDEX IF NOT EXISTS idx_comment_likes_cmt_user ON comment_likes(comment_id, user_id);
 
+	-- ── Реклама / Тарғиб (promotions) — фармоиши реклама барои пост ──
+	CREATE TABLE IF NOT EXISTS promotions (
+		id          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id     TEXT NOT NULL,
+		post_id     TEXT NOT NULL,
+		goal        TEXT DEFAULT 'profile',   -- profile | website | messages
+		action_url  TEXT DEFAULT '',
+		audience    TEXT DEFAULT 'auto',      -- auto | manual
+		budget_cents INTEGER DEFAULT 100,     -- буҷет (сент/рӯз)
+		duration_days INTEGER DEFAULT 1,
+		status      TEXT DEFAULT 'in_review', -- in_review | active | finished | rejected
+		impressions INTEGER DEFAULT 0,
+		clicks      INTEGER DEFAULT 0,
+		created_at  TIMESTAMPTZ DEFAULT NOW(),
+		ends_at     TIMESTAMPTZ
+	);
+	CREATE INDEX IF NOT EXISTS idx_promotions_user ON promotions(user_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_promotions_post ON promotions(post_id);
+
 	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE
 	WHERE LOWER(username)='raonson';
