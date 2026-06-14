@@ -368,7 +368,6 @@ class _ReelItemState extends State<_ReelItem> {
   bool _showHeart = false;
   bool _saved = false;
   bool _following = false;
-  int _retweetCount = 0;
   bool _captionExpanded = false;
   bool _isBuffering = false;
   bool _downloading = false; // ← НАВ
@@ -1020,7 +1019,6 @@ class _ReelItemState extends State<_ReelItem> {
             onTap: () {
               Navigator.pop(context);
               Share.share(url);
-              setState(() => _retweetCount++);
             }),
         const SizedBox(height: 8),
       ])),
@@ -1249,11 +1247,6 @@ class _ReelItemState extends State<_ReelItem> {
                   svgPath: 'assets/icons/comment.svg',
                   count: _fmt(reel.commentsCount),
                   onTap: _openComments),
-              const SizedBox(height: 22),
-              _ReelStableBtn(
-                  svgPath: 'assets/icons/retweet.svg',
-                  count: _fmt(_retweetCount),
-                  onTap: _share),
               const SizedBox(height: 22),
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',

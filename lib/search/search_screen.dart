@@ -18,6 +18,7 @@ import '../models/post_model.dart';
 import '../models/user_model.dart';
 import '../profile/profile_screen.dart';
 import '../widgets/avatar.dart';
+import '../widgets/verified_badge.dart';
 import 'search_history.dart';
 
 // ════════════════════════════════════════════════════════════════════
@@ -49,6 +50,7 @@ class _SearchScreenState extends State<SearchScreen>
 
   // Recent history
   List<String> _history = [];
+  List<Map<String, dynamic>> _accounts = [];
 
   // Search results
   bool            _searching = false;
@@ -92,7 +94,8 @@ class _SearchScreenState extends State<SearchScreen>
   // ── data loaders ─────────────────────────────────────────────────
   Future<void> _loadHistory() async {
     final h = await SearchHistory.load();
-    if (mounted) setState(() => _history = h);
+    final a = await SearchHistory.loadAccounts();
+    if (mounted) setState(() { _history = h; _accounts = a; });
   }
 
   Future<void> _loadExplore() async {
@@ -234,6 +237,18 @@ class _SearchScreenState extends State<SearchScreen>
 
   void _openProfile(String userId) {
     _focus.unfocus();
+    // Аккаунти дидашударо ба «Охирин» сабт мекунем (мисли Instagram).
+    final match = _users.where((e) => e.id == userId);
+    if (match.isNotEmpty) {
+      final u = match.first;
+      SearchHistory.addAccount({
+        'id':       u.id,
+        'username': u.username,
+        'avatar':   u.avatar,
+        'verified': u.verified,
+        'subtitle': u.fullName ?? '',
+      });
+    }
     Navigator.push(context,
         MaterialPageRoute(builder: (_) => ProfileScreen(userId: userId)));
   }
@@ -363,7 +378,7 @@ class _SearchScreenState extends State<SearchScreen>
           ]),
         ),
         // History header
-        if (_history.isNotEmpty) ...[
+        if (_accounts.isNotEmpty || _history.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
             child: Row(children: [
@@ -383,42 +398,14 @@ class _SearchScreenState extends State<SearchScreen>
             ]),
           ),
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               padding: EdgeInsets.zero,
-              itemCount: _history.length,
-              itemBuilder: (_, i) {
-                final q = _history[i];
-                return InkWell(
-                  onTap: () => _applyHistory(q),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    child: Row(children: [
-                      Container(
-                        width: 44, height: 44,
-                        decoration: const BoxDecoration(
-                            color: Color(0xFF262626), shape: BoxShape.circle),
-                        child: const Icon(Icons.history_rounded,
-                            color: Colors.white54, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(q,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 14)),
-                      ),
-                      GestureDetector(
-                        onTap: () async {
-                          await SearchHistory.remove(q);
-                          _loadHistory();
-                        },
-                        child: const Icon(Icons.close_rounded,
-                            color: Colors.white38, size: 18),
-                      ),
-                    ]),
-                  ),
-                );
-              },
+              children: [
+                // Аккаунтҳои дидашуда
+                ..._accounts.map(_recentAccountTile),
+                // Ҷустуҷӯҳои матнӣ
+                ..._history.map(_recentQueryTile),
+              ],
             ),
           ),
         ] else
@@ -430,6 +417,90 @@ class _SearchScreenState extends State<SearchScreen>
             ),
           ),
       ],
+    );
+  }
+
+  Widget _recentAccountTile(Map<String, dynamic> a) {
+    final id       = (a['id'] ?? '').toString();
+    final username = (a['username'] ?? '').toString();
+    final avatar   = (a['avatar'] ?? '').toString();
+    final verified = a['verified'] == true;
+    final subtitle = (a['subtitle'] ?? '').toString();
+    return InkWell(
+      onTap: () {
+        _focus.unfocus();
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => ProfileScreen(userId: id)));
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(children: [
+          Avatar(imageUrl: avatar, size: 44, glowBorder: false),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Flexible(
+                    child: Text(username,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white,
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                  ),
+                  if (verified) ...[
+                    const SizedBox(width: 4),
+                    const VerifiedBadge(size: 13),
+                  ],
+                ]),
+                if (subtitle.isNotEmpty)
+                  Text(subtitle,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white38, fontSize: 12.5)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () async {
+              await SearchHistory.removeAccount(id);
+              _loadHistory();
+            },
+            child: const Icon(Icons.close_rounded,
+                color: Colors.white38, size: 18),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _recentQueryTile(String q) {
+    return InkWell(
+      onTap: () => _applyHistory(q),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(children: [
+          Container(
+            width: 44, height: 44,
+            decoration: const BoxDecoration(
+                color: Color(0xFF262626), shape: BoxShape.circle),
+            child: const Icon(Icons.history_rounded,
+                color: Colors.white54, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(q,
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
+          ),
+          GestureDetector(
+            onTap: () async {
+              await SearchHistory.remove(q);
+              _loadHistory();
+            },
+            child: const Icon(Icons.close_rounded,
+                color: Colors.white38, size: 18),
+          ),
+        ]),
+      ),
     );
   }
 
