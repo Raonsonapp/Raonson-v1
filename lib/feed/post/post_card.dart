@@ -1416,6 +1416,8 @@ class _MediaCarouselState extends State<_MediaCarousel> {
   Widget build(BuildContext context) {
     final aspectRatio = _getAspectRatio();
     return Stack(alignment: Alignment.bottomCenter, children: [
+      // Фони сиёҳ дар паси расм — ягон навори бежеви аз letterbox намонад
+      const Positioned.fill(child: ColoredBox(color: Colors.black)),
       AspectRatio(
         aspectRatio: aspectRatio,
         child: PageView.builder(
