@@ -226,6 +226,32 @@ class _ChatView extends StatelessWidget {
 
             const SizedBox(height: 4),
 
+            // ── Requests info banner ─────────────────────────
+            if (ctrl.query.isEmpty && ctrl.tab == ChatTab.requests)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF121212),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Row(children: const [
+                  Icon(Icons.lock_outline_rounded,
+                      color: Colors.white54, size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Ин паёмҳо аз касоне ҳастанд, ки шумо пайгирӣ '
+                      'намекунед. Онҳо намедонанд, ки шумо дархостро '
+                      'дидаед, то даме ки ҷавоб надиҳед.',
+                      style: TextStyle(
+                          color: Colors.white54, fontSize: 11.5, height: 1.35),
+                    ),
+                  ),
+                ]),
+              ),
+
             // ── Chat list ────────────────────────────────────
             Expanded(
               child: ctrl.isLoading
@@ -233,9 +259,11 @@ class _ChatView extends StatelessWidget {
                   : ctrl.chats.isEmpty
                       ? Center(
                           child: Text(
-                            ctrl.query.isEmpty
-                                ? 'Паёме нест'
-                                : 'Натиҷае нест',
+                            ctrl.query.isNotEmpty
+                                ? 'Натиҷае нест'
+                                : ctrl.tab == ChatTab.requests
+                                    ? 'Дархости паём нест'
+                                    : 'Паёме нест',
                             style: const TextStyle(color: Colors.white38),
                           ))
                       : RefreshIndicator(
@@ -259,22 +287,19 @@ class _ChatView extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 //  Tab bar (Асосй / Дархостҳо / Умумй)
 // ─────────────────────────────────────────────────────────────────
-class _TabBar extends StatefulWidget {
-  @override
-  State<_TabBar> createState() => _TabBarState();
-}
-
-class _TabBarState extends State<_TabBar> {
-  int _selected = 0;
-
+class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    const tabs = ['Асосй', 'Яқинон', 'Дархостҳо'];
+    final ctrl = context.watch<ChatListController>();
+    const tabs = [ChatTab.primary, ChatTab.general, ChatTab.requests];
+    const labels = ['Асосӣ', 'Яқинон', 'Дархостҳо'];
     return Row(
-      children: tabs.asMap().entries.map((e) {
-        final selected = e.key == _selected;
+      children: List.generate(tabs.length, (i) {
+        final tab      = tabs[i];
+        final selected = ctrl.tab == tab;
+        final reqCount = ctrl.requestCount;
         return GestureDetector(
-          onTap: () => setState(() => _selected = e.key),
+          onTap: () => context.read<ChatListController>().selectTab(tab),
           child: Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
@@ -283,22 +308,38 @@ class _TabBarState extends State<_TabBar> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(e.value,
+              Text(labels[i],
                   style: TextStyle(
                       color: selected ? Colors.black : Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 13)),
-              if (e.key == 0 && selected) ...[
+              // Нуқтаи сабз дар таби «Асосӣ» (паёмҳои нав).
+              if (i == 0 && selected) ...[
                 const SizedBox(width: 5),
                 Container(
                     width: 7, height: 7,
                     decoration: const BoxDecoration(
                         color: Color(0xFF00E676), shape: BoxShape.circle)),
               ],
+              // Шумораи дархостҳо дар таби «Дархостҳо».
+              if (tab == ChatTab.requests && reqCount > 0) ...[
+                const SizedBox(width: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                      color: selected ? Colors.black : AppColors.neonBlue,
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Text('$reqCount',
+                      style: TextStyle(
+                          color: selected ? Colors.white : Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
             ]),
           ),
         );
-      }).toList(),
+      }),
     );
   }
 }

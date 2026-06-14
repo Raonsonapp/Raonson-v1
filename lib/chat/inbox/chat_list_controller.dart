@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
 
+/// Tabҳои inbox — мисли Instagram: Асосӣ / Дархостҳо.
+enum ChatTab { primary, general, requests }
+
 class ChatListController extends ChangeNotifier {
   final ChatRepository _repository;
 
@@ -16,9 +19,38 @@ class ChatListController extends ChangeNotifier {
   List<MessageModel> _chats    = [];
   List<MessageModel> _filtered = [];
   String             _query    = '';
+  ChatTab            _tab      = ChatTab.primary;
 
-  List<MessageModel> get chats  => _query.isEmpty ? List.unmodifiable(_chats) : List.unmodifiable(_filtered);
-  String             get query  => _query;
+  ChatTab get tab => _tab;
+
+  /// Ҳамаи сӯҳбатҳои қабулшуда (на дархост).
+  List<MessageModel> get _accepted =>
+      _chats.where((c) => !c.isRequest).toList();
+
+  /// Дархостҳои паём (аз касоне, ки пайгирӣ намекунӣ ва ҷавоб надодаӣ).
+  List<MessageModel> get requests =>
+      _chats.where((c) => c.isRequest).toList();
+
+  int get requestCount => requests.length;
+
+  List<MessageModel> get chats {
+    if (_query.isNotEmpty) return List.unmodifiable(_filtered);
+    switch (_tab) {
+      case ChatTab.requests:
+        return List.unmodifiable(requests);
+      case ChatTab.primary:
+      case ChatTab.general:
+        return List.unmodifiable(_accepted);
+    }
+  }
+
+  String get query => _query;
+
+  void selectTab(ChatTab t) {
+    if (_tab == t) return;
+    _tab = t;
+    notifyListeners();
+  }
 
   Future<void> loadChats() async {
     _loading = true;
