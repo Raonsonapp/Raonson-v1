@@ -16,6 +16,7 @@ import '../../models/reel_model.dart';
 import '../reels_repository.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
+import '../../gifts/gift_sheet.dart';
 
 // ── Ads (ТАНҲО ИН 2 ХАТИ НАВ) ───────────────────────────────────────────────
 import '../../core/ads/ads_manager.dart';
@@ -939,7 +940,11 @@ class _ReelItemState extends State<_ReelItem> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
-          child: _ReelComments(reelId: widget.reel.id)),
+          child: _ReelComments(
+            reelId: widget.reel.id,
+            authorId: widget.reel.user.id,
+            authorName: widget.reel.user.username,
+          )),
     ).then((_) {
       if (!_paused && mounted) _ctrl?.play();
     });
@@ -1794,7 +1799,13 @@ class _HeartBurstState extends State<_HeartBurst>
 
 class _ReelComments extends StatefulWidget {
   final String reelId;
-  const _ReelComments({required this.reelId});
+  final String authorId;
+  final String authorName;
+  const _ReelComments({
+    required this.reelId,
+    this.authorId = '',
+    this.authorName = '',
+  });
   @override
   State<_ReelComments> createState() => _ReelCommentsState();
 }
@@ -2016,13 +2027,36 @@ class _ReelCommentsState extends State<_ReelComments> {
                   child: const Icon(Icons.close,
                       color: Colors.white38, size: 16)),
             ])),
+      // Emoji quick-reaction row (мисли Instagram)
+      SizedBox(
+        height: 40,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          children: ['❤️','🙌','🔥','👏','😢','😍','😮','😂']
+              .map((e) => GestureDetector(
+                    onTap: () {
+                      final t = _ctrl.text;
+                      _ctrl.text = t + e;
+                      _ctrl.selection = TextSelection.collapsed(
+                          offset: _ctrl.text.length);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 7),
+                      child: Center(child: Text(e,
+                          style: const TextStyle(fontSize: 24))),
+                    ),
+                  ))
+              .toList(),
+        ),
+      ),
       SafeArea(
         child: Padding(
           padding: EdgeInsets.only(
               left: 16,
-              right: 16,
+              right: 12,
               bottom: 8,
-              top: 8 +
+              top: 4 +
                   MediaQuery.of(context).viewInsets.bottom / 2),
           child: Row(children: [
             Expanded(
@@ -2044,7 +2078,21 @@ class _ReelCommentsState extends State<_ReelComments> {
                             borderSide: BorderSide.none),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 10)))),
-            const SizedBox(width: 10),
+            // Тӯҳфа (gift)
+            IconButton(
+                icon: SvgPicture.asset('assets/icons/gift.svg',
+                    width: 26, height: 26,
+                    colorFilter: const ColorFilter.mode(
+                        Colors.white70, BlendMode.srcIn)),
+                onPressed: widget.authorId.isEmpty
+                    ? null
+                    : () => showGiftSheet(
+                          context,
+                          toUserId: widget.authorId,
+                          authorName: widget.authorName,
+                          targetType: 'reel',
+                          targetId: widget.reelId,
+                        )),
             GestureDetector(
                 onTap: _send,
                 child: _sending
