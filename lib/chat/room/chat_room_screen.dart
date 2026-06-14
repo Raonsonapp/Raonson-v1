@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
 import '../chat_repository.dart';
+import '../../core/api/api_client.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
 import '../../core/storage/token_storage.dart';
@@ -21,7 +22,8 @@ import 'call_screen.dart';
 // ─────────────────────────────────────────────────────────────────
 class ChatRoomScreen extends StatefulWidget {
   final UserModel peer;
-  const ChatRoomScreen({super.key, required this.peer});
+  final bool isRequest; // дархости паём аст?
+  const ChatRoomScreen({super.key, required this.peer, this.isRequest = false});
 
   @override
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
@@ -45,6 +47,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   // Reply state
   MessageModel? _replyTo;
+
+  // Дархости паём
+  late bool _isRequest = widget.isRequest;
 
   // Offline queue
   final List<Map<String, dynamic>> _offlineQueue = [];
@@ -459,18 +464,103 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     : _messageList(),
           ),
 
-          // Input
-          MessageInput(
-            onSend:       _onSend,
-            onSendMedia:  _onSendMedia,
-            onSendVoice:  _onSendVoice,
-            onTyping:     _onTyping,
-            replyTo:      _replyTo,
-            onCancelReply: () => setState(() => _replyTo = null),
-          ),
+          // Input ё banner-и дархост
+          if (_isRequest)
+            _requestBanner()
+          else
+            MessageInput(
+              onSend:       _onSend,
+              onSendMedia:  _onSendMedia,
+              onSendVoice:  _onSendVoice,
+              onTyping:     _onTyping,
+              replyTo:      _replyTo,
+              onCancelReply: () => setState(() => _replyTo = null),
+            ),
         ],
       ),
     );
+  }
+
+  Widget _requestBanner() {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.white12)),
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(
+            '@${widget.peer.username} мехоҳад ба шумо паём нависад. '
+            'Агар қабул кунед, ӯ инро мебинад.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white54, fontSize: 12.5,
+                height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.white24),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _blockRequest,
+                child: const Text('Блок'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white24),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _deleteRequest,
+                child: const Text('Нест'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.neonBlue,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _acceptRequest,
+                child: const Text('Қабул',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _acceptRequest() async {
+    setState(() => _isRequest = false);
+    await _repo.acceptRequest(widget.peer.id);
+  }
+
+  Future<void> _deleteRequest() async {
+    await _repo.deleteRequest(widget.peer.id);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _blockRequest() async {
+    try {
+      await ApiClient.instance.post('/users/${widget.peer.id}/block');
+      await _repo.deleteRequest(widget.peer.id);
+    } catch (_) {}
+    if (mounted) Navigator.pop(context);
   }
 
   AppBar _buildAppBar() {

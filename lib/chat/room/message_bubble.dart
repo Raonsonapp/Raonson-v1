@@ -103,6 +103,7 @@ class _MessageBubbleState extends State<MessageBubble>
 
     return GestureDetector(
       onLongPress: () => _showContextMenu(context),
+      onDoubleTap: () => widget.onReact?.call('❤️'), // дубл-тап → дил (мисли Instagram)
       onHorizontalDragUpdate: _onHorizontalUpdate,
       onHorizontalDragEnd:    _onHorizontalEnd,
       child: Transform.translate(
