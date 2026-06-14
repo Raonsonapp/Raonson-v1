@@ -16,6 +16,7 @@ import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../comments/comments_screen.dart';
+import '../../promote/promote_screen.dart';
 import '../../app/app_theme.dart';
 
 class PostCard extends StatefulWidget {
@@ -230,9 +231,21 @@ class _PostCardState extends State<PostCard>
           _SvgMenuTile(assetPath: 'assets/icons/stats.svg',
               label: 'Статистика',
               onTap: () { Navigator.pop(context); _showStats(); }),
+          _MenuItem(icon: Icons.campaign_outlined, iconColor: AppColors.storyEnd,
+              label: 'Тарғиб кардан (реклама)', labelColor: AppColors.storyEnd,
+              onTap: () { Navigator.pop(context); _promotePost(); }),
           const SizedBox(height: 8),
         ])),
     );
+  }
+
+  void _promotePost() {
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => PromoteScreen(
+        postId: widget.post.id,
+        thumbUrl: widget.post.mediaUrl,
+      ),
+    ));
   }
 
   void _showOtherMenu() {

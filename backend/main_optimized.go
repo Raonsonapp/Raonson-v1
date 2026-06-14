@@ -233,6 +233,13 @@ func main() {
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)
 	}
 
+	pr := r.Group("/promotions", auth, rl100)
+	{
+		pr.POST("/",     handlers.CreatePromotion)
+		pr.GET("/",      handlers.GetMyPromotions)
+		pr.DELETE("/:id", handlers.DeletePromotion)
+	}
+
 	no := r.Group("/notifications", auth, rl100)
 	{
 		no.GET("/",             handlers.GetNotifications)
