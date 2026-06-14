@@ -52,6 +52,23 @@ class ChatListController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Дархостро қабул мекунад — ба «Асосӣ» мегузарад.
+  Future<void> acceptRequest(String peerId) async {
+    _chats = _chats.map((c) =>
+        c.peer.id == peerId ? c.copyWith(isRequest: false) : c).toList();
+    notifyListeners();
+    await _repository.acceptRequest(peerId);
+    await loadChats();
+  }
+
+  /// Дархостро нест/пинҳон мекунад.
+  Future<void> deleteRequest(String peerId) async {
+    _chats = _chats.where((c) => c.peer.id != peerId).toList();
+    notifyListeners();
+    await _repository.deleteRequest(peerId);
+    await loadChats();
+  }
+
   Future<void> loadChats() async {
     _loading = true;
     _error   = null;

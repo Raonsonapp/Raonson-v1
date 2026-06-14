@@ -219,7 +219,11 @@ func GetChats(c *gin.Context) {
 		       sub.s_username,sub.s_avatar,sub.s_verified,sub.r_username,sub.r_avatar,sub.r_verified,
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1
 		              AND f.following_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS i_follow,
-		       EXISTS(SELECT 1 FROM messages mm WHERE mm.chat_id=sub.chat_id AND mm.sender_id=$1) AS i_sent
+		       EXISTS(SELECT 1 FROM messages mm WHERE mm.chat_id=sub.chat_id AND mm.sender_id=$1) AS i_sent,
+		       EXISTS(SELECT 1 FROM chat_accepts ca WHERE ca.user_id=$1
+		              AND ca.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS accepted,
+		       EXISTS(SELECT 1 FROM chat_hidden ch WHERE ch.user_id=$1
+		              AND ch.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS hidden
 		FROM (
 			SELECT DISTINCT ON (m.chat_id)
 			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
@@ -245,10 +249,13 @@ func GetChats(c *gin.Context) {
 		var read bool
 		var createdAt interface{}
 		var sUname, sAvatar, rUname, rAvatar string
-		var sVer, rVer, iFollow, iSent bool
+		var sVer, rVer, iFollow, iSent, accepted, hidden bool
 		rows.Scan(&msgID, &chatID, &senderID, &receiverID, &text, &read, &createdAt,
-			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent)
+			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent, &accepted, &hidden)
 
+		if hidden {
+			continue // корбар ин дархостро нест/пинҳон кардааст
+		}
 		isMine := senderID == myID
 		var peer gin.H
 		if isMine {
@@ -259,8 +266,8 @@ func GetChats(c *gin.Context) {
 		if peer["username"] == "" {
 			continue
 		}
-		// Message request: I don't follow this person AND I never replied.
-		isRequest := !iFollow && !iSent
+		// Message request: I don't follow + never replied + haven't accepted.
+		isRequest := !iFollow && !iSent && !accepted
 		result = append(result, gin.H{
 			"_id": msgID, "chatId": chatID,
 			"isMine": isMine, "text": text, "read": read, "createdAt": createdAt,
@@ -268,6 +275,37 @@ func GetChats(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+// POST /chat/requests/:peerId/accept — дархостро қабул мекунад
+func AcceptChatRequest(c *gin.Context) {
+	myID := mw.UID(c)
+	peer := c.Param("peerId")
+	if peer == "" || peer == myID {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "bad peer"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO chat_accepts(user_id,peer_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+		myID, peer)
+	// Агар қаблан пинҳон карда буд, барқарор кунем.
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM chat_hidden WHERE user_id=$1 AND peer_id=$2`, myID, peer)
+	c.JSON(http.StatusOK, gin.H{"accepted": true})
+}
+
+// POST /chat/requests/:peerId/delete — дархостро нест/пинҳон мекунад
+func DeleteChatRequest(c *gin.Context) {
+	myID := mw.UID(c)
+	peer := c.Param("peerId")
+	if peer == "" || peer == myID {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "bad peer"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO chat_hidden(user_id,peer_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+		myID, peer)
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
 // GET /chat/:chatId/messages

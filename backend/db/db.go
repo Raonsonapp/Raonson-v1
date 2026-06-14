@@ -468,6 +468,20 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_gifts_from ON gifts(from_user_id, created_at DESC);
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS stars_balance INTEGER DEFAULT 0;
 
+	-- ── Дархостҳои паём: қабул/пинҳон (мисли Instagram message requests) ──
+	CREATE TABLE IF NOT EXISTS chat_accepts (
+		user_id TEXT NOT NULL,
+		peer_id TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, peer_id)
+	);
+	CREATE TABLE IF NOT EXISTS chat_hidden (
+		user_id TEXT NOT NULL,
+		peer_id TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, peer_id)
+	);
+
 	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE
 	WHERE LOWER(username)='raonson';
