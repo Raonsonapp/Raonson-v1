@@ -223,7 +223,9 @@ func GetChats(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM chat_accepts ca WHERE ca.user_id=$1
 		              AND ca.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS accepted,
 		       EXISTS(SELECT 1 FROM chat_hidden ch WHERE ch.user_id=$1
-		              AND ch.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS hidden
+		              AND ch.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS hidden,
+		       (SELECT COUNT(*) FROM messages mu WHERE mu.chat_id=sub.chat_id
+		              AND mu.receiver_id=$1 AND mu.read=false) AS unread_count
 		FROM (
 			SELECT DISTINCT ON (m.chat_id)
 			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
@@ -250,8 +252,9 @@ func GetChats(c *gin.Context) {
 		var createdAt interface{}
 		var sUname, sAvatar, rUname, rAvatar string
 		var sVer, rVer, iFollow, iSent, accepted, hidden bool
+		var unreadCount int
 		rows.Scan(&msgID, &chatID, &senderID, &receiverID, &text, &read, &createdAt,
-			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent, &accepted, &hidden)
+			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent, &accepted, &hidden, &unreadCount)
 
 		if hidden {
 			continue // корбар ин дархостро нест/пинҳон кардааст
@@ -271,7 +274,7 @@ func GetChats(c *gin.Context) {
 		result = append(result, gin.H{
 			"_id": msgID, "chatId": chatID,
 			"isMine": isMine, "text": text, "read": read, "createdAt": createdAt,
-			"peer": peer, "isRequest": isRequest,
+			"peer": peer, "isRequest": isRequest, "unreadCount": unreadCount,
 		})
 	}
 	c.JSON(http.StatusOK, result)

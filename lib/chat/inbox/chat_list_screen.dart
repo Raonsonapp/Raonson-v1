@@ -743,9 +743,9 @@ class _ChatTile extends StatelessWidget {
     final online   = presence.isOnline(chat.peer.id);
     final label    = presence.lastSeenLabel(chat.peer.id);
 
-    // Unread: not mine and not read
-    final unread = !chat.isMine && chat.status != MessageStatus.read;
-    final unreadCount = unread ? 1 : 0; // backend should supply actual count
+    // Unread: шумораи воқеӣ аз backend (на ҳамеша 1)
+    final unreadCount = chat.unreadCount;
+    final unread = unreadCount > 0;
 
     return InkWell(
       onTap: () => Navigator.push(
