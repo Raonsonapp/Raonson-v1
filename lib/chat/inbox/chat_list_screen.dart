@@ -755,7 +755,8 @@ class _ChatTile extends StatelessWidget {
       }),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
           // Avatar + online dot
           Stack(clipBehavior: Clip.none, children: [
             Avatar(imageUrl: chat.peer.avatar, size: 54, glowBorder: false),
@@ -851,6 +852,57 @@ class _ChatTile extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ]),
+        // Дархост: тугмаҳои Қабул / Нест кардан (мисли Instagram)
+        if (chat.isRequest)
+          Padding(
+            padding: const EdgeInsets.only(left: 66, top: 8),
+            child: Row(children: [
+              Expanded(
+                child: SizedBox(
+                  height: 34,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neonBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => context
+                        .read<ChatListController>()
+                        .acceptRequest(chat.peer.id),
+                    child: const Text('Қабул',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 34,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF262626),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => context
+                        .read<ChatListController>()
+                        .deleteRequest(chat.peer.id),
+                    child: const Text('Нест кардан',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ),
+            ]),
           ),
         ]),
       ),

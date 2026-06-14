@@ -231,6 +231,8 @@ func main() {
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)
+		ch.POST("/requests/:peerId/accept", handlers.AcceptChatRequest)
+		ch.POST("/requests/:peerId/delete", handlers.DeleteChatRequest)
 	}
 
 	pr := r.Group("/promotions", auth, rl100)

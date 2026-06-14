@@ -202,6 +202,30 @@ class ChatRepository {
     try { await _api.postRequest('${ApiEndpoints.chat}/$chatId/read'); } catch (_) {}
   }
 
+  // ── Дархостҳои паём: қабул / нест кардан ────────────────────────
+  Future<void> clearInboxCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_inboxKey);
+    } catch (_) {}
+  }
+
+  Future<bool> acceptRequest(String peerId) async {
+    try {
+      final r = await _api.postRequest('${ApiEndpoints.chat}/requests/$peerId/accept');
+      await clearInboxCache();
+      return r.statusCode < 400;
+    } catch (_) { return false; }
+  }
+
+  Future<bool> deleteRequest(String peerId) async {
+    try {
+      final r = await _api.postRequest('${ApiEndpoints.chat}/requests/$peerId/delete');
+      await clearInboxCache();
+      return r.statusCode < 400;
+    } catch (_) { return false; }
+  }
+
   Future<List<MessageModel>> getMessagesWithUserEx(String peerId) =>
       getMessagesWithUser(peerId);
 
