@@ -240,6 +240,12 @@ func main() {
 		pr.DELETE("/:id", handlers.DeletePromotion)
 	}
 
+	gf := r.Group("/gifts", auth, rl100)
+	{
+		gf.POST("/",         handlers.SendGift)
+		gf.GET("/received",  handlers.GetReceivedGifts)
+	}
+
 	no := r.Group("/notifications", auth, rl100)
 	{
 		no.GET("/",             handlers.GetNotifications)

@@ -453,6 +453,21 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_promotions_user ON promotions(user_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_promotions_post ON promotions(post_id);
 
+	-- ── Тӯҳфаҳо (gifts / звёзды) — дастгирии муаллифон ──
+	CREATE TABLE IF NOT EXISTS gifts (
+		id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		from_user_id TEXT NOT NULL,
+		to_user_id   TEXT NOT NULL,
+		target_type  TEXT DEFAULT 'reel',   -- reel | post | comment
+		target_id    TEXT DEFAULT '',
+		stars        INTEGER DEFAULT 1,
+		message      TEXT DEFAULT '',
+		created_at   TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_gifts_to   ON gifts(to_user_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_gifts_from ON gifts(from_user_id, created_at DESC);
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS stars_balance INTEGER DEFAULT 0;
+
 	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE
 	WHERE LOWER(username)='raonson';

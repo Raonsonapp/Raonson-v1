@@ -9,6 +9,8 @@ import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../../gifts/gift_sheet.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -75,6 +77,32 @@ class _CommentsScreenState extends State<CommentsScreen> {
       }
     } catch (_) {}
     setState(() => _loading = false);
+  }
+
+  void _insertEmoji(String e) {
+    final sel = _ctrl.selection;
+    final base = _ctrl.text;
+    if (sel.isValid) {
+      _ctrl.text = base.replaceRange(sel.start, sel.end, e);
+      _ctrl.selection =
+          TextSelection.collapsed(offset: sel.start + e.length);
+    } else {
+      _ctrl.text = base + e;
+      _ctrl.selection =
+          TextSelection.collapsed(offset: _ctrl.text.length);
+    }
+    _focus.requestFocus();
+  }
+
+  void _openGift() {
+    final author = widget.post.user;
+    showGiftSheet(
+      context,
+      toUserId:   author.id,
+      authorName: author.username,
+      targetType: 'post',
+      targetId:   widget.post.id,
+    );
   }
 
   Future<void> _send() async {
@@ -240,9 +268,28 @@ class _CommentsScreenState extends State<CommentsScreen> {
               ]),
             ),
 
+          // Emoji quick-reaction row (мисли Instagram)
+          SizedBox(
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: ['❤️','🙌','🔥','👏','😢','😍','😮','😂']
+                  .map((e) => GestureDetector(
+                        onTap: () => _insertEmoji(e),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Center(child: Text(e,
+                              style: const TextStyle(fontSize: 22))),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ),
+
           Padding(
             padding: EdgeInsets.only(
-              left: 12, right: 4, top: 8,
+              left: 12, right: 4, top: 4,
               bottom: MediaQuery.of(context).viewInsets.bottom + 8),
             child: Row(children: [
               // Avatar
@@ -270,6 +317,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     hintStyle: const TextStyle(color: Colors.white38),
                     border: InputBorder.none),
                 ),
+              ),
+              // Тӯҳфа (gift) — мисли Instagram
+              IconButton(
+                icon: SvgPicture.asset('assets/icons/gift.svg',
+                    width: 24, height: 24,
+                    colorFilter: const ColorFilter.mode(
+                        Colors.white70, BlendMode.srcIn)),
+                onPressed: _openGift,
               ),
               _sending
                   ? const Padding(padding: EdgeInsets.all(10),
