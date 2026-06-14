@@ -89,6 +89,48 @@ class _MessageInputState extends State<MessageInput>
     _ctrl.clear();
   }
 
+  void _insertEmoji(String e) {
+    final sel = _ctrl.selection;
+    final base = _ctrl.text;
+    if (sel.isValid && sel.start >= 0) {
+      _ctrl.text = base.replaceRange(sel.start, sel.end, e);
+      _ctrl.selection =
+          TextSelection.collapsed(offset: sel.start + e.length);
+    } else {
+      _ctrl.text = base + e;
+      _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
+    }
+  }
+
+  // Эмоҷӣ-пикер (мисли Instagram) — эмоҷиро ба матн илова мекунад.
+  void _showEmojiPicker() {
+    const emojis = [
+      '😀','😂','🤣','😊','😍','😘','🥰','😎','🤩','😭','😅','😉','🙂','🤔','😐','😑',
+      '😏','😜','😌','🤗','🤭','🤫','😴','🥱','😇','🥳','😱','😡','🤬','👍','👎','👏',
+      '🙌','🙏','💪','🔥','❤️','🧡','💛','💚','💙','💜','🖤','💯','✨','⭐','🎉','🎊',
+      '😢','😤','😬','😳','🤤','😋','😛','🤪','🥲','😮','😯','🫶','👌','✌️','🤞','🤝',
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 8,
+            children: emojis.map((e) => GestureDetector(
+              onTap: () { _insertEmoji(e); },
+              child: Center(child: Text(e, style: const TextStyle(fontSize: 26))),
+            )).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Замимаҳо (3 нуқта) — расм/камера/видео ──────────────────
   void _openAttachments() {
     FocusScope.of(context).unfocus();
@@ -297,13 +339,13 @@ class _MessageInputState extends State<MessageInput>
                     ),
                   ),
                 ),
-                // Emoji button (placeholder)
+                // Emoji button — эмоҷӣ дохил мекунад
                 Padding(
                   padding: const EdgeInsets.only(right: 10, bottom: 8),
                   child: GestureDetector(
-                    onTap: () {},
+                    onTap: _showEmojiPicker,
                     child: const Icon(Icons.emoji_emotions_outlined,
-                        color: Colors.white38, size: 22),
+                        color: Colors.white54, size: 22),
                   ),
                 ),
               ],

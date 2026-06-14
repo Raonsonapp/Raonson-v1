@@ -781,7 +781,26 @@ class _ReelItemState extends State<_ReelItem> {
                             title: Text('@${u['username']}',
                                 style: const TextStyle(
                                     color: Colors.white)),
-                            onTap: () => Navigator.pop(ctx));
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final uname = (u['username'] ?? '').toString();
+                              if (uname.isEmpty) return;
+                              final base = widget.reel.caption.trim();
+                              final newCaption =
+                                  base.isEmpty ? '@$uname' : '$base @$uname';
+                              try {
+                                await ApiClient.instance.put(
+                                    '/reels/${widget.reel.id}/caption',
+                                    body: {'caption': newCaption});
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('@$uname зикр шуд'),
+                                          duration:
+                                              const Duration(seconds: 2)));
+                                }
+                              } catch (_) {}
+                            });
                       }),
             ),
           ]),
