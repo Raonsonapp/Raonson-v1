@@ -57,8 +57,6 @@ class _PostCardState extends State<PostCard>
   late AnimationController _countCtrl;
   bool _countUp = true;
 
-  // ── Repost rotate ────────────────────────────────────────────
-  late AnimationController _repostCtrl;
 
   // ── Double-tap heart overlay ─────────────────────────────────
   late AnimationController _heartCtrl;
@@ -102,9 +100,6 @@ class _PostCardState extends State<PostCard>
     _countCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 250));
 
-    _repostCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 400));
-
     _heartCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 800));
     _heartMoveX = Tween(begin: 0.0, end: 1.0).animate(
@@ -132,7 +127,6 @@ class _PostCardState extends State<PostCard>
     _likeDebounce?.cancel();
     _likeCtrl.dispose();
     _countCtrl.dispose();
-    _repostCtrl.dispose();
     _heartCtrl.dispose();
     super.dispose();
   }
