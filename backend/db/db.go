@@ -468,6 +468,21 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_gifts_from ON gifts(from_user_id, created_at DESC);
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS stars_balance INTEGER DEFAULT 0;
 
+	-- ── Шикоят аз корбар ва маҳдудкунӣ (report / restrict) ──
+	CREATE TABLE IF NOT EXISTS user_reports (
+		reported_id TEXT NOT NULL,
+		user_id     TEXT NOT NULL,
+		reason      TEXT DEFAULT '',
+		created_at  TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (reported_id, user_id)
+	);
+	CREATE TABLE IF NOT EXISTS user_restricts (
+		user_id      TEXT NOT NULL,
+		restricted_id TEXT NOT NULL,
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, restricted_id)
+	);
+
 	-- ── Дархостҳои паём: қабул/пинҳон (мисли Instagram message requests) ──
 	CREATE TABLE IF NOT EXISTS chat_accepts (
 		user_id TEXT NOT NULL,

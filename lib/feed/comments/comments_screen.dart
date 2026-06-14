@@ -458,7 +458,19 @@ class _CommentItemState extends State<_CommentItem> {
             leading: const Icon(Icons.block, color: Colors.white, size: 22),
             title: const Text('Маҳдуд кардан',
                 style: TextStyle(color: Colors.white, fontSize: 15)),
-            onTap: () => Navigator.pop(context)),
+            onTap: () async {
+              Navigator.pop(context);
+              try {
+                await ApiClient.instance
+                    .post('/users/${widget.comment.user.id}/restrict');
+              } catch (_) {}
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Корбар маҳдуд карда шуд ✓'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2)));
+              }
+            }),
           ListTile(
             leading: const Icon(Icons.link, color: Colors.white, size: 22),
             title: const Text('Нусха гирифтан',

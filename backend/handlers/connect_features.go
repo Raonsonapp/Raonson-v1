@@ -44,6 +44,50 @@ func UnblockUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"unblocked": true})
 }
 
+// POST /users/:id/report — шикоят аз корбар
+func ReportUser(c *gin.Context) {
+	myID := mw.UID(c)
+	target := c.Param("id")
+	if target == "" || target == myID {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "bad target"})
+		return
+	}
+	var b struct {
+		Reason string `json:"reason"`
+	}
+	c.ShouldBindJSON(&b)
+	if b.Reason == "" {
+		b.Reason = "spam"
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO user_reports(reported_id, user_id, reason)
+		 VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, target, myID, b.Reason)
+	c.JSON(http.StatusOK, gin.H{"reported": true})
+}
+
+// POST /users/:id/restrict — маҳдуд кардани корбар (мисли Instagram)
+func RestrictUser(c *gin.Context) {
+	myID := mw.UID(c)
+	target := c.Param("id")
+	if target == "" || target == myID {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "bad target"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO user_restricts(user_id, restricted_id)
+		 VALUES($1,$2) ON CONFLICT DO NOTHING`, myID, target)
+	c.JSON(http.StatusOK, gin.H{"restricted": true})
+}
+
+// POST /users/:id/unrestrict
+func UnrestrictUser(c *gin.Context) {
+	myID := mw.UID(c)
+	target := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM user_restricts WHERE user_id=$1 AND restricted_id=$2`, myID, target)
+	c.JSON(http.StatusOK, gin.H{"unrestricted": true})
+}
+
 // GET /users/blocked
 func GetBlockedUsers(c *gin.Context) {
 	myID := mw.UID(c)

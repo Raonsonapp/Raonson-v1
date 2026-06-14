@@ -35,12 +35,12 @@ class HighlightsRow extends StatelessWidget {
               label:    'Нав',
               coverUrl: '',
               isAdd:    true,
-              onTap:    onAdd ?? () {},
+              onTap:    onAdd,
             ),
           ...highlights.map((h) => _HlItem(
             label:    h.title,
             coverUrl: h.coverUrl,
-            onTap:    onOpen != null ? () => onOpen!(h) : () {},
+            onTap:    onOpen != null ? () => onOpen!(h) : null,
             onLongPress: onLongPress != null ? () => onLongPress!(h) : null,
           )),
         ],
@@ -53,13 +53,13 @@ class _HlItem extends StatelessWidget {
   final String       label;
   final String       coverUrl;
   final bool         isAdd;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   const _HlItem({
     required this.label,
     required this.coverUrl,
-    required this.onTap,
+    this.onTap,
     this.isAdd      = false,
     this.onLongPress,
   });

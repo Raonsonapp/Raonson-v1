@@ -236,7 +236,21 @@ class _ProfileScreenState extends State<ProfileScreen>
           () { Navigator.pop(context); _confirmBlock(u.isBlocked); },
           red: !u.isBlocked),
       _tile(Icons.flag_outlined, 'Шикоят кун',
-          () { Navigator.pop(context); _snack('Шикоят фиристода шуд'); }),
+          () async {
+            Navigator.pop(context);
+            try {
+              await ApiClient.instance.post('/users/${u.id}/report');
+            } catch (_) {}
+            _snack('Шикоят фиристода шуд');
+          }),
+      _tile(Icons.do_not_disturb_on_outlined, 'Маҳдуд кун',
+          () async {
+            Navigator.pop(context);
+            try {
+              await ApiClient.instance.post('/users/${u.id}/restrict');
+            } catch (_) {}
+            _snack('Корбар маҳдуд карда шуд');
+          }),
       _tile(Icons.link_rounded, 'Линкро нусха кун', () {
         Navigator.pop(context);
         Clipboard.setData(
