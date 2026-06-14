@@ -1104,6 +1104,8 @@ class _ReelItemState extends State<_ReelItem> {
       onTap: _togglePause,
       onDoubleTap: _doubleTapLike,
       child: Stack(fit: StackFit.expand, children: [
+        // Фони сиёҳ — кафолат, ки ягон навори хокистарӣ намонад (мисли Instagram)
+        const ColoredBox(color: Colors.black),
         if (_initialized && _ctrl != null)
           FittedBox(
               fit: BoxFit.cover,
