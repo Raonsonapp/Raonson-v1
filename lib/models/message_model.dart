@@ -30,6 +30,7 @@ class MessageModel {
   final String?                 replyToId;
   final MessageModel?           replyTo;
   final List<MessageReaction>   reactions;
+  final bool                    isRequest; // DM аз касе, ки пайгирӣ намекунӣ
 
   const MessageModel({
     required this.id,
@@ -47,6 +48,7 @@ class MessageModel {
     this.replyToId,
     this.replyTo,
     this.reactions    = const [],
+    this.isRequest    = false,
   });
 
   // ── copyWith ────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ class MessageModel {
     String?               replyToId,
     MessageModel?         replyTo,
     List<MessageReaction>? reactions,
+    bool?                 isRequest,
   }) => MessageModel(
     id:           id            ?? this.id,
     chatId:       chatId        ?? this.chatId,
@@ -82,6 +85,7 @@ class MessageModel {
     replyToId:    replyToId     ?? this.replyToId,
     replyTo:      replyTo       ?? this.replyTo,
     reactions:    reactions     ?? this.reactions,
+    isRequest:    isRequest     ?? this.isRequest,
   );
 
   String get lastMessage {
@@ -129,6 +133,7 @@ class MessageModel {
       replyToId: json['replyToId']?.toString(),
       type:      _parseType(json['type']?.toString()),
       status:    MessageStatus.sent,
+      isRequest: json['isRequest'] == true,
     );
   }
 

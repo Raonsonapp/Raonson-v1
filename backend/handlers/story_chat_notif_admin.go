@@ -215,8 +215,11 @@ func GetChats(c *gin.Context) {
 	// One row per conversation (latest message), newest first — DISTINCT ON
 	// avoids the old "one row per message" duplication + 100-message truncation.
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT id,chat_id,sender_id,receiver_id,text,read,created_at,
-		       s_username,s_avatar,s_verified,r_username,r_avatar,r_verified
+		SELECT sub.id,sub.chat_id,sub.sender_id,sub.receiver_id,sub.text,sub.read,sub.created_at,
+		       sub.s_username,sub.s_avatar,sub.s_verified,sub.r_username,sub.r_avatar,sub.r_verified,
+		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1
+		              AND f.following_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS i_follow,
+		       EXISTS(SELECT 1 FROM messages mm WHERE mm.chat_id=sub.chat_id AND mm.sender_id=$1) AS i_sent
 		FROM (
 			SELECT DISTINCT ON (m.chat_id)
 			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
@@ -228,7 +231,7 @@ func GetChats(c *gin.Context) {
 			WHERE (m.sender_id=$1 OR m.receiver_id=$1)
 			ORDER BY m.chat_id, m.created_at DESC
 		) sub
-		ORDER BY created_at DESC
+		ORDER BY sub.created_at DESC
 		LIMIT 100`, myID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get chats failed"})
@@ -242,9 +245,9 @@ func GetChats(c *gin.Context) {
 		var read bool
 		var createdAt interface{}
 		var sUname, sAvatar, rUname, rAvatar string
-		var sVer, rVer bool
+		var sVer, rVer, iFollow, iSent bool
 		rows.Scan(&msgID, &chatID, &senderID, &receiverID, &text, &read, &createdAt,
-			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer)
+			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent)
 
 		isMine := senderID == myID
 		var peer gin.H
@@ -256,10 +259,12 @@ func GetChats(c *gin.Context) {
 		if peer["username"] == "" {
 			continue
 		}
+		// Message request: I don't follow this person AND I never replied.
+		isRequest := !iFollow && !iSent
 		result = append(result, gin.H{
 			"_id": msgID, "chatId": chatID,
 			"isMine": isMine, "text": text, "read": read, "createdAt": createdAt,
-			"peer": peer,
+			"peer": peer, "isRequest": isRequest,
 		})
 	}
 	c.JSON(http.StatusOK, result)
