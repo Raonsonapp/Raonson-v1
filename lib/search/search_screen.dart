@@ -253,6 +253,46 @@ class _SearchScreenState extends State<SearchScreen>
         MaterialPageRoute(builder: (_) => ProfileScreen(userId: userId)));
   }
 
+  // Long-press → пешнамоиши зуд (мисли Instagram)
+  void _showExplorePreview(int index) {
+    if (index < 0 || index >= _exploreItems.length) return;
+    final item = _exploreItems[index];
+    String authorId = '', authorName = '', authorAvatar = '';
+    if (item.postData != null) {
+      authorId     = item.postData!.user.id;
+      authorName   = item.postData!.user.username;
+      authorAvatar = item.postData!.user.avatar;
+    } else if (item.reelData != null) {
+      final u = item.reelData!['user'];
+      if (u is Map) {
+        authorId     = (u['_id'] ?? u['id'] ?? '').toString();
+        authorName   = (u['username'] ?? '').toString();
+        authorAvatar = (u['avatar'] ?? '').toString();
+      }
+    }
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.88),
+      builder: (ctx) => _ExplorePreviewDialog(
+        item:         item,
+        authorName:   authorName,
+        authorAvatar: authorAvatar,
+        onOpen: () { Navigator.pop(ctx); _openExploreAt(index); },
+        onProfile: authorId.isEmpty ? null : () {
+          Navigator.pop(ctx);
+          Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ProfileScreen(userId: authorId)));
+        },
+        onShare: () {
+          Navigator.pop(ctx);
+          final kind = item.type == _ItemType.reel ? 'reels' : 'p';
+          Share.share(
+              'https://mahmadmurodov-raonson.hf.space/$kind/${item.id}');
+        },
+      ),
+    );
+  }
+
   // Open explore item → inline Reels-style feed
   void _openExploreAt(int index) {
     _focus.unfocus();
@@ -340,6 +380,7 @@ class _SearchScreenState extends State<SearchScreen>
               : _ExploreGrid(
                   items:   _exploreItems,
                   onTap:   _openExploreAt,
+                  onLongPress: _showExplorePreview,
                 ),
         ),
       ],
@@ -705,7 +746,8 @@ class _ExploreItem {
 class _ExploreGrid extends StatelessWidget {
   final List<_ExploreItem> items;
   final void Function(int index) onTap;
-  const _ExploreGrid({required this.items, required this.onTap});
+  final void Function(int index)? onLongPress;
+  const _ExploreGrid({required this.items, required this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
@@ -734,6 +776,7 @@ class _ExploreGrid extends StatelessWidget {
       itemBuilder: (_, i) => _ExploreCell(
         item:  items[i],
         onTap: () => onTap(i),
+        onLongPress: onLongPress == null ? null : () => onLongPress!(i),
       ),
     );
   }
@@ -742,12 +785,14 @@ class _ExploreGrid extends StatelessWidget {
 class _ExploreCell extends StatelessWidget {
   final _ExploreItem item;
   final VoidCallback onTap;
-  const _ExploreCell({required this.item, required this.onTap});
+  final VoidCallback? onLongPress;
+  const _ExploreCell({required this.item, required this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Stack(fit: StackFit.expand, children: [
         // Thumbnail
         CachedNetworkImage(
@@ -799,6 +844,99 @@ class _ExploreCell extends StatelessWidget {
     if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
     if (v >= 1000)    return '${(v / 1000).toStringAsFixed(v >= 10000 ? 0 : 1)}K';
     return '$v';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  EXPLORE LONG-PRESS PREVIEW (мисли Instagram)
+// ════════════════════════════════════════════════════════════════════
+class _ExplorePreviewDialog extends StatelessWidget {
+  final _ExploreItem item;
+  final String authorName, authorAvatar;
+  final VoidCallback onOpen, onShare;
+  final VoidCallback? onProfile;
+  const _ExplorePreviewDialog({
+    required this.item,
+    required this.authorName,
+    required this.authorAvatar,
+    required this.onOpen,
+    required this.onShare,
+    this.onProfile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Center(
+        child: GestureDetector(
+          onTap: () {}, // дохилро напӯшонад
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 28),
+            constraints: const BoxConstraints(maxWidth: 340),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              // Author header
+              if (authorName.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Row(children: [
+                    Avatar(imageUrl: authorAvatar, size: 32, glowBorder: false),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(authorName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white,
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                    ),
+                  ]),
+                ),
+              // Media preview
+              AspectRatio(
+                aspectRatio: 1,
+                child: CachedNetworkImage(
+                  imageUrl: item.url,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) =>
+                      Container(color: const Color(0xFF111111)),
+                  errorWidget: (_, __, ___) =>
+                      Container(color: const Color(0xFF111111)),
+                ),
+              ),
+              // Action row (мисли Instagram menu)
+              _act(Icons.open_in_full_rounded, 'Кушодан', onOpen),
+              if (onProfile != null)
+                _act(Icons.person_outline_rounded,
+                    'Профили @$authorName', onProfile!),
+              _act(Icons.share_outlined, 'Паҳн кардан', onShare),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _act(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.white12))),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(children: [
+          Expanded(
+            child: Text(label,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white, fontSize: 14.5)),
+          ),
+          Icon(icon, color: Colors.white70, size: 20),
+        ]),
+      ),
+    );
   }
 }
 

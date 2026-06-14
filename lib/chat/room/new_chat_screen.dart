@@ -3,13 +3,19 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
+import '../../core/services/user_session.dart';
+import '../../core/storage/token_storage.dart';
+import '../../core/webrtc_service.dart';
 import '../../models/user_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import 'chat_room_screen.dart';
+import 'call_screen.dart';
 
 class NewChatScreen extends StatefulWidget {
-  const NewChatScreen({super.key});
+  /// Агар callType дода шавад, интихоби корбар занг оғоз мекунад (на чат).
+  final CallType? callType;
+  const NewChatScreen({super.key, this.callType});
 
   @override
   State<NewChatScreen> createState() => _NewChatScreenState();
@@ -61,7 +67,24 @@ class _NewChatScreenState extends State<NewChatScreen> {
     }
   }
 
-  void _openChat(UserModel user) {
+  Future<void> _openChat(UserModel user) async {
+    // Режими занг — мисли тугмаи «занги нав»-и Instagram.
+    if (widget.callType != null) {
+      final myId = await TokenStorage.getUserId() ?? '';
+      WebRTCService().notifyIncoming(
+        toUserId:     user.id,
+        fromUserId:   myId,
+        fromUsername: UserSession.username ?? '',
+        fromAvatar:   UserSession.avatar ?? '',
+        isVideo:      widget.callType == CallType.video,
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => CallScreen(peer: user, callType: widget.callType!),
+      ));
+      return;
+    }
     Navigator.pop(context); // close NewChatScreen first
     Navigator.push(
       context,
