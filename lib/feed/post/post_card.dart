@@ -578,14 +578,47 @@ class _PostCardState extends State<PostCard>
         // Ба чатҳо фиристодан — мисли Instagram
         _ShareChatsRow(postUrl: url),
 
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-            _ShareActionBtn(icon: Icons.add_circle_outline_rounded,
+        // Иконкаҳои худамон (assets/icons) + логоҳои social media — мисли Instagram
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          child: Row(children: [
+            _ShareActionBtn(svgPath: 'assets/icons/add_story.svg',
               color: const Color(0xFF833AB4), label: 'Сторис',
               onTap: () { Navigator.pop(sheetCtx);
                 Navigator.pushNamed(context, '/create-story'); }),
-            _ShareActionBtn(icon: Icons.link_rounded,
+            _ShareActionBtn(svgPath: 'assets/icons/logo_whatsapp.svg',
+              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'WhatsApp',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(url)}'),
+                    mode: LaunchMode.externalApplication);
+                if (mounted) setState(() => _shareCount++);
+              }),
+            _ShareActionBtn(svgPath: 'assets/icons/logo_telegram.svg',
+              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'Telegram',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                launchUrl(Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(url)}'),
+                    mode: LaunchMode.externalApplication);
+                if (mounted) setState(() => _shareCount++);
+              }),
+            _ShareActionBtn(svgPath: 'assets/icons/logo_instagram.svg',
+              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'Instagram',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                Share.share(url);
+                if (mounted) setState(() => _shareCount++);
+              }),
+            _ShareActionBtn(svgPath: 'assets/icons/logo_facebook.svg',
+              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'Facebook',
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                launchUrl(Uri.parse('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(url)}'),
+                    mode: LaunchMode.externalApplication);
+                if (mounted) setState(() => _shareCount++);
+              }),
+            _ShareActionBtn(svgPath: 'assets/icons/link.svg',
               color: const Color(0xFF2A2A2A), label: 'Линк',
               onTap: () {
                 Clipboard.setData(ClipboardData(text: url));
@@ -594,7 +627,7 @@ class _PostCardState extends State<PostCard>
                   content: Text('Линк нусха шуд ✓'),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2))); }),
-            _ShareActionBtn(icon: Icons.download_rounded,
+            _ShareActionBtn(svgPath: 'assets/icons/download.svg',
               color: const Color(0xFF2A2A2A), label: 'Зеркашӣ',
               onTap: () {
                 Navigator.pop(sheetCtx);
@@ -606,22 +639,11 @@ class _PostCardState extends State<PostCard>
                       mode: LaunchMode.externalApplication);
                 }
               }),
-            _ShareActionBtn(icon: Icons.ios_share_rounded,
+            _ShareActionBtn(svgPath: 'assets/icons/share.svg',
               color: const Color(0xFF2A2A2A), label: 'Бештар',
               onTap: () { Navigator.pop(sheetCtx);
                 Share.share(url).then((_) {
                   if (mounted) setState(() => _shareCount++); }); }),
-            _ShareActionBtn(icon: Icons.flag_outlined,
-              color: const Color(0xFF2A2A2A), label: 'Хабар',
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                ApiClient.instance
-                    .post('/posts/${widget.post.id}/report')
-                    .then((_) {}, onError: (_) {});
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Хабар фиристода шуд. Ташаккур!'),
-                    duration: Duration(seconds: 2)));
-              }),
           ])),
         const Divider(color: Colors.white12, height: 1),
         ListTile(
@@ -1670,20 +1692,30 @@ class _MediaChip extends StatelessWidget {
 }
 
 class _ShareActionBtn extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final String? svgPath;       // иконкаи худамон (assets/icons)
+  final bool brandLogo;        // логои brand — бо ранги аслиаш (бе filter)
   final Color color;
   final String label;
   final VoidCallback onTap;
-  const _ShareActionBtn({required this.icon, required this.color,
-      required this.label, required this.onTap});
+  const _ShareActionBtn({this.icon, this.svgPath, this.brandLogo = false,
+      required this.color, required this.label, required this.onTap});
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 52, height: 52,
+    behavior: HitTestBehavior.opaque,
+    child: SizedBox(width: 70, child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 54, height: 54,
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        child: Icon(icon, color: Colors.white, size: 24)),
+        child: Center(child: svgPath != null
+            ? SvgPicture.asset(svgPath!,
+                width: brandLogo ? 30 : 24, height: brandLogo ? 30 : 24,
+                colorFilter: brandLogo
+                    ? null
+                    : const ColorFilter.mode(Colors.white, BlendMode.srcIn))
+            : Icon(icon, color: Colors.white, size: 24))),
       const SizedBox(height: 5),
-      Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-    ]));
+      Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white60, fontSize: 11)),
+    ])));
 }
