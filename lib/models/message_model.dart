@@ -31,6 +31,7 @@ class MessageModel {
   final MessageModel?           replyTo;
   final List<MessageReaction>   reactions;
   final bool                    isRequest; // DM аз касе, ки пайгирӣ намекунӣ
+  final int                     unreadCount;
 
   const MessageModel({
     required this.id,
@@ -49,6 +50,7 @@ class MessageModel {
     this.replyTo,
     this.reactions    = const [],
     this.isRequest    = false,
+    this.unreadCount  = 0,
   });
 
   // ── copyWith ────────────────────────────────────────────────────
@@ -69,6 +71,7 @@ class MessageModel {
     MessageModel?         replyTo,
     List<MessageReaction>? reactions,
     bool?                 isRequest,
+    int?                  unreadCount,
   }) => MessageModel(
     id:           id            ?? this.id,
     chatId:       chatId        ?? this.chatId,
@@ -86,6 +89,7 @@ class MessageModel {
     replyTo:      replyTo       ?? this.replyTo,
     reactions:    reactions     ?? this.reactions,
     isRequest:    isRequest     ?? this.isRequest,
+    unreadCount:  unreadCount   ?? this.unreadCount,
   );
 
   String get lastMessage {
@@ -134,6 +138,7 @@ class MessageModel {
       type:      _parseType(json['type']?.toString()),
       status:    MessageStatus.sent,
       isRequest: json['isRequest'] == true,
+      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
     );
   }
 
