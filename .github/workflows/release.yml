@@ -1,10 +1,11 @@
 name: Release AAB (signed)
 
 # Release-и имзошуда барои Google Play.
-# Мануалӣ оғоз кунед (Actions → Release AAB → Run workflow) ё бо tag "v*".
+# ХАР build release аст: ҳар push ба main/шохаи кор signed AAB+APK месозад.
 on:
   workflow_dispatch:
   push:
+    branches: [main, claude/profile-settings-home-feed-N5ct0]
     tags: ['v*']
 
 jobs:
@@ -68,3 +69,12 @@ jobs:
         with:
           name: app-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Файли деобфускатсия (R8) — барои огоҳии Google Play "mapping.txt нест".
+      # Онро аз ин артефакт зеркашӣ карда, дар Play Console бор кунед.
+      - name: Upload R8 mapping (deobfuscation)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping-deobfuscation
+          path: build/app/outputs/mapping/release/mapping.txt
+          if-no-files-found: ignore
