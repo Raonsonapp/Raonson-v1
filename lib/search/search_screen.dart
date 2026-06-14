@@ -1148,6 +1148,8 @@ class _FeedCardState extends State<_FeedCard> {
   @override
   Widget build(BuildContext context) {
     return Stack(fit: StackFit.expand, children: [
+      // Фони сиёҳ — мисли Instagram (на бежеви)
+      const ColoredBox(color: Colors.black),
       // ── Media: видеоро бозӣ мекунад, на ҳамчун расм (боги сиёҳ ислоҳ шуд) ──
       if (_isVideo)
         (_ready && _video != null
@@ -1169,11 +1171,14 @@ class _FeedCardState extends State<_FeedCard> {
                     child: CircularProgressIndicator(
                         color: Colors.white24, strokeWidth: 2))))
       else
+        // Расм пурра нишон дода мешавад (мисли Instagram) — буриш намешавад
         CachedNetworkImage(
           imageUrl: widget.item.url,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Container(color: Colors.black),
-          errorWidget: (_, __, ___) => Container(color: Colors.black),
+          fit: BoxFit.contain,
+          width: double.infinity,
+          height: double.infinity,
+          placeholder: (_, __) => const ColoredBox(color: Colors.black),
+          errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black),
         ),
       // Gradient overlay
       Container(
