@@ -1245,7 +1245,7 @@ class _FeedCardState extends State<_FeedCard> {
                       color: Colors.white, size: 14),
                 ],
                 const SizedBox(width: 10),
-                _FollowChip(),
+                _FollowChip(userId: widget.item.postData!.user.id),
               ]),
               if (widget.item.postData!.caption.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -1287,7 +1287,7 @@ class _FeedCardState extends State<_FeedCard> {
                         color: Colors.white, size: 14),
                   ],
                   const SizedBox(width: 10),
-                  _FollowChip(),
+                  _FollowChip(userId: (u['_id'] ?? u['id'] ?? '').toString()),
                 ]),
                 if (caption.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -1334,18 +1334,54 @@ class _ActionBtn extends StatelessWidget {
   }
 }
 
-class _FollowChip extends StatelessWidget {
+class _FollowChip extends StatefulWidget {
+  final String userId;
+  const _FollowChip({this.userId = ''});
+  @override
+  State<_FollowChip> createState() => _FollowChipState();
+}
+
+class _FollowChipState extends State<_FollowChip> {
+  bool _following = false;
+  bool _busy = false;
+
+  bool get _isMe =>
+      widget.userId.isEmpty ||
+      widget.userId == (UserSession.userId ?? '__none__');
+
+  Future<void> _toggle() async {
+    if (_busy) return;
+    setState(() { _busy = true; _following = !_following; });
+    try {
+      if (_following) {
+        await ApiClient.instance.post('/follow/${widget.userId}');
+      } else {
+        await ApiClient.instance.delete('/follow/${widget.userId}');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _following = !_following); // баргардонӣ
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.white60),
-        borderRadius: BorderRadius.circular(6),
+    // Дар пости ХУДАТ тугмаи «Пайравӣ» нишон дода намешавад.
+    if (_isMe) return const SizedBox.shrink();
+    return GestureDetector(
+      onTap: _toggle,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: _following ? Colors.transparent : Colors.transparent,
+          border: Border.all(color: Colors.white60),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(_following ? 'Пайравӣ шуд' : 'Пайравӣ',
+            style: const TextStyle(color: Colors.white,
+                fontSize: 12, fontWeight: FontWeight.w600)),
       ),
-      child: const Text('Пайравӣ',
-          style: TextStyle(color: Colors.white,
-              fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 }
