@@ -597,6 +597,12 @@ class _ReelItemState extends State<_ReelItem> {
       builder: (_) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
+        _menuItem(_saved ? Icons.bookmark : Icons.bookmark_border_rounded,
+            _saved ? 'Захира шуд' : 'Захира кардан', () {
+          Navigator.pop(context);
+          setState(() => _saved = !_saved);
+          widget.onSave();
+        }),
         _menuItem(Icons.thumb_up_outlined, 'Ҷолиб аст', () {
           Navigator.pop(context);
           _markInterest(true);
@@ -604,6 +610,12 @@ class _ReelItemState extends State<_ReelItem> {
         _menuItem(Icons.thumb_down_outlined, 'Ҷолиб нест', () {
           Navigator.pop(context);
           widget.onNotInterested();
+        }),
+        _menuItem(Icons.info_outline_rounded, 'Чаро ин рилсро мебинед', () {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Ин рилс аз рӯи завқ ва фаъолияти шумо нишон дода шуд'),
+              duration: Duration(seconds: 3)));
         }),
         _menuItem(Icons.flag_outlined, 'Шикоят кардан', () {
           Navigator.pop(context);
@@ -1232,6 +1244,11 @@ class _ReelItemState extends State<_ReelItem> {
                   svgPath: 'assets/icons/comment.svg',
                   count: _fmt(reel.commentsCount),
                   onTap: _openComments),
+              const SizedBox(height: 22),
+              _ReelStableBtn(
+                  svgPath: 'assets/icons/retweet.svg',
+                  count: _fmt(_retweetCount),
+                  onTap: _share),
               const SizedBox(height: 22),
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',
