@@ -750,7 +750,9 @@ class _ChatTile extends StatelessWidget {
     return InkWell(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: chat.peer)),
+        MaterialPageRoute(
+            builder: (_) =>
+                ChatRoomScreen(peer: chat.peer, isRequest: chat.isRequest)),
       ).then((_) {
         context.read<ChatListController>().loadChats();
         presence.checkUser(chat.peer.id);
