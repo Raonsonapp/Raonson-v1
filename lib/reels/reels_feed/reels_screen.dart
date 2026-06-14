@@ -1007,12 +1007,27 @@ class _ReelItemState extends State<_ReelItem> {
                     color: Colors.white, size: 18)),
             title: const Text('Ба история илова кун',
                 style: TextStyle(color: Colors.white)),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Ба история илова шуд ✓'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2)));
+              try {
+                await ApiClient.instance.post('/stories/', body: {
+                  'mediaUrl': widget.reel.videoUrl,
+                  'mediaType': 'video',
+                  'caption': widget.reel.caption,
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Ба история илова шуд ✓'),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2)));
+                }
+              } catch (_) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('Хато ҳангоми илова'),
+                      duration: Duration(seconds: 2)));
+                }
+              }
             }),
         ListTile(
             leading: const CircleAvatar(
