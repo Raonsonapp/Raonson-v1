@@ -17,6 +17,7 @@ import '../../core/services/user_session.dart';
 import '../../widgets/account_switcher.dart';
 import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
+import '../room/call_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatListScreen — 10/10 Instagram DM style
@@ -164,10 +165,11 @@ class _ChatView extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.video_call_outlined,
                       color: Colors.white, size: 26),
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Занги видеоӣ ба зудӣ илова мешавад'),
-                        duration: Duration(seconds: 2)),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const NewChatScreen(callType: CallType.video)),
                   ),
                 ),
                 IconButton(
