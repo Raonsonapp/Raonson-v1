@@ -429,9 +429,6 @@ class _StoryEditorState extends State<StoryEditor> {
               const SizedBox(height: 2),
               _SideBtn(icon: Icons.more_horiz_rounded, label: 'Боз',
                 onTap: _saveStory),
-              const SizedBox(height: 2),
-              _SideBtn(icon: Icons.expand_less_rounded, label: '',
-                small: true, onTap: () {}),
             ])),
 
           // ── BOTTOM: тугмаҳои нашр (мисли Instagram — поён) ────
