@@ -248,7 +248,14 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         ListTile(
           leading: const Icon(Icons.archive_outlined, color: Colors.white),
           title: const Text('Бойгонӣ', style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _resume(); _toast('Бойгонӣ ба зудӣ илова мешавад'); }),
+          onTap: () async {
+            Navigator.pop(context);
+            try {
+              await ApiClient.instance.post('/stories/${_current.id}/archive');
+              _toast('Ба бойгонӣ кӯчид ✓');
+            } catch (_) { _toast('Хато'); }
+            _resume();
+          }),
         ListTile(
           leading: Icon(_isVideo ? Icons.video_collection_outlined : Icons.save_alt_outlined,
               color: Colors.white),
@@ -263,7 +270,14 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           leading: const Icon(Icons.comment_bank_outlined, color: Colors.white),
           title: const Text('Шарҳро хомӯш кун',
               style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _resume(); _toast('Ин хосият ба зудӣ илова мешавад'); }),
+          onTap: () async {
+            Navigator.pop(context);
+            try {
+              await ApiClient.instance.post('/stories/${_current.id}/toggle-replies');
+              _toast('Танзими ҷавобҳо нав шуд ✓');
+            } catch (_) { _toast('Хато'); }
+            _resume();
+          }),
         const SizedBox(height: 8),
       ])),
     ).then((_) => _resume());
