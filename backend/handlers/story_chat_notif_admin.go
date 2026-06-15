@@ -95,6 +95,14 @@ func CreateStory(c *gin.Context) {
 func ViewStory(c *gin.Context) {
 	sid  := c.Param("id")
 	myID := mw.UID(c)
+	// Бинандаи худи соҳибро ҳисоб намекунем (мисли Instagram).
+	var owner string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
+	if owner == myID {
+		c.JSON(http.StatusOK, gin.H{"viewed": true})
+		return
+	}
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO story_views(story_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, sid, myID)
 	c.JSON(http.StatusOK, gin.H{"viewed": true})
@@ -138,7 +146,8 @@ func GetStoryViewers(c *gin.Context) {
 	}
 	var viewCount, likeCount, replyCount int
 	db.Pool.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM story_views WHERE story_id=$1::text`, sid).Scan(&viewCount)
+		`SELECT COUNT(*) FROM story_views WHERE story_id=$1::text AND user_id <> $2::text`,
+		sid, ownerID).Scan(&viewCount)
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COUNT(*) FROM story_likes WHERE story_id=$1::text`, sid).Scan(&likeCount)
 	db.Pool.QueryRow(context.Background(),
@@ -152,9 +161,9 @@ func GetStoryViewers(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM story_likes sl
 		              WHERE sl.story_id=$1::text AND sl.user_id=u.id) AS liked
 		FROM story_views sv JOIN users u ON u.id=sv.user_id
-		WHERE sv.story_id=$1::text
+		WHERE sv.story_id=$1::text AND sv.user_id <> $2::text
 		ORDER BY sv.viewed_at DESC NULLS LAST
-		LIMIT 500`, sid)
+		LIMIT 500`, sid, ownerID)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
