@@ -116,6 +116,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   bool   _paused  = false;
   bool   _liked   = false;
 
+  // Пешнамоиши бинандагон (барои тугмаи «Амалҳо»-и поён)
+  List<String> _viewerAvatars = [];
+  int          _viewerCount   = 0;
+
   VideoPlayerController? _videoCtrl;
   bool _videoReady = false;
 
@@ -227,6 +231,26 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     try {
       await ApiClient.instance.post('/stories/${_current.id}/view');
     } catch (_) {}
+    if (_isOwner) _loadViewerPreview();
+  }
+
+  // Пешнамоиши бинандагон (то 3 аватар + шумора) барои тугмаи «Амалҳо».
+  Future<void> _loadViewerPreview() async {
+    setState(() { _viewerAvatars = []; _viewerCount = 0; });
+    try {
+      final res = await ApiClient.instance.get('/stories/${_current.id}/viewers');
+      if (res.statusCode >= 400 || !mounted) return;
+      final b = jsonDecode(res.body) as Map<String, dynamic>;
+      final viewers = (b['viewers'] as List?) ?? [];
+      setState(() {
+        _viewerCount = (b['viewsCount'] as num?)?.toInt() ?? viewers.length;
+        _viewerAvatars = viewers
+            .take(3)
+            .map((v) => (v['avatar'] ?? '').toString())
+            .where((s) => s.isNotEmpty)
+            .toList();
+      });
+    } catch (_) {}
   }
 
   // ── Owner menu — ТОҶИКӢ ─────────────────────────────────────────
@@ -238,22 +262,13 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(margin: const EdgeInsets.symmetric(vertical: 8),
+        Container(margin: const EdgeInsets.symmetric(vertical: 10),
           width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        ListTile(
-          leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          title: const Text('Нест кун',
-              style: TextStyle(color: Colors.redAccent, fontSize: 17, fontWeight: FontWeight.w500)),
-          onTap: () { Navigator.pop(context); _deleteStory(); }),
-        ListTile(
-          leading: const Icon(Icons.add_circle_outline, color: Colors.white),
-          title: const Text('Ба актуальный илова', style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _addToHighlight(); }),
-        ListTile(
-          leading: const Icon(Icons.archive_outlined, color: Colors.white),
-          title: const Text('Бойгонӣ', style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () async {
+        // Менюи матнӣ бе icon — айнан мисли Instagram
+        _menuRow('Нест кун', red: true,
+            onTap: () { Navigator.pop(context); _deleteStory(); }),
+        _menuRow('Бойгонӣ', onTap: () async {
             Navigator.pop(context);
             try {
               await ApiClient.instance.post('/stories/${_current.id}/archive');
@@ -261,21 +276,13 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             } catch (_) { _toast('Хато'); }
             _resume();
           }),
-        ListTile(
-          leading: Icon(_isVideo ? Icons.video_collection_outlined : Icons.save_alt_outlined,
-              color: Colors.white),
-          title: Text(_isVideo ? 'Видео ҳифз кун' : 'Расм ҳифз кун',
-              style: const TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _resume(); _saveMedia(); }),
-        ListTile(
-          leading: const Icon(Icons.share_outlined, color: Colors.white),
-          title: const Text('Мубодила кун', style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () { Navigator.pop(context); _shareStory(); }),
-        ListTile(
-          leading: const Icon(Icons.comment_bank_outlined, color: Colors.white),
-          title: const Text('Шарҳро хомӯш кун',
-              style: TextStyle(color: Colors.white, fontSize: 17)),
-          onTap: () async {
+        _menuRow(_isVideo ? 'Видеоро ҳифз кун' : 'Расмро ҳифз кун',
+            onTap: () { Navigator.pop(context); _resume(); _saveMedia(); }),
+        _menuRow('Мубодила кардан',
+            onTap: () { Navigator.pop(context); _shareStory(); }),
+        _menuRow('Танзимоти сторис',
+            onTap: () { Navigator.pop(context); _resume(); }),
+        _menuRow('Шарҳҳоро хомӯш кардан', onTap: () async {
             Navigator.pop(context);
             try {
               await ApiClient.instance.post('/stories/${_current.id}/toggle-replies');
@@ -286,6 +293,24 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         const SizedBox(height: 8),
       ])),
     ).then((_) => _resume());
+  }
+
+  // Сатри менюи матнӣ (бе icon) — мисли Instagram
+  Widget _menuRow(String label, {required VoidCallback onTap, bool red = false}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(label,
+              style: TextStyle(
+                  color: red ? const Color(0xFFFF3B30) : Colors.white,
+                  fontSize: 16,
+                  fontWeight: red ? FontWeight.w600 : FontWeight.w400)),
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteStory() async {
@@ -521,32 +546,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           // Positioned(bottom: 130, left: 16, right: 16,
           //   child: Text(_current.caption!, style: TextStyle(color: Colors.white, fontSize: 15))),
 
-          // ── Owner: viewers hint ────────────────────────────────
-          if (_isOwner)
-            Positioned(
-              bottom: MediaQuery.of(context).padding.bottom + 90,
-              left: 0, right: 0,
-              child: GestureDetector(
-                onTap: _showViewersSheet,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.keyboard_arrow_up, color: Colors.white70, size: 22),
-                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.remove_red_eye_outlined, color: Colors.white70, size: 14),
-                    const SizedBox(width: 4),
-                    Text('${_current.viewsCount} кас дид',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.favorite, color: Colors.red, size: 14),
-                    const SizedBox(width: 4),
-                    Text('${_current.likesCount}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                  ]),
-                ]))),
-
           // ── Bottom actions ─────────────────────────────────────
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 12,
-            left: 12, right: 12,
+            bottom: MediaQuery.of(context).padding.bottom + 10,
+            left: 8, right: 8,
             child: _showReply ? _buildReplyInput() : _buildActions(),
           ),
         ]),
@@ -569,12 +572,30 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   Widget _buildActions() {
     if (_isOwner) {
-      return Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _ActionBtn(svgPath: 'assets/icons/share.svg', label: 'Мубодила', onTap: _shareStory),
-        _ActionBtn(icon: Icons.delete_outline, label: 'Нест кун',
-            onTap: _deleteStory, color: Colors.redAccent),
-        _ActionBtn(icon: Icons.more_horiz_rounded, label: 'Бештар', onTap: _showOwnerMenu),
-      ]);
+      // Айнан мисли Instagram: чап — «Амалҳо» бо аватарҳои бинандагон,
+      // баъд Мубодила / Актуалӣ / Зикр / Бештар.
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _ActivityBtn(
+            avatars: _viewerAvatars,
+            count: _viewerCount,
+            onTap: _showViewersSheet,
+          ),
+          const Spacer(),
+          _ActionBtn(svgPath: 'assets/icons/share.svg', label: 'Мубодила',
+              onTap: _shareStory),
+          const SizedBox(width: 4),
+          _ActionBtn(icon: Icons.add_box_outlined, label: 'Актуалӣ',
+              onTap: _addToHighlight),
+          const SizedBox(width: 4),
+          _ActionBtn(icon: Icons.alternate_email_rounded, label: 'Зикр',
+              onTap: _shareStory),
+          const SizedBox(width: 4),
+          _ActionBtn(icon: Icons.more_horiz_rounded, label: 'Бештар',
+              onTap: _showOwnerMenu),
+        ],
+      );
     }
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(height: 44, child: ListView(scrollDirection: Axis.horizontal,
@@ -687,7 +708,7 @@ class _ProgressBar extends StatelessWidget {
       minHeight: 2.5));
 }
 
-// ── Action button for owner ──────────────────────────────────────────
+// ── Action button for owner (plain icon + label, мисли Instagram) ──────
 class _ActionBtn extends StatelessWidget {
   final IconData? icon;
   final String? svgPath;
@@ -699,17 +720,67 @@ class _ActionBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        width: 48, height: 48,
-        decoration: const BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
-        child: Center(child: svgPath != null
-          ? SvgPicture.asset(svgPath!, width: 22, height: 22,
+    behavior: HitTestBehavior.opaque,
+    child: SizedBox(
+      width: 64,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        svgPath != null
+          ? SvgPicture.asset(svgPath!, width: 26, height: 26,
               colorFilter: ColorFilter.mode(color ?? Colors.white, BlendMode.srcIn))
-          : Icon(icon, color: color ?? Colors.white, size: 22))),
-      const SizedBox(height: 4),
-      Text(label, style: TextStyle(color: color ?? Colors.white70, fontSize: 10)),
-    ]));
+          : Icon(icon, color: color ?? Colors.white, size: 27),
+        const SizedBox(height: 5),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color ?? Colors.white, fontSize: 11)),
+      ]),
+    ));
+}
+
+// ── «Амалҳо» — аватарҳои бинандагон + шумора (мисли Instagram) ─────────
+class _ActivityBtn extends StatelessWidget {
+  final List<String> avatars;
+  final int count;
+  final VoidCallback onTap;
+  const _ActivityBtn({required this.avatars, required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (avatars.isEmpty)
+          const Icon(Icons.favorite_border_rounded, color: Colors.white, size: 27)
+        else
+          SizedBox(
+            height: 30,
+            width: (avatars.length * 18.0) + 12,
+            child: Stack(
+              children: List.generate(avatars.length, (i) => Positioned(
+                left: i * 18.0,
+                child: Container(
+                  width: 30, height: 30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 1.5),
+                  ),
+                  child: ClipOval(
+                    child: Image.network(avatars[i], fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFF333333),
+                            child: const Icon(Icons.person,
+                                color: Colors.white54, size: 16))),
+                  ),
+                ),
+              )),
+            ),
+          ),
+        const SizedBox(height: 5),
+        Text(count > 0 ? 'Амалҳо · $count' : 'Амалҳо',
+            maxLines: 1,
+            style: const TextStyle(color: Colors.white, fontSize: 11)),
+      ]),
+    );
+  }
 }
 
 // ── Heart overlay ────────────────────────────────────────────────────
@@ -945,7 +1016,18 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
           ),
         const Divider(color: Colors.white12, height: 1),
 
-        // ── Seen-by list ──
+        if (!_loading && _viewers.isNotEmpty)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Кӣ сторисро дид',
+                  style: TextStyle(color: Colors.white,
+                      fontSize: 17, fontWeight: FontWeight.w700)),
+            ),
+          ),
+
+        // ── Seen-by list (мисли Instagram) ──
         Expanded(
           child: _loading
               ? const Center(
@@ -957,7 +1039,7 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
                           style: TextStyle(color: Colors.white38)))
                   : ListView.builder(
                       controller: scrollCtrl,
-                      padding: const EdgeInsets.only(top: 4, bottom: 16),
+                      padding: const EdgeInsets.only(top: 2, bottom: 16),
                       itemCount: _viewers.length,
                       itemBuilder: (_, i) {
                         final v = _viewers[i];
@@ -965,34 +1047,64 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
                         final uname = (v['username'] ?? '').toString();
                         final name = (v['fullName'] ?? '').toString();
                         final liked = v['liked'] == true;
-                        return ListTile(
-                          leading: CircleAvatar(
-                            radius: 22,
-                            backgroundColor: Colors.white12,
-                            backgroundImage: avatar.isNotEmpty
-                                ? CachedNetworkImageProvider(avatar)
-                                : null,
-                            child: avatar.isEmpty
-                                ? Text(
-                                    uname.isNotEmpty
-                                        ? uname[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(color: Colors.white))
-                                : null,
-                          ),
-                          title: Text(uname,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500)),
-                          subtitle: name.isEmpty
-                              ? null
-                              : Text(name,
-                                  style: const TextStyle(
-                                      color: Colors.white38, fontSize: 12)),
-                          trailing: liked
-                              ? const Icon(Icons.favorite,
-                                  color: Colors.red, size: 18)
-                              : null,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 7),
+                          child: Row(children: [
+                            // Аватар + нишони дил (агар лайк карда бошад)
+                            Stack(clipBehavior: Clip.none, children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Colors.white12,
+                                backgroundImage: avatar.isNotEmpty
+                                    ? CachedNetworkImageProvider(avatar) : null,
+                                child: avatar.isEmpty
+                                    ? Text(uname.isNotEmpty
+                                        ? uname[0].toUpperCase() : '?',
+                                        style: const TextStyle(color: Colors.white))
+                                    : null,
+                              ),
+                              if (liked)
+                                Positioned(
+                                  bottom: -2, right: -2,
+                                  child: Container(
+                                    width: 20, height: 20,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF2D55),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: const Color(0xFF1A1A1A), width: 2),
+                                    ),
+                                    child: const Icon(Icons.favorite,
+                                        color: Colors.white, size: 11),
+                                  ),
+                                ),
+                            ]),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(uname,
+                                      style: const TextStyle(color: Colors.white,
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w600)),
+                                  if (name.isNotEmpty)
+                                    Text(name, maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            color: Colors.white38, fontSize: 12.5)),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.more_vert,
+                                color: Colors.white54, size: 20),
+                            const SizedBox(width: 14),
+                            SvgPicture.asset('assets/icons/share.svg',
+                                width: 22, height: 22,
+                                colorFilter: const ColorFilter.mode(
+                                    Colors.white, BlendMode.srcIn)),
+                          ]),
                         );
                       }),
         ),
