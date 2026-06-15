@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -246,6 +247,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
               style: TextStyle(color: Colors.redAccent, fontSize: 17, fontWeight: FontWeight.w500)),
           onTap: () { Navigator.pop(context); _deleteStory(); }),
         ListTile(
+          leading: const Icon(Icons.add_circle_outline, color: Colors.white),
+          title: const Text('Ба актуальный илова', style: TextStyle(color: Colors.white, fontSize: 17)),
+          onTap: () { Navigator.pop(context); _addToHighlight(); }),
+        ListTile(
           leading: const Icon(Icons.archive_outlined, color: Colors.white),
           title: const Text('Бойгонӣ', style: TextStyle(color: Colors.white, fontSize: 17)),
           onTap: () async {
@@ -333,6 +338,50 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     late OverlayEntry entry;
     entry = OverlayEntry(builder: (_) => _HeartOverlay(onDone: () => entry.remove()));
     overlay.insert(entry);
+  }
+
+  // Сторисро ба «Актуальный» (highlights) илова мекунад.
+  Future<void> _addToHighlight() async {
+    _pause();
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Актуальни нав', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 16,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Ном (масалан, Сафар)',
+            hintStyle: TextStyle(color: Colors.white38),
+            counterStyle: TextStyle(color: Colors.white24),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context),
+              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()),
+              child: const Text('Илова', style: TextStyle(color: AppColors.neonBlue))),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty) { _resume(); return; }
+    try {
+      await ApiClient.instance.post('/highlights/', body: {
+        'title': name,
+        'coverUrl': _current.mediaUrl,
+        'storyIds': [_current.id],
+        'items': [
+          {'url': _current.mediaUrl, 'type': _current.mediaType, 'storyId': _current.id}
+        ],
+      });
+      _toast('Ба «$name» илова шуд ✓');
+    } catch (_) { _toast('Хато'); }
+    _resume();
   }
 
   Future<void> _sendReply() async {
@@ -671,26 +720,91 @@ class _HeartOverlay extends StatefulWidget {
   State<_HeartOverlay> createState() => _HeartOverlayState();
 }
 
+// Instagram-монанд: чанд дил аз гӯшаи поёни чап боло парвоз мекунад.
 class _HeartOverlayState extends State<_HeartOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _scale, _opacity;
+  final _rnd = math.Random();
+  late final List<_HeartParticle> _hearts;
+
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800))..forward();
-    _scale   = Tween(begin: 0.5, end: 1.3).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
-    _opacity = Tween(begin: 1.0, end: 0.0).animate(
-        CurvedAnimation(parent: _ctrl, curve: const Interval(0.6, 1.0, curve: Curves.easeOut)));
-    _ctrl.addStatusListener((s) { if (s == AnimationStatus.completed) widget.onDone(); });
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1600))..forward();
+    _hearts = List.generate(7, (i) {
+      return _HeartParticle(
+        startDelay: i * 0.06,
+        driftX: (_rnd.nextDouble() * 70) + 10,   // ба рост каҷ мешавад
+        wobble: (_rnd.nextDouble() * 26) + 8,
+        rise: (_rnd.nextDouble() * 120) + 280,   // баландии парвоз
+        size: (_rnd.nextDouble() * 14) + 22,
+        color: [
+          const Color(0xFFFF3040),
+          const Color(0xFFFF6B9D),
+          const Color(0xFFE91E63),
+          Colors.white,
+        ][i % 4],
+      );
+    });
+    _ctrl.addStatusListener((s) {
+      if (s == AnimationStatus.completed) widget.onDone();
+    });
   }
-  @override void dispose() { _ctrl.dispose(); super.dispose(); }
+
   @override
-  Widget build(BuildContext context) => Center(child: AnimatedBuilder(animation: _ctrl,
-    builder: (_, __) => Opacity(opacity: _opacity.value,
-      child: Transform.scale(scale: _scale.value,
-        child: const Icon(Icons.favorite, color: Colors.white, size: 100,
-            shadows: [Shadow(blurRadius: 20, color: Colors.black54)])))));
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom + 80;
+    return Positioned(
+      left: 18, bottom: bottom,
+      child: SizedBox(
+        width: 140, height: 440,
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) => Stack(
+            clipBehavior: Clip.none,
+            children: _hearts.map((h) {
+              final t = ((_ctrl.value - h.startDelay) / (1 - h.startDelay))
+                  .clamp(0.0, 1.0);
+              if (t <= 0) return const SizedBox.shrink();
+              final y = -h.rise * Curves.easeOut.transform(t);
+              final x = h.driftX * t +
+                  math.sin(t * math.pi * 3) * h.wobble;
+              final opacity = t < 0.15
+                  ? (t / 0.15)
+                  : (1.0 - ((t - 0.15) / 0.85)).clamp(0.0, 1.0);
+              final scale = (0.4 + t * 0.9).clamp(0.4, 1.3);
+              return Positioned(
+                left: x, bottom: -y,
+                child: Opacity(
+                  opacity: opacity,
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Icon(Icons.favorite, color: h.color, size: h.size,
+                        shadows: const [
+                          Shadow(blurRadius: 8, color: Colors.black45)
+                        ]),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeartParticle {
+  final double startDelay, driftX, wobble, rise, size;
+  final Color color;
+  const _HeartParticle({
+    required this.startDelay, required this.driftX, required this.wobble,
+    required this.rise, required this.size, required this.color,
+  });
 }
 
 // ── Floating emoji ───────────────────────────────────────────────────
