@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 // ─────────────────────────────────────────────
@@ -132,6 +133,15 @@ class _StoryEditorState extends State<StoryEditor> {
     final file = File('${dir.path}/story_${DateTime.now().millisecondsSinceEpoch}.png');
     await file.writeAsBytes(bytes);
     return file;
+  }
+
+  // Захира/боз — тасвири таҳриршударо мегирад ва ба sheet-и мубодила медиҳад
+  // (аз он ҷо «Захира дар галерея» дастрас аст).
+  Future<void> _saveStory() async {
+    try {
+      final file = widget.isVideo ? File(widget.media.path) : await _captureCanvas();
+      await Share.shareXFiles([XFile(file.path)]);
+    } catch (_) {}
   }
 
   Future<void> _onPublish() async {
@@ -392,7 +402,7 @@ class _StoryEditorState extends State<StoryEditor> {
                     _drawPoints.removeRange(i, _drawPoints.length);
                   })),
               IconButton(icon: const Icon(Icons.download_rounded, color: Colors.white, size: 26),
-                onPressed: () {}),
+                onPressed: _saveStory),
             ]))),
 
           // ── RIGHT SIDEBAR TOOLBAR (Instagram style) ────────
@@ -415,10 +425,10 @@ class _StoryEditorState extends State<StoryEditor> {
                 onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
               const SizedBox(height: 2),
               _SideBtn(icon: Icons.download_rounded, label: 'Захира',
-                onTap: () {}),
+                onTap: _saveStory),
               const SizedBox(height: 2),
               _SideBtn(icon: Icons.more_horiz_rounded, label: 'Боз',
-                onTap: () {}),
+                onTap: _saveStory),
               const SizedBox(height: 2),
               _SideBtn(icon: Icons.expand_less_rounded, label: '',
                 small: true, onTap: () {}),

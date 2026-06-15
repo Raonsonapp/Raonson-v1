@@ -217,6 +217,8 @@ func main() {
 		st.POST("/:id/view",   handlers.ViewStory)
 		st.POST("/:id/like",   handlers.LikeStory)
 		st.POST("/:id/reply",  handlers.ReplyStory)
+		st.POST("/:id/archive", handlers.ToggleStoryArchive)
+		st.POST("/:id/toggle-replies", handlers.ToggleStoryReplies)
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
 	}
 

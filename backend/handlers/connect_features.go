@@ -244,8 +244,14 @@ func ReplyStory(c *gin.Context) {
 		return
 	}
 	var ownerID string
+	var repliesOff bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&ownerID)
+		`SELECT user_id, COALESCE(replies_off,false) FROM stories WHERE id=$1`,
+		sid).Scan(&ownerID, &repliesOff)
+	if repliesOff {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Ҷавобҳо хомӯш карда шудаанд"})
+		return
+	}
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO story_replies(story_id, from_user_id, text) VALUES($1,$2,$3)`,
 		sid, myID, b.Text)

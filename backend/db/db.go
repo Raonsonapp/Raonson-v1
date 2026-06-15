@@ -472,6 +472,8 @@ func migrate() {
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS archived      BOOLEAN DEFAULT FALSE;
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
 
 	-- ── Шикоят аз корбар ва маҳдудкунӣ (report / restrict) ──
 	CREATE TABLE IF NOT EXISTS user_reports (

@@ -21,8 +21,39 @@ func GetStories(c *gin.Context) {
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
 		       u.id,u.username,u.avatar,u.verified
 		FROM stories s JOIN users u ON u.id=s.user_id
-		WHERE s.expires_at > NOW() ORDER BY s.created_at DESC`)
+		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
+		ORDER BY s.created_at DESC`)
 	c.JSON(http.StatusOK, scanStoryRows(rows))
+}
+
+// POST /stories/:id/archive — toggle архив (соҳиб)
+func ToggleStoryArchive(c *gin.Context) {
+	sid := c.Param("id")
+	myID := mw.UID(c)
+	var arch bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE stories SET archived = NOT COALESCE(archived,false)
+		 WHERE id=$1 AND user_id=$2::text RETURNING archived`, sid, myID).Scan(&arch)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"archived": arch})
+}
+
+// POST /stories/:id/toggle-replies — хомӯш/фаъол кардани ҷавобҳо (соҳиб)
+func ToggleStoryReplies(c *gin.Context) {
+	sid := c.Param("id")
+	myID := mw.UID(c)
+	var off bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE stories SET replies_off = NOT COALESCE(replies_off,false)
+		 WHERE id=$1 AND user_id=$2::text RETURNING replies_off`, sid, myID).Scan(&off)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"repliesOff": off})
 }
 
 // GET /stories/my
