@@ -41,6 +41,66 @@ func ReportPost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"reported": true})
 }
 
+// ── POST /posts/:id/hide-likes ── (toggle) танҳо соҳиб ──
+func TogglePostHideLikes(c *gin.Context) {
+	pid := c.Param("id")
+	myID := mw.UID(c)
+	var hide bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE posts SET hide_likes = NOT COALESCE(hide_likes,false)
+		 WHERE id=$1 AND user_id=$2 RETURNING hide_likes`, pid, myID).Scan(&hide)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"hideLikes": hide})
+}
+
+// ── POST /posts/:id/toggle-comments ── (toggle) танҳо соҳиб ──
+func TogglePostComments(c *gin.Context) {
+	pid := c.Param("id")
+	myID := mw.UID(c)
+	var off bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE posts SET comments_off = NOT COALESCE(comments_off,false)
+		 WHERE id=$1 AND user_id=$2 RETURNING comments_off`, pid, myID).Scan(&off)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"commentsOff": off})
+}
+
+// ── POST /posts/:id/archive ── (toggle) танҳо соҳиб ──
+func TogglePostArchive(c *gin.Context) {
+	pid := c.Param("id")
+	myID := mw.UID(c)
+	var arch bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE posts SET archived = NOT COALESCE(archived,false)
+		 WHERE id=$1 AND user_id=$2 RETURNING archived`, pid, myID).Scan(&arch)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"archived": arch})
+}
+
+// ── POST /reels/:id/hide-likes ── (toggle) танҳо соҳиб ──
+func ToggleReelHideLikes(c *gin.Context) {
+	rid := c.Param("id")
+	myID := mw.UID(c)
+	var hide bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE reels SET hide_likes = NOT COALESCE(hide_likes,false)
+		 WHERE id=$1 AND user_id=$2::text RETURNING hide_likes`, rid, myID).Scan(&hide)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"hideLikes": hide})
+}
+
 // ── POST /posts/:id/interest ──────────────────────────────────────
 // "Интересно" — алгоритм бештар нишон медиҳад
 func MarkInterest(c *gin.Context) {

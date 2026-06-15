@@ -52,7 +52,9 @@ func GetSmartReels(c *gin.Context) {
 		  SELECT
 		    r.id, r.video_url, COALESCE(r.video_url_low,'') AS video_url_low,
 		    r.caption, r.views_count,
-		    r.likes_count, r.comments_count, r.created_at,
+		    CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1
+		         THEN -1 ELSE r.likes_count END AS likes_count,
+		    r.comments_count, r.created_at,
 		    u.id AS uid, u.username, u.avatar, u.verified,
 		    EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1) AS liked,
 		    EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1) AS saved,

@@ -50,7 +50,10 @@ func GetSmartFeed(c *gin.Context) {
 		  ) t GROUP BY creator_id
 		)
 		SELECT DISTINCT
-		  p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
+		  p.id, p.caption,
+		  CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $1
+		       THEN -1 ELSE p.likes_count END AS likes_count,
+		  p.comments_count, p.created_at,
 		  u.id, u.username, u.avatar, u.verified,
 		  (SELECT COALESCE(json_agg(
 		           json_build_object('url',m.url,'type',m.type)
@@ -79,6 +82,7 @@ func GetSmartFeed(c *gin.Context) {
 		WHERE
 		  u.banned = FALSE
 		  AND COALESCE(p.hidden,false) = FALSE
+		  AND COALESCE(p.archived,false) = FALSE
 		  AND NOT EXISTS(SELECT 1 FROM blocks b
 		        WHERE (b.blocker_id=$1 AND b.blocked_id=p.user_id)
 		           OR (b.blocker_id=p.user_id AND b.blocked_id=$1))

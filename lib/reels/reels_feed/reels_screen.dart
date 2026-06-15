@@ -572,8 +572,17 @@ class _ReelItemState extends State<_ReelItem> {
           _addMention();
         }),
         _menuItem(Icons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
-            () {
+            () async {
           Navigator.pop(context);
+          try {
+            await ApiClient.instance.post('/reels/${widget.reel.id}/hide-likes');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Танзими лайкҳо нав шуд ✓'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2)));
+            }
+          } catch (_) {}
           if (!_paused) _ctrl?.play();
         }),
         _menuItem(Icons.delete_outline_rounded, 'Нест кардан', () {
