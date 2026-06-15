@@ -467,6 +467,11 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_gifts_to   ON gifts(to_user_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_gifts_from ON gifts(from_user_id, created_at DESC);
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS stars_balance INTEGER DEFAULT 0;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS bio_song      JSONB   DEFAULT '{}'::jsonb;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS archived      BOOLEAN DEFAULT FALSE;
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
 
 	-- ── Шикоят аз корбар ва маҳдудкунӣ (report / restrict) ──
 	CREATE TABLE IF NOT EXISTS user_reports (

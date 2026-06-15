@@ -80,6 +80,7 @@ class ProfileRepository {
   Future<void> updateProfile({
     required String username, String? bio, String? fullName,
     String? website, bool? isPrivate, String? avatar,
+    Map<String, dynamic>? bioSong,
   }) async {
     final res = await _api.put('/profile/', body: {
       'username': username,
@@ -88,6 +89,7 @@ class ProfileRepository {
       if (website   != null) 'website':   website,
       if (isPrivate != null) 'isPrivate': isPrivate,
       if (avatar    != null && avatar.isNotEmpty) 'avatar': avatar,
+      if (bioSong   != null) 'bioSong':   bioSong,
     });
     if (res.statusCode == 409) throw Exception('409: Username already taken');
     if (res.statusCode >= 400) {

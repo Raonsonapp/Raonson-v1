@@ -228,9 +228,43 @@ class _PostCardState extends State<PostCard>
           _MenuItem(icon: Icons.campaign_outlined, iconColor: AppColors.storyEnd,
               label: 'Тарғиб кардан (реклама)', labelColor: AppColors.storyEnd,
               onTap: () { Navigator.pop(context); _promotePost(); }),
+          _MenuItem(icon: Icons.favorite_border_rounded,
+              label: 'Пинҳон кардани лайкҳо',
+              onTap: () { Navigator.pop(context); _toggleAction('hide-likes', 'Танзими лайкҳо нав шуд'); }),
+          _MenuItem(icon: Icons.mode_comment_outlined,
+              label: 'Хомӯш/фаъол кардани шарҳҳо',
+              onTap: () { Navigator.pop(context); _toggleAction('toggle-comments', 'Танзими шарҳҳо нав шуд'); }),
+          _MenuItem(icon: Icons.archive_outlined,
+              label: 'Бойгонӣ кардан',
+              onTap: () { Navigator.pop(context); _archivePost(); }),
           const SizedBox(height: 8),
         ])),
     );
+  }
+
+  Future<void> _toggleAction(String path, String msg) async {
+    try {
+      await ApiClient.instance.post('/posts/${widget.post.id}/$path');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$msg ✓'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2)));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _archivePost() async {
+    try {
+      await ApiClient.instance.post('/posts/${widget.post.id}/archive');
+      widget.onDeleted?.call(); // аз феед/профил мепарад
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ба бойгонӣ кӯчид ✓'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2)));
+      }
+    } catch (_) {}
   }
 
   void _promotePost() {

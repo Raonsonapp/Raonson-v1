@@ -78,7 +78,7 @@ func GetUserPosts(c *gin.Context) {
 	// liked/saved/isPinned — то дар экрани кушодашуда (мисли home) кор кунад.
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
-		WHERE p.user_id=$2
+		WHERE p.user_id=$2 AND COALESCE(p.archived,false)=FALSE
 		ORDER BY COALESCE(p.is_pinned,false) DESC, p.created_at DESC
 		LIMIT $3 OFFSET $4`,
 		myID, id, limit, offset)

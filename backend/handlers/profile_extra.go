@@ -48,7 +48,10 @@ func scanFeedPosts(rows interface {
 }
 
 const feedPostCols = `
-	SELECT p.id, p.caption, COALESCE(p.likes_count,0), COALESCE(p.comments_count,0), p.created_at,
+	SELECT p.id, p.caption,
+	       CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $1::text
+	            THEN -1 ELSE COALESCE(p.likes_count,0) END,
+	       COALESCE(p.comments_count,0), p.created_at,
 	       u.id, u.username, u.avatar, COALESCE(u.verified,false),
 	       (SELECT COALESCE(json_agg(
 	                json_build_object('url',m.url,'type',m.type)

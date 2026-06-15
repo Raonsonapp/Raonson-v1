@@ -52,6 +52,9 @@ class EditProfileController extends ChangeNotifier {
         bio:       bioController.text.trim(),
         isPrivate: isPrivate,
         avatar:    avatarUrl,
+        bioSong:   (bioSong != null && bioSong.isEmpty != true)
+            ? (bioSong.toJson() as Map<String, dynamic>)
+            : null,
       );
       return true;
     } catch (e) {

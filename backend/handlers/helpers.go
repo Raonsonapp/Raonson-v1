@@ -113,7 +113,7 @@ func postsForUser(userID string, limit int) []gin.H {
 		                json_build_object('url',m.url,'type',m.type)
 		                ORDER BY m.position), '[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
-		FROM posts p WHERE p.user_id=$1
+		FROM posts p WHERE p.user_id=$1 AND COALESCE(p.archived,false)=FALSE
 		ORDER BY p.created_at DESC LIMIT $2`, userID, limit)
 	if err != nil {
 		log.Printf("[postsForUser] error: %v", err)

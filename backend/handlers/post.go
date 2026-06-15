@@ -124,7 +124,10 @@ func GetFeed(c *gin.Context) {
 	}
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
+		SELECT p.id, p.caption,
+		       CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $1::text
+		            THEN -1 ELSE p.likes_count END,
+		       p.comments_count, p.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type)
@@ -133,6 +136,7 @@ func GetFeed(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1::text),
 		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1::text)
 		FROM posts p JOIN users u ON u.id=p.user_id
+		WHERE COALESCE(p.archived,false) = FALSE
 		ORDER BY p.created_at DESC
 		LIMIT $2 OFFSET $3`, myID, limit, offset)
 	if err != nil {

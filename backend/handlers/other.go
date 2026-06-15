@@ -23,11 +23,16 @@ func AddComment(c *gin.Context) {
 		return
 	}
 
-	var exists bool
+	var exists, commentsOff bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM posts WHERE id=$1)`, postID).Scan(&exists)
+		`SELECT TRUE, COALESCE(comments_off,false) FROM posts WHERE id=$1`,
+		postID).Scan(&exists, &commentsOff)
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
+		return
+	}
+	if commentsOff {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Шарҳҳо барои ин пост хомӯш карда шудаанд"})
 		return
 	}
 
@@ -404,7 +409,9 @@ func GetReels(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''), r.caption, r.views_count, r.likes_count, r.created_at,
+		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''), r.caption, r.views_count,
+		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
+		            THEN -1 ELSE r.likes_count END, r.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text)
