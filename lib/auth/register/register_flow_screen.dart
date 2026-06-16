@@ -83,10 +83,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _submitStep1() {
     final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
     final pass = _passCtrl.text;
     if (name.isEmpty) return _err('Номи пурраро ворид кунед');
     if (!email.contains('@') || !email.contains('.')) {
       return _err('Почтаи дуруст ворид кунед');
+    }
+    // Телефон ҳатмӣ — барои барқарорсозии аккаунт (рамз ба ҳамин рақам меояд)
+    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length < 7) {
+      return _err('Рақами телефони худро ворид кунед');
     }
     if (pass.length < 8) return _err('Рамз ҳадди ақал 8 аломат');
     if (pass != _confirmCtrl.text) return _err('Рамзҳо мувофиқат намекунанд');
@@ -326,7 +332,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 14),
         AuthField(
           controller: _phoneCtrl,
-          hint: '00 000 00 00',
+          hint: 'Рақами телефон (барои барқарорсозӣ)',
           icon: Icons.phone_outlined,
           keyboardType: TextInputType.phone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
