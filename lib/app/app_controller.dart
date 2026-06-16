@@ -102,7 +102,7 @@ class AppController {
         return _page(const ForgotPasswordScreen());
       case AppRoutes.resetPassword:
         return _page(ResetPasswordScreen(
-            email: settings.arguments as String? ?? ''));
+            identifier: settings.arguments as String? ?? ''));
 
       // ── Hashtag feed ──
       case '/hashtag':
