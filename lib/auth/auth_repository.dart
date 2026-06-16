@@ -52,25 +52,33 @@ class AuthRepository {
   }
 
   // ================= PASSWORD =================
-  Future<void> forgotPassword(String email) async {
-    await _api.post(
+  /// Рамзи 6-рақамаро тавассути канали интихобшуда мефиристад.
+  /// channel: 'email' | 'sms' | 'whatsapp'. Агар backend рамзро
+  /// баргардонад (бе провайдер), онро бармегардонем (барои санҷиш).
+  Future<String?> forgotPassword(String identifier, {String channel = 'email'}) async {
+    final res = await _api.post(
       ApiEndpoints.forgotPassword,
-      body: {'email': email},
+      body: {'identifier': identifier, 'channel': channel},
     );
+    try {
+      final j = jsonDecode(res.body) as Map<String, dynamic>;
+      return j['otp']?.toString();
+    } catch (_) { return null; }
   }
 
-  Future<void> resetPassword({
-    required String email,
+  Future<bool> resetPassword({
+    required String identifier,
     required String otp,
     required String newPassword,
   }) async {
-    await _api.post(
+    final res = await _api.post(
       ApiEndpoints.resetPassword,
       body: {
-        'email': email,
+        'identifier': identifier,
         'otp': otp,
         'newPassword': newPassword,
       },
     );
+    return res.statusCode < 400;
   }
 }

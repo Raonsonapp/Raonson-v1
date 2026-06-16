@@ -1,118 +1,135 @@
 import 'package:flutter/material.dart';
-import '../../core/api/api_client.dart';
+import 'package:flutter/services.dart';
+import '../../app/app_theme.dart';
+import '../auth_repository.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  final String email;
-
-  const ResetPasswordScreen({
-    super.key,
-    required this.email,
-  });
+  final String identifier;
+  final String? prefillOtp;
+  const ResetPasswordScreen({super.key, required this.identifier, this.prefillOtp});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  final TextEditingController _otpController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
+  final _otpCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  final _repo = AuthRepository();
   bool _loading = false;
+  bool _obscure = true;
   String? _error;
 
-  Future<void> _resetPassword() async {
-    if (_otpController.text.isEmpty ||
-        _passwordController.text.length < 6) {
-      return;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.prefillOtp != null && widget.prefillOtp!.isNotEmpty) {
+      _otpCtrl.text = widget.prefillOtp!;
     }
+  }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() { _otpCtrl.dispose(); _passCtrl.dispose(); super.dispose(); }
 
+  Future<void> _reset() async {
+    final otp = _otpCtrl.text.trim();
+    final pass = _passCtrl.text;
+    if (otp.length < 4) { setState(() => _error = 'Рамзи 6-рақамаро ворид кунед'); return; }
+    if (pass.length < 6) { setState(() => _error = 'Парол ҳадди ақал 6 аломат'); return; }
+    setState(() { _loading = true; _error = null; });
     try {
-      await ApiClient.instance.post(
-        '/auth/reset-password',
-        body: {
-          'email': widget.email,
-          'otp': _otpController.text.trim(),
-          'newPassword': _passwordController.text,
-        },
-      );
-
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+      final ok = await _repo.resetPassword(
+          identifier: widget.identifier, otp: otp, newPassword: pass);
+      if (!mounted) return;
+      if (ok) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Парол иваз шуд ✓'),
+          backgroundColor: Colors.green));
+        Navigator.popUntil(context, (r) => r.isFirst);
+      } else {
+        setState(() => _error = 'Рамз нодуруст ё кӯҳна');
       }
-    } catch (e) {
-      setState(() {
-        _error = 'Invalid code or password';
-      });
+    } catch (_) {
+      setState(() => _error = 'Хато ҳангоми барқарорсозӣ');
     } finally {
-      setState(() {
-        _loading = false;
-      });
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Create new password',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Reset for ${widget.email}',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-
-            TextField(
-              controller: _otpController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Reset Code (OTP)',
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black, elevation: 0,
+        title: const Text('Рамзро ворид кунед',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        children: [
+          Text('Рамзи 6-рақамаро, ки ба ${widget.identifier} '
+              'фиристодем, ворид кунед ва пароли нав созед.',
+              style: const TextStyle(color: Colors.white54, fontSize: 13.5, height: 1.4)),
+          const SizedBox(height: 22),
+          TextField(
+            controller: _otpCtrl,
+            style: const TextStyle(color: Colors.white,
+                fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.w700),
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: _dec('• • • • • •').copyWith(counterText: ''),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _passCtrl,
+            obscureText: _obscure,
+            style: const TextStyle(color: Colors.white),
+            decoration: _dec('Пароли нав').copyWith(
+              suffixIcon: IconButton(
+                icon: Icon(_obscure ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined, color: Colors.white38, size: 20),
+                onPressed: () => setState(() => _obscure = !_obscure),
               ),
             ),
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'New Password',
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-
-            const SizedBox(height: 16),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _resetPassword,
-                child: _loading
-                    ? const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      )
-                    : const Text('Reset Password'),
-              ),
-            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 14),
+            Text(_error!, style: const TextStyle(color: Color(0xFFFF3B30), fontSize: 13)),
           ],
-        ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 48,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.neonBlue,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppColors.neonBlue.withOpacity(0.5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: _loading ? null : _reset,
+              child: _loading
+                  ? const SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Иваз кардани парол',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  InputDecoration _dec(String hint) => InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white30),
+        filled: true,
+        fillColor: const Color(0xFF1A1A1A),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      );
 }

@@ -13,6 +13,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -114,11 +115,11 @@ func Login(c *gin.Context) {
 	}
 	b.Email = strings.ToLower(strings.TrimSpace(b.Email))
 
-	// Логин бо почта Ё номи корбар
+	// Логин бо почта Ё номи корбар Ё рақами телефон
 	var id, username, email, hash, avatar, fullName string
 	err := db.Pool.QueryRow(context.Background(),
 		`SELECT id,username,email,password,COALESCE(avatar,''),COALESCE(full_name,'')
-		 FROM users WHERE email=$1 OR username=$1`,
+		 FROM users WHERE email=$1 OR username=$1 OR phone=$1`,
 		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName)
 	if err != nil {
 		log.Printf("[Login] User not found: email=%s err=%v", b.Email, err)
@@ -172,33 +173,69 @@ func Logout(c *gin.Context) {
 
 // POST /auth/forgot-password
 func ForgotPassword(c *gin.Context) {
-	var b struct{ Email string `json:"email"` }
-	if err := c.ShouldBindJSON(&b); err != nil || b.Email == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Email required"})
+	var b struct {
+		Identifier string `json:"identifier"` // email ё телефон ё username
+		Email      string `json:"email"`      // мутобиқати қафо
+		Channel    string `json:"channel"`    // email | sms | whatsapp
+	}
+	c.ShouldBindJSON(&b)
+	ident := strings.ToLower(strings.TrimSpace(b.Identifier))
+	if ident == "" {
+		ident = strings.ToLower(strings.TrimSpace(b.Email))
+	}
+	if ident == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Email ё телефон лозим аст"})
 		return
 	}
-	email := strings.ToLower(strings.TrimSpace(b.Email))
+	if b.Channel == "" {
+		b.Channel = "email"
+	}
 
-	var id string
+	var id, email, phone string
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id FROM users WHERE email=$1`, email).Scan(&id)
+		`SELECT id, COALESCE(email,''), COALESCE(phone,'')
+		 FROM users WHERE LOWER(email)=$1 OR phone=$1 OR LOWER(username)=$1`,
+		ident).Scan(&id, &email, &phone)
 	if err != nil {
-		// Do not reveal if email exists
-		c.JSON(http.StatusOK, gin.H{"message": "If email exists, reset code sent"})
+		// Маълумотро ошкор намекунем
+		c.JSON(http.StatusOK, gin.H{"message": "Агар ҳисоб мавҷуд бошад, рамз фиристода шуд"})
 		return
 	}
 
-	// Generate 6-digit OTP
 	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
+	// Бо id нигоҳ медорем — то reset бо ҳар идентификатор кор кунад.
+	mw.CacheSet("otp:reset:"+id, []byte(otp), 10*time.Minute)
 
-	// Store in Redis (10 min TTL)
-	mw.CacheSet("otp:"+email, []byte(otp), 10*time.Minute)
+	// Тавассути канали интихобшуда мефиристем.
+	var sendErr error
+	var dest string
+	switch b.Channel {
+	case "sms":
+		if phone == "" { sendErr = fmt.Errorf("no phone") } else {
+			sendErr = utils.SendSMSOTP(phone, otp); dest = utils.MaskPhone(phone)
+		}
+	case "whatsapp":
+		if phone == "" { sendErr = fmt.Errorf("no phone") } else {
+			sendErr = utils.SendWhatsAppOTP(phone, otp); dest = utils.MaskPhone(phone)
+		}
+	default: // email
+		if email == "" { sendErr = fmt.Errorf("no email") } else {
+			sendErr = utils.SendEmailOTP(email, otp); dest = utils.MaskEmail(email)
+		}
+	}
 
-	// TODO production: send via SendGrid/AWS SES
-	// Development: return OTP in response
-	resp := gin.H{"message": "Reset code sent"}
-	if os.Getenv("GIN_MODE") != "release" {
-		resp["otp"] = otp // Only in dev mode
+	resp := gin.H{"message": "Рамз фиристода шуд", "to": dest, "channel": b.Channel}
+	// Дар реҷаи dev ё OTP_ECHO=1 рамзро дар response нишон медиҳем
+	// (барои санҷиш бе провайдер). Дар production — танҳо вақте канал
+	// танзим нашудаасту фиристодан ноком шуд, то корбар маҳкам намонад.
+	echo := os.Getenv("GIN_MODE") != "release" || os.Getenv("OTP_ECHO") == "1"
+	if sendErr != nil {
+		log.Printf("[ForgotPassword] send via %s failed: %v", b.Channel, sendErr)
+		resp["message"] = "Канали интихобшуда танзим нашудааст"
+		echo = true
+	}
+	if echo {
+		resp["otp"] = otp
 	}
 	c.JSON(http.StatusOK, resp)
 }
@@ -206,34 +243,44 @@ func ForgotPassword(c *gin.Context) {
 // POST /auth/reset-password
 func ResetPassword(c *gin.Context) {
 	var b struct {
+		Identifier  string `json:"identifier"`
 		Email       string `json:"email"`
 		OTP         string `json:"otp"`
 		NewPassword string `json:"newPassword"`
 	}
-	if err := c.ShouldBindJSON(&b); err != nil || b.Email == "" || b.OTP == "" || b.NewPassword == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing fields"})
+	c.ShouldBindJSON(&b)
+	ident := strings.ToLower(strings.TrimSpace(b.Identifier))
+	if ident == "" {
+		ident = strings.ToLower(strings.TrimSpace(b.Email))
+	}
+	if ident == "" || b.OTP == "" || len(b.NewPassword) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Майдонҳо нопурра (парол ≥6)"})
 		return
 	}
-	email := strings.ToLower(strings.TrimSpace(b.Email))
 
-	stored, ok := mw.CacheGet("otp:" + email)
-	if !ok || string(stored) != b.OTP {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid or expired OTP"})
+	var id string
+	if err := db.Pool.QueryRow(context.Background(),
+		`SELECT id FROM users WHERE LOWER(email)=$1 OR phone=$1 OR LOWER(username)=$1`,
+		ident).Scan(&id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Ҳисоб ёфт нашуд"})
+		return
+	}
+
+	stored, ok := mw.CacheGet("otp:reset:" + id)
+	if !ok || string(stored) != strings.TrimSpace(b.OTP) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
 		return
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(b.NewPassword), 10)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Reset failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Барқарорсозӣ ноком шуд"})
 		return
 	}
-
 	db.Pool.Exec(context.Background(),
-		`UPDATE users SET password=$1, updated_at=NOW() WHERE email=$2`,
-		string(hash), email)
-
-	mw.CacheDel("otp:" + email)
-	c.JSON(http.StatusOK, gin.H{"message": "Password reset successful"})
+		`UPDATE users SET password=$1, updated_at=NOW() WHERE id=$2`, string(hash), id)
+	mw.CacheDel("otp:reset:" + id)
+	c.JSON(http.StatusOK, gin.H{"message": "Парол бо муваффақият иваз шуд"})
 }
 
 var _ = os.Getenv

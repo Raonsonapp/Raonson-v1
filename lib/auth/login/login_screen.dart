@@ -80,7 +80,7 @@ class _LoginViewState extends State<_LoginView> {
 
                 AuthField(
                   controller: _idCtrl,
-                  hint: 'Номи корбар ё почтаи электронӣ',
+                  hint: 'Телефон, номи корбар ё почта',
                   icon: Icons.person_outline_rounded,
                   keyboardType: TextInputType.emailAddress,
                 ),
