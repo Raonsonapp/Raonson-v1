@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
+import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/user_model.dart';
@@ -113,6 +114,7 @@ class ProfileController extends ChangeNotifier {
     profile = u.copyWith(
         isFollowing:    !was,
         followersCount: (u.followersCount + delta).clamp(0, 999999999));
+    FollowService.instance.prime(u.id, !was); // синхрон бо reels/search/home
     notifyListeners();
     try {
       was ? await _repo.unfollow(u.id) : await _repo.follow(u.id);

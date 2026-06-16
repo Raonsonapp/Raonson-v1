@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/follow_service.dart';
 import '../../core/services/network_quality.dart';
 import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
@@ -388,6 +389,7 @@ class _ReelItemState extends State<_ReelItem> {
     super.initState();
     _saved = widget.reel.isSaved;
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
+    FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
     _initVideo();
     _loadStoryStatus();
   }
@@ -1369,33 +1371,40 @@ class _ReelItemState extends State<_ReelItem> {
                                     const VerifiedBadge(size: 14, color: Colors.white)
                                   ],
                                 ]))),
-                    if (!_isOwner && !_following) ...[
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                          onTap: () {
-                            setState(() => _following = true);
-                            ApiClient.instance
-                                .post('/follow/${reel.user.id}');
-                          },
-                          child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 5),
-                              decoration: BoxDecoration(
-                                  border: Border.all(
-                                      color: Colors.white, width: 1.2),
-                                  borderRadius:
-                                      BorderRadius.circular(20)),
-                              child: const Text('Пайравӣ кунед',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
-                                      shadows: [
-                                        Shadow(
-                                            blurRadius: 4,
-                                            color: Colors.black)
-                                      ]))))
-                    ],
+                    if (!_isOwner)
+                      ValueListenableBuilder<Map<String, bool>>(
+                        valueListenable: FollowService.instance.states,
+                        builder: (_, __, ___) {
+                          final following = FollowService.instance
+                              .resolve(reel.user.id, _following);
+                          if (following) return const SizedBox.shrink();
+                          return Row(mainAxisSize: MainAxisSize.min, children: [
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () => FollowService.instance
+                                  .toggle(reel.user.id, false),
+                              child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 5),
+                                  decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: Colors.white, width: 1.2),
+                                      borderRadius:
+                                          BorderRadius.circular(20)),
+                                  child: const Text('Пайравӣ кунед',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                          shadows: [
+                                            Shadow(
+                                                blurRadius: 4,
+                                                color: Colors.black)
+                                          ]))),
+                            ),
+                          ]);
+                        },
+                      ),
                   ]),
                   if (reel.caption.isNotEmpty) ...[
                     const SizedBox(height: 8),
