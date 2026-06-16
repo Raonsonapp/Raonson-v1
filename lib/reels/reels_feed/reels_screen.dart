@@ -387,6 +387,7 @@ class _ReelItemState extends State<_ReelItem> {
   void initState() {
     super.initState();
     _saved = widget.reel.isSaved;
+    _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
     _initVideo();
     _loadStoryStatus();
   }

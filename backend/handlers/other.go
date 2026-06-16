@@ -414,7 +414,8 @@ func GetReels(c *gin.Context) {
 		            THEN -1 ELSE r.likes_count END, r.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
-		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text)
+		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
+		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id)
 		FROM reels r JOIN users u ON u.id=r.user_id
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset)
@@ -429,15 +430,16 @@ func GetReels(c *gin.Context) {
 	for rows.Next() {
 		var rid, vurl, vurlLow, cap, uid, uname, uavatar string
 		var views, likes int
-		var verified, liked, saved bool
+		var verified, liked, saved, following bool
 		var createdAt interface{}
 		rows.Scan(&rid, &vurl, &vurlLow, &cap, &views, &likes, &createdAt,
-			&uid, &uname, &uavatar, &verified, &liked, &saved)
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &following)
 		reels = append(reels, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow, "caption": cap,
 			"viewsCount": views, "likesCount": likes,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
-			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
+			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
+				"verified": verified, "isFollowing": following},
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
