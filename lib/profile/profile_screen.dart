@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
+import '../core/services/follow_service.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
@@ -1047,54 +1048,36 @@ class _ULS extends State<_UserListSheet> {
   }
 }
 
-// ── Per-row follow/unfollow button (худро нишон намедиҳад) ──────────────
-class _UserFollowBtn extends StatefulWidget {
+// ── Per-row follow/unfollow button (ҳолати глобалӣ, худро нишон намедиҳад) ──
+class _UserFollowBtn extends StatelessWidget {
   final UserModel user;
   const _UserFollowBtn({required this.user});
-  @override State<_UserFollowBtn> createState() => _UserFollowBtnState();
-}
 
-class _UserFollowBtnState extends State<_UserFollowBtn> {
-  late bool _following = widget.user.isFollowing;
-  bool _busy = false;
-
-  bool get _isMe =>
-      widget.user.id == (UserSession.userId ?? '__none__');
-
-  Future<void> _toggle() async {
-    if (_busy) return;
-    setState(() { _busy = true; _following = !_following; });
-    try {
-      if (_following) {
-        await ApiClient.instance.post('/follow/${widget.user.id}');
-      } else {
-        await ApiClient.instance.delete('/follow/${widget.user.id}');
-      }
-    } catch (_) {
-      if (mounted) setState(() => _following = !_following);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
+  bool get _isMe => user.id == (UserSession.userId ?? '__none__');
 
   @override
   Widget build(BuildContext context) {
     if (_isMe) return const SizedBox.shrink();
-    final following = _following;
-    return SizedBox(
-      height: 32, width: 104,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: following ? const Color(0xFF262626) : AppColors.neonBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        onPressed: _toggle,
-        child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
-            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-      ),
+    return ValueListenableBuilder<Map<String, bool>>(
+      valueListenable: FollowService.instance.states,
+      builder: (_, __, ___) {
+        final following = FollowService.instance.resolve(user.id, user.isFollowing);
+        return SizedBox(
+          height: 32, width: 104,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: following ? const Color(0xFF262626) : AppColors.neonBlue,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => FollowService.instance.toggle(user.id, following),
+            child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          ),
+        );
+      },
     );
   }
 }

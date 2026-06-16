@@ -14,6 +14,7 @@ import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../core/services/user_session.dart';
+import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
 import '../profile/profile_screen.dart';
@@ -1339,54 +1340,35 @@ class _ActionBtn extends StatelessWidget {
   }
 }
 
-class _FollowChip extends StatefulWidget {
+class _FollowChip extends StatelessWidget {
   final String userId;
   const _FollowChip({this.userId = ''});
-  @override
-  State<_FollowChip> createState() => _FollowChipState();
-}
-
-class _FollowChipState extends State<_FollowChip> {
-  bool _following = false;
-  bool _busy = false;
 
   bool get _isMe =>
-      widget.userId.isEmpty ||
-      widget.userId == (UserSession.userId ?? '__none__');
-
-  Future<void> _toggle() async {
-    if (_busy) return;
-    setState(() { _busy = true; _following = !_following; });
-    try {
-      if (_following) {
-        await ApiClient.instance.post('/follow/${widget.userId}');
-      } else {
-        await ApiClient.instance.delete('/follow/${widget.userId}');
-      }
-    } catch (_) {
-      if (mounted) setState(() => _following = !_following); // баргардонӣ
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
+      userId.isEmpty || userId == (UserSession.userId ?? '__none__');
 
   @override
   Widget build(BuildContext context) {
     // Дар пости ХУДАТ тугмаи «Пайравӣ» нишон дода намешавад.
     if (_isMe) return const SizedBox.shrink();
-    return GestureDetector(
-      onTap: _toggle,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: _following ? Colors.transparent : Colors.transparent,
-          border: Border.all(color: Colors.white60),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(_following ? 'Пайравӣ шуд' : 'Пайравӣ',
-            style: const TextStyle(color: Colors.white,
-                fontSize: 12, fontWeight: FontWeight.w600)),
-      ),
+    return ValueListenableBuilder<Map<String, bool>>(
+      valueListenable: FollowService.instance.states,
+      builder: (_, __, ___) {
+        final following = FollowService.instance.resolve(userId, false);
+        return GestureDetector(
+          onTap: () => FollowService.instance.toggle(userId, following),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white60),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
+                style: const TextStyle(color: Colors.white,
+                    fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+        );
+      },
     );
   }
 }
