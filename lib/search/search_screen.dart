@@ -13,6 +13,7 @@ import '../core/api/api_client.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
@@ -765,19 +766,28 @@ class _ExploreGrid extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
+    // Гриди quilted — айнан мисли Instagram Explore (ҳуҷайраҳои баланди reel).
+    return GridView.custom(
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount:   3,
-        mainAxisSpacing:  2,
+      gridDelegate: SliverQuiltedGridDelegate(
+        crossAxisCount: 3,
+        mainAxisSpacing: 2,
         crossAxisSpacing: 2,
-        childAspectRatio: 1.0, // perfect square — uniform
+        repeatPattern: QuiltedGridRepeatPattern.inverted,
+        pattern: const [
+          QuiltedGridTile(2, 1), // ҳуҷайраи баланд (reel)
+          QuiltedGridTile(1, 1),
+          QuiltedGridTile(1, 1),
+          QuiltedGridTile(1, 1),
+        ],
       ),
-      itemCount: items.length,
-      itemBuilder: (_, i) => _ExploreCell(
-        item:  items[i],
-        onTap: () => onTap(i),
-        onLongPress: onLongPress == null ? null : () => onLongPress!(i),
+      childrenDelegate: SliverChildBuilderDelegate(
+        (_, i) => _ExploreCell(
+          item:  items[i],
+          onTap: () => onTap(i),
+          onLongPress: onLongPress == null ? null : () => onLongPress!(i),
+        ),
+        childCount: items.length,
       ),
     );
   }
