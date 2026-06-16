@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/services/network_service.dart';
 
+/// Banner-и шабака — мисли Instagram: як бор кӯтоҳ пайдо мешавад ва
+/// худкор гум мешавад (на ин ки тамоми вақт дар боло биистад).
 class OfflineBanner extends StatefulWidget {
   final Widget child;
   const OfflineBanner({super.key, required this.child});
@@ -14,19 +16,20 @@ class OfflineBanner extends StatefulWidget {
 class _OfflineBannerState extends State<OfflineBanner>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
+  Timer? _hideTimer;
+  bool _show = false;
+  bool _isOnlineMsg = false; // true = «Пайваст шуд», false = «Офлайн»
   bool _wasOffline = false;
-  bool _showOnline = false;
-  Timer? _onlineTimer;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+        vsync: this, duration: const Duration(milliseconds: 280));
     NetworkService.instance.isOnlineNotifier.addListener(_onNetworkChange);
     if (!NetworkService.instance.isOnline) {
-      _ctrl.value = 1.0;
       _wasOffline = true;
+      _trigger(online: false);
     }
   }
 
@@ -34,24 +37,30 @@ class _OfflineBannerState extends State<OfflineBanner>
     final online = NetworkService.instance.isOnline;
     if (!online) {
       _wasOffline = true;
-      _showOnline = false;
-      _onlineTimer?.cancel();
-      _ctrl.forward();
-      if (mounted) setState(() {});
+      _trigger(online: false);
     } else if (_wasOffline) {
-      _showOnline = true;
-      _ctrl.reverse();
-      if (mounted) setState(() {});
-      _onlineTimer = Timer(const Duration(seconds: 3), () {
-        if (mounted) setState(() { _showOnline = false; _wasOffline = false; });
-      });
+      _wasOffline = false;
+      _trigger(online: true);
     }
+  }
+
+  /// Banner-ро кӯтоҳ нишон медиҳад ва худкор пинҳон мекунад.
+  void _trigger({required bool online}) {
+    _hideTimer?.cancel();
+    if (!mounted) return;
+    setState(() { _show = true; _isOnlineMsg = online; });
+    _ctrl.forward(from: 0);
+    _hideTimer = Timer(Duration(seconds: online ? 2 : 3), () async {
+      if (!mounted) return;
+      await _ctrl.reverse();
+      if (mounted) setState(() => _show = false);
+    });
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
-    _onlineTimer?.cancel();
+    _hideTimer?.cancel();
     NetworkService.instance.isOnlineNotifier.removeListener(_onNetworkChange);
     super.dispose();
   }
@@ -60,42 +69,51 @@ class _OfflineBannerState extends State<OfflineBanner>
   Widget build(BuildContext context) {
     return Stack(children: [
       widget.child,
-      if (_wasOffline && !_showOnline)
-        Positioned(
-          top: 0, left: 0, right: 0,
-          child: SlideTransition(
-            position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-                .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut)),
-            child: SafeArea(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                color: const Color(0xFF1C1C1E),
-                child: Row(children: const [
-                  Icon(Icons.wifi_off_rounded, color: Color(0xFFFF9500), size: 16),
-                  SizedBox(width: 8),
-                  Expanded(child: Text(
-                    'Офлайн — мӯҳтавои захирашуда нишон дода мешавад',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  )),
-                ]),
-              ),
-            ),
-          ),
-        ),
-      if (_showOnline)
+      if (_show)
         Positioned(
           top: 0, left: 0, right: 0,
           child: SafeArea(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              color: const Color(0xFF34C759),
-              child: Row(children: const [
-                Icon(Icons.wifi_rounded, color: Colors.white, size: 16),
-                SizedBox(width: 8),
-                Text('Пайваст шуд ✓',
-                    style: TextStyle(color: Colors.white, fontSize: 12,
-                        fontWeight: FontWeight.w600)),
-              ]),
+            child: FadeTransition(
+              opacity: _ctrl,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                        begin: const Offset(0, -0.6), end: Offset.zero)
+                    .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut)),
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 9, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: _isOnlineMsg
+                          ? const Color(0xFF34C759)
+                          : const Color(0xFF2C2C2E),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: const [
+                        BoxShadow(blurRadius: 12, color: Colors.black38)
+                      ],
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(
+                          _isOnlineMsg
+                              ? Icons.wifi_rounded
+                              : Icons.wifi_off_rounded,
+                          color: _isOnlineMsg
+                              ? Colors.white
+                              : const Color(0xFFFF9500),
+                          size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isOnlineMsg
+                            ? 'Дубора пайваст шуд'
+                            : 'Пайвастшавӣ ба интернет нест',
+                        style: const TextStyle(color: Colors.white,
+                            fontSize: 12.5, fontWeight: FontWeight.w500),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
