@@ -939,8 +939,18 @@ class _UserListSheet extends StatefulWidget {
 }
 class _ULS extends State<_UserListSheet> {
   final _repo = ProfileRepository(ApiClient.instance);
+  final _searchCtrl = TextEditingController();
   List<UserModel> _list = []; bool _loading = true;
-  @override void initState() { super.initState(); _load(); }
+  String _query = '';
+
+  @override void initState() {
+    super.initState();
+    _load();
+    _searchCtrl.addListener(() =>
+        setState(() => _query = _searchCtrl.text.trim().toLowerCase()));
+  }
+  @override void dispose() { _searchCtrl.dispose(); super.dispose(); }
+
   Future<void> _load() async {
     final list = widget.isFollowers
         ? await _repo.getFollowers(widget.userId)
@@ -949,50 +959,144 @@ class _ULS extends State<_UserListSheet> {
       setState(() { _list = list; _loading = false; });
     }
   }
+
+  List<UserModel> get _filtered {
+    if (_query.isEmpty) return _list;
+    return _list.where((u) =>
+        u.username.toLowerCase().contains(_query) ||
+        (u.fullName ?? '').toLowerCase().contains(_query)).toList();
+  }
+
   @override
-  Widget build(BuildContext context) => Container(
-    height: MediaQuery.of(context).size.height * 0.65,
-    decoration: const BoxDecoration(color: Color(0xFF111111),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    child: Column(children: [
-      Center(child: Container(width: 36, height: 4,
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(color: Colors.white24,
-            borderRadius: BorderRadius.circular(2)))),
-      Text(widget.title, style: const TextStyle(color: Colors.white,
-          fontSize: 16, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 8),
-      const Divider(color: Colors.white10),
-      Expanded(child: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: AppColors.neonBlue, strokeWidth: 2))
-          : _list.isEmpty
-              ? Center(child: Text('Ҳанӯз ${widget.title.toLowerCase()} нест',
-                  style: const TextStyle(color: Colors.white30, fontSize: 14)))
-              : ListView.builder(itemCount: _list.length, itemBuilder: (_, i) {
-                  final u = _list[i];
-                  return ListTile(
-                    leading: CircleAvatar(radius: 22,
-                      backgroundColor: AppColors.card,
-                      backgroundImage: u.avatar.isNotEmpty
-                          ? NetworkImage(u.avatar) : null,
-                      child: u.avatar.isEmpty
-                          ? const Icon(Icons.person, color: Colors.white38) : null),
-                    title: Row(children: [
-                      Text(u.username, style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600)),
-                      if (u.isVerified) ...[
-                        const SizedBox(width: 4),
-                        const VerifiedBadge(size: 14),
-                      ],
-                    ]),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => ProfileScreen(userId: u.id)));
-                    });
-                })),
-    ]));
+  Widget build(BuildContext context) {
+    final list = _filtered;
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.72,
+      decoration: const BoxDecoration(color: Color(0xFF111111),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      child: Column(children: [
+        Center(child: Container(width: 36, height: 4,
+          margin: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(color: Colors.white24,
+              borderRadius: BorderRadius.circular(2)))),
+        Text(widget.title, style: const TextStyle(color: Colors.white,
+            fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        // Ҷустуҷӯ — мисли Instagram
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Container(
+            height: 38,
+            decoration: BoxDecoration(color: const Color(0xFF262626),
+                borderRadius: BorderRadius.circular(10)),
+            child: TextField(
+              controller: _searchCtrl,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Ҷустуҷӯ',
+                hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: Colors.white38, size: 19),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 9),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Expanded(child: _loading
+            ? const Center(child: CircularProgressIndicator(
+                color: AppColors.neonBlue, strokeWidth: 2))
+            : list.isEmpty
+                ? Center(child: Text(_query.isNotEmpty
+                        ? 'Натиҷае нест'
+                        : 'Ҳанӯз ${widget.title.toLowerCase()} нест',
+                    style: const TextStyle(color: Colors.white30, fontSize: 14)))
+                : ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
+                    final u = list[i];
+                    return ListTile(
+                      leading: CircleAvatar(radius: 22,
+                        backgroundColor: AppColors.card,
+                        backgroundImage: u.avatar.isNotEmpty
+                            ? NetworkImage(u.avatar) : null,
+                        child: u.avatar.isEmpty
+                            ? const Icon(Icons.person, color: Colors.white38) : null),
+                      title: Row(children: [
+                        Flexible(child: Text(u.username,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white, fontWeight: FontWeight.w600))),
+                        if (u.isVerified) ...[
+                          const SizedBox(width: 4),
+                          const VerifiedBadge(size: 14),
+                        ],
+                      ]),
+                      subtitle: (u.fullName ?? '').isNotEmpty
+                          ? Text(u.fullName!, maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 12.5))
+                          : null,
+                      trailing: _UserFollowBtn(user: u),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => ProfileScreen(userId: u.id)));
+                      });
+                  })),
+      ]));
+  }
+}
+
+// ── Per-row follow/unfollow button (худро нишон намедиҳад) ──────────────
+class _UserFollowBtn extends StatefulWidget {
+  final UserModel user;
+  const _UserFollowBtn({required this.user});
+  @override State<_UserFollowBtn> createState() => _UserFollowBtnState();
+}
+
+class _UserFollowBtnState extends State<_UserFollowBtn> {
+  late bool _following = widget.user.isFollowing;
+  bool _busy = false;
+
+  bool get _isMe =>
+      widget.user.id == (UserSession.userId ?? '__none__');
+
+  Future<void> _toggle() async {
+    if (_busy) return;
+    setState(() { _busy = true; _following = !_following; });
+    try {
+      if (_following) {
+        await ApiClient.instance.post('/follow/${widget.user.id}');
+      } else {
+        await ApiClient.instance.delete('/follow/${widget.user.id}');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _following = !_following);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isMe) return const SizedBox.shrink();
+    final following = _following;
+    return SizedBox(
+      height: 32, width: 104,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: following ? const Color(0xFF262626) : AppColors.neonBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: _toggle,
+        child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
 }
 
 // ─── Verify Sheet ────────────────────────────────────────────────────────

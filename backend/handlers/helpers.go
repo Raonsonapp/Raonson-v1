@@ -96,6 +96,22 @@ func miniUser(rows pgx.Rows) []gin.H {
 	return out
 }
 
+// miniUserF — мисли miniUser, вале isFollowing-ро (нисбати корбари ҷорӣ) ҳам дорад.
+func miniUserF(rows pgx.Rows) []gin.H {
+	out := []gin.H{}
+	for rows.Next() {
+		var id, uname, avatar, bio string
+		var verified, isFollowing bool
+		rows.Scan(&id, &uname, &avatar, &verified, &bio, &isFollowing)
+		out = append(out, gin.H{
+			"_id": id, "id": id,
+			"username": uname, "avatar": avatar,
+			"verified": verified, "bio": bio, "isFollowing": isFollowing,
+		})
+	}
+	return out
+}
+
 func setIsFollowing(u gin.H, myID, targetID string) {
 	var isFollowing bool
 	db.Pool.QueryRow(context.Background(),
