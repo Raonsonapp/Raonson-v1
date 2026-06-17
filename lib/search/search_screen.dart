@@ -16,9 +16,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
-import '../core/services/region_service.dart';
-import '../core/services/vip_service.dart';
-import '../anime/anime_screen.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
 import '../profile/profile_screen.dart';
@@ -74,8 +71,6 @@ class _SearchScreenState extends State<SearchScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 4, vsync: this);
-    RegionService.instance.ensure();   // бахши «Аниме» танҳо дар TJ
-    VipService.instance.load();
     _loadHistory();
     _loadExplore();
 
@@ -380,35 +375,6 @@ class _SearchScreenState extends State<SearchScreen>
           showCancel: false,
           onChanged:  _onChanged,
           onCancel:   _cancelSearch,
-        ),
-        // Тугмаи «Аниме» — танҳо дар Тоҷикистон
-        ValueListenableBuilder<bool>(
-          valueListenable: RegionService.instance.isTajikistan,
-          builder: (_, isTj, __) {
-            if (!isTj) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
-              child: GestureDetector(
-                onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const AnimeScreen())),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: AppColors.storyGradient),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(children: const [
-                    Icon(Icons.movie_filter_outlined, color: Colors.white, size: 22),
-                    SizedBox(width: 10),
-                    Text('Аниме', style: TextStyle(color: Colors.white,
-                        fontSize: 15, fontWeight: FontWeight.w700)),
-                    Spacer(),
-                    Icon(Icons.chevron_right_rounded, color: Colors.white70),
-                  ]),
-                ),
-              ),
-            );
-          },
         ),
         Expanded(
           child: _exploreLoading

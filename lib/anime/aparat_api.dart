@@ -29,10 +29,45 @@ class AnimeStream {
 
 class AparatApi {
   // ── Ҷустуҷӯ/рӯйхати аниме ──
+  // Аввал API-и нави v1-ро месанҷем, баъд etc/api-и кӯҳнаро (fallback).
   static Future<List<AnimeItem>> search(String query, {int perpage = 30}) async {
+    final v1 = await _searchV1(query);
+    if (v1.isNotEmpty) return v1;
     final url = 'https://www.aparat.com/etc/api/videoBySearch/text/'
         '${Uri.encodeComponent(query)}/perpage/$perpage';
     return _fetchList(url, 'videoBySearch');
+  }
+
+  // API-и нави Aparat: data[].attributes
+  static Future<List<AnimeItem>> _searchV1(String query) async {
+    try {
+      final url = 'https://www.aparat.com/api/fa/v1/video/video/search?'
+          'text=${Uri.encodeComponent(query)}';
+      final res = await http.get(Uri.parse(url),
+          headers: {'accept': 'application/json'})
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return [];
+      final j = jsonDecode(res.body);
+      final List data = (j is Map ? (j['data'] ?? []) : []) as List;
+      final out = <AnimeItem>[];
+      for (final e in data) {
+        if (e is! Map) continue;
+        final attr = (e['attributes'] ?? e) as Map;
+        final hash = (attr['uid'] ?? attr['hash'] ?? e['id'] ?? '').toString();
+        if (hash.isEmpty) continue;
+        out.add(AnimeItem(
+          hash: hash,
+          title: (attr['title'] ?? '').toString(),
+          poster: (attr['big_poster'] ?? attr['preview'] ??
+              attr['small_poster'] ?? '').toString(),
+          duration: int.tryParse('${attr['duration'] ?? 0}') ?? 0,
+          visits: int.tryParse('${attr['visit_cnt'] ?? attr['visit'] ?? 0}') ?? 0,
+        ));
+      }
+      return out;
+    } catch (_) {
+      return [];
+    }
   }
 
   static Future<List<AnimeItem>> byTag(String tag, {int perpage = 30}) async {

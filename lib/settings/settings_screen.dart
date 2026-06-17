@@ -15,6 +15,9 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
 import '../core/services/user_session.dart';
+import '../core/services/region_service.dart';
+import '../core/services/vip_service.dart';
+import '../anime/anime_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
 
 /// Theme label in the active language.
@@ -33,6 +36,8 @@ class SettingsScreen extends StatelessWidget {
       listenable: AppSettingsState.instance,
       builder: (ctx, _) {
         final s = AppSettingsState.instance;
+        RegionService.instance.ensure(); // бахши «Аниме» танҳо дар TJ
+        VipService.instance.load();
         return Scaffold(
           backgroundColor: AppColors.bg,
           appBar: _appBar(ctx, tr('settings.title'),
@@ -122,6 +127,23 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => _go(ctx, const AdminPanelScreen()),
                 ),
               ],
+
+              // ── АНИМЕ (танҳо дар Тоҷикистон) ──────────────────────
+              ValueListenableBuilder<bool>(
+                valueListenable: RegionService.instance.isTajikistan,
+                builder: (_, isTj, __) {
+                  if (!isTj) return const SizedBox.shrink();
+                  return Column(children: [
+                    _Hdr('Дигар'),
+                    _NavTile(
+                      icon:  Icons.movie_filter_outlined,
+                      title: 'Аниме',
+                      sub:   'Тамошои аниме · 480p ройгон, 720p/1080p VIP',
+                      onTap: () => _go(ctx, const AnimeScreen()),
+                    ),
+                  ]);
+                },
+              ),
 
               // ── ABOUT ─────────────────────────────────────────────
               _Hdr('Маълумот'),
