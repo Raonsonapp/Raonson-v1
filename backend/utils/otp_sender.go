@@ -30,6 +30,9 @@ func SendEmailOTP(to, otp string) error {
 	if from == "" {
 		from = user
 	}
+	// Gmail app-password-ро бо фосила нишон медиҳад ("xxxx xxxx ...") —
+	// фосиларо тоза мекунем, то корбар хато накунад.
+	pass = strings.ReplaceAll(pass, " ", "")
 	if user == "" || pass == "" {
 		return fmt.Errorf("SMTP not configured")
 	}
