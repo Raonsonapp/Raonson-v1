@@ -12,6 +12,7 @@ import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/follow_service.dart';
 import '../../core/services/network_quality.dart';
+import '../../widgets/embed_player.dart';
 import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
 import '../reels_repository.dart';
@@ -163,6 +164,95 @@ class _ReelsViewState extends State<_ReelsView> {
     super.dispose();
   }
 
+  // Интихоби сохтани reel: аз галерея ё аз силка (Aparat/YouTube).
+  void _showReelCreateOptions(_ReelsVM vm) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 36, height: 4,
+            decoration: BoxDecoration(color: Colors.white24,
+                borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(Icons.video_library_outlined, color: Colors.white),
+            title: const Text('Аз галерея', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => const CreateReelScreen()))
+                  .then((ok) { if (ok == true && mounted) vm.load(); });
+            }),
+          ListTile(
+            leading: const Icon(Icons.link_rounded, color: Colors.white),
+            title: const Text('Аз силка (Aparat/YouTube)',
+                style: TextStyle(color: Colors.white)),
+            subtitle: const Text('Силкаи видеоро гузоред',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            onTap: () { Navigator.pop(context); _createFromLink(vm); }),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _createFromLink(_ReelsVM vm) async {
+    final linkCtrl = TextEditingController();
+    final capCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Reel аз силка', style: TextStyle(color: Colors.white)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: linkCtrl, autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'https://www.aparat.com/v/...',
+              hintStyle: TextStyle(color: Colors.white30))),
+          const SizedBox(height: 10),
+          TextField(controller: capCtrl,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Тавсиф (ихтиёрӣ)',
+              hintStyle: TextStyle(color: Colors.white30))),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Нашр', style: TextStyle(color: AppColors.neonBlue))),
+        ],
+      ),
+    );
+    final link = linkCtrl.text.trim();
+    final cap = capCtrl.text.trim();
+    linkCtrl.dispose(); capCtrl.dispose();
+    if (ok != true || link.isEmpty) return;
+    if (!EmbedUtils.isEmbed(link)) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Танҳо силкаи Aparat/YouTube қабул мешавад')));
+      return;
+    }
+    try {
+      await ApiClient.instance.post('/reels/', body: {
+        'videoUrl': link, 'caption': cap,
+      });
+      if (mounted) {
+        vm.load();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Reel илова шуд ✓'), backgroundColor: Colors.green));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Хато ҳангоми нашр')));
+    }
+  }
+
   void _onPageChanged(int i, _ReelsVM vm) {
     setState(() => _currentPage = i);
     if (i >= vm.reels.length - 3) vm.loadMore();
@@ -296,11 +386,7 @@ class _ReelsViewState extends State<_ReelsView> {
           onSave: () => vm.toggleSave(vm.reels[i].id),
           onMuteToggle: vm.toggleMute,
           onToggleFilter: vm.toggleFilter,
-          onAddReel: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const CreateReelScreen()))
-              .then((ok) {
-            if (ok == true && context.mounted) vm.load();
-          }),
+          onAddReel: () => _showReelCreateOptions(vm),
           onDelete: () => vm.markNotInterested(vm.reels[i].id),
           onNotInterested: () {
             vm.markNotInterested(vm.reels[i].id);
@@ -411,8 +497,12 @@ class _ReelItemState extends State<_ReelItem> {
     } catch (_) {}
   }
 
+  // Видеои берунӣ (Aparat/YouTube) — на файли мустақим
+  bool get _isEmbed => EmbedUtils.isEmbed(widget.reel.videoUrl);
+
   void _initVideo() {
     if (widget.reel.videoUrl.isEmpty) return;
+    if (_isEmbed) return; // embed-ро VideoPlayer бозӣ намекунад — WebView мекунад
     if (widget.preloadCtrl != null &&
         widget.preloadCtrl!.value.isInitialized) {
       _ctrl = widget.preloadCtrl;
@@ -1152,7 +1242,10 @@ class _ReelItemState extends State<_ReelItem> {
       child: Stack(fit: StackFit.expand, children: [
         // Фони сиёҳ — кафолат, ки ягон навори хокистарӣ намонад (мисли Instagram)
         const ColoredBox(color: Colors.black),
-        if (_initialized && _ctrl != null)
+        if (_isEmbed)
+          // Видеои берунӣ (Aparat/YouTube) дар WebView
+          EmbedPlayer(url: widget.reel.videoUrl)
+        else if (_initialized && _ctrl != null)
           FittedBox(
               fit: BoxFit.cover,
               child: SizedBox(
