@@ -12,7 +12,6 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _idCtrl = TextEditingController();
   final _repo = AuthRepository();
-  String _channel = 'email'; // email | sms | whatsapp
   bool _loading = false;
   String? _error;
 
@@ -21,10 +20,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _send() async {
     final id = _idCtrl.text.trim();
-    if (id.isEmpty) { setState(() => _error = 'Email ё рақами телефонро ворид кунед'); return; }
+    if (id.isEmpty) { setState(() => _error = 'Почтаи электрониро ворид кунед'); return; }
     setState(() { _loading = true; _error = null; });
     try {
-      final otp = await _repo.forgotPassword(id, channel: _channel);
+      final otp = await _repo.forgotPassword(id, channel: 'email');
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(
         builder: (_) => ResetPasswordScreen(identifier: id, prefillOtp: otp),
@@ -67,7 +66,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   fontSize: 19, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           const Text(
-            'Email ё рақами телефони худро ворид кунед ва мо барои '
+            'Почтаи электронии худро ворид кунед ва мо барои '
             'барқарорсозии парол рамзи 6-рақама мефиристем.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white54, fontSize: 13.5, height: 1.4),
@@ -77,20 +76,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             controller: _idCtrl,
             style: const TextStyle(color: Colors.white),
             keyboardType: TextInputType.emailAddress,
-            decoration: _dec('Email ё рақами телефон'),
+            decoration: _dec('Почтаи электронӣ'),
           ),
-          const SizedBox(height: 18),
-          const Text('Рамзро ба куҷо фиристем?',
-              style: TextStyle(color: Colors.white70, fontSize: 13,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Row(children: [
-            _channelChip('email', Icons.email_outlined, 'Email'),
-            const SizedBox(width: 8),
-            _channelChip('sms', Icons.sms_outlined, 'SMS'),
-            const SizedBox(width: 8),
-            _channelChip('whatsapp', Icons.chat_outlined, 'WhatsApp'),
-          ]),
           if (_error != null) ...[
             const SizedBox(height: 14),
             Text(_error!, style: const TextStyle(color: Color(0xFFFF3B30), fontSize: 13)),
@@ -115,32 +102,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _channelChip(String value, IconData icon, String label) {
-    final sel = _channel == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _channel = value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: sel ? AppColors.neonBlue.withOpacity(0.15) : const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: sel ? AppColors.neonBlue : Colors.white12,
-                width: sel ? 1.5 : 1),
-          ),
-          child: Column(children: [
-            Icon(icon, color: sel ? AppColors.neonBlue : Colors.white60, size: 22),
-            const SizedBox(height: 5),
-            Text(label, style: TextStyle(
-                color: sel ? Colors.white : Colors.white60,
-                fontSize: 12, fontWeight: FontWeight.w500)),
-          ]),
-        ),
       ),
     );
   }
