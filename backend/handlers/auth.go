@@ -224,17 +224,14 @@ func ForgotPassword(c *gin.Context) {
 		}
 	}
 
-	resp := gin.H{"message": "Рамз фиристода шуд", "to": dest, "channel": b.Channel}
-	// Дар реҷаи dev ё OTP_ECHO=1 рамзро дар response нишон медиҳем
-	// (барои санҷиш бе провайдер). Дар production — танҳо вақте канал
-	// танзим нашудаасту фиристодан ноком шуд, то корбар маҳкам намонад.
-	echo := os.Getenv("GIN_MODE") != "release" || os.Getenv("OTP_ECHO") == "1"
+	resp := gin.H{"message": "Рамз ба почтаи шумо фиристода шуд", "to": dest, "channel": b.Channel}
 	if sendErr != nil {
+		// Хатогиро сабт мекунем, вале ба корбар ошкор намекунем (бехатарӣ).
 		log.Printf("[ForgotPassword] send via %s failed: %v", b.Channel, sendErr)
-		resp["message"] = "Канали интихобшуда танзим нашудааст"
-		echo = true
 	}
-	if echo {
+	// Рамз ТАНҲО ба email/SMS меравад. Дар экран нишон дода НАМЕШАВАД.
+	// Барои санҷиш (бе провайдер) — env OTP_ECHO=1 гузоред.
+	if os.Getenv("OTP_ECHO") == "1" {
 		resp["otp"] = otp
 	}
 	c.JSON(http.StatusOK, resp)

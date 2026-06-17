@@ -82,8 +82,25 @@ class _AnimeScreenState extends State<AnimeScreen> {
               ? const Center(child: CircularProgressIndicator(
                   color: AppColors.neonBlue, strokeWidth: 2))
               : _items.isEmpty
-                  ? const Center(child: Text('Чизе ёфт нашуд',
-                      style: TextStyle(color: Colors.white38)))
+                  ? Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.movie_outlined,
+                            color: Colors.white24, size: 48),
+                        const SizedBox(height: 12),
+                        const Text('Натиҷае нест ё Aparat дастрас нест',
+                            style: TextStyle(color: Colors.white38)),
+                        const SizedBox(height: 14),
+                        OutlinedButton.icon(
+                          onPressed: _load,
+                          icon: const Icon(Icons.refresh_rounded,
+                              color: Colors.white, size: 18),
+                          label: const Text('Такрор',
+                              style: TextStyle(color: Colors.white)),
+                          style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white24)),
+                        ),
+                      ]),
+                    )
                   : GridView.builder(
                       padding: const EdgeInsets.all(8),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
