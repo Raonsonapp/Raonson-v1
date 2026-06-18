@@ -1,6 +1,11 @@
 // lib/anime/aparat_api.dart
 // Танҳо API-и Aparat — рӯйхат ва линкҳои стрими ҳар сифат.
 // Видео аз CDN-и Aparat бозӣ мешавад; ба сервери мо ягон фишор намеояд.
+//
+// Муҳим: Aparat ҷавоби JSON:API медиҳад, ки видеоҳо метавонанд дар `data`,
+// `included` ё дохили объектҳои дигар бошанд. Барои ҳамин мо ба ҷои донистани
+// роҳи дақиқи майдон, тамоми дарахти JSON-ро мегардем ва ҳар объектеро,
+// ки ба видео монанд аст (uid + poster), ҷамъ мекунем.
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -40,37 +45,56 @@ class AparatApi {
   /// Барои диагностика — охирин ҳолат/хато (дар экран нишон дода мешавад).
   static String lastDebug = '';
 
-  // Қиматро ба сатр табдил медиҳад (агар Map бошад, калидҳои матнро мегирад).
-  static String _asStr(dynamic v) {
-    if (v == null) return '';
-    if (v is String) return v;
-    if (v is num) return v.toString();
-    if (v is Map) {
-      return _asStr(v['text'] ?? v['title'] ?? v['caption'] ??
-          v['value'] ?? v['name'] ?? '');
+  // ── Trending: рӯйхати ибтидоӣ бе ҷустуҷӯ ──
+  // Якчанд эндпоинтро меозмоем; кадоме видео дод — ҳамонро бармегардонем.
+  static Future<List<AnimeItem>> trending({int perpage = 40}) async {
+    lastDebug = '';
+    // Эндпоинтҳои гуногуни Aparat — то яктоаш видео диҳад.
+    const endpoints = [
+      // Натиҷаи ҷустуҷӯ барои «анимэ» (форсӣ) — одатан бойтарин аст.
+      'https://www.aparat.com/api/fa/v1/video/video/search?text=%D8%A7%D9%86%DB%8C%D9%85%D9%87&type_search=search',
+      // Категорияи аниматсия/аниме (tagid метавонад фарқ кунад — fallback).
+      'https://www.aparat.com/api/fa/v1/video/video/list/tagid/6',
+      // etc/api-и кӯҳна.
+      'https://www.aparat.com/etc/api/videoBySearch/text/anime/perpage/40',
+    ];
+    for (final url in endpoints) {
+      final items = await _fetchAndExtract(url);
+      if (items.isNotEmpty) return items;
     }
-    return '';
+    return [];
   }
 
   // ── Ҷустуҷӯ/рӯйхати аниме ──
   // Aparat форсӣ/лотинист — пас номи кириллиро ба лотинӣ табдил медиҳем
-  // (мисли «Наруто» → «Naruto»), баъд etc/api-и расмиро месанҷем.
+  // (мисли «Наруто» → «Naruto»), баъд якчанд эндпоинтро месанҷем.
   static Future<List<AnimeItem>> search(String query, {int perpage = 40}) async {
     lastDebug = '';
-    final q = _translit(query.trim());
-    // Аввал etc/api-и расмӣ — сохтори тоза: title=сатр, uid, big_poster
-    final etc = await _fetchList(
-        'https://www.aparat.com/etc/api/videoBySearch/text/'
-        '${Uri.encodeComponent(q)}/perpage/$perpage',
-        'videoBySearch');
-    if (etc.isNotEmpty) return etc;
-    // Fallback: API-и нави v1
-    return _searchV1(q);
+    final raw = query.trim();
+    if (raw.isEmpty) return trending(perpage: perpage);
+    final q = _translit(raw);
+    final enc = Uri.encodeComponent(q);
+    // Чанд эндпоинт — кадоме натиҷа дод, ҳамон.
+    final endpoints = [
+      'https://www.aparat.com/api/fa/v1/video/video/search?text=$enc',
+      'https://www.aparat.com/api/fa/v1/video/video/search?text=$enc&type_search=search',
+      'https://www.aparat.com/etc/api/videoBySearch/text/$enc/perpage/$perpage',
+    ];
+    for (final url in endpoints) {
+      final items = await _fetchAndExtract(url);
+      if (items.isNotEmpty) return items;
+    }
+    return [];
+  }
+
+  static Future<List<AnimeItem>> byTag(String tag, {int perpage = 30}) async {
+    final url = 'https://www.aparat.com/etc/api/videobytag/text/'
+        '${Uri.encodeComponent(tag)}';
+    return _fetchAndExtract(url);
   }
 
   /// Кириллӣ → лотинӣ (барои ҷустуҷӯи Aparat).
   static String _translit(String s) {
-    // Агар аллакай лотинӣ/форсӣ бошад, ҳамон тавр мемонад.
     final hasCyr = RegExp(r'[А-Яа-яЁёҶҷҲҳӢӣҚқҒғӮӯ]').hasMatch(s);
     if (!hasCyr) return s;
     const m = {
@@ -87,87 +111,126 @@ class AparatApi {
     return b.toString();
   }
 
-  // API-и нави Aparat: data[].attributes
-  static Future<List<AnimeItem>> _searchV1(String query) async {
+  // GET + истихроҷи рекурсивӣ. Диагностикаро низ нав мекунад.
+  static Future<List<AnimeItem>> _fetchAndExtract(String url) async {
     try {
-      final url = 'https://www.aparat.com/api/fa/v1/video/video/search?'
-          'text=${Uri.encodeComponent(query)}';
       final res = await http.get(Uri.parse(url), headers: _headers)
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 12));
       if (res.statusCode != 200) {
-        lastDebug = 'v1 HTTP ${res.statusCode}';
+        _appendDebug('HTTP ${res.statusCode}');
         return [];
       }
       final j = jsonDecode(res.body);
-      final List data = (j is Map ? (j['data'] ?? j['list'] ?? []) : []) as List;
-      final out = <AnimeItem>[];
-      for (final e in data) {
-        if (e is! Map) continue;
-        final attr = (e['attributes'] is Map ? e['attributes'] : e) as Map;
-        final hash = _asStr(attr['uid'] ?? attr['hash'] ?? e['id']);
-        if (hash.isEmpty) continue;
-        out.add(AnimeItem(
-          hash: hash,
-          title: _asStr(attr['title']),
-          poster: _asStr(attr['big_poster'] ?? attr['preview'] ??
-              attr['poster'] ?? attr['small_poster']),
-          duration: int.tryParse('${attr['duration'] ?? 0}') ?? 0,
-          visits: int.tryParse('${attr['visit_cnt'] ?? attr['visit'] ?? 0}') ?? 0,
-        ));
+      final acc = <String, AnimeItem>{};
+      _collectVideos(j, acc);
+      final out = acc.values.toList();
+      // Аз рӯи бозидидҳо мураттаб (машҳуртарин боло).
+      out.sort((a, b) => b.visits.compareTo(a.visits));
+      if (out.isEmpty) {
+        _appendDebug('200 вале 0 видео · ${_snippet(res.body)}');
+      } else {
+        _appendDebug('200, ${out.length} видео');
       }
-      // Агар чизе ёфт нашуд — порчаи raw-ро барои диагностика нигоҳ медорем.
-      lastDebug = out.isEmpty
-          ? 'v1 200, вале 0 — ${_snippet(res.body)}'
-          : 'v1 200, ${out.length} натиҷа';
       return out;
     } catch (e) {
-      lastDebug = 'v1 хато: $e';
+      _appendDebug('хато: $e');
       return [];
     }
   }
 
-  static Future<List<AnimeItem>> byTag(String tag, {int perpage = 30}) async {
-    final url = 'https://www.aparat.com/etc/api/videobytag/text/'
-        '${Uri.encodeComponent(tag)}';
-    return _fetchList(url, 'videobytag');
+  // Рекурсивӣ тамоми дарахти JSON-ро мегардад ва ҳар объекти видеоро ҷамъ мекунад.
+  static void _collectVideos(dynamic node, Map<String, AnimeItem> acc) {
+    if (node is List) {
+      for (final e in node) {
+        _collectVideos(e, acc);
+      }
+      return;
+    }
+    if (node is! Map) return;
+
+    // attributes-ро низ месанҷем (JSON:API).
+    final attr = node['attributes'] is Map
+        ? Map<String, dynamic>.from(node['attributes'] as Map)
+        : <String, dynamic>{};
+
+    // uid-и видео метавонад дар худи node ё дар attributes бошад.
+    final hash = _asStr(node['uid'] ?? attr['uid'] ?? node['hash'] ?? attr['hash']);
+    final poster = _asStr(attr['big_poster'] ?? node['big_poster'] ??
+        attr['preview'] ?? node['preview'] ??
+        attr['poster'] ?? node['poster'] ??
+        attr['small_poster'] ?? node['small_poster']);
+    final title = _asStr(attr['title'] ?? node['title']);
+
+    // Объект «видео» аст, агар uid-и эътимоднок + (poster ё title) дошта бошад.
+    final looksLikeVideo = _isVideoHash(hash) && (poster.isNotEmpty || title.isNotEmpty);
+    if (looksLikeVideo && !acc.containsKey(hash)) {
+      acc[hash] = AnimeItem(
+        hash: hash,
+        title: title,
+        poster: poster,
+        duration: _parseDuration(attr['duration'] ?? node['duration']),
+        visits: _parseInt(attr['visit_cnt'] ?? node['visit_cnt'] ??
+            attr['visit'] ?? node['visit']),
+      );
+    }
+
+    // Ҳарчанд видео ёфтем ҳам, ба чуқурӣ идома медиҳем (included, relationships...).
+    for (final v in node.values) {
+      if (v is Map || v is List) _collectVideos(v, acc);
+    }
+  }
+
+  // uid-и Aparat: ҳарфу рақам, дарозии ~6–12. Рақами холӣ/ID-и дарозро рад мекунем.
+  static bool _isVideoHash(String s) {
+    if (s.isEmpty) return false;
+    if (!RegExp(r'^[A-Za-z0-9]{5,16}$').hasMatch(s)) return false;
+    // ID-и сирф рақамӣ одатан uid нест (uid ҳамеша ҳарф дорад).
+    if (RegExp(r'^\d+$').hasMatch(s)) return false;
+    return true;
+  }
+
+  // Қиматро ба сатр табдил медиҳад (агар Map бошад, калидҳои матнро мегирад).
+  static String _asStr(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v;
+    if (v is num) return v.toString();
+    if (v is Map) {
+      return _asStr(v['text'] ?? v['title'] ?? v['caption'] ??
+          v['value'] ?? v['name'] ?? '');
+    }
+    return '';
+  }
+
+  static int _parseInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString().replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+  }
+
+  // Duration метавонад сония (num) ё "mm:ss" / "hh:mm:ss" бошад.
+  static int _parseDuration(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v.toInt();
+    final s = v.toString().trim();
+    if (s.isEmpty) return 0;
+    if (s.contains(':')) {
+      final parts = s.split(':').map((e) => int.tryParse(e.trim()) ?? 0).toList();
+      var sec = 0;
+      for (final p in parts) {
+        sec = sec * 60 + p;
+      }
+      return sec;
+    }
+    return int.tryParse(s) ?? 0;
+  }
+
+  static void _appendDebug(String m) {
+    lastDebug = lastDebug.isEmpty ? m : '$lastDebug · $m';
   }
 
   static String _snippet(String body) {
-    final b = body.replaceAll('\n', ' ').trim();
-    return b.length > 160 ? b.substring(0, 160) : b;
-  }
-
-  static Future<List<AnimeItem>> _fetchList(String url, String key) async {
-    try {
-      final res = await http.get(Uri.parse(url), headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode != 200) {
-        lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}etc HTTP ${res.statusCode}';
-        return [];
-      }
-      final j = jsonDecode(res.body);
-      final List raw = (j is Map ? (j[key] ?? j['videos'] ?? []) : j) as List;
-      final out = <AnimeItem>[];
-      for (final e in raw) {
-        if (e is! Map) continue;
-        final hash = _asStr(e['uid'] ?? e['hash']);
-        if (hash.isEmpty) continue;
-        out.add(AnimeItem(
-          hash: hash,
-          title: _asStr(e['title']),
-          poster: _asStr(e['big_poster'] ?? e['small_poster']),
-          duration: int.tryParse('${e['duration'] ?? 0}') ?? 0,
-          visits: int.tryParse('${e['visit_cnt'] ?? 0}') ?? 0,
-        ));
-      }
-      // Ҳамеша ҳолат+порчаро нигоҳ медорем (барои диагностика).
-      lastDebug = 'etc ${res.statusCode}, ${out.length} натиҷа · '
-          '${_snippet(res.body)}';
-      return out;
-    } catch (e) {
-      lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}etc хато: $e';
-      return [];
-    }
+    final b = body.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return b.length > 200 ? b.substring(0, 200) : b;
   }
 
   /// Линкҳои стрими ҳар сифат + (fallback) embed.
@@ -179,34 +242,65 @@ class AparatApi {
       final res = await http
           .get(Uri.parse('https://www.aparat.com/api/fa/v1/video/video/show/videohash/$hash'),
               headers: _headers)
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 12));
       if (res.statusCode == 200) {
         final j = jsonDecode(res.body);
-        final attr = (j['data']?['attributes']) as Map? ?? {};
-        if ((attr['frame'] ?? '').toString().isNotEmpty) {
-          embed = attr['frame'].toString();
-        }
-        // file_link_all = [ {profile:"720p", urls:[m3u8...]} , ... ]
-        final all = attr['file_link_all'];
-        if (all is List) {
-          for (final f in all) {
-            if (f is! Map) continue;
-            final profile = (f['profile'] ?? f['label'] ?? '').toString();
-            String link = '';
-            final urls = f['urls'] ?? f['url'] ?? f['src'];
-            if (urls is List && urls.isNotEmpty) {
-              link = urls.first.toString();
-            } else if (urls is String) {
-              link = urls;
-            }
-            if (link.isNotEmpty) {
-              streams.add(AnimeStream(profile: profile, url: link));
-            }
-          }
-        }
+        // frame-и embed-ро ҳама ҷо ҷустуҷӯ мекунем.
+        final foundFrame = _findFrame(j);
+        if (foundFrame.isNotEmpty) embed = foundFrame;
+        // Ҳама линкҳои сифатдор (file_link_all) — рекурсивӣ.
+        _collectStreams(j, streams);
       }
     } catch (_) {}
-    streams.sort((a, b) => a.height.compareTo(b.height)); // паст → баланд
-    return (streams, embed);
+    // Дубликатҳоро аз рӯи URL тоза мекунем.
+    final seen = <String>{};
+    final uniq = streams.where((s) => seen.add(s.url)).toList();
+    uniq.sort((a, b) => a.height.compareTo(b.height)); // паст → баланд
+    return (uniq, embed);
+  }
+
+  static String _findFrame(dynamic node) {
+    if (node is Map) {
+      final f = node['frame'];
+      if (f is String && f.startsWith('http')) return f;
+      for (final v in node.values) {
+        final r = _findFrame(v);
+        if (r.isNotEmpty) return r;
+      }
+    } else if (node is List) {
+      for (final e in node) {
+        final r = _findFrame(e);
+        if (r.isNotEmpty) return r;
+      }
+    }
+    return '';
+  }
+
+  // file_link_all = [ {profile:"720p", urls:[m3u8...]} , ... ] — ҳама ҷо меҷӯем.
+  static void _collectStreams(dynamic node, List<AnimeStream> out) {
+    if (node is List) {
+      for (final e in node) {
+        _collectStreams(e, out);
+      }
+      return;
+    }
+    if (node is! Map) return;
+    final hasProfile = node.containsKey('profile') || node.containsKey('label');
+    final urls = node['urls'] ?? node['url'] ?? node['src'] ?? node['file'];
+    if (hasProfile && urls != null) {
+      final profile = (node['profile'] ?? node['label'] ?? '').toString();
+      String link = '';
+      if (urls is List && urls.isNotEmpty) {
+        link = urls.first.toString();
+      } else if (urls is String) {
+        link = urls;
+      }
+      if (link.startsWith('http')) {
+        out.add(AnimeStream(profile: profile, url: link));
+      }
+    }
+    for (final v in node.values) {
+      if (v is Map || v is List) _collectStreams(v, out);
+    }
   }
 }

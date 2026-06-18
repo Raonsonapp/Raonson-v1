@@ -16,7 +16,7 @@ class _AnimeScreenState extends State<AnimeScreen> {
   final _searchCtrl = TextEditingController();
   List<AnimeItem> _items = [];
   bool _loading = true;
-  String _query = 'انیمه'; // "аниме" ба форсӣ — натиҷаи беҳтар
+  String _query = ''; // холӣ = trending
 
   @override
   void initState() {
@@ -29,14 +29,15 @@ class _AnimeScreenState extends State<AnimeScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final list = await AparatApi.search(_query);
+    // Холӣ бошад → trending; вагарна → ҷустуҷӯ.
+    final list = _query.isEmpty
+        ? await AparatApi.trending()
+        : await AparatApi.search(_query);
     if (mounted) setState(() { _items = list; _loading = false; });
   }
 
   void _onSearch(String q) {
-    final t = q.trim();
-    if (t.isEmpty) return;
-    _query = t;
+    _query = q.trim();
     _load();
   }
 

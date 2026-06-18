@@ -75,17 +75,14 @@ func sendBrevo(apiKey, to, subject, text string) error {
 	return nil
 }
 
-// SMTP бо timeout-и пайвастшавӣ (то дар HF беохир шах нашавад).
+// SMTP бо timeout — портҳои гуногунро меозмоем (587 STARTTLS, баъд 465 SSL).
+// Баъзе хостингҳо 587-ро мебанданд вале 465-ро мекушоянд (ё баръакс).
 func sendSMTP(to, subject, bodyText string) error {
 	host := os.Getenv("SMTP_HOST")
 	user := os.Getenv("SMTP_USER")
 	pass := strings.ReplaceAll(os.Getenv("SMTP_PASS"), " ", "")
 	if host == "" {
 		host = "smtp.gmail.com"
-	}
-	port := os.Getenv("SMTP_PORT")
-	if port == "" {
-		port = "587"
 	}
 	from := os.Getenv("SMTP_FROM")
 	if from == "" {
@@ -102,21 +99,58 @@ func sendSMTP(to, subject, bodyText string) error {
 		"Content-Type: text/plain; charset=UTF-8\r\n\r\n" +
 		bodyText
 
+	// Тартиби озмоиш: агар SMTP_PORT танзим шуда бошад, аввал ҳамон.
+	ports := []string{"587", "465"}
+	if p := os.Getenv("SMTP_PORT"); p != "" && p != "587" && p != "465" {
+		ports = append([]string{p}, ports...)
+	} else if p == "465" {
+		ports = []string{"465", "587"}
+	}
+
+	auth := smtp.PlainAuth("", user, pass, host)
+	var lastErr error
+	for _, port := range ports {
+		err := smtpDeliver(host, port, from, to, msg, auth)
+		if err == nil {
+			return nil
+		}
+		lastErr = fmt.Errorf("порти %s: %w", port, err)
+	}
+	return fmt.Errorf("SMTP нашуд (%v) — хостинг шояд портҳоро баста бошад", lastErr)
+}
+
+// smtpDeliver — як кӯшиши расонидан тавассути порти мушаххас.
+// Порти 465 = implicit TLS; дигарон = plain + STARTTLS.
+func smtpDeliver(host, port, from, to, msg string, auth smtp.Auth) error {
 	addr := host + ":" + port
-	conn, err := net.DialTimeout("tcp", addr, 8*time.Second)
+	var conn net.Conn
+	var err error
+	if port == "465" {
+		d := &net.Dialer{Timeout: 8 * time.Second}
+		conn, err = tls.DialWithDialer(d, "tcp", addr, &tls.Config{ServerName: host})
+	} else {
+		conn, err = net.DialTimeout("tcp", addr, 8*time.Second)
+	}
 	if err != nil {
-		return fmt.Errorf("SMTP dial: %w (хостинг шояд портро баста бошад)", err)
+		return fmt.Errorf("dial: %w", err)
 	}
 	defer conn.Close()
+
 	c, err := smtp.NewClient(conn, host)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
-	if err := c.StartTLS(&tls.Config{ServerName: host}); err != nil {
-		return err
+
+	// Барои портҳои ғайри-465 STARTTLS лозим аст.
+	if port != "465" {
+		if ok, _ := c.Extension("STARTTLS"); ok {
+			if err := c.StartTLS(&tls.Config{ServerName: host}); err != nil {
+				return err
+			}
+		}
 	}
-	if err := c.Auth(smtp.PlainAuth("", user, pass, host)); err != nil {
+	if err := c.Auth(auth); err != nil {
 		return err
 	}
 	if err := c.Mail(from); err != nil {
