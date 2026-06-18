@@ -40,6 +40,18 @@ class AparatApi {
   /// Барои диагностика — охирин ҳолат/хато (дар экран нишон дода мешавад).
   static String lastDebug = '';
 
+  // Қиматро ба сатр табдил медиҳад (агар Map бошад, калидҳои матнро мегирад).
+  static String _asStr(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v;
+    if (v is num) return v.toString();
+    if (v is Map) {
+      return _asStr(v['text'] ?? v['title'] ?? v['caption'] ??
+          v['value'] ?? v['name'] ?? '');
+    }
+    return '';
+  }
+
   // ── Ҷустуҷӯ/рӯйхати аниме ──
   // Аввал API-и нави v1-ро месанҷем, баъд etc/api-и кӯҳнаро (fallback).
   static Future<List<AnimeItem>> search(String query, {int perpage = 30}) async {
@@ -59,26 +71,31 @@ class AparatApi {
           'text=${Uri.encodeComponent(query)}';
       final res = await http.get(Uri.parse(url), headers: _headers)
           .timeout(const Duration(seconds: 10));
-      lastDebug = 'v1 HTTP ${res.statusCode}';
-      if (res.statusCode != 200) return [];
+      if (res.statusCode != 200) {
+        lastDebug = 'v1 HTTP ${res.statusCode}';
+        return [];
+      }
       final j = jsonDecode(res.body);
-      final List data = (j is Map ? (j['data'] ?? []) : []) as List;
+      final List data = (j is Map ? (j['data'] ?? j['list'] ?? []) : []) as List;
       final out = <AnimeItem>[];
       for (final e in data) {
         if (e is! Map) continue;
-        final attr = (e['attributes'] ?? e) as Map;
-        final hash = (attr['uid'] ?? attr['hash'] ?? e['id'] ?? '').toString();
+        final attr = (e['attributes'] is Map ? e['attributes'] : e) as Map;
+        final hash = _asStr(attr['uid'] ?? attr['hash'] ?? e['id']);
         if (hash.isEmpty) continue;
         out.add(AnimeItem(
           hash: hash,
-          title: (attr['title'] ?? '').toString(),
-          poster: (attr['big_poster'] ?? attr['preview'] ??
-              attr['small_poster'] ?? '').toString(),
+          title: _asStr(attr['title']),
+          poster: _asStr(attr['big_poster'] ?? attr['preview'] ??
+              attr['poster'] ?? attr['small_poster']),
           duration: int.tryParse('${attr['duration'] ?? 0}') ?? 0,
           visits: int.tryParse('${attr['visit_cnt'] ?? attr['visit'] ?? 0}') ?? 0,
         ));
       }
-      lastDebug = 'v1 HTTP ${res.statusCode}, ${out.length} натиҷа';
+      // Агар чизе ёфт нашуд — порчаи raw-ро барои диагностика нигоҳ медорем.
+      lastDebug = out.isEmpty
+          ? 'v1 200, вале 0 — ${_snippet(res.body)}'
+          : 'v1 200, ${out.length} натиҷа';
       return out;
     } catch (e) {
       lastDebug = 'v1 хато: $e';
@@ -92,29 +109,41 @@ class AparatApi {
     return _fetchList(url, 'videobytag');
   }
 
+  static String _snippet(String body) {
+    final b = body.replaceAll('\n', ' ').trim();
+    return b.length > 160 ? b.substring(0, 160) : b;
+  }
+
   static Future<List<AnimeItem>> _fetchList(String url, String key) async {
     try {
       final res = await http.get(Uri.parse(url), headers: _headers)
           .timeout(const Duration(seconds: 10));
-      lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}etc HTTP ${res.statusCode}';
-      if (res.statusCode != 200) return [];
+      if (res.statusCode != 200) {
+        lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}etc HTTP ${res.statusCode}';
+        return [];
+      }
       final j = jsonDecode(res.body);
       final List raw = (j is Map ? (j[key] ?? j['videos'] ?? []) : j) as List;
       final out = <AnimeItem>[];
       for (final e in raw) {
         if (e is! Map) continue;
-        final hash = (e['uid'] ?? e['hash'] ?? '').toString();
+        final hash = _asStr(e['uid'] ?? e['hash']);
         if (hash.isEmpty) continue;
         out.add(AnimeItem(
           hash: hash,
-          title: (e['title'] ?? '').toString(),
-          poster: (e['big_poster'] ?? e['small_poster'] ?? '').toString(),
+          title: _asStr(e['title']),
+          poster: _asStr(e['big_poster'] ?? e['small_poster']),
           duration: int.tryParse('${e['duration'] ?? 0}') ?? 0,
           visits: int.tryParse('${e['visit_cnt'] ?? 0}') ?? 0,
         ));
       }
+      if (out.isEmpty) {
+        lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}'
+            'etc 200, 0 — ${_snippet(res.body)}';
+      }
       return out;
-    } catch (_) {
+    } catch (e) {
+      lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}etc хато: $e';
       return [];
     }
   }

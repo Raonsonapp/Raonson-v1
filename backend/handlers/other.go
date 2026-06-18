@@ -506,6 +506,7 @@ func DeleteReel(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
 		return
 	}
+	mw.CacheDel("explore:grid") // то аз search фавран нопадид шавад
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 

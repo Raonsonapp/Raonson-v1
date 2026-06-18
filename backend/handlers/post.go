@@ -215,6 +215,7 @@ func DeletePost(c *gin.Context) {
 	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET posts_count=GREATEST(posts_count-1,0) WHERE id=$1`, myID)
+	mw.CacheDel("explore:grid") // фавран аз search/explore нопадид шавад
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
