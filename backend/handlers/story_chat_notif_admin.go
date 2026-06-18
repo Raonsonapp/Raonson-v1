@@ -523,6 +523,9 @@ func ExploreGrid(c *gin.Context) {
 		       u.id, u.username, u.avatar,
 		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
+		WHERE COALESCE(p.hidden,false)=FALSE
+		  AND COALESCE(p.archived,false)=FALSE
+		  AND COALESCE(u.banned,false)=FALSE
 		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`)
 	posts := []gin.H{}
 	if pRows != nil {
