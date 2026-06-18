@@ -53,15 +53,38 @@ class AparatApi {
   }
 
   // ── Ҷустуҷӯ/рӯйхати аниме ──
-  // Аввал API-и нави v1-ро месанҷем, баъд etc/api-и кӯҳнаро (fallback).
-  static Future<List<AnimeItem>> search(String query, {int perpage = 30}) async {
+  // Aparat форсӣ/лотинист — пас номи кириллиро ба лотинӣ табдил медиҳем
+  // (мисли «Наруто» → «Naruto»), баъд etc/api-и расмиро месанҷем.
+  static Future<List<AnimeItem>> search(String query, {int perpage = 40}) async {
     lastDebug = '';
-    final v1 = await _searchV1(query);
-    if (v1.isNotEmpty) return v1;
-    final url = 'https://www.aparat.com/etc/api/videoBySearch/text/'
-        '${Uri.encodeComponent(query)}/perpage/$perpage';
-    final old = await _fetchList(url, 'videoBySearch');
-    return old;
+    final q = _translit(query.trim());
+    // Аввал etc/api-и расмӣ — сохтори тоза: title=сатр, uid, big_poster
+    final etc = await _fetchList(
+        'https://www.aparat.com/etc/api/videoBySearch/text/'
+        '${Uri.encodeComponent(q)}/perpage/$perpage',
+        'videoBySearch');
+    if (etc.isNotEmpty) return etc;
+    // Fallback: API-и нави v1
+    return _searchV1(q);
+  }
+
+  /// Кириллӣ → лотинӣ (барои ҷустуҷӯи Aparat).
+  static String _translit(String s) {
+    // Агар аллакай лотинӣ/форсӣ бошад, ҳамон тавр мемонад.
+    final hasCyr = RegExp(r'[А-Яа-яЁёҶҷҲҳӢӣҚқҒғӮӯ]').hasMatch(s);
+    if (!hasCyr) return s;
+    const m = {
+      'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'j','з':'z',
+      'и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
+      'с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh',
+      'щ':'sh','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
+      'ҷ':'j','ҳ':'h','ӣ':'i','қ':'q','ғ':'gh','ӯ':'u',
+    };
+    final b = StringBuffer();
+    for (final ch in s.toLowerCase().split('')) {
+      b.write(m[ch] ?? ch);
+    }
+    return b.toString();
   }
 
   // API-и нави Aparat: data[].attributes
