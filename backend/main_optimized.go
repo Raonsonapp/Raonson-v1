@@ -283,6 +283,7 @@ func main() {
 	ad := r.Group("/admin", auth, admin)
 	{
 		ad.GET("/stats",        handlers.AdminStats)
+		ad.POST("/test-email",  handlers.AdminTestEmail)
 		ad.GET("/users",        handlers.AdminListUsers)
 		ad.POST("/ban/:id",     handlers.BanUser)
 		ad.POST("/unban/:id",   handlers.UnbanUser)

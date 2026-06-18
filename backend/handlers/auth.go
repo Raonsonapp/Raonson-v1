@@ -237,6 +237,28 @@ func ForgotPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// POST /admin/test-email — ба почтаи худи admin тест мефиристад ва
+// хатои аслии SMTP-ро бармегардонад (барои ташхиси «email намеояд»).
+func AdminTestEmail(c *gin.Context) {
+	myID := mw.UID(c)
+	var email string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(email,'') FROM users WHERE id=$1`, myID).Scan(&email)
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Аккаунти шумо почта надорад"})
+		return
+	}
+	cfg := os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != ""
+	if err := utils.SendEmailOTP(email, "123456"); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"sent": false, "to": email, "configured": cfg,
+			"error": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"sent": true, "to": email, "configured": cfg})
+}
+
 // POST /auth/reset-password
 func ResetPassword(c *gin.Context) {
 	var b struct {
