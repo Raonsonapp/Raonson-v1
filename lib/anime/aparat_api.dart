@@ -160,10 +160,9 @@ class AparatApi {
           visits: int.tryParse('${e['visit_cnt'] ?? 0}') ?? 0,
         ));
       }
-      if (out.isEmpty) {
-        lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}'
-            'etc 200, 0 — ${_snippet(res.body)}';
-      }
+      // Ҳамеша ҳолат+порчаро нигоҳ медорем (барои диагностика).
+      lastDebug = 'etc ${res.statusCode}, ${out.length} натиҷа · '
+          '${_snippet(res.body)}';
       return out;
     } catch (e) {
       lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}etc хато: $e';
