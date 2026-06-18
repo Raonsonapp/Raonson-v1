@@ -28,14 +28,28 @@ class AnimeStream {
 }
 
 class AparatApi {
+  // Aparat баъзан дархости бе User-Agent-ро рад мекунад — сарварақи браузер.
+  static const Map<String, String> _headers = {
+    'User-Agent':
+        'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36',
+    'Referer': 'https://www.aparat.com/',
+    'Accept': 'application/json, text/plain, */*',
+  };
+
+  /// Барои диагностика — охирин ҳолат/хато (дар экран нишон дода мешавад).
+  static String lastDebug = '';
+
   // ── Ҷустуҷӯ/рӯйхати аниме ──
   // Аввал API-и нави v1-ро месанҷем, баъд etc/api-и кӯҳнаро (fallback).
   static Future<List<AnimeItem>> search(String query, {int perpage = 30}) async {
+    lastDebug = '';
     final v1 = await _searchV1(query);
     if (v1.isNotEmpty) return v1;
     final url = 'https://www.aparat.com/etc/api/videoBySearch/text/'
         '${Uri.encodeComponent(query)}/perpage/$perpage';
-    return _fetchList(url, 'videoBySearch');
+    final old = await _fetchList(url, 'videoBySearch');
+    return old;
   }
 
   // API-и нави Aparat: data[].attributes
@@ -43,9 +57,9 @@ class AparatApi {
     try {
       final url = 'https://www.aparat.com/api/fa/v1/video/video/search?'
           'text=${Uri.encodeComponent(query)}';
-      final res = await http.get(Uri.parse(url),
-          headers: {'accept': 'application/json'})
+      final res = await http.get(Uri.parse(url), headers: _headers)
           .timeout(const Duration(seconds: 10));
+      lastDebug = 'v1 HTTP ${res.statusCode}';
       if (res.statusCode != 200) return [];
       final j = jsonDecode(res.body);
       final List data = (j is Map ? (j['data'] ?? []) : []) as List;
@@ -64,8 +78,10 @@ class AparatApi {
           visits: int.tryParse('${attr['visit_cnt'] ?? attr['visit'] ?? 0}') ?? 0,
         ));
       }
+      lastDebug = 'v1 HTTP ${res.statusCode}, ${out.length} натиҷа';
       return out;
-    } catch (_) {
+    } catch (e) {
+      lastDebug = 'v1 хато: $e';
       return [];
     }
   }
@@ -78,8 +94,9 @@ class AparatApi {
 
   static Future<List<AnimeItem>> _fetchList(String url, String key) async {
     try {
-      final res = await http.get(Uri.parse(url))
+      final res = await http.get(Uri.parse(url), headers: _headers)
           .timeout(const Duration(seconds: 10));
+      lastDebug = '${lastDebug.isEmpty ? '' : '$lastDebug · '}etc HTTP ${res.statusCode}';
       if (res.statusCode != 200) return [];
       final j = jsonDecode(res.body);
       final List raw = (j is Map ? (j[key] ?? j['videos'] ?? []) : j) as List;
@@ -109,7 +126,8 @@ class AparatApi {
     final streams = <AnimeStream>[];
     try {
       final res = await http
-          .get(Uri.parse('https://www.aparat.com/api/fa/v1/video/video/show/videohash/$hash'))
+          .get(Uri.parse('https://www.aparat.com/api/fa/v1/video/video/show/videohash/$hash'),
+              headers: _headers)
           .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final j = jsonDecode(res.body);

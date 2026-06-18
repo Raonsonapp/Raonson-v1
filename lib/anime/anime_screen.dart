@@ -89,6 +89,16 @@ class _AnimeScreenState extends State<AnimeScreen> {
                         const SizedBox(height: 12),
                         const Text('Натиҷае нест ё Aparat дастрас нест',
                             style: TextStyle(color: Colors.white38)),
+                        if (AparatApi.lastDebug.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(AparatApi.lastDebug,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    color: Colors.white24, fontSize: 11)),
+                          ),
+                        ],
                         const SizedBox(height: 14),
                         OutlinedButton.icon(
                           onPressed: _load,
