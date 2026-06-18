@@ -129,6 +129,15 @@ class _AnimeScreenState extends State<AnimeScreen> {
                       ),
                     ),
         ),
+        // Диагностика (доимӣ) — то сохтори ҷавоби Aparat дида шавад.
+        if (!_loading && AparatApi.lastDebug.isNotEmpty)
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF0E0E0E),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: SelectableText(AparatApi.lastDebug,
+                style: const TextStyle(color: Colors.white30, fontSize: 10)),
+          ),
       ]),
     );
   }
