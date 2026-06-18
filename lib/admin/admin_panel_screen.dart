@@ -163,6 +163,37 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
+  // Тест email — хатои аслии SMTP-ро нишон медиҳад (барои ташхис).
+  Future<void> _testEmail() async {
+    showDialog(context: context, barrierDismissible: false,
+        builder: (_) => const Center(
+            child: CircularProgressIndicator(color: AppColors.neonBlue)));
+    String result;
+    try {
+      final res = await ApiClient.instance.post('/admin/test-email');
+      final j = jsonDecode(res.body) as Map<String, dynamic>;
+      if (j['sent'] == true) {
+        result = '✅ Фиристода шуд ба ${j['to']}\n\nПочтаатонро (ва Spam) санҷед.';
+      } else {
+        result = '❌ Нафиристода шуд\n\n'
+            'Танзим: ${j['configured'] == true ? 'SMTP_USER/PASS гузошта шуда' : 'SMTP_USER/PASS НЕСТ'}\n\n'
+            'Хато:\n${j['error'] ?? 'номаълум'}';
+      }
+    } catch (e) {
+      result = '❌ Хатои шабака: $e';
+    }
+    if (!mounted) return;
+    Navigator.pop(context); // loader
+    showDialog(context: context, builder: (_) => AlertDialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      title: const Text('Тести email', style: TextStyle(color: Colors.white)),
+      content: SelectableText(result,
+          style: const TextStyle(color: Colors.white70, fontSize: 13)),
+      actions: [TextButton(onPressed: () => Navigator.pop(context),
+          child: const Text('Хуб', style: TextStyle(color: AppColors.neonBlue)))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -178,6 +209,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             style: TextStyle(
                 color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Тест email',
+            icon: const Icon(Icons.mark_email_read_outlined,
+                color: Colors.white),
+            onPressed: _testEmail,
+          ),
+        ],
       ),
       body: Column(children: [
         Padding(
