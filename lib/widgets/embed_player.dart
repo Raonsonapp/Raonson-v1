@@ -3,6 +3,7 @@
 // бозӣ мекунад — чун онҳо файли мустақими видео нестанд.
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../app/app_theme.dart';
 
 class EmbedUtils {
   /// Оё ин силка embed аст (на файли мустақими видео)?
@@ -72,7 +73,7 @@ class _EmbedPlayerState extends State<EmbedPlayer> {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.black)
+      ..setBackgroundColor(AppColors.bg)
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) {
           if (mounted) setState(() => _loading = false);
@@ -86,11 +87,11 @@ class _EmbedPlayerState extends State<EmbedPlayer> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        const ColoredBox(color: Colors.black),
+        ColoredBox(color: AppColors.bg),
         WebViewWidget(controller: _controller),
         if (_loading)
-          const Center(
-            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+          Center(
+            child: CircularProgressIndicator(color: AppColors.textPrimary, strokeWidth: 2),
           ),
       ],
     );

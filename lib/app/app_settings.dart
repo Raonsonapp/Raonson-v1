@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api/api_client.dart';
+import 'app_theme.dart';
 
 class AppSettingsState extends ChangeNotifier {
   static final AppSettingsState _instance = AppSettingsState._();
@@ -32,6 +33,7 @@ class AppSettingsState extends ChangeNotifier {
       final t = p.getString(_kTheme) ?? 'dark';
       _theme  = (t == 'light') ? ThemeMode.light : ThemeMode.dark;
       _lang   = p.getString(_kLang) ?? 'tj';
+      AppColors.applyTheme(_theme == ThemeMode.light);
       notifyListeners();
     } catch (_) {/* keep defaults */}
   }
@@ -39,6 +41,7 @@ class AppSettingsState extends ChangeNotifier {
   Future<void> setTheme(ThemeMode m) async {
     if (_theme == m) return;
     _theme = m;
+    AppColors.applyTheme(m == ThemeMode.light);
     notifyListeners(); // ← instant repaint
     final p = await SharedPreferences.getInstance();
     await p.setString(_kTheme, m == ThemeMode.light ? 'light' : 'dark');

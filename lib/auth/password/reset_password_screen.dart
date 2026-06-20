@@ -59,9 +59,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black, elevation: 0,
+        backgroundColor: AppColors.bg, elevation: 0,
         title: const Text('Рамзро ворид кунед',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ),
@@ -70,11 +70,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         children: [
           Text('Рамзи 6-рақамаро, ки ба ${widget.identifier} '
               'фиристодем, ворид кунед ва пароли нав созед.',
-              style: const TextStyle(color: Colors.white54, fontSize: 13.5, height: 1.4)),
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 13.5, height: 1.4)),
           const SizedBox(height: 22),
           TextField(
             controller: _otpCtrl,
-            style: const TextStyle(color: Colors.white,
+            style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
             keyboardType: TextInputType.number,
@@ -86,11 +86,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           TextField(
             controller: _passCtrl,
             obscureText: _obscure,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: AppColors.textPrimary),
             decoration: _dec('Пароли нав').copyWith(
               suffixIcon: IconButton(
                 icon: Icon(_obscure ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined, color: Colors.white38, size: 20),
+                    : Icons.visibility_outlined, color: AppColors.textFaint, size: 20),
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
             ),
@@ -105,15 +105,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.neonBlue,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimary,
                 disabledBackgroundColor: AppColors.neonBlue.withOpacity(0.5),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: _loading ? null : _reset,
               child: _loading
-                  ? const SizedBox(width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary))
                   : const Text('Иваз кардани парол',
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
@@ -125,7 +125,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   InputDecoration _dec(String hint) => InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white30),
+        hintStyle: TextStyle(color: AppColors.textFaint),
         filled: true,
         fillColor: const Color(0xFF1A1A1A),
         border: OutlineInputBorder(

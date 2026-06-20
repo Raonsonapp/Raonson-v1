@@ -172,7 +172,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.black,
+    backgroundColor: AppColors.bg,
     body: FadeTransition(
       opacity: _fadeAnim,
       child: widget.callType == CallType.video ? _buildVideo() : _buildVoice(),
@@ -192,7 +192,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       const SizedBox(height: 60),
       Text(_statusText,
           style: TextStyle(
-              color: Colors.white.withOpacity(0.65), fontSize: 16, letterSpacing: 1.2)),
+              color: AppColors.textPrimary.withOpacity(0.65), fontSize: 16, letterSpacing: 1.2)),
       const SizedBox(height: 48),
       Stack(alignment: Alignment.center, children: [
         if (!_connected) ...[_ring(180, 0.04), _ring(150, 0.08), _ring(120, 0.13)],
@@ -213,7 +213,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       ]),
       const SizedBox(height: 28),
       Text(widget.peer.username,
-          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700)),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 28, fontWeight: FontWeight.w700)),
       const SizedBox(height: 10),
       if (_connected) _connectedBadge(),
       const Spacer(),
@@ -261,7 +261,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
                     child: Avatar(imageUrl: widget.peer.avatar, size: 120, glowBorder: true)),
                 const SizedBox(height: 16),
                 Text(_statusText,
-                    style: const TextStyle(color: Colors.white54, fontSize: 15)),
+                    style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
               ])),
             ),
     ),
@@ -272,7 +272,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
           width: 100, height: 140,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white24),
+            border: Border.all(color: AppColors.textFaint),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 16)],
           ),
           child: ClipRRect(
@@ -291,15 +291,15 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(children: [
         IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: _endCall,
         ),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Text(widget.peer.username,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+              style: TextStyle(
+                  color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
           Text(_statusText,
-              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+              style: TextStyle(color: AppColors.textPrimary.withOpacity(0.6), fontSize: 13)),
         ])),
         const SizedBox(width: 48),
       ]),
@@ -368,15 +368,15 @@ class _Btn extends StatelessWidget {
           shape: BoxShape.circle,
           color: active
               ? AppColors.neonBlue.withOpacity(0.3)
-              : Colors.white.withOpacity(0.12),
+              : AppColors.textPrimary.withOpacity(0.12),
           border: Border.all(
-              color: active ? AppColors.neonBlue.withOpacity(0.6) : Colors.white24),
+              color: active ? AppColors.neonBlue.withOpacity(0.6) : AppColors.textFaint),
         ),
         child: Icon(icon,
-            color: active ? AppColors.neonBlue : Colors.white, size: 24),
+            color: active ? AppColors.neonBlue : AppColors.textPrimary, size: 24),
       ),
       const SizedBox(height: 6),
-      Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+      Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
     ]),
   );
 }
@@ -398,10 +398,10 @@ class _EndBtn extends StatelessWidget {
               color: const Color(0xFFFF3B55).withOpacity(0.55),
               blurRadius: 22, spreadRadius: 2)],
         ),
-        child: const Icon(Icons.call_end_rounded, color: Colors.white, size: 32),
+        child: Icon(Icons.call_end_rounded, color: AppColors.textPrimary, size: 32),
       ),
       const SizedBox(height: 6),
-      const Text('Қатъ', style: TextStyle(color: Colors.white60, fontSize: 11)),
+      Text('Қатъ', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
     ]),
   );
 }

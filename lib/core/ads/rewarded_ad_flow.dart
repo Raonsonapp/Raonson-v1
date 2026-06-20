@@ -79,12 +79,12 @@ void _showSuccessToast(BuildContext context, RewardType type) {
       duration: const Duration(seconds: 3),
       content: Row(
         children: [
-          Icon(type.icon, color: Colors.white, size: 20),
+          Icon(type.icon, color: AppColors.textPrimary, size: 20),
           const SizedBox(width: 10),
           Text(
             '${type.title} unlocked!',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
@@ -179,7 +179,7 @@ class _RewardDialogState extends State<_RewardDialog>
                       ),
                     ],
                   ),
-                  child: Icon(type.icon, color: Colors.white, size: 34),
+                  child: Icon(type.icon, color: AppColors.textPrimary, size: 34),
                 ),
 
                 const SizedBox(height: 20),
@@ -188,8 +188,8 @@ class _RewardDialogState extends State<_RewardDialog>
                 Text(
                   type.title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.3,
@@ -318,13 +318,13 @@ class _AnimatedButtonState extends State<_AnimatedButton>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.play_arrow_rounded,
-                  color: Colors.white, size: 20),
+              Icon(Icons.play_arrow_rounded,
+                  color: AppColors.textPrimary, size: 20),
               const SizedBox(width: 8),
               Text(
                 widget.label,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
                   letterSpacing: 0.2,

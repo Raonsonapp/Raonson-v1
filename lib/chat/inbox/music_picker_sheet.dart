@@ -133,7 +133,7 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
       child: Column(children: [
         const SizedBox(height: 10),
         Container(width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.white24,
+            decoration: BoxDecoration(color: AppColors.textFaint,
                 borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 14),
 
@@ -142,8 +142,8 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
           child: Row(children: [
             _IconBtn(Icons.close_rounded, onTap: () => Navigator.pop(context)),
             const SizedBox(width: 14),
-            const Expanded(child: Text('Мусиқӣ интихоб кун',
-                style: TextStyle(color: Colors.white,
+            Expanded(child: Text('Мусиқӣ интихоб кун',
+                style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 17, fontWeight: FontWeight.bold))),
           ]),
         ),
@@ -157,7 +157,7 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
           ),
         ),
         const SizedBox(height: 8),
-        const Divider(color: Colors.white10, height: 1),
+        Divider(color: AppColors.dividerFaint, height: 1),
 
         // Label
         if (_tracks.isNotEmpty)
@@ -173,7 +173,7 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
                 style: TextStyle(
                   color: _isTrending
                       ? const Color(0xFF00A8FF)
-                      : Colors.white.withOpacity(0.4),
+                      : AppColors.textPrimary.withOpacity(0.4),
                   fontSize: 12, fontWeight: FontWeight.w600,
                 ),
               ),
@@ -400,8 +400,8 @@ class _SegmentScreenState extends State<_SegmentScreen> {
                   gradient: _kGrad,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text('Тасдиқ',
-                    style: TextStyle(color: Colors.white,
+                child: Text('Тасдиқ',
+                    style: TextStyle(color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold, fontSize: 14)),
               ),
             ),
@@ -446,13 +446,13 @@ class _SegmentScreenState extends State<_SegmentScreen> {
               Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(widget.track.title,
-                    style: const TextStyle(color: Colors.white,
+                    style: TextStyle(color: AppColors.textPrimary,
                         fontWeight: FontWeight.w700, fontSize: 14),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 3),
                 Text(widget.track.artist,
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.5), fontSize: 12),
+                        color: AppColors.textPrimary.withOpacity(0.5), fontSize: 12),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ])),
               // Play/Pause
@@ -463,12 +463,12 @@ class _SegmentScreenState extends State<_SegmentScreen> {
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle, gradient: _kGrad),
                   child: _loading
-                      ? const Padding(padding: EdgeInsets.all(12),
+                      ? Padding(padding: EdgeInsets.all(12),
                           child: CircularProgressIndicator(
-                              strokeWidth: 2.5, color: Colors.white))
+                              strokeWidth: 2.5, color: AppColors.textPrimary))
                       : Icon(
                           _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                          color: Colors.white, size: 26),
+                          color: AppColors.textPrimary, size: 26),
                 ),
               ),
             ]),
@@ -541,7 +541,7 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
       // Вақтҳои интихоб + icon-и давомнокӣ
       Row(children: [
         _TimeChip(widget.fmt(startMs), color: const Color(0xFF00A8FF)),
-        Text(' – ', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11)),
+        Text(' – ', style: TextStyle(color: AppColors.textPrimary.withOpacity(0.4), fontSize: 11)),
         _TimeChip(widget.fmt(endMs),   color: const Color(0xFF00E676)),
         const Spacer(),
         // Icon-и давомнокӣ — занед → интихоб
@@ -551,7 +551,7 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
         ),
         const SizedBox(width: 8),
         Text(widget.fmt(trackMs),
-            style: TextStyle(color: Colors.white.withOpacity(0.28), fontSize: 11)),
+            style: TextStyle(color: AppColors.textPrimary.withOpacity(0.28), fontSize: 11)),
       ]),
       const SizedBox(height: 10),
 
@@ -635,7 +635,7 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
                 child: Container(
                   width: 2.5,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -649,9 +649,9 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
       // 0:00 .... полная длина
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text('0:00', style: TextStyle(
-            color: Colors.white.withOpacity(0.22), fontSize: 10)),
+            color: AppColors.textPrimary.withOpacity(0.22), fontSize: 10)),
         Text(widget.fmt(trackMs), style: TextStyle(
-            color: Colors.white.withOpacity(0.22), fontSize: 10)),
+            color: AppColors.textPrimary.withOpacity(0.22), fontSize: 10)),
       ]),
     ]);
   }
@@ -692,7 +692,7 @@ class _BarsPainter extends CustomPainter {
               center: Offset(x, midY), width: barW, height: h)));
       } else {
         canvas.drawRRect(rect, Paint()
-          ..color = Colors.white.withOpacity(0.18));
+          ..color = AppColors.textPrimary.withOpacity(0.18));
       }
     }
   }
@@ -776,11 +776,11 @@ class _BubblePreview extends StatelessWidget {
             topLeft:     Radius.circular(18), topRight:    Radius.circular(18),
             bottomRight: Radius.circular(18), bottomLeft:  Radius.circular(4),
           ),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: AppColors.textPrimary.withOpacity(0.1)),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (noteText.isNotEmpty) ...[
-            Text(noteText, style: const TextStyle(color: Colors.white, fontSize: 15),
+            Text(noteText, style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
                 textAlign: TextAlign.center,
                 maxLines: 3, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 8),
@@ -789,7 +789,7 @@ class _BubblePreview extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.07),
+              color: AppColors.textPrimary.withOpacity(0.07),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -800,7 +800,7 @@ class _BubblePreview extends StatelessWidget {
               const SizedBox(width: 6),
               Flexible(
                 child: Text(track.title,
-                    style: const TextStyle(color: Colors.white,
+                    style: TextStyle(color: AppColors.textPrimary,
                         fontSize: 11, fontWeight: FontWeight.w600),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
@@ -819,9 +819,9 @@ class _BubblePreview extends StatelessWidget {
         width: 52, height: 52,
         decoration: BoxDecoration(
           shape: BoxShape.circle, color: const Color(0xFF1C2333),
-          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+          border: Border.all(color: AppColors.textPrimary.withOpacity(0.15), width: 1.5),
         ),
-        child: const Icon(Icons.person_rounded, color: Colors.white38, size: 28),
+        child: Icon(Icons.person_rounded, color: AppColors.textFaint, size: 28),
       ),
     ],
   );
@@ -858,7 +858,7 @@ class _TrackRow extends StatelessWidget {
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(track.title,
-              style: const TextStyle(color: Colors.white,
+              style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.w500, fontSize: 13.5),
               maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 3),
@@ -866,24 +866,24 @@ class _TrackRow extends StatelessWidget {
             Expanded(
               child: Text(track.artist,
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.45), fontSize: 11.5),
+                      color: AppColors.textPrimary.withOpacity(0.45), fontSize: 11.5),
                   maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
             Text(_dur(track.trackMs),
                 style: TextStyle(
-                    color: Colors.white.withOpacity(0.3), fontSize: 11)),
+                    color: AppColors.textPrimary.withOpacity(0.3), fontSize: 11)),
           ]),
         ])),
         const SizedBox(width: 8),
         Icon(Icons.chevron_right_rounded,
-            color: Colors.white.withOpacity(0.2)),
+            color: AppColors.textPrimary.withOpacity(0.2)),
       ]),
     ),
   );
 
   Widget _artPlaceholder() => Container(
     width: 50, height: 50, color: const Color(0xFF1C2333),
-    child: const Icon(Icons.music_note_rounded, color: Colors.white24, size: 24));
+    child: Icon(Icons.music_note_rounded, color: AppColors.textFaint, size: 24));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -903,19 +903,19 @@ class _SearchField extends StatelessWidget {
         borderRadius: BorderRadius.circular(13)),
     child: TextField(
       controller: ctrl,
-      style: const TextStyle(color: Colors.white, fontSize: 14),
+      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
       decoration: InputDecoration(
         hintText: 'Суруд ё хонанда...',
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38, size: 20),
+        hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
+        prefixIcon: Icon(Icons.search_rounded, color: AppColors.textFaint, size: 20),
         suffixIcon: searching
             ? const Padding(padding: EdgeInsets.all(12),
                 child: SizedBox(width: 16, height: 16,
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: AppColors.neonBlue)))
             : ctrl.text.isNotEmpty
-                ? IconButton(icon: const Icon(Icons.clear_rounded,
-                      color: Colors.white30, size: 18),
+                ? IconButton(icon: Icon(Icons.clear_rounded,
+                      color: AppColors.textFaint, size: 18),
                     onPressed: () { ctrl.clear(); onChanged(''); })
                 : null,
         border: InputBorder.none,
@@ -936,10 +936,10 @@ class _EmptyHint extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.music_note_rounded, size: 58,
-          color: Colors.white.withOpacity(0.09)),
+          color: AppColors.textPrimary.withOpacity(0.09)),
       const SizedBox(height: 12),
       Text(searched ? 'Ёфт нашуд' : 'Номи суруд ё хонандаро ворид кун',
-          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13)),
+          style: TextStyle(color: AppColors.textPrimary.withOpacity(0.3), fontSize: 13)),
     ]),
   );
 }
@@ -970,8 +970,8 @@ class _IconBtn extends StatelessWidget {
     child: Container(
       width: 36, height: 36,
       decoration: BoxDecoration(
-          shape: BoxShape.circle, color: Colors.white.withOpacity(0.08)),
-      child: Icon(icon, color: Colors.white, size: 18),
+          shape: BoxShape.circle, color: AppColors.textPrimary.withOpacity(0.08)),
+      child: Icon(icon, color: AppColors.textPrimary, size: 18),
     ),
   );
 }
@@ -1043,8 +1043,8 @@ class _DurationBadge extends StatelessWidget {
         ),
         child: Center(
           child: Text('$_secsс',
-              style: const TextStyle(
-                color: Colors.white, fontSize: 13,
+              style: TextStyle(
+                color: AppColors.textPrimary, fontSize: 13,
                 fontWeight: FontWeight.bold)),
         ),
       ),
@@ -1091,7 +1091,7 @@ class _WheelPopupState extends State<_WheelPopup> {
         decoration: BoxDecoration(
           color: const Color(0xFF0D1117),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: AppColors.textPrimary.withOpacity(0.1)),
           boxShadow: [
             BoxShadow(color: Colors.black.withOpacity(0.5),
                 blurRadius: 24, spreadRadius: 2),
@@ -1103,7 +1103,7 @@ class _WheelPopupState extends State<_WheelPopup> {
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
             child: Text('Сония',
                 style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: AppColors.textPrimary.withOpacity(0.5),
                     fontSize: 12, fontWeight: FontWeight.w500)),
           ),
 
@@ -1140,8 +1140,8 @@ class _WheelPopupState extends State<_WheelPopup> {
                       child: Text('$secs',
                           style: TextStyle(
                             color: active
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.35),
+                                ? AppColors.textPrimary
+                                : AppColors.textPrimary.withOpacity(0.35),
                             fontSize:   active ? 22 : 17,
                             fontWeight: active
                                 ? FontWeight.bold
@@ -1169,9 +1169,9 @@ class _WheelPopupState extends State<_WheelPopup> {
                   ),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text('OK',
-                      style: TextStyle(color: Colors.white,
+                      style: TextStyle(color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold, fontSize: 14)),
                 ),
               ),

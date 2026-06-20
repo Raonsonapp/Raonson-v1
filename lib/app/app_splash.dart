@@ -53,7 +53,7 @@ class _AppSplashState extends State<AppSplash>
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontFamily: 'RaonsonFont',
                     letterSpacing: 1,
                   ),

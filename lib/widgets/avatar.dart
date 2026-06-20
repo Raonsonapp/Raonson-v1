@@ -80,7 +80,7 @@ class Avatar extends StatelessWidget {
         ),
       ),
       child: Icon(Icons.person_rounded,
-          size: size * 0.62, color: Colors.white.withOpacity(0.85)),
+          size: size * 0.62, color: AppColors.textPrimary.withOpacity(0.85)),
     );
   }
 }

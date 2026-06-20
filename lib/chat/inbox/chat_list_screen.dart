@@ -119,7 +119,7 @@ class _ChatView extends StatelessWidget {
     final notes = context.watch<NoteService>();
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,8 +129,8 @@ class _ChatView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
               child: Row(children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white, size: 20),
+                  icon: Icon(Icons.arrow_back_ios_new_rounded,
+                      color: AppColors.textPrimary, size: 20),
                   onPressed: () => Navigator.maybePop(context),
                 ),
                 Expanded(
@@ -148,23 +148,23 @@ class _ChatView extends StatelessWidget {
                                   ? UserSession.username!
                                   : 'Паёмҳо',
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 22,
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontWeight: FontWeight.w700,
                               )),
                           ),
                           const SizedBox(width: 4),
-                          const Icon(Icons.keyboard_arrow_down_rounded,
-                              color: Colors.white, size: 24),
+                          Icon(Icons.keyboard_arrow_down_rounded,
+                              color: AppColors.textPrimary, size: 24),
                         ],
                       ),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.video_call_outlined,
-                      color: Colors.white, size: 26),
+                  icon: Icon(Icons.video_call_outlined,
+                      color: AppColors.textPrimary, size: 26),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -173,8 +173,8 @@ class _ChatView extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined,
-                      color: Colors.white, size: 22),
+                  icon: Icon(Icons.edit_outlined,
+                      color: AppColors.textPrimary, size: 22),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const NewChatScreen()),
@@ -193,12 +193,12 @@ class _ChatView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12)),
                 child: TextField(
                   controller: searchCtrl,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
                     hintText: 'Ҷустуҷӯ',
-                    hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                    hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
                     prefixIcon:
-                        Icon(Icons.search, color: Colors.white38, size: 18),
+                        Icon(Icons.search, color: AppColors.textFaint, size: 18),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 9),
                   ),
@@ -236,11 +236,11 @@ class _ChatView extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF121212),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12),
+                  border: Border.all(color: AppColors.dividerFaint),
                 ),
-                child: Row(children: const [
+                child: Row(children: [
                   Icon(Icons.lock_outline_rounded,
-                      color: Colors.white54, size: 18),
+                      color: AppColors.textTertiary, size: 18),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -248,7 +248,7 @@ class _ChatView extends StatelessWidget {
                       'намекунед. Онҳо намедонанд, ки шумо дархостро '
                       'дидаед, то даме ки ҷавоб надиҳед.',
                       style: TextStyle(
-                          color: Colors.white54, fontSize: 11.5, height: 1.35),
+                          color: AppColors.textTertiary, fontSize: 11.5, height: 1.35),
                     ),
                   ),
                 ]),
@@ -266,7 +266,7 @@ class _ChatView extends StatelessWidget {
                                 : ctrl.tab == ChatTab.requests
                                     ? 'Дархости паём нест'
                                     : 'Паёме нест',
-                            style: const TextStyle(color: Colors.white38),
+                            style: TextStyle(color: AppColors.textFaint),
                           ))
                       : RefreshIndicator(
                           color: AppColors.neonBlue,
@@ -306,13 +306,13 @@ class _TabBar extends StatelessWidget {
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
             decoration: BoxDecoration(
-              color: selected ? Colors.white : const Color(0xFF1C1C1E),
+              color: selected ? AppColors.textPrimary : Color(0xFF1C1C1E),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(labels[i],
                   style: TextStyle(
-                      color: selected ? Colors.black : Colors.white,
+                      color: selected ? AppColors.bg : AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                       fontSize: 13)),
               // Нуқтаи сабз дар таби «Асосӣ» (паёмҳои нав).
@@ -329,11 +329,11 @@ class _TabBar extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
-                      color: selected ? Colors.black : AppColors.neonBlue,
+                      color: selected ? AppColors.bg : AppColors.neonBlue,
                       borderRadius: BorderRadius.circular(10)),
                   child: Text('$reqCount',
                       style: TextStyle(
-                          color: selected ? Colors.white : Colors.white,
+                          color: selected ? AppColors.textPrimary : AppColors.textPrimary,
                           fontSize: 11,
                           fontWeight: FontWeight.bold)),
                 ),
@@ -374,8 +374,8 @@ class _ChatTileSkeleton extends StatelessWidget {
         // Avatar placeholder
         Container(
           width: 52, height: 52,
-          decoration: const BoxDecoration(
-              color: Colors.white, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+              color: AppColors.textPrimary, shape: BoxShape.circle),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -383,13 +383,13 @@ class _ChatTileSkeleton extends StatelessWidget {
             Container(
                 width: 120, height: 13,
                 decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     borderRadius: BorderRadius.circular(6))),
             const SizedBox(height: 6),
             Container(
                 width: 200, height: 11,
                 decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     borderRadius: BorderRadius.circular(6))),
           ]),
         ),
@@ -400,7 +400,7 @@ class _ChatTileSkeleton extends StatelessWidget {
             Container(
                 width: 36, height: 11,
                 decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     borderRadius: BorderRadius.circular(6))),
           ],
         ),
@@ -484,7 +484,7 @@ class _MyNoteBubble extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: hasNote ? AppColors.neonBlue.withOpacity(0.7) : Colors.white24,
+                    color: hasNote ? AppColors.neonBlue.withOpacity(0.7) : AppColors.textFaint,
                     width: 2,
                   ),
                 ),
@@ -502,18 +502,18 @@ class _MyNoteBubble extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.neonBlue,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 1.5),
+                    border: Border.all(color: AppColors.bg, width: 1.5),
                   ),
                   child: Icon(
                     hasNote ? Icons.edit_rounded : Icons.add_rounded,
-                    color: Colors.white, size: 11,
+                    color: AppColors.textPrimary, size: 11,
                   ),
                 ),
               ),
             ]),
             const SizedBox(height: 5),
             Text(hasNote ? 'Ёддошти ман' : 'Ёддошт',
-                style: const TextStyle(color: Colors.white70, fontSize: 10),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center),
           ]),
@@ -523,7 +523,7 @@ class _MyNoteBubble extends StatelessWidget {
   }
 
   Widget _ph() => Container(color: const Color(0xFF1A1A1A),
-      child: const Icon(Icons.person, color: Colors.white38, size: 26));
+      child: Icon(Icons.person, color: AppColors.textFaint, size: 26));
 }
 
 class _FriendNoteBubble extends StatefulWidget {
@@ -592,7 +592,7 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
             width: 54, height: 54,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white30, width: 1.5),
+              border: Border.all(color: AppColors.textFaint, width: 1.5),
             ),
             child: ClipOval(
               child: widget.note.avatar.isNotEmpty
@@ -603,7 +603,7 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
           ),
           const SizedBox(height: 5),
           Text(widget.note.username,
-              style: const TextStyle(color: Colors.white70, fontSize: 10),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
               maxLines: 1, overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center),
         ]),
@@ -612,7 +612,7 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
   }
 
   Widget _ph() => Container(color: const Color(0xFF1A1A1A),
-      child: const Icon(Icons.person, color: Colors.white38, size: 26));
+      child: Icon(Icons.person, color: AppColors.textFaint, size: 26));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -634,7 +634,7 @@ class _SpeechBubble extends StatelessWidget {
         : const Color(0xFF1C2333);
     final borderColor = isMine
         ? AppColors.neonBlue.withOpacity(0.45)
-        : Colors.white12;
+        : AppColors.dividerFaint;
     final hasSong = song != null && !song!.isEmpty;
     final hasText = text.isNotEmpty;
 
@@ -653,7 +653,7 @@ class _SpeechBubble extends StatelessWidget {
             if (hasText)
               Text(text,
                   style: TextStyle(
-                      color: isMine ? Colors.white : Colors.white70,
+                      color: isMine ? AppColors.textPrimary : AppColors.textSecondary,
                       fontSize: 10.5, height: 1.3),
                   maxLines: 2, overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center),
@@ -712,7 +712,7 @@ class _BubbleTailPainter extends CustomPainter {
         : const Color(0xFF1C2333);
     final borderColor = isMine
         ? AppColors.neonBlue.withOpacity(0.45)
-        : Colors.white12;
+        : AppColors.dividerFaint;
     final path = Path()
       ..moveTo(0, 0)
       ..lineTo(size.width / 2, size.height)
@@ -772,7 +772,7 @@ class _ChatTile extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00E676),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2.5),
+                    border: Border.all(color: AppColors.bg, width: 2.5),
                   ),
                 ),
               ),
@@ -790,7 +790,7 @@ class _ChatTile extends StatelessWidget {
                     Expanded(
                       child: Text(chat.peer.username,
                           style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontWeight: unread
                                   ? FontWeight.bold
                                   : FontWeight.w500,
@@ -801,7 +801,7 @@ class _ChatTile extends StatelessWidget {
                         style: TextStyle(
                           color: unread
                               ? AppColors.neonBlue
-                              : Colors.white38,
+                              : AppColors.textFaint,
                           fontSize: 12,
                           fontWeight: unread
                               ? FontWeight.w600
@@ -815,7 +815,7 @@ class _ChatTile extends StatelessWidget {
                       style: TextStyle(
                           color: online
                               ? const Color(0xFF00E676)
-                              : Colors.white38,
+                              : AppColors.textFaint,
                           fontSize: 11,
                           fontWeight: online ? FontWeight.w500 : FontWeight.normal)),
                 const SizedBox(height: 1),
@@ -826,14 +826,14 @@ class _ChatTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: unread ? Colors.white70 : Colors.white38,
+                              color: unread ? AppColors.textSecondary : AppColors.textFaint,
                               fontSize: 13,
                               fontWeight: unread ? FontWeight.w500 : FontWeight.normal)),
                     ),
                     const SizedBox(width: 8),
                     // Camera icon
                     Icon(Icons.camera_alt_outlined,
-                        color: Colors.white30, size: 18),
+                        color: AppColors.textFaint, size: 18),
                     if (unread) ...[
                       const SizedBox(width: 8),
                       Container(
@@ -844,8 +844,8 @@ class _ChatTile extends StatelessWidget {
                             shape: BoxShape.circle),
                         child: Text(
                           '$unreadCount',
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: AppColors.textPrimary,
                               fontSize: 11,
                               fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
@@ -869,7 +869,7 @@ class _ChatTile extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.neonBlue,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.textPrimary,
                       elevation: 0,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
@@ -891,7 +891,7 @@ class _ChatTile extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF262626),
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.textPrimary,
                       elevation: 0,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(

@@ -5,6 +5,7 @@ import '../../app/app_state.dart';
 import '../../app/app_routes.dart';
 import '../widgets/auth_kit.dart';
 import 'login_controller.dart';
+import '../../app/app_theme.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -50,7 +51,7 @@ class _LoginViewState extends State<_LoginView> {
     final state = ctrl.state;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: AuthBackground(
         child: SafeArea(
           child: SingleChildScrollView(
@@ -63,18 +64,18 @@ class _LoginViewState extends State<_LoginView> {
                 const SizedBox(height: 28),
                 const Center(child: AuthLogo(size: 92)),
                 const SizedBox(height: 28),
-                const Center(
+                Center(
                   child: Text('Хуш омадед!',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 26,
                           fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 8),
-                const Center(
+                Center(
                   child: Text('Барои идомаи кор ба ҳисоби худ ворид шавед',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white54, fontSize: 14)),
+                      style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
                 ),
                 const SizedBox(height: 28),
 
@@ -95,7 +96,7 @@ class _LoginViewState extends State<_LoginView> {
                         _obscure
                             ? Icons.visibility_off_rounded
                             : Icons.visibility_rounded,
-                        color: Colors.white38, size: 20),
+                        color: AppColors.textFaint, size: 20),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                 ),
@@ -130,9 +131,9 @@ class _LoginViewState extends State<_LoginView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Ҳисоб надоред? ',
+                    Text('Ҳисоб надоред? ',
                         style:
-                            TextStyle(color: Colors.white54, fontSize: 14)),
+                            TextStyle(color: AppColors.textTertiary, fontSize: 14)),
                     GestureDetector(
                       onTap: () =>
                           Navigator.pushNamed(context, AppRoutes.register),

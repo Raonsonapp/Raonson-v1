@@ -80,11 +80,11 @@ class _HlItem extends StatelessWidget {
               // Актуалӣ ҳалқаи story надорад — танҳо доираи оддӣ (мисли Instagram)
               color:  isAdd ? AppColors.surface : null,
               border: Border.all(
-                  color: Colors.white24, width: 1.5),
+                  color: AppColors.textFaint, width: 1.5),
             ),
             padding: isAdd ? null : const EdgeInsets.all(2.5),
             child: isAdd
-                ? const Icon(Icons.add_rounded, color: Colors.white, size: 26)
+                ? Icon(Icons.add_rounded, color: AppColors.textPrimary, size: 26)
                 : ClipOval(
                     child: coverUrl.isNotEmpty
                         ? CachedNetworkImage(
@@ -93,12 +93,12 @@ class _HlItem extends StatelessWidget {
                             errorWidget: (_, __, ___) =>
                                 Container(color: AppColors.card))
                         : Container(color: AppColors.card,
-                            child: const Icon(Icons.photo_library_outlined,
-                                color: Colors.white38, size: 26))),
+                            child: Icon(Icons.photo_library_outlined,
+                                color: AppColors.textFaint, size: 26))),
           ),
           const SizedBox(height: 5),
           Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 11),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 11),
               maxLines: 1, overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center),
         ]),
@@ -125,7 +125,7 @@ class HighlightOptionsSheet extends StatelessWidget {
           width: 36, height: 4,
           margin: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-              color: Colors.white24, borderRadius: BorderRadius.circular(2)))),
+              color: AppColors.textFaint, borderRadius: BorderRadius.circular(2)))),
         ListTile(
           leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
           title: Text('«${highlight.title}»-ро нест кун',

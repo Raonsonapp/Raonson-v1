@@ -97,11 +97,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(color: Colors.white24,
+              decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
-          const Padding(padding: EdgeInsets.only(bottom: 8),
+          Padding(padding: EdgeInsets.only(bottom: 8),
             child: Text('Мӯҳлати галочка',
-                style: TextStyle(color: Colors.white,
+                style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600, fontSize: 15))),
           ...options.map((o) => ListTile(
                 leading: Icon(
@@ -109,7 +109,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                               : Icons.schedule_rounded,
                     color: AppColors.verified, size: 20),
                 title: Text(o.$1,
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: AppColors.textPrimary)),
                 onTap: () => Navigator.pop(ctx, o.$2),
               )),
           const SizedBox(height: 8),
@@ -140,15 +140,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Нест кардани аккаунт?',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('Нест кардани аккаунт?',
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: Text('Аккаунти @$uname пурра нест мешавад. Ин амал бебозгашт аст.',
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор',
-                  style: TextStyle(color: Colors.white54))),
+              child: Text('Бекор',
+                  style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Нест кун',
@@ -200,11 +200,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     Navigator.pop(context); // loader
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: const Color(0xFF1A1A1A),
-      title: const Text('Тести email', style: TextStyle(color: Colors.white)),
+      title: Text('Тести email', style: TextStyle(color: AppColors.textPrimary)),
       content: SelectableText(result,
-          style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
       actions: [TextButton(onPressed: () => Navigator.pop(context),
-          child: const Text('Хуб', style: TextStyle(color: AppColors.neonBlue)))],
+          child: Text('Хуб', style: TextStyle(color: AppColors.neonBlue)))],
     ));
   }
 
@@ -216,18 +216,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 20),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
-        title: const Text('Панели идоракунӣ',
+        title: Text('Панели идоракунӣ',
             style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
             tooltip: 'Тест email',
-            icon: const Icon(Icons.mark_email_read_outlined,
-                color: Colors.white),
+            icon: Icon(Icons.mark_email_read_outlined,
+                color: AppColors.textPrimary),
             onPressed: _testEmail,
           ),
         ],
@@ -238,11 +238,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           child: TextField(
             controller: _searchCtrl,
             onChanged: _onSearchChanged,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Ҷустуҷӯи корбар...',
-              hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38),
+              hintStyle: TextStyle(color: AppColors.textFaint),
+              prefixIcon: Icon(Icons.search_rounded, color: AppColors.textFaint),
               filled: true,
               fillColor: AppColors.card,
               border: OutlineInputBorder(
@@ -258,13 +258,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   child: CircularProgressIndicator(
                       color: AppColors.neonBlue, strokeWidth: 2))
               : _users.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text('Корбаре ёфт нашуд',
-                          style: TextStyle(color: Colors.white38)))
+                          style: TextStyle(color: AppColors.textFaint)))
                   : ListView.separated(
                       itemCount: _users.length,
                       separatorBuilder: (_, __) =>
-                          const Divider(color: Colors.white10, height: 0, indent: 72),
+                          Divider(color: AppColors.dividerFaint, height: 0, indent: 72),
                       itemBuilder: (_, i) => _tile(_users[i]),
                     ),
         ),
@@ -287,13 +287,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         backgroundColor: AppColors.card,
         backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
         child: avatar.isEmpty
-            ? const Icon(Icons.person, color: Colors.white38) : null,
+            ? Icon(Icons.person, color: AppColors.textFaint) : null,
       ),
       title: Row(children: [
         Flexible(
             child: Text('@$username',
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 15))),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 15))),
         if (verified) ...[
           const SizedBox(width: 6),
           const Icon(Icons.verified_rounded,
@@ -312,13 +312,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ],
       ]),
       subtitle: phone.isNotEmpty
-          ? Text(phone, style: const TextStyle(color: Colors.white38, fontSize: 12))
+          ? Text(phone, style: TextStyle(color: AppColors.textFaint, fontSize: 12))
           : null,
       trailing: busy
-          ? const SizedBox(
+          ? SizedBox(
               width: 20, height: 20,
               child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white54))
+                  strokeWidth: 2, color: AppColors.textTertiary))
           : isOwner
               ? null
               : Row(mainAxisSize: MainAxisSize.min, children: [
@@ -326,7 +326,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     tooltip: isVip ? 'VIP-ро гир' : 'VIP деҳ',
                     icon: Icon(
                         isVip ? Icons.star_rounded : Icons.star_outline_rounded,
-                        color: isVip ? Colors.amber : Colors.white54,
+                        color: isVip ? Colors.amber : AppColors.textTertiary,
                         size: 22),
                     onPressed: () => _setVip(u, !isVip),
                   ),
@@ -336,7 +336,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         verified
                             ? Icons.verified_rounded
                             : Icons.verified_outlined,
-                        color: verified ? AppColors.verified : Colors.white54,
+                        color: verified ? AppColors.verified : AppColors.textTertiary,
                         size: 22),
                     onPressed: () => _setVerified(u, !verified),
                   ),

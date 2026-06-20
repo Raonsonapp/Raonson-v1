@@ -70,13 +70,13 @@ class NotificationBadge extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: badgeColor,
                     borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: Colors.black, width: 1.5),
+                    border: Border.all(color: AppColors.bg, width: 1.5),
                   ),
                   child: Center(
                     child: Text(
                       count > 99 ? '99+' : '$count',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         height: 1.2,

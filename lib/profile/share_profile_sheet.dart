@@ -34,11 +34,11 @@ class _ShareState extends State<ShareProfileSheet> {
         // Handle
         Center(child: Container(width: 36, height: 4,
           margin: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(color: Colors.white24,
+          decoration: BoxDecoration(color: AppColors.textFaint,
               borderRadius: BorderRadius.circular(2)))),
 
-        const Text('Профилро мубодила кун',
-            style: TextStyle(color: Colors.white,
+        Text('Профилро мубодила кун',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 17, fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),
 
@@ -50,10 +50,10 @@ class _ShareState extends State<ShareProfileSheet> {
             margin: const EdgeInsets.symmetric(horizontal: 28),
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color:  _dark ? const Color(0xFF111111) : Colors.white,
+              color:  _dark ? Color(0xFF111111) : AppColors.textPrimary,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                  color: _dark ? Colors.white12 : Colors.black12)),
+                  color: _dark ? AppColors.dividerFaint : Colors.black12)),
             child: Column(children: [
 
               // User row
@@ -67,12 +67,12 @@ class _ShareState extends State<ShareProfileSheet> {
                               Container(color: AppColors.card),
                           errorWidget: (_, __, ___) =>
                               Container(color: AppColors.card,
-                                  child: const Icon(Icons.person_rounded,
-                                      color: Colors.white38, size: 26)))
+                                  child: Icon(Icons.person_rounded,
+                                      color: AppColors.textFaint, size: 26)))
                       : Container(width: 48, height: 48,
                           color: AppColors.card,
-                          child: const Icon(Icons.person_rounded,
-                              color: Colors.white38, size: 26))),
+                          child: Icon(Icons.person_rounded,
+                              color: AppColors.textFaint, size: 26))),
                 const SizedBox(width: 12),
                 Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +80,7 @@ class _ShareState extends State<ShareProfileSheet> {
                     Row(children: [
                       Flexible(child: Text(widget.user.username,
                           style: TextStyle(
-                              color: _dark ? Colors.white : Colors.black,
+                              color: _dark ? AppColors.textPrimary : AppColors.bg,
                               fontSize: 15, fontWeight: FontWeight.bold))),
                       if (widget.user.isVerified) ...[
                         const SizedBox(width: 5),
@@ -91,7 +91,7 @@ class _ShareState extends State<ShareProfileSheet> {
                     const SizedBox(height: 2),
                     Text('raonson.app/${widget.user.username}',
                         style: TextStyle(
-                            color: _dark ? Colors.white38 : Colors.black38,
+                            color: _dark ? AppColors.textFaint : Colors.black38,
                             fontSize: 11.5)),
                   ])),
               ]),
@@ -100,8 +100,8 @@ class _ShareState extends State<ShareProfileSheet> {
               // QR + Raonson logo
               SizedBox(width: 190, height: 190,
                 child: CustomPaint(painter: _QrPainter(
-                    fg: _dark ? Colors.white : Colors.black,
-                    bg: _dark ? const Color(0xFF111111) : Colors.white,
+                    fg: _dark ? AppColors.textPrimary : AppColors.bg,
+                    bg: _dark ? Color(0xFF111111) : AppColors.textPrimary,
                     urlLen: _url.length))),
               const SizedBox(height: 14),
 
@@ -112,7 +112,7 @@ class _ShareState extends State<ShareProfileSheet> {
                         color: _dark ? AppColors.neonBlue : AppColors.neonBlueDim))),
                 const SizedBox(width: 7),
                 Text('raonson.app', style: TextStyle(
-                    color: _dark ? Colors.white38 : Colors.black38,
+                    color: _dark ? AppColors.textFaint : Colors.black38,
                     fontSize: 12, letterSpacing: 0.5)),
               ]),
             ]),
@@ -141,7 +141,7 @@ class _ShareState extends State<ShareProfileSheet> {
                             content: Text('Линк нусхабардорӣ шуд'),
                             duration: Duration(seconds: 2)));
                   }),
-              const Divider(color: Colors.white10, height: 0),
+              Divider(color: AppColors.dividerFaint, height: 0),
               _ARow(icon: Icons.share_rounded, label: 'Мубодила',
                   onTap: () => Share.share(_url,
                       subject: widget.user.username)),
@@ -328,9 +328,9 @@ class _TBtn extends StatelessWidget {
         color: sel ? AppColors.neonBlue : Colors.transparent,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-            color: sel ? AppColors.neonBlue : Colors.white24)),
+            color: sel ? AppColors.neonBlue : AppColors.textFaint)),
       child: Text(label, style: TextStyle(
-          color: sel ? Colors.white : Colors.white54,
+          color: sel ? AppColors.textPrimary : AppColors.textTertiary,
           fontWeight: sel ? FontWeight.bold : FontWeight.normal,
           fontSize: 13))));
 }
@@ -343,11 +343,11 @@ class _ARow extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(onTap: onTap,
     child: Padding(padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(children: [
-        Icon(icon, color: Colors.white70, size: 22),
+        Icon(icon, color: AppColors.textSecondary, size: 22),
         const SizedBox(width: 14),
         Expanded(child: Text(label,
-            style: const TextStyle(color: Colors.white, fontSize: 15))),
-        const Icon(Icons.chevron_right_rounded,
-            color: Colors.white24, size: 20),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 15))),
+        Icon(Icons.chevron_right_rounded,
+            color: AppColors.textFaint, size: 20),
       ])));
 }

@@ -206,7 +206,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       // Handle
       Container(margin: const EdgeInsets.symmetric(vertical: 10),
         width: 36, height: 4,
-        decoration: BoxDecoration(color: Colors.white24,
+        decoration: BoxDecoration(color: AppColors.textFaint,
             borderRadius: BorderRadius.circular(2))),
 
       // Title + count
@@ -214,10 +214,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(
           'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
-          style: const TextStyle(color: Colors.white,
+          style: TextStyle(color: AppColors.textPrimary,
               fontWeight: FontWeight.bold, fontSize: 16)),
       ),
-      const Divider(color: Colors.white10, height: 1),
+      Divider(color: AppColors.dividerFaint, height: 1),
 
       // ── Comments list ────────────────────────────────────────
       Expanded(
@@ -228,11 +228,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
             : _comments.isEmpty
                 ? Center(child: Column(mainAxisSize: MainAxisSize.min,
                     children: [
-                    const Icon(Icons.chat_bubble_outline,
-                        color: Colors.white24, size: 48),
+                    Icon(Icons.chat_bubble_outline,
+                        color: AppColors.textFaint, size: 48),
                     const SizedBox(height: 12),
-                    const Text('Аввалин шарҳро шумо гузоред!',
-                        style: TextStyle(color: Colors.white38, fontSize: 15)),
+                    Text('Аввалин шарҳро шумо гузоред!',
+                        style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
                   ]))
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -248,23 +248,23 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
       // ── Input ────────────────────────────────────────────────
       Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.white10))),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.dividerFaint))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           // Reply hint
           if (_replyTo != null)
             Container(
-              color: Colors.white.withOpacity(0.08),
+              color: AppColors.textPrimary.withOpacity(0.08),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(children: [
-                const Icon(Icons.reply_rounded, color: AppColors.neonBlue, size: 16),
+                Icon(Icons.reply_rounded, color: AppColors.neonBlue, size: 16),
                 const SizedBox(width: 6),
                 Expanded(child: Text(
                   'Ҷавоб ба @${_replyTo!.user.username}',
-                  style: const TextStyle(color: AppColors.neonBlue, fontSize: 12))),
+                  style: TextStyle(color: AppColors.neonBlue, fontSize: 12))),
                 GestureDetector(
                   onTap: () => setState(() => _replyTo = null),
-                  child: const Icon(Icons.close, color: Colors.white38, size: 16)),
+                  child: Icon(Icons.close, color: AppColors.textFaint, size: 16)),
               ]),
             ),
 
@@ -299,7 +299,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 backgroundImage: (UserSession.avatar?.isNotEmpty == true)
                     ? NetworkImage(UserSession.avatar!) : null,
                 child: (UserSession.avatar?.isEmpty != false)
-                    ? const Icon(Icons.person, size: 16, color: Colors.white54) : null,
+                    ? Icon(Icons.person, size: 16, color: AppColors.textTertiary) : null,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -307,14 +307,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   controller: _ctrl,
                   focusNode: _focus,
                   autofocus: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
                   decoration: InputDecoration(
                     hintText: _replyTo != null
                         ? '@${_replyTo!.user.username}-га ҷавоб...'
                         : 'Шарҳ нависед...',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: TextStyle(color: AppColors.textFaint),
                     border: InputBorder.none),
                 ),
               ),
@@ -322,8 +322,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
               IconButton(
                 icon: SvgPicture.asset('assets/icons/gift.svg',
                     width: 24, height: 24,
-                    colorFilter: const ColorFilter.mode(
-                        Colors.white70, BlendMode.srcIn)),
+                    colorFilter: ColorFilter.mode(
+                        AppColors.textSecondary, BlendMode.srcIn)),
                 onPressed: _openGift,
               ),
               _sending
@@ -416,9 +416,9 @@ class _CommentItemState extends State<_CommentItem> {
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
             onTap: () { Navigator.pop(context); widget.onDelete(); }),
           ListTile(
-            leading: const Icon(Icons.edit_outlined, color: Colors.white, size: 22),
-            title: const Text('Таҳрир кардан',
-                style: TextStyle(color: Colors.white, fontSize: 15)),
+            leading: Icon(Icons.edit_outlined, color: AppColors.textPrimary, size: 22),
+            title: Text('Таҳрир кардан',
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () { Navigator.pop(context); _editComment(); }),
           const SizedBox(height: 8),
         ],
@@ -455,9 +455,9 @@ class _CommentItemState extends State<_CommentItem> {
               }
             }),
           ListTile(
-            leading: const Icon(Icons.block, color: Colors.white, size: 22),
-            title: const Text('Маҳдуд кардан',
-                style: TextStyle(color: Colors.white, fontSize: 15)),
+            leading: Icon(Icons.block, color: AppColors.textPrimary, size: 22),
+            title: Text('Маҳдуд кардан',
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () async {
               Navigator.pop(context);
               try {
@@ -472,9 +472,9 @@ class _CommentItemState extends State<_CommentItem> {
               }
             }),
           ListTile(
-            leading: const Icon(Icons.link, color: Colors.white, size: 22),
-            title: const Text('Нусха гирифтан',
-                style: TextStyle(color: Colors.white, fontSize: 15)),
+            leading: Icon(Icons.link, color: AppColors.textPrimary, size: 22),
+            title: Text('Нусха гирифтан',
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () {
               Navigator.pop(context);
               Clipboard.setData(ClipboardData(text: widget.comment.text));
@@ -495,22 +495,22 @@ class _CommentItemState extends State<_CommentItem> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Таҳрир кардан',
-            style: TextStyle(color: Colors.white)),
+        title: Text('Таҳрир кардан',
+            style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
           controller: ctrl, autofocus: true, maxLines: 4,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
             hintText: 'Шарҳ...',
-            hintStyle: TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: AppColors.textFaint),
             filled: true, fillColor: Color(0xFF111111),
             border: OutlineInputBorder(borderSide: BorderSide.none)),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -527,7 +527,7 @@ class _CommentItemState extends State<_CommentItem> {
   Widget _handle() => Container(
     margin: const EdgeInsets.symmetric(vertical: 10),
     width: 36, height: 4,
-    decoration: BoxDecoration(color: Colors.white24,
+    decoration: BoxDecoration(color: AppColors.textFaint,
         borderRadius: BorderRadius.circular(2)));
 
   String _timeAgo() {
@@ -558,7 +558,7 @@ class _CommentItemState extends State<_CommentItem> {
             backgroundImage: c.user.avatar.isNotEmpty
                 ? NetworkImage(c.user.avatar) : null,
             child: c.user.avatar.isEmpty
-                ? const Icon(Icons.person, color: Colors.white54, size: 18) : null,
+                ? Icon(Icons.person, color: AppColors.textTertiary, size: 18) : null,
           ),
         ),
         const SizedBox(width: 10),
@@ -572,8 +572,8 @@ class _CommentItemState extends State<_CommentItem> {
               Flexible(
                 child: Text(c.user.username,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w700,
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontWeight: FontWeight.w700,
                         fontSize: 13)),
               ),
               if (c.user.isVerified) ...[
@@ -584,35 +584,35 @@ class _CommentItemState extends State<_CommentItem> {
             const SizedBox(height: 2),
             // Матни коммент — ЗЕРИ ном (мисли Instagram)
             Text(c.text,
-                style: const TextStyle(color: Colors.white, fontSize: 14)),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
             const SizedBox(height: 6),
 
             // ── Нижняя строка: время · лайков · Ответить · ⋮ ──
             Row(children: [
               Text(_timeAgo(),
-                  style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
               if (_likeCount > 0) ...[
                 const SizedBox(width: 12),
                 Text('$_likeCount лайк',
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12,
+                    style: TextStyle(
+                        color: AppColors.textFaint, fontSize: 12,
                         fontWeight: FontWeight.w600)),
               ],
               const SizedBox(width: 12),
               // ── Ответить — барои ҲАМА ──────────────────────
               GestureDetector(
                 onTap: widget.onReply,
-                child: const Text('Ҷавоб',
+                child: Text('Ҷавоб',
                     style: TextStyle(
-                        color: Colors.white54, fontSize: 12,
+                        color: AppColors.textTertiary, fontSize: 12,
                         fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 8),
               // ── ⋮ меню ──────────────────────────────────────
               GestureDetector(
                 onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
-                child: const Icon(Icons.more_horiz,
-                    color: Colors.white38, size: 18)),
+                child: Icon(Icons.more_horiz,
+                    color: AppColors.textFaint, size: 18)),
             ]),
           ],
         )),
@@ -629,14 +629,14 @@ class _CommentItemState extends State<_CommentItem> {
                 child: Icon(
                   _liked ? Icons.favorite : Icons.favorite_border,
                   size: 18,
-                  color: _liked ? Colors.red : Colors.white38,
+                  color: _liked ? Colors.red : AppColors.textFaint,
                 ),
               ),
               if (_likeCount > 0) ...[
                 const SizedBox(height: 2),
                 Text('$_likeCount',
                     style: TextStyle(
-                        color: _liked ? Colors.red : Colors.white38,
+                        color: _liked ? Colors.red : AppColors.textFaint,
                         fontSize: 11, fontWeight: FontWeight.w600)),
               ],
             ]),

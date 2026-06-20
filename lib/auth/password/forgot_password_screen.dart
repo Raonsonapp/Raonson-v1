@@ -38,9 +38,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black, elevation: 0,
+        backgroundColor: AppColors.bg, elevation: 0,
         title: const Text('Кӯмак барои воридшавӣ',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ),
@@ -53,28 +53,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               width: 90, height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white24, width: 2),
+                border: Border.all(color: AppColors.textFaint, width: 2),
               ),
-              child: const Icon(Icons.lock_outline_rounded,
-                  color: Colors.white, size: 42),
+              child: Icon(Icons.lock_outline_rounded,
+                  color: AppColors.textPrimary, size: 42),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Паролатонро фаромӯш кардед?',
+          Text('Паролатонро фаромӯш кардед?',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white,
+              style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 19, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Почтаи электронии худро ворид кунед ва мо барои '
             'барқарорсозии парол рамзи 6-рақама мефиристем.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54, fontSize: 13.5, height: 1.4),
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 13.5, height: 1.4),
           ),
           const SizedBox(height: 24),
           TextField(
             controller: _idCtrl,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: AppColors.textPrimary),
             keyboardType: TextInputType.emailAddress,
             decoration: _dec('Почтаи электронӣ'),
           ),
@@ -88,15 +88,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.neonBlue,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimary,
                 disabledBackgroundColor: AppColors.neonBlue.withOpacity(0.5),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: _loading ? null : _send,
               child: _loading
-                  ? const SizedBox(width: 20, height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary))
                   : const Text('Фиристодани рамз',
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
@@ -108,7 +108,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   InputDecoration _dec(String hint) => InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white30),
+        hintStyle: TextStyle(color: AppColors.textFaint),
         filled: true,
         fillColor: const Color(0xFF1A1A1A),
         border: OutlineInputBorder(

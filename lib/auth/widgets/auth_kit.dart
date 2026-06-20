@@ -73,29 +73,29 @@ class AuthField extends StatelessWidget {
       onChanged: onChanged,
       autofocus: autofocus,
       inputFormatters: inputFormatters?.cast(),
-      style: const TextStyle(color: Colors.white, fontSize: 15),
+      style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
       cursorColor: AppColors.neonBlue,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
+        hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
         prefixIcon: prefix ??
-            Icon(icon, color: Colors.white38, size: 20),
+            Icon(icon, color: AppColors.textFaint, size: 20),
         suffixIcon: suffix,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: AppColors.textPrimary.withOpacity(0.05),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+          borderSide: BorderSide(color: AppColors.textPrimary.withOpacity(0.10)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.neonBlue, width: 1.6),
+          borderSide: BorderSide(color: AppColors.neonBlue, width: 1.6),
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.10)),
+          borderSide: BorderSide(color: AppColors.textPrimary.withOpacity(0.10)),
         ),
       ),
     );
@@ -142,22 +142,22 @@ class AuthButton extends StatelessWidget {
           ),
           child: Center(
             child: loading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 24, height: 24,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2.4, color: Colors.white))
+                        strokeWidth: 2.4, color: AppColors.textPrimary))
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(label,
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: AppColors.textPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.w700)),
                       if (showArrow) ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_rounded,
-                            color: Colors.white, size: 20),
+                        Icon(Icons.arrow_forward_rounded,
+                            color: AppColors.textPrimary, size: 20),
                       ],
                     ],
                   ),
@@ -182,21 +182,21 @@ class AuthOutlineButton extends StatelessWidget {
       child: Container(
         height: 52,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: AppColors.textPrimary.withOpacity(0.05),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          border: Border.all(color: AppColors.textPrimary.withOpacity(0.12)),
         ),
         child: Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, color: Colors.white70, size: 18),
+                Icon(icon, color: AppColors.textSecondary, size: 18),
                 const SizedBox(width: 8),
               ],
               Text(label,
-                  style: const TextStyle(
-                      color: Colors.white70,
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
                       fontSize: 15,
                       fontWeight: FontWeight.w600)),
             ],
@@ -226,8 +226,8 @@ class StepProgress extends StatelessWidget {
           ),
           child: Center(
             child: Text('$current/$total',
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: AppColors.textPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.bold)),
           ),
@@ -244,7 +244,7 @@ class StepProgress extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: active
                         ? AppColors.storyEnd
-                        : Colors.white.withOpacity(0.12),
+                        : AppColors.textPrimary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -273,23 +273,23 @@ class LangChip extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
+              color: AppColors.textPrimary.withOpacity(0.06),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.12)),
+              border: Border.all(color: AppColors.textPrimary.withOpacity(0.12)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.language_rounded,
-                    color: Colors.white70, size: 16),
+                Icon(Icons.language_rounded,
+                    color: AppColors.textSecondary, size: 16),
                 const SizedBox(width: 6),
                 Text(name,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 13,
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 13,
                         fontWeight: FontWeight.w500)),
                 const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down_rounded,
-                    color: Colors.white54, size: 18),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textTertiary, size: 18),
               ],
             ),
           );
@@ -317,7 +317,7 @@ class LangChip extends StatelessWidget {
           ].map((l) => ListTile(
                 leading: Text(l.$3, style: const TextStyle(fontSize: 22)),
                 title: Text(l.$2,
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: AppColors.textPrimary)),
                 onTap: () {
                   AppSettingsState.instance.setLang(l.$1);
                   Navigator.pop(context);

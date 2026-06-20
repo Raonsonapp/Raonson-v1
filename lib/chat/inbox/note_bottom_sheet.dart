@@ -143,7 +143,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
           // Handle
           const SizedBox(height: 10),
           Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.white24,
+              decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 18),
 
@@ -162,27 +162,27 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Ёддошт',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.45), fontSize: 12,
+                      color: AppColors.textPrimary.withOpacity(0.45), fontSize: 12,
                       fontWeight: FontWeight.w500)),
               const SizedBox(height: 6),
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFF161B27),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: AppColors.textPrimary.withOpacity(0.08)),
                 ),
                 child: TextField(
                   controller: _txt,
                   maxLength: 60,
                   maxLines: 3,
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
                   decoration: InputDecoration(
                     hintText: 'Чӣ дар зеҳнатон аст?',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.22)),
+                    hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.22)),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
                     counterStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.2), fontSize: 11),
+                        color: AppColors.textPrimary.withOpacity(0.2), fontSize: 11),
                   ),
                 ),
               ),
@@ -235,15 +235,15 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.neonBlue,
                     disabledBackgroundColor: AppColors.neonBlue.withOpacity(0.25),
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.textPrimary,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
                   child: _saving
-                      ? const SizedBox(width: 20, height: 20,
+                      ? SizedBox(width: 20, height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
+                              strokeWidth: 2, color: AppColors.textPrimary))
                       : const Text('Нашр кун',
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 15)),
@@ -292,12 +292,12 @@ class _BubblePreview extends StatelessWidget {
                     bottomRight: Radius.circular(18),
                     bottomLeft:  Radius.circular(5),
                   ),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: AppColors.textPrimary.withOpacity(0.1)),
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   if (hasText)
                     Text(text,
-                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
                         textAlign: TextAlign.center,
                         maxLines: 3, overflow: TextOverflow.ellipsis),
                   if (hasText && hasSong) const SizedBox(height: 8),
@@ -305,7 +305,7 @@ class _BubblePreview extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
+                        color: AppColors.textPrimary.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -330,13 +330,13 @@ class _BubblePreview extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(song!.title,
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 11,
+                                  style: TextStyle(
+                                      color: AppColors.textPrimary, fontSize: 11,
                                       fontWeight: FontWeight.w600),
                                   maxLines: 1, overflow: TextOverflow.ellipsis),
                               Text(song!.artist,
                                   style: TextStyle(
-                                      color: Colors.white.withOpacity(0.45),
+                                      color: AppColors.textPrimary.withOpacity(0.45),
                                       fontSize: 10),
                                   maxLines: 1, overflow: TextOverflow.ellipsis),
                             ],
@@ -364,11 +364,11 @@ class _BubblePreview extends StatelessWidget {
                   bottomRight: Radius.circular(16),
                   bottomLeft:  Radius.circular(5),
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: AppColors.textPrimary.withOpacity(0.08)),
               ),
               child: Text('Ёддошт иловакун...',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.18), fontSize: 13),
+                      color: AppColors.textPrimary.withOpacity(0.18), fontSize: 13),
                   textAlign: TextAlign.center),
             ),
 
@@ -379,9 +379,9 @@ class _BubblePreview extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: const Color(0xFF1C2333),
-          border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+          border: Border.all(color: AppColors.textPrimary.withOpacity(0.15), width: 1.5),
         ),
-        child: const Icon(Icons.person_rounded, color: Colors.white38, size: 26),
+        child: Icon(Icons.person_rounded, color: AppColors.textFaint, size: 26),
       ),
     ]);
   }
@@ -402,7 +402,7 @@ class _AddMusicBtn extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF161B27),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.textPrimary.withOpacity(0.08)),
       ),
       child: Row(children: [
         Container(
@@ -412,13 +412,13 @@ class _AddMusicBtn extends StatelessWidget {
             color: AppColors.neonBlue.withOpacity(0.12),
             border: Border.all(color: AppColors.neonBlue.withOpacity(0.35)),
           ),
-          child: const Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 17),
+          child: Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 17),
         ),
         const SizedBox(width: 12),
         Text('Мусиқӣ илова кун',
-            style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 14)),
+            style: TextStyle(color: AppColors.textPrimary.withOpacity(0.55), fontSize: 14)),
         const Spacer(),
-        Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.2)),
+        Icon(Icons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2)),
       ]),
     ),
   );
@@ -475,7 +475,7 @@ class _AttachedMusic extends StatelessWidget {
                 borderRadius: BorderRadius.circular(9)),
             child: Icon(
               isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-              color: Colors.white, size: 22),
+              color: AppColors.textPrimary, size: 22),
           ),
         ]),
       ),
@@ -483,12 +483,12 @@ class _AttachedMusic extends StatelessWidget {
       // Info
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(song.title,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+            style: TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
             maxLines: 1, overflow: TextOverflow.ellipsis),
         const SizedBox(height: 2),
         Text(song.artist,
-            style: TextStyle(color: Colors.white.withOpacity(0.45), fontSize: 11),
+            style: TextStyle(color: AppColors.textPrimary.withOpacity(0.45), fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis),
         const SizedBox(height: 4),
         Text('${_t(song.startMs)} – ${_t(song.endMs)}',
@@ -503,16 +503,16 @@ class _AttachedMusic extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.07),
+              color: AppColors.textPrimary.withOpacity(0.07),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('Иваз', style: TextStyle(color: Colors.white54, fontSize: 11)),
+            child: Text('Иваз', style: TextStyle(color: AppColors.textTertiary, fontSize: 11)),
           ),
         ),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: onRemove,
-          child: const Icon(Icons.close_rounded, color: Colors.white30, size: 18),
+          child: Icon(Icons.close_rounded, color: AppColors.textFaint, size: 18),
         ),
       ]),
     ]),

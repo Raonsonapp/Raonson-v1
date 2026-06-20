@@ -1,5 +1,6 @@
 // lib/profile/profile_skeleton.dart
 import 'package:flutter/material.dart';
+import '../app/app_theme.dart';
 
 class ProfileSkeleton extends StatefulWidget {
   const ProfileSkeleton({super.key});
@@ -32,7 +33,7 @@ class _ProfileSkeletonState extends State<ProfileSkeleton>
       final c2 = Color.lerp(const Color(0xFF1A1A1A), const Color(0xFF2A2A2A), _anim.value)!;
 
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.bg,
         body: SafeArea(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

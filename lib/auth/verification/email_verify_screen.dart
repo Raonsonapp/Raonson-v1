@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
+import '../../app/app_theme.dart';
 
 class EmailVerifyScreen extends StatefulWidget {
   const EmailVerifyScreen({super.key});
@@ -90,9 +91,9 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _sendVerification,
                 child: _isLoading
-                    ? const CircularProgressIndicator(
+                    ? CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                       )
                     : const Text('Send Code'),
               ),

@@ -99,18 +99,18 @@ class _PromoteScreenState extends State<PromoteScreen> {
               decoration: const BoxDecoration(
                   gradient: LinearGradient(colors: AppColors.storyGradient),
                   shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded, color: Colors.white, size: 36),
+              child: Icon(Icons.check_rounded, color: AppColors.textPrimary, size: 36),
             ),
             const SizedBox(height: 16),
-            const Text('Реклама ба баррасӣ фиристода шуд',
-                style: TextStyle(color: Colors.white,
+            Text('Реклама ба баррасӣ фиристода шуд',
+                style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Одатан баррасӣ то 60 дақиқа давом мекунад. Баъди тасдиқ '
               'реклама фаъол мешавад ва оморро дар «Рекламаҳои ман» мебинед.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 13, height: 1.4),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -132,9 +132,9 @@ class _PromoteScreenState extends State<PromoteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.bg,
         elevation: 0,
         title: const Text('Тарғиб кардан',
             style: TextStyle(fontWeight: FontWeight.w700)),
@@ -161,9 +161,9 @@ class _PromoteScreenState extends State<PromoteScreen> {
                   : _thumbPh(),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text('Ин пост тарғиб мешавад',
-                  style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             ),
           ]),
           const SizedBox(height: 24),
@@ -181,7 +181,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
             const SizedBox(height: 8),
             TextField(
               controller: _urlCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.textPrimary),
               keyboardType: TextInputType.url,
               decoration: _fieldDeco('https://example.com'),
             ),
@@ -210,7 +210,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
             child: Slider(
               value: _budget, min: 1, max: 50, divisions: 49,
               activeColor: AppColors.storyEnd,
-              inactiveColor: Colors.white12,
+              inactiveColor: AppColors.dividerFaint,
               onChanged: (v) => setState(() => _budget = v),
             ),
           ),
@@ -220,7 +220,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
             child: Slider(
               value: _days.toDouble(), min: 1, max: 30, divisions: 29,
               activeColor: AppColors.storyEnd,
-              inactiveColor: Colors.white12,
+              inactiveColor: AppColors.dividerFaint,
               onChanged: (v) => setState(() => _days = v.round()),
             ),
           ),
@@ -231,25 +231,25 @@ class _PromoteScreenState extends State<PromoteScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFF121212),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white10),
+              border: Border.all(color: AppColors.dividerFaint),
             ),
             child: Row(children: [
-              const Icon(Icons.visibility_outlined,
-                  color: Colors.white54, size: 20),
+              Icon(Icons.visibility_outlined,
+                  color: AppColors.textTertiary, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Фарогирии тахминӣ',
-                        style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text('Фарогирии тахминӣ',
+                        style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                     Text('$_estReachLow – $_estReachHigh нафар',
-                        style: const TextStyle(color: Colors.white,
+                        style: TextStyle(color: AppColors.textPrimary,
                             fontSize: 15, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
               Text('Ҳамагӣ \$${(_budget * _days).toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.white,
+                  style: TextStyle(color: AppColors.textPrimary,
                       fontSize: 15, fontWeight: FontWeight.w700)),
             ]),
           ),
@@ -261,11 +261,11 @@ class _PromoteScreenState extends State<PromoteScreen> {
             onTap: _sending ? null : _submit,
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Бо эҷоди реклама шумо бо Шартҳои реклама розӣ мешавед. '
             'Пардохт баъди тасдиқ гирифта мешавад.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+            style: TextStyle(color: AppColors.textFaint, fontSize: 11, height: 1.4),
           ),
         ],
       ),
@@ -274,19 +274,19 @@ class _PromoteScreenState extends State<PromoteScreen> {
 
   Widget _thumbPh() => Container(
       width: 56, height: 56, color: const Color(0xFF1C1C1C),
-      child: const Icon(Icons.image_outlined, color: Colors.white24));
+      child: Icon(Icons.image_outlined, color: AppColors.textFaint));
 
   Widget _section(String t) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(t, style: const TextStyle(color: Colors.white,
+      child: Text(t, style: TextStyle(color: AppColors.textPrimary,
           fontSize: 16, fontWeight: FontWeight.w700)));
 
   Widget _sliderTile({required String label, required String value,
       required Widget child}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-        Text(value, style: const TextStyle(color: Colors.white,
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(color: AppColors.textPrimary,
             fontSize: 14, fontWeight: FontWeight.w600)),
       ]),
       child,
@@ -295,7 +295,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
 
   InputDecoration _fieldDeco(String hint) => InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white30),
+        hintStyle: TextStyle(color: AppColors.textFaint),
         filled: true,
         fillColor: const Color(0xFF121212),
         border: OutlineInputBorder(
@@ -326,29 +326,29 @@ class _GoalCard extends StatelessWidget {
           color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: selected ? AppColors.storyEnd : Colors.white10,
+              color: selected ? AppColors.storyEnd : AppColors.dividerFaint,
               width: selected ? 1.6 : 1),
         ),
         child: Row(children: [
-          Icon(icon, color: selected ? AppColors.storyEnd : Colors.white70,
+          Icon(icon, color: selected ? AppColors.storyEnd : AppColors.textSecondary,
               size: 24),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: Colors.white,
+                Text(title, style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 14.5, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(
-                    color: Colors.white54, fontSize: 12)),
+                Text(subtitle, style: TextStyle(
+                    color: AppColors.textTertiary, fontSize: 12)),
               ],
             ),
           ),
           if (selected)
-            const Icon(Icons.check_circle, color: AppColors.storyEnd, size: 22)
+            Icon(Icons.check_circle, color: AppColors.storyEnd, size: 22)
           else
-            const Icon(Icons.radio_button_unchecked,
-                color: Colors.white24, size: 22),
+            Icon(Icons.radio_button_unchecked,
+                color: AppColors.textFaint, size: 22),
         ]),
       ),
     );
@@ -374,15 +374,15 @@ class _RadioRow extends StatelessWidget {
           Icon(selected
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
-              color: selected ? AppColors.storyEnd : Colors.white30, size: 22),
+              color: selected ? AppColors.storyEnd : AppColors.textFaint, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: Colors.white,
+                Text(label, style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 14.5, fontWeight: FontWeight.w600)),
-                Text(subtitle, style: const TextStyle(
-                    color: Colors.white54, fontSize: 12)),
+                Text(subtitle, style: TextStyle(
+                    color: AppColors.textTertiary, fontSize: 12)),
               ],
             ),
           ),
@@ -409,14 +409,14 @@ class _GradientButton extends StatelessWidget {
           height: 50,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: AppColors.storyGradient),
+            gradient: LinearGradient(colors: AppColors.storyGradient),
             borderRadius: BorderRadius.circular(12),
           ),
           child: loading
-              ? const SizedBox(width: 20, height: 20,
+              ? SizedBox(width: 20, height: 20,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
-              : Text(label, style: const TextStyle(color: Colors.white,
+                      strokeWidth: 2, color: AppColors.textPrimary))
+              : Text(label, style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 15.5, fontWeight: FontWeight.w700)),
         ),
       ),

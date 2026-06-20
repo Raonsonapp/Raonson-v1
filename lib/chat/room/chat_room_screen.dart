@@ -486,15 +486,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.white12)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.dividerFaint)),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(
             '@${widget.peer.username} мехоҳад ба шумо паём нависад. '
             'Агар қабул кунед, ӯ инро мебинад.',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white54, fontSize: 12.5,
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 12.5,
                 height: 1.35),
           ),
           const SizedBox(height: 12),
@@ -503,7 +503,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.white24),
+                  side: BorderSide(color: AppColors.textFaint),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
@@ -515,8 +515,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Expanded(
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white24),
+                  foregroundColor: AppColors.textPrimary,
+                  side: BorderSide(color: AppColors.textFaint),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
@@ -529,7 +529,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.neonBlue,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -568,8 +568,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       backgroundColor: const Color(0xFF000000),
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-            color: Colors.white, size: 20),
+        icon: Icon(Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
       title: GestureDetector(
@@ -586,7 +586,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00E676),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 2),
+                    border: Border.all(color: AppColors.bg, width: 2),
                   ),
                 ),
               ),
@@ -598,8 +598,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             children: [
               Row(mainAxisSize: MainAxisSize.min, children: [
                 Text(widget.peer.username,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 15)),
                 if (widget.peer.isVerified) ...[
@@ -615,7 +615,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 style: TextStyle(
                   color: _isPeerTyping || _online
                       ? const Color(0xFF00E676)
-                      : Colors.white38,
+                      : AppColors.textFaint,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -682,15 +682,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00E676),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 3),
+                    border: Border.all(color: AppColors.bg, width: 3),
                   ),
                 ),
               ),
           ]),
           const SizedBox(height: 14),
           Text(widget.peer.username,
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 20)),
           const SizedBox(height: 4),
@@ -699,12 +699,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 style: TextStyle(
                   color: _online
                       ? const Color(0xFF00E676)
-                      : Colors.white38,
+                      : AppColors.textFaint,
                   fontSize: 13,
                 )),
           const SizedBox(height: 20),
-          const Text('Чизе гӯед! 👋',
-              style: TextStyle(color: Colors.white38, fontSize: 14)),
+          Text('Чизе гӯед! 👋',
+              style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
           const SizedBox(height: 24),
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -780,9 +780,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     width: 7, height: 7,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white70,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 );
@@ -805,7 +805,7 @@ class _AppBarBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    icon: Icon(icon, color: Colors.white, size: 22),
+    icon: Icon(icon, color: AppColors.textPrimary, size: 22),
     onPressed: onTap,
   );
 }
@@ -831,7 +831,7 @@ class _QuickBtn extends StatelessWidget {
         Icon(icon, color: AppColors.neonBlue, size: 18),
         const SizedBox(width: 8),
         Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
       ]),
     ),
   );

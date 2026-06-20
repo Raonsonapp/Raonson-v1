@@ -141,7 +141,7 @@ class _HighlightViewerState extends State<HighlightViewer>
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 36, height: 4,
               margin: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(color: Colors.white24,
+              decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
           _tile(ctx, Icons.download_rounded, 'Зеркашӣ', _download),
           _tile(ctx, Icons.share_outlined, 'Мубодила', _share),
@@ -160,7 +160,7 @@ class _HighlightViewerState extends State<HighlightViewer>
   }
 
   Widget _tile(BuildContext ctx, IconData icon, String label, VoidCallback onTap,
-          {Color color = Colors.white}) =>
+          {Color color = AppColors.textPrimary}) =>
       ListTile(
         leading: Icon(icon, color: color),
         title: Text(label, style: TextStyle(color: color, fontSize: 15)),
@@ -181,25 +181,25 @@ class _HighlightViewerState extends State<HighlightViewer>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
-        title: const Text('Номивазкунӣ',
-            style: TextStyle(color: Colors.white)),
+        title: Text('Номивазкунӣ',
+            style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
           controller: ctrl, autofocus: true, maxLength: 20,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
             hintText: 'Ном...',
-            hintStyle: TextStyle(color: Colors.white38),
-            counterStyle: TextStyle(color: Colors.white24),
+            hintStyle: TextStyle(color: AppColors.textFaint),
+            counterStyle: TextStyle(color: AppColors.textFaint),
             enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
+                borderSide: BorderSide(color: AppColors.textFaint)),
             focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: AppColors.neonBlue)),
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор',
-                  style: TextStyle(color: Colors.white54))),
+              child: Text('Бекор',
+                  style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, ctrl.text),
               child: const Text('Сабт',
                   style: TextStyle(color: AppColors.neonBlue))),
@@ -233,12 +233,12 @@ class _HighlightViewerState extends State<HighlightViewer>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
-        title: const Text('Нест кардан?', style: TextStyle(color: Colors.white)),
-        content: const Text('Актуалӣ тамоман нест мешавад.',
-            style: TextStyle(color: Colors.white70)),
+        title: Text('Нест кардан?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Актуалӣ тамоман нест мешавад.',
+            style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
               child: const Text('Нест кун',
                   style: TextStyle(color: Colors.redAccent))),
@@ -257,10 +257,10 @@ class _HighlightViewerState extends State<HighlightViewer>
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     if (_items.isEmpty) {
-      return const Scaffold(backgroundColor: Colors.black);
+      return Scaffold(backgroundColor: AppColors.bg);
     }
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: GestureDetector(
         onLongPressStart: (_) => _pause(),
         onLongPressEnd:   (_) => _resume(),
@@ -308,18 +308,18 @@ class _HighlightViewerState extends State<HighlightViewer>
             top: top + 18, left: 14, right: 10,
             child: Row(children: [
               Text(_title,
-                  style: const TextStyle(color: Colors.white,
+                  style: TextStyle(color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold, fontSize: 15,
                       shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
               const Spacer(),
               GestureDetector(
                 onTap: _menu,
-                child: const Padding(padding: EdgeInsets.all(6),
-                  child: Icon(Icons.more_vert, color: Colors.white, size: 24))),
+                child: Padding(padding: EdgeInsets.all(6),
+                  child: Icon(Icons.more_vert, color: AppColors.textPrimary, size: 24))),
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: const Padding(padding: EdgeInsets.all(6),
-                  child: Icon(Icons.close, color: Colors.white, size: 24))),
+                child: Padding(padding: EdgeInsets.all(6),
+                  child: Icon(Icons.close, color: AppColors.textPrimary, size: 24))),
             ]),
           ),
         ]),
@@ -330,24 +330,24 @@ class _HighlightViewerState extends State<HighlightViewer>
   Widget _bar(double v) => ClipRRect(
     borderRadius: BorderRadius.circular(2),
     child: LinearProgressIndicator(
-      value: v, backgroundColor: Colors.white30,
-      valueColor: const AlwaysStoppedAnimation(Colors.white), minHeight: 2.5));
+      value: v, backgroundColor: AppColors.textFaint,
+      valueColor: AlwaysStoppedAnimation(AppColors.textPrimary), minHeight: 2.5));
 
   Widget _buildImage() {
-    if (_cur.url.isEmpty) return Container(color: Colors.black);
+    if (_cur.url.isEmpty) return Container(color: AppColors.bg);
     return CachedNetworkImage(
       imageUrl: _cur.url, fit: BoxFit.contain,
       width: double.infinity, height: double.infinity,
-      placeholder: (_, __) => const Center(
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)),
-      errorWidget: (_, __, ___) => const Center(
-          child: Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64)));
+      placeholder: (_, __) => Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint)),
+      errorWidget: (_, __, ___) => Center(
+          child: Icon(Icons.broken_image_outlined, color: AppColors.textFaint, size: 64)));
   }
 
   Widget _buildVideo() {
     if (!_videoReady) {
-      return const Center(
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30));
+      return Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint));
     }
     return Center(
       child: AspectRatio(

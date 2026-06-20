@@ -344,7 +344,7 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 150),
@@ -399,8 +399,8 @@ class _SearchScreenState extends State<SearchScreen>
           padding: const EdgeInsets.fromLTRB(0, 10, 14, 6),
           child: Row(children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 20),
+              icon: Icon(Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textPrimary, size: 20),
               onPressed: _cancelSearch,
             ),
             Expanded(
@@ -425,8 +425,8 @@ class _SearchScreenState extends State<SearchScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
             child: Row(children: [
-              const Text('Охирин',
-                  style: TextStyle(color: Colors.white,
+              Text('Охирин',
+                  style: TextStyle(color: AppColors.textPrimary,
                       fontSize: 16, fontWeight: FontWeight.w700)),
               const Spacer(),
               GestureDetector(
@@ -456,7 +456,7 @@ class _SearchScreenState extends State<SearchScreen>
             child: Center(
               child: Text('Ҷустуҷӯи охирин нест',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.3), fontSize: 14)),
+                      color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
             ),
           ),
       ],
@@ -487,7 +487,7 @@ class _SearchScreenState extends State<SearchScreen>
                   Flexible(
                     child: Text(username,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white,
+                        style: TextStyle(color: AppColors.textPrimary,
                             fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                   if (verified) ...[
@@ -498,8 +498,8 @@ class _SearchScreenState extends State<SearchScreen>
                 if (subtitle.isNotEmpty)
                   Text(subtitle,
                       maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 12.5)),
+                      style: TextStyle(
+                          color: AppColors.textFaint, fontSize: 12.5)),
               ],
             ),
           ),
@@ -508,8 +508,8 @@ class _SearchScreenState extends State<SearchScreen>
               await SearchHistory.removeAccount(id);
               _loadHistory();
             },
-            child: const Icon(Icons.close_rounded,
-                color: Colors.white38, size: 18),
+            child: Icon(Icons.close_rounded,
+                color: AppColors.textFaint, size: 18),
           ),
         ]),
       ),
@@ -526,21 +526,21 @@ class _SearchScreenState extends State<SearchScreen>
             width: 44, height: 44,
             decoration: const BoxDecoration(
                 color: Color(0xFF262626), shape: BoxShape.circle),
-            child: const Icon(Icons.history_rounded,
-                color: Colors.white54, size: 22),
+            child: Icon(Icons.history_rounded,
+                color: AppColors.textTertiary, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Text(q,
-                style: const TextStyle(color: Colors.white, fontSize: 14)),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
           ),
           GestureDetector(
             onTap: () async {
               await SearchHistory.remove(q);
               _loadHistory();
             },
-            child: const Icon(Icons.close_rounded,
-                color: Colors.white38, size: 18),
+            child: Icon(Icons.close_rounded,
+                color: AppColors.textFaint, size: 18),
           ),
         ]),
       ),
@@ -557,8 +557,8 @@ class _SearchScreenState extends State<SearchScreen>
           padding: const EdgeInsets.fromLTRB(0, 10, 14, 6),
           child: Row(children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 20),
+              icon: Icon(Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textPrimary, size: 20),
               onPressed: _cancelSearch,
             ),
             Expanded(
@@ -583,13 +583,13 @@ class _SearchScreenState extends State<SearchScreen>
           controller: _tabs,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          indicatorColor: Colors.white,
+          indicatorColor: AppColors.textPrimary,
           indicatorWeight: 2,
           indicatorSize: TabBarIndicatorSize.label,
-          labelColor: Colors.white,
+          labelColor: AppColors.textPrimary,
           labelStyle: const TextStyle(
               fontSize: 13, fontWeight: FontWeight.w600),
-          unselectedLabelColor: Colors.white38,
+          unselectedLabelColor: AppColors.textFaint,
           dividerColor: Colors.transparent,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           tabs: _tabLabels.map((l) => Tab(text: l)).toList(),
@@ -690,10 +690,10 @@ class _SearchBarRaw extends StatelessWidget {
         controller: ctrl,
         focusNode: focus,
         onChanged: onChanged,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Ҷустуҷӯ',
-          hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
+          hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
           prefixIcon: searching
               ? const Padding(
                   padding: EdgeInsets.all(11),
@@ -701,16 +701,16 @@ class _SearchBarRaw extends StatelessWidget {
                     width: 16, height: 16,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppColors.neonBlue)))
-              : const Icon(Icons.search_rounded,
-                  color: Colors.white38, size: 20),
+              : Icon(Icons.search_rounded,
+                  color: AppColors.textFaint, size: 20),
           suffixIcon: ctrl.text.isNotEmpty
               ? GestureDetector(
                   onTap: () {
                     ctrl.clear();
                     onChanged('');
                   },
-                  child: const Icon(Icons.close_rounded,
-                      color: Colors.white38, size: 18))
+                  child: Icon(Icons.close_rounded,
+                      color: AppColors.textFaint, size: 18))
               : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -757,11 +757,11 @@ class _ExploreGrid extends StatelessWidget {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.explore_outlined,
-              size: 52, color: Colors.white.withOpacity(0.1)),
+              size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
           const SizedBox(height: 12),
           Text('Мӯҳтаво ҳанӯз нест',
               style: TextStyle(
-                  color: Colors.white.withOpacity(0.3), fontSize: 14)),
+                  color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
         ]),
       );
     }
@@ -816,34 +816,34 @@ class _ExploreCell extends StatelessWidget {
         ),
         // Reel icon (top-right)
         if (item.type == _ItemType.reel)
-          const Positioned(
+          Positioned(
             top: 6, right: 6,
             child: Icon(Icons.slow_motion_video_rounded,
-                color: Colors.white, size: 16,
-                shadows: [Shadow(blurRadius: 6, color: Colors.black)]),
+                color: AppColors.textPrimary, size: 16,
+                shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
           ),
         // Multi icon
         if (item.isMulti && item.type != _ItemType.reel)
-          const Positioned(
+          Positioned(
             top: 6, right: 6,
             child: Icon(Icons.collections_rounded,
-                color: Colors.white, size: 16,
-                shadows: [Shadow(blurRadius: 6, color: Colors.black)]),
+                color: AppColors.textPrimary, size: 16,
+                shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
           ),
         // Views counter (bottom-left) — shown if > 0
         if (item.views > 0)
           Positioned(
             bottom: 5, left: 5,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.remove_red_eye_rounded,
-                  color: Colors.white, size: 11,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+              Icon(Icons.remove_red_eye_rounded,
+                  color: AppColors.textPrimary, size: 11,
+                  shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
               const SizedBox(width: 3),
               Text(_fmtViews(item.views),
-                  style: const TextStyle(
-                    color: Colors.white, fontSize: 10,
+                  style: TextStyle(
+                    color: AppColors.textPrimary, fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    shadows: [Shadow(blurRadius: 4, color: Colors.black)],
+                    shadows: [Shadow(blurRadius: 4, color: AppColors.bg)],
                   )),
             ]),
           ),
@@ -901,7 +901,7 @@ class _ExplorePreviewDialog extends StatelessWidget {
                     Expanded(
                       child: Text(authorName,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white,
+                          style: TextStyle(color: AppColors.textPrimary,
                               fontSize: 14, fontWeight: FontWeight.w600)),
                     ),
                   ]),
@@ -935,16 +935,16 @@ class _ExplorePreviewDialog extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.white12))),
+        decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: AppColors.dividerFaint))),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(children: [
           Expanded(
             child: Text(label,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 14.5)),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14.5)),
           ),
-          Icon(icon, color: Colors.white70, size: 20),
+          Icon(icon, color: AppColors.textSecondary, size: 20),
         ]),
       ),
     );
@@ -1027,7 +1027,7 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: Stack(children: [
         PageView.builder(
           controller:  _page,
@@ -1043,13 +1043,13 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
             onTap: () => Navigator.pop(context),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(mainAxisSize: MainAxisSize.min, children: const [
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 18),
+                    color: AppColors.textPrimary, size: 18),
                 SizedBox(width: 4),
                 Text('Reels',
                     style: TextStyle(
-                        color: Colors.white, fontSize: 17,
+                        color: AppColors.textPrimary, fontSize: 17,
                         fontWeight: FontWeight.w600)),
               ]),
             ),
@@ -1160,7 +1160,7 @@ class _FeedCardState extends State<_FeedCard> {
   Widget build(BuildContext context) {
     return Stack(fit: StackFit.expand, children: [
       // Фони сиёҳ — мисли Instagram (на бежеви)
-      const ColoredBox(color: Colors.black),
+      ColoredBox(color: AppColors.bg),
       // ── Media: видеоро бозӣ мекунад, на ҳамчун расм (боги сиёҳ ислоҳ шуд) ──
       if (_isVideo)
         (_ready && _video != null
@@ -1177,10 +1177,10 @@ class _FeedCardState extends State<_FeedCard> {
                 ),
               )
             : Container(
-                color: Colors.black,
-                child: const Center(
+                color: AppColors.bg,
+                child: Center(
                     child: CircularProgressIndicator(
-                        color: Colors.white24, strokeWidth: 2))))
+                        color: AppColors.textFaint, strokeWidth: 2))))
       else
         // Расм пурра нишон дода мешавад (мисли Instagram) — буриш намешавад
         CachedNetworkImage(
@@ -1188,8 +1188,8 @@ class _FeedCardState extends State<_FeedCard> {
           fit: BoxFit.contain,
           width: double.infinity,
           height: double.infinity,
-          placeholder: (_, __) => const ColoredBox(color: Colors.black),
-          errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black),
+          placeholder: (_, __) => ColoredBox(color: AppColors.bg),
+          errorWidget: (_, __, ___) => ColoredBox(color: AppColors.bg),
         ),
       // Gradient overlay
       Container(
@@ -1210,7 +1210,7 @@ class _FeedCardState extends State<_FeedCard> {
               svg: _liked
                   ? 'assets/icons/heart_filled.svg'
                   : 'assets/icons/heart.svg',
-              color: _liked ? const Color(0xFFFF3040) : Colors.white,
+              color: _liked ? Color(0xFFFF3040) : AppColors.textPrimary,
               label: _likeCount > 0 ? _fmt(_likeCount) : null,
               onTap: _toggleLike),
           const SizedBox(height: 18),
@@ -1235,7 +1235,7 @@ class _FeedCardState extends State<_FeedCard> {
               behavior: HitTestBehavior.opaque,
               child: Icon(
                   _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                  color: Colors.white, size: 26),
+                  color: AppColors.textPrimary, size: 26),
             ),
           ],
         ]),
@@ -1252,13 +1252,13 @@ class _FeedCardState extends State<_FeedCard> {
                 Avatar(imageUrl: widget.item.postData!.user.avatar, size: 32),
                 const SizedBox(width: 8),
                 Text(widget.item.postData!.user.username,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 if (widget.item.postData!.user.isVerified) ...[
                   const SizedBox(width: 4),
-                  const Icon(Icons.verified_rounded,
-                      color: Colors.white, size: 14),
+                  Icon(Icons.verified_rounded,
+                      color: AppColors.textPrimary, size: 14),
                 ],
                 const SizedBox(width: 10),
                 _FollowChip(userId: widget.item.postData!.user.id),
@@ -1266,7 +1266,7 @@ class _FeedCardState extends State<_FeedCard> {
               if (widget.item.postData!.caption.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(widget.item.postData!.caption,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                     maxLines: 2, overflow: TextOverflow.ellipsis),
               ],
             ],
@@ -1293,14 +1293,14 @@ class _FeedCardState extends State<_FeedCard> {
                   Flexible(
                     child: Text(uname,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.w600, fontSize: 14)),
                   ),
                   if (verified) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.verified_rounded,
-                        color: Colors.white, size: 14),
+                    Icon(Icons.verified_rounded,
+                        color: AppColors.textPrimary, size: 14),
                   ],
                   const SizedBox(width: 10),
                   _FollowChip(userId: (u['_id'] ?? u['id'] ?? '').toString()),
@@ -1308,7 +1308,7 @@ class _FeedCardState extends State<_FeedCard> {
                 if (caption.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(caption,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                       maxLines: 2, overflow: TextOverflow.ellipsis),
                 ],
               ],
@@ -1322,13 +1322,14 @@ class _FeedCardState extends State<_FeedCard> {
 class _ActionBtn extends StatelessWidget {
   final String svg;
   final VoidCallback? onTap;
-  final Color color;
+  final Color? color;
   final String? label;
-  const _ActionBtn(
-      {required this.svg, this.onTap, this.color = Colors.white, this.label});
+  _ActionBtn(
+      {required this.svg, this.onTap, this.color, this.label});
 
   @override
   Widget build(BuildContext context) {
+    final c = color ?? AppColors.textPrimary;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -1336,13 +1337,13 @@ class _ActionBtn extends StatelessWidget {
         SvgPicture.asset(
           svg,
           width: 30, height: 30,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          colorFilter: ColorFilter.mode(c, BlendMode.srcIn),
         ),
         if (label != null && label!.isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(label!,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 12,
+              style: TextStyle(
+                  color: AppColors.textPrimary, fontSize: 12,
                   fontWeight: FontWeight.w600)),
         ],
       ]),
@@ -1370,11 +1371,11 @@ class _FollowChip extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.white60),
+              border: Border.all(color: AppColors.textSecondary),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
-                style: const TextStyle(color: Colors.white,
+                style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 12, fontWeight: FontWeight.w600)),
           ),
         );
@@ -1442,12 +1443,12 @@ class _ForYouTab extends StatelessWidget {
       slivers: [
         // Top accounts row (horizontal scroll)
         if (users.isNotEmpty) ...[
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Text('Аккаунтҳо',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 15, fontWeight: FontWeight.w700)),
             ),
           ),
@@ -1470,12 +1471,12 @@ class _ForYouTab extends StatelessWidget {
 
         // Music strip
         if (music.isNotEmpty) ...[
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Text('Аудио',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 15, fontWeight: FontWeight.w700)),
             ),
           ),
@@ -1530,8 +1531,8 @@ class _UserChip extends StatelessWidget {
           Avatar(imageUrl: user.avatar, size: 48),
           const SizedBox(height: 4),
           Text(user.username,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 11),
+              style: TextStyle(
+                  color: AppColors.textPrimary, fontSize: 11),
               maxLines: 1, overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center),
         ]),
@@ -1608,19 +1609,19 @@ class _HashtagTab extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: const Color(0xFF1C1C1C),
                     borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.tag_rounded,
-                    color: Colors.white70, size: 22),
+                child: Icon(Icons.tag_rounded,
+                    color: AppColors.textSecondary, size: 22),
               ),
               const SizedBox(width: 14),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('#$tag',
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
                 Text('$cnt пост',
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12)),
+                    style: TextStyle(
+                        color: AppColors.textFaint, fontSize: 12)),
               ]),
             ]),
           ),
@@ -1676,8 +1677,8 @@ class _UserRowState extends State<_UserRow> {
             children: [
               Row(children: [
                 Text(widget.user.username,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 if (widget.user.isVerified) ...[
                   const SizedBox(width: 4),
@@ -1688,13 +1689,13 @@ class _UserRowState extends State<_UserRow> {
               if ((widget.user.bio ?? '').isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(widget.user.bio!,
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12),
+                    style: TextStyle(
+                        color: AppColors.textFaint, fontSize: 12),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
               Text('${_fmtFollowers(widget.user.followersCount)} обуначи',
-                  style: const TextStyle(
-                      color: Colors.white24, fontSize: 11)),
+                  style: TextStyle(
+                      color: AppColors.textFaint, fontSize: 11)),
             ],
           )),
           if (!_isMe)
@@ -1709,19 +1710,19 @@ class _UserRowState extends State<_UserRow> {
                       ? Colors.transparent : AppColors.neonBlue,
                   border: Border.all(
                       color: _following
-                          ? Colors.white30 : AppColors.neonBlue),
+                          ? AppColors.textFaint : AppColors.neonBlue),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: _loading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 14, height: 14,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
+                            strokeWidth: 2, color: AppColors.textPrimary))
                     : Text(
                         _following ? 'Пайрав' : 'Пайравӣ',
                         style: TextStyle(
                           color: _following
-                              ? Colors.white54 : Colors.white,
+                              ? AppColors.textTertiary : AppColors.textPrimary,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         )),
@@ -1809,21 +1810,21 @@ class _MusicRowState extends State<_MusicRow> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(_title,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w500, fontSize: 13.5),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 3),
             Text(_artist,
-                style: const TextStyle(
-                    color: Colors.white38, fontSize: 12),
+                style: TextStyle(
+                    color: AppColors.textFaint, fontSize: 12),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         )),
         if (_ms > 0) ...[
           Text(_dur(_ms),
-              style: const TextStyle(
-                  color: Colors.white24, fontSize: 11)),
+              style: TextStyle(
+                  color: AppColors.textFaint, fontSize: 11)),
           const SizedBox(width: 10),
         ],
         GestureDetector(
@@ -1843,7 +1844,7 @@ class _MusicRowState extends State<_MusicRow> {
                 _playing
                     ? Icons.pause_rounded
                     : Icons.play_arrow_rounded,
-                color: Colors.white, size: 22),
+                color: AppColors.textPrimary, size: 22),
           ),
         ),
       ]),
@@ -1855,8 +1856,8 @@ class _MusicPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
       width: 50, height: 50, color: const Color(0xFF1A1A1A),
-      child: const Icon(Icons.music_note_rounded,
-          color: Colors.white24, size: 22));
+      child: Icon(Icons.music_note_rounded,
+          color: AppColors.textFaint, size: 22));
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -1878,11 +1879,11 @@ class _NoResult extends StatelessWidget {
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.search_off_rounded,
-          size: 52, color: Colors.white.withOpacity(0.1)),
+          size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
       const SizedBox(height: 10),
       Text('Ёфт нашуд',
           style: TextStyle(
-              color: Colors.white.withOpacity(0.3), fontSize: 14)),
+              color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
     ]),
   );
 }
@@ -1895,17 +1896,17 @@ class _ErrView extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.wifi_off_rounded,
-            color: Colors.white24, size: 48),
+        Icon(Icons.wifi_off_rounded,
+            color: AppColors.textFaint, size: 48),
         const SizedBox(height: 12),
-        const Text('Пайвастшавӣ нашуд',
+        Text('Пайвастшавӣ нашуд',
             style: TextStyle(
-                color: Colors.white54, fontSize: 15,
+                color: AppColors.textTertiary, fontSize: 15,
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         Text(msg,
-            style: const TextStyle(
-                color: Colors.white38, fontSize: 12),
+            style: TextStyle(
+                color: AppColors.textFaint, fontSize: 12),
             textAlign: TextAlign.center),
       ]),
     ),
@@ -1976,19 +1977,19 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
         child: Column(children: [
           Container(width: 40, height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(color: Colors.white24,
+              decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
-          const Text('Шарҳҳо',
-              style: TextStyle(color: Colors.white,
+          Text('Шарҳҳо',
+              style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600, fontSize: 15)),
-          const Divider(color: Colors.white12),
+          Divider(color: AppColors.dividerFaint),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(
-                    color: Colors.white30, strokeWidth: 2))
+                ? Center(child: CircularProgressIndicator(
+                    color: AppColors.textFaint, strokeWidth: 2))
                 : _comments.isEmpty
-                    ? const Center(child: Text('Ҳанӯз шарҳ нест',
-                        style: TextStyle(color: Colors.white38)))
+                    ? Center(child: Text('Ҳанӯз шарҳ нест',
+                        style: TextStyle(color: AppColors.textFaint)))
                     : ListView.builder(
                         itemCount: _comments.length,
                         itemBuilder: (_, i) {
@@ -2000,10 +2001,10 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
                                 name: (u['username'] ?? '').toString(),
                                 size: 34),
                             title: Text((u['username'] ?? '').toString(),
-                                style: const TextStyle(color: Colors.white,
+                                style: TextStyle(color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w600, fontSize: 13)),
                             subtitle: Text((c['text'] ?? '').toString(),
-                                style: const TextStyle(color: Colors.white)),
+                                style: TextStyle(color: AppColors.textPrimary)),
                           );
                         }),
           ),
@@ -2013,11 +2014,11 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
               Expanded(
                 child: TextField(
                   controller: _ctrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
                     hintText: 'Шарҳ нависед...',
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    filled: true, fillColor: Colors.white12,
+                    hintStyle: TextStyle(color: AppColors.textFaint),
+                    filled: true, fillColor: AppColors.dividerFaint,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none),
