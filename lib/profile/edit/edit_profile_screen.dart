@@ -220,7 +220,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     Widget? suffix;
     if (_checkingUsername) {
-      suffix = const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16,
+      suffix = Padding(padding: const EdgeInsets.all(12), child: SizedBox(width: 16, height: 16,
           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint)));
     }
     else if (_usernameTaken || (_usernameError != null && !_isOriginal)) {

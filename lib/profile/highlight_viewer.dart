@@ -160,10 +160,10 @@ class _HighlightViewerState extends State<HighlightViewer>
   }
 
   Widget _tile(BuildContext ctx, IconData icon, String label, VoidCallback onTap,
-          {Color color = AppColors.textPrimary}) =>
+          {Color? color}) =>
       ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(label, style: TextStyle(color: color, fontSize: 15)),
+        leading: Icon(icon, color: color ?? AppColors.textPrimary),
+        title: Text(label, style: TextStyle(color: color ?? AppColors.textPrimary, fontSize: 15)),
         onTap: () { Navigator.pop(ctx); onTap(); },
       );
 

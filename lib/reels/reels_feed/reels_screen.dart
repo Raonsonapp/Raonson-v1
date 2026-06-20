@@ -292,9 +292,9 @@ class _ReelsViewState extends State<_ReelsView> {
     final vm = context.watch<_ReelsVM>();
 
     if (vm.loading && vm.reels.isEmpty) {
-      return const Scaffold(
+      return Scaffold(
           backgroundColor: AppColors.bg,
-          body: Center(
+          body: const Center(
               child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor:
