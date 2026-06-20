@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../app/app_theme.dart';
 import 'aparat_api.dart';
 import 'anime_player_screen.dart';
+import 'anime_downloads_screen.dart';
 
 class AnimeScreen extends StatefulWidget {
   const AnimeScreen({super.key});
@@ -55,6 +56,14 @@ class _AnimeScreenState extends State<AnimeScreen> {
         backgroundColor: Colors.black, elevation: 0,
         title: const Text('Аниме',
             style: TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download_rounded, color: Colors.white),
+            tooltip: 'Зеркашшуда',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const AnimeDownloadsScreen())),
+          ),
+        ],
       ),
       body: Column(children: [
         Padding(
@@ -181,7 +190,8 @@ class _AnimeCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+        Text(AparatApi.toTajik(item.title),
+            maxLines: 2, overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white, fontSize: 12.5, height: 1.2)),
       ]),
     );

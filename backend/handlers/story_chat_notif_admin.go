@@ -639,6 +639,20 @@ func UnverifyUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"verified": false})
 }
 
+// POST /admin/vip/:id — VIP медиҳад (720p/1080p-и аниме) (admin only).
+func SetVip(c *gin.Context) {
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET is_vip=TRUE WHERE id=$1`, c.Param("id"))
+	c.JSON(http.StatusOK, gin.H{"is_vip": true})
+}
+
+// POST /admin/unvip/:id — VIP-ро мегирад (admin only).
+func UnsetVip(c *gin.Context) {
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET is_vip=FALSE WHERE id=$1`, c.Param("id"))
+	c.JSON(http.StatusOK, gin.H{"is_vip": false})
+}
+
 // DELETE /admin/users/:id — аккаунтро пурра нест мекунад (admin only).
 // Соҳиби барнома (@raonson) нест карда намешавад.
 func AdminDeleteUser(c *gin.Context) {
@@ -668,7 +682,7 @@ func AdminListUsers(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT id, username, COALESCE(avatar,''),
 		       COALESCE(verified,false), COALESCE(banned,false),
-		       COALESCE(role,'user')
+		       COALESCE(role,'user'), COALESCE(is_vip,false)
 		FROM users
 		WHERE ($1 = '' OR username ILIKE '%' || $1 || '%')
 		ORDER BY (LOWER(username)='raonson') DESC, username ASC
@@ -681,11 +695,12 @@ func AdminListUsers(c *gin.Context) {
 	out := []gin.H{}
 	for rows.Next() {
 		var id, username, avatar, role string
-		var verified, banned bool
-		if rows.Scan(&id, &username, &avatar, &verified, &banned, &role) == nil {
+		var verified, banned, isVip bool
+		if rows.Scan(&id, &username, &avatar, &verified, &banned, &role, &isVip) == nil {
 			out = append(out, gin.H{
 				"_id": id, "id": id, "username": username, "avatar": avatar,
 				"verified": verified, "banned": banned, "role": role,
+				"is_vip": isVip,
 			})
 		}
 	}

@@ -118,6 +118,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  Future<void> _setVip(Map<String, dynamic> u, bool vip) async {
+    final id = (u['_id'] ?? u['id']).toString();
+    setState(() => _busy.add(id));
+    try {
+      final res = await ApiClient.instance.post(
+          '/admin/${vip ? 'vip' : 'unvip'}/$id');
+      if (res.statusCode == 200 && mounted) {
+        setState(() => u['is_vip'] = vip);
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
   Future<void> _deleteUser(Map<String, dynamic> u) async {
     final id    = (u['_id'] ?? u['id']).toString();
     final uname = (u['username'] ?? '').toString();
@@ -263,6 +277,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final username = (u['username'] ?? '').toString();
     final avatar   = (u['avatar'] ?? '').toString();
     final verified = u['verified'] == true;
+    final isVip    = u['is_vip'] == true;
     final isOwner  = username.toLowerCase() == 'raonson';
     final busy     = _busy.contains(id);
 
@@ -303,6 +318,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           : isOwner
               ? null
               : Row(mainAxisSize: MainAxisSize.min, children: [
+                  IconButton(
+                    tooltip: isVip ? 'VIP-ро гир' : 'VIP деҳ',
+                    icon: Icon(
+                        isVip ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: isVip ? Colors.amber : Colors.white54,
+                        size: 22),
+                    onPressed: () => _setVip(u, !isVip),
+                  ),
                   IconButton(
                     tooltip: verified ? 'Галочкаро гир' : 'Галочка деҳ',
                     icon: Icon(

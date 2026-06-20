@@ -72,25 +72,77 @@ class AparatApi {
     lastDebug = '';
     final raw = query.trim();
     if (raw.isEmpty) return trending(perpage: perpage);
-    final q = _translit(raw);
-    final enc = Uri.encodeComponent(q);
-    // Чанд эндпоинт — кадоме натиҷа дод, ҳамон.
-    final endpoints = [
-      'https://www.aparat.com/api/fa/v1/video/video/search?text=$enc',
-      'https://www.aparat.com/api/fa/v1/video/video/search?text=$enc&type_search=search',
-      'https://www.aparat.com/etc/api/videoBySearch/text/$enc/perpage/$perpage',
+    // Чанд имлои эҳтимолӣ месозем («чучутсу»→jujutsu, «кайсен»→kaisen),
+    // то ҳатто бо хатои имло аниме ёфт шавад.
+    final variants = _queryVariants(raw);
+    for (final q in variants) {
+      final enc = Uri.encodeComponent(q);
+      final items = await _fetchAndExtract(
+          'https://www.aparat.com/api/fa/v1/video/video/search?text=$enc');
+      if (items.isNotEmpty) return items;
+    }
+    // Ҳеҷ — эндпоинтҳои дигарро бо вариантҳои аввал месанҷем.
+    final q0 = Uri.encodeComponent(variants.first);
+    final fallbacks = [
+      'https://www.aparat.com/api/fa/v1/video/video/search?text=$q0&type_search=search',
+      'https://www.aparat.com/etc/api/videoBySearch/text/$q0/perpage/$perpage',
     ];
-    for (final url in endpoints) {
+    for (final url in fallbacks) {
       final items = await _fetchAndExtract(url);
       if (items.isNotEmpty) return items;
     }
     return [];
   }
 
+  // Имлоҳои эҳтимолии лотинӣ барои матни кириллӣ.
+  // Тоҷикӣ «ч»-ро ҳам ch ҳам j, «й»-ро ҳам y ҳам i навишта метавонад.
+  static List<String> _queryVariants(String raw) {
+    final s = raw.trim();
+    final hasCyr = RegExp(r'[А-Яа-яЁёҶҷҲҳӢӣҚқҒғӮӯ]').hasMatch(s);
+    if (!hasCyr) return [s];
+    final base = _translit(s);
+    final set = <String>{
+      base,
+      base.replaceAll('ch', 'j'),                       // чу→ju (jujutsu)
+      base.replaceAll('y', 'i'),                        // кайсен→kaisen
+      base.replaceAll('ch', 'j').replaceAll('y', 'i'),
+      base.replaceAll('ts', 's'),                       // тс→s
+      base.replaceAll('kh', 'h'),
+      s,                                                // худи кириллӣ
+    };
+    return set.where((e) => e.trim().isNotEmpty).toList();
+  }
+
   static Future<List<AnimeItem>> byTag(String tag, {int perpage = 30}) async {
     final url = 'https://www.aparat.com/etc/api/videobytag/text/'
         '${Uri.encodeComponent(tag)}';
     return _fetchAndExtract(url);
+  }
+
+  // Форсӣ (хатти арабӣ) → тоҷикӣ (кириллӣ). Тоҷикӣ ва форсӣ як забонанд,
+  // танҳо хаташон фарқ мекунад — пас номро ба хатти давлатӣ мегардонем.
+  // Ҳарфҳои лотинӣ (мисли «Boruto») ва рақамҳо бетағйир мемонанд.
+  static const Map<String, String> _faToTj = {
+    'آ':'о','ا':'а','أ':'а','إ':'и','ب':'б','پ':'п','ت':'т','ث':'с','ج':'ҷ',
+    'چ':'ч','ح':'ҳ','خ':'х','د':'д','ذ':'з','ر':'р','ز':'з','ژ':'ж','س':'с',
+    'ش':'ш','ص':'с','ض':'з','ط':'т','ظ':'з','ع':'ъ','غ':'ғ','ف':'ф','ق':'қ',
+    'ک':'к','ك':'к','گ':'г','ل':'л','م':'м','ن':'н','و':'в','ه':'ҳ','ة':'а',
+    'ی':'и','ي':'и','ئ':'ъ','ء':'ъ','ؤ':'в',
+    '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9',
+    '،':',','؛':';','ـ':'',
+  };
+
+  /// Номро ба хатти тоҷикӣ (кириллӣ) мегардонад — барои хониши осон.
+  static String toTajik(String s) {
+    if (s.isEmpty) return s;
+    final hasArabic = RegExp(r'[؀-ۿ]').hasMatch(s);
+    if (!hasArabic) return s; // аллакай лотинӣ/кириллӣ
+    final b = StringBuffer();
+    for (final ch in s.split('')) {
+      b.write(_faToTj[ch] ?? ch);
+    }
+    // Фосилаҳои зиёдатиро тоза мекунем.
+    return b.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   /// Кириллӣ → лотинӣ (барои ҷустуҷӯи Aparat).
@@ -235,26 +287,30 @@ class AparatApi {
 
   /// Линкҳои стрими ҳар сифат + (fallback) embed.
   /// Бармегардонад: (streams, embedUrl).
+  /// Якчанд эндпоинтро меозмоем, то линки мустақим (m3u8/mp4) ёбем —
+  /// бо ҳамин ба ҷои webview-и Aparat (логою скролл) худи видеоро нишон медиҳем.
   static Future<(List<AnimeStream>, String)> streams(String hash) async {
     String embed = 'https://www.aparat.com/video/video/embed/videohash/$hash/vt/frame';
-    final streams = <AnimeStream>[];
-    try {
-      final res = await http
-          .get(Uri.parse('https://www.aparat.com/api/fa/v1/video/video/show/videohash/$hash'),
-              headers: _headers)
-          .timeout(const Duration(seconds: 12));
-      if (res.statusCode == 200) {
+    final out = <AnimeStream>[];
+    final endpoints = [
+      'https://www.aparat.com/api/fa/v1/video/video/show/videohash/$hash',
+      'https://www.aparat.com/video/video/config/videohash/$hash/format/json',
+    ];
+    for (final url in endpoints) {
+      try {
+        final res = await http.get(Uri.parse(url), headers: _headers)
+            .timeout(const Duration(seconds: 12));
+        if (res.statusCode != 200) continue;
         final j = jsonDecode(res.body);
-        // frame-и embed-ро ҳама ҷо ҷустуҷӯ мекунем.
         final foundFrame = _findFrame(j);
         if (foundFrame.isNotEmpty) embed = foundFrame;
-        // Ҳама линкҳои сифатдор (file_link_all) — рекурсивӣ.
-        _collectStreams(j, streams);
-      }
-    } catch (_) {}
+        _collectStreams(j, out);
+        if (out.isNotEmpty) break; // линк ёфтем — бас
+      } catch (_) {}
+    }
     // Дубликатҳоро аз рӯи URL тоза мекунем.
     final seen = <String>{};
-    final uniq = streams.where((s) => seen.add(s.url)).toList();
+    final uniq = out.where((s) => seen.add(s.url)).toList();
     uniq.sort((a, b) => a.height.compareTo(b.height)); // паст → баланд
     return (uniq, embed);
   }
@@ -276,7 +332,8 @@ class AparatApi {
     return '';
   }
 
-  // file_link_all = [ {profile:"720p", urls:[m3u8...]} , ... ] — ҳама ҷо меҷӯем.
+  // Ҳама линкҳои видео (.m3u8/.mp4)-ро аз ҳар сохтор рекурсивӣ ҷамъ мекунад.
+  // Сифатро аз майдони profile/label ё аз худи URL дармеёбад.
   static void _collectStreams(dynamic node, List<AnimeStream> out) {
     if (node is List) {
       for (final e in node) {
@@ -285,22 +342,51 @@ class AparatApi {
       return;
     }
     if (node is! Map) return;
-    final hasProfile = node.containsKey('profile') || node.containsKey('label');
-    final urls = node['urls'] ?? node['url'] ?? node['src'] ?? node['file'];
-    if (hasProfile && urls != null) {
-      final profile = (node['profile'] ?? node['label'] ?? '').toString();
-      String link = '';
-      if (urls is List && urls.isNotEmpty) {
-        link = urls.first.toString();
-      } else if (urls is String) {
-        link = urls;
+
+    // 1) Объекти линкдор: {profile/label, urls/url/src/file/link}
+    final label = (node['profile'] ?? node['label'] ?? node['title'] ?? '').toString();
+    final urls = node['urls'] ?? node['url'] ?? node['src'] ?? node['file'] ?? node['link'];
+    if (urls != null) {
+      final candidates = <String>[];
+      if (urls is List) {
+        for (final u in urls) {
+          candidates.add(u.toString());
+        }
+      } else {
+        candidates.add(urls.toString());
       }
-      if (link.startsWith('http')) {
-        out.add(AnimeStream(profile: profile, url: link));
+      for (final link in candidates) {
+        if (_isVideoUrl(link)) {
+          out.add(AnimeStream(profile: _qualityFor(label, link), url: link));
+        }
       }
     }
-    for (final v in node.values) {
-      if (v is Map || v is List) _collectStreams(v, out);
+
+    // 2) Ҳар қимати сатрӣ, ки худаш линки видео аст (multiSRC, httpurl, ...).
+    for (final entry in node.entries) {
+      final v = entry.value;
+      if (v is String && _isVideoUrl(v)) {
+        out.add(AnimeStream(profile: _qualityFor(entry.key.toString(), v), url: v));
+      } else if (v is Map || v is List) {
+        _collectStreams(v, out);
+      }
     }
+  }
+
+  static bool _isVideoUrl(String s) {
+    if (!s.startsWith('http')) return false;
+    final u = s.toLowerCase();
+    return u.contains('.m3u8') || u.contains('.mp4');
+  }
+
+  // Сифатро аз label ("720p") ё аз URL (".../720p/...") дармеёбад.
+  static String _qualityFor(String label, String url) {
+    final m1 = RegExp(r'(\d{3,4})\s*p').firstMatch(label.toLowerCase());
+    if (m1 != null) return '${m1.group(1)}p';
+    final m2 = RegExp(r'(\d{3,4})p').firstMatch(url.toLowerCase());
+    if (m2 != null) return '${m2.group(1)}p';
+    // m3u8-и master (бе сифат) — auto
+    if (url.toLowerCase().contains('.m3u8')) return 'auto';
+    return label.isEmpty ? 'mp4' : label;
   }
 }

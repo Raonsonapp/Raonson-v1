@@ -289,6 +289,8 @@ func main() {
 		ad.POST("/unban/:id",   handlers.UnbanUser)
 		ad.POST("/verify/:id",   handlers.VerifyUser)
 		ad.POST("/unverify/:id", handlers.UnverifyUser)
+		ad.POST("/vip/:id",     handlers.SetVip)
+		ad.POST("/unvip/:id",   handlers.UnsetVip)
 		ad.DELETE("/users/:id", handlers.AdminDeleteUser)
 	}
 

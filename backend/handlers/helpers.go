@@ -28,7 +28,8 @@ const userSelectSQL = `
 	       COALESCE(note_song_track_ms,0), COALESCE(note_song_start_ms,0),
 	       COALESCE(note_song_end_ms,30000),
 	       COALESCE(website,''), COALESCE(location,''),
-	       COALESCE(full_name,''), COALESCE(phone,'')
+	       COALESCE(full_name,''), COALESCE(phone,''),
+	       COALESCE(is_vip,false)
 	FROM users`
 
 func scanFullUser(row pgx.Row) (gin.H, error) {
@@ -43,6 +44,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		stTrackMs, stStartMs, stEndMs   int
 		website, location               string
 		fullName, phone                 string
+		isVip                           bool
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -51,6 +53,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&stTitle, &stArtist, &stArtUrl, &stPreviewUrl,
 		&stTrackMs, &stStartMs, &stEndMs,
 		&website, &location, &fullName, &phone,
+		&isVip,
 	)
 	if err != nil {
 		log.Printf("[scanFullUser] error: %v", err)
@@ -61,6 +64,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"username": username, "avatar": avatar, "bio": bio,
 		"verified": verified, "isPrivate": isPrivate,
 		"role": role, "banned": banned,
+		"is_vip": isVip, "isVip": isVip,
 		"postsCount": postsCount,
 		"followersCount": followersCount,
 		"followingCount": followingCount,
