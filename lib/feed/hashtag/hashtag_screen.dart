@@ -52,11 +52,11 @@ class _HashtagScreenState extends State<HashtagScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('#${widget.hashtag}',
-          style: const TextStyle(color: Colors.white,
+          style: TextStyle(color: AppColors.textPrimary,
               fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: _loading
@@ -64,9 +64,9 @@ class _HashtagScreenState extends State<HashtagScreen> {
               color: AppColors.neonBlue, strokeWidth: 2))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: Colors.white30, size: 48),
+                  Icon(Icons.error_outline, color: AppColors.textFaint, size: 48),
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.white38)),
+                  Text(_error!, style: TextStyle(color: AppColors.textFaint)),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: _load,
@@ -77,14 +77,14 @@ class _HashtagScreenState extends State<HashtagScreen> {
                 ]))
               : _posts.isEmpty
                   ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.tag, color: Colors.white12, size: 64),
+                      Icon(Icons.tag, color: AppColors.dividerFaint, size: 64),
                       const SizedBox(height: 12),
                       Text('#${widget.hashtag}',
-                        style: const TextStyle(color: Colors.white38,
+                        style: TextStyle(color: AppColors.textFaint,
                             fontSize: 16, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      const Text('Постҳо ёфт нашуданд',
-                        style: TextStyle(color: Colors.white24, fontSize: 14)),
+                      Text('Постҳо ёфт нашуданд',
+                        style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
                     ]))
                   : RefreshIndicator(
                       color: AppColors.neonBlue,

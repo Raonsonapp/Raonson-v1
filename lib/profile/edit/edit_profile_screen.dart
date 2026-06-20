@@ -132,17 +132,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.bg, elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.close_rounded, color: Colors.white),
+        leading: IconButton(icon: Icon(Icons.close_rounded, color: AppColors.textPrimary),
             onPressed: () => Navigator.pop(context)),
-        title: const Text('Таҳрири профил', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text('Таҳрири профил', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [_ctrl.isSaving
-            ? const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
-            : TextButton(onPressed: _save, child: const Text('Сабт', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)))],
+            ? Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 20, height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary)))
+            : TextButton(onPressed: _save, child: Text('Сабт', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)))],
       ),
       body: _ctrl.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.storyStart, strokeWidth: 2))
+          ? Center(child: CircularProgressIndicator(color: AppColors.storyStart, strokeWidth: 2))
           : SingleChildScrollView(padding: const EdgeInsets.all(20), child: Column(children: [
 
         // Avatar
@@ -150,18 +150,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Stack(alignment: Alignment.bottomRight, children: [
             Container(width: 96, height: 96,
               decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.card,
-                  border: Border.all(color: Colors.white24, width: 2)),
+                  border: Border.all(color: AppColors.textFaint, width: 2)),
               child: ClipOval(child: _localAvatar != null
                   ? Image.file(_localAvatar!, fit: BoxFit.cover)
                   : (_ctrl.currentAvatarUrl?.isNotEmpty == true
                       ? Image.network(_ctrl.currentAvatarUrl!, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.person_rounded, color: Colors.white38, size: 46))
-                      : const Icon(Icons.person_rounded, color: Colors.white38, size: 46)))),
+                          errorBuilder: (_, __, ___) => Icon(Icons.person_rounded, color: AppColors.textFaint, size: 46))
+                      : Icon(Icons.person_rounded, color: AppColors.textFaint, size: 46)))),
             Container(width: 30, height: 30,
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF0095F6)),
               child: _uploadingAvatar
-                  ? const Padding(padding: EdgeInsets.all(7), child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16)),
+                  ? Padding(padding: EdgeInsets.all(7), child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary))
+                  : Icon(Icons.camera_alt_rounded, color: AppColors.textPrimary, size: 16)),
           ]))),
         const SizedBox(height: 6),
         const Text('Аксро тағир бидеҳ', style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
@@ -178,14 +178,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08))),
+              border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
           child: TextField(controller: _ctrl.bioController, maxLines: 4, maxLength: 150,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Худро муаррифӣ кун...', hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-              prefixIcon: const Padding(padding: EdgeInsets.only(bottom: 60), child: Icon(Icons.info_outline_rounded, color: Colors.white38, size: 18)),
+              hintText: 'Худро муаррифӣ кун...', hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
+              prefixIcon: Padding(padding: EdgeInsets.only(bottom: 60), child: Icon(Icons.info_outline_rounded, color: AppColors.textFaint, size: 18)),
               border: InputBorder.none, contentPadding: const EdgeInsets.fromLTRB(12,12,12,0),
-              counterStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 11)))),
+              counterStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.2), fontSize: 11)))),
         const SizedBox(height: 20),
 
         // Music
@@ -199,11 +199,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08))),
+              border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
           child: Row(children: [
-            const Icon(Icons.lock_outline_rounded, color: Colors.white60, size: 20),
+            Icon(Icons.lock_outline_rounded, color: AppColors.textSecondary, size: 20),
             const SizedBox(width: 12),
-            const Expanded(child: Text('Профили хусусӣ', style: TextStyle(color: Colors.white, fontSize: 14))),
+            Expanded(child: Text('Профили хусусӣ', style: TextStyle(color: AppColors.textPrimary, fontSize: 14))),
             Switch(value: _ctrl.isPrivate, onChanged: _ctrl.togglePrivate, activeColor: AppColors.storyStart)])),
         const SizedBox(height: 40),
       ])),
@@ -211,7 +211,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildUsernameField() {
-    Color border = Colors.white.withOpacity(0.08);
+    Color border = AppColors.textPrimary.withOpacity(0.08);
     if (_usernameTaken || (_usernameError != null && !_isOriginal)) {
       border = Colors.red.withOpacity(0.7);
     } else if (!_checkingUsername && !_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) {
@@ -220,8 +220,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     Widget? suffix;
     if (_checkingUsername) {
-      suffix = const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 16, height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white38)));
+      suffix = Padding(padding: const EdgeInsets.all(12), child: SizedBox(width: 16, height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint)));
     }
     else if (_usernameTaken || (_usernameError != null && !_isOriginal)) {
       suffix = const Icon(Icons.close_rounded, color: Colors.red, size: 20);
@@ -233,24 +233,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
             border: Border.all(color: border, width: 1.2)),
         child: TextField(controller: _ctrl.usernameController, maxLength: 30,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
           decoration: InputDecoration(
-            hintText: 'username', hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-            prefixIcon: const Icon(Icons.alternate_email_rounded, color: Colors.white38, size: 18),
+            hintText: 'username', hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
+            prefixIcon: Icon(Icons.alternate_email_rounded, color: AppColors.textFaint, size: 18),
             suffixIcon: suffix, border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 13),
-            counterStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 11)))),
+            counterStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.2), fontSize: 11)))),
       if (!_isOriginal) ...[
         const SizedBox(height: 5),
         Text(_usernameError ?? (_usernameTaken ? 'Ин username банд аст ✗' : (_checkingUsername ? 'Санҷиш...' : 'Username озод аст ✓')),
             style: TextStyle(fontSize: 12,
-                color: (_usernameError != null || _usernameTaken) ? Colors.red : (_checkingUsername ? Colors.white38 : Colors.green))),
+                color: (_usernameError != null || _usernameTaken) ? Colors.red : (_checkingUsername ? AppColors.textFaint : Colors.green))),
       ],
     ]);
   }
 
   Widget _label(String t) => Align(alignment: Alignment.centerLeft,
-    child: Text(t, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w600)));
+    child: Text(t, style: TextStyle(color: AppColors.textPrimary.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w600)));
 }
 
 class _AddMusicTile extends StatelessWidget {
@@ -260,14 +260,14 @@ class _AddMusicTile extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(onTap: onTap,
     child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.08))),
+          border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
       child: Row(children: [
         Container(width: 34, height: 34, decoration: BoxDecoration(shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.1), border: Border.all(color: Colors.white.withOpacity(0.3))),
-          child: const Icon(Icons.music_note_rounded, color: Colors.white, size: 17)),
+          color: AppColors.textPrimary.withOpacity(0.1), border: Border.all(color: AppColors.textPrimary.withOpacity(0.3))),
+          child: Icon(Icons.music_note_rounded, color: AppColors.textPrimary, size: 17)),
         const SizedBox(width: 12),
-        Text('Мусиқӣ илова кун', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 14)),
-        const Spacer(), Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.2))])));
+        Text('Мусиқӣ илова кун', style: TextStyle(color: AppColors.textPrimary.withOpacity(0.5), fontSize: 14)),
+        Spacer(), Icon(Icons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2))])));
 }
 
 class _MusicCard extends StatelessWidget {
@@ -278,18 +278,18 @@ class _MusicCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.3))),
+        border: Border.all(color: AppColors.textPrimary.withOpacity(0.3))),
     child: Row(children: [
       ClipRRect(borderRadius: BorderRadius.circular(8),
         child: song.artUrl.isNotEmpty
             ? Image.network(song.artUrl, width: 48, height: 48, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: AppColors.card, child: const Icon(Icons.music_note_rounded, color: Colors.white38)))
-            : Container(width: 48, height: 48, color: AppColors.card, child: const Icon(Icons.music_note_rounded, color: Colors.white38))),
+                errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: AppColors.card, child: Icon(Icons.music_note_rounded, color: AppColors.textFaint)))
+            : Container(width: 48, height: 48, color: AppColors.card, child: Icon(Icons.music_note_rounded, color: AppColors.textFaint))),
       const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(song.title, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(song.artist, style: const TextStyle(color: Colors.white54, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(_t(song.trackMs), style: const TextStyle(color: Colors.white38, fontSize: 11))])),
-      IconButton(icon: const Icon(Icons.edit_rounded, color: Colors.white54, size: 18), onPressed: onChange),
-      IconButton(icon: const Icon(Icons.close_rounded, color: Colors.white38, size: 18), onPressed: onRemove)]));
+        Text(song.title, style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(song.artist, style: TextStyle(color: AppColors.textTertiary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(_t(song.trackMs), style: TextStyle(color: AppColors.textFaint, fontSize: 11))])),
+      IconButton(icon: Icon(Icons.edit_rounded, color: AppColors.textTertiary, size: 18), onPressed: onChange),
+      IconButton(icon: Icon(Icons.close_rounded, color: AppColors.textFaint, size: 18), onPressed: onRemove)]));
 }

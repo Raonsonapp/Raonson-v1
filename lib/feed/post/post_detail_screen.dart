@@ -88,13 +88,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(widget.title,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            style: TextStyle(
+                color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: ListView.builder(

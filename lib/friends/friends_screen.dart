@@ -184,19 +184,19 @@ class _FriendsScreenState extends State<FriendsScreen>
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
-        title: const Text('Дӯстон',
-            style: TextStyle(color: Colors.white,
+        title: Text('Дӯстон',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 18, fontWeight: FontWeight.w700)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Colors.white, size: 20),
+          icon: Icon(Icons.arrow_back_ios_rounded,
+              color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
         bottom: TabBar(
           controller: _tabs,
           indicatorColor: AppColors.neonBlue,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white38,
+          labelColor: AppColors.textPrimary,
+          unselectedLabelColor: AppColors.textFaint,
           labelStyle: const TextStyle(
               fontWeight: FontWeight.w600, fontSize: 14),
           tabs: [
@@ -260,11 +260,11 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Widget _empty(String text) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.people_outline_rounded,
-          size: 64, color: Colors.white12),
+      Icon(Icons.people_outline_rounded,
+          size: 64, color: AppColors.dividerFaint),
       const SizedBox(height: 16),
-      Text(text, style: const TextStyle(
-          color: Colors.white38, fontSize: 16)),
+      Text(text, style: TextStyle(
+          color: AppColors.textFaint, fontSize: 16)),
     ]),
   );
 }
@@ -292,12 +292,12 @@ class _RequestCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user.username,
-                style: const TextStyle(color: Colors.white,
+                style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600, fontSize: 14)),
             if (user.fullName.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(user.fullName,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
             ],
             if (user.mutualFriends > 0) ...[
               const SizedBox(height: 2),
@@ -309,9 +309,9 @@ class _RequestCard extends StatelessWidget {
         )),
         const SizedBox(width: 8),
         Column(children: [
-          _btn('Қабул', AppColors.neonBlue, Colors.white, onAccept),
+          _btn('Қабул', AppColors.neonBlue, AppColors.textPrimary, onAccept),
           const SizedBox(height: 6),
-          _btn('Рад', const Color(0xFF2A2A2A), Colors.white, onDecline),
+          _btn('Рад', Color(0xFF2A2A2A), AppColors.textPrimary, onDecline),
         ]),
       ]),
     );
@@ -353,12 +353,12 @@ class _SuggestionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user.username,
-                style: const TextStyle(color: Colors.white,
+                style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600, fontSize: 14)),
             if (user.fullName.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text(user.fullName,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
             ],
             if (user.mutualFriends > 0) ...[
               const SizedBox(height: 2),
@@ -378,8 +378,8 @@ class _SuggestionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.neonBlue,
                   borderRadius: BorderRadius.circular(8)),
-                child: const Text('Пайравӣ',
-                    style: TextStyle(color: Colors.white,
+                child: Text('Пайравӣ',
+                    style: TextStyle(color: AppColors.textPrimary,
                         fontSize: 13, fontWeight: FontWeight.w600)),
               ),
             )
@@ -388,17 +388,17 @@ class _SuggestionCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(
                   horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.white24),
+                border: Border.all(color: AppColors.textFaint),
                 borderRadius: BorderRadius.circular(8)),
-              child: const Text('Пайравӣ мекунад',
-                  style: TextStyle(color: Colors.white54,
+              child: Text('Пайравӣ мекунад',
+                  style: TextStyle(color: AppColors.textTertiary,
                       fontSize: 12)),
             ),
           const SizedBox(height: 6),
           GestureDetector(
             onTap: onRemove,
-            child: const Text('Хориҷ кун',
-                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            child: Text('Хориҷ кун',
+                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           ),
         ]),
       ]),
@@ -420,7 +420,7 @@ Widget _avatar(String url, double size) {
 Widget _ph(double size) => Container(
   width: size, height: size,
   color: const Color(0xFF1A1A1A),
-  child: Icon(Icons.person, color: Colors.white38, size: size * 0.5),
+  child: Icon(Icons.person, color: AppColors.textFaint, size: size * 0.5),
 );
 
 // ── Data model ───────────────────────────────────────────────────────
@@ -467,19 +467,19 @@ class _ContactsTab extends StatelessWidget {
     }
     if (users.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.contacts_outlined, color: Colors.white24, size: 64),
+        Icon(Icons.contacts_outlined, color: AppColors.textFaint, size: 64),
         const SizedBox(height: 16),
-        const Text('Дӯстони шумо аз контактҳо',
-            style: TextStyle(color: Colors.white, fontSize: 16,
+        Text('Дӯстони шумо аз контактҳо',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 16,
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        const Text('Мо контактҳои шуморо меёбем',
-            style: TextStyle(color: Colors.white38, fontSize: 13)),
+        Text('Мо контактҳои шуморо меёбем',
+            style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
         const SizedBox(height: 24),
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.neonBlue,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textPrimary,
               padding: const EdgeInsets.symmetric(
                   horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(

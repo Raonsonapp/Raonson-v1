@@ -45,7 +45,7 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
   ({String label, Color color}) _status(String s) {
     switch (s) {
       case 'active':   return (label: 'Фаъол', color: AppColors.storyEnd);
-      case 'finished': return (label: 'Анҷомёфта', color: Colors.white38);
+      case 'finished': return (label: 'Анҷомёфта', color: AppColors.textFaint);
       case 'rejected': return (label: 'Рад шуд', color: Colors.redAccent);
       default:         return (label: 'Дар баррасӣ', color: Colors.orangeAccent);
     }
@@ -54,9 +54,9 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.bg,
         elevation: 0,
         title: const Text('Рекламаҳои ман',
             style: TextStyle(fontWeight: FontWeight.w700)),
@@ -65,14 +65,14 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.storyEnd))
           : _items.isEmpty
-              ? const Center(
+              ? Center(
                   child: Padding(
                     padding: EdgeInsets.all(32),
                     child: Text(
                       'Шумо ҳоло рекламае насохтаед.\n'
                       'Дар ҳар пости худ «Тарғиб кардан»-ро пахш кунед.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white54, height: 1.5),
+                      style: TextStyle(color: AppColors.textTertiary, height: 1.5),
                     ),
                   ))
               : RefreshIndicator(
@@ -102,7 +102,7 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF121212),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: AppColors.dividerFaint),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
@@ -132,16 +132,16 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
                 ]),
                 const SizedBox(height: 6),
                 Text('\$${budget.toStringAsFixed(0)}/рӯз · $days рӯз',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.white38),
+            icon: Icon(Icons.delete_outline, color: AppColors.textFaint),
             onPressed: () => _delete((p['id'] ?? '').toString()),
           ),
         ]),
-        const Divider(color: Colors.white10, height: 20),
+        Divider(color: AppColors.dividerFaint, height: 20),
         Row(children: [
           _stat('Намоишҳо', '$impr'),
           _stat('Кликҳо', '$clicks'),
@@ -155,15 +155,15 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
 
   Widget _stat(String label, String value) => Expanded(
         child: Column(children: [
-          Text(value, style: const TextStyle(color: Colors.white,
+          Text(value, style: TextStyle(color: AppColors.textPrimary,
               fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 2),
-          Text(label, style: const TextStyle(
-              color: Colors.white54, fontSize: 11)),
+          Text(label, style: TextStyle(
+              color: AppColors.textTertiary, fontSize: 11)),
         ]),
       );
 
   Widget _ph() => Container(width: 52, height: 52,
       color: const Color(0xFF1C1C1C),
-      child: const Icon(Icons.image_outlined, color: Colors.white24));
+      child: Icon(Icons.image_outlined, color: AppColors.textFaint));
 }

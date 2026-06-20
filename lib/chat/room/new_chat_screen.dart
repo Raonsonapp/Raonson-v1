@@ -100,11 +100,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Паёми нав',
-            style: TextStyle(color: Colors.white,
+        title: Text('Паёми нав',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: Column(
@@ -121,12 +121,12 @@ class _NewChatScreenState extends State<NewChatScreen> {
               child: TextField(
                 controller: _ctrl,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
                   hintText: 'Ҷустуҷӯи корбарон...',
-                  hintStyle: TextStyle(color: Colors.white38),
+                  hintStyle: TextStyle(color: AppColors.textFaint),
                   prefixIcon:
-                      Icon(Icons.search, color: Colors.white38, size: 20),
+                      Icon(Icons.search, color: AppColors.textFaint, size: 20),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -140,7 +140,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
               ),
             ),
           ),
-          const Divider(color: Colors.white12, height: 1),
+          Divider(color: AppColors.dividerFaint, height: 1),
           // Results
           Expanded(
             child: _loading
@@ -152,8 +152,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
                           _lastQuery.isEmpty
                               ? 'Касеро барои паём ҷустуҷӯ кунед'
                               : 'No users found',
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 14),
+                          style: TextStyle(
+                              color: AppColors.textFaint, fontSize: 14),
                         ),
                       )
                     : ListView.builder(
@@ -169,8 +169,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
                               children: [
                                 Text(
                                   user.username,
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: AppColors.textPrimary,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 15),
                                 ),
@@ -185,8 +185,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                     user.bio!,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: Colors.white38, fontSize: 12),
+                                    style: TextStyle(
+                                        color: AppColors.textFaint, fontSize: 12),
                                   )
                                 : null,
                             trailing: GestureDetector(
@@ -204,9 +204,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                     )
                                   ],
                                 ),
-                                child: const Text('Паём',
+                                child: Text('Паём',
                                     style: TextStyle(
-                                        color: Colors.white,
+                                        color: AppColors.textPrimary,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13)),
                               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/services/user_session.dart';
+import '../../app/app_theme.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -20,8 +21,8 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.black,
+      decoration: BoxDecoration(
+        color: AppColors.bg,
         border: Border(top: BorderSide(color: Color(0xFF1A1A1A), width: 0.5)),
       ),
       child: SafeArea(
@@ -95,7 +96,7 @@ class _SvgNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sel = currentIndex == index;
-    final color = sel ? Colors.white : const Color(0xFF555555);
+    final color = sel ? AppColors.textPrimary : Color(0xFF555555);
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
@@ -142,7 +143,7 @@ class _ProfileItem extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: sel ? Colors.white : Colors.transparent,
+                color: sel ? AppColors.textPrimary : Colors.transparent,
                 width: 1.5,
               ),
             ),
@@ -166,8 +167,8 @@ class _ProfileItem extends StatelessWidget {
                 child: Center(
                   child: Text(
                     notifCount > 9 ? '9+' : '$notifCount',
-                    style: const TextStyle(fontSize: 8,
-                        color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 8,
+                        color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -179,6 +180,6 @@ class _ProfileItem extends StatelessWidget {
 
   Widget _defaultIcon() => Container(
     color: const Color(0xFF1A1A1A),
-    child: const Icon(Icons.person, size: 16, color: Colors.white60),
+    child: Icon(Icons.person, size: 16, color: AppColors.textSecondary),
   );
 }

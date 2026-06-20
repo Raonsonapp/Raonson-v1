@@ -97,7 +97,7 @@ class _GiftSheetState extends State<_GiftSheet> {
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 40, height: 4,
-          decoration: BoxDecoration(color: Colors.white24,
+          decoration: BoxDecoration(color: AppColors.textFaint,
               borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 24),
         ShaderMask(
@@ -106,12 +106,12 @@ class _GiftSheetState extends State<_GiftSheet> {
           child: SvgPicture.asset('assets/icons/gift.svg',
               width: 64, height: 64,
               colorFilter:
-                  const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+                  ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
         ),
         const SizedBox(height: 18),
-        const Text('Муаллифони дӯстдоштаро дастгирӣ кунед',
+        Text('Муаллифони дӯстдоштаро дастгирӣ кунед',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white,
+            style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 20, fontWeight: FontWeight.w800, height: 1.2)),
         const SizedBox(height: 20),
         _bullet(Icons.favorite_border_rounded, 'Бештар аз «Лайк»',
@@ -130,7 +130,7 @@ class _GiftSheetState extends State<_GiftSheet> {
         const SizedBox(height: 10),
         Text('Танҳо @${widget.authorName} тӯҳфаи шуморо мебинад.',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white38, fontSize: 12)),
+            style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
       ]),
     );
   }
@@ -138,16 +138,16 @@ class _GiftSheetState extends State<_GiftSheet> {
   Widget _bullet(IconData icon, String title, String sub) => Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: Colors.white, size: 24),
+          Icon(icon, color: AppColors.textPrimary, size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: Colors.white,
+                Text(title, style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(sub, style: const TextStyle(
-                    color: Colors.white54, fontSize: 13, height: 1.3)),
+                Text(sub, style: TextStyle(
+                    color: AppColors.textTertiary, fontSize: 13, height: 1.3)),
               ],
             ),
           ),
@@ -160,11 +160,11 @@ class _GiftSheetState extends State<_GiftSheet> {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 40, height: 4,
-          decoration: BoxDecoration(color: Colors.white24,
+          decoration: BoxDecoration(color: AppColors.textFaint,
               borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 16),
         Text('Тӯҳфа ба @${widget.authorName}',
-            style: const TextStyle(color: Colors.white,
+            style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
         const SizedBox(height: 16),
         GridView.count(
@@ -183,17 +183,17 @@ class _GiftSheetState extends State<_GiftSheet> {
                   color: const Color(0xFF242424),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                      color: sel ? AppColors.storyEnd : Colors.white10,
+                      color: sel ? AppColors.storyEnd : AppColors.dividerFaint,
                       width: sel ? 2 : 1),
                 ),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text('⭐', style: TextStyle(fontSize: s >= 50 ? 30 : 24)),
                     const SizedBox(height: 6),
-                    Text('$s', style: const TextStyle(color: Colors.white,
+                    Text('$s', style: TextStyle(color: AppColors.textPrimary,
                         fontSize: 16, fontWeight: FontWeight.w700)),
-                    Text('ситора', style: const TextStyle(
-                        color: Colors.white38, fontSize: 11)),
+                    Text('ситора', style: TextStyle(
+                        color: AppColors.textFaint, fontSize: 11)),
                   ],
                 ),
               ),
@@ -232,14 +232,14 @@ class _GradientBtn extends StatelessWidget {
           height: 50,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: AppColors.storyGradient),
+            gradient: LinearGradient(colors: AppColors.storyGradient),
             borderRadius: BorderRadius.circular(12),
           ),
           child: loading
-              ? const SizedBox(width: 20, height: 20,
+              ? SizedBox(width: 20, height: 20,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white))
-              : Text(label, style: const TextStyle(color: Colors.white,
+                      strokeWidth: 2, color: AppColors.textPrimary))
+              : Text(label, style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 15.5, fontWeight: FontWeight.w700)),
         ),
       ),

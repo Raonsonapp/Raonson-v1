@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
 import '../widgets/avatar.dart';
+import '../app/app_theme.dart';
 
 class NotificationItem extends StatelessWidget {
   final NotificationModel notification;
@@ -23,7 +24,7 @@ class NotificationItem extends StatelessWidget {
       case 'follow_request': return const Color(0xFF00D084);
       case 'story_view':
       case 'story_reply': return const Color(0xFFFF8C00);
-      default: return Colors.white54;
+      default: return AppColors.textTertiary;
     }
   }
 
@@ -51,7 +52,7 @@ class NotificationItem extends StatelessWidget {
       child: Container(
         color: notification.isRead
             ? Colors.transparent
-            : Colors.white.withOpacity(0.04),
+            : AppColors.textPrimary.withOpacity(0.04),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(children: [
           // Avatar with type icon badge
@@ -64,9 +65,9 @@ class NotificationItem extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: _typeColor,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black, width: 1.5),
+                  border: Border.all(color: AppColors.bg, width: 1.5),
                 ),
-                child: Icon(_typeIcon, size: 11, color: Colors.white),
+                child: Icon(_typeIcon, size: 11, color: AppColors.textPrimary),
               ),
             ),
           ]),
@@ -75,7 +76,7 @@ class NotificationItem extends StatelessWidget {
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 14, color: Colors.white, height: 1.4),
+                style: TextStyle(fontSize: 14, color: AppColors.textPrimary, height: 1.4),
                 children: [
                   if (u != null)
                     TextSpan(
@@ -84,12 +85,12 @@ class NotificationItem extends StatelessWidget {
                     ),
                   TextSpan(
                     text: ' ${notification.message}',
-                    style: const TextStyle(color: Colors.white70),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                   TextSpan(
                     text: '  ${notification.timeAgo}',
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12),
+                    style: TextStyle(
+                        color: AppColors.textFaint, fontSize: 12),
                   ),
                 ],
               ),

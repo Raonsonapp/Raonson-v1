@@ -185,13 +185,13 @@ class _BubbleBody extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: AppColors.dividerFaint),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: const [
-          Icon(Icons.do_not_disturb_alt_rounded, color: Colors.white30, size: 14),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.do_not_disturb_alt_rounded, color: AppColors.textFaint, size: 14),
           SizedBox(width: 6),
           Text('Паём нест карда шуд',
-              style: TextStyle(color: Colors.white30, fontSize: 13, fontStyle: FontStyle.italic)),
+              style: TextStyle(color: AppColors.textFaint, fontSize: 13, fontStyle: FontStyle.italic)),
         ]),
       );
     }
@@ -221,7 +221,7 @@ class _BubbleBody extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.72),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isMine ? AppColors.neonBlue : const Color(0xFF1C1C1E),
+        color: isMine ? AppColors.neonBlue : Color(0xFF1C1C1E),
         borderRadius: BorderRadius.only(
           topLeft:     const Radius.circular(18),
           topRight:    const Radius.circular(18),
@@ -236,7 +236,7 @@ class _BubbleBody extends StatelessWidget {
       ),
       child: Text(
         m.text,
-        style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.35),
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 15, height: 1.35),
       ),
     );
   }
@@ -278,8 +278,8 @@ class _ImageBubble extends StatelessWidget {
         errorWidget: (_, __, ___) => Container(
           width: 220, height: 260,
           color: const Color(0xFF1C1C1E),
-          child: const Icon(Icons.broken_image_rounded,
-              color: Colors.white30, size: 40),
+          child: Icon(Icons.broken_image_rounded,
+              color: AppColors.textFaint, size: 40),
         ),
       ),
     ));
@@ -292,20 +292,20 @@ class _ChatImageScreen extends StatelessWidget {
   const _ChatImageScreen({required this.url});
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.black,
+    backgroundColor: AppColors.bg,
     appBar: AppBar(
-      backgroundColor: Colors.black,
-      iconTheme: const IconThemeData(color: Colors.white),
+      backgroundColor: AppColors.bg,
+      iconTheme: IconThemeData(color: AppColors.textPrimary),
     ),
     body: Center(
       child: InteractiveViewer(
         minScale: 1, maxScale: 4,
         child: CachedNetworkImage(
           imageUrl: url, fit: BoxFit.contain,
-          placeholder: (_, __) => const CircularProgressIndicator(
-              color: Colors.white30, strokeWidth: 2),
-          errorWidget: (_, __, ___) => const Icon(
-              Icons.broken_image_rounded, color: Colors.white38, size: 64),
+          placeholder: (_, __) => CircularProgressIndicator(
+              color: AppColors.textFaint, strokeWidth: 2),
+          errorWidget: (_, __, ___) => Icon(
+              Icons.broken_image_rounded, color: AppColors.textFaint, size: 64),
         ),
       ),
     ),
@@ -392,12 +392,12 @@ class _AudioBubbleState extends State<_AudioBubble> {
   Widget build(BuildContext context) {
     final total = _dur.inMilliseconds == 0 ? 1.0 : _dur.inMilliseconds.toDouble();
     final progress = (_pos.inMilliseconds / total).clamp(0.0, 1.0);
-    final accent = widget.isMine ? Colors.white : AppColors.neonBlue;
+    final accent = widget.isMine ? AppColors.textPrimary : AppColors.neonBlue;
     return Container(
       width: 220,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: widget.isMine ? AppColors.neonBlue : const Color(0xFF1C1C1E),
+        color: widget.isMine ? AppColors.neonBlue : Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(children: [
@@ -405,7 +405,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
           onTap: _toggle,
           child: Icon(
             _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-            color: widget.isMine ? AppColors.neonBlue : Colors.white,
+            color: widget.isMine ? AppColors.neonBlue : AppColors.textPrimary,
             size: 26),
         ),
         const SizedBox(width: 4),
@@ -413,10 +413,10 @@ class _AudioBubbleState extends State<_AudioBubble> {
           width: 28, height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: widget.isMine ? Colors.white : AppColors.neonBlue,
+            color: widget.isMine ? AppColors.textPrimary : AppColors.neonBlue,
             shape: BoxShape.circle),
           child: Icon(Icons.mic_rounded,
-              color: widget.isMine ? AppColors.neonBlue : Colors.white,
+              color: widget.isMine ? AppColors.neonBlue : AppColors.textPrimary,
               size: 16),
         ),
         const SizedBox(width: 8),
@@ -438,7 +438,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
               Text(
                 _pos.inMilliseconds > 0 ? _fmt(_pos) : _fmt(_dur),
                 style: TextStyle(
-                    color: widget.isMine ? Colors.white70 : Colors.white54,
+                    color: widget.isMine ? AppColors.textSecondary : AppColors.textTertiary,
                     fontSize: 11),
               ),
             ],
@@ -466,12 +466,12 @@ class _VideoBubble extends StatelessWidget {
         child: Container(
           width: 220, height: 260,
           color: const Color(0xFF1C1C1E),
-          child: const Center(
+          child: Center(
             child: CircleAvatar(
               radius: 26,
               backgroundColor: Colors.black54,
               child: Icon(Icons.play_arrow_rounded,
-                  color: Colors.white, size: 34),
+                  color: AppColors.textPrimary, size: 34),
             ),
           ),
         ),
@@ -502,15 +502,15 @@ class _ChatVideoScreenState extends State<_ChatVideoScreen> {
   void dispose() { _c.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.black,
+    backgroundColor: AppColors.bg,
     appBar: AppBar(
-      backgroundColor: Colors.black,
-      iconTheme: const IconThemeData(color: Colors.white),
+      backgroundColor: AppColors.bg,
+      iconTheme: IconThemeData(color: AppColors.textPrimary),
     ),
     body: Center(
       child: _c.value.isInitialized
           ? AspectRatio(aspectRatio: _c.value.aspectRatio, child: VideoPlayer(_c))
-          : const CircularProgressIndicator(color: Colors.white),
+          : CircularProgressIndicator(color: AppColors.textPrimary),
     ),
   );
 }
@@ -528,7 +528,7 @@ class _ReplyQuote extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 4, left: 34, right: 0),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: AppColors.textPrimary.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: AppColors.neonBlue, width: 3)),
       ),
@@ -542,7 +542,7 @@ class _ReplyQuote extends StatelessWidget {
         Text(replyTo.lastMessage,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
       ]),
     );
   }
@@ -574,7 +574,7 @@ class _ReactionsRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1C1C1E),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white12),
+            border: Border.all(color: AppColors.dividerFaint),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -586,8 +586,8 @@ class _ReactionsRow extends StatelessWidget {
                   if (e.value > 1) ...[
                     const SizedBox(width: 2),
                     Text('${e.value}',
-                        style: const TextStyle(
-                            color: Colors.white60, fontSize: 10)),
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 10)),
                   ],
                 ]),
               );
@@ -621,7 +621,7 @@ class _StatusRow extends StatelessWidget {
         children: [
           Text(
             m.timeLabel,
-            style: const TextStyle(color: Colors.white30, fontSize: 10),
+            style: TextStyle(color: AppColors.textFaint, fontSize: 10),
           ),
           if (m.isMine) ...[
             const SizedBox(width: 4),
@@ -641,13 +641,13 @@ class _ReadTick extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = status == MessageStatus.read
         ? AppColors.neonBlue
-        : Colors.white38;
+        : AppColors.textFaint;
 
     if (status == MessageStatus.sending) {
-      return const SizedBox(
+      return SizedBox(
         width: 12, height: 12,
         child: CircularProgressIndicator(
-            color: Colors.white30, strokeWidth: 1.2),
+            color: AppColors.textFaint, strokeWidth: 1.2),
       );
     }
 
@@ -666,7 +666,7 @@ class _ReadTick extends StatelessWidget {
     }
 
     // single tick
-    return Icon(Icons.check_rounded, color: Colors.white38, size: 12);
+    return Icon(Icons.check_rounded, color: AppColors.textFaint, size: 12);
   }
 }
 
@@ -713,7 +713,7 @@ class _MessageContextMenu extends StatelessWidget {
                   child: Container(
                     width: 48, height: 48,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: AppColors.textPrimary.withOpacity(0.06),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -724,7 +724,7 @@ class _MessageContextMenu extends StatelessWidget {
             ),
           ),
 
-          const Divider(color: Colors.white10, height: 1),
+          Divider(color: AppColors.dividerFaint, height: 1),
 
           // Actions
           _MenuItem(
@@ -759,28 +759,31 @@ class _MenuItem extends StatelessWidget {
   final IconData  icon;
   final String    label;
   final VoidCallback onTap;
-  final Color     color;
-  const _MenuItem({
+  final Color?    color;
+  _MenuItem({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = Colors.white,
+    this.color,
   });
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) {
+    final c = color ?? AppColors.textPrimary;
+    return InkWell(
     onTap: onTap,
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(children: [
-        Icon(icon, color: color, size: 20),
+        Icon(icon, color: c, size: 20),
         const SizedBox(width: 14),
         Text(label,
-            style: TextStyle(color: color, fontSize: 15,
+            style: TextStyle(color: c, fontSize: 15,
                 fontWeight: FontWeight.w500)),
       ]),
     ),
   );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -805,16 +808,16 @@ class DateSeparator extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(children: [
-        Expanded(child: Container(height: 0.5, color: Colors.white12)),
+        Expanded(child: Container(height: 0.5, color: AppColors.dividerFaint)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             _label(),
-            style: const TextStyle(color: Colors.white30, fontSize: 11,
+            style: TextStyle(color: AppColors.textFaint, fontSize: 11,
                 fontWeight: FontWeight.w500),
           ),
         ),
-        Expanded(child: Container(height: 0.5, color: Colors.white12)),
+        Expanded(child: Container(height: 0.5, color: AppColors.dividerFaint)),
       ]),
     );
   }

@@ -290,7 +290,7 @@ class LanguageScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                           color: selected
-                              ? AppColors.neonBlue : Colors.white12,
+                              ? AppColors.neonBlue : AppColors.dividerFaint,
                           width: selected ? 1.5 : 1.0),
                     ),
                     child: Row(children: [
@@ -300,7 +300,7 @@ class LanguageScreen extends StatelessWidget {
                       Expanded(child: Text(l.$2,
                           style: TextStyle(
                             color: selected
-                                ? Colors.white : Colors.white70,
+                                ? AppColors.textPrimary : AppColors.textSecondary,
                             fontSize: 15,
                             fontWeight: selected
                                 ? FontWeight.w600 : FontWeight.normal,
@@ -518,7 +518,7 @@ class _NotifState extends State<NotificationsScreen> {
               _SwTile(icon: Icons.slow_motion_video_rounded,
                   title: 'Рилҳо', value: _reels,
                   onChanged: (v) { setState(() => _reels = v); _save(); }),
-              const Divider(color: Colors.white12, height: 28, indent: 16, endIndent: 16),
+              Divider(color: AppColors.dividerFaint, height: 28, indent: 16, endIndent: 16),
               _SwTile(icon: Icons.notifications_rounded,
                   title: 'Push-огоҳиҳо', sub: 'Огоҳиҳои телефонӣ',
                   value: _push,
@@ -640,28 +640,28 @@ class _CPState extends State<ChangePasswordScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 20),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
-        title: const Text('Иваз кардани рамз',
-            style: TextStyle(color: Colors.white,
+        title: Text('Иваз кардани рамз',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           if (_saving)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(14),
               child: SizedBox(
                 width: 20, height: 20,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white)),
+                    strokeWidth: 2, color: AppColors.textPrimary)),
             )
           else
             TextButton(
               onPressed: _submit,
-              child: const Text('Сабт',
+              child: Text('Сабт',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 15)),
             ),
@@ -774,7 +774,7 @@ class TwoFAState extends State<TwoFactorScreen> {
                   'Вақте ки 2FA фаъол аст, ҳар бор ки ворид мешавед, '
                   'рамзи иловагӣ талаб карда мешавад.',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
+                      color: AppColors.textPrimary.withOpacity(0.4),
                       fontSize: 13, height: 1.5),
                 ),
               ),
@@ -834,11 +834,11 @@ class _SessState extends State<SessionsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg, elevation: 0,
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 20),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
-        title: const Text('Сессияҳои фаъол',
-            style: TextStyle(color: Colors.white,
+        title: Text('Сессияҳои фаъол',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
@@ -870,10 +870,10 @@ class _SessState extends State<SessionsScreen> {
                               ? Icons.phone_iphone_rounded
                               : Icons.computer_rounded,
                           color: current
-                              ? AppColors.neonBlue : Colors.white54),
+                              ? AppColors.neonBlue : AppColors.textTertiary),
                       title: Row(children: [
                         Flexible(child: Text(device,
-                            style: const TextStyle(color: Colors.white))),
+                            style: TextStyle(color: AppColors.textPrimary))),
                         if (current) ...[
                           const SizedBox(width: 8),
                           Container(
@@ -890,8 +890,8 @@ class _SessState extends State<SessionsScreen> {
                       ]),
                       subtitle: ip.isNotEmpty
                           ? Text(ip,
-                              style: const TextStyle(
-                                  color: Colors.white38,
+                              style: TextStyle(
+                                  color: AppColors.textFaint,
                                   fontSize: 12))
                           : null,
                     );
@@ -967,10 +967,10 @@ class _BUSState extends State<BlockedUsersScreen> {
                         backgroundImage: avatar.isNotEmpty
                             ? NetworkImage(avatar) : null,
                         child: avatar.isEmpty
-                            ? const Icon(Icons.person,
-                                color: Colors.white38) : null),
+                            ? Icon(Icons.person,
+                                color: AppColors.textFaint) : null),
                       title: Text(username,
-                          style: const TextStyle(color: Colors.white)),
+                          style: TextStyle(color: AppColors.textPrimary)),
                       trailing: TextButton(
                           onPressed: () => _unblock(uid),
                           child: const Text('Бардор',
@@ -1016,22 +1016,22 @@ class AboutScreen extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Image.asset('assets/icon.png', height: 60,
-                  errorBuilder: (_, __, ___) => const Icon(
-                      Icons.bolt_rounded, color: Colors.white, size: 48)),
+                  errorBuilder: (_, __, ___) => Icon(
+                      Icons.bolt_rounded, color: AppColors.textPrimary, size: 48)),
             ),
           ),
           const SizedBox(height: 16),
-          const Center(
+          Center(
             child: Text('Raonson',
                 style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 26,
                     fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 4),
           Center(
             child: Text('Версия $_version',
-                style: const TextStyle(color: Colors.white38, fontSize: 13)),
+                style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           ),
           const SizedBox(height: 28),
 
@@ -1053,19 +1053,19 @@ class AboutScreen extends StatelessWidget {
               value: 'Flutter • Go • PostgreSQL'),
 
           const SizedBox(height: 24),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               'Raonson — шабакаи иҷтимоии тоҷикӣ барои мубодилаи аксҳо, '
               'видеоҳо, стори ва паёмҳо. Бо муҳаббат дар Тоҷикистон сохта шудааст.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 13, height: 1.5),
             ),
           ),
           const SizedBox(height: 28),
           Center(
             child: Text('© $_year Raonson. Ҳамаи ҳуқуқҳо ҳифз шудаанд.',
-                style: const TextStyle(color: Colors.white24, fontSize: 11)),
+                style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
           ),
         ],
       ),
@@ -1084,14 +1084,14 @@ class _AboutRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(children: [
-        Icon(icon, color: Colors.white54, size: 20),
+        Icon(icon, color: AppColors.textTertiary, size: 20),
         const SizedBox(width: 16),
         Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 14)),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
         const Spacer(),
         Text(value,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+            style: TextStyle(
+                color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
       ]),
     );
   }
@@ -1110,11 +1110,11 @@ class _SimpleScreen extends StatelessWidget {
       appBar: _appBar(context, title),
       body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.construction_rounded,
-            size: 52, color: Colors.white.withOpacity(0.1)),
+            size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
         const SizedBox(height: 12),
         Text('Дар таҳия аст',
             style: TextStyle(
-                color: Colors.white.withOpacity(0.35), fontSize: 14)),
+                color: AppColors.textPrimary.withOpacity(0.35), fontSize: 14)),
       ])),
     );
   }
@@ -1131,12 +1131,12 @@ AppBar _appBar(BuildContext ctx, String title, {bool showBack = true}) {
     automaticallyImplyLeading: showBack,
     leading: showBack
         ? IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 20),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(ctx))
         : null,
-    title: Text(title, style: const TextStyle(
-        color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+    title: Text(title, style: TextStyle(
+        color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
     centerTitle: true);
 }
 
@@ -1150,7 +1150,7 @@ class _Hdr extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 6),
       child: Text(text, style: TextStyle(
-          color: Colors.white.withOpacity(0.4), fontSize: 12,
+          color: AppColors.textPrimary.withOpacity(0.4), fontSize: 12,
           fontWeight: FontWeight.w700, letterSpacing: 0.9)));
   }
 }
@@ -1166,14 +1166,14 @@ class _NavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white70, size: 22),
+      leading: Icon(icon, color: AppColors.textSecondary, size: 22),
       title:   Text(title,
-          style: const TextStyle(color: Colors.white, fontSize: 15)),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
       subtitle: sub != null
-          ? Text(sub!, style: const TextStyle(
-              color: Colors.white38, fontSize: 12)) : null,
-      trailing: const Icon(Icons.chevron_right_rounded,
-          color: Colors.white24, size: 20),
+          ? Text(sub!, style: TextStyle(
+              color: AppColors.textFaint, fontSize: 12)) : null,
+      trailing: Icon(Icons.chevron_right_rounded,
+          color: AppColors.textFaint, size: 20),
       onTap: onTap);
   }
 }
@@ -1190,12 +1190,12 @@ class _SwTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SwitchListTile(
-      secondary: Icon(icon, color: Colors.white70, size: 22),
+      secondary: Icon(icon, color: AppColors.textSecondary, size: 22),
       title:     Text(title,
-          style: const TextStyle(color: Colors.white, fontSize: 15)),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
       subtitle:  sub != null
-          ? Text(sub!, style: const TextStyle(
-              color: Colors.white38, fontSize: 12)) : null,
+          ? Text(sub!, style: TextStyle(
+              color: AppColors.textFaint, fontSize: 12)) : null,
       value:     value,
       onChanged: onChanged,
       activeColor: AppColors.neonBlue);
@@ -1239,15 +1239,15 @@ class _ChoiceCard extends StatelessWidget {
               ? AppColors.neonBlue.withOpacity(0.12) : AppColors.card,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: selected ? AppColors.neonBlue : Colors.white12,
+              color: selected ? AppColors.neonBlue : AppColors.dividerFaint,
               width: selected ? 1.5 : 1.0)),
         child: Row(children: [
           Icon(icon,
-              color: selected ? AppColors.neonBlue : Colors.white54,
+              color: selected ? AppColors.neonBlue : AppColors.textTertiary,
               size: 22),
           const SizedBox(width: 14),
           Expanded(child: Text(label, style: TextStyle(
-              color: selected ? Colors.white : Colors.white70,
+              color: selected ? AppColors.textPrimary : AppColors.textSecondary,
               fontSize: 15,
               fontWeight: selected
                   ? FontWeight.w600 : FontWeight.normal))),
@@ -1274,21 +1274,21 @@ class _PwField extends StatelessWidget {
       decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white12)),
+          border: Border.all(color: AppColors.dividerFaint)),
       child: TextField(
         controller: ctrl,
         obscureText: !show,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText:  hint,
-          hintStyle: const TextStyle(color: Colors.white38),
-          prefixIcon: const Icon(Icons.lock_outline_rounded,
-              color: Colors.white38, size: 18),
+          hintStyle: TextStyle(color: AppColors.textFaint),
+          prefixIcon: Icon(Icons.lock_outline_rounded,
+              color: AppColors.textFaint, size: 18),
           suffixIcon: IconButton(
               icon: Icon(
                   show ? Icons.visibility_off_rounded
                       : Icons.visibility_rounded,
-                  color: Colors.white38, size: 18),
+                  color: AppColors.textFaint, size: 18),
               onPressed: onToggle),
           border: InputBorder.none,
           contentPadding:
@@ -1301,8 +1301,8 @@ class _ThinDiv extends StatelessWidget {
   const _ThinDiv();
   @override
   Widget build(BuildContext context) {
-    return const Divider(
-        color: Colors.white10, height: 0, indent: 56);
+    return Divider(
+        color: AppColors.dividerFaint, height: 0, indent: 56);
   }
 }
 
@@ -1324,7 +1324,7 @@ class _EmptyHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(child: Text(text,
-        style: const TextStyle(color: Colors.white38, fontSize: 14)));
+        style: TextStyle(color: AppColors.textFaint, fontSize: 14)));
   }
 }
 
@@ -1341,15 +1341,15 @@ class _Dialog extends StatelessWidget {
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16)),
       title: Text(title,
-          style: const TextStyle(color: Colors.white,
+          style: TextStyle(color: AppColors.textPrimary,
               fontWeight: FontWeight.bold)),
       content: Text(body,
-          style: const TextStyle(color: Colors.white70)),
+          style: TextStyle(color: AppColors.textSecondary)),
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(tr('common.cancel'),
-                style: const TextStyle(color: Colors.white54))),
+                style: TextStyle(color: AppColors.textTertiary))),
         TextButton(
             onPressed: onAction,
             child: Text(actionLabel,

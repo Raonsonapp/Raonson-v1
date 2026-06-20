@@ -196,19 +196,19 @@ class _ProfileScreenState extends State<ProfileScreen>
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        title: const Text('Актуальни нав',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('Актуальни нав',
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           maxLength: 20,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
             hintText: 'Ном...',
-            hintStyle: TextStyle(color: Colors.white38),
-            counterStyle: TextStyle(color: Colors.white24),
+            hintStyle: TextStyle(color: AppColors.textFaint),
+            counterStyle: TextStyle(color: AppColors.textFaint),
             enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
+                borderSide: BorderSide(color: AppColors.textFaint)),
             focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: AppColors.neonBlue)),
           ),
@@ -216,8 +216,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор',
-                  style: TextStyle(color: Colors.white54))),
+              child: Text('Бекор',
+                  style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(context, ctrl.text),
               child: const Text('Эҷод',
@@ -266,14 +266,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: const Color(0xFF1C1C1E),
       title: Text(cur ? 'Блокро бардор?' : '${u.username}-ро блок кун?',
-          style: const TextStyle(color: Colors.white)),
+          style: TextStyle(color: AppColors.textPrimary)),
       content: Text(cur
           ? '${u.username} барнома-и шуморо дида метавонад.'
           : '${u.username} шуморо дида наметавонад.',
-          style: const TextStyle(color: Colors.white70)),
+          style: TextStyle(color: AppColors.textSecondary)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
         TextButton(onPressed: () { Navigator.pop(context); _ctrl.toggleBlock(); },
             child: Text(cur ? 'Бардор' : 'Блок кун',
                 style: const TextStyle(color: Colors.redAccent,
@@ -295,13 +295,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _confirmDelete(PostModel p) {
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: const Color(0xFF1C1C1E),
-      title: const Text('Нест кардан?',
-          style: TextStyle(color: Colors.white)),
-      content: const Text('Ин пост тамоман нест мешавад.',
-          style: TextStyle(color: Colors.white70)),
+      title: Text('Нест кардан?',
+          style: TextStyle(color: AppColors.textPrimary)),
+      content: Text('Ин пост тамоман нест мешавад.',
+          style: TextStyle(color: AppColors.textSecondary)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
         TextButton(onPressed: () { Navigator.pop(context); _ctrl.deletePost(p); },
             child: const Text('Нест кун',
                 style: TextStyle(color: Colors.redAccent,
@@ -347,14 +347,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     final user = _ctrl.profile;
     if (user == null) {
       return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(backgroundColor: Colors.black, elevation: 0,
-            leading: const BackButton(color: Colors.white)),
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(backgroundColor: AppColors.bg, elevation: 0,
+            leading: BackButton(color: AppColors.textPrimary)),
         body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.person_off_rounded, size: 56, color: Colors.white24),
+          Icon(Icons.person_off_rounded, size: 56, color: AppColors.textFaint),
           const SizedBox(height: 12),
-          const Text('Корбар ёфт нашуд',
-              style: TextStyle(color: Colors.white54, fontSize: 15)),
+          Text('Корбар ёфт нашуд',
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
           if (_ctrl.error != null)
             Padding(padding: const EdgeInsets.all(12),
                 child: Text(_ctrl.error!,
@@ -369,7 +369,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         ? user.avatar : (_isMe ? (UserSession.avatar ?? '') : '');
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: RefreshIndicator(
         color: AppColors.neonBlue,
         backgroundColor: AppColors.card,
@@ -390,8 +390,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Row(children: [
                   if (Navigator.canPop(context))
                     IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white, size: 20),
+                      icon: Icon(Icons.arrow_back_ios_new_rounded,
+                          color: AppColors.textPrimary, size: 20),
                       onPressed: () => Navigator.maybePop(context))
                   else
                     const SizedBox(width: 8),
@@ -400,7 +400,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     behavior: HitTestBehavior.opaque,
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Flexible(child: Text(user.username,
-                        style: const TextStyle(color: Colors.white,
+                        style: TextStyle(color: AppColors.textPrimary,
                             fontSize: 18, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis)),
                     if (user.isVerified) ...[
@@ -410,23 +410,23 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                     if (_isMe) ...[
                       const SizedBox(width: 4),
-                      const Icon(Icons.keyboard_arrow_down_rounded,
-                          color: Colors.white, size: 22),
+                      Icon(Icons.keyboard_arrow_down_rounded,
+                          color: AppColors.textPrimary, size: 22),
                     ],
                   ]))),
-                  IconButton(icon: const Icon(Icons.share_outlined,
-                      color: Colors.white, size: 20),
+                  IconButton(icon: Icon(Icons.share_outlined,
+                      color: AppColors.textPrimary, size: 20),
                       onPressed: _shareProfile),
                   _isMe
                       ? IconButton(
-                          icon: const Icon(Icons.more_horiz_rounded,
-                              color: Colors.white, size: 22),
+                          icon: Icon(Icons.more_horiz_rounded,
+                              color: AppColors.textPrimary, size: 22),
                           onPressed: () => Navigator.push(context,
                               MaterialPageRoute(
                                   builder: (_) => const SettingsScreen())))
                       : IconButton(
-                          icon: const Icon(Icons.more_vert_rounded,
-                              color: Colors.white, size: 22),
+                          icon: Icon(Icons.more_vert_rounded,
+                              color: AppColors.textPrimary, size: 22),
                           onPressed: _otherMenu),
                 ]),
               )),
@@ -453,8 +453,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               // ── FULL NAME ───────────────────────────────────────────
               if ((user.fullName ?? '').isNotEmpty)
                 Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Text(user.fullName!, style: const TextStyle(
-                      color: Colors.white, fontSize: 14,
+                  child: Text(user.fullName!, style: TextStyle(
+                      color: AppColors.textPrimary, fontSize: 14,
                       fontWeight: FontWeight.bold))),
 
               // ── BIO ─────────────────────────────────────────────────
@@ -462,8 +462,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 Padding(
                   padding: EdgeInsets.fromLTRB(16,
                       (user.fullName ?? '').isNotEmpty ? 4 : 12, 16, 0),
-                  child: Text(user.bio!, style: const TextStyle(
-                      color: Colors.white, fontSize: 13.5, height: 1.45))),
+                  child: Text(user.bio!, style: TextStyle(
+                      color: AppColors.textPrimary, fontSize: 13.5, height: 1.45))),
 
               // ── WEBSITE ─────────────────────────────────────────────
               if ((user.website ?? '').isNotEmpty)
@@ -517,12 +517,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               if (!_isMe && _mutualTxt(user).isNotEmpty)
                 Padding(padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                   child: Row(children: [
-                    const Icon(Icons.people_outline_rounded,
-                        color: Colors.white38, size: 14),
+                    Icon(Icons.people_outline_rounded,
+                        color: AppColors.textFaint, size: 14),
                     const SizedBox(width: 6),
                     Flexible(child: Text(_mutualTxt(user),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12.5),
+                        style: TextStyle(
+                            color: AppColors.textTertiary, fontSize: 12.5),
                         maxLines: 2)),
                   ])),
 
@@ -538,19 +538,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                         'assets/icons/nav_reels.svg',
                         width: 22, height: 22,
                         colorFilter: ColorFilter.mode(
-                            _tab.index == 1 ? Colors.white : Colors.white24,
+                            _tab.index == 1 ? AppColors.textPrimary : AppColors.textFaint,
                             BlendMode.srcIn)),
                   )),
                   const Tab(icon: Icon(Icons.person_pin_outlined)),
                   if (_isMe)
                     const Tab(icon: Icon(Icons.bookmark_border_rounded)),
                 ],
-                indicatorColor:       Colors.white,
+                indicatorColor:       AppColors.textPrimary,
                 indicatorWeight:      2,
                 indicatorSize:        TabBarIndicatorSize.tab,
-                labelColor:           Colors.white,
-                unselectedLabelColor: Colors.white24,
-                dividerColor:         Colors.white10,
+                labelColor:           AppColors.textPrimary,
+                unselectedLabelColor: AppColors.textFaint,
+                dividerColor:         AppColors.dividerFaint,
               ),
             ]))],
         body: TabBarView(controller: _tab, children: [
@@ -590,15 +590,15 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _bar() => Center(child: Container(width: 36, height: 4,
     margin: const EdgeInsets.symmetric(vertical: 10),
-    decoration: BoxDecoration(color: Colors.white24,
+    decoration: BoxDecoration(color: AppColors.textFaint,
         borderRadius: BorderRadius.circular(2))));
 
   Widget _tile(IconData icon, String label, VoidCallback onTap,
       {bool red = false}) =>
       ListTile(
-        leading: Icon(icon, color: red ? Colors.redAccent : Colors.white),
+        leading: Icon(icon, color: red ? Colors.redAccent : AppColors.textPrimary),
         title: Text(label, style: TextStyle(
-            color: red ? Colors.redAccent : Colors.white, fontSize: 16)),
+            color: red ? Colors.redAccent : AppColors.textPrimary, fontSize: 16)),
         onTap: onTap);
 }
 
@@ -610,7 +610,7 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: size, height: size,
     decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.card,
-        border: Border.all(color: Colors.white12, width: 1.5)),
+        border: Border.all(color: AppColors.dividerFaint, width: 1.5)),
     child: ClipOval(child: url.isNotEmpty
         ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
             width: size, height: size,
@@ -618,7 +618,7 @@ class _Avatar extends StatelessWidget {
             errorWidget: (_, __, ___) => _icon(size))
         : _icon(size)));
   Widget _icon(double s) => Container(color: AppColors.card,
-      child: Icon(Icons.person_rounded, color: Colors.white38, size: s*.5));
+      child: Icon(Icons.person_rounded, color: AppColors.textFaint, size: s*.5));
 }
 
 // ─── Stat ──────────────────────────────────────────────────────────────
@@ -633,10 +633,10 @@ class _Stat extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(onTap: onTap,
     child: Column(children: [
-      Text(_f(n), style: const TextStyle(color: Colors.white,
+      Text(_f(n), style: TextStyle(color: AppColors.textPrimary,
           fontSize: 17, fontWeight: FontWeight.bold)),
       const SizedBox(height: 2),
-      Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11.5)),
+      Text(label, style: TextStyle(color: AppColors.textTertiary, fontSize: 11.5)),
     ]));
 }
 
@@ -690,11 +690,11 @@ class _OtherBtns extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           height: 34,
           decoration: BoxDecoration(
-            color: muted ? AppColors.surface : Colors.white,
+            color: muted ? AppColors.surface : AppColors.textPrimary,
             borderRadius: BorderRadius.circular(10),
-            border: muted ? Border.all(color: Colors.white12) : null),
+            border: muted ? Border.all(color: AppColors.dividerFaint) : null),
           child: Center(child: Text(_label, style: TextStyle(
-            color: muted ? Colors.white : Colors.black,
+            color: muted ? AppColors.textPrimary : AppColors.bg,
             fontWeight: FontWeight.bold, fontSize: 13.5)))))),
       const SizedBox(width: 8),
       // ── Паём (баробар бо тугмаи боло, бе icon) ──
@@ -702,9 +702,9 @@ class _OtherBtns extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: Container(height: 34,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
-            color: AppColors.surface, border: Border.all(color: Colors.white12)),
-          child: const Center(child: Text('Паём', style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold,
+            color: AppColors.surface, border: Border.all(color: AppColors.dividerFaint)),
+          child: Center(child: Text('Паём', style: TextStyle(
+              color: AppColors.textPrimary, fontWeight: FontWeight.bold,
               fontSize: 13.5)))))),
     ]);
   }
@@ -717,11 +717,11 @@ class _Btn extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(onTap: onTap,
     child: Container(height: 36,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
-        color: AppColors.surface, border: Border.all(color: Colors.white12)),
+        color: AppColors.surface, border: Border.all(color: AppColors.dividerFaint)),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(icon, color: Colors.white, size: 14),
+        Icon(icon, color: AppColors.textPrimary, size: 14),
         const SizedBox(width: 6),
-        Flexible(child: Text(label, style: const TextStyle(color: Colors.white,
+        Flexible(child: Text(label, style: TextStyle(color: AppColors.textPrimary,
             fontWeight: FontWeight.bold, fontSize: 12),
             overflow: TextOverflow.ellipsis)),
       ])));
@@ -768,26 +768,26 @@ class _PostGrid extends StatelessWidget {
                     placeholder: (_, __) => Container(color: AppColors.card),
                     errorWidget: (_, __, ___) => Container(color: AppColors.card))
                 : Container(color: AppColors.card,
-                    child: const Icon(Icons.image_outlined,
-                        color: Colors.white24, size: 28)),
+                    child: Icon(Icons.image_outlined,
+                        color: AppColors.textFaint, size: 28)),
             if (p.media.length > 1)
-              const Positioned(top: 6, right: 6, child: Icon(
-                  Icons.collections_rounded, color: Colors.white, size: 16,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
+              Positioned(top: 6, right: 6, child: Icon(
+                  Icons.collections_rounded, color: AppColors.textPrimary, size: 16,
+                  shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
             if (p.isPinned)
-              const Positioned(top: 6, left: 6, child: Icon(
-                  Icons.push_pin_rounded, color: Colors.white, size: 15,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
+              Positioned(top: 6, left: 6, child: Icon(
+                  Icons.push_pin_rounded, color: AppColors.textPrimary, size: 15,
+                  shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
             Positioned(bottom: 5, left: 5,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.remove_red_eye_rounded,
-                    color: Colors.white, size: 11,
-                    shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+                Icon(Icons.remove_red_eye_rounded,
+                    color: AppColors.textPrimary, size: 11,
+                    shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
                 const SizedBox(width: 2),
-                Text(_f(p.likesCount), style: const TextStyle(
-                    color: Colors.white, fontSize: 10,
+                Text(_f(p.likesCount), style: TextStyle(
+                    color: AppColors.textPrimary, fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
+                    shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
               ])),
           ]));
       });
@@ -811,8 +811,8 @@ class _ReelGrid extends StatelessWidget {
         child: Center(
           child: SvgPicture.asset('assets/icons/nav_reels.svg',
               width: 30, height: 30,
-              colorFilter: const ColorFilter.mode(
-                  Colors.white38, BlendMode.srcIn)),
+              colorFilter: ColorFilter.mode(
+                  AppColors.textFaint, BlendMode.srcIn)),
         ),
       );
   @override
@@ -848,15 +848,15 @@ class _ReelGrid extends StatelessWidget {
                 colors: [Colors.black.withOpacity(0.7), Colors.transparent])))),
           Positioned(top: 6, right: 6, child: SvgPicture.asset(
               'assets/icons/nav_reels.svg', width: 16, height: 16,
-              colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))),
+              colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn))),
           Positioned(bottom: 5, left: 5,
             child: Row(children: [
-              const Icon(Icons.remove_red_eye_rounded, color: Colors.white,
-                  size: 11, shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+              Icon(Icons.remove_red_eye_rounded, color: AppColors.textPrimary,
+                  size: 11, shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
               const SizedBox(width: 3),
-              Text(_f(r.viewsCount), style: const TextStyle(
-                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black)])),
+              Text(_f(r.viewsCount), style: TextStyle(
+                  color: AppColors.textPrimary, fontSize: 11, fontWeight: FontWeight.bold,
+                  shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
             ])),
         ]));
       });
@@ -978,9 +978,9 @@ class _ULS extends State<_UserListSheet> {
       child: Column(children: [
         Center(child: Container(width: 36, height: 4,
           margin: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(color: Colors.white24,
+          decoration: BoxDecoration(color: AppColors.textFaint,
               borderRadius: BorderRadius.circular(2)))),
-        Text(widget.title, style: const TextStyle(color: Colors.white,
+        Text(widget.title, style: TextStyle(color: AppColors.textPrimary,
             fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         // Ҷустуҷӯ — мисли Instagram
@@ -992,11 +992,11 @@ class _ULS extends State<_UserListSheet> {
                 borderRadius: BorderRadius.circular(10)),
             child: TextField(
               controller: _searchCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: const InputDecoration(
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
                 hintText: 'Ҷустуҷӯ',
-                hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: Colors.white38, size: 19),
+                hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: AppColors.textFaint, size: 19),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 9),
               ),
@@ -1011,7 +1011,7 @@ class _ULS extends State<_UserListSheet> {
                 ? Center(child: Text(_query.isNotEmpty
                         ? 'Натиҷае нест'
                         : 'Ҳанӯз ${widget.title.toLowerCase()} нест',
-                    style: const TextStyle(color: Colors.white30, fontSize: 14)))
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 14)))
                 : ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
                     final u = list[i];
                     return ListTile(
@@ -1020,12 +1020,12 @@ class _ULS extends State<_UserListSheet> {
                         backgroundImage: u.avatar.isNotEmpty
                             ? NetworkImage(u.avatar) : null,
                         child: u.avatar.isEmpty
-                            ? const Icon(Icons.person, color: Colors.white38) : null),
+                            ? Icon(Icons.person, color: AppColors.textFaint) : null),
                       title: Row(children: [
                         Flexible(child: Text(u.username,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.w600))),
+                            style: TextStyle(
+                                color: AppColors.textPrimary, fontWeight: FontWeight.w600))),
                         if (u.isVerified) ...[
                           const SizedBox(width: 4),
                           const VerifiedBadge(size: 14),
@@ -1034,8 +1034,8 @@ class _ULS extends State<_UserListSheet> {
                       subtitle: (u.fullName ?? '').isNotEmpty
                           ? Text(u.fullName!, maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white38, fontSize: 12.5))
+                              style: TextStyle(
+                                  color: AppColors.textFaint, fontSize: 12.5))
                           : null,
                       trailing: _UserFollowBtn(user: u),
                       onTap: () {
@@ -1066,8 +1066,8 @@ class _UserFollowBtn extends StatelessWidget {
           height: 32, width: 104,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: following ? const Color(0xFF262626) : AppColors.neonBlue,
-              foregroundColor: Colors.white,
+              backgroundColor: following ? Color(0xFF262626) : AppColors.neonBlue,
+              foregroundColor: AppColors.textPrimary,
               elevation: 0,
               padding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1094,7 +1094,7 @@ class _VerifySheet extends StatelessWidget {
       children: [
         Center(child: Container(width: 36, height: 4,
           margin: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(color: Colors.white24,
+          decoration: BoxDecoration(color: AppColors.textFaint,
               borderRadius: BorderRadius.circular(2)))),
         const SizedBox(height: 12),
         Container(width: 72, height: 72,
@@ -1105,12 +1105,12 @@ class _VerifySheet extends StatelessWidget {
           child: const Icon(Icons.verified_rounded,
               color: Color(0xFF00C853), size: 36)),
         const SizedBox(height: 16),
-        const Text('Raonson Verified', style: TextStyle(color: Colors.white,
+        Text('Raonson Verified', style: TextStyle(color: AppColors.textPrimary,
             fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Text('Профили тасдиқшуда корбаронро нишон медиҳад, '
             'ки шумо аслӣ ҳастед.',
-            style: TextStyle(color: Colors.white.withOpacity(0.55),
+            style: TextStyle(color: AppColors.textPrimary.withOpacity(0.55),
                 fontSize: 13.5),
             textAlign: TextAlign.center),
         const SizedBox(height: 28),
@@ -1121,13 +1121,13 @@ class _VerifySheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14))),
-          child: const Text('Тасдиқ дархост кун',
-              style: TextStyle(color: Colors.white,
+          child: Text('Тасдиқ дархост кун',
+              style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold, fontSize: 15)))),
         const SizedBox(height: 10),
         TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор',
-                style: TextStyle(color: Colors.white38))),
+            child: Text('Бекор',
+                style: TextStyle(color: AppColors.textFaint))),
       ])));
 }
 
@@ -1152,9 +1152,9 @@ class _ES extends State<_Empty> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) => Center(child: Column(
     mainAxisSize: MainAxisSize.min, children: [
     ScaleTransition(scale: _s,
-        child: Icon(widget.icon, size: 52, color: Colors.white12)),
+        child: Icon(widget.icon, size: 52, color: AppColors.dividerFaint)),
     const SizedBox(height: 10),
     Text(widget.label,
-        style: const TextStyle(color: Colors.white30, fontSize: 14)),
+        style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
   ]));
 }

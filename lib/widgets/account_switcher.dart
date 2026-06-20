@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/services/account_manager.dart';
 import '../core/services/user_session.dart';
 import 'avatar.dart';
+import '../app/app_theme.dart';
 
 void showAccountSwitcher(BuildContext context) {
   showModalBottomSheet(
@@ -21,14 +22,14 @@ void showAccountSwitcher(BuildContext context) {
               width: 40, height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2)),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 6),
               child: Text('Аккаунтҳо',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600, fontSize: 16)),
             ),
             ...accounts.map((a) {
@@ -36,14 +37,14 @@ void showAccountSwitcher(BuildContext context) {
               return ListTile(
                 leading: Avatar(imageUrl: a.avatar, size: 42, name: a.username),
                 title: Text(a.username,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w500)),
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
                 trailing: active
                     ? const Icon(Icons.check_circle_rounded,
                         color: Color(0xFF00C853))
                     : IconButton(
-                        icon: const Icon(Icons.logout_rounded,
-                            color: Colors.white38, size: 20),
+                        icon: Icon(Icons.logout_rounded,
+                            color: AppColors.textFaint, size: 20),
                         onPressed: () => AccountManager.remove(a.userId),
                       ),
                 onTap: active
@@ -58,13 +59,13 @@ void showAccountSwitcher(BuildContext context) {
                       },
               );
             }),
-            const Divider(color: Colors.white12, height: 1),
+            Divider(color: AppColors.dividerFaint, height: 1),
             if (AccountManager.canAddMore)
               ListTile(
-                leading: const CircleAvatar(
+                leading: CircleAvatar(
                     radius: 21,
                     backgroundColor: Color(0xFF2A2A2C),
-                    child: Icon(Icons.add_rounded, color: Colors.white)),
+                    child: Icon(Icons.add_rounded, color: AppColors.textPrimary)),
                 title: const Text('Илова кардани аккаунт',
                     style: TextStyle(
                         color: Color(0xFF1D9BF0), fontWeight: FontWeight.w600)),
@@ -75,10 +76,10 @@ void showAccountSwitcher(BuildContext context) {
                 },
               )
             else
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(14),
                 child: Text('Ҳадди аксар 3 аккаунт',
-                    style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
               ),
             const SizedBox(height: 8),
           ]);

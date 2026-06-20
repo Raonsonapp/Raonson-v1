@@ -92,7 +92,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -113,9 +113,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: AppColors.textPrimary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white12),
+                    border: Border.all(color: AppColors.dividerFaint),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(
@@ -129,7 +129,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                       widget.callType == CallType.video
                           ? 'Занги видео'
                           : 'Занги овозӣ',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                     ),
                   ]),
                 ),
@@ -162,15 +162,15 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                 const SizedBox(height: 28),
 
                 Text(widget.caller.username,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
                         fontSize: 30,
                         fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 Text(
                   'занг мезанад...',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.45), fontSize: 16),
+                      color: AppColors.textPrimary.withOpacity(0.45), fontSize: 16),
                 ),
               ]),
 
@@ -231,11 +231,11 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   color: color.withOpacity(0.5),
                   blurRadius: 28, spreadRadius: 3)],
             ),
-            child: Icon(icon, color: Colors.white, size: 32),
+            child: Icon(icon, color: AppColors.textPrimary, size: 32),
           ),
           const SizedBox(height: 10),
           Text(label,
-              style: const TextStyle(color: Colors.white60, fontSize: 13)),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
         ]),
       );
 }

@@ -95,7 +95,7 @@ class _FeedShellState extends State<_FeedShell> {
             leading: IconButton(
               icon: SvgPicture.asset('assets/icons/upload.svg',
                 width: 26, height: 26,
-                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+                colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
               onPressed: () async {
                 final r = await Navigator.pushNamed(ctx, AppRoutes.create);
                 if (r == true && ctx.mounted) {
@@ -104,8 +104,8 @@ class _FeedShellState extends State<_FeedShell> {
                 }
               },
             ),
-            title: const Text('Raonson', style: TextStyle(
-              fontSize: 30, fontWeight: FontWeight.w400, color: Colors.white,
+            title: Text('Raonson', style: TextStyle(
+              fontSize: 30, fontWeight: FontWeight.w400, color: AppColors.textPrimary,
               fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1,
             )),
             centerTitle: true, // лого дар марказ — мисли скриншоти Instagram
@@ -113,7 +113,7 @@ class _FeedShellState extends State<_FeedShell> {
               IconButton(
                 icon: SvgPicture.asset('assets/icons/friends.svg',
                     width: 25, height: 25,
-                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+                    colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
                 onPressed: () => Navigator.pushNamed(ctx, '/friends'),
               ),
               Padding(
@@ -122,7 +122,7 @@ class _FeedShellState extends State<_FeedShell> {
                   child: IconButton(
                     icon: SvgPicture.asset('assets/icons/notifications.svg',
                         width: 25, height: 25,
-                        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
+                        colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
                     onPressed: () {
                       NotificationService.markRead();
                       Navigator.pushNamed(ctx, AppRoutes.notifications);
@@ -221,10 +221,10 @@ class _FeedBody extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             color: const Color(0xFF1A1A1A),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.wifi_off, color: Colors.white38, size: 14),
+              Icon(Icons.wifi_off, color: AppColors.textFaint, size: 14),
               const SizedBox(width: 6),
-              const Text('Оффлайн — кэш нишон дода мешавад',
-                style: TextStyle(color: Colors.white38, fontSize: 12)),
+              Text('Оффлайн — кэш нишон дода мешавад',
+                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
               const Spacer(),
               GestureDetector(
                 onTap: () => feedCtrl.refresh(),
@@ -248,11 +248,11 @@ class _FeedBody extends StatelessWidget {
             SliverFillRemaining(
               child: Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.photo_camera_outlined,
-                      size: 64, color: Colors.white12),
+                  Icon(Icons.photo_camera_outlined,
+                      size: 64, color: AppColors.dividerFaint),
                   const SizedBox(height: 16),
-                  const Text('Ҳоло постҳо нест',
-                      style: TextStyle(color: Colors.white38, fontSize: 16)),
+                  Text('Ҳоло постҳо нест',
+                      style: TextStyle(color: AppColors.textFaint, fontSize: 16)),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: () async {
@@ -265,7 +265,7 @@ class _FeedBody extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.neonBlue,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.textPrimary,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20)),
                       padding: const EdgeInsets.symmetric(
@@ -293,14 +293,14 @@ class _FeedBody extends StatelessWidget {
             SliverFillRemaining(
               child: Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.cloud_off_outlined,
-                      size: 64, color: Colors.white12),
+                  Icon(Icons.cloud_off_outlined,
+                      size: 64, color: AppColors.dividerFaint),
                   const SizedBox(height: 16),
-                  const Text('Пайвастшавӣ мумкин нест',
-                    style: TextStyle(color: Colors.white38, fontSize: 16)),
+                  Text('Пайвастшавӣ мумкин нест',
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 16)),
                   const SizedBox(height: 8),
-                  const Text('Интернетро санҷед ва такрор кӯшиш кунед',
-                    style: TextStyle(color: Colors.white24, fontSize: 13),
+                  Text('Интернетро санҷед ва такрор кӯшиш кунед',
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 13),
                     textAlign: TextAlign.center),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
@@ -309,7 +309,7 @@ class _FeedBody extends StatelessWidget {
                     label: const Text('Такрор кӯшиш'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.neonBlue,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.textPrimary,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20)),
                       padding: const EdgeInsets.symmetric(
@@ -392,10 +392,10 @@ class _NewPostsBanner extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 16),
+            Icon(Icons.arrow_upward_rounded, color: AppColors.textPrimary, size: 16),
             const SizedBox(width: 6),
             Text(count == 1 ? '1 пости нав' : '$count та пости нав',
-              style: const TextStyle(color: Colors.white,
+              style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
           ]),
       ),

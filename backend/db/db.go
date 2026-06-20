@@ -318,6 +318,9 @@ func migrate() {
 	-- ── Verification expiry (NULL = беохир) ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_until TIMESTAMPTZ;
 
+	-- ── VIP (720p/1080p-и аниме) — admin медиҳад ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS is_vip BOOLEAN DEFAULT FALSE;
+
 	-- ── Pinned posts ──
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
 
@@ -504,8 +507,8 @@ func migrate() {
 		PRIMARY KEY (user_id, peer_id)
 	);
 
-	-- ── App owner: @raonson ҳамеша admin + verified (ройгон, бе харид) ──
-	UPDATE users SET role='admin', verified=TRUE
+	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
+	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';
 	`
 	if _, err := Pool.Exec(ctx, sql); err != nil {

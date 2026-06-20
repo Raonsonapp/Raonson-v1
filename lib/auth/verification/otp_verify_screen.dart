@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
+import '../../app/app_theme.dart';
 
 class OtpVerifyScreen extends StatefulWidget {
   final String email;
@@ -95,9 +96,9 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _verifyOtp,
                 child: _isLoading
-                    ? const CircularProgressIndicator(
+                    ? CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                       )
                     : const Text('Verify'),
               ),

@@ -143,7 +143,7 @@ class _MessageInputState extends State<MessageInput>
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(color: Colors.white24,
+              decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 18),
@@ -244,8 +244,8 @@ class _MessageInputState extends State<MessageInput>
           top: false,
           child: Container(
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-            decoration: const BoxDecoration(
-              color: Colors.black,
+            decoration: BoxDecoration(
+              color: AppColors.bg,
               border: Border(top: BorderSide(color: Color(0xFF1C1C1E))),
             ),
             child: _recording ? _recordingBar() : _inputBar(),
@@ -272,11 +272,11 @@ class _MessageInputState extends State<MessageInput>
         const _PulsingDot(),
         const SizedBox(width: 10),
         Text(_fmtDur(_recordDur),
-            style: const TextStyle(
-                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
-        const Expanded(
+            style: TextStyle(
+                color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+        Expanded(
           child: Text('  Сабти овоз...',
-              style: TextStyle(color: Colors.white38, fontSize: 13),
+              style: TextStyle(color: AppColors.textFaint, fontSize: 13),
               overflow: TextOverflow.ellipsis),
         ),
         // Фиристодан
@@ -287,8 +287,8 @@ class _MessageInputState extends State<MessageInput>
             width: 44, height: 44,
             decoration: const BoxDecoration(
                 shape: BoxShape.circle, color: AppColors.neonBlue),
-            child: const Center(
-                child: Icon(Icons.send_rounded, color: Colors.white, size: 20)),
+            child: Center(
+                child: Icon(Icons.send_rounded, color: AppColors.textPrimary, size: 20)),
           ),
         ),
       ],
@@ -303,10 +303,10 @@ class _MessageInputState extends State<MessageInput>
         // Замима (+) — расм/камера/видео
         GestureDetector(
           onTap: _openAttachments,
-          child: const Padding(
+          child: Padding(
             padding: EdgeInsets.only(right: 8, bottom: 8),
             child: Icon(Icons.add_circle_outline_rounded,
-                color: Colors.white70, size: 28),
+                color: AppColors.textSecondary, size: 28),
           ),
         ),
 
@@ -328,12 +328,12 @@ class _MessageInputState extends State<MessageInput>
                     maxLines:   null,
                     keyboardType: TextInputType.multiline,
                     textInputAction: TextInputAction.newline,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 15),
-                    decoration: const InputDecoration(
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 15),
+                    decoration: InputDecoration(
                       hintText: 'Паём...',
                       hintStyle: TextStyle(
-                          color: Colors.white38, fontSize: 15),
+                          color: AppColors.textFaint, fontSize: 15),
                       contentPadding: EdgeInsets.fromLTRB(16, 10, 8, 10),
                       border: InputBorder.none,
                     ),
@@ -344,8 +344,8 @@ class _MessageInputState extends State<MessageInput>
                   padding: const EdgeInsets.only(right: 10, bottom: 8),
                   child: GestureDetector(
                     onTap: _showEmojiPicker,
-                    child: const Icon(Icons.emoji_emotions_outlined,
-                        color: Colors.white54, size: 22),
+                    child: Icon(Icons.emoji_emotions_outlined,
+                        color: AppColors.textTertiary, size: 22),
                   ),
                 ),
               ],
@@ -365,9 +365,9 @@ class _MessageInputState extends State<MessageInput>
                     shape: BoxShape.circle,
                     color: AppColors.neonBlue,
                   ),
-                  child: const Center(
+                  child: Center(
                       child: Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20)),
+                          color: AppColors.textPrimary, size: 20)),
                 ),
               )
             : GestureDetector(
@@ -376,9 +376,9 @@ class _MessageInputState extends State<MessageInput>
                 child: Container(
                   width: 44, height: 44,
                   decoration: const BoxDecoration(shape: BoxShape.circle),
-                  child: const Center(
+                  child: Center(
                       child: Icon(Icons.mic_rounded,
-                          color: Colors.white70, size: 26)),
+                          color: AppColors.textSecondary, size: 26)),
                 ),
               ),
       ],
@@ -440,7 +440,7 @@ class _AttachTile extends StatelessWidget {
       ),
       const SizedBox(height: 8),
       Text(label,
-          style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
     ]),
   );
 }
@@ -484,13 +484,13 @@ class _ReplyPreviewBar extends StatelessWidget {
                   message.lastMessage,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white38, size: 20),
+            icon: Icon(Icons.close_rounded, color: AppColors.textFaint, size: 20),
             onPressed: onCancel,
           ),
         ],

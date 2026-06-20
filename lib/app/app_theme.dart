@@ -1,71 +1,116 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// Рангҳои барнома.
+///
+/// Рангҳои замина ва матн **мутағайиранд** (light/dark) — ҳангоми иваз шудани
+/// тема `AppColors.applyTheme(...)` онҳоро аз нав мегузорад, то тамоми экранҳо
+/// бе таҳрири алоҳида рӯшан/торик шаванд.
+///
+/// Рангҳои бренд (ҳалқаи story = теал, галочка = сабз, тугмаи кабуд, сурх)
+/// **ҳаргиз тағйир намеёбанд** — онҳо `const` мемонанд.
 class AppColors {
-  // Instagram Dark Mode palette
-  static const Color bg          = Color(0xFF000000); // pure black (video bg)
-  static const Color surface     = Color(0xFF121212); // Instagram dark bg
-  static const Color card        = Color(0xFF1C1C1C); // card bg
-  static const Color divider     = Color(0xFF262626); // divider
-
-  // Ҳалқаи story — ранги бренди Raonson (нигоҳ дошта мешавад, тағйир намеёбад)
+  // ── Рангҳои бренд (доимӣ — тағйир намеёбанд) ──
   static const Color storyStart  = Color(0xFF00C6FF);
   static const Color storyEnd    = Color(0xFF00E87A);
   static const List<Color> storyGradient = [Color(0xFF00C6FF), Color(0xFF00E87A)];
-
-  // Instagram primary blue (#0095F6) — тугмаҳо, линкҳо, фиристодан
   static const Color neonBlue    = Color(0xFF0095F6);
   static const Color neonBlueDim = Color(0xFF1877F2);
-
   static const Color verified    = Color(0xFF1DB954);
-  static const Color hashtag     = Color(0xFFFFFFFF);
-
-  static const Color white       = Colors.white;
-  static const Color grey        = Color(0xFF8899A6);
-  static const Color greyLight   = Color(0xFFD9D9D9);
-  static const Color timeColor   = Color(0xFF6B7F8C);
-  static const Color captionText = Color(0xFFCCCCCC);
-  static const Color actionCount = Color(0xFF8899A6);
-
   static const Color red         = Color(0xFFF4212E);
+  static const Color white       = Colors.white; // ҳамеша сафед (рӯи тугмаҳои ранга)
+
+  // ── Замина ва сатҳҳо (мутағайир) ──
+  static Color bg          = const Color(0xFF000000);
+  static Color surface     = const Color(0xFF121212);
+  static Color card        = const Color(0xFF1C1C1C);
+  static Color divider     = const Color(0xFF262626);
+
+  // ── Матн ва иконҳо (мутағайир) ──
+  static Color textPrimary   = Colors.white;            // матни асосӣ
+  static Color textSecondary = const Color(0xFFE4E4E4); // white70/60
+  static Color textTertiary  = const Color(0xFF8E8E93); // white54/50
+  static Color textFaint     = const Color(0xFF636366); // white38/30/24
+  static Color dividerFaint  = const Color(0x1AFFFFFF); // white10/12
+
+  // ── Рангҳои кӯҳна (мутағайир, барои мутобиқат) ──
+  static Color grey        = const Color(0xFF8899A6);
+  static Color greyLight   = const Color(0xFFD9D9D9);
+  static Color timeColor   = const Color(0xFF6B7F8C);
+  static Color captionText = const Color(0xFFCCCCCC);
+  static Color actionCount = const Color(0xFF8899A6);
+  static const Color hashtag = Color(0xFFFFFFFF);
+
+  /// Рангҳои мутағайирро вобаста ба тема мегузорад.
+  static void applyTheme(bool isLight) {
+    if (isLight) {
+      bg            = const Color(0xFFFFFFFF);
+      surface       = const Color(0xFFFAFAFA);
+      card          = const Color(0xFFF2F2F2);
+      divider       = const Color(0xFFDBDBDB);
+      textPrimary   = const Color(0xFF111111);
+      textSecondary = const Color(0xFF3A3A3A);
+      textTertiary  = const Color(0xFF6B6B6B);
+      textFaint     = const Color(0xFF9A9A9A);
+      dividerFaint  = const Color(0x14000000);
+      grey          = const Color(0xFF6B7280);
+      greyLight     = const Color(0xFF4B4B4B);
+      timeColor     = const Color(0xFF6B7280);
+      captionText   = const Color(0xFF333333);
+      actionCount   = const Color(0xFF6B7280);
+    } else {
+      bg            = const Color(0xFF000000);
+      surface       = const Color(0xFF121212);
+      card          = const Color(0xFF1C1C1C);
+      divider       = const Color(0xFF262626);
+      textPrimary   = Colors.white;
+      textSecondary = const Color(0xFFE4E4E4);
+      textTertiary  = const Color(0xFF8E8E93);
+      textFaint     = const Color(0xFF636366);
+      dividerFaint  = const Color(0x1AFFFFFF);
+      grey          = const Color(0xFF8899A6);
+      greyLight     = const Color(0xFFD9D9D9);
+      timeColor     = const Color(0xFF6B7F8C);
+      captionText   = const Color(0xFFCCCCCC);
+      actionCount   = const Color(0xFF8899A6);
+    }
+  }
 }
 
 class AppTheme {
   static ThemeData dark() {
     return ThemeData(
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.bg,
+      scaffoldBackgroundColor: const Color(0xFF000000),
       primaryColor: AppColors.neonBlue,
       colorScheme: const ColorScheme.dark(
         primary:   AppColors.neonBlue,
         secondary: AppColors.storyStart,
-        surface:   AppColors.bg,
+        surface:   Color(0xFF000000),
         onPrimary: Colors.white,
         onSurface: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Color(0xFF000000),
         elevation: 0,
         centerTitle: true,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.w600,
-        ),
+          color: Colors.white, fontSize: 32, fontWeight: FontWeight.w600),
       ),
       iconTheme:   const IconThemeData(color: Colors.white),
-      dividerColor: AppColors.divider,
+      dividerColor: const Color(0xFF262626),
       textTheme: const TextTheme(
         bodyLarge:  TextStyle(color: Colors.white),
-        bodyMedium: TextStyle(color: AppColors.greyLight),
-        bodySmall:  TextStyle(color: AppColors.grey),
+        bodyMedium: TextStyle(color: Color(0xFFD9D9D9)),
+        bodySmall:  TextStyle(color: Color(0xFF8899A6)),
         titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
-  // ── Light theme — genuine light palette (no longer an alias of dark) ──
+
+  // ── Light theme ──
   static const Color lightBg      = Color(0xFFFFFFFF);
   static const Color lightSurface = Color(0xFFFAFAFA);
   static const Color lightCard    = Color(0xFFF2F2F2);
@@ -92,10 +137,7 @@ class AppTheme {
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         iconTheme: IconThemeData(color: lightText),
         titleTextStyle: TextStyle(
-          color: lightText,
-          fontSize: 32,
-          fontWeight: FontWeight.w600,
-        ),
+          color: lightText, fontSize: 32, fontWeight: FontWeight.w600),
       ),
       iconTheme:    const IconThemeData(color: lightText),
       dividerColor: lightDivider,

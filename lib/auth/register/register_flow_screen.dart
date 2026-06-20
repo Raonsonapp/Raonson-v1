@@ -227,7 +227,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       body: AuthBackground(
         child: SafeArea(
           child: Column(
@@ -239,8 +239,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     if (_page <= 1)
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white, size: 18),
+                        icon: Icon(Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textPrimary, size: 18),
                         onPressed: _back,
                       )
                     else
@@ -289,8 +289,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Аллакай ҳисоб доред? ',
-                style: TextStyle(color: Colors.white54, fontSize: 14)),
+            Text('Аллакай ҳисоб доред? ',
+                style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
             GestureDetector(
               onTap: () => Navigator.pop(context),
               child: const Text('Ворид шавед',
@@ -308,16 +308,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 8),
         const Center(child: AuthLogo(size: 76)),
         const SizedBox(height: 16),
-        const Center(
+        Center(
             child: Text('Сабти ном кунед!',
                 style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold))),
         const SizedBox(height: 6),
-        const Center(
+        Center(
             child: Text('Барои идомаи кор ҳисоб эҷод намоед',
-                style: TextStyle(color: Colors.white54, fontSize: 14))),
+                style: TextStyle(color: AppColors.textTertiary, fontSize: 14))),
         const SizedBox(height: 24),
         AuthField(
             controller: _nameCtrl,
@@ -338,9 +338,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(mainAxisSize: MainAxisSize.min, children: const [
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text('🇹🇯  +992',
-                  style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
             ]),
           ),
         ),
@@ -367,14 +367,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 activeColor: AppColors.neonBlue,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(5)),
-                side: const BorderSide(color: Colors.white38),
+                side: BorderSide(color: AppColors.textFaint),
               ),
             ),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
                 'Ман бо Шартҳои истифода ва Сиёсати махфият розӣ ҳастам',
-                style: TextStyle(color: Colors.white60, fontSize: 13),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
             ),
           ],
@@ -390,17 +390,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 8),
         const Center(child: AuthLogo(size: 76)),
         const SizedBox(height: 16),
-        const Center(
+        Center(
             child: Text('Номи ҳисоб',
                 style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold))),
         const SizedBox(height: 6),
-        const Center(
+        Center(
             child: Text('Номи беназири худро интихоб кунед',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54, fontSize: 14))),
+                style: TextStyle(color: AppColors.textTertiary, fontSize: 14))),
         const SizedBox(height: 24),
         AuthField(
           controller: _userCtrl,
@@ -416,12 +416,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             }),
           ],
           suffix: _checkingUsername
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.all(14),
                   child: SizedBox(
                       width: 18, height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white38)))
+                          strokeWidth: 2, color: AppColors.textFaint)))
               : _usernameAvailable == null
                   ? null
                   : Icon(
@@ -434,9 +434,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       size: 22),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Ном бояд 4–30 аломат бошад. Танҳо ҳарфҳо, рақамҳо, нуқта (.) ва зерхат (_).',
-          style: TextStyle(color: Colors.white38, fontSize: 12),
+          style: TextStyle(color: AppColors.textFaint, fontSize: 12),
         ),
         const SizedBox(height: 22),
         _errorText(),
@@ -450,16 +450,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 8),
         const Center(child: AuthLogo(size: 76)),
         const SizedBox(height: 16),
-        const Center(
+        Center(
             child: Text('Акс интихоб кунед',
                 style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold))),
         const SizedBox(height: 6),
-        const Center(
+        Center(
             child: Text('Аксе, ки шуморо муаррифӣ мекунад',
-                style: TextStyle(color: Colors.white54, fontSize: 14))),
+                style: TextStyle(color: AppColors.textTertiary, fontSize: 14))),
         const SizedBox(height: 28),
         Center(
           child: GestureDetector(
@@ -468,7 +468,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               width: 150, height: 150,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: AppColors.textPrimary.withOpacity(0.05),
                 border: Border.all(color: AppColors.neonBlue, width: 2),
                 image: _avatar != null
                     ? DecorationImage(
@@ -476,8 +476,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     : null,
               ),
               child: _avatar == null
-                  ? const Icon(Icons.photo_camera_rounded,
-                      color: Colors.white54, size: 44)
+                  ? Icon(Icons.photo_camera_rounded,
+                      color: AppColors.textTertiary, size: 44)
                   : null,
             ),
           ),
@@ -568,18 +568,18 @@ class _FindFriendsState extends State<_FindFriends> {
         children: [
           const Center(child: AuthLogo(size: 66)),
           const SizedBox(height: 12),
-          const Center(
+          Center(
               child: Text('Дӯстонро пайдо кунед',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.bold))),
           const SizedBox(height: 6),
-          const Center(
+          Center(
               child: Text(
                   'Ба одамоне, ки шавқ доред, обуна шавед',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 13))),
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
           const SizedBox(height: 16),
           AuthField(
             controller: _searchCtrl,
@@ -594,9 +594,9 @@ class _FindFriendsState extends State<_FindFriends> {
                     child: CircularProgressIndicator(
                         color: AppColors.neonBlue, strokeWidth: 2))
                 : _users.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text('Касе ёфт нашуд',
-                            style: TextStyle(color: Colors.white38)))
+                            style: TextStyle(color: AppColors.textFaint)))
                     : ListView.separated(
                         itemCount: _users.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 6),
@@ -624,7 +624,7 @@ class _FindFriendsState extends State<_FindFriends> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: AppColors.textPrimary.withOpacity(0.04),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -634,7 +634,7 @@ class _FindFriendsState extends State<_FindFriends> {
             backgroundColor: AppColors.card,
             backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
             child: avatar.isEmpty
-                ? const Icon(Icons.person, color: Colors.white38)
+                ? Icon(Icons.person, color: AppColors.textFaint)
                 : null,
           ),
           const SizedBox(width: 12),
@@ -645,15 +645,15 @@ class _FindFriendsState extends State<_FindFriends> {
                 Text(name.isNotEmpty ? name : username,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600)),
                 Text('@$username',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white38, fontSize: 12)),
+                    style: TextStyle(
+                        color: AppColors.textFaint, fontSize: 12)),
               ],
             ),
           ),
@@ -667,12 +667,12 @@ class _FindFriendsState extends State<_FindFriends> {
                     ? null
                     : const LinearGradient(
                         colors: [AppColors.neonBlue, AppColors.storyEnd]),
-                color: isFollowed ? Colors.white.withOpacity(0.08) : null,
+                color: isFollowed ? AppColors.textPrimary.withOpacity(0.08) : null,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(isFollowed ? 'Обуна шуд' : 'Обуна шудан',
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w600)),
             ),

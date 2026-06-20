@@ -64,10 +64,10 @@ class _FeedAdCardState extends State<FeedAdCard>
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.card : Colors.white,
+          color: isDark ? AppColors.card : AppColors.textPrimary,
           border: Border.symmetric(
             horizontal: BorderSide(
-              color: isDark ? AppColors.divider : const Color(0xFFEFEFEF),
+              color: isDark ? AppColors.divider : Color(0xFFEFEFEF),
               width: 0.5,
             ),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'notifications_repository.dart';
 import 'notification_item.dart';
 import '../models/notification_model.dart';
+import '../app/app_theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -63,13 +64,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.bg,
         elevation: 0,
         centerTitle: false, // сарлавҳа ба чап — мисли Instagram
-        title: const Text('Огоҳиномаҳо',
-            style: TextStyle(color: Colors.white,
+        title: Text('Огоҳиномаҳо',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 22)),
         actions: [
           if (_unreadCount > 0)
@@ -81,8 +82,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: Colors.white30, strokeWidth: 2))
+          ? Center(child: CircularProgressIndicator(
+              color: AppColors.textFaint, strokeWidth: 2))
           : _notifications.isEmpty
               ? _buildEmpty()
               : _buildGroupedList(),
@@ -128,8 +129,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: Colors.white,
-      backgroundColor: Colors.black,
+      color: AppColors.textPrimary,
+      backgroundColor: AppColors.bg,
       child: ListView(padding: const EdgeInsets.only(top: 4), children: children),
     );
   }
@@ -137,8 +138,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _sectionHeader(String title) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
         child: Text(title,
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 15)),
       );
@@ -150,18 +151,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           width: 80, height: 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white24, width: 2),
+            border: Border.all(color: AppColors.textFaint, width: 2),
           ),
-          child: const Icon(Icons.notifications_none_outlined,
-              color: Colors.white54, size: 40),
+          child: Icon(Icons.notifications_none_outlined,
+              color: AppColors.textTertiary, size: 40),
         ),
         const SizedBox(height: 16),
-        const Text('Огоҳиномае нест',
-            style: TextStyle(color: Colors.white,
+        Text('Огоҳиномае нест',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(height: 8),
-        const Text('Вақте кас лайк ё комментария монд,\nинҷо нишон дода мешавад',
-            style: TextStyle(color: Colors.white54, fontSize: 14),
+        Text('Вақте кас лайк ё комментария монд,\nинҷо нишон дода мешавад',
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 14),
             textAlign: TextAlign.center),
       ]),
     );

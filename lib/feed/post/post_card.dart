@@ -310,13 +310,13 @@ class _PostCardState extends State<PostCard>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Ҳазф кардан?',
-            style: TextStyle(color: Colors.white)),
-        content: const Text('Пост тамоман ҳазф мешавад.',
-            style: TextStyle(color: Colors.white70)),
+        title: Text('Ҳазф кардан?',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Пост тамоман ҳазф мешавад.',
+            style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
               child: const Text('Ҳазф', style: TextStyle(color: Colors.redAccent))),
         ],
@@ -347,14 +347,14 @@ class _PostCardState extends State<PostCard>
             left: 16, right: 16, top: 8),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(color: Colors.white24,
+            decoration: BoxDecoration(color: AppColors.textFaint,
                 borderRadius: BorderRadius.circular(2))),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             TextButton(onPressed: () { ctrl.dispose(); Navigator.pop(ctx); },
-              child: const Text('Бекор',
-                  style: TextStyle(color: Colors.white54))),
-            const Text('Таҳрир кардан', style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+              child: Text('Бекор',
+                  style: TextStyle(color: AppColors.textTertiary))),
+            Text('Таҳрир кардан', style: TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
             TextButton(
               onPressed: () async {
                 final newCaption = ctrl.text.trim();
@@ -384,12 +384,12 @@ class _PostCardState extends State<PostCard>
           const SizedBox(height: 12),
           TextField(
             controller: ctrl, autofocus: true, maxLines: 6, maxLength: 2200,
-            style: const TextStyle(color: Colors.white, fontSize: 15),
-            decoration: const InputDecoration(
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
+            decoration: InputDecoration(
               hintText: 'Тавсиф ё матн...',
-              hintStyle: TextStyle(color: Colors.white38),
+              hintStyle: TextStyle(color: AppColors.textFaint),
               border: InputBorder.none,
-              counterStyle: TextStyle(color: Colors.white38))),
+              counterStyle: TextStyle(color: AppColors.textFaint))),
         ])));
   }
 
@@ -401,8 +401,8 @@ class _PostCardState extends State<PostCard>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Тағир додани мусиқа',
-            style: TextStyle(color: Colors.white)),
+        title: Text('Тағир додани мусиқа',
+            style: TextStyle(color: AppColors.textPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _dialogField(titleCtrl,  'Номи суруд'),
           const SizedBox(height: 8),
@@ -412,7 +412,7 @@ class _PostCardState extends State<PostCard>
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
@@ -424,7 +424,7 @@ class _PostCardState extends State<PostCard>
                   'musicUrl':    urlCtrl.text.trim(),
                 });
             },
-            child: const Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
+            child: Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -432,9 +432,9 @@ class _PostCardState extends State<PostCard>
   }
 
   TextField _dialogField(TextEditingController c, String hint) => TextField(
-    controller: c, style: const TextStyle(color: Colors.white),
+    controller: c, style: TextStyle(color: AppColors.textPrimary),
     decoration: InputDecoration(
-      hintText: hint, hintStyle: const TextStyle(color: Colors.white38),
+      hintText: hint, hintStyle: TextStyle(color: AppColors.textFaint),
       filled: true, fillColor: const Color(0xFF111111),
       border: const OutlineInputBorder(borderSide: BorderSide.none)));
 
@@ -453,15 +453,15 @@ class _PostCardState extends State<PostCard>
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4,
             margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(color: Colors.white24,
+            decoration: BoxDecoration(color: AppColors.textFaint,
                 borderRadius: BorderRadius.circular(2))),
-          const Text('Зикр кардан', style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+          Text('Зикр кардан', style: TextStyle(
+              color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 12),
           TextField(controller: ctrl, autofocus: true,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: '@username', hintStyle: TextStyle(color: Colors.white38),
+            style: TextStyle(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: '@username', hintStyle: TextStyle(color: AppColors.textFaint),
               filled: true, fillColor: Color(0xFF1A1A1A),
               border: OutlineInputBorder(borderSide: BorderSide.none))),
           const SizedBox(height: 12),
@@ -469,7 +469,7 @@ class _PostCardState extends State<PostCard>
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.neonBlue,
-                  foregroundColor: Colors.white),
+                  foregroundColor: AppColors.textPrimary),
               onPressed: () async {
                 final m = ctrl.text.trim();
                 Navigator.pop(ctx);
@@ -500,12 +500,12 @@ class _PostCardState extends State<PostCard>
     final oPct      = total > 0 ? 100 - fPct : 0;
     if (!mounted) return;
     Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        leading: const BackButton(color: Colors.white),
-        title: const Text('Статистика',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        backgroundColor: AppColors.bg,
+        leading: BackButton(color: AppColors.textPrimary),
+        title: Text('Статистика',
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
         centerTitle: true),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -555,11 +555,11 @@ class _PostCardState extends State<PostCard>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Жалоб партофтан',
-            style: TextStyle(color: Colors.white)),
+        title: Text('Жалоб партофтан',
+            style: TextStyle(color: AppColors.textPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min,
           children: reasons.map((r) => ListTile(
-            title: Text(r.$2, style: const TextStyle(color: Colors.white)),
+            title: Text(r.$2, style: TextStyle(color: AppColors.textPrimary)),
             onTap: () => Navigator.pop(context, r.$1))).toList()),
       ),
     );
@@ -582,7 +582,7 @@ class _PostCardState extends State<PostCard>
         content: const Text('Пост пинҳон шуд. Алгоритм навшуд.'),
         backgroundColor: Colors.grey[800],
         duration: const Duration(seconds: 3),
-        action: SnackBarAction(label: 'Бекор', textColor: Colors.white,
+        action: SnackBarAction(label: 'Бекор', textColor: AppColors.textPrimary,
           onPressed: () { if (mounted) setState(() => _hidden = false); }),
       ));
     } else if (mounted) {
@@ -601,19 +601,19 @@ class _PostCardState extends State<PostCard>
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetCtx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
-        const Padding(padding: EdgeInsets.only(bottom: 8),
+        Padding(padding: EdgeInsets.only(bottom: 8),
           child: Text('Мубодила кунед', style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
+              color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 16))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Container(height: 36,
-            decoration: BoxDecoration(color: Colors.white12,
+            decoration: BoxDecoration(color: AppColors.dividerFaint,
                 borderRadius: BorderRadius.circular(10)),
-            child: const Row(children: [
+            child: Row(children: [
               SizedBox(width: 10),
-              Icon(Icons.search, color: Colors.white38, size: 18),
+              Icon(Icons.search, color: AppColors.textFaint, size: 18),
               SizedBox(width: 6),
-              Text('Ҷустуҷӯ...', style: TextStyle(color: Colors.white38, fontSize: 14)),
+              Text('Ҷустуҷӯ...', style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
             ]))),
 
         // Ба чатҳо фиристодан — мисли Instagram
@@ -686,16 +686,16 @@ class _PostCardState extends State<PostCard>
                 Share.share(url).then((_) {
                   if (mounted) setState(() => _shareCount++); }); }),
           ])),
-        const Divider(color: Colors.white12, height: 1),
+        Divider(color: AppColors.dividerFaint, height: 1),
         ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           leading: Container(width: 44, height: 44,
             decoration: const BoxDecoration(color: Color(0xFF0095F6), shape: BoxShape.circle),
-            child: const Icon(Icons.send_rounded, color: Colors.white, size: 20)),
-          title: const Text('Ба чат фиристодан', style: TextStyle(
-              color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
-          subtitle: const Text('Паёми мустақим',
-              style: TextStyle(color: Colors.white38, fontSize: 12)),
+            child: Icon(Icons.send_rounded, color: AppColors.textPrimary, size: 20)),
+          title: Text('Ба чат фиристодан', style: TextStyle(
+              color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500)),
+          subtitle: Text('Паёми мустақим',
+              style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           onTap: () { Navigator.pop(sheetCtx);
             Navigator.pushNamed(context, '/chat'); }),
         const SizedBox(height: 12),
@@ -759,19 +759,19 @@ class _PostCardState extends State<PostCard>
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(color: Colors.white24,
+              decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(bottom: 8),
             child: Text('Дар ин пост зикршудагон',
-                style: TextStyle(color: Colors.white,
+                style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600, fontSize: 15)),
           ),
           ...users.map((u) => ListTile(
-                leading: const Icon(Icons.alternate_email_rounded,
-                    color: Colors.white54, size: 20),
+                leading: Icon(Icons.alternate_email_rounded,
+                    color: AppColors.textTertiary, size: 20),
                 title: Text('@$u',
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: AppColors.textPrimary)),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, '/profile-by-username',
@@ -840,7 +840,7 @@ class _PostCardState extends State<PostCard>
       } else {
         spans.add(TextSpan(
           text: '$word ',
-          style: const TextStyle(color: Colors.white, fontSize: 14)));
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14)));
       }
     }
     return spans;
@@ -863,8 +863,8 @@ class _PostCardState extends State<PostCard>
       child: Text(
         _fmt(_likeCount),
         key: ValueKey(_likeCount),
-        style: const TextStyle(
-          color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -899,21 +899,21 @@ class _PostCardState extends State<PostCard>
                       context, '/profile', arguments: post.user.id),
                   child: Text(post.user.username,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600,
-                        fontSize: 14, color: Colors.white)))),
+                    style: TextStyle(fontWeight: FontWeight.w600,
+                        fontSize: 14, color: AppColors.textPrimary)))),
                 if (post.user.isVerified) ...[ const SizedBox(width: 4),
                   const VerifiedBadge(size: 15) ],
                 // Соавтор (2 user 1 публикатсия) — мисли Instagram
                 if (post.collaborators.isNotEmpty) ...[
-                  const Text(' ва ',
-                      style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text(' ва ',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                   Flexible(child: GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/profile-by-username',
                         arguments: post.collaborators.first),
                     child: Text(post.collaborators.first,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600,
-                            fontSize: 14, color: Colors.white)))),
+                        style: TextStyle(fontWeight: FontWeight.w600,
+                            fontSize: 14, color: AppColors.textPrimary)))),
                 ],
               ]),
               const SizedBox(height: 2),
@@ -922,22 +922,22 @@ class _PostCardState extends State<PostCard>
                 Padding(
                   padding: const EdgeInsets.only(bottom: 1),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.location_on_outlined,
+                    Icon(Icons.location_on_outlined,
                         size: 11, color: AppColors.timeColor),
                     const SizedBox(width: 2),
                     Text(post.location,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.timeColor, fontSize: 11)),
                   ]),
                 ),
               Text(_timeAgo(post.createdAt),
-                  style: const TextStyle(color: AppColors.timeColor, fontSize: 12.5)),
+                  style: TextStyle(color: AppColors.timeColor, fontSize: 12.5)),
             ],
           )),
           GestureDetector(
             onTap: _showMenu,
-            child: const Padding(padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_horiz, color: Colors.white, size: 22))),
+            child: Padding(padding: EdgeInsets.all(8),
+              child: Icon(Icons.more_horiz, color: AppColors.textPrimary, size: 22))),
         ]),
       ),
 
@@ -1024,8 +1024,8 @@ class _PostCardState extends State<PostCard>
                           width: 26, height: 26, fit: BoxFit.contain)
                       : SvgPicture.asset('assets/icons/heart.svg',
                           width: 26, height: 26, fit: BoxFit.contain,
-                          colorFilter: const ColorFilter.mode(
-                              Colors.white, BlendMode.srcIn))),
+                          colorFilter: ColorFilter.mode(
+                              AppColors.textPrimary, BlendMode.srcIn))),
                   const SizedBox(width: 5),
                   _animatedLikeCount(),
                 ]),
@@ -1051,8 +1051,8 @@ class _PostCardState extends State<PostCard>
             onTap: _toggleSave,
             svgPath: 'assets/icons/save.svg',
             activeSvgPath: 'assets/icons/save_filled.svg',
-            isActive: _saved, activeColor: Colors.white,
-            inactiveColor: Colors.white, size: 25, count: 0, fmt: _fmt),
+            isActive: _saved, activeColor: AppColors.textPrimary,
+            inactiveColor: AppColors.textPrimary, size: 25, count: 0, fmt: _fmt),
         ]),
       ),
 
@@ -1084,15 +1084,15 @@ class _PostCardState extends State<PostCard>
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.music_note_rounded,
-                  color: Colors.white70, size: 13),
+              Icon(Icons.music_note_rounded,
+                  color: AppColors.textSecondary, size: 13),
               const SizedBox(width: 5),
               Flexible(child: Text(
                 widget.post.musicTitle +
                     (widget.post.musicArtist.isNotEmpty
                         ? ' — ${widget.post.musicArtist}' : ''),
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 12),
+                style: TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12),
                 maxLines: 1, overflow: TextOverflow.ellipsis)),
             ]),
           ),
@@ -1106,7 +1106,7 @@ class _PostCardState extends State<PostCard>
               _commentCount == 1
                   ? 'Намоиш 1 шарҳ'
                   : 'Намоиш ҳама $_commentCount шарҳ',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.grey,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w500,
@@ -1137,10 +1137,10 @@ class _CaptionWidget extends StatelessWidget {
   bool _needsTruncation(BuildContext context) {
     final tp = TextPainter(
       text: TextSpan(children: [
-        TextSpan(text: '$username ', style: const TextStyle(
-            fontWeight: FontWeight.w700, color: Colors.white, fontSize: 14)),
-        TextSpan(text: caption, style: const TextStyle(
-            color: Colors.white, fontSize: 14)),
+        TextSpan(text: '$username ', style: TextStyle(
+            fontWeight: FontWeight.w700, color: AppColors.textPrimary, fontSize: 14)),
+        TextSpan(text: caption, style: TextStyle(
+            color: AppColors.textPrimary, fontSize: 14)),
       ]),
       maxLines: _maxLines,
       textDirection: TextDirection.ltr,
@@ -1164,8 +1164,8 @@ class _CaptionWidget extends StatelessWidget {
               onTap: () => Navigator.of(context)
                   .pushNamed('/profile', arguments: userId),
               child: Text('$username ',
-                style: const TextStyle(fontWeight: FontWeight.w700,
-                    color: Colors.white, fontSize: 14)),
+                style: TextStyle(fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary, fontSize: 14)),
             ),
           ),
           ...spans,
@@ -1178,7 +1178,7 @@ class _CaptionWidget extends StatelessWidget {
             padding: const EdgeInsets.only(top: 3),
             child: Text(
               expanded ? 'камтар нишон деҳ' : '...бештар нишон деҳ',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.grey,
                 fontSize: 13.5,
                 fontWeight: FontWeight.w500,
@@ -1229,8 +1229,8 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
       height: MediaQuery.of(context).size.height * 0.55,
       child: Column(children: [
         _handle(),
-        const Text('Лайк гузоштанд',
-            style: TextStyle(color: Colors.white,
+        Text('Лайк гузоштанд',
+            style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Expanded(
@@ -1238,8 +1238,8 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
               ? const Center(child: CircularProgressIndicator(
                   color: AppColors.neonBlue, strokeWidth: 2))
               : _users.isEmpty
-                  ? const Center(child: Text('Ҳанӯз лайк нест',
-                      style: TextStyle(color: Colors.white38)))
+                  ? Center(child: Text('Ҳанӯз лайк нест',
+                      style: TextStyle(color: AppColors.textFaint)))
                   : ListView.builder(
                       itemCount: _users.length,
                       itemBuilder: (_, i) {
@@ -1252,12 +1252,12 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                             radius: 20,
                             backgroundImage: av.isNotEmpty
                                 ? NetworkImage(av) : null,
-                            child: av.isEmpty ? const Icon(
-                                Icons.person, color: Colors.white38) : null,
+                            child: av.isEmpty ? Icon(
+                                Icons.person, color: AppColors.textFaint) : null,
                             backgroundColor: const Color(0xFF1A1A1A),
                           ),
                           title: Text('@$un',
-                              style: const TextStyle(color: Colors.white,
+                              style: TextStyle(color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w600)),
                           onTap: () {
                             Navigator.pop(context);
@@ -1276,7 +1276,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
 Widget _handle() => Container(
   margin: const EdgeInsets.symmetric(vertical: 10),
   width: 36, height: 4,
-  decoration: BoxDecoration(color: Colors.white24,
+  decoration: BoxDecoration(color: AppColors.textFaint,
       borderRadius: BorderRadius.circular(2)));
 
 // ── Menu item ─────────────────────────────────────────────────────
@@ -1290,9 +1290,9 @@ class _MenuItem extends StatelessWidget {
       required this.label, this.labelColor, required this.onTap});
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: iconColor ?? Colors.white, size: 22),
+    leading: Icon(icon, color: iconColor ?? AppColors.textPrimary, size: 22),
     title: Text(label,
-        style: TextStyle(color: labelColor ?? Colors.white, fontSize: 15)),
+        style: TextStyle(color: labelColor ?? AppColors.textPrimary, fontSize: 15)),
     onTap: onTap);
 }
 
@@ -1302,19 +1302,19 @@ class _StableBtn extends StatelessWidget {
   final String svgPath;
   final String? activeSvgPath;
   final bool isActive;
-  final Color activeColor, inactiveColor;
+  final Color? activeColor, inactiveColor;
   final double size;
   final int count;
   final String Function(int) fmt;
-  const _StableBtn({
+  _StableBtn({
     required this.onTap, required this.svgPath, this.activeSvgPath,
-    this.isActive = false, this.activeColor = Colors.white,
-    this.inactiveColor = Colors.white, required this.size,
+    this.isActive = false, this.activeColor,
+    this.inactiveColor, required this.size,
     required this.count, required this.fmt});
   @override
   Widget build(BuildContext context) {
     final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
-    final color = isActive ? activeColor : inactiveColor;
+    final color = (isActive ? activeColor : inactiveColor) ?? AppColors.textPrimary;
     return GestureDetector(
       onTap: onTap, behavior: HitTestBehavior.opaque,
       child: Padding(
@@ -1325,7 +1325,7 @@ class _StableBtn extends StatelessWidget {
               fit: BoxFit.contain,
               colorFilter: ColorFilter.mode(color, BlendMode.srcIn))),
           if (count > 0) ...[ const SizedBox(width: 5),
-            Text(fmt(count), style: const TextStyle(color: Colors.white,
+            Text(fmt(count), style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 14, fontWeight: FontWeight.w500))],
         ])));
   }
@@ -1340,7 +1340,7 @@ class _SvgMenuTile extends StatelessWidget {
       this.color, required this.onTap});
   @override
   Widget build(BuildContext context) {
-    final c = color ?? Colors.white;
+    final c = color ?? AppColors.textPrimary;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       leading: SvgPicture.asset(assetPath, width: 22, height: 22,
@@ -1363,11 +1363,11 @@ class _BigStat extends StatelessWidget {
     child: Column(children: [
       Text(emoji, style: const TextStyle(fontSize: 20)),
       const SizedBox(height: 4),
-      Text('$value', style: const TextStyle(color: Colors.white,
+      Text('$value', style: TextStyle(color: AppColors.textPrimary,
           fontSize: 18, fontWeight: FontWeight.w800)),
       const SizedBox(height: 2),
       Text(label, textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white54, fontSize: 10)),
+          style: TextStyle(color: AppColors.textTertiary, fontSize: 10)),
     ])));
 }
 
@@ -1378,7 +1378,7 @@ class _AudienceBar extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+      Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
       Text('$pct%', style: TextStyle(color: color, fontWeight: FontWeight.w700)),
     ]),
     const SizedBox(height: 6),
@@ -1395,14 +1395,14 @@ class _EngRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(children: [
     SizedBox(width: 110, child: Text(label,
-        style: const TextStyle(color: Colors.white70, fontSize: 13))),
+        style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
     Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(4),
       child: LinearProgressIndicator(
         value: value > 0 ? (value / (value + 20)).clamp(0.05, 1.0) : 0,
         backgroundColor: const Color(0xFF2A2A2A),
         valueColor: AlwaysStoppedAnimation(color), minHeight: 8))),
     const SizedBox(width: 8),
-    Text('$value', style: const TextStyle(color: Colors.white,
+    Text('$value', style: TextStyle(color: AppColors.textPrimary,
         fontWeight: FontWeight.w600, fontSize: 13)),
   ]);
 }
@@ -1412,7 +1412,7 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.title);
   @override
   Widget build(BuildContext context) => Text(title,
-    style: const TextStyle(color: Colors.white,
+    style: TextStyle(color: AppColors.textPrimary,
         fontWeight: FontWeight.w700, fontSize: 16));
 }
 
@@ -1451,7 +1451,7 @@ class _MediaCarouselState extends State<_MediaCarousel> {
     final aspectRatio = _getAspectRatio();
     return Stack(alignment: Alignment.bottomCenter, children: [
       // Фони сиёҳ дар паси расм — ягон навори бежеви аз letterbox намонад
-      const Positioned.fill(child: ColoredBox(color: Colors.black)),
+      Positioned.fill(child: ColoredBox(color: AppColors.bg)),
       AspectRatio(
         aspectRatio: aspectRatio,
         child: PageView.builder(
@@ -1472,12 +1472,12 @@ class _MediaCarouselState extends State<_MediaCarousel> {
               imageUrl: url, fit: BoxFit.cover,
               width: double.infinity, height: double.infinity,
               placeholder: (_, __) => Container(color: const Color(0xFF111111),
-                child: const Center(child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white30))),
+                child: Center(child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.textFaint))),
               errorWidget: (_, __, ___) => Container(
                 color: const Color(0xFF111111),
-                child: const Center(child: Icon(Icons.broken_image_outlined,
-                    color: Colors.white30, size: 48))));
+                child: Center(child: Icon(Icons.broken_image_outlined,
+                    color: AppColors.textFaint, size: 48))));
           }),
       ),
       if (widget.media.length > 1)
@@ -1491,7 +1491,7 @@ class _MediaCarouselState extends State<_MediaCarousel> {
                 width: _current == i ? 18 : 6, height: 6,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(3),
-                  color: _current == i ? Colors.white : Colors.white38)))),
+                  color: _current == i ? AppColors.textPrimary : AppColors.textFaint)))),
         ),
     ]);
   }
@@ -1555,40 +1555,40 @@ class _VideoItemState extends State<_VideoItem> {
   @override
   Widget build(BuildContext context) {
     if (_error) return Container(color: Colors.black12,
-        child: const Center(child: Column(mainAxisSize: MainAxisSize.min,
+        child: Center(child: Column(mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.play_circle_outline, color: Colors.white30, size: 48),
+            Icon(Icons.play_circle_outline, color: AppColors.textFaint, size: 48),
             SizedBox(height: 8),
             Text('Видео бор намешавад',
-                style: TextStyle(color: Colors.white30, fontSize: 12)),
+                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           ])));
     if (!_ready) {
-      return Container(color: Colors.black,
-        child: const Center(child: CircularProgressIndicator(
-            strokeWidth: 2, color: Colors.white30)));
+      return Container(color: AppColors.bg,
+        child: Center(child: CircularProgressIndicator(
+            strokeWidth: 2, color: AppColors.textFaint)));
     }
     final videoRatio = _ctrl!.value.isInitialized
         ? _ctrl!.value.aspectRatio : widget.aspectRatio;
     return GestureDetector(
       onTap: () { setState(() => _paused = !_paused);
         _paused ? _ctrl!.pause() : _ctrl!.play(); },
-      child: Container(color: Colors.black,
+      child: Container(color: AppColors.bg,
         child: Center(child: AspectRatio(aspectRatio: videoRatio,
           child: Stack(fit: StackFit.expand, children: [
             VideoPlayer(_ctrl!),
-            if (_buffering) const Center(child: CircularProgressIndicator(
-                strokeWidth: 2, color: Colors.white38)),
+            if (_buffering) Center(child: CircularProgressIndicator(
+                strokeWidth: 2, color: AppColors.textFaint)),
             if (_paused && !_buffering)
-              const Center(child: Icon(Icons.play_circle_outline_rounded,
-                  color: Colors.white70, size: 56)),
+              Center(child: Icon(Icons.play_circle_outline_rounded,
+                  color: AppColors.textSecondary, size: 56)),
             // Mute badge
             Positioned(bottom: 8, right: 8,
               child: Container(
                 decoration: const BoxDecoration(
                     color: Colors.black54, shape: BoxShape.circle),
                 padding: const EdgeInsets.all(5),
-                child: const Icon(Icons.volume_off_rounded,
-                    color: Colors.white, size: 14))),
+                child: Icon(Icons.volume_off_rounded,
+                    color: AppColors.textPrimary, size: 14))),
           ])))),
     );
   }
@@ -1653,11 +1653,11 @@ class _ShareChatsRowState extends State<_ShareChatsRow> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const SizedBox(
+      return SizedBox(
         height: 96,
         child: Center(
             child: CircularProgressIndicator(
-                color: Colors.white24, strokeWidth: 2)),
+                color: AppColors.textFaint, strokeWidth: 2)),
       );
     }
     if (_chats.isEmpty) return const SizedBox.shrink();
@@ -1685,7 +1685,7 @@ class _ShareChatsRowState extends State<_ShareChatsRow> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: sent ? AppColors.neonBlue : Colors.white70,
+                        color: sent ? AppColors.neonBlue : AppColors.textSecondary,
                         fontSize: 11)),
                 if (sent)
                   const Text('Фиристода шуд',
@@ -1717,14 +1717,14 @@ class _MediaChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: Colors.white, size: 14),
+          Icon(icon, color: AppColors.textPrimary, size: 14),
           const SizedBox(width: 5),
           Flexible(
             child: Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: AppColors.textPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500)),
           ),
@@ -1755,10 +1755,10 @@ class _ShareActionBtn extends StatelessWidget {
                 width: brandLogo ? 30 : 24, height: brandLogo ? 30 : 24,
                 colorFilter: brandLogo
                     ? null
-                    : const ColorFilter.mode(Colors.white, BlendMode.srcIn))
-            : Icon(icon, color: Colors.white, size: 24))),
+                    : ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn))
+            : Icon(icon, color: AppColors.textPrimary, size: 24))),
       const SizedBox(height: 5),
       Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
     ])));
 }

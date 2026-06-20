@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../core/api/api_client.dart';
 import '../core/storage/token_storage.dart';
 import '../core/services/user_session.dart';
+import '../core/services/vip_service.dart';
 
 class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -55,6 +56,12 @@ class AppState extends ChangeNotifier {
           final id       = (user['_id'] ?? user['id'])?.toString() ?? '';
           final uname    = user['username']?.toString() ?? '';
           final avatarUrl= user['avatar']?.toString()   ?? '';
+
+          // VIP-ро аз сервер ҳамоҳанг мекунем (admin додааст).
+          // Соҳиби барнома (@raonson) ҳамеша VIP аст.
+          final vip = user['is_vip'] == true || user['isVip'] == true ||
+              uname.toLowerCase() == 'raonson';
+          await VipService.instance.setVip(vip);
 
           if (id.isNotEmpty) {
             // Аватари холиро ба ҷои аватари кэшшуда нанависем

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
+import '../app/app_theme.dart';
 
 // ════════════════════════════════════════════════════════════════
 //  SmartMediaWidget  —  Instagram/TikTok style dynamic media
@@ -192,7 +193,7 @@ class _SmartVideoPlayerState extends State<_SmartVideoPlayer> {
     return GestureDetector(
       onTap: _togglePause,
       child: Container(
-        color: Colors.black,
+        color: AppColors.bg,
         child: Center(
           child: AspectRatio(
             aspectRatio: videoRatio,
@@ -201,13 +202,13 @@ class _SmartVideoPlayerState extends State<_SmartVideoPlayer> {
 
               // Buffering indicator
               if (_buffering)
-                const Center(child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white38)),
+                Center(child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.textFaint)),
 
               // Pause icon
               if (_paused && !_buffering)
-                const Center(child: Icon(Icons.play_circle_outline_rounded,
-                    color: Colors.white70, size: 56)),
+                Center(child: Icon(Icons.play_circle_outline_rounded,
+                    color: AppColors.textSecondary, size: 56)),
 
               // Mute button
               Positioned(bottom: 10, right: 10,
@@ -219,7 +220,7 @@ class _SmartVideoPlayerState extends State<_SmartVideoPlayer> {
                       color: Colors.black54, shape: BoxShape.circle),
                     child: Icon(
                       _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                      color: Colors.white, size: 16)))),
+                      color: AppColors.textPrimary, size: 16)))),
             ]),
           ),
         ),
@@ -266,7 +267,7 @@ class _ErrorPlaceholder extends StatelessWidget {
     color: const Color(0xFF111111),
     child: Center(child: Icon(
       isVideo ? Icons.play_circle_outline : Icons.broken_image_outlined,
-      color: Colors.white24, size: 48)));
+      color: AppColors.textFaint, size: 48)));
 }
 
 // ── Dots row ─────────────────────────────────────────────────────
@@ -282,5 +283,5 @@ class _DotsRow extends StatelessWidget {
       width: current == i ? 18 : 6, height: 6,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(3),
-        color: current == i ? Colors.white : Colors.white38))));
+        color: current == i ? AppColors.textPrimary : AppColors.textFaint))));
 }
