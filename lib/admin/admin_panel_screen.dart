@@ -278,6 +278,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final avatar   = (u['avatar'] ?? '').toString();
     final verified = u['verified'] == true;
     final isVip    = u['is_vip'] == true;
+    final phone    = (u['phone'] ?? '').toString();
     final isOwner  = username.toLowerCase() == 'raonson';
     final busy     = _busy.contains(id);
 
@@ -310,6 +311,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
         ],
       ]),
+      subtitle: phone.isNotEmpty
+          ? Text(phone, style: const TextStyle(color: Colors.white38, fontSize: 12))
+          : null,
       trailing: busy
           ? const SizedBox(
               width: 20, height: 20,

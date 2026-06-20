@@ -58,7 +58,9 @@ class AppState extends ChangeNotifier {
           final avatarUrl= user['avatar']?.toString()   ?? '';
 
           // VIP-ро аз сервер ҳамоҳанг мекунем (admin додааст).
-          final vip = user['is_vip'] == true || user['isVip'] == true;
+          // Соҳиби барнома (@raonson) ҳамеша VIP аст.
+          final vip = user['is_vip'] == true || user['isVip'] == true ||
+              uname.toLowerCase() == 'raonson';
           await VipService.instance.setVip(vip);
 
           if (id.isNotEmpty) {

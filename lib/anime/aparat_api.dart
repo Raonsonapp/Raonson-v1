@@ -45,6 +45,28 @@ class AparatApi {
   /// Барои диагностика — охирин ҳолат/хато (дар экран нишон дода мешавад).
   static String lastDebug = '';
 
+  // ── Филтри мӯҳтавои ҳаром (шариъат) ──
+  // Видеоҳое, ки унвонашон ин калимаҳоро дорад, нишон дода намешаванд:
+  // 18+, эротика, рақси беодоб, либоси луч, ҳентай/эччи ва ғ.
+  static final List<String> _banned = [
+    // лотинӣ/англисӣ
+    'sexy', 'sex', 'porn', 'xxx', '18+', '+18', 'erotic', 'hot girl',
+    'hentai', 'ecchi', 'nude', 'naked', 'bikini', 'twerk', 'striptease',
+    'lingerie', 'adult', 'nsfw',
+    // форсӣ
+    'سکسی', 'سکس', 'پورن', 'اروتیک', 'برهنه', 'لخت', 'نیمه برهنه', 'بیکینی',
+    'مستهجن', 'شهوانی', 'رقص لخت', 'هنتای', 'اچی', 'لختی', 'داغ',
+  ];
+
+  static bool _isHaram(String title) {
+    if (title.isEmpty) return false;
+    final t = title.toLowerCase();
+    for (final w in _banned) {
+      if (t.contains(w)) return true;
+    }
+    return false;
+  }
+
   // ── Trending: рӯйхати ибтидоӣ бе ҷустуҷӯ ──
   // Якчанд эндпоинтро меозмоем; кадоме видео дод — ҳамонро бармегардонем.
   static Future<List<AnimeItem>> trending({int perpage = 40}) async {
@@ -214,7 +236,9 @@ class AparatApi {
     final title = _asStr(attr['title'] ?? node['title']);
 
     // Объект «видео» аст, агар uid-и эътимоднок + (poster ё title) дошта бошад.
-    final looksLikeVideo = _isVideoHash(hash) && (poster.isNotEmpty || title.isNotEmpty);
+    // Мӯҳтавои ҳаром (18+/беодоб) ҳаргиз илова намешавад.
+    final looksLikeVideo = _isVideoHash(hash) &&
+        (poster.isNotEmpty || title.isNotEmpty) && !_isHaram(title);
     if (looksLikeVideo && !acc.containsKey(hash)) {
       acc[hash] = AnimeItem(
         hash: hash,

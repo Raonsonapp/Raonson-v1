@@ -59,6 +59,10 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		log.Printf("[scanFullUser] error: %v", err)
 		return nil, err
 	}
+	// Соҳиби барнома (@raonson) ҳамеша VIP аст.
+	if strings.EqualFold(username, "raonson") {
+		isVip = true
+	}
 	return gin.H{
 		"_id": id, "id": id,
 		"username": username, "avatar": avatar, "bio": bio,
