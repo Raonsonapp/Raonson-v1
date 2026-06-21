@@ -447,7 +447,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppColors.bg,
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -565,7 +565,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppColors.bg,
       elevation: 0,
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios_new_rounded,
@@ -761,7 +761,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1C1C1E),
+            color: AppColors.card,
             borderRadius: BorderRadius.circular(18),
           ),
           child: AnimatedBuilder(
@@ -823,7 +823,7 @@ class _QuickBtn extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
       ),

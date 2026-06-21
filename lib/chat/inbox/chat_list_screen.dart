@@ -189,7 +189,7 @@ class _ChatView extends StatelessWidget {
               child: Container(
                 height: 38,
                 decoration: BoxDecoration(
-                    color: const Color(0xFF1C1C1E),
+                    color: AppColors.card,
                     borderRadius: BorderRadius.circular(12)),
                 child: TextField(
                   controller: searchCtrl,
@@ -234,7 +234,7 @@ class _ChatView extends StatelessWidget {
                 margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF121212),
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.dividerFaint),
                 ),
@@ -270,7 +270,7 @@ class _ChatView extends StatelessWidget {
                           ))
                       : RefreshIndicator(
                           color: AppColors.neonBlue,
-                          backgroundColor: const Color(0xFF1C1C1E),
+                          backgroundColor: AppColors.card,
                           onRefresh: () => ctrl.loadChats(),
                           child: ListView.builder(
                             itemCount: ctrl.chats.length,
@@ -306,7 +306,7 @@ class _TabBar extends StatelessWidget {
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
             decoration: BoxDecoration(
-              color: selected ? AppColors.textPrimary : Color(0xFF1C1C1E),
+              color: selected ? AppColors.textPrimary : AppColors.card,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -353,8 +353,8 @@ class _SkeletonList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: const Color(0xFF1C1C1E),
-      highlightColor: const Color(0xFF2C2C2E),
+      baseColor: AppColors.card,
+      highlightColor: AppColors.divider,
       child: ListView.builder(
         itemCount: 8,
         itemBuilder: (_, __) => const _ChatTileSkeleton(),
@@ -522,7 +522,7 @@ class _MyNoteBubble extends StatelessWidget {
     );
   }
 
-  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+  Widget _ph() => Container(color: AppColors.card,
       child: Icon(Icons.person, color: AppColors.textFaint, size: 26));
 }
 
@@ -611,7 +611,7 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
     );
   }
 
-  Widget _ph() => Container(color: const Color(0xFF1A1A1A),
+  Widget _ph() => Container(color: AppColors.card,
       child: Icon(Icons.person, color: AppColors.textFaint, size: 26));
 }
 
@@ -890,7 +890,7 @@ class _ChatTile extends StatelessWidget {
                   height: 34,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF262626),
+                      backgroundColor: AppColors.divider,
                       foregroundColor: AppColors.textPrimary,
                       elevation: 0,
                       padding: EdgeInsets.zero,

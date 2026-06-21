@@ -127,7 +127,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         hintText: hint,
         hintStyle: TextStyle(color: AppColors.textFaint),
         filled: true,
-        fillColor: const Color(0xFF1A1A1A),
+        fillColor: AppColors.card,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

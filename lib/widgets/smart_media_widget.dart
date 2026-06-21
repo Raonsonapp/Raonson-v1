@@ -254,8 +254,8 @@ class _ShimmerBoxState extends State<_ShimmerBox>
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _anim,
     builder: (_, __) => Container(
-      color: Color.lerp(const Color(0xFF1A1A1A),
-          const Color(0xFF2A2A2A), _anim.value)));
+      color: Color.lerp(AppColors.card,
+          AppColors.divider, _anim.value)));
 }
 
 // ── Error placeholder ────────────────────────────────────────────
@@ -264,7 +264,7 @@ class _ErrorPlaceholder extends StatelessWidget {
   const _ErrorPlaceholder({this.isVideo = false});
   @override
   Widget build(BuildContext context) => Container(
-    color: const Color(0xFF111111),
+    color: AppColors.surface,
     child: Center(child: Icon(
       isVideo ? Icons.play_circle_outline : Icons.broken_image_outlined,
       color: AppColors.textFaint, size: 48)));

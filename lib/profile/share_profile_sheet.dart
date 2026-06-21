@@ -50,7 +50,7 @@ class _ShareState extends State<ShareProfileSheet> {
             margin: const EdgeInsets.symmetric(horizontal: 28),
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color:  _dark ? Color(0xFF111111) : AppColors.textPrimary,
+              color:  _dark ? AppColors.surface : AppColors.textPrimary,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                   color: _dark ? AppColors.dividerFaint : Colors.black12)),
@@ -101,7 +101,7 @@ class _ShareState extends State<ShareProfileSheet> {
               SizedBox(width: 190, height: 190,
                 child: CustomPaint(painter: _QrPainter(
                     fg: _dark ? AppColors.textPrimary : AppColors.bg,
-                    bg: _dark ? Color(0xFF111111) : AppColors.textPrimary,
+                    bg: _dark ? AppColors.surface : AppColors.textPrimary,
                     urlLen: _url.length))),
               const SizedBox(height: 14),
 

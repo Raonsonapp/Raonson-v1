@@ -112,7 +112,7 @@ class _MessageInputState extends State<MessageInput>
     ];
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -136,7 +136,7 @@ class _MessageInputState extends State<MessageInput>
     FocusScope.of(context).unfocus();
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
@@ -246,7 +246,7 @@ class _MessageInputState extends State<MessageInput>
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
             decoration: BoxDecoration(
               color: AppColors.bg,
-              border: Border(top: BorderSide(color: Color(0xFF1C1C1E))),
+              border: Border(top: BorderSide(color: AppColors.card)),
             ),
             child: _recording ? _recordingBar() : _inputBar(),
           ),
@@ -315,7 +315,7 @@ class _MessageInputState extends State<MessageInput>
           child: Container(
             constraints: const BoxConstraints(maxHeight: 120),
             decoration: BoxDecoration(
-              color: const Color(0xFF1C1C1E),
+              color: AppColors.card,
               borderRadius: BorderRadius.circular(24),
             ),
             child: Row(
@@ -457,7 +457,7 @@ class _ReplyPreviewBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      color: const Color(0xFF111111),
+      color: AppColors.surface,
       child: Row(
         children: [
           Container(

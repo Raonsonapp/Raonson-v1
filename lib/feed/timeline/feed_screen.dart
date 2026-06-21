@@ -219,7 +219,7 @@ class _FeedBody extends StatelessWidget {
     final offlineBanner = feedCtrl.isOffline
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            color: const Color(0xFF1A1A1A),
+            color: AppColors.card,
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(Icons.wifi_off, color: AppColors.textFaint, size: 14),
               const SizedBox(width: 6),
@@ -243,8 +243,8 @@ class _FeedBody extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: storyBar),
-            const SliverToBoxAdapter(
-                child: Divider(color: Color(0xFF1A1A1A), height: 1)),
+            SliverToBoxAdapter(
+                child: Divider(color: AppColors.card, height: 1)),
             SliverFillRemaining(
               child: Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -288,8 +288,8 @@ class _FeedBody extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: storyBar),
-            const SliverToBoxAdapter(
-                child: Divider(color: Color(0xFF1A1A1A), height: 1)),
+            SliverToBoxAdapter(
+                child: Divider(color: AppColors.card, height: 1)),
             SliverFillRemaining(
               child: Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -332,8 +332,8 @@ class _FeedBody extends StatelessWidget {
         slivers: [
           SliverToBoxAdapter(child: offlineBanner),
           SliverToBoxAdapter(child: storyBar),
-          const SliverToBoxAdapter(
-              child: Divider(color: Color(0xFF1A1A1A), height: 1)),
+          SliverToBoxAdapter(
+              child: Divider(color: AppColors.card, height: 1)),
           if (feedCtrl.pendingCount > 0)
             SliverToBoxAdapter(
               child: _NewPostsBanner(

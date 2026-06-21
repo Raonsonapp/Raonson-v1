@@ -311,7 +311,7 @@ class _RequestCard extends StatelessWidget {
         Column(children: [
           _btn('Қабул', AppColors.neonBlue, AppColors.textPrimary, onAccept),
           const SizedBox(height: 6),
-          _btn('Рад', Color(0xFF2A2A2A), AppColors.textPrimary, onDecline),
+          _btn('Рад', AppColors.divider, AppColors.textPrimary, onDecline),
         ]),
       ]),
     );
@@ -419,7 +419,7 @@ Widget _avatar(String url, double size) {
 
 Widget _ph(double size) => Container(
   width: size, height: size,
-  color: const Color(0xFF1A1A1A),
+  color: AppColors.card,
   child: Icon(Icons.person, color: AppColors.textFaint, size: size * 0.5),
 );
 

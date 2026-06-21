@@ -29,8 +29,8 @@ class _ProfileSkeletonState extends State<ProfileSkeleton>
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _anim,
     builder: (_, __) {
-      final c1 = Color.lerp(const Color(0xFF111111), const Color(0xFF222222), _anim.value)!;
-      final c2 = Color.lerp(const Color(0xFF1A1A1A), const Color(0xFF2A2A2A), _anim.value)!;
+      final c1 = Color.lerp(AppColors.surface, AppColors.divider, _anim.value)!;
+      final c2 = Color.lerp(AppColors.card, AppColors.divider, _anim.value)!;
 
       return Scaffold(
         backgroundColor: AppColors.bg,

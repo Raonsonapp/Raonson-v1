@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../app/app_theme.dart';
 
 // ── Shimmer effect ───────────────────────────────────────────────────
 class _Shimmer extends StatefulWidget {
@@ -40,10 +41,10 @@ class _ShimmerState extends State<_Shimmer>
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             stops: const [0.0, 0.5, 1.0],
-            colors: const [
-              Color(0xFF1A1A1A),
-              Color(0xFF2A2A2A),
-              Color(0xFF1A1A1A),
+            colors: [
+              AppColors.card,
+              AppColors.divider,
+              AppColors.card,
             ],
             transform: _SlideGradient(_anim.value),
           ),
@@ -112,7 +113,7 @@ class PostCardSkeleton extends StatelessWidget {
           ]),
         ),
         const SizedBox(height: 12),
-        const Divider(color: Color(0xFF1A1A1A), height: 1),
+        Divider(color: AppColors.card, height: 1),
       ],
     );
   }
@@ -151,7 +152,7 @@ class FeedSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: [
       const StoryBarSkeleton(),
-      const Divider(color: Color(0xFF1A1A1A), height: 1),
+      Divider(color: AppColors.card, height: 1),
       const PostCardSkeleton(),
       const PostCardSkeleton(),
       const PostCardSkeleton(),

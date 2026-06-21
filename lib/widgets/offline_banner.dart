@@ -88,7 +88,7 @@ class _OfflineBannerState extends State<OfflineBanner>
                     decoration: BoxDecoration(
                       color: _isOnlineMsg
                           ? const Color(0xFF34C759)
-                          : const Color(0xFF2C2C2E),
+                          : AppColors.divider,
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: const [
                         BoxShadow(blurRadius: 12, color: Colors.black38)
