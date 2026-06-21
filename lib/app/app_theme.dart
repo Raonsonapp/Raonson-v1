@@ -107,8 +107,32 @@ class AppTheme {
         bodySmall:  TextStyle(color: Color(0xFF8899A6)),
         titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
+      pageTransitionsTheme: _transitions,
+      splashFactory: InkSparkle.splashFactory,
+      bottomSheetTheme: _sheetTheme,
+      dialogTheme: _dialogTheme,
+      snackBarTheme: _snackTheme,
     );
   }
+
+  // ── Ҷузъҳои муштарак (мулоим + муосир) — ҳар ду тема истифода мебаранд ──
+  static const PageTransitionsTheme _transitions = PageTransitionsTheme(builders: {
+    TargetPlatform.android: ZoomPageTransitionsBuilder(),
+    TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+  });
+  static const BottomSheetThemeData _sheetTheme = BottomSheetThemeData(
+    shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+    clipBehavior: Clip.antiAlias,
+  );
+  static final DialogTheme _dialogTheme = DialogTheme(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  );
+  static const SnackBarThemeData _snackTheme = SnackBarThemeData(
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12))),
+  );
 
   // ── Light theme ──
   static const Color lightBg      = Color(0xFFFFFFFF);
@@ -147,6 +171,11 @@ class AppTheme {
         bodySmall:  TextStyle(color: lightSubtext),
         titleLarge: TextStyle(color: lightText, fontWeight: FontWeight.bold),
       ),
+      pageTransitionsTheme: _transitions,
+      splashFactory: InkSparkle.splashFactory,
+      bottomSheetTheme: _sheetTheme,
+      dialogTheme: _dialogTheme,
+      snackBarTheme: _snackTheme,
     );
   }
 }
