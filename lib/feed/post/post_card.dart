@@ -190,7 +190,7 @@ class _PostCardState extends State<PostCard>
     if (_likeCount == 0) return;
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       isScrollControlled: true,
@@ -204,7 +204,7 @@ class _PostCardState extends State<PostCard>
   void _showOwnerMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
@@ -279,7 +279,7 @@ class _PostCardState extends State<PostCard>
   void _showOtherMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
@@ -309,7 +309,7 @@ class _PostCardState extends State<PostCard>
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.card,
         title: Text('Ҳазф кардан?',
             style: TextStyle(color: AppColors.textPrimary)),
         content: Text('Пост тамоман ҳазф мешавад.',
@@ -338,7 +338,7 @@ class _PostCardState extends State<PostCard>
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
@@ -400,7 +400,7 @@ class _PostCardState extends State<PostCard>
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.card,
         title: Text('Тағир додани мусиқа',
             style: TextStyle(color: AppColors.textPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -435,7 +435,7 @@ class _PostCardState extends State<PostCard>
     controller: c, style: TextStyle(color: AppColors.textPrimary),
     decoration: InputDecoration(
       hintText: hint, hintStyle: TextStyle(color: AppColors.textFaint),
-      filled: true, fillColor: const Color(0xFF111111),
+      filled: true, fillColor: AppColors.surface,
       border: const OutlineInputBorder(borderSide: BorderSide.none)));
 
 
@@ -443,7 +443,7 @@ class _PostCardState extends State<PostCard>
     final ctrl = TextEditingController();
     await showModalBottomSheet(
       context: context, isScrollControlled: true,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
@@ -462,7 +462,7 @@ class _PostCardState extends State<PostCard>
             style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: '@username', hintStyle: TextStyle(color: AppColors.textFaint),
-              filled: true, fillColor: Color(0xFF1A1A1A),
+              filled: true, fillColor: AppColors.card,
               border: OutlineInputBorder(borderSide: BorderSide.none))),
           const SizedBox(height: 12),
           SizedBox(width: double.infinity,
@@ -554,7 +554,7 @@ class _PostCardState extends State<PostCard>
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.card,
         title: Text('Жалоб партофтан',
             style: TextStyle(color: AppColors.textPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min,
@@ -595,7 +595,7 @@ class _PostCardState extends State<PostCard>
   void _showShare() {
     final url = 'https://mahmadmurodov-raonson.hf.space/posts/preview/${widget.post.id}';
     showModalBottomSheet(
-      context: context, backgroundColor: const Color(0xFF1A1A1A),
+      context: context, backgroundColor: AppColors.card,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -660,7 +660,7 @@ class _PostCardState extends State<PostCard>
                 if (mounted) setState(() => _shareCount++);
               }),
             _ShareActionBtn(svgPath: 'assets/icons/link.svg',
-              color: const Color(0xFF2A2A2A), label: 'Линк',
+              color: AppColors.divider, label: 'Линк',
               onTap: () {
                 Clipboard.setData(ClipboardData(text: url));
                 Navigator.pop(sheetCtx);
@@ -669,7 +669,7 @@ class _PostCardState extends State<PostCard>
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2))); }),
             _ShareActionBtn(svgPath: 'assets/icons/download.svg',
-              color: const Color(0xFF2A2A2A), label: 'Зеркашӣ',
+              color: AppColors.divider, label: 'Зеркашӣ',
               onTap: () {
                 Navigator.pop(sheetCtx);
                 final media = widget.post.media.isNotEmpty
@@ -681,7 +681,7 @@ class _PostCardState extends State<PostCard>
                 }
               }),
             _ShareActionBtn(svgPath: 'assets/icons/share.svg',
-              color: const Color(0xFF2A2A2A), label: 'Бештар',
+              color: AppColors.divider, label: 'Бештар',
               onTap: () { Navigator.pop(sheetCtx);
                 Share.share(url).then((_) {
                   if (mounted) setState(() => _shareCount++); }); }),
@@ -739,7 +739,7 @@ class _PostCardState extends State<PostCard>
   void _openComments() {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SizedBox(
@@ -752,7 +752,7 @@ class _PostCardState extends State<PostCard>
   void _showTaggedUsers(List<String> users) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
@@ -1080,7 +1080,7 @@ class _PostCardState extends State<PostCard>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
+              color: AppColors.card,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1116,7 +1116,7 @@ class _PostCardState extends State<PostCard>
       else
         const SizedBox(height: 10),
 
-      const Divider(color: Color(0xFF1A1A1A), height: 1),
+      Divider(color: AppColors.card, height: 1),
     ]);
   }
 }
@@ -1254,7 +1254,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                                 ? NetworkImage(av) : null,
                             child: av.isEmpty ? Icon(
                                 Icons.person, color: AppColors.textFaint) : null,
-                            backgroundColor: const Color(0xFF1A1A1A),
+                            backgroundColor: AppColors.card,
                           ),
                           title: Text('@$un',
                               style: TextStyle(color: AppColors.textPrimary,
@@ -1358,7 +1358,7 @@ class _BigStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Expanded(child: Container(
     margin: const EdgeInsets.all(4), padding: const EdgeInsets.symmetric(vertical: 14),
-    decoration: BoxDecoration(color: const Color(0xFF1A1A1A),
+    decoration: BoxDecoration(color: AppColors.card,
         borderRadius: BorderRadius.circular(12)),
     child: Column(children: [
       Text(emoji, style: const TextStyle(fontSize: 20)),
@@ -1384,7 +1384,7 @@ class _AudienceBar extends StatelessWidget {
     const SizedBox(height: 6),
     ClipRRect(borderRadius: BorderRadius.circular(4),
       child: LinearProgressIndicator(value: pct / 100,
-        backgroundColor: const Color(0xFF2A2A2A),
+        backgroundColor: AppColors.divider,
         valueColor: AlwaysStoppedAnimation(color), minHeight: 8)),
   ]);
 }
@@ -1399,7 +1399,7 @@ class _EngRow extends StatelessWidget {
     Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(4),
       child: LinearProgressIndicator(
         value: value > 0 ? (value / (value + 20)).clamp(0.05, 1.0) : 0,
-        backgroundColor: const Color(0xFF2A2A2A),
+        backgroundColor: AppColors.divider,
         valueColor: AlwaysStoppedAnimation(color), minHeight: 8))),
     const SizedBox(width: 8),
     Text('$value', style: TextStyle(color: AppColors.textPrimary,
@@ -1460,7 +1460,7 @@ class _MediaCarouselState extends State<_MediaCarousel> {
           itemBuilder: (_, i) {
             final url  = widget.media[i]['url']  ?? '';
             final type = widget.media[i]['type'] ?? 'image';
-            if (url.isEmpty) return Container(color: const Color(0xFF111111));
+            if (url.isEmpty) return Container(color: AppColors.surface);
             if (type == 'video') return _VideoItem(
               url: url, isActive: widget.isActive, aspectRatio: aspectRatio,
               onRatio: (r) {
@@ -1471,11 +1471,11 @@ class _MediaCarouselState extends State<_MediaCarousel> {
             return CachedNetworkImage(
               imageUrl: url, fit: BoxFit.cover,
               width: double.infinity, height: double.infinity,
-              placeholder: (_, __) => Container(color: const Color(0xFF111111),
+              placeholder: (_, __) => Container(color: AppColors.surface,
                 child: Center(child: CircularProgressIndicator(
                     strokeWidth: 2, color: AppColors.textFaint))),
               errorWidget: (_, __, ___) => Container(
-                color: const Color(0xFF111111),
+                color: AppColors.surface,
                 child: Center(child: Icon(Icons.broken_image_outlined,
                     color: AppColors.textFaint, size: 48))));
           }),

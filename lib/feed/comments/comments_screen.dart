@@ -403,7 +403,7 @@ class _CommentItemState extends State<_CommentItem> {
   void _showOwnerMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(
@@ -430,7 +430,7 @@ class _CommentItemState extends State<_CommentItem> {
   void _showOtherMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(child: Column(
@@ -494,7 +494,7 @@ class _CommentItemState extends State<_CommentItem> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.card,
         title: Text('Таҳрир кардан',
             style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
@@ -503,7 +503,7 @@ class _CommentItemState extends State<_CommentItem> {
           decoration: InputDecoration(
             hintText: 'Шарҳ...',
             hintStyle: TextStyle(color: AppColors.textFaint),
-            filled: true, fillColor: Color(0xFF111111),
+            filled: true, fillColor: AppColors.surface,
             border: OutlineInputBorder(borderSide: BorderSide.none)),
         ),
         actions: [

@@ -23,7 +23,7 @@ class BottomNavBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bg,
-        border: Border(top: BorderSide(color: Color(0xFF1A1A1A), width: 0.5)),
+        border: Border(top: BorderSide(color: AppColors.card, width: 0.5)),
       ),
       child: SafeArea(
         top: false,
@@ -179,7 +179,7 @@ class _ProfileItem extends StatelessWidget {
   }
 
   Widget _defaultIcon() => Container(
-    color: const Color(0xFF1A1A1A),
+    color: AppColors.card,
     child: Icon(Icons.person, size: 16, color: AppColors.textSecondary),
   );
 }

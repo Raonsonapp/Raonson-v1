@@ -90,7 +90,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     ];
     return showModalBottomSheet<int>(
       context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
@@ -138,7 +138,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Нест кардани аккаунт?',
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
@@ -199,7 +199,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     if (!mounted) return;
     Navigator.pop(context); // loader
     showDialog(context: context, builder: (_) => AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.card,
       title: Text('Тести email', style: TextStyle(color: AppColors.textPrimary)),
       content: SelectableText(result,
           style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),

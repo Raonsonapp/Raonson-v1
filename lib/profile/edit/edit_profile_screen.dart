@@ -177,7 +177,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _label('Биография'),
         const SizedBox(height: 6),
         Container(
-          decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
           child: TextField(controller: _ctrl.bioController, maxLines: 4, maxLength: 150,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
@@ -198,7 +198,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         // Private
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
           child: Row(children: [
             Icon(Icons.lock_outline_rounded, color: AppColors.textSecondary, size: 20),
@@ -230,7 +230,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
-        decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),
             border: Border.all(color: border, width: 1.2)),
         child: TextField(controller: _ctrl.usernameController, maxLength: 30,
           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
@@ -259,7 +259,7 @@ class _AddMusicTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GestureDetector(onTap: onTap,
     child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
       child: Row(children: [
         Container(width: 34, height: 34, decoration: BoxDecoration(shape: BoxShape.circle,
@@ -277,7 +277,7 @@ class _MusicCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14),
+    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.textPrimary.withOpacity(0.3))),
     child: Row(children: [
       ClipRRect(borderRadius: BorderRadius.circular(8),

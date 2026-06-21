@@ -221,7 +221,7 @@ class _BubbleBody extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.72),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isMine ? AppColors.neonBlue : Color(0xFF1C1C1E),
+        color: isMine ? AppColors.neonBlue : AppColors.card,
         borderRadius: BorderRadius.only(
           topLeft:     const Radius.circular(18),
           topRight:    const Radius.circular(18),
@@ -270,14 +270,14 @@ class _ImageBubble extends StatelessWidget {
         fit:      BoxFit.cover,
         placeholder: (_, __) => Container(
           width: 220, height: 260,
-          color: const Color(0xFF1C1C1E),
+          color: AppColors.card,
           child: const Center(
               child: CircularProgressIndicator(
                   color: AppColors.neonBlue, strokeWidth: 2)),
         ),
         errorWidget: (_, __, ___) => Container(
           width: 220, height: 260,
-          color: const Color(0xFF1C1C1E),
+          color: AppColors.card,
           child: Icon(Icons.broken_image_rounded,
               color: AppColors.textFaint, size: 40),
         ),
@@ -322,7 +322,7 @@ class _UploadingBubble extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 180, height: 120,
     decoration: BoxDecoration(
-      color: const Color(0xFF1C1C1E),
+      color: AppColors.card,
       borderRadius: BorderRadius.circular(16),
     ),
     child: const Center(
@@ -397,7 +397,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
       width: 220,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: widget.isMine ? AppColors.neonBlue : Color(0xFF1C1C1E),
+        color: widget.isMine ? AppColors.neonBlue : AppColors.card,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(children: [
@@ -465,7 +465,7 @@ class _VideoBubble extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           width: 220, height: 260,
-          color: const Color(0xFF1C1C1E),
+          color: AppColors.card,
           child: Center(
             child: CircleAvatar(
               radius: 26,
@@ -572,7 +572,7 @@ class _ReactionsRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
-            color: const Color(0xFF1C1C1E),
+            color: AppColors.card,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppColors.dividerFaint),
           ),
@@ -693,7 +693,7 @@ class _MessageContextMenu extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 24),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(

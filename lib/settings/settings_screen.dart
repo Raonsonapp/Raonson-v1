@@ -1337,7 +1337,7 @@ class _Dialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: AppColors.card,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16)),
       title: Text(title,

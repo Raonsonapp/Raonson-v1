@@ -77,7 +77,7 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
                   ))
               : RefreshIndicator(
                   color: AppColors.storyEnd,
-                  backgroundColor: const Color(0xFF1C1C1E),
+                  backgroundColor: AppColors.card,
                   onRefresh: _load,
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
@@ -100,7 +100,7 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF121212),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.dividerFaint),
       ),
@@ -164,6 +164,6 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
       );
 
   Widget _ph() => Container(width: 52, height: 52,
-      color: const Color(0xFF1C1C1C),
+      color: AppColors.card,
       child: Icon(Icons.image_outlined, color: AppColors.textFaint));
 }

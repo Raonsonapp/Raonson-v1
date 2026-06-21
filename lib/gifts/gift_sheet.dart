@@ -18,7 +18,7 @@ Future<void> showGiftSheet(
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1A1A1A),
+    backgroundColor: AppColors.card,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
     builder: (_) => _GiftSheet(
@@ -64,7 +64,7 @@ class _GiftSheetState extends State<_GiftSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('⭐ $_selected ситора ба @${widget.authorName} фиристода шуд'),
-          backgroundColor: const Color(0xFF222222),
+          backgroundColor: AppColors.divider,
           duration: const Duration(seconds: 2),
         ));
       } else {
@@ -180,7 +180,7 @@ class _GiftSheetState extends State<_GiftSheet> {
               onTap: () => setState(() => _selected = s),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF242424),
+                  color: AppColors.divider,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                       color: sel ? AppColors.storyEnd : AppColors.dividerFaint,

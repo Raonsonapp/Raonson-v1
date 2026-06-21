@@ -134,7 +134,7 @@ class _HighlightViewerState extends State<HighlightViewer>
     _pause();
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: AppColors.card,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
@@ -180,7 +180,7 @@ class _HighlightViewerState extends State<HighlightViewer>
     final name = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.card,
         title: Text('Номивазкунӣ',
             style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
@@ -232,7 +232,7 @@ class _HighlightViewerState extends State<HighlightViewer>
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.card,
         title: Text('Нест кардан?', style: TextStyle(color: AppColors.textPrimary)),
         content: Text('Актуалӣ тамоман нест мешавад.',
             style: TextStyle(color: AppColors.textSecondary)),

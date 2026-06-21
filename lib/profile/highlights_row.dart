@@ -117,8 +117,8 @@ class HighlightOptionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-          color: Color(0xFF1C1C1E),
+      decoration: BoxDecoration(
+          color: AppColors.card,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Center(child: Container(

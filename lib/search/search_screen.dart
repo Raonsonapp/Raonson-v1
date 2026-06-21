@@ -524,8 +524,8 @@ class _SearchScreenState extends State<SearchScreen>
         child: Row(children: [
           Container(
             width: 44, height: 44,
-            decoration: const BoxDecoration(
-                color: Color(0xFF262626), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: AppColors.divider, shape: BoxShape.circle),
             child: Icon(Icons.history_rounded,
                 color: AppColors.textTertiary, size: 22),
           ),
@@ -594,7 +594,7 @@ class _SearchScreenState extends State<SearchScreen>
           padding: const EdgeInsets.symmetric(horizontal: 8),
           tabs: _tabLabels.map((l) => Tab(text: l)).toList(),
         ),
-        const Divider(color: Color(0xFF262626), height: 1),
+        Divider(color: AppColors.divider, height: 1),
         // Tab views
         Expanded(
           child: _error != null
@@ -683,7 +683,7 @@ class _SearchBarRaw extends StatelessWidget {
     return Container(
       height: 38,
       decoration: BoxDecoration(
-        color: const Color(0xFF262626),
+        color: AppColors.divider,
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextField(
@@ -810,9 +810,9 @@ class _ExploreCell extends StatelessWidget {
           imageUrl: item.url,
           fit: BoxFit.cover,
           placeholder: (_, __) =>
-              Container(color: const Color(0xFF111111)),
+              Container(color: AppColors.surface),
           errorWidget: (_, __, ___) =>
-              Container(color: const Color(0xFF111111)),
+              Container(color: AppColors.surface),
         ),
         // Reel icon (top-right)
         if (item.type == _ItemType.reel)
@@ -886,7 +886,7 @@ class _ExplorePreviewDialog extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 28),
             constraints: const BoxConstraints(maxWidth: 340),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
+              color: AppColors.card,
               borderRadius: BorderRadius.circular(16),
             ),
             clipBehavior: Clip.antiAlias,
@@ -913,9 +913,9 @@ class _ExplorePreviewDialog extends StatelessWidget {
                   imageUrl: item.url,
                   fit: BoxFit.cover,
                   placeholder: (_, __) =>
-                      Container(color: const Color(0xFF111111)),
+                      Container(color: AppColors.surface),
                   errorWidget: (_, __, ___) =>
-                      Container(color: const Color(0xFF111111)),
+                      Container(color: AppColors.surface),
                 ),
               ),
               // Action row (мисли Instagram menu)
@@ -990,7 +990,7 @@ class _SkeletonGridState extends State<_SkeletonGrid>
         itemCount: 18,
         itemBuilder: (_, __) => Container(
           color: Color.lerp(
-              const Color(0xFF111111), const Color(0xFF1E1E1E), _anim.value),
+              AppColors.surface, AppColors.card, _anim.value),
         ),
       ),
     );
@@ -1146,7 +1146,7 @@ class _FeedCardState extends State<_FeedCard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _ExploreCommentsSheet(
@@ -1465,8 +1465,8 @@ class _ForYouTab extends StatelessWidget {
               ),
             ),
           ),
-          const SliverToBoxAdapter(
-              child: Divider(color: Color(0xFF1C1C1C), height: 16)),
+          SliverToBoxAdapter(
+              child: Divider(color: AppColors.card, height: 16)),
         ],
 
         // Music strip
@@ -1487,8 +1487,8 @@ class _ForYouTab extends StatelessWidget {
                   .toList(),
             ),
           ),
-          const SliverToBoxAdapter(
-              child: Divider(color: Color(0xFF1C1C1C), height: 16)),
+          SliverToBoxAdapter(
+              child: Divider(color: AppColors.card, height: 16)),
         ],
 
         // Grid of posts/reels
@@ -1607,7 +1607,7 @@ class _HashtagTab extends StatelessWidget {
               Container(
                 width: 46, height: 46,
                 decoration: BoxDecoration(
-                    color: const Color(0xFF1C1C1C),
+                    color: AppColors.card,
                     borderRadius: BorderRadius.circular(12)),
                 child: Icon(Icons.tag_rounded,
                     color: AppColors.textSecondary, size: 22),
@@ -1855,7 +1855,7 @@ class _MusicRowState extends State<_MusicRow> {
 class _MusicPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-      width: 50, height: 50, color: const Color(0xFF1A1A1A),
+      width: 50, height: 50, color: AppColors.card,
       child: Icon(Icons.music_note_rounded,
           color: AppColors.textFaint, size: 22));
 }

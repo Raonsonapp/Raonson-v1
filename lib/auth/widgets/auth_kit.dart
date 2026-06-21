@@ -13,11 +13,11 @@ class AuthBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment(0.9, -0.9),
           radius: 1.2,
-          colors: [Color(0xFF06210F), Color(0xFF000000)],
+          colors: [Color(0xFF06210F), AppColors.bg],
           stops: [0.0, 0.7],
         ),
       ),
@@ -304,7 +304,7 @@ class LangChip extends StatelessWidget {
   void _pick(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(

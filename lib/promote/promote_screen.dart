@@ -87,7 +87,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
       context: context,
       isDismissible: false,
       enableDrag: false,
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => SafeArea(
@@ -229,7 +229,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF121212),
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.dividerFaint),
             ),
@@ -273,7 +273,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
   }
 
   Widget _thumbPh() => Container(
-      width: 56, height: 56, color: const Color(0xFF1C1C1C),
+      width: 56, height: 56, color: AppColors.card,
       child: Icon(Icons.image_outlined, color: AppColors.textFaint));
 
   Widget _section(String t) => Padding(
@@ -297,7 +297,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
         hintText: hint,
         hintStyle: TextStyle(color: AppColors.textFaint),
         filled: true,
-        fillColor: const Color(0xFF121212),
+        fillColor: AppColors.surface,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none),
@@ -323,7 +323,7 @@ class _GoalCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
               color: selected ? AppColors.storyEnd : AppColors.dividerFaint,

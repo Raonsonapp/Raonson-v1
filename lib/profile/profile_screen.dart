@@ -193,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     return showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
         title: Text('Актуальни нав',
@@ -264,7 +264,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _confirmBlock(bool cur) {
     final u = _ctrl.profile!;
     showDialog(context: context, builder: (_) => AlertDialog(
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: AppColors.card,
       title: Text(cur ? 'Блокро бардор?' : '${u.username}-ро блок кун?',
           style: TextStyle(color: AppColors.textPrimary)),
       content: Text(cur
@@ -294,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _confirmDelete(PostModel p) {
     showDialog(context: context, builder: (_) => AlertDialog(
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: AppColors.card,
       title: Text('Нест кардан?',
           style: TextStyle(color: AppColors.textPrimary)),
       content: Text('Ин пост тамоман нест мешавад.',
@@ -581,7 +581,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _sheet(List<Widget> items) => showModalBottomSheet(
     context: context,
-    backgroundColor: const Color(0xFF1C1C1E),
+    backgroundColor: AppColors.card,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => SafeArea(child: Column(
@@ -804,9 +804,9 @@ class _ReelGrid extends StatelessWidget {
     return '$v';
   }
   Widget _reelPlaceholder() => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF2C2C2E), Color(0xFF1A1A1C)],
+            colors: [AppColors.divider, Color(0xFF1A1A1C)],
             begin: Alignment.topLeft, end: Alignment.bottomRight)),
         child: Center(
           child: SvgPicture.asset('assets/icons/nav_reels.svg',
@@ -973,7 +973,7 @@ class _ULS extends State<_UserListSheet> {
     final list = _filtered;
     return Container(
       height: MediaQuery.of(context).size.height * 0.72,
-      decoration: const BoxDecoration(color: Color(0xFF111111),
+      decoration: BoxDecoration(color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       child: Column(children: [
         Center(child: Container(width: 36, height: 4,
@@ -988,7 +988,7 @@ class _ULS extends State<_UserListSheet> {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Container(
             height: 38,
-            decoration: BoxDecoration(color: const Color(0xFF262626),
+            decoration: BoxDecoration(color: AppColors.divider,
                 borderRadius: BorderRadius.circular(10)),
             child: TextField(
               controller: _searchCtrl,
@@ -1066,7 +1066,7 @@ class _UserFollowBtn extends StatelessWidget {
           height: 32, width: 104,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: following ? Color(0xFF262626) : AppColors.neonBlue,
+              backgroundColor: following ? AppColors.divider : AppColors.neonBlue,
               foregroundColor: AppColors.textPrimary,
               elevation: 0,
               padding: EdgeInsets.zero,
@@ -1088,7 +1088,7 @@ class _VerifySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(24, 8, 24, 36),
-    decoration: const BoxDecoration(color: Color(0xFF111111),
+    decoration: BoxDecoration(color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
     child: SafeArea(top: false, child: Column(mainAxisSize: MainAxisSize.min,
       children: [

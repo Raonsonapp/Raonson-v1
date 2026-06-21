@@ -10,7 +10,7 @@ import '../app/app_theme.dart';
 void showAccountSwitcher(BuildContext context) {
   showModalBottomSheet(
     context: context,
-    backgroundColor: const Color(0xFF1A1A1A),
+    backgroundColor: AppColors.card,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (sheetCtx) => SafeArea(
