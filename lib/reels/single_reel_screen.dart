@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 
 import '../core/api/api_client.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 import '../models/reel_model.dart';
 import 'player/reel_player.dart';
 
@@ -18,6 +20,8 @@ class _SingleReelScreenState extends State<SingleReelScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.logEvent(AnalyticsEvents.reelView,
+        params: {'reelId': widget.reel.id});
     // Ҳисоби бинандаҳо (1 бор аз ҳар user — backend dedup мекунад)
     ApiClient.instance
         .post('/reels/${widget.reel.id}/view')

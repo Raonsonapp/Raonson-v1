@@ -6,6 +6,7 @@ import '../core/storage/token_storage.dart';
 import '../core/services/user_session.dart';
 import '../core/services/vip_service.dart';
 import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 
 class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -92,6 +93,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.logout);
     AnalyticsService.instance.clearUser();
     await AnalyticsService.instance.flush();
     await TokenStorage.clearTokens();

@@ -5,6 +5,8 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/services/user_session.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 
 class RegisterState {
   final String username;
@@ -108,6 +110,7 @@ class RegisterController extends ChangeNotifier {
         }
       }
 
+      AnalyticsService.instance.logEvent(AnalyticsEvents.register);
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;

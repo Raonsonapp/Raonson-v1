@@ -16,6 +16,12 @@ class SocketService {
   bool _connected  = false;
   bool _connecting = false;
 
+  // ── Auto-reconnect (exponential backoff) ──
+  bool        _manualClose = false; // disconnect()-и дастӣ → reconnect нашавад
+  String?     _lastToken;
+  int         _retry = 0;
+  Timer?      _reconnectTimer;
+
   final Map<String, List<void Function(dynamic)>> _listeners = {};
 
   bool get isConnected => _connected;
@@ -23,6 +29,8 @@ class SocketService {
   Future<void> connect(String token) async {
     if (_connected || _connecting) return;
     _connecting = true;
+    _manualClose = false;
+    _lastToken = token;
 
     final wsUrl = AppConfig.apiBaseUrl
         .replaceFirst('https://', 'wss://')
@@ -43,17 +51,45 @@ class SocketService {
             debugPrint('[Socket] parse: $e');
           }
         },
-        onDone:  () { _connected = false; _connecting = false; },
-        onError: (e) { _connected = false; _connecting = false; debugPrint('[Socket] error: $e'); },
+        onDone:  () { _onClosed(); },
+        onError: (e) { debugPrint('[Socket] error: $e'); _onClosed(); },
         cancelOnError: false,
       );
       _connected  = true;
       _connecting = false;
+      _retry      = 0; // пайвасти муваффақ → backoff reset
       debugPrint('[Socket] connected ✅');
     } catch (e) {
       _connecting = false;
       debugPrint('[Socket] connect failed: $e');
+      _scheduleReconnect();
     }
+  }
+
+  // Пайваст канда шуд (onDone/onError) — агар дастӣ набошад, дубора пайваст шав.
+  void _onClosed() {
+    _connected  = false;
+    _connecting = false;
+    _sub?.cancel();
+    _channel = null;
+    if (_manualClose) return;
+    _scheduleReconnect();
+  }
+
+  // Exponential backoff: 1с, 2с, 4с, 8с, 16с, ... (макс 30с).
+  void _scheduleReconnect() {
+    if (_manualClose) return;
+    _reconnectTimer?.cancel();
+    final delay = (1 << _retry).clamp(1, 30); // 1,2,4,8,16,30…
+    if (_retry < 5) _retry++;
+    _reconnectTimer = Timer(Duration(seconds: delay), () async {
+      if (_manualClose) return;
+      final token = _lastToken ??
+          await TokenStorage.getAccessToken();
+      if (token != null && token.isNotEmpty) {
+        await connect(token);
+      }
+    });
   }
 
   Future<void> autoConnect() async {
@@ -99,10 +135,28 @@ class SocketService {
   void offTyping()     => off('chat:typing');
 
   void disconnect() {
+    _manualClose = true;
+    _reconnectTimer?.cancel();
     _sub?.cancel();
     _channel?.sink.close();
     _channel = null; _connected = false; _connecting = false;
     _listeners.clear();
+  }
+
+  // ── Test hooks ──
+  @visibleForTesting
+  bool get reconnectPending => _reconnectTimer?.isActive ?? false;
+
+  @visibleForTesting
+  void debugTriggerDisconnect() => _onClosed();
+
+  @visibleForTesting
+  void debugReset() {
+    _reconnectTimer?.cancel();
+    _retry = 0;
+    _manualClose = false;
+    _connected = false;
+    _connecting = false;
   }
 
   void _dispatch(String event, dynamic data) {

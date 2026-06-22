@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import 'dart:async';
 import 'dart:math' show Random;
 import 'package:flutter/material.dart';
@@ -142,7 +144,11 @@ class _PostCardState extends State<PostCard>
       _likeCount += _liked ? 1 : -1;
       if (_likeCount < 0) _likeCount = 0;
     });
-    if (_liked) _likeCtrl.forward(from: 0);
+    if (_liked) {
+      _likeCtrl.forward(from: 0);
+      AnalyticsService.instance.logEvent(AnalyticsEvents.postLike,
+          params: {'postId': widget.post.id});
+    }
     _countCtrl.forward(from: 0);
 
     _likeDebounce?.cancel();
@@ -177,6 +183,10 @@ class _PostCardState extends State<PostCard>
   Future<void> _toggleSave() async {
     final was = _saved;
     setState(() => _saved = !was);
+    if (!was) {
+      AnalyticsService.instance.logEvent(AnalyticsEvents.postSave,
+          params: {'postId': widget.post.id});
+    }
     try {
       final res = await ApiClient.instance
           .post('/posts/${widget.post.id}/save');
@@ -593,6 +603,8 @@ class _PostCardState extends State<PostCard>
   }
 
   void _showShare() {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.postShare,
+        params: {'postId': widget.post.id});
     final url = 'https://mahmadmurodov-raonson.hf.space/posts/preview/${widget.post.id}';
     showModalBottomSheet(
       context: context, backgroundColor: AppColors.card,
@@ -737,6 +749,8 @@ class _PostCardState extends State<PostCard>
   }
 
   void _openComments() {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.postComment,
+        params: {'postId': widget.post.id});
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       backgroundColor: AppColors.surface,
