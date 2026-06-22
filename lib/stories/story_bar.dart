@@ -66,7 +66,10 @@ class StoryBar extends StatelessWidget {
               url: liveAvatar ?? myAvatar ?? '',
               ringState: myRing,
               onTapAvatar: () => myGrp.isNotEmpty
-                  ? onTap?.call(myGrp.first) : onAddStory?.call(),
+                  ? (onTapGroup != null
+                      ? onTapGroup!(myGrp, 0)
+                      : onTap?.call(myGrp.first))
+                  : onAddStory?.call(),
               onTapAdd: onAddStory ?? () {},
             ),
           ),
