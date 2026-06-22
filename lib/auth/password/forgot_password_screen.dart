@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../auth_repository.dart';
 import 'reset_password_screen.dart';
+import '../../core/ui/app_icons.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -55,7 +56,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.textFaint, width: 2),
               ),
-              child: Icon(Icons.lock_outline_rounded,
+              child: Icon(AppIcons.lock_outline_rounded,
                   color: AppColors.textPrimary, size: 42),
             ),
           ),

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
+import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -355,13 +356,13 @@ class _StoryEditorState extends State<StoryEditor> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white24)),
                   child: Row(children: [
-                    const Icon(Icons.music_note, color: Colors.white, size: 18),
+                    const Icon(AppIcons.music_note, color: Colors.white, size: 18),
                     const SizedBox(width: 8),
                     Expanded(child: Text('${_selectedTrack!.title} — ${_selectedTrack!.artist}',
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       overflow: TextOverflow.ellipsis)),
                     GestureDetector(onTap: () => setState(() => _selectedTrack = null),
-                      child: const Icon(Icons.close, color: Colors.white54, size: 16)),
+                      child: const Icon(AppIcons.close, color: Colors.white54, size: 16)),
                   ])))),
 
           // ── Draw color bar ──────────────────────
@@ -391,17 +392,17 @@ class _StoryEditorState extends State<StoryEditor> {
           SafeArea(child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(children: [
-              IconButton(icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              IconButton(icon: const Icon(AppIcons.close, color: Colors.white, size: 28),
                 onPressed: widget.isUploading ? null : widget.onCancel),
               const Spacer(),
               if (_tool == _Tool.draw && _drawPoints.isNotEmpty)
-                IconButton(icon: const Icon(Icons.undo, color: Colors.white),
+                IconButton(icon: const Icon(AppIcons.undo, color: Colors.white),
                   onPressed: () => setState(() {
                     int i = _drawPoints.length - 1;
                     while (i > 0 && !_drawPoints[i].isStart) { i--; }
                     _drawPoints.removeRange(i, _drawPoints.length);
                   })),
-              IconButton(icon: const Icon(Icons.download_rounded, color: Colors.white, size: 26),
+              IconButton(icon: const Icon(AppIcons.download_rounded, color: Colors.white, size: 26),
                 onPressed: _saveStory),
             ]))),
 
@@ -424,10 +425,10 @@ class _StoryEditorState extends State<StoryEditor> {
               _SideBtn(svgPath: 'assets/icons/mention.svg', label: 'Зикр',
                 onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
               const SizedBox(height: 2),
-              _SideBtn(icon: Icons.download_rounded, label: 'Захира',
+              _SideBtn(icon: AppIcons.download_rounded, label: 'Захира',
                 onTap: _saveStory),
               const SizedBox(height: 2),
-              _SideBtn(icon: Icons.more_horiz_rounded, label: 'Боз',
+              _SideBtn(icon: AppIcons.more_horiz_rounded, label: 'Боз',
                 onTap: _saveStory),
             ])),
 
@@ -446,7 +447,7 @@ class _StoryEditorState extends State<StoryEditor> {
                       borderRadius: BorderRadius.circular(24)),
                     child: const Row(mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_circle, color: Colors.white, size: 20),
+                        Icon(AppIcons.add_circle, color: Colors.white, size: 20),
                         SizedBox(width: 8),
                         Text('Сторис шумо',
                           style: TextStyle(color: Colors.white,
@@ -462,7 +463,7 @@ class _StoryEditorState extends State<StoryEditor> {
                       color: const Color(0xFF262626),
                       borderRadius: BorderRadius.circular(24)),
                     child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.star, color: Color(0xFF4AC959), size: 18),
+                      Icon(AppIcons.star, color: Color(0xFF4AC959), size: 18),
                       SizedBox(width: 6),
                       Text('Наздикон',
                         style: TextStyle(color: Colors.white,
@@ -480,7 +481,7 @@ class _StoryEditorState extends State<StoryEditor> {
                         ? const Padding(padding: EdgeInsets.all(14),
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.black))
-                        : const Icon(Icons.arrow_forward_rounded,
+                        : const Icon(AppIcons.arrow_forward_rounded,
                             color: Colors.black, size: 24))),
               ])))),
 
@@ -586,8 +587,8 @@ class _MusicPanelState extends State<_MusicPanel> {
             textInputAction: TextInputAction.search, onSubmitted: _search,
             decoration: InputDecoration(
               hintText: 'Суруд ё хонанда...', hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(Icons.search, color: Colors.white38),
-              suffixIcon: IconButton(icon: const Icon(Icons.send, color: Color(0xFF0095F6)),
+              prefixIcon: const Icon(AppIcons.search, color: Colors.white38),
+              suffixIcon: IconButton(icon: const Icon(AppIcons.send, color: Color(0xFF0095F6)),
                 onPressed: () => _search(_ctrl.text)),
               filled: true, fillColor: Colors.white10,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
@@ -598,7 +599,7 @@ class _MusicPanelState extends State<_MusicPanel> {
           child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
         if (!_loading && _tracks.isEmpty && _error == null)
           const Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.music_note, color: Colors.white24, size: 48),
+            Icon(AppIcons.music_note, color: Colors.white24, size: 48),
             SizedBox(height: 12),
             Text('Суруд ёбед', style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
             Text('Масалан: Coldplay, Тарона...', style: TextStyle(color: Colors.white24, fontSize: 12)),
@@ -610,7 +611,7 @@ class _MusicPanelState extends State<_MusicPanel> {
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
                     child: Image.network(t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover))
-                : const Icon(Icons.music_note, color: Colors.white54),
+                : const Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(t.artist, style: const TextStyle(color: Colors.white54),
@@ -619,11 +620,11 @@ class _MusicPanelState extends State<_MusicPanel> {
                 if (t.previewUrl.isNotEmpty)
                   GestureDetector(onTap: () => _togglePlay(t.previewUrl),
                     child: Icon(_playingUrl == t.previewUrl
-                      ? Icons.stop_circle : Icons.play_circle_outline,
+                      ? AppIcons.stop_circle : AppIcons.play_circle_outline,
                       color: Colors.white54, size: 28)),
                 const SizedBox(width: 8),
                 GestureDetector(onTap: () { _player.stop(); widget.onSelected(t); Navigator.pop(context); },
-                  child: const Icon(Icons.add_circle_outline, color: Color(0xFF0095F6), size: 28)),
+                  child: const Icon(AppIcons.add_circle_outline, color: Color(0xFF0095F6), size: 28)),
               ]),
               onTap: () => _togglePlay(t.previewUrl));
           })),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 // ════════════════════════════════════════════════════════════════
 //  SmartMediaWidget  —  Instagram/TikTok style dynamic media
@@ -207,7 +208,7 @@ class _SmartVideoPlayerState extends State<_SmartVideoPlayer> {
 
               // Pause icon
               if (_paused && !_buffering)
-                Center(child: Icon(Icons.play_circle_outline_rounded,
+                Center(child: Icon(AppIcons.play_circle_outline_rounded,
                     color: AppColors.textSecondary, size: 56)),
 
               // Mute button
@@ -219,7 +220,7 @@ class _SmartVideoPlayerState extends State<_SmartVideoPlayer> {
                     decoration: const BoxDecoration(
                       color: Colors.black54, shape: BoxShape.circle),
                     child: Icon(
-                      _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                      _muted ? AppIcons.volume_off_rounded : AppIcons.volume_up_rounded,
                       color: AppColors.textPrimary, size: 16)))),
             ]),
           ),
@@ -266,7 +267,7 @@ class _ErrorPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     color: AppColors.surface,
     child: Center(child: Icon(
-      isVideo ? Icons.play_circle_outline : Icons.broken_image_outlined,
+      isVideo ? AppIcons.play_circle_outline : AppIcons.broken_image_outlined,
       color: AppColors.textFaint, size: 48)));
 }
 

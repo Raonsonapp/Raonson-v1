@@ -12,6 +12,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 import '../upload/post_upload_service.dart';
+import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -87,7 +88,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           leading: Container(width: 44, height: 44,
             decoration: const BoxDecoration(
                 color: Color(0xFF0095F6), shape: BoxShape.circle),
-            child: const Icon(Icons.image_outlined, color: Colors.white, size: 22)),
+            child: const Icon(AppIcons.image_outlined, color: Colors.white, size: 22)),
           title: const Text('Расм', style: TextStyle(color: Colors.white, fontSize: 16,
               fontWeight: FontWeight.w500)),
           subtitle: const Text('Аз галерея',
@@ -97,7 +98,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           leading: Container(width: 44, height: 44,
             decoration: const BoxDecoration(
                 color: Color(0xFF833AB4), shape: BoxShape.circle),
-            child: const Icon(Icons.videocam_outlined, color: Colors.white, size: 22)),
+            child: const Icon(AppIcons.videocam_outlined, color: Colors.white, size: 22)),
           title: const Text('Видео', style: TextStyle(color: Colors.white, fontSize: 16,
               fontWeight: FontWeight.w500)),
           subtitle: const Text('Аз галерея',
@@ -268,7 +269,7 @@ class _PostEditorState extends State<_PostEditor> {
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(children: [
-          Icon(Icons.group_add_rounded, color: Color(0xFF0095F6), size: 20),
+          Icon(AppIcons.group_add_rounded, color: Color(0xFF0095F6), size: 20),
           SizedBox(width: 8),
           Text('Соавтор', style: TextStyle(color: Colors.white)),
         ]),
@@ -300,7 +301,7 @@ class _PostEditorState extends State<_PostEditor> {
                       backgroundColor: const Color(0xFF2A2A2C),
                       label: Text('@$u',
                           style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white54),
+                      deleteIcon: const Icon(AppIcons.close, size: 14, color: Colors.white54),
                       onDeleted: () {
                         setDlg(() => _collaborators.remove(u));
                         setState(() {});
@@ -327,7 +328,7 @@ class _PostEditorState extends State<_PostEditor> {
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(children: [
-          Icon(Icons.location_on, color: Color(0xFFFF3040), size: 20),
+          Icon(AppIcons.location_on, color: Color(0xFFFF3040), size: 20),
           SizedBox(width: 8),
           Text('Ҷойгиршавӣ', style: TextStyle(color: Colors.white)),
         ]),
@@ -525,13 +526,13 @@ class _PostEditorState extends State<_PostEditor> {
                   decoration: BoxDecoration(color: Colors.black54,
                     borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
                   child: Row(children: [
-                    const Icon(Icons.music_note, color: Colors.white, size: 18),
+                    const Icon(AppIcons.music_note, color: Colors.white, size: 18),
                     const SizedBox(width: 8),
                     Expanded(child: Text('${_selectedTrack!.title} — ${_selectedTrack!.artist}',
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       overflow: TextOverflow.ellipsis)),
                     GestureDetector(onTap: () => setState(() => _selectedTrack = null),
-                      child: const Icon(Icons.close, color: Colors.white54, size: 16)),
+                      child: const Icon(AppIcons.close, color: Colors.white54, size: 16)),
                   ])))),
 
           // ── Caption overlay ─────────────────────
@@ -578,11 +579,11 @@ class _PostEditorState extends State<_PostEditor> {
           SafeArea(child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(children: [
-              IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 24),
+              IconButton(icon: const Icon(AppIcons.arrow_back_ios_new, color: Colors.white, size: 24),
                 onPressed: widget.isUploading ? null : widget.onCancel),
               const Spacer(),
               if (_tool == _Tool.draw && _drawPoints.isNotEmpty)
-                IconButton(icon: const Icon(Icons.undo, color: Colors.white),
+                IconButton(icon: const Icon(AppIcons.undo, color: Colors.white),
                   onPressed: () => setState(() {
                     int i = _drawPoints.length - 1;
                     while (i > 0 && !_drawPoints[i].isStart) { i--; }
@@ -606,24 +607,24 @@ class _PostEditorState extends State<_PostEditor> {
               color: Colors.black54,
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                _ToolBtn(icon: Icons.text_fields,         label: 'Текст',
+                _ToolBtn(icon: AppIcons.text_fields,         label: 'Текст',
                   onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
-                _ToolBtn(icon: Icons.brush,               label: 'Расм',
+                _ToolBtn(icon: AppIcons.brush,               label: 'Расм',
                   isActive: _tool == _Tool.draw,
                   onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
-                _ToolBtn(icon: Icons.emoji_emotions_outlined, label: 'Стикер',
+                _ToolBtn(icon: AppIcons.emoji_emotions_outlined, label: 'Стикер',
                   onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
-                _ToolBtn(icon: Icons.music_note,          label: 'Мусиқӣ',
+                _ToolBtn(icon: AppIcons.music_note,          label: 'Мусиқӣ',
                   onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
-                _ToolBtn(icon: Icons.alternate_email,     label: 'Зикр',
+                _ToolBtn(icon: AppIcons.alternate_email,     label: 'Зикр',
                   onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
-                _ToolBtn(icon: Icons.group_add_outlined,  label: 'Соавтор',
+                _ToolBtn(icon: AppIcons.group_add_outlined,  label: 'Соавтор',
                   isActive: _collaborators.isNotEmpty,
                   onTap: () { setState(() => _tool = _Tool.none); _showCollaboratorDialog(); }),
-                _ToolBtn(icon: Icons.location_on_outlined, label: 'Ҷой',
+                _ToolBtn(icon: AppIcons.location_on_outlined, label: 'Ҷой',
                   isActive: _location.isNotEmpty,
                   onTap: () { setState(() => _tool = _Tool.none); _showLocationDialog(); }),
-                _ToolBtn(icon: Icons.edit_note,           label: 'Тавсиф',
+                _ToolBtn(icon: AppIcons.edit_note,           label: 'Тавсиф',
                   isActive: _showCaption,
                   onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),
               ])))),
@@ -758,8 +759,8 @@ class _MusicPanelState extends State<_MusicPanel> {
             textInputAction: TextInputAction.search, onSubmitted: _search,
             decoration: InputDecoration(
               hintText: 'Суруд ё хонанда...', hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(Icons.search, color: Colors.white38),
-              suffixIcon: IconButton(icon: const Icon(Icons.send, color: Color(0xFF0095F6)),
+              prefixIcon: const Icon(AppIcons.search, color: Colors.white38),
+              suffixIcon: IconButton(icon: const Icon(AppIcons.send, color: Color(0xFF0095F6)),
                 onPressed: () => _search(_ctrl.text)),
               filled: true, fillColor: Colors.white10,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
@@ -769,7 +770,7 @@ class _MusicPanelState extends State<_MusicPanel> {
           child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
         if (!_loading && _tracks.isEmpty && _error == null)
           const Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.music_note, color: Colors.white24, size: 48), SizedBox(height: 12),
+            Icon(AppIcons.music_note, color: Colors.white24, size: 48), SizedBox(height: 12),
             Text('Суруд ёбед', style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
           ]))),
         if (!_loading && _tracks.isNotEmpty)
@@ -779,7 +780,7 @@ class _MusicPanelState extends State<_MusicPanel> {
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
                     child: Image.network(t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover))
-                : const Icon(Icons.music_note, color: Colors.white54),
+                : const Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(t.artist, style: const TextStyle(color: Colors.white54),
@@ -788,11 +789,11 @@ class _MusicPanelState extends State<_MusicPanel> {
                 if (t.previewUrl.isNotEmpty)
                   GestureDetector(onTap: () => _togglePlay(t.previewUrl),
                     child: Icon(_playingUrl == t.previewUrl
-                      ? Icons.stop_circle : Icons.play_circle_outline,
+                      ? AppIcons.stop_circle : AppIcons.play_circle_outline,
                       color: Colors.white54, size: 28)),
                 const SizedBox(width: 8),
                 GestureDetector(onTap: () { _player.stop(); widget.onSelected(t); Navigator.pop(context); },
-                  child: const Icon(Icons.add_circle_outline, color: Color(0xFF0095F6), size: 28)),
+                  child: const Icon(AppIcons.add_circle_outline, color: Color(0xFF0095F6), size: 28)),
               ]),
               onTap: () => _togglePlay(t.previewUrl));
           })),

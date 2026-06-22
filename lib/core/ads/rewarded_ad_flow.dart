@@ -1,6 +1,8 @@
+import '../ui/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'ads_manager.dart';
 import '../../app/app_theme.dart';
+import '../ui/app_icons.dart';
 
 /// ──────────────────────────────────────────────────────────────
 ///  RewardType — what the user unlocks by watching the ad
@@ -33,9 +35,9 @@ extension RewardTypeX on RewardType {
 
   IconData get icon {
     switch (this) {
-      case RewardType.videoDownload:  return Icons.download_rounded;
-      case RewardType.premiumDubbing: return Icons.record_voice_over_rounded;
-      case RewardType.hdExport:       return Icons.high_quality_rounded;
+      case RewardType.videoDownload:  return AppIcons.download_rounded;
+      case RewardType.premiumDubbing: return AppIcons.record_voice_over_rounded;
+      case RewardType.hdExport:       return AppIcons.high_quality_rounded;
     }
   }
 }
@@ -215,7 +217,7 @@ class _RewardDialogState extends State<_RewardDialog>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.play_circle_outline_rounded,
+                    Icon(AppIcons.play_circle_outline_rounded,
                         color: AppColors.neonBlue, size: 15),
                     const SizedBox(width: 5),
                     Text(
@@ -318,7 +320,7 @@ class _AnimatedButtonState extends State<_AnimatedButton>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.play_arrow_rounded,
+              Icon(AppIcons.play_arrow_rounded,
                   color: AppColors.textPrimary, size: 20),
               const SizedBox(width: 8),
               Text(

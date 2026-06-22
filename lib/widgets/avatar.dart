@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 class Avatar extends StatelessWidget {
   final String imageUrl;
@@ -79,7 +80,7 @@ class Avatar extends StatelessWidget {
           end: Alignment.bottomCenter,
         ),
       ),
-      child: Icon(Icons.person_rounded,
+      child: Icon(AppIcons.person_rounded,
           size: size * 0.62, color: AppColors.textPrimary.withOpacity(0.85)),
     );
   }

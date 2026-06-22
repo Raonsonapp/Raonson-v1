@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/services/network_service.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 /// Banner-и шабака — мисли Instagram: як бор кӯтоҳ пайдо мешавад ва
 /// худкор гум мешавад (на ин ки тамоми вақт дар боло биистад).
@@ -97,8 +98,8 @@ class _OfflineBannerState extends State<OfflineBanner>
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(
                           _isOnlineMsg
-                              ? Icons.wifi_rounded
-                              : Icons.wifi_off_rounded,
+                              ? AppIcons.wifi_rounded
+                              : AppIcons.wifi_off_rounded,
                           color: _isOnlineMsg
                               ? AppColors.textPrimary
                               : const Color(0xFFFF9500),

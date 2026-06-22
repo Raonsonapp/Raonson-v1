@@ -4,6 +4,7 @@ import '../../core/api/api_client.dart';
 import '../../app/app_theme.dart';
 import '../../models/post_model.dart';
 import '../post/post_card.dart';
+import '../../core/ui/app_icons.dart';
 
 class HashtagScreen extends StatefulWidget {
   final String hashtag; // бе # аломат
@@ -52,7 +53,7 @@ class _HashtagScreenState extends State<HashtagScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+          icon: Icon(AppIcons.arrow_back_ios_new, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('#${widget.hashtag}',
@@ -64,7 +65,7 @@ class _HashtagScreenState extends State<HashtagScreen> {
               color: AppColors.neonBlue, strokeWidth: 2))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.error_outline, color: AppColors.textFaint, size: 48),
+                  Icon(AppIcons.error_outline, color: AppColors.textFaint, size: 48),
                   const SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: AppColors.textFaint)),
                   const SizedBox(height: 12),
@@ -77,7 +78,7 @@ class _HashtagScreenState extends State<HashtagScreen> {
                 ]))
               : _posts.isEmpty
                   ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.tag, color: AppColors.dividerFaint, size: 64),
+                      Icon(AppIcons.tag, color: AppColors.dividerFaint, size: 64),
                       const SizedBox(height: 12),
                       Text('#${widget.hashtag}',
                         style: TextStyle(color: AppColors.textFaint,

@@ -19,6 +19,7 @@ import '../../core/services/account_manager.dart';
 import '../../core/storage/token_storage.dart';
 import '../../create/upload/upload_manager.dart';
 import '../widgets/auth_kit.dart';
+import '../../core/ui/app_icons.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -239,7 +240,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     if (_page <= 1)
                       IconButton(
-                        icon: Icon(Icons.arrow_back_ios_new_rounded,
+                        icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                             color: AppColors.textPrimary, size: 18),
                         onPressed: _back,
                       )
@@ -322,18 +323,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         AuthField(
             controller: _nameCtrl,
             hint: 'Номи пурра',
-            icon: Icons.person_outline_rounded),
+            icon: AppIcons.person_outline_rounded),
         const SizedBox(height: 14),
         AuthField(
             controller: _emailCtrl,
             hint: 'Почтаи электронӣ',
-            icon: Icons.email_outlined,
+            icon: AppIcons.email_outlined,
             keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 14),
         AuthField(
           controller: _phoneCtrl,
           hint: 'Рақами телефон (барои барқарорсозӣ)',
-          icon: Icons.phone_outlined,
+          icon: AppIcons.phone_outlined,
           keyboardType: TextInputType.phone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           prefix: Padding(
@@ -348,13 +349,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         AuthField(
             controller: _passCtrl,
             hint: 'Парол',
-            icon: Icons.lock_outline_rounded,
+            icon: AppIcons.lock_outline_rounded,
             obscure: true),
         const SizedBox(height: 14),
         AuthField(
             controller: _confirmCtrl,
             hint: 'Тасдиқи парол',
-            icon: Icons.lock_outline_rounded,
+            icon: AppIcons.lock_outline_rounded,
             obscure: true),
         const SizedBox(height: 16),
         Row(
@@ -405,7 +406,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         AuthField(
           controller: _userCtrl,
           hint: 'nomi_hisob',
-          icon: Icons.alternate_email_rounded,
+          icon: AppIcons.alternate_email_rounded,
           autofocus: false,
           onChanged: _onUsernameChanged,
           inputFormatters: [
@@ -426,8 +427,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ? null
                   : Icon(
                       _usernameAvailable!
-                          ? Icons.check_circle_rounded
-                          : Icons.cancel_rounded,
+                          ? AppIcons.check_circle_rounded
+                          : AppIcons.cancel_rounded,
                       color: _usernameAvailable!
                           ? AppColors.storyEnd
                           : Colors.redAccent,
@@ -476,7 +477,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     : null,
               ),
               child: _avatar == null
-                  ? Icon(Icons.photo_camera_rounded,
+                  ? Icon(AppIcons.photo_camera_rounded,
                       color: AppColors.textTertiary, size: 44)
                   : null,
             ),
@@ -584,7 +585,7 @@ class _FindFriendsState extends State<_FindFriends> {
           AuthField(
             controller: _searchCtrl,
             hint: 'Ҷустуҷӯ аз рӯи ном ё @username',
-            icon: Icons.search_rounded,
+            icon: AppIcons.search_rounded,
             onChanged: (v) => _load(v.trim()),
           ),
           const SizedBox(height: 12),
@@ -634,7 +635,7 @@ class _FindFriendsState extends State<_FindFriends> {
             backgroundColor: AppColors.card,
             backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
             child: avatar.isEmpty
-                ? Icon(Icons.person, color: AppColors.textFaint)
+                ? Icon(AppIcons.person, color: AppColors.textFaint)
                 : null,
           ),
           const SizedBox(width: 12),

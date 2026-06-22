@@ -16,6 +16,7 @@ import '../models/story_model.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -511,7 +512,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                     ? NetworkImage(_current.user.avatar) : null,
                 backgroundColor: Colors.white12,
                 child: _current.user.avatar.isEmpty
-                    ? const Icon(Icons.person, color: Colors.white54, size: 20) : null,
+                    ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
               ),
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -523,7 +524,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                           shadows: [Shadow(blurRadius: 4, color: Colors.black54)]))),
                   if (_current.user.isVerified) ...[
                     const SizedBox(width: 4),
-                    const Icon(Icons.verified_rounded,
+                    const Icon(AppIcons.verified_rounded,
                         color: Colors.white, size: 14),
                   ],
                 ]),
@@ -533,11 +534,11 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                 GestureDetector(
                   onTap: _showOwnerMenu,
                   child: const Padding(padding: EdgeInsets.all(6),
-                    child: Icon(Icons.more_vert, color: Colors.white, size: 24))),
+                    child: Icon(AppIcons.more_vert, color: Colors.white, size: 24))),
               GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
                 child: const Padding(padding: EdgeInsets.all(6),
-                  child: Icon(Icons.close, color: Colors.white, size: 24))),
+                  child: Icon(AppIcons.close, color: Colors.white, size: 24))),
             ]),
           ),
 
@@ -586,13 +587,13 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           _ActionBtn(svgPath: 'assets/icons/share.svg', label: 'Мубодила',
               onTap: _shareStory),
           const SizedBox(width: 4),
-          _ActionBtn(icon: Icons.add_box_outlined, label: 'Актуалӣ',
+          _ActionBtn(icon: AppIcons.add_box_outlined, label: 'Актуалӣ',
               onTap: _addToHighlight),
           const SizedBox(width: 4),
-          _ActionBtn(icon: Icons.alternate_email_rounded, label: 'Зикр',
+          _ActionBtn(icon: AppIcons.alternate_email_rounded, label: 'Зикр',
               onTap: _shareStory),
           const SizedBox(width: 4),
-          _ActionBtn(icon: Icons.more_horiz_rounded, label: 'Бештар',
+          _ActionBtn(icon: AppIcons.more_horiz_rounded, label: 'Бештар',
               onTap: _showOwnerMenu),
         ],
       );
@@ -626,13 +627,13 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: Icon(
-              _liked ? Icons.favorite : Icons.favorite_border,
+              _liked ? AppIcons.favorite : AppIcons.favorite_border,
               key: ValueKey(_liked),
               color: _liked ? Colors.red : Colors.white, size: 28))),
         const SizedBox(width: 14),
         GestureDetector(
           onTap: _shareStory,
-          child: const Icon(Icons.send_outlined, color: Colors.white, size: 26)),
+          child: const Icon(AppIcons.send_outlined, color: Colors.white, size: 26)),
       ]),
     ]);
   }
@@ -654,11 +655,11 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                   child: SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
               : IconButton(
-                  icon: const Icon(Icons.send_rounded, color: AppColors.neonBlue),
+                  icon: const Icon(AppIcons.send_rounded, color: AppColors.neonBlue),
                   onPressed: _sendReply)),
       )),
       IconButton(
-        icon: const Icon(Icons.close, color: Colors.white54),
+        icon: const Icon(AppIcons.close, color: Colors.white54),
         onPressed: () { setState(() => _showReply = false); _resume(); }),
     ]);
   }
@@ -671,7 +672,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
       placeholder: (_, __) => const Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)),
       errorWidget: (_, __, ___) => const Center(
-          child: Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64)));
+          child: Icon(AppIcons.broken_image_outlined, color: Colors.white38, size: 64)));
   }
 
   Widget _buildVideo() {
@@ -749,7 +750,7 @@ class _ActivityBtn extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         if (avatars.isEmpty)
-          const Icon(Icons.favorite_border_rounded, color: Colors.white, size: 27)
+          const Icon(AppIcons.favorite_border_rounded, color: Colors.white, size: 27)
         else
           SizedBox(
             height: 30,
@@ -767,7 +768,7 @@ class _ActivityBtn extends StatelessWidget {
                     child: Image.network(avatars[i], fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                             color: const Color(0xFF333333),
-                            child: const Icon(Icons.person,
+                            child: const Icon(AppIcons.person,
                                 color: Colors.white54, size: 16))),
                   ),
                 ),
@@ -854,7 +855,7 @@ class _HeartOverlayState extends State<_HeartOverlay>
                   opacity: opacity,
                   child: Transform.scale(
                     scale: scale,
-                    child: Icon(Icons.favorite, color: h.color, size: h.size,
+                    child: Icon(AppIcons.favorite, color: h.color, size: h.size,
                         shadows: const [
                           Shadow(blurRadius: 8, color: Colors.black45)
                         ]),
@@ -984,13 +985,13 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Row(children: [
-            Expanded(child: _stat(Icons.remove_red_eye_outlined, '$_views', 'Бинандагон')),
+            Expanded(child: _stat(AppIcons.remove_red_eye_outlined, '$_views', 'Бинандагон')),
             _divider(),
-            Expanded(child: _stat(Icons.bolt_rounded, '$_interactions', 'Ҳамкориҳо')),
+            Expanded(child: _stat(AppIcons.bolt_rounded, '$_interactions', 'Ҳамкориҳо')),
             _divider(),
-            Expanded(child: _stat(Icons.favorite, '$_likes', 'Лайкҳо', color: Colors.red)),
+            Expanded(child: _stat(AppIcons.favorite, '$_likes', 'Лайкҳо', color: Colors.red)),
             _divider(),
-            Expanded(child: _stat(Icons.chat_bubble_outline_rounded, '$_replies', 'Ҷавобҳо')),
+            Expanded(child: _stat(AppIcons.chat_bubble_outline_rounded, '$_replies', 'Ҷавобҳо')),
           ]),
         ),
         // ── Омори пайравон ──
@@ -1003,7 +1004,7 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(children: [
-              const Icon(Icons.group_rounded, color: Colors.white54, size: 18),
+              const Icon(AppIcons.group_rounded, color: Colors.white54, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1075,7 +1076,7 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
                                       border: Border.all(
                                           color: const Color(0xFF1A1A1A), width: 2),
                                     ),
-                                    child: const Icon(Icons.favorite,
+                                    child: const Icon(AppIcons.favorite,
                                         color: Colors.white, size: 11),
                                   ),
                                 ),
@@ -1097,7 +1098,7 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
                                 ],
                               ),
                             ),
-                            const Icon(Icons.more_vert,
+                            const Icon(AppIcons.more_vert,
                                 color: Colors.white54, size: 20),
                             const SizedBox(width: 14),
                             SvgPicture.asset('assets/icons/share.svg',

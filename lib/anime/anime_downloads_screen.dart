@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import 'anime_player_screen.dart';
 import 'download_service.dart';
+import '../core/ui/app_icons.dart';
 
 class AnimeDownloadsScreen extends StatefulWidget {
   const AnimeDownloadsScreen({super.key});
@@ -47,7 +48,7 @@ class _AnimeDownloadsScreenState extends State<AnimeDownloadsScreen> {
           : _files.isEmpty
               ? const Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.download_done_rounded, color: Colors.white24, size: 48),
+                    Icon(AppIcons.download_done_rounded, color: Colors.white24, size: 48),
                     SizedBox(height: 12),
                     Text('Ҳанӯз чизе зеркашӣ нашудааст',
                         style: TextStyle(color: Colors.white38)),
@@ -66,14 +67,14 @@ class _AnimeDownloadsScreenState extends State<AnimeDownloadsScreen> {
                         decoration: BoxDecoration(
                             color: const Color(0xFF1C1C1C),
                             borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.play_circle_outline_rounded,
+                        child: const Icon(AppIcons.play_circle_outline_rounded,
                             color: Colors.white70),
                       ),
                       title: Text(title,
                           maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.white, fontSize: 13)),
                       trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded,
+                        icon: const Icon(AppIcons.delete_outline_rounded,
                             color: Colors.white38),
                         onPressed: () => _delete(f),
                       ),

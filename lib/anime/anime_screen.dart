@@ -8,6 +8,7 @@ import '../app/app_theme.dart';
 import 'aparat_api.dart';
 import 'anime_player_screen.dart';
 import 'anime_downloads_screen.dart';
+import '../core/ui/app_icons.dart';
 
 class AnimeScreen extends StatefulWidget {
   const AnimeScreen({super.key});
@@ -69,7 +70,7 @@ class _AnimeScreenState extends State<AnimeScreen> {
         title: const Text('Аниме', style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download_rounded, color: Colors.white),
+            icon: const Icon(AppIcons.download_rounded, color: Colors.white),
             tooltip: 'Зеркашшуда',
             onPressed: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const AnimeDownloadsScreen())),
@@ -92,9 +93,9 @@ class _AnimeScreenState extends State<AnimeScreen> {
               decoration: InputDecoration(
                 hintText: 'Ҷустуҷӯи аниме (тоҷикӣ ҳам мешавад)',
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
-                prefixIcon: const Icon(Icons.search, color: Colors.white38, size: 20),
+                prefixIcon: const Icon(AppIcons.search, color: Colors.white38, size: 20),
                 suffixIcon: _searchCtrl.text.isEmpty ? null : IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white38, size: 18),
+                  icon: const Icon(AppIcons.close_rounded, color: Colors.white38, size: 18),
                   onPressed: () { _searchCtrl.clear(); _onSearch(''); },
                 ),
                 border: InputBorder.none,
@@ -151,7 +152,7 @@ class _AnimeScreenState extends State<AnimeScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         const SizedBox(height: 120),
-        const Icon(Icons.movie_outlined, color: Colors.white24, size: 48),
+        const Icon(AppIcons.movie_outlined, color: Colors.white24, size: 48),
         const SizedBox(height: 12),
         const Center(child: Text('Натиҷае нест ё Aparat дастрас нест',
             style: TextStyle(color: Colors.white38))),
@@ -167,7 +168,7 @@ class _AnimeScreenState extends State<AnimeScreen> {
         Center(
           child: OutlinedButton.icon(
             onPressed: _load,
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
+            icon: const Icon(AppIcons.refresh_rounded, color: Colors.white, size: 18),
             label: const Text('Такрор', style: TextStyle(color: Colors.white)),
             style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Colors.white24)),
@@ -202,7 +203,7 @@ class _AnimeCell extends StatelessWidget {
             ? CachedNetworkImage(imageUrl: item.poster, fit: BoxFit.cover,
                 placeholder: (_, __) => Container(color: const Color(0xFF1C1C1C)),
                 errorWidget: (_, __, ___) => Container(color: const Color(0xFF1C1C1C),
-                    child: const Icon(Icons.broken_image_outlined,
+                    child: const Icon(AppIcons.broken_image_outlined,
                         color: Colors.white24, size: 28)))
             : Container(color: const Color(0xFF1C1C1C)),
         // Градиенти поён барои хониши унвон
@@ -218,14 +219,14 @@ class _AnimeCell extends StatelessWidget {
           ),
         ),
         // Иконаи пахш
-        const Center(child: Icon(Icons.play_circle_fill_rounded,
+        const Center(child: Icon(AppIcons.play_circle_fill_rounded,
             color: Colors.white70, size: 34)),
         // Бозидидҳо (боло-чап)
         if (_views.isNotEmpty)
           Positioned(
             left: 6, top: 6,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 13),
+              const Icon(AppIcons.play_arrow_rounded, color: Colors.white, size: 13),
               Text(_views, style: const TextStyle(color: Colors.white,
                   fontSize: 11, fontWeight: FontWeight.w600)),
             ]),

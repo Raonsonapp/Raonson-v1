@@ -3,6 +3,7 @@ import '../app/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/story_model.dart';
 import '../core/services/user_session.dart';
+import '../core/ui/app_icons.dart';
 
 List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
   final Map<String, List<StoryModel>> map = {};
@@ -143,7 +144,7 @@ class _MyStoryItem extends StatelessWidget {
                     color: Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.black, width: 2)),
-                  child: const Icon(Icons.add, color: Colors.black, size: 13)),
+                  child: const Icon(AppIcons.add, color: Colors.black, size: 13)),
               ),
             ),
           ]),
@@ -160,7 +161,7 @@ class _MyStoryItem extends StatelessWidget {
   }
 
   Widget _ph() => Container(color: const Color(0xFF1A1A1A),
-      child: const Icon(Icons.person, color: Colors.white38, size: 30));
+      child: const Icon(AppIcons.person, color: Colors.white38, size: 30));
 }
 
 // ── STORY ITEM ───────────────────────────────────────────────────────
@@ -218,7 +219,7 @@ class _StoryItem extends StatelessWidget {
   }
 
   Widget _ph() => Container(color: const Color(0xFF1A1A1A),
-      child: const Icon(Icons.person, color: Colors.white38, size: 28));
+      child: const Icon(AppIcons.person, color: Colors.white38, size: 28));
 }
 
 // ── RING PAINTER ─────────────────────────────────────────────────────

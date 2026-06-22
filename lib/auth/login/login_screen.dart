@@ -6,6 +6,7 @@ import '../../app/app_routes.dart';
 import '../widgets/auth_kit.dart';
 import 'login_controller.dart';
 import '../../app/app_theme.dart';
+import '../../core/ui/app_icons.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -82,20 +83,20 @@ class _LoginViewState extends State<_LoginView> {
                 AuthField(
                   controller: _idCtrl,
                   hint: 'Телефон, номи корбар ё почта',
-                  icon: Icons.person_outline_rounded,
+                  icon: AppIcons.person_outline_rounded,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 14),
                 AuthField(
                   controller: _pwCtrl,
                   hint: 'Рамз',
-                  icon: Icons.lock_outline_rounded,
+                  icon: AppIcons.lock_outline_rounded,
                   obscure: _obscure,
                   suffix: IconButton(
                     icon: Icon(
                         _obscure
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded,
+                            ? AppIcons.visibility_off_rounded
+                            : AppIcons.visibility_rounded,
                         color: AppColors.textFaint, size: 20),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),

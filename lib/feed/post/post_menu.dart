@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/post_model.dart';
+import '../../core/ui/app_icons.dart';
 
 class PostMenu extends StatelessWidget {
   final PostModel post;
@@ -15,7 +16,7 @@ class PostMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert),
+      icon: const Icon(AppIcons.more_vert),
       itemBuilder: (_) => [
         const PopupMenuItem(
           value: 'copy',
