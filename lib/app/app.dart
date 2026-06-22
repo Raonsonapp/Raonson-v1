@@ -10,9 +10,12 @@ import 'app_config.dart';
 import 'app_splash.dart';
 import '../auth/login/login_screen.dart';
 import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
+import '../core/analytics/analytics_observer.dart';
 
 class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
+
+  static final AnalyticsObserver _analyticsObserver = AnalyticsObserver();
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +45,7 @@ class RaonsonApp extends StatelessWidget {
                         ? const BottomNavScaffold()
                         : const LoginScreen()),
                 onGenerateRoute: controller.onGenerateRoute,
+                navigatorObservers: [_analyticsObserver],
               );
             },
           );

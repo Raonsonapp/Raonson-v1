@@ -216,11 +216,26 @@ func GetPostStats(c *gin.Context) {
 		        (SELECT COUNT(*) FROM post_reports WHERE post_id=$1)
 		 FROM posts WHERE id=$1`, pid).Scan(&likes, &comments, &views, &saves, &reports)
 
+	// Аудитория: бинандагоне, ки ба муаллиф обуна шудаанд vs дигарон.
+	var fromFollowers, fromOthers int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT
+		   COUNT(*) FILTER (WHERE f.follower_id IS NOT NULL),
+		   COUNT(*) FILTER (WHERE f.follower_id IS NULL)
+		 FROM post_views pv
+		 LEFT JOIN follows f
+		   ON f.follower_id = pv.user_id AND f.following_id = $2
+		 WHERE pv.post_id = $1`, pid, myID).Scan(&fromFollowers, &fromOthers)
+
+	// shares — ҳоло ҷадвали post_shares нест → 0.
 	c.JSON(http.StatusOK, gin.H{
-		"likes":    likes,
-		"comments": comments,
-		"views":    views,
-		"saves":    saves,
-		"reports":  reports,
+		"likes":         likes,
+		"comments":      comments,
+		"views":         views,
+		"saves":         saves,
+		"reports":       reports,
+		"shares":        0,
+		"fromFollowers": fromFollowers,
+		"fromOthers":    fromOthers,
 	})
 }

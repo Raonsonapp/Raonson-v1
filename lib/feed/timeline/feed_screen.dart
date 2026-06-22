@@ -17,6 +17,8 @@ import '../../core/api/api_client.dart';
 import '../../app/app_routes.dart';
 import '../../app/app_theme.dart';
 import '../../core/services/user_session.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -64,6 +66,7 @@ class _FeedShellState extends State<_FeedShell> {
     super.initState();
     _scroll = ScrollController()..addListener(_onScroll);
     NotificationService.startPolling();
+    AnalyticsService.instance.logEvent('feed_view');
   }
 
   void _onScroll() {

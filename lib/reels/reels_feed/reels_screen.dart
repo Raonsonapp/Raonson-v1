@@ -16,6 +16,7 @@ import '../../widgets/embed_player.dart';
 import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
 import '../reels_repository.dart';
+import '../../core/analytics/analytics_service.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 import '../../gifts/gift_sheet.dart';
@@ -124,6 +125,8 @@ class _ReelsVM extends ChangeNotifier {
   }) {
     _repo.trackWatchTime(
         reelId: reelId, watchMs: watchMs, durationMs: durationMs);
+    AnalyticsService.instance.logEvent('reel_view',
+        params: {'reelId': reelId, 'watchMs': watchMs});
   }
 
   void markNotInterested(String id) {

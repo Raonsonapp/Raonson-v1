@@ -196,6 +196,7 @@ func main() {
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)
 		re.POST("/:id/view",     handlers.TrackReelView)   // view dedup tracking
+		re.POST("/:id/watch",    handlers.TrackReelWatch)  // watch-time tracking
 		re.POST("/:id/like",     handlers.ToggleReelLike)
 		re.POST("/:id/save",     handlers.ToggleReelSave)
 		re.GET("/:id/comments",  cache30s, handlers.GetReelComments)
@@ -265,6 +266,12 @@ func main() {
 		no.POST("/read-all",    handlers.MarkAllNotifsRead)
 		no.POST("/:id/read",    handlers.MarkNotifRead)
 		no.DELETE("/:id",       handlers.DeleteNotification)
+	}
+
+	// ── ANALYTICS (батч-рӯйдодҳо аз client) ──
+	an := r.Group("/analytics", auth, rl100)
+	{
+		an.POST("/events", handlers.TrackAnalyticsEvents)
 	}
 
 	se := r.Group("/search", auth, rl100)

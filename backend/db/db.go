@@ -507,6 +507,28 @@ func migrate() {
 		PRIMARY KEY (user_id, peer_id)
 	);
 
+	-- ── Analytics events (batch-inserted from client) ──
+	CREATE TABLE IF NOT EXISTS events (
+		id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id    TEXT,
+		event      TEXT NOT NULL,
+		params     JSONB DEFAULT '{}'::jsonb,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_events_user  ON events(user_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_events_event ON events(event, created_at DESC);
+
+	-- ── Reel watch-time tracking (avg watch / completion rate) ──
+	CREATE TABLE IF NOT EXISTS reel_watch (
+		user_id    TEXT NOT NULL,
+		reel_id    TEXT NOT NULL,
+		watch_ms   INTEGER DEFAULT 0,
+		completed  BOOLEAN DEFAULT FALSE,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
+	CREATE INDEX IF NOT EXISTS idx_reel_watch_user ON reel_watch(user_id);
+
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';

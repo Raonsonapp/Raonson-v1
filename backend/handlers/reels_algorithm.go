@@ -48,6 +48,12 @@ func GetSmartReels(c *gin.Context) {
 		      WHERE rs3.user_id=$1
 		  ) t GROUP BY creator_id
 		),
+		cr AS (
+		  -- Сатҳи итмоми тамошо барои ҳар reel (0..1).
+		  SELECT reel_id,
+		         AVG(CASE WHEN completed THEN 1.0 ELSE 0.0 END) AS completion_rate
+		    FROM reel_watch GROUP BY reel_id
+		),
 		scored AS (
 		  SELECT
 		    r.id, r.video_url, COALESCE(r.video_url_low,'') AS video_url_low,
@@ -71,6 +77,8 @@ func GetSmartReels(c *gin.Context) {
 		      + LEAST(10, r.comments_count)
 		      -- 5. Trending: views > 100 = +15
 		      + CASE WHEN r.views_count > 100 THEN 15 ELSE 0 END
+		      -- 5b. Completion rate: ҳиссаи тамошои пурра — то +20
+		      + LEAST(20, COALESCE(cr.completion_rate,0) * 20)
 		      -- 6. Завқ (taste): эҷодкори маҳбуб — то +50
 		      + LEAST(50, COALESCE(af.aff,0) * 6)
 		      -- 7. Тасодуфӣ барои variety (0-8)
@@ -80,6 +88,7 @@ func GetSmartReels(c *gin.Context) {
 		  JOIN users u ON u.id=r.user_id
 		  LEFT JOIN follows f ON f.follower_id=$1 AND f.following_id=r.user_id
 		  LEFT JOIN aff af ON af.creator_id = u.id
+		  LEFT JOIN cr ON cr.reel_id = r.id
 		  WHERE
 		    u.banned = FALSE
 		    AND r.created_at > NOW() - INTERVAL '30 days'

@@ -178,17 +178,66 @@ func MarkReelNotInterested(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"not_interested": true})
 }
 
-// GET /reels/:id/stats
+// GET /reels/:id/stats — танҳо соҳиби reel мебинад.
 func GetReelStats(c *gin.Context) {
 	rid := c.Param("id")
-	var likes, comments, views int
+	myID := mw.UID(c)
+
+	// Танҳо соҳиб мебинад (мисли GetPostStats).
+	var ownerID string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&ownerID)
+	if ownerID == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
+		return
+	}
+	if ownerID != myID {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Not your reel"})
+		return
+	}
+
+	var likes, comments, views, saves int
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COALESCE(likes_count,0), COALESCE(comments_count,0),
-		        COALESCE(views_count,0) FROM reels WHERE id=$1`, rid).
-		Scan(&likes, &comments, &views)
+		        COALESCE(views_count,0),
+		        (SELECT COUNT(*) FROM reel_saves WHERE reel_id=$1)
+		 FROM reels WHERE id=$1`, rid).
+		Scan(&likes, &comments, &views, &saves)
+
+	// Миёнаи тамошо (ms) аз reel_watch.
+	var avgWatchMs int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(ROUND(AVG(watch_ms)),0)::int
+		 FROM reel_watch WHERE reel_id=$1`, rid).Scan(&avgWatchMs)
+
+	// shares — ҳоло ҷадвали shares нест → 0.
 	c.JSON(http.StatusOK, gin.H{
-		"likesCount": likes, "commentsCount": comments, "viewsCount": views,
+		"views":      views,
+		"likes":      likes,
+		"comments":   comments,
+		"saves":      saves,
+		"shares":     0,
+		"avgWatchMs": avgWatchMs,
 	})
+}
+
+// POST /reels/:id/watch — сабти вақти тамошои як reel.
+// Body: {"watchMs":1234,"completed":true}
+func TrackReelWatch(c *gin.Context) {
+	myID := mw.UID(c)
+	rid := c.Param("id")
+	var b struct {
+		WatchMs   int  `json:"watchMs"`
+		Completed bool `json:"completed"`
+	}
+	c.ShouldBindJSON(&b)
+	if b.WatchMs < 0 {
+		b.WatchMs = 0
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO reel_watch(user_id, reel_id, watch_ms, completed)
+		 VALUES($1,$2,$3,$4)`, myID, rid, b.WatchMs, b.Completed)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 // POST /reels/:id/comments/:commentId/like — toggle
