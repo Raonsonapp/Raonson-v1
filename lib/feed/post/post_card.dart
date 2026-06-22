@@ -881,14 +881,14 @@ class _PostCardState extends State<PostCard>
 
       // ── HEADER ────────────────────────────────────────────────
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 6, 8),
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 10),
         child: Row(children: [
           GestureDetector(
             onTap: _openAvatarTap,
-            child: Avatar(imageUrl: post.user.avatar, size: 38,
+            child: Avatar(imageUrl: post.user.avatar, size: 42,
                 name: post.user.username,
                 glowBorder: post.user.hasStory)),
-          const SizedBox(width: 10),
+          const SizedBox(width: 11),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
