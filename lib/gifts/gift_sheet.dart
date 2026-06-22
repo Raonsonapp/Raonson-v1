@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import '../core/ui/app_icons.dart';
 
 /// Шийтаи тӯҳфаро мекушояд.
 Future<void> showGiftSheet(
@@ -114,11 +115,11 @@ class _GiftSheetState extends State<_GiftSheet> {
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 20, fontWeight: FontWeight.w800, height: 1.2)),
         const SizedBox(height: 20),
-        _bullet(Icons.favorite_border_rounded, 'Бештар аз «Лайк»',
+        _bullet(AppIcons.favorite_border_rounded, 'Бештар аз «Лайк»',
             'Миннатдории худро бо тӯҳфа барои видеоҳо ифода кунед.'),
-        _bullet(Icons.payments_outlined, 'Муаллифон пул кор карда метавонанд',
+        _bullet(AppIcons.payments_outlined, 'Муаллифон пул кор карда метавонанд',
             'Баъзе муаллифон аз тӯҳфаҳои гирифта даромад мегиранд.'),
-        _bullet(Icons.card_giftcard_rounded, 'Шуморо қайд карда метавонанд',
+        _bullet(AppIcons.card_giftcard_rounded, 'Шуморо қайд карда метавонанд',
             'Муаллифон метавонанд ба тӯҳфаи шумо ҷавоб диҳанд.'),
         const SizedBox(height: 20),
         SizedBox(width: double.infinity,

@@ -10,6 +10,7 @@ import '../../models/note_model.dart';
 import '../../chat/inbox/music_picker_sheet.dart';
 import '../profile_repository.dart';
 import 'edit_profile_controller.dart';
+import '../../core/ui/app_icons.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String userId;
@@ -132,7 +133,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.bg, elevation: 0,
-        leading: IconButton(icon: Icon(Icons.close_rounded, color: AppColors.textPrimary),
+        leading: IconButton(icon: Icon(AppIcons.close_rounded, color: AppColors.textPrimary),
             onPressed: () => Navigator.pop(context)),
         title: Text('Таҳрири профил', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -155,13 +156,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ? Image.file(_localAvatar!, fit: BoxFit.cover)
                   : (_ctrl.currentAvatarUrl?.isNotEmpty == true
                       ? Image.network(_ctrl.currentAvatarUrl!, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(Icons.person_rounded, color: AppColors.textFaint, size: 46))
-                      : Icon(Icons.person_rounded, color: AppColors.textFaint, size: 46)))),
+                          errorBuilder: (_, __, ___) => Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: 46))
+                      : Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: 46)))),
             Container(width: 30, height: 30,
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF0095F6)),
               child: _uploadingAvatar
                   ? Padding(padding: EdgeInsets.all(7), child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary))
-                  : Icon(Icons.camera_alt_rounded, color: AppColors.textPrimary, size: 16)),
+                  : Icon(AppIcons.camera_alt_rounded, color: AppColors.textPrimary, size: 16)),
           ]))),
         const SizedBox(height: 6),
         const Text('Аксро тағир бидеҳ', style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
@@ -183,7 +184,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Худро муаррифӣ кун...', hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
-              prefixIcon: Padding(padding: EdgeInsets.only(bottom: 60), child: Icon(Icons.info_outline_rounded, color: AppColors.textFaint, size: 18)),
+              prefixIcon: Padding(padding: EdgeInsets.only(bottom: 60), child: Icon(AppIcons.info_outline_rounded, color: AppColors.textFaint, size: 18)),
               border: InputBorder.none, contentPadding: const EdgeInsets.fromLTRB(12,12,12,0),
               counterStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.2), fontSize: 11)))),
         const SizedBox(height: 20),
@@ -201,7 +202,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
           child: Row(children: [
-            Icon(Icons.lock_outline_rounded, color: AppColors.textSecondary, size: 20),
+            Icon(AppIcons.lock_outline_rounded, color: AppColors.textSecondary, size: 20),
             const SizedBox(width: 12),
             Expanded(child: Text('Профили хусусӣ', style: TextStyle(color: AppColors.textPrimary, fontSize: 14))),
             Switch(value: _ctrl.isPrivate, onChanged: _ctrl.togglePrivate, activeColor: AppColors.storyStart)])),
@@ -224,9 +225,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint)));
     }
     else if (_usernameTaken || (_usernameError != null && !_isOriginal)) {
-      suffix = const Icon(Icons.close_rounded, color: Colors.red, size: 20);
+      suffix = const Icon(AppIcons.close_rounded, color: Colors.red, size: 20);
     }
-    else if (!_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) { suffix = const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20); }
+    else if (!_isOriginal && _ctrl.usernameController.text.length >= 3 && _usernameError == null) { suffix = const Icon(AppIcons.check_circle_rounded, color: Colors.green, size: 20); }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
@@ -236,7 +237,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'username', hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
-            prefixIcon: Icon(Icons.alternate_email_rounded, color: AppColors.textFaint, size: 18),
+            prefixIcon: Icon(AppIcons.alternate_email_rounded, color: AppColors.textFaint, size: 18),
             suffixIcon: suffix, border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(vertical: 13),
             counterStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.2), fontSize: 11)))),
@@ -264,10 +265,10 @@ class _AddMusicTile extends StatelessWidget {
       child: Row(children: [
         Container(width: 34, height: 34, decoration: BoxDecoration(shape: BoxShape.circle,
           color: AppColors.textPrimary.withOpacity(0.1), border: Border.all(color: AppColors.textPrimary.withOpacity(0.3))),
-          child: Icon(Icons.music_note_rounded, color: AppColors.textPrimary, size: 17)),
+          child: Icon(AppIcons.music_note_rounded, color: AppColors.textPrimary, size: 17)),
         const SizedBox(width: 12),
         Text('Мусиқӣ илова кун', style: TextStyle(color: AppColors.textPrimary.withOpacity(0.5), fontSize: 14)),
-        Spacer(), Icon(Icons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2))])));
+        Spacer(), Icon(AppIcons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2))])));
 }
 
 class _MusicCard extends StatelessWidget {
@@ -283,13 +284,13 @@ class _MusicCard extends StatelessWidget {
       ClipRRect(borderRadius: BorderRadius.circular(8),
         child: song.artUrl.isNotEmpty
             ? Image.network(song.artUrl, width: 48, height: 48, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: AppColors.card, child: Icon(Icons.music_note_rounded, color: AppColors.textFaint)))
-            : Container(width: 48, height: 48, color: AppColors.card, child: Icon(Icons.music_note_rounded, color: AppColors.textFaint))),
+                errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: AppColors.card, child: Icon(AppIcons.music_note_rounded, color: AppColors.textFaint)))
+            : Container(width: 48, height: 48, color: AppColors.card, child: Icon(AppIcons.music_note_rounded, color: AppColors.textFaint))),
       const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(song.title, style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
         Text(song.artist, style: TextStyle(color: AppColors.textTertiary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
         Text(_t(song.trackMs), style: TextStyle(color: AppColors.textFaint, fontSize: 11))])),
-      IconButton(icon: Icon(Icons.edit_rounded, color: AppColors.textTertiary, size: 18), onPressed: onChange),
-      IconButton(icon: Icon(Icons.close_rounded, color: AppColors.textFaint, size: 18), onPressed: onRemove)]));
+      IconButton(icon: Icon(AppIcons.edit_rounded, color: AppColors.textTertiary, size: 18), onPressed: onChange),
+      IconButton(icon: Icon(AppIcons.close_rounded, color: AppColors.textFaint, size: 18), onPressed: onRemove)]));
 }

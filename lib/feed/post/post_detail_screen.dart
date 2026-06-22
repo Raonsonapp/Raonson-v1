@@ -8,6 +8,7 @@ import '../../app/app_theme.dart';
 import '../../models/post_model.dart';
 import '../../models/user_model.dart';
 import 'post_card.dart';
+import '../../core/ui/app_icons.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final List<PostModel> posts;
@@ -88,7 +89,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
+          icon: Icon(AppIcons.arrow_back_ios_new_rounded,
               color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),

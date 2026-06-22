@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
+import '../../core/ui/app_icons.dart';
 
 /// Заминаи торик бо дурахши нозуки кабуд-сабз (мисли расм).
 class AuthBackground extends StatelessWidget {
@@ -33,7 +34,7 @@ class AuthLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Image.asset('assets/icon.png', height: size,
-          errorBuilder: (_, __, ___) => Icon(Icons.bolt_rounded,
+          errorBuilder: (_, __, ___) => Icon(AppIcons.bolt_rounded,
               size: size, color: AppColors.neonBlue));
 }
 
@@ -156,7 +157,7 @@ class AuthButton extends StatelessWidget {
                               fontWeight: FontWeight.w700)),
                       if (showArrow) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded,
+                        Icon(AppIcons.arrow_forward_rounded,
                             color: AppColors.textPrimary, size: 20),
                       ],
                     ],
@@ -280,7 +281,7 @@ class LangChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.language_rounded,
+                Icon(AppIcons.language_rounded,
                     color: AppColors.textSecondary, size: 16),
                 const SizedBox(width: 6),
                 Text(name,
@@ -288,7 +289,7 @@ class LangChip extends StatelessWidget {
                         color: AppColors.textPrimary, fontSize: 13,
                         fontWeight: FontWeight.w500)),
                 const SizedBox(width: 4),
-                Icon(Icons.keyboard_arrow_down_rounded,
+                Icon(AppIcons.keyboard_arrow_down_rounded,
                     color: AppColors.textTertiary, size: 18),
               ],
             ),

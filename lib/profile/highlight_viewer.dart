@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app/app_theme.dart';
 import 'highlight_model.dart';
+import '../core/ui/app_icons.dart';
 
 class HighlightViewer extends StatefulWidget {
   final HighlightModel highlight;
@@ -143,14 +144,14 @@ class _HighlightViewerState extends State<HighlightViewer>
               margin: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
-          _tile(ctx, Icons.download_rounded, 'Зеркашӣ', _download),
-          _tile(ctx, Icons.share_outlined, 'Мубодила', _share),
+          _tile(ctx, AppIcons.download_rounded, 'Зеркашӣ', _download),
+          _tile(ctx, AppIcons.share_outlined, 'Мубодила', _share),
           if (widget.isOwner) ...[
-            _tile(ctx, Icons.drive_file_rename_outline_rounded,
+            _tile(ctx, AppIcons.drive_file_rename_outline_rounded,
                 'Номивазкунӣ', _rename),
-            _tile(ctx, Icons.hide_image_outlined,
+            _tile(ctx, AppIcons.hide_image_outlined,
                 'Ин расмро аз актуалӣ нест кун', _removeItem),
-            _tile(ctx, Icons.delete_outline_rounded,
+            _tile(ctx, AppIcons.delete_outline_rounded,
                 'Актуалиро нест кун', _deleteHighlight, color: Colors.redAccent),
           ],
           const SizedBox(height: 8),
@@ -315,11 +316,11 @@ class _HighlightViewerState extends State<HighlightViewer>
               GestureDetector(
                 onTap: _menu,
                 child: Padding(padding: EdgeInsets.all(6),
-                  child: Icon(Icons.more_vert, color: AppColors.textPrimary, size: 24))),
+                  child: Icon(AppIcons.more_vert, color: AppColors.textPrimary, size: 24))),
               GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Padding(padding: EdgeInsets.all(6),
-                  child: Icon(Icons.close, color: AppColors.textPrimary, size: 24))),
+                  child: Icon(AppIcons.close, color: AppColors.textPrimary, size: 24))),
             ]),
           ),
         ]),
@@ -341,7 +342,7 @@ class _HighlightViewerState extends State<HighlightViewer>
       placeholder: (_, __) => Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint)),
       errorWidget: (_, __, ___) => Center(
-          child: Icon(Icons.broken_image_outlined, color: AppColors.textFaint, size: 64)));
+          child: Icon(AppIcons.broken_image_outlined, color: AppColors.textFaint, size: 64)));
   }
 
   Widget _buildVideo() {

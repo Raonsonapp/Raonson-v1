@@ -11,6 +11,7 @@ import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import 'chat_room_screen.dart';
 import 'call_screen.dart';
+import '../../core/ui/app_icons.dart';
 
 class NewChatScreen extends StatefulWidget {
   /// Агар callType дода шавад, интихоби корбар занг оғоз мекунад (на чат).
@@ -100,7 +101,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(AppIcons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Паёми нав',
@@ -126,7 +127,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   hintText: 'Ҷустуҷӯи корбарон...',
                   hintStyle: TextStyle(color: AppColors.textFaint),
                   prefixIcon:
-                      Icon(Icons.search, color: AppColors.textFaint, size: 20),
+                      Icon(AppIcons.search, color: AppColors.textFaint, size: 20),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),

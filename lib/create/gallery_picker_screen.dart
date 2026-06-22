@@ -9,6 +9,7 @@ import 'package:photo_manager/photo_manager.dart';
 import 'create_post/create_post_screen.dart';
 import 'create_reel/create_reel_screen.dart';
 import 'create_story/create_story_screen.dart';
+import '../core/ui/app_icons.dart';
 
 enum CreateMode { post, story, reel }
 
@@ -129,7 +130,7 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
         backgroundColor: Colors.black,
         elevation: 0,
         leading: IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: const Icon(AppIcons.close, color: Colors.white),
             onPressed: () => Navigator.pop(context)),
         centerTitle: true,
         title: Text(_title,
@@ -151,7 +152,7 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
     if (_denied) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.photo_library_outlined,
+          const Icon(AppIcons.photo_library_outlined,
               color: Colors.white30, size: 48),
           const SizedBox(height: 14),
           const Text('Барои нишон додани галерея иҷозат лозим аст',
@@ -240,7 +241,7 @@ class _AssetTile extends StatelessWidget {
           Positioned(
             right: 4, bottom: 4,
             child: Row(children: [
-              const Icon(Icons.play_circle_fill, color: Colors.white, size: 16),
+              const Icon(AppIcons.play_circle_fill, color: Colors.white, size: 16),
               const SizedBox(width: 2),
               Text(_dur(asset.videoDuration),
                   style: const TextStyle(color: Colors.white, fontSize: 11)),
@@ -271,7 +272,7 @@ class _CameraTile extends StatelessWidget {
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.photo_camera_rounded, color: Colors.white, size: 26),
+            Icon(AppIcons.photo_camera_rounded, color: Colors.white, size: 26),
             SizedBox(height: 4),
             Text('Камера',
                 style: TextStyle(color: Colors.white70, fontSize: 11)),

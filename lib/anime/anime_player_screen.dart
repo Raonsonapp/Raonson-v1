@@ -13,6 +13,7 @@ import '../core/services/vip_service.dart';
 import '../widgets/embed_player.dart';
 import 'aparat_api.dart';
 import 'download_service.dart';
+import '../core/ui/app_icons.dart';
 
 class AnimePlayerScreen extends StatefulWidget {
   final String hash;
@@ -241,8 +242,8 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
                 ? (s.height > 0 ? '${s.height}p' : 'Авто') : s.profile;
             return ListTile(
               leading: Icon(
-                  locked ? Icons.lock_outline_rounded
-                         : (selected ? Icons.check_rounded : Icons.hd_outlined),
+                  locked ? AppIcons.lock_outline_rounded
+                         : (selected ? AppIcons.check_rounded : AppIcons.hd_outlined),
                   color: locked ? Colors.amber
                                 : (selected ? AppColors.neonBlue : Colors.white70)),
               title: Text(label, style: const TextStyle(color: Colors.white)),
@@ -318,7 +319,7 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
                     )
                   : IconButton(
                       onPressed: _download,
-                      icon: const Icon(Icons.download_rounded, color: Colors.white),
+                      icon: const Icon(AppIcons.download_rounded, color: Colors.white),
                       tooltip: 'Зеркашӣ'),
             ],
           ],
@@ -376,15 +377,15 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
           const Spacer(),
           // Маркази контролҳо: 10с ақиб | пахш/таваққуф | 10с пеш
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            _ctrlBtn(Icons.replay_10_rounded, () => _seekBy(-10), size: 38),
+            _ctrlBtn(AppIcons.replay_10_rounded, () => _seekBy(-10), size: 38),
             const SizedBox(width: 28),
             _ctrlBtn(
                 c.value.isPlaying
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
+                    ? AppIcons.pause_rounded
+                    : AppIcons.play_arrow_rounded,
                 _togglePlay, size: 58),
             const SizedBox(width: 28),
-            _ctrlBtn(Icons.forward_10_rounded, () => _seekBy(10), size: 38),
+            _ctrlBtn(AppIcons.forward_10_rounded, () => _seekBy(10), size: 38),
           ]),
           const Spacer(),
           // Поён: вақт | слайдер | вақт | сифат | экрани калон
@@ -427,8 +428,8 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
                 ),
               _ctrlBtn(
                   _fullscreen
-                      ? Icons.fullscreen_exit_rounded
-                      : Icons.screen_rotation_rounded,
+                      ? AppIcons.fullscreen_exit_rounded
+                      : AppIcons.screen_rotation_rounded,
                   _toggleFullscreen, size: 24),
             ]),
           ),

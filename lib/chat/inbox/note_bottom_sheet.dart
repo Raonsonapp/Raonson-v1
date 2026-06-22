@@ -5,6 +5,7 @@ import '../../app/app_theme.dart';
 import '../../core/note_service.dart';
 import '../../models/note_model.dart';
 import 'music_picker_sheet.dart';
+import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  NoteBottomSheet — як экран, мисли Instagram Notes
@@ -321,7 +322,7 @@ class _BubblePreview extends StatelessWidget {
                             decoration: BoxDecoration(
                                 color: const Color(0xFF1C2333),
                                 borderRadius: BorderRadius.circular(4)),
-                            child: const Icon(Icons.music_note_rounded,
+                            child: const Icon(AppIcons.music_note_rounded,
                                 color: AppColors.neonBlue, size: 14)),
                         const SizedBox(width: 7),
                         Flexible(
@@ -345,8 +346,8 @@ class _BubblePreview extends StatelessWidget {
                         const SizedBox(width: 7),
                         Icon(
                           isPlaying
-                              ? Icons.pause_circle_filled_rounded
-                              : Icons.play_circle_filled_rounded,
+                              ? AppIcons.pause_circle_filled_rounded
+                              : AppIcons.play_circle_filled_rounded,
                           color: AppColors.neonBlue, size: 20),
                       ]),
                     ),
@@ -381,7 +382,7 @@ class _BubblePreview extends StatelessWidget {
           color: const Color(0xFF1C2333),
           border: Border.all(color: AppColors.textPrimary.withOpacity(0.15), width: 1.5),
         ),
-        child: Icon(Icons.person_rounded, color: AppColors.textFaint, size: 26),
+        child: Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: 26),
       ),
     ]);
   }
@@ -412,13 +413,13 @@ class _AddMusicBtn extends StatelessWidget {
             color: AppColors.neonBlue.withOpacity(0.12),
             border: Border.all(color: AppColors.neonBlue.withOpacity(0.35)),
           ),
-          child: Icon(Icons.music_note_rounded, color: AppColors.neonBlue, size: 17),
+          child: Icon(AppIcons.music_note_rounded, color: AppColors.neonBlue, size: 17),
         ),
         const SizedBox(width: 12),
         Text('Мусиқӣ илова кун',
             style: TextStyle(color: AppColors.textPrimary.withOpacity(0.55), fontSize: 14)),
         const Spacer(),
-        Icon(Icons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2)),
+        Icon(AppIcons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2)),
       ]),
     ),
   );
@@ -465,7 +466,7 @@ class _AttachedMusic extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: const Color(0xFF1C2333),
                         borderRadius: BorderRadius.circular(9)),
-                    child: const Icon(Icons.music_note_rounded,
+                    child: const Icon(AppIcons.music_note_rounded,
                         color: AppColors.neonBlue, size: 24)),
           ),
           Container(
@@ -474,7 +475,7 @@ class _AttachedMusic extends StatelessWidget {
                 color: Colors.black.withOpacity(0.35),
                 borderRadius: BorderRadius.circular(9)),
             child: Icon(
-              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              isPlaying ? AppIcons.pause_rounded : AppIcons.play_arrow_rounded,
               color: AppColors.textPrimary, size: 22),
           ),
         ]),
@@ -512,7 +513,7 @@ class _AttachedMusic extends StatelessWidget {
         const SizedBox(height: 8),
         GestureDetector(
           onTap: onRemove,
-          child: Icon(Icons.close_rounded, color: AppColors.textFaint, size: 18),
+          child: Icon(AppIcons.close_rounded, color: AppColors.textFaint, size: 18),
         ),
       ]),
     ]),

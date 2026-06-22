@@ -18,6 +18,7 @@ import '../../app/app_routes.dart';
 import '../../app/app_theme.dart';
 import '../../core/services/user_session.dart';
 import '../../notifications/notification_badge.dart';
+import '../../core/ui/app_icons.dart';
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -227,7 +228,7 @@ class _FeedBody extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             color: AppColors.card,
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.wifi_off, color: AppColors.textFaint, size: 14),
+              Icon(AppIcons.wifi_off, color: AppColors.textFaint, size: 14),
               const SizedBox(width: 6),
               Text('Оффлайн — кэш нишон дода мешавад',
                 style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
@@ -254,7 +255,7 @@ class _FeedBody extends StatelessWidget {
             SliverFillRemaining(
               child: Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.photo_camera_outlined,
+                  Icon(AppIcons.photo_camera_outlined,
                       size: 64, color: AppColors.dividerFaint),
                   const SizedBox(height: 16),
                   Text('Ҳоло постҳо нест',
@@ -299,7 +300,7 @@ class _FeedBody extends StatelessWidget {
             SliverFillRemaining(
               child: Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.cloud_off_outlined,
+                  Icon(AppIcons.cloud_off_outlined,
                       size: 64, color: AppColors.dividerFaint),
                   const SizedBox(height: 16),
                   Text('Пайвастшавӣ мумкин нест',
@@ -311,7 +312,7 @@ class _FeedBody extends StatelessWidget {
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: () => feedCtrl.loadInitialFeed(),
-                    icon: const Icon(Icons.refresh_rounded),
+                    icon: const Icon(AppIcons.refresh_rounded),
                     label: const Text('Такрор кӯшиш'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.neonBlue,
@@ -398,7 +399,7 @@ class _NewPostsBanner extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.arrow_upward_rounded, color: AppColors.textPrimary, size: 16),
+            Icon(AppIcons.arrow_upward_rounded, color: AppColors.textPrimary, size: 16),
             const SizedBox(width: 6),
             Text(count == 1 ? '1 пости нав' : '$count та пости нав',
               style: TextStyle(color: AppColors.textPrimary,

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import '../core/ui/app_icons.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -105,8 +106,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     fontWeight: FontWeight.w600, fontSize: 15))),
           ...options.map((o) => ListTile(
                 leading: Icon(
-                    o.$2 == 0 ? Icons.all_inclusive_rounded
-                              : Icons.schedule_rounded,
+                    o.$2 == 0 ? AppIcons.all_inclusive_rounded
+                              : AppIcons.schedule_rounded,
                     color: AppColors.verified, size: 20),
                 title: Text(o.$1,
                     style: TextStyle(color: AppColors.textPrimary)),
@@ -216,7 +217,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded,
+            icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
         title: Text('Панели идоракунӣ',
@@ -226,7 +227,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         actions: [
           IconButton(
             tooltip: 'Тест email',
-            icon: Icon(Icons.mark_email_read_outlined,
+            icon: Icon(AppIcons.mark_email_read_outlined,
                 color: AppColors.textPrimary),
             onPressed: _testEmail,
           ),
@@ -242,7 +243,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             decoration: InputDecoration(
               hintText: 'Ҷустуҷӯи корбар...',
               hintStyle: TextStyle(color: AppColors.textFaint),
-              prefixIcon: Icon(Icons.search_rounded, color: AppColors.textFaint),
+              prefixIcon: Icon(AppIcons.search_rounded, color: AppColors.textFaint),
               filled: true,
               fillColor: AppColors.card,
               border: OutlineInputBorder(
@@ -287,7 +288,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         backgroundColor: AppColors.card,
         backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
         child: avatar.isEmpty
-            ? Icon(Icons.person, color: AppColors.textFaint) : null,
+            ? Icon(AppIcons.person, color: AppColors.textFaint) : null,
       ),
       title: Row(children: [
         Flexible(
@@ -296,7 +297,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15))),
         if (verified) ...[
           const SizedBox(width: 6),
-          const Icon(Icons.verified_rounded,
+          const Icon(AppIcons.verified_rounded,
               color: AppColors.verified, size: 16),
         ],
         if (isOwner) ...[
@@ -325,7 +326,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   IconButton(
                     tooltip: isVip ? 'VIP-ро гир' : 'VIP деҳ',
                     icon: Icon(
-                        isVip ? Icons.star_rounded : Icons.star_outline_rounded,
+                        isVip ? AppIcons.star_rounded : AppIcons.star_outline_rounded,
                         color: isVip ? Colors.amber : AppColors.textTertiary,
                         size: 22),
                     onPressed: () => _setVip(u, !isVip),
@@ -334,15 +335,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     tooltip: verified ? 'Галочкаро гир' : 'Галочка деҳ',
                     icon: Icon(
                         verified
-                            ? Icons.verified_rounded
-                            : Icons.verified_outlined,
+                            ? AppIcons.verified_rounded
+                            : AppIcons.verified_outlined,
                         color: verified ? AppColors.verified : AppColors.textTertiary,
                         size: 22),
                     onPressed: () => _setVerified(u, !verified),
                   ),
                   IconButton(
                     tooltip: 'Нест кун',
-                    icon: const Icon(Icons.delete_outline_rounded,
+                    icon: const Icon(AppIcons.delete_outline_rounded,
                         color: Colors.redAccent, size: 22),
                     onPressed: () => _deleteUser(u),
                   ),

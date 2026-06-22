@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/ui/app_icons.dart';
 
 class AppScaffold extends StatefulWidget {
   final Widget child;
@@ -29,28 +30,28 @@ class _AppScaffoldState extends State<AppScaffold> {
         showUnselectedLabels: false,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            icon: Icon(AppIcons.home_outlined),
+            activeIcon: Icon(AppIcons.home),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.movie_outlined),
-            activeIcon: Icon(Icons.movie),
+            icon: Icon(AppIcons.movie_outlined),
+            activeIcon: Icon(AppIcons.movie),
             label: 'Reels',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
+            icon: Icon(AppIcons.chat_bubble_outline),
+            activeIcon: Icon(AppIcons.chat_bubble),
             label: 'Chat',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            activeIcon: Icon(Icons.search),
+            icon: Icon(AppIcons.search),
+            activeIcon: Icon(AppIcons.search),
             label: 'Search',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
+            icon: Icon(AppIcons.person_outline),
+            activeIcon: Icon(AppIcons.person),
             label: 'Profile',
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 /// Verified badge — checkmark. Ранг default сабз, вале метавон сафед кард
 /// (дар сторис ва reels болои тасвир сафед хубтар дида мешавад).
@@ -11,7 +12,7 @@ class VerifiedBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Icon(
-      Icons.verified_rounded,
+      AppIcons.verified_rounded,
       size: size,
       color: color ?? AppColors.verified,
     );

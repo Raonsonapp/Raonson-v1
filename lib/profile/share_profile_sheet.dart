@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../app/app_theme.dart';
 import '../models/user_model.dart';
+import '../core/ui/app_icons.dart';
 
 class ShareProfileSheet extends StatefulWidget {
   final UserModel user;
@@ -67,11 +68,11 @@ class _ShareState extends State<ShareProfileSheet> {
                               Container(color: AppColors.card),
                           errorWidget: (_, __, ___) =>
                               Container(color: AppColors.card,
-                                  child: Icon(Icons.person_rounded,
+                                  child: Icon(AppIcons.person_rounded,
                                       color: AppColors.textFaint, size: 26)))
                       : Container(width: 48, height: 48,
                           color: AppColors.card,
-                          child: Icon(Icons.person_rounded,
+                          child: Icon(AppIcons.person_rounded,
                               color: AppColors.textFaint, size: 26))),
                 const SizedBox(width: 12),
                 Expanded(child: Column(
@@ -84,7 +85,7 @@ class _ShareState extends State<ShareProfileSheet> {
                               fontSize: 15, fontWeight: FontWeight.bold))),
                       if (widget.user.isVerified) ...[
                         const SizedBox(width: 5),
-                        const Icon(Icons.verified_rounded,
+                        const Icon(AppIcons.verified_rounded,
                             color: Color(0xFF00C853), size: 14),
                       ],
                     ]),
@@ -133,7 +134,7 @@ class _ShareState extends State<ShareProfileSheet> {
           // Actions
           Padding(padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(children: [
-              _ARow(icon: Icons.copy_rounded, label: 'Линкро нусха кун',
+              _ARow(icon: AppIcons.copy_rounded, label: 'Линкро нусха кун',
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: _url));
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -142,7 +143,7 @@ class _ShareState extends State<ShareProfileSheet> {
                             duration: Duration(seconds: 2)));
                   }),
               Divider(color: AppColors.dividerFaint, height: 0),
-              _ARow(icon: Icons.share_rounded, label: 'Мубодила',
+              _ARow(icon: AppIcons.share_rounded, label: 'Мубодила',
                   onTap: () => Share.share(_url,
                       subject: widget.user.username)),
             ])),
@@ -347,7 +348,7 @@ class _ARow extends StatelessWidget {
         const SizedBox(width: 14),
         Expanded(child: Text(label,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 15))),
-        Icon(Icons.chevron_right_rounded,
+        Icon(AppIcons.chevron_right_rounded,
             color: AppColors.textFaint, size: 20),
       ])));
 }

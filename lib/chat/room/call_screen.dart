@@ -9,6 +9,7 @@ import '../../widgets/avatar.dart';
 import '../../core/agora_service.dart';
 import '../../core/webrtc_service.dart';
 import '../../core/storage/token_storage.dart';
+import '../../core/ui/app_icons.dart';
 
 enum CallType { voice, video }
 
@@ -221,14 +222,14 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
           _Btn(
-            icon:   _agora.muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+            icon:   _agora.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
             label:  _agora.muted ? 'Кушо' : 'Бандош',
             active: _agora.muted,
             onTap:  _agora.toggleMute,
           ),
           _EndBtn(onTap: _endCall),
           _Btn(
-            icon:   _agora.speakerOn ? Icons.volume_up_rounded : Icons.volume_down_rounded,
+            icon:   _agora.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_down_rounded,
             label:  'Баланд',
             active: _agora.speakerOn,
             onTap:  _agora.toggleSpeaker,
@@ -291,7 +292,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(children: [
         IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(AppIcons.arrow_back, color: AppColors.textPrimary),
           onPressed: _endCall,
         ),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -313,14 +314,14 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
           colors: [Colors.black.withOpacity(0.88), Colors.transparent],
         )),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          _Btn(icon: _agora.muted ? Icons.mic_off_rounded : Icons.mic_rounded,
+          _Btn(icon: _agora.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
               label: 'Овоз', active: _agora.muted, onTap: _agora.toggleMute),
-          _Btn(icon: _agora.cameraOff ? Icons.videocam_off_rounded : Icons.videocam_rounded,
+          _Btn(icon: _agora.cameraOff ? AppIcons.videocam_off_rounded : AppIcons.videocam_rounded,
               label: 'Камера', active: _agora.cameraOff, onTap: _agora.toggleCamera),
           _EndBtn(onTap: _endCall),
-          _Btn(icon: Icons.flip_camera_ios_rounded,
+          _Btn(icon: AppIcons.flip_camera_ios_rounded,
               label: 'Тағир', active: false, onTap: _agora.flipCamera),
-          _Btn(icon: _agora.speakerOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+          _Btn(icon: _agora.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_off_rounded,
               label: 'Баланд', active: _agora.speakerOn, onTap: _agora.toggleSpeaker),
         ]),
       ),
@@ -341,7 +342,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       border: Border.all(color: Colors.green.withOpacity(0.4)),
     ),
     child: const Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.circle, color: Colors.green, size: 8),
+      Icon(AppIcons.circle, color: Colors.green, size: 8),
       SizedBox(width: 6),
       Text('Пайваст', style: TextStyle(color: Colors.green, fontSize: 13)),
     ]),
@@ -398,7 +399,7 @@ class _EndBtn extends StatelessWidget {
               color: const Color(0xFFFF3B55).withOpacity(0.55),
               blurRadius: 22, spreadRadius: 2)],
         ),
-        child: Icon(Icons.call_end_rounded, color: AppColors.textPrimary, size: 32),
+        child: Icon(AppIcons.call_end_rounded, color: AppColors.textPrimary, size: 32),
       ),
       const SizedBox(height: 6),
       Text('Қатъ', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),

@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import 'highlight_model.dart';
+import '../core/ui/app_icons.dart';
 
 class HighlightsRow extends StatelessWidget {
   final List<HighlightModel> highlights;
@@ -84,7 +85,7 @@ class _HlItem extends StatelessWidget {
             ),
             padding: isAdd ? null : const EdgeInsets.all(2.5),
             child: isAdd
-                ? Icon(Icons.add_rounded, color: AppColors.textPrimary, size: 26)
+                ? Icon(AppIcons.add_rounded, color: AppColors.textPrimary, size: 26)
                 : ClipOval(
                     child: coverUrl.isNotEmpty
                         ? CachedNetworkImage(
@@ -93,7 +94,7 @@ class _HlItem extends StatelessWidget {
                             errorWidget: (_, __, ___) =>
                                 Container(color: AppColors.card))
                         : Container(color: AppColors.card,
-                            child: Icon(Icons.photo_library_outlined,
+                            child: Icon(AppIcons.photo_library_outlined,
                                 color: AppColors.textFaint, size: 26))),
           ),
           const SizedBox(height: 5),
@@ -127,7 +128,7 @@ class HighlightOptionsSheet extends StatelessWidget {
           decoration: BoxDecoration(
               color: AppColors.textFaint, borderRadius: BorderRadius.circular(2)))),
         ListTile(
-          leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+          leading: const Icon(AppIcons.delete_outline_rounded, color: Colors.redAccent),
           title: Text('«${highlight.title}»-ро нест кун',
               style: const TextStyle(color: Colors.redAccent, fontSize: 15)),
           onTap: () {

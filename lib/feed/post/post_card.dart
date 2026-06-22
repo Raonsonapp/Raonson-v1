@@ -18,6 +18,7 @@ import '../../core/services/user_session.dart';
 import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
 import '../../app/app_theme.dart';
+import '../../core/ui/app_icons.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -225,16 +226,16 @@ class _PostCardState extends State<PostCard>
           _SvgMenuTile(assetPath: 'assets/icons/stats.svg',
               label: 'Статистика',
               onTap: () { Navigator.pop(context); _showStats(); }),
-          _MenuItem(icon: Icons.campaign_outlined, iconColor: AppColors.storyEnd,
+          _MenuItem(icon: AppIcons.campaign_outlined, iconColor: AppColors.storyEnd,
               label: 'Тарғиб кардан (реклама)', labelColor: AppColors.storyEnd,
               onTap: () { Navigator.pop(context); _promotePost(); }),
-          _MenuItem(icon: Icons.favorite_border_rounded,
+          _MenuItem(icon: AppIcons.favorite_border_rounded,
               label: 'Пинҳон кардани лайкҳо',
               onTap: () { Navigator.pop(context); _toggleAction('hide-likes', 'Танзими лайкҳо нав шуд'); }),
-          _MenuItem(icon: Icons.mode_comment_outlined,
+          _MenuItem(icon: AppIcons.mode_comment_outlined,
               label: 'Хомӯш/фаъол кардани шарҳҳо',
               onTap: () { Navigator.pop(context); _toggleAction('toggle-comments', 'Танзими шарҳҳо нав шуд'); }),
-          _MenuItem(icon: Icons.archive_outlined,
+          _MenuItem(icon: AppIcons.archive_outlined,
               label: 'Бойгонӣ кардан',
               onTap: () { Navigator.pop(context); _archivePost(); }),
           const SizedBox(height: 8),
@@ -285,14 +286,14 @@ class _PostCardState extends State<PostCard>
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _MenuItem(icon: Icons.flag_outlined, iconColor: Colors.redAccent,
+          _MenuItem(icon: AppIcons.flag_outlined, iconColor: Colors.redAccent,
               label: 'Жалоб партофтан', labelColor: Colors.redAccent,
               onTap: () { Navigator.pop(context); _reportPost(); }),
-          _MenuItem(icon: Icons.thumb_up_outlined, label: 'Интересно',
+          _MenuItem(icon: AppIcons.thumb_up_outlined, label: 'Интересно',
               onTap: () { Navigator.pop(context); _markInterest(true); }),
-          _MenuItem(icon: Icons.thumb_down_outlined, label: 'Неинтересно',
+          _MenuItem(icon: AppIcons.thumb_down_outlined, label: 'Неинтересно',
               onTap: () { Navigator.pop(context); _markInterest(false); }),
-          _MenuItem(icon: Icons.person_outline_rounded,
+          _MenuItem(icon: AppIcons.person_outline_rounded,
               label: 'Профили @${widget.post.user.username}',
               onTap: () {
                 Navigator.pop(context);
@@ -611,7 +612,7 @@ class _PostCardState extends State<PostCard>
                 borderRadius: BorderRadius.circular(10)),
             child: Row(children: [
               SizedBox(width: 10),
-              Icon(Icons.search, color: AppColors.textFaint, size: 18),
+              Icon(AppIcons.search, color: AppColors.textFaint, size: 18),
               SizedBox(width: 6),
               Text('Ҷустуҷӯ...', style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
             ]))),
@@ -691,7 +692,7 @@ class _PostCardState extends State<PostCard>
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           leading: Container(width: 44, height: 44,
             decoration: const BoxDecoration(color: Color(0xFF0095F6), shape: BoxShape.circle),
-            child: Icon(Icons.send_rounded, color: AppColors.textPrimary, size: 20)),
+            child: Icon(AppIcons.send_rounded, color: AppColors.textPrimary, size: 20)),
           title: Text('Ба чат фиристодан', style: TextStyle(
               color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500)),
           subtitle: Text('Паёми мустақим',
@@ -768,7 +769,7 @@ class _PostCardState extends State<PostCard>
                     fontWeight: FontWeight.w600, fontSize: 15)),
           ),
           ...users.map((u) => ListTile(
-                leading: Icon(Icons.alternate_email_rounded,
+                leading: Icon(AppIcons.alternate_email_rounded,
                     color: AppColors.textTertiary, size: 20),
                 title: Text('@$u',
                     style: TextStyle(color: AppColors.textPrimary)),
@@ -881,14 +882,14 @@ class _PostCardState extends State<PostCard>
 
       // ── HEADER ────────────────────────────────────────────────
       Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 6, 8),
+        padding: const EdgeInsets.fromLTRB(14, 12, 8, 10),
         child: Row(children: [
           GestureDetector(
             onTap: _openAvatarTap,
-            child: Avatar(imageUrl: post.user.avatar, size: 38,
+            child: Avatar(imageUrl: post.user.avatar, size: 42,
                 name: post.user.username,
                 glowBorder: post.user.hasStory)),
-          const SizedBox(width: 10),
+          const SizedBox(width: 11),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -922,7 +923,7 @@ class _PostCardState extends State<PostCard>
                 Padding(
                   padding: const EdgeInsets.only(bottom: 1),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.location_on_outlined,
+                    Icon(AppIcons.location_on_outlined,
                         size: 11, color: AppColors.timeColor),
                     const SizedBox(width: 2),
                     Text(post.location,
@@ -937,7 +938,7 @@ class _PostCardState extends State<PostCard>
           GestureDetector(
             onTap: _showMenu,
             child: Padding(padding: EdgeInsets.all(8),
-              child: Icon(Icons.more_horiz, color: AppColors.textPrimary, size: 22))),
+              child: Icon(AppIcons.more_horiz, color: AppColors.textPrimary, size: 22))),
         ]),
       ),
 
@@ -972,7 +973,7 @@ class _PostCardState extends State<PostCard>
                 if (post.musicTitle.isNotEmpty)
                   Flexible(
                     child: _MediaChip(
-                      icon: Icons.music_note_rounded,
+                      icon: AppIcons.music_note_rounded,
                       label: post.musicArtist.isNotEmpty
                           ? '${post.musicTitle} • ${post.musicArtist}'
                           : post.musicTitle),
@@ -981,7 +982,7 @@ class _PostCardState extends State<PostCard>
                   const SizedBox(width: 6),
                 if (post.taggedUsers.isNotEmpty)
                   _MediaChip(
-                    icon: Icons.person_rounded,
+                    icon: AppIcons.person_rounded,
                     label: post.taggedUsers.length == 1
                         ? '@${post.taggedUsers.first}'
                         : '${post.taggedUsers.length}',
@@ -997,7 +998,7 @@ class _PostCardState extends State<PostCard>
                   child: Opacity(
                     opacity: _heartOpacity.value,
                     child: Transform.scale(scale: _heartScale.value,
-                      child: Icon(Icons.favorite, color: _heartColor, size: 100,
+                      child: Icon(AppIcons.favorite, color: _heartColor, size: 100,
                         shadows: [
                           Shadow(color: _heartColor.withOpacity(0.5), blurRadius: 20),
                           const Shadow(color: Colors.black45, blurRadius: 8),
@@ -1084,7 +1085,7 @@ class _PostCardState extends State<PostCard>
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.music_note_rounded,
+              Icon(AppIcons.music_note_rounded,
                   color: AppColors.textSecondary, size: 13),
               const SizedBox(width: 5),
               Flexible(child: Text(
@@ -1253,7 +1254,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                             backgroundImage: av.isNotEmpty
                                 ? NetworkImage(av) : null,
                             child: av.isEmpty ? Icon(
-                                Icons.person, color: AppColors.textFaint) : null,
+                                AppIcons.person, color: AppColors.textFaint) : null,
                             backgroundColor: AppColors.card,
                           ),
                           title: Text('@$un',
@@ -1476,7 +1477,7 @@ class _MediaCarouselState extends State<_MediaCarousel> {
                     strokeWidth: 2, color: AppColors.textFaint))),
               errorWidget: (_, __, ___) => Container(
                 color: AppColors.surface,
-                child: Center(child: Icon(Icons.broken_image_outlined,
+                child: Center(child: Icon(AppIcons.broken_image_outlined,
                     color: AppColors.textFaint, size: 48))));
           }),
       ),
@@ -1557,7 +1558,7 @@ class _VideoItemState extends State<_VideoItem> {
     if (_error) return Container(color: Colors.black12,
         child: Center(child: Column(mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.play_circle_outline, color: AppColors.textFaint, size: 48),
+            Icon(AppIcons.play_circle_outline, color: AppColors.textFaint, size: 48),
             SizedBox(height: 8),
             Text('Видео бор намешавад',
                 style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
@@ -1579,7 +1580,7 @@ class _VideoItemState extends State<_VideoItem> {
             if (_buffering) Center(child: CircularProgressIndicator(
                 strokeWidth: 2, color: AppColors.textFaint)),
             if (_paused && !_buffering)
-              Center(child: Icon(Icons.play_circle_outline_rounded,
+              Center(child: Icon(AppIcons.play_circle_outline_rounded,
                   color: AppColors.textSecondary, size: 56)),
             // Mute badge
             Positioned(bottom: 8, right: 8,
@@ -1587,7 +1588,7 @@ class _VideoItemState extends State<_VideoItem> {
                 decoration: const BoxDecoration(
                     color: Colors.black54, shape: BoxShape.circle),
                 padding: const EdgeInsets.all(5),
-                child: Icon(Icons.volume_off_rounded,
+                child: Icon(AppIcons.volume_off_rounded,
                     color: AppColors.textPrimary, size: 14))),
           ])))),
     );

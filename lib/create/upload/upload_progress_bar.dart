@@ -2,6 +2,7 @@
 // Бари progress дар боли Home — мисли Instagram (thumbnail + ҳолат + хати кабуд→сабз).
 import 'package:flutter/material.dart';
 import 'post_upload_service.dart';
+import '../../core/ui/app_icons.dart';
 
 class UploadProgressBar extends StatelessWidget {
   const UploadProgressBar({super.key});
@@ -37,9 +38,9 @@ class UploadProgressBar extends StatelessWidget {
                         fontSize: 13, fontWeight: FontWeight.w500)),
               ),
               if (s.done)
-                const Icon(Icons.check_circle, color: Color(0xFF00E87A), size: 20),
+                const Icon(AppIcons.check_circle, color: Color(0xFF00E87A), size: 20),
               if (s.error)
-                const Icon(Icons.error_outline, color: Color(0xFFFF3040), size: 20),
+                const Icon(AppIcons.error_outline, color: Color(0xFFFF3040), size: 20),
             ]),
             if (!s.done && !s.error) ...[
               const SizedBox(height: 6),

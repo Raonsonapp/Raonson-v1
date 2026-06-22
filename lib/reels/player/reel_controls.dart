@@ -7,6 +7,7 @@ import '../../models/reel_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
+import '../../core/ui/app_icons.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -72,7 +73,7 @@ class _ReelControlsState extends State<ReelControls> {
               decoration: BoxDecoration(color: Colors.white24,
                   borderRadius: BorderRadius.circular(2))),
           ListTile(
-            leading: const Icon(Icons.flag_outlined, color: Colors.white),
+            leading: const Icon(AppIcons.flag_outlined, color: Colors.white),
             title: const Text('Хабар додан',
                 style: TextStyle(color: Colors.white)),
             onTap: () {
@@ -86,7 +87,7 @@ class _ReelControlsState extends State<ReelControls> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.link_rounded, color: Colors.white),
+            leading: const Icon(AppIcons.link_rounded, color: Colors.white),
             title: const Text('Нусхаи линк',
                 style: TextStyle(color: Colors.white)),
             onTap: () { Navigator.pop(ctx); _share(); },
@@ -148,7 +149,7 @@ class _ReelControlsState extends State<ReelControls> {
           const SizedBox(height: 18),
           GestureDetector(
             onTap: _more,
-            child: const Icon(Icons.more_vert, color: Colors.white, size: 26),
+            child: const Icon(AppIcons.more_vert, color: Colors.white, size: 26),
           ),
         ]),
       ),
@@ -367,7 +368,7 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.send_rounded, color: Color(0xFF1D9BF0)),
+                icon: const Icon(AppIcons.send_rounded, color: Color(0xFF1D9BF0)),
                 onPressed: _send,
               ),
             ]),
