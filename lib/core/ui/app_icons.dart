@@ -1,3 +1,4 @@
+// ignore_for_file: constant_identifier_names
 // lib/core/ui/app_icons.dart
 // Иконҳои муосири outline (Material Symbols Outlined — 24x24, хатти борик).
 // Ҳамаи Icons.* -и кӯҳна ба ин харита кӯчонида шудаанд (як ҷои марказӣ).
@@ -60,7 +61,7 @@ class AppIcons {
   static const IconData construction_rounded = Symbols.construction;
   static const IconData contacts_outlined = Symbols.contacts;
   static const IconData contacts_rounded = Symbols.contacts;
-  static const IconData copy_rounded = Symbols.copy;
+  static const IconData copy_rounded = Symbols.content_copy;
   static const IconData dark_mode_rounded = Symbols.dark_mode;
   static const IconData delete_forever_rounded = Symbols.delete_forever;
   static const IconData delete_outline = Symbols.delete;
@@ -195,7 +196,7 @@ class AppIcons {
   static const IconData verified_rounded = Symbols.verified;
   static const IconData verified_user_outlined = Symbols.verified_user;
   static const IconData video_call_outlined = Symbols.video_call;
-  static const IconData video_collection_outlined = Symbols.video_collection;
+  static const IconData video_collection_outlined = Symbols.video_library;
   static const IconData video_library_outlined = Symbols.video_library;
   static const IconData videocam_off_rounded = Symbols.videocam_off;
   static const IconData videocam_outlined = Symbols.videocam;
