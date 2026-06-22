@@ -19,6 +19,7 @@ class AnalyticsEvents {
   // ================= CREATE =================
   static const createPost = 'create_post';
   static const createStory = 'create_story';
+  static const createReel = 'create_reel';
   static const uploadMedia = 'upload_media';
 
   // ================= STORIES =================
@@ -36,6 +37,9 @@ class AnalyticsEvents {
   static const followUser = 'follow_user';
   static const unfollowUser = 'unfollow_user';
   static const editProfile = 'edit_profile';
+
+  // ================= SEARCH =================
+  static const searchView = 'search_view';
 
   // ================= CHAT =================
   static const chatOpen = 'chat_open';

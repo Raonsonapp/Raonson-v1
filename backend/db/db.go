@@ -524,10 +524,10 @@ func migrate() {
 		reel_id    TEXT NOT NULL,
 		watch_ms   INTEGER DEFAULT 0,
 		completed  BOOLEAN DEFAULT FALSE,
-		created_at TIMESTAMPTZ DEFAULT NOW()
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, reel_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
-	CREATE INDEX IF NOT EXISTS idx_reel_watch_user ON reel_watch(user_id);
 
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE

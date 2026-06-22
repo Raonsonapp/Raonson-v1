@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 import 'package:http/http.dart' as http;
 
 import '../app/app_theme.dart';
@@ -73,6 +75,7 @@ class _SearchScreenState extends State<SearchScreen>
     _tabs = TabController(length: 4, vsync: this);
     _loadHistory();
     _loadExplore();
+    AnalyticsService.instance.logEvent(AnalyticsEvents.searchView);
 
     _focus.addListener(() {
       if (!mounted) return;

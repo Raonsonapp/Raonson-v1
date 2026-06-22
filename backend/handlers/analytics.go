@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"raonson/db"
 	mw "raonson/middleware"
@@ -85,21 +86,7 @@ func (b *pgxBatch) sql() string {
 			s += ","
 		}
 		n := i * 3
-		s += "($" + itoa(n+1) + ",$" + itoa(n+2) + ",$" + itoa(n+3) + "::jsonb)"
+		s += "($" + strconv.Itoa(n+1) + ",$" + strconv.Itoa(n+2) + ",$" + strconv.Itoa(n+3) + "::jsonb)"
 	}
 	return s
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	buf := [12]byte{}
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	return string(buf[i:])
 }

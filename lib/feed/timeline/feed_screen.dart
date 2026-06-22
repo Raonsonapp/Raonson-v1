@@ -66,7 +66,7 @@ class _FeedShellState extends State<_FeedShell> {
     super.initState();
     _scroll = ScrollController()..addListener(_onScroll);
     NotificationService.startPolling();
-    AnalyticsService.instance.logEvent('feed_view');
+    AnalyticsService.instance.logEvent(AnalyticsEvents.feedView);
   }
 
   void _onScroll() {

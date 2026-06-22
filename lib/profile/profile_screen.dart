@@ -4,6 +4,8 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -59,6 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     _tab  = TabController(length: 3, vsync: this);
     _ctrl.loadProfile();
     _ctrl.addListener(_onCtrl);
+    AnalyticsService.instance.logEvent(AnalyticsEvents.profileView);
   }
 
   void _onCtrl() {
@@ -508,7 +511,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                         isFollowing:       user.isFollowing,
                         isPrivate:         user.isPrivate,
                         followRequestSent: user.followRequestSent,
-                        onFollow:  _ctrl.toggleFollow,
+                        onFollow:  () {
+                          AnalyticsService.instance.logEvent(user.isFollowing
+                              ? AnalyticsEvents.unfollowUser
+                              : AnalyticsEvents.followUser);
+                          _ctrl.toggleFollow();
+                        },
                         onMessage: () => Navigator.of(context).push(
                             MaterialPageRoute(
                                 builder: (_) => ChatRoomScreen(peer: user))))),

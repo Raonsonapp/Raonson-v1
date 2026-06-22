@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -41,6 +43,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _ctrl = ChatListController(ChatRepository());
     _ctrl.addListener(_onChatsLoaded);
     _ctrl.loadChats();
+    AnalyticsService.instance.logEvent(AnalyticsEvents.chatOpen);
     _presence.connect();
     _notes.load();
     _loadMyAvatar();

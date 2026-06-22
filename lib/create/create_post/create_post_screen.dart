@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -131,6 +133,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       String location = '',
       List<String> taggedUsers = const [],
       List<String> collaborators = const []}) {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.createPost);
     PostUploadService.instance.publishPost(
       file: capturedFile,
       isVideo: _isVideo,

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
+
 import '../api/api_client.dart';
 
 /// Lightweight analytics: events are buffered locally and POSTed to the
@@ -71,6 +73,21 @@ class AnalyticsService {
     _timer ??= Timer.periodic(_flushInterval, (_) => flush());
   }
 
+  /// Test-only sender override (avoids real network in unit tests).
+  @visibleForTesting
+  Future<bool> Function(List<Map<String, dynamic>> batch)? sendOverride;
+
+  @visibleForTesting
+  int get bufferLength => _buffer.length;
+
+  @visibleForTesting
+  void resetForTest() {
+    _buffer.clear();
+    _timer?.cancel();
+    _timer = null;
+    _sending = false;
+  }
+
   /// Sends the current buffer to the backend. On failure the events are
   /// put back at the front of the buffer so they are retried later.
   Future<void> flush() async {
@@ -81,9 +98,15 @@ class AnalyticsService {
     _buffer.clear();
 
     try {
-      final res = await ApiClient.instance
-          .post('/analytics/events', body: {'events': batch});
-      if (res.statusCode >= 400) {
+      bool ok;
+      if (sendOverride != null) {
+        ok = await sendOverride!(batch);
+      } else {
+        final res = await ApiClient.instance
+            .post('/analytics/events', body: {'events': batch});
+        ok = res.statusCode < 400;
+      }
+      if (!ok) {
         // Server rejected — re-queue for retry.
         _buffer.insertAll(0, batch);
       }

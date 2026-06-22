@@ -235,8 +235,13 @@ func TrackReelWatch(c *gin.Context) {
 		b.WatchMs = 0
 	}
 	db.Pool.Exec(context.Background(),
-		`INSERT INTO reel_watch(user_id, reel_id, watch_ms, completed)
-		 VALUES($1,$2,$3,$4)`, myID, rid, b.WatchMs, b.Completed)
+		`INSERT INTO reel_watch(user_id, reel_id, watch_ms, completed, created_at)
+		 VALUES($1,$2,$3,$4,NOW())
+		 ON CONFLICT (user_id, reel_id) DO UPDATE
+		   SET watch_ms=EXCLUDED.watch_ms,
+		       completed=EXCLUDED.completed,
+		       created_at=NOW()`,
+		myID, rid, b.WatchMs, b.Completed)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 

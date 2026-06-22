@@ -17,6 +17,7 @@ import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 import '../../gifts/gift_sheet.dart';
@@ -125,7 +126,7 @@ class _ReelsVM extends ChangeNotifier {
   }) {
     _repo.trackWatchTime(
         reelId: reelId, watchMs: watchMs, durationMs: durationMs);
-    AnalyticsService.instance.logEvent('reel_view',
+    AnalyticsService.instance.logEvent(AnalyticsEvents.reelView,
         params: {'reelId': reelId, 'watchMs': watchMs});
   }
 

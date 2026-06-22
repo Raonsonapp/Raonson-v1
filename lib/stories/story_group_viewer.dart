@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
@@ -228,6 +230,8 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   Future<void> _markViewed() async {
     widget.onViewed?.call(_current.id);
+    AnalyticsService.instance.logEvent(AnalyticsEvents.storyView,
+        params: {'storyId': _current.id});
     try {
       await ApiClient.instance.post('/stories/${_current.id}/view');
     } catch (_) {}
