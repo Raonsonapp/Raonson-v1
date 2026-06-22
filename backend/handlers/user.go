@@ -142,11 +142,18 @@ func GetUserReels(c *gin.Context) {
 func GetFollowers(c *gin.Context) {
 	id := c.Param("id")
 	myID := mw.UID(c)
-	rows, _ := db.Pool.Query(context.Background(), `
+	limit, offset := followPage(c)
+	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id,u.username,u.avatar,u.verified,u.bio,
 		       EXISTS(SELECT 1 FROM follows ff WHERE ff.follower_id=$2::text AND ff.following_id=u.id)
 		FROM follows f JOIN users u ON u.id=f.follower_id
-		WHERE f.following_id=$1`, id, myID)
+		WHERE f.following_id=$1
+		ORDER BY f.created_at DESC
+		LIMIT $3 OFFSET $4`, id, myID, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to load followers"})
+		return
+	}
 	defer rows.Close()
 	c.JSON(http.StatusOK, miniUserF(rows))
 }
@@ -155,11 +162,34 @@ func GetFollowers(c *gin.Context) {
 func GetFollowing(c *gin.Context) {
 	id := c.Param("id")
 	myID := mw.UID(c)
-	rows, _ := db.Pool.Query(context.Background(), `
+	limit, offset := followPage(c)
+	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id,u.username,u.avatar,u.verified,u.bio,
 		       EXISTS(SELECT 1 FROM follows ff WHERE ff.follower_id=$2::text AND ff.following_id=u.id)
 		FROM follows f JOIN users u ON u.id=f.following_id
-		WHERE f.follower_id=$1`, id, myID)
+		WHERE f.follower_id=$1
+		ORDER BY f.created_at DESC
+		LIMIT $3 OFFSET $4`, id, myID, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to load following"})
+		return
+	}
 	defer rows.Close()
 	c.JSON(http.StatusOK, miniUserF(rows))
+}
+
+// followPage — page/limit-и followers/following (default 50, max 100).
+func followPage(c *gin.Context) (limit, offset int) {
+	page := toInt(c.Query("page"), 1)
+	if page < 1 {
+		page = 1
+	}
+	limit = toInt(c.Query("limit"), 50)
+	if limit < 1 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return limit, (page - 1) * limit
 }

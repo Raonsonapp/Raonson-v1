@@ -30,6 +30,7 @@ func CreatePost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "At least one media item required"})
 		return
 	}
+	b.Caption = clampRunes(b.Caption, 2200)
 	if b.TaggedUsers == nil {
 		b.TaggedUsers = []string{}
 	}
@@ -230,19 +231,26 @@ func TogglePostLike(c *gin.Context) {
 		pid, myID).Scan(&liked)
 
 	if liked {
-		db.Pool.Exec(context.Background(),
+		// UNLIKE — count танҳо вақте кам мешавад, ки сатр воқеан ҳазф шуд.
+		ct, _ := db.Pool.Exec(context.Background(),
 			`DELETE FROM post_likes WHERE post_id=$1::text AND user_id=$2::text`, pid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE posts SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, pid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE posts SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, pid)
+		}
 	} else {
-		db.Pool.Exec(context.Background(),
+		// LIKE — count танҳо вақте зиёд мешавад, ки сатр воқеан нав илова шуд
+		// (race-safe: дархостҳои ҳамзамон count-ро дучанд намекунанд).
+		ct, _ := db.Pool.Exec(context.Background(),
 			`INSERT INTO post_likes(post_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, pid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE posts SET likes_count=likes_count+1 WHERE id=$1`, pid)
-		var owner string
-		db.Pool.QueryRow(context.Background(),
-			`SELECT user_id FROM posts WHERE id=$1`, pid).Scan(&owner)
-		notify(owner, myID, "like", pid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE posts SET likes_count=likes_count+1 WHERE id=$1`, pid)
+			var owner string
+			db.Pool.QueryRow(context.Background(),
+				`SELECT user_id FROM posts WHERE id=$1`, pid).Scan(&owner)
+			notify(owner, myID, "like", pid)
+		}
 	}
 
 	var cnt int

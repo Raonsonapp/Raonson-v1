@@ -100,6 +100,10 @@ func UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
 		return
 	}
+	if b.Bio != nil {
+		clamped := clampRunes(*b.Bio, 150)
+		b.Bio = &clamped
+	}
 	var bioSongStr *string
 	if b.BioSong != nil {
 		s := string(*b.BioSong)

@@ -402,6 +402,7 @@ func SendMessage(c *gin.Context) {
 		ReceiverID string `json:"receiverId"`
 	}
 	c.ShouldBindJSON(&b)
+	b.Text = clampRunes(b.Text, 1000)
 
 	var msgID string
 	var createdAt interface{}
