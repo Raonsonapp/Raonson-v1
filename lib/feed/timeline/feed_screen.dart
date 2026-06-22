@@ -192,7 +192,13 @@ class _FeedBody extends StatelessWidget {
         final groups = allGroups;
         final groupIdx = groups.indexWhere(
             (g) => g.first.user.id == group.first.user.id);
-        _openStoryGroup(context, groups, groupIdx.clamp(0, groups.length - 1));
+        if (groupIdx < 0) {
+          // Гурӯҳ дар рӯйхати умумӣ нест (мас. сториси худи ман) —
+          // ҳамон гурӯҳро бо ҳамаи сторисҳояш мекушоем.
+          _openStoryGroup(context, [group], 0);
+        } else {
+          _openStoryGroup(context, groups, groupIdx);
+        }
       },
       onTap: (s) {
         // Fallback: open single story as group
