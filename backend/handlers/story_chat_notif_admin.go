@@ -81,6 +81,11 @@ func CreateStory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
 		return
 	}
+	// Эътибори медиа: танҳо URL-и https (мисли SendMessageExt).
+	if !strings.HasPrefix(b.MediaURL, "https://") {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl must be https"})
+		return
+	}
 	exp := time.Now().Add(24 * time.Hour)
 	var sid string
 	db.Pool.QueryRow(context.Background(),
@@ -380,6 +385,7 @@ func DeleteChatRequest(c *gin.Context) {
 // GET /chat/:chatId/messages
 func GetMessages(c *gin.Context) {
 	chatID := c.Param("chatId")
+	myID   := mw.UID(c)
 	page  := toInt(c.Query("page"), 1)
 	if page < 1 {
 		page = 1
@@ -394,6 +400,9 @@ func GetMessages(c *gin.Context) {
 	offset := (page - 1) * limit
 	// Паёмҳои ОХИРИНро (page) мегирем (на аввалин), вале бо тартиби афзоянда
 	// бармегардонем — то дар чатҳои дароз ҳам зуд ва дуруст бошад.
+	// Иштироккунанда: танҳо паёмҳое, ки корбар фиристода ё гирифтааст. Шарти
+	// (sender_id=$4 OR receiver_id=$4) ҳатмист — то паёмҳои ХУДИ корбар ҳеҷ
+	// гоҳ пинҳон нашаванд (вагарна паёми навфиристода "гум" мешуд).
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
 		       is_deleted,read,created_at,username,avatar,verified
@@ -403,8 +412,9 @@ func GetMessages(c *gin.Context) {
 		         COALESCE(m.is_deleted,false) is_deleted,m.read,m.created_at,
 		         u.username,u.avatar,u.verified
 		  FROM messages m JOIN users u ON u.id=m.sender_id
-		  WHERE m.chat_id=$1 ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
-		) sub ORDER BY created_at ASC`, chatID, limit, offset)
+		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
+		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
+		) sub ORDER BY created_at ASC`, chatID, limit, offset, myID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get messages failed"})
 		return
@@ -523,8 +533,10 @@ func GetNotifications(c *gin.Context) {
 
 // POST /notifications/:id/read
 func MarkNotifRead(c *gin.Context) {
+	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`UPDATE notifications SET read=TRUE WHERE id=$1`, c.Param("id"))
+		`UPDATE notifications SET read=TRUE WHERE id=$1 AND user_id=$2`,
+		c.Param("id"), myID)
 	c.JSON(http.StatusOK, gin.H{"read": true})
 }
 
@@ -538,8 +550,9 @@ func MarkAllNotifsRead(c *gin.Context) {
 
 // DELETE /notifications/:id
 func DeleteNotification(c *gin.Context) {
+	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`DELETE FROM notifications WHERE id=$1`, c.Param("id"))
+		`DELETE FROM notifications WHERE id=$1 AND user_id=$2`, c.Param("id"), myID)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
