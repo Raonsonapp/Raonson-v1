@@ -257,16 +257,23 @@ func dispatch(cl *client, raw []byte) {
 		var p struct {
 			ChatID   string `json:"chatId"`
 			Receiver string `json:"receiver"`
+			IsTyping *bool  `json:"isTyping"`
 		}
 		json.Unmarshal(msg.Data, &p)
+		isTyping := true
+		if p.IsTyping != nil {
+			isTyping = *p.IsTyping
+		}
 		emit(p.Receiver, "chat:typing", map[string]interface{}{
-			"userId": cl.userID, "chatId": p.ChatID})
+			"userId": cl.userID, "chatId": p.ChatID, "isTyping": isTyping})
 
 	case "chat:read":
 		var p struct{ MessageID string `json:"messageId"` }
 		json.Unmarshal(msg.Data, &p)
+		// Танҳо паёмҳое, ки ба худи ҳамин корбар фиристода шудаанд, хонда
+		// эълон карда мешаванд — то касе паёми каси дигарро "read" накунад.
 		db.Pool.Exec(context.Background(),
-			`UPDATE messages SET read=TRUE WHERE id=$1`, p.MessageID)
+			`UPDATE messages SET read=TRUE WHERE id=$1 AND receiver_id=$2`, p.MessageID, cl.userID)
 
 	// ── WebRTC / Calls ────────────────────────────────────────
 	case "user:register":

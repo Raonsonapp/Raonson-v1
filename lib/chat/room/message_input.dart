@@ -14,7 +14,7 @@ class MessageInput extends StatefulWidget {
   final void Function(String text)  onSend;
   final void Function(File file)?   onSendMedia;
   final void Function(File file)?   onSendVoice;
-  final VoidCallback?               onTyping;
+  final void Function(bool isTyping)? onTyping;
   final MessageModel?               replyTo;
   final VoidCallback?               onCancelReply;
 
@@ -77,16 +77,23 @@ class _MessageInputState extends State<MessageInput>
     _typingDebounce?.cancel();
     if (has) {
       _typingDebounce = Timer(const Duration(seconds: 1), () {
-        widget.onTyping?.call();
+        _sendTyping(true);
       });
+    } else {
+      // Майдон холӣ шуд — "stop typing" мефиристем.
+      _sendTyping(false);
     }
   }
+
+  void _sendTyping(bool isTyping) => widget.onTyping?.call(isTyping);
 
   void _send() {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
     widget.onSend(text);
     _ctrl.clear();
+    _typingDebounce?.cancel();
+    _sendTyping(false);
   }
 
   void _insertEmoji(String e) {
@@ -328,6 +335,7 @@ class _MessageInputState extends State<MessageInput>
                     maxLines:   null,
                     keyboardType: TextInputType.multiline,
                     textInputAction: TextInputAction.newline,
+                    onSubmitted: (_) => _sendTyping(false),
                     style: TextStyle(
                         color: AppColors.textPrimary, fontSize: 15),
                     decoration: InputDecoration(

@@ -104,6 +104,12 @@ func UpdateProfile(c *gin.Context) {
 		clamped := clampRunes(*b.Bio, 150)
 		b.Bio = &clamped
 	}
+	changingUsername, allowed := usernameChangeAllowed(myID, b.Username)
+	if !allowed {
+		c.JSON(http.StatusTooManyRequests,
+			gin.H{"message": "Username can only be changed once every 14 days"})
+		return
+	}
 	var bioSongStr *string
 	if b.BioSong != nil {
 		s := string(*b.BioSong)
@@ -120,10 +126,11 @@ func UpdateProfile(c *gin.Context) {
 		  full_name  = COALESCE($7, full_name),
 		  phone      = COALESCE($8, phone),
 		  bio_song   = COALESCE($10::jsonb, bio_song),
+		  username_changed_at = CASE WHEN $11 THEN NOW() ELSE username_changed_at END,
 		  updated_at = NOW()
 		WHERE id=$9`,
 		b.Bio, b.Avatar, b.IsPrivate, b.Username,
-		b.Website, b.Location, b.FullName, b.Phone, myID, bioSongStr)
+		b.Website, b.Location, b.FullName, b.Phone, myID, bioSongStr, changingUsername)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return

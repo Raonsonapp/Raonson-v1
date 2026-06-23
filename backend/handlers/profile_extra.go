@@ -69,15 +69,27 @@ const feedPostCols = `
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)
 func GetSavedPosts(c *gin.Context) {
 	myID := mw.UID(c)
+	page  := toInt(c.Query("page"), 1)
+	if page < 1 {
+		page = 1
+	}
+	limit := toInt(c.Query("limit"), 24)
+	if limit < 1 {
+		limit = 24
+	}
+	if limit > 60 {
+		limit = 60
+	}
+	offset := (page - 1) * limit
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
 		JOIN post_saves s ON s.post_id=p.id AND s.user_id=$1::text
-		ORDER BY p.created_at DESC LIMIT 60`, myID)
+		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`, myID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
+		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}, "page": page, "limit": limit})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"posts": scanFeedPosts(rows)})
+	c.JSON(http.StatusOK, gin.H{"posts": scanFeedPosts(rows), "page": page, "limit": limit})
 }
 
 // GET /users/:id/tagged — постҳое ки корбар дар онҳо зикр (@) шудааст

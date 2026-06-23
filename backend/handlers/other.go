@@ -284,7 +284,8 @@ func Search(c *gin.Context) {
 	// Users
 	uRows, _ := db.Pool.Query(context.Background(), `
 		SELECT id,username,avatar,verified,bio,followers_count
-		FROM users WHERE username ILIKE $1 AND banned=FALSE LIMIT 20`, like)
+		FROM users WHERE username ILIKE $1 AND banned=FALSE
+		ORDER BY followers_count DESC, username ASC LIMIT 20`, like)
 	users := []gin.H{}
 	if uRows != nil {
 		for uRows.Next() {
@@ -310,7 +311,8 @@ func Search(c *gin.Context) {
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
-		WHERE p.caption ILIKE $1 LIMIT 20`, like)
+		WHERE p.caption ILIKE $1
+		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 20`, like)
 	posts := []gin.H{}
 	if pRows != nil {
 		for pRows.Next() {
@@ -331,7 +333,8 @@ func Search(c *gin.Context) {
 	// Reels
 	rRows, _ := db.Pool.Query(context.Background(), `
 		SELECT id,video_url,caption,views_count,likes_count,created_at
-		FROM reels WHERE caption ILIKE $1 LIMIT 10`, like)
+		FROM reels WHERE caption ILIKE $1
+		ORDER BY views_count DESC, likes_count DESC LIMIT 10`, like)
 	reels := []gin.H{}
 	if rRows != nil {
 		for rRows.Next() {
@@ -359,7 +362,8 @@ func SearchUsers(c *gin.Context) {
 	}
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT id,username,avatar,verified,bio,followers_count
-		FROM users WHERE username ILIKE $1 AND banned=FALSE LIMIT 30`,
+		FROM users WHERE username ILIKE $1 AND banned=FALSE
+		ORDER BY followers_count DESC, username ASC LIMIT 30`,
 		"%"+q+"%")
 	users := []gin.H{}
 	if rows != nil {

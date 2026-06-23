@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"raonson/db"
@@ -139,6 +140,20 @@ func SendMessageExt(c *gin.Context) {
 	msgType := body.MediaType
 	if msgType == "" {
 		msgType = "text"
+	}
+
+	// Эътибори медиа: танҳо URL-и https + навъи иҷозатдодашуда.
+	if body.MediaURL != "" {
+		if !strings.HasPrefix(body.MediaURL, "https://") {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl must be https"})
+			return
+		}
+		switch msgType {
+		case "image", "video", "audio", "file":
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"message": "invalid media type"})
+			return
+		}
 	}
 
 	var replyToPtr *string

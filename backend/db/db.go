@@ -321,6 +321,9 @@ func migrate() {
 	-- ── VIP (720p/1080p-и аниме) — admin медиҳад ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS is_vip BOOLEAN DEFAULT FALSE;
 
+	-- ── Username change rate-limit (once every 14 days) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
+
 	-- ── Pinned posts ──
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
 

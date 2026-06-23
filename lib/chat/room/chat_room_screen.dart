@@ -188,6 +188,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // Typing
     _socket.on('chat:typing', (data) {
       if (!mounted) return;
+      // Агар "stop typing" омада бошад (isTyping=false), фавран пинҳон мекунем.
+      final isTyping = data is Map && data['isTyping'] == false ? false : true;
+      if (!isTyping) {
+        _typingResetTimer?.cancel();
+        setState(() => _isPeerTyping = false);
+        return;
+      }
       setState(() => _isPeerTyping = true);
       _typingResetTimer?.cancel();
       _typingResetTimer = Timer(const Duration(seconds: 3), () {
@@ -397,9 +404,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } catch (_) {}
   }
 
-  void _onTyping() {
+  void _onTyping(bool isTyping) {
     if (_chatId.isNotEmpty) {
-      _socket.sendTyping(_chatId, widget.peer.id);
+      _socket.sendTyping(_chatId, widget.peer.id, isTyping: isTyping);
     }
   }
 

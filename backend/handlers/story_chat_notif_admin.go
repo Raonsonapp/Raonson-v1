@@ -145,6 +145,18 @@ func GetStoryViewers(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Not authorized"})
 		return
 	}
+	page  := toInt(c.Query("page"), 1)
+	if page < 1 {
+		page = 1
+	}
+	limit := toInt(c.Query("limit"), 50)
+	if limit < 1 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	offset := (page - 1) * limit
 	var viewCount, likeCount, replyCount int
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COUNT(*) FROM story_views WHERE story_id=$1::text AND user_id <> $2::text`,
@@ -164,7 +176,7 @@ func GetStoryViewers(c *gin.Context) {
 		FROM story_views sv JOIN users u ON u.id=sv.user_id
 		WHERE sv.story_id=$1::text AND sv.user_id <> $2::text
 		ORDER BY sv.viewed_at DESC NULLS LAST
-		LIMIT 500`, sid, ownerID)
+		LIMIT $3 OFFSET $4`, sid, ownerID, limit, offset)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -201,6 +213,7 @@ func GetStoryViewers(c *gin.Context) {
 		"followersViewed": followersViewed,
 		"nonFollowers":    notFollowers,
 		"viewers":         viewers,
+		"page":            page,
 	})
 }
 
@@ -253,6 +266,18 @@ func GetOrCreateChat(c *gin.Context) {
 // GET /chat
 func GetChats(c *gin.Context) {
 	myID := mw.UID(c)
+	page  := toInt(c.Query("page"), 1)
+	if page < 1 {
+		page = 1
+	}
+	limit := toInt(c.Query("limit"), 30)
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	offset := (page - 1) * limit
 	// One row per conversation (latest message), newest first — DISTINCT ON
 	// avoids the old "one row per message" duplication + 100-message truncation.
 	rows, err := db.Pool.Query(context.Background(), `
@@ -279,7 +304,7 @@ func GetChats(c *gin.Context) {
 			ORDER BY m.chat_id, m.created_at DESC
 		) sub
 		ORDER BY sub.created_at DESC
-		LIMIT 100`, myID)
+		LIMIT $2 OFFSET $3`, myID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get chats failed"})
 		return
@@ -318,7 +343,7 @@ func GetChats(c *gin.Context) {
 			"peer": peer, "isRequest": isRequest, "unreadCount": unreadCount,
 		})
 	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, gin.H{"chats": result, "page": page, "limit": limit})
 }
 
 // POST /chat/requests/:peerId/accept — дархостро қабул мекунад
@@ -355,7 +380,19 @@ func DeleteChatRequest(c *gin.Context) {
 // GET /chat/:chatId/messages
 func GetMessages(c *gin.Context) {
 	chatID := c.Param("chatId")
-	// 100 паёми ОХИРИНро мегирем (на аввалин), вале бо тартиби афзоянда
+	page  := toInt(c.Query("page"), 1)
+	if page < 1 {
+		page = 1
+	}
+	limit := toInt(c.Query("limit"), 30)
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	offset := (page - 1) * limit
+	// Паёмҳои ОХИРИНро (page) мегирем (на аввалин), вале бо тартиби афзоянда
 	// бармегардонем — то дар чатҳои дароз ҳам зуд ва дуруст бошад.
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
@@ -366,8 +403,8 @@ func GetMessages(c *gin.Context) {
 		         COALESCE(m.is_deleted,false) is_deleted,m.read,m.created_at,
 		         u.username,u.avatar,u.verified
 		  FROM messages m JOIN users u ON u.id=m.sender_id
-		  WHERE m.chat_id=$1 ORDER BY m.created_at DESC LIMIT 100
-		) sub ORDER BY created_at ASC`, chatID)
+		  WHERE m.chat_id=$1 ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
+		) sub ORDER BY created_at ASC`, chatID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get messages failed"})
 		return
@@ -390,7 +427,7 @@ func GetMessages(c *gin.Context) {
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
-	c.JSON(http.StatusOK, gin.H{"messages": messages})
+	c.JSON(http.StatusOK, gin.H{"messages": messages, "page": page, "limit": limit})
 }
 
 // POST /chat/:chatId/messages

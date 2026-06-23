@@ -3,12 +3,34 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"raonson/db"
 	mw "raonson/middleware"
 
 	"github.com/gin-gonic/gin"
 )
+
+// usernameChangeAllowed — оё корбар имрӯз метавонад username-ро тағйир диҳад?
+// Танҳо вақте username воқеан дигар мешавад санҷида мешавад. Як бор дар 14 рӯз.
+// Бармегардонад: changing (оё username тағйир меёбад), allowed (иҷозат ҳаст).
+func usernameChangeAllowed(userID string, newUsername *string) (changing bool, allowed bool) {
+	if newUsername == nil {
+		return false, true
+	}
+	var current string
+	var changedAt *time.Time
+	db.Pool.QueryRow(context.Background(),
+		`SELECT username, username_changed_at FROM users WHERE id=$1`,
+		userID).Scan(&current, &changedAt)
+	if current == *newUsername {
+		return false, true
+	}
+	if changedAt != nil && time.Since(*changedAt) < 14*24*time.Hour {
+		return true, false
+	}
+	return true, true
+}
 
 // GET /users/:id
 func GetUserByID(c *gin.Context) {
@@ -37,15 +59,22 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
 		return
 	}
+	changingUsername, allowed := usernameChangeAllowed(myID, b.Username)
+	if !allowed {
+		c.JSON(http.StatusTooManyRequests,
+			gin.H{"message": "Username can only be changed once every 14 days"})
+		return
+	}
 	_, err := db.Pool.Exec(context.Background(), `
 		UPDATE users SET
 		  bio        = COALESCE($1, bio),
 		  avatar     = COALESCE($2, avatar),
 		  is_private = COALESCE($3, is_private),
 		  username   = COALESCE($4, username),
+		  username_changed_at = CASE WHEN $6 THEN NOW() ELSE username_changed_at END,
 		  updated_at = NOW()
 		WHERE id=$5`,
-		b.Bio, b.Avatar, b.IsPrivate, b.Username, myID)
+		b.Bio, b.Avatar, b.IsPrivate, b.Username, myID, changingUsername)
 	if err != nil {
 		if isUnique(err) {
 			c.JSON(http.StatusConflict, gin.H{"message": "Username taken"})
