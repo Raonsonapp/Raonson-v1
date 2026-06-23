@@ -324,26 +324,30 @@ func dispatch(cl *client, raw []byte) {
 		var p struct {
 			To       string `json:"to"`
 			Type     string `json:"type"`
-			From     string `json:"from"`
 			EntityID string `json:"entityId"`
 		}
 		json.Unmarshal(msg.Data, &p)
 		if p.To == "" || p.Type == "" { return }
+		// "From"-и аз ҷониби клиент дода нашударо қабул намекунем — фиристанда
+		// ҳамеша худи корбари пайвастшуда аст (cl.userID). Вагарна касе паёмро
+		// аз номи каси дигар фиристода метавонист.
 		var nid string
 		db.Pool.QueryRow(context.Background(),
 			`INSERT INTO notifications(user_id,from_user_id,type,target_id)
 			 VALUES($1,$2,$3,$4) RETURNING id`,
-			p.To, p.From, p.Type, nullIfEmpty(p.EntityID)).Scan(&nid)
+			p.To, cl.userID, p.Type, nullIfEmpty(p.EntityID)).Scan(&nid)
 		emit(p.To, "notification:new", map[string]interface{}{
 			"_id": nid, "type": p.Type,
-			"fromUser": map[string]interface{}{"_id": p.From},
+			"fromUser": map[string]interface{}{"_id": cl.userID},
 		})
 
 	case "notification:read":
 		var p struct{ NotificationID string `json:"notificationId"` }
 		json.Unmarshal(msg.Data, &p)
+		// Танҳо хабарномаҳои худи корбар хонда эълон карда мешаванд.
 		db.Pool.Exec(context.Background(),
-			`UPDATE notifications SET read=TRUE WHERE id=$1`, p.NotificationID)
+			`UPDATE notifications SET read=TRUE WHERE id=$1 AND user_id=$2`,
+			p.NotificationID, cl.userID)
 
 	case "call:decline":
 		var p struct{ To string `json:"to"` }
