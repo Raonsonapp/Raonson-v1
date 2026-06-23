@@ -119,6 +119,7 @@ class AccountManager {
     }
     await TokenStorage.saveUserId(acc.userId);
     ApiClient.instance.setAuthToken(acc.token);
+    ApiClient.instance.setRefreshToken(acc.refreshToken);
 
     UserSession.userId = acc.userId;
     UserSession.username = acc.username;

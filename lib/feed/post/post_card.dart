@@ -316,6 +316,9 @@ class _PostCardState extends State<PostCard>
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
+          _MenuItem(icon: Icons.volume_off_outlined,
+              label: 'Постҳои @${widget.post.user.username}-ро бандош',
+              onTap: () { Navigator.pop(context); _muteUser(); }),
           _MenuItem(icon: Icons.flag_outlined, iconColor: Colors.redAccent,
               label: 'Жалоб партофтан', labelColor: Colors.redAccent,
               onTap: () { Navigator.pop(context); _reportPost(); }),
@@ -602,10 +605,29 @@ class _PostCardState extends State<PostCard>
       backgroundColor: Colors.green, duration: Duration(seconds: 2)));
   }
 
+  Future<void> _muteUser() async {
+    setState(() => _hidden = true);
+    await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Постҳои @${widget.post.user.username} пинҳон шуд'),
+      backgroundColor: Colors.grey[800],
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+        label: 'Бекор',
+        textColor: Colors.white,
+        onPressed: () {
+          ApiClient.instance.delete('/users/${widget.post.user.id}/mute');
+          if (mounted) setState(() => _hidden = false);
+        },
+      ),
+    ));
+  }
+
   Future<void> _markInterest(bool interested) async {
     final endpoint = interested
         ? '/posts/${widget.post.id}/interest'
-        : '/posts/${widget.post.id}/not_interest';
+        : '/posts/${widget.post.id}/not-interested';
     await ApiClient.instance.post(endpoint);
     if (!interested && mounted) {
       setState(() => _hidden = true);

@@ -28,6 +28,7 @@ class AppState extends ChangeNotifier {
 
       // ✅ Token дорад → ФАВРАН login нишон деҳ аз cache
       ApiClient.instance.setAuthToken(token);
+      ApiClient.instance.setRefreshToken(await TokenStorage.getRefreshToken());
       await UserSession.loadCachedData();
 
       // Агар userId cache дорад → ФАВРАН кушода мешавад

@@ -95,7 +95,10 @@ class RegisterController extends ChangeNotifier {
           ApiClient.instance.setAuthToken(token);
 
           final refresh = data['refreshToken']?.toString() ?? '';
-          if (refresh.isNotEmpty) await TokenStorage.saveRefreshToken(refresh);
+          if (refresh.isNotEmpty) {
+            await TokenStorage.saveRefreshToken(refresh);
+            ApiClient.instance.setRefreshToken(refresh);
+          }
 
           final user = data['user'] as Map<String, dynamic>?;
           if (user != null) {

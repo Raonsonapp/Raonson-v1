@@ -76,6 +76,7 @@ class LoginController extends ChangeNotifier {
       final refresh = data['refreshToken']?.toString() ?? '';
       if (refresh.isNotEmpty) {
         await TokenStorage.saveRefreshToken(refresh);
+        ApiClient.instance.setRefreshToken(refresh);
       }
 
       // Save user info

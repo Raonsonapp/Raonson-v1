@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../app/app_config.dart';
+import '../storage/token_storage.dart';
 
 class ApiClient {
   ApiClient._();
@@ -13,6 +14,9 @@ class ApiClient {
   String? _authToken;
   void setAuthToken(String? token) => _authToken = token;
   String? get authToken => _authToken;
+
+  String? _refreshToken;
+  void setRefreshToken(String? t) => _refreshToken = t;
 
   Map<String, String> _headers() {
     final h = <String, String>{'Content-Type': 'application/json'};
@@ -70,7 +74,13 @@ class ApiClient {
       Future<http.Response> Function() request) async {
     for (int i = 0; i < 2; i++) {
       try {
-        return await request();
+        final response = await request();
+        // 401 → як бор token-ро нав мекунем ва дархостро такрор мекунем.
+        if (response.statusCode == 401 && i == 0 && _refreshToken != null) {
+          final refreshed = await _tryRefresh();
+          if (refreshed) continue; // retry бо token-и нав (headers нав мешаванд)
+        }
+        return response;
       } on SocketException {
         if (i == 1) rethrow;
         await Future.delayed(const Duration(seconds: 1));
@@ -82,6 +92,32 @@ class ApiClient {
       }
     }
     throw const SocketException('No internet');
+  }
+
+  // Access token-ро бо refresh token нав мекунад. true агар муваффақ.
+  Future<bool> _tryRefresh() async {
+    try {
+      final res = await _client.post(
+        _uri('/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': _refreshToken}),
+      ).timeout(_timeout);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final newToken = data['accessToken']?.toString();
+        final newRefresh = data['refreshToken']?.toString();
+        if (newToken != null && newToken.isNotEmpty) {
+          _authToken = newToken;
+          await TokenStorage.saveAccessToken(newToken);
+          if (newRefresh != null && newRefresh.isNotEmpty) {
+            _refreshToken = newRefresh;
+            await TokenStorage.saveRefreshToken(newRefresh);
+          }
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
   }
 
   // Aliases
