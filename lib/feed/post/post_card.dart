@@ -51,6 +51,10 @@ class _PostCardState extends State<PostCard>
   late String _caption;
   bool        _captionExpanded = false; // ← Show more/less
 
+  // ── View tracking — once per post, after 1s on screen ─────────
+  Timer? _viewTimer;
+  bool   _viewTracked = false;
+
   // ── Like bounce ──────────────────────────────────────────────
   late AnimationController _likeCtrl;
   late Animation<double>   _likeScale;
@@ -122,10 +126,25 @@ class _PostCardState extends State<PostCard>
         setState(() => _showHeart = false);
       }
     });
+
+    // Пост намоиш дода шуд → баъди 1с дебоунс як бор view-ро қайд мекунем.
+    _viewTimer = Timer(const Duration(seconds: 1), _trackView);
+  }
+
+  // POST /posts/view/:id — танҳо як бор барои ҳар пост (бе бастаи иловагӣ).
+  Future<void> _trackView() async {
+    if (_viewTracked) return;
+    _viewTracked = true;
+    final id = widget.post.id;
+    if (id.isEmpty) return;
+    try {
+      await ApiClient.instance.post('/posts/view/$id');
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    _viewTimer?.cancel();
     _likeDebounce?.cancel();
     _likeCtrl.dispose();
     _countCtrl.dispose();

@@ -72,6 +72,26 @@ class ChatRepository {
     });
   }
 
+  // ── Inbox pagination — саҳифаи навбатиро аз шабака мегирад (бе cache) ──
+  Future<List<MessageModel>> fetchInboxPage(int page, {int limit = 30}) async {
+    try {
+      final res = await _api
+          .getRequest('${ApiEndpoints.chat}?page=$page&limit=$limit')
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode >= 400) return [];
+      final body = jsonDecode(res.body);
+      final List raw = body is List ? body : (body['chats'] ?? []);
+      final out = <MessageModel>[];
+      for (final e in raw) {
+        try {
+          final m = MessageModel.fromJson(e as Map<String, dynamic>);
+          if (m.peer.username.isNotEmpty) out.add(m);
+        } catch (err) { debugPrint('[Chat] parse: $err'); }
+      }
+      return out;
+    } catch (_) { return []; }
+  }
+
   // ── Messages бо cache ───────────────────────────────────────
   String _msgKey(String peerId) => 'chat_messages_$peerId';
 
@@ -147,6 +167,22 @@ class ChatRepository {
     try {
       final myId = await _myId();
       final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages')
+          .timeout(const Duration(seconds: 8));
+      if (mr.statusCode >= 400) return [];
+      final body = jsonDecode(mr.body);
+      final List data = body is Map ? (body['messages'] ?? []) : body as List;
+      return data.map((e) =>
+          MessageModel.fromRoomJson(e as Map<String,dynamic>, myId)).toList();
+    } catch (_) { return []; }
+  }
+
+  // ── Паёмҳои кӯҳнатар — саҳифаи навбатӣ (load older) ──────────
+  Future<List<MessageModel>> fetchOlderMessages(String chatId, int page,
+      {int limit = 30}) async {
+    try {
+      final myId = await _myId();
+      final mr = await _api
+          .getRequest('${ApiEndpoints.chat}/$chatId/messages?page=$page&limit=$limit')
           .timeout(const Duration(seconds: 8));
       if (mr.statusCode >= 400) return [];
       final body = jsonDecode(mr.body);

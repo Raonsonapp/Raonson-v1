@@ -12,6 +12,8 @@ import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
 import '../app/app_settings.dart';
 import '../app/app_theme.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
 import '../core/services/user_session.dart';
@@ -233,14 +235,22 @@ class AppearanceScreen extends StatelessWidget {
                 icon:     Icons.dark_mode_rounded,
                 label:    tr('theme.dark'),
                 selected: s.theme == ThemeMode.dark,
-                onTap:    () => s.setTheme(ThemeMode.dark),
+                onTap:    () {
+                  s.setTheme(ThemeMode.dark);
+                  AnalyticsService.instance.logEvent(
+                      AnalyticsEvents.changeTheme, params: {'theme': 'dark'});
+                },
               ),
               const SizedBox(height: 12),
               _ChoiceCard(
                 icon:     Icons.light_mode_rounded,
                 label:    tr('theme.light'),
                 selected: s.theme == ThemeMode.light,
-                onTap:    () => s.setTheme(ThemeMode.light),
+                onTap:    () {
+                  s.setTheme(ThemeMode.light);
+                  AnalyticsService.instance.logEvent(
+                      AnalyticsEvents.changeTheme, params: {'theme': 'light'});
+                },
               ),
             ],
           ),
@@ -382,6 +392,9 @@ class _PrivacyState extends State<PrivacyScreen> {
                 onChanged: (v) {
                   setState(() => _private = v);
                   _sync('isPrivate', v);
+                  AnalyticsService.instance.logEvent(
+                      AnalyticsEvents.changePrivacy,
+                      params: {'isPrivate': v});
                 },
               ),
               const _ThinDiv(),

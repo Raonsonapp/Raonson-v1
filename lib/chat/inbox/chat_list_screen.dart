@@ -275,10 +275,36 @@ class _ChatView extends StatelessWidget {
                           color: AppColors.neonBlue,
                           backgroundColor: AppColors.card,
                           onRefresh: () => ctrl.loadChats(),
-                          child: ListView.builder(
-                            itemCount: ctrl.chats.length,
-                            itemBuilder: (_, i) =>
-                                _ChatTile(chat: ctrl.chats[i]),
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: (n) {
+                              if (n.metrics.pixels >=
+                                  n.metrics.maxScrollExtent - 200) {
+                                context
+                                    .read<ChatListController>()
+                                    .loadMoreChats();
+                              }
+                              return false;
+                            },
+                            child: ListView.builder(
+                              itemCount: ctrl.chats.length +
+                                  (ctrl.isLoadingMore ? 1 : 0),
+                              itemBuilder: (_, i) {
+                                if (i >= ctrl.chats.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 22, height: 22,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.neonBlue),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return _ChatTile(chat: ctrl.chats[i]);
+                              },
+                            ),
                           ),
                         ),
             ),

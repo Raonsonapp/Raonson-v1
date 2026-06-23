@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'notifications_repository.dart';
 import 'notification_item.dart';
 import '../models/notification_model.dart';
 import '../app/app_theme.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
+import '../core/services/notification_badge_controller.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -33,6 +37,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _unreadCount = data['unreadCount'] as int;
         _loading = false;
       });
+      // Бейҷи глобалиро бо шумораи воқеӣ синхрон мекунем.
+      NotificationBadgeController.instance.setCount(_unreadCount);
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -46,9 +52,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       _notifications = _notifications.map((e) => e.copyWith(read: true)).toList();
       _unreadCount = 0;
     });
+    NotificationBadgeController.instance.reset();
   }
 
   Future<void> _onTap(NotificationModel n) async {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.notificationOpen,
+        params: {'type': n.type});
     if (!n.isRead) {
       await _repo.markAsRead(n.id);
       if (!mounted) return;
@@ -58,6 +67,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             .toList();
         if (_unreadCount > 0) _unreadCount--;
       });
+      NotificationBadgeController.instance.decrement();
     }
   }
 
@@ -82,8 +92,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(
-              color: AppColors.textFaint, strokeWidth: 2))
+          ? const _NotifSkeleton()
           : _notifications.isEmpty
               ? _buildEmpty()
               : _buildGroupedList(),
@@ -165,6 +174,48 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             style: TextStyle(color: AppColors.textTertiary, fontSize: 14),
             textAlign: TextAlign.center),
       ]),
+    );
+  }
+}
+
+// ── Shimmer skeleton — avatar + 2 lines ──────────────────────────────
+class _NotifSkeleton extends StatelessWidget {
+  const _NotifSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).colorScheme.surface;
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: base.withOpacity(0.4),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: 9,
+        itemBuilder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            Container(
+              width: 48, height: 48,
+              decoration: const BoxDecoration(
+                  color: Colors.white, shape: BoxShape.circle)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: double.infinity, height: 12,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(6))),
+                  const SizedBox(height: 8),
+                  Container(width: 140, height: 12,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(6))),
+                ],
+              ),
+            ),
+          ]),
+        ),
+      ),
     );
   }
 }

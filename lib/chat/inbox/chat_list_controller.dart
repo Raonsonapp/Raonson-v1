@@ -13,6 +13,12 @@ class ChatListController extends ChangeNotifier {
   bool   _loading = false;
   bool   get isLoading => _loading;
 
+  bool   _loadingMore = false;
+  bool   get isLoadingMore => _loadingMore;
+  int    _page = 1;
+  bool   _hasMore = true;
+  static const int _pageSize = 30;
+
   String? _error;
   String? get error => _error;
 
@@ -75,6 +81,8 @@ class ChatListController extends ChangeNotifier {
     notifyListeners();
     try {
       _chats = await _repository.getInboxChats();
+      _page = 1;
+      _hasMore = _chats.length >= _pageSize;
       _applyFilter();
       debugPrint('[Inbox] loaded ${_chats.length} chats');
     } catch (e) {
@@ -83,6 +91,33 @@ class ChatListController extends ChangeNotifier {
       _error = e.toString();
     } finally {
       _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Саҳифаи навбатии сӯҳбатҳоро бор мекунад (scroll pagination).
+  Future<void> loadMoreChats() async {
+    if (_loadingMore || !_hasMore || _loading || _query.isNotEmpty) return;
+    _loadingMore = true;
+    notifyListeners();
+    try {
+      final more = await _repository.fetchInboxPage(_page + 1);
+      if (more.isEmpty) {
+        _hasMore = false;
+      } else {
+        final existing = _chats.map((c) => c.chatId).toSet();
+        final fresh = more.where((c) => !existing.contains(c.chatId)).toList();
+        if (fresh.isEmpty) {
+          _hasMore = false;
+        } else {
+          _chats = [..._chats, ...fresh];
+          _page++;
+          _applyFilter();
+        }
+      }
+    } catch (_) {
+    } finally {
+      _loadingMore = false;
       notifyListeners();
     }
   }

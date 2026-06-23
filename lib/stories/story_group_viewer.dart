@@ -359,7 +359,11 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   void _toggleLike() {
     setState(() => _liked = !_liked);
     ApiClient.instance.post('/stories/${_current.id}/like').then((_) {}).catchError((e) => e);
-    if (_liked) _showHeartAnim();
+    if (_liked) {
+      AnalyticsService.instance.logEvent(AnalyticsEvents.storyLike,
+          params: {'storyId': _current.id});
+      _showHeartAnim();
+    }
   }
 
   void _showHeartAnim() {

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
@@ -81,12 +82,18 @@ class _ReelsVM extends ChangeNotifier {
   }
 
   void toggleLike(String id) {
+    bool nowLiked = false;
     reels = reels.map((r) {
       if (r.id != id) return r;
       final liked = !r.isLiked;
+      nowLiked = liked;
       return r.copyWith(
           isLiked: liked, likesCount: r.likesCount + (liked ? 1 : -1));
     }).toList();
+    if (nowLiked) {
+      AnalyticsService.instance.logEvent(AnalyticsEvents.reelLike,
+          params: {'reelId': id});
+    }
     notifyListeners();
     _repo.likeReel(id).then((res) {
       if (res == null) return;
@@ -101,10 +108,16 @@ class _ReelsVM extends ChangeNotifier {
   }
 
   void toggleSave(String id) {
+    bool nowSaved = false;
     reels = reels.map((r) {
       if (r.id != id) return r;
-      return r.copyWith(isSaved: !r.isSaved);
+      nowSaved = !r.isSaved;
+      return r.copyWith(isSaved: nowSaved);
     }).toList();
+    if (nowSaved) {
+      AnalyticsService.instance.logEvent(AnalyticsEvents.reelSave,
+          params: {'reelId': id});
+    }
     notifyListeners();
     _repo.saveReel(id);
   }
@@ -296,13 +309,9 @@ class _ReelsViewState extends State<_ReelsView> {
     final vm = context.watch<_ReelsVM>();
 
     if (vm.loading && vm.reels.isEmpty) {
-      return Scaffold(
-          backgroundColor: AppColors.bg,
-          body: const Center(
-              child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor:
-                      AlwaysStoppedAnimation(AppColors.storyStart))));
+      return const Scaffold(
+          backgroundColor: Colors.black,
+          body: _ReelsSkeleton());
     }
 
     if (vm.reels.isEmpty) {
@@ -375,7 +384,15 @@ class _ReelsViewState extends State<_ReelsView> {
       extendBody: true,
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.black,
-      body: PageView.builder(
+      body: RefreshIndicator(
+        color: Colors.white,
+        backgroundColor: Colors.black54,
+        onRefresh: () async {
+          _currentPage = 0;
+          await vm.load();
+          if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
+        },
+        child: PageView.builder(
         controller: _pageCtrl,
         scrollDirection: Axis.vertical,
         itemCount: vm.reels.length,
@@ -411,6 +428,63 @@ class _ReelsViewState extends State<_ReelsView> {
           ),
         ),
       ),
+      ),
+    );
+  }
+}
+
+// ── Reels loading skeleton (shimmer) ─────────────────────────────────
+class _ReelsSkeleton extends StatelessWidget {
+  const _ReelsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).colorScheme.surface;
+    final size = MediaQuery.of(context).size;
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: base.withOpacity(0.4),
+      child: Stack(fit: StackFit.expand, children: [
+        Container(color: base),
+        // Right action rail placeholders
+        Positioned(
+          right: 14,
+          bottom: bottom + size.height * 0.12,
+          child: Column(mainAxisSize: MainAxisSize.min, children: List.generate(
+            4,
+            (_) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Container(
+                width: 30, height: 30,
+                decoration: BoxDecoration(
+                    color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          )),
+        ),
+        // Bottom caption placeholders
+        Positioned(
+          left: 14, right: 90, bottom: bottom + 30,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 140, height: 14,
+                  decoration: BoxDecoration(color: Colors.white,
+                      borderRadius: BorderRadius.circular(6))),
+              const SizedBox(height: 10),
+              Container(width: double.infinity, height: 12,
+                  decoration: BoxDecoration(color: Colors.white,
+                      borderRadius: BorderRadius.circular(6))),
+              const SizedBox(height: 8),
+              Container(width: 180, height: 12,
+                  decoration: BoxDecoration(color: Colors.white,
+                      borderRadius: BorderRadius.circular(6))),
+            ],
+          ),
+        ),
+      ]),
     );
   }
 }
@@ -1075,6 +1149,8 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _share() {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.reelShare,
+        params: {'reelId': widget.reel.id});
     final url =
         'https://mahmadmurodov-raonson.hf.space/reels/${widget.reel.id}';
     _ctrl?.pause();

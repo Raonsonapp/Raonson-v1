@@ -114,12 +114,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final ok = await _ctrl.save(bioSong: _bioSong, avatarUrl: _uploadedAvatarUrl);
     if (!mounted) { return; }
     if (ok) {
+      AnalyticsService.instance.logEvent(AnalyticsEvents.editProfile);
       UserSession.username = _ctrl.usernameController.text.trim();
       if (_uploadedAvatarUrl?.isNotEmpty == true) { UserSession.avatar = _uploadedAvatarUrl; }
       Navigator.pop(context, true);
     } else {
       final err = _ctrl.error ?? 'Хатогӣ';
-      final msg = err.contains('409') || err.toLowerCase().contains('taken') ? 'Ин username банд аст' : err;
+      final lower = err.toLowerCase();
+      String msg;
+      if (err.contains('429') || lower.contains('14 days') || lower.contains('once every')) {
+        msg = 'Username can only be changed once every 14 days';
+      } else if (err.contains('409') || lower.contains('taken')) {
+        msg = 'Ин username банд аст';
+      } else {
+        msg = err;
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red.shade800));
     }
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -41,6 +42,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   bool   _isPeerTyping = false;
   String _chatId      = '';
   String _myId        = '';
+
+  // Пагинатсия — паёмҳои кӯҳнатарро ҳангоми scroll-to-top бор мекунем.
+  int  _msgPage      = 1;
+  bool _loadingOlder = false;
+  bool _hasMoreOlder = true;
+  static const int _msgPageSize = 30;
 
   // Auto-refresh (safety net дар сурати кор накардани socket дар баъзе шабакаҳо)
   Timer? _pollTimer;
@@ -82,8 +89,49 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
+  void _onScrollLoadOlder() {
+    if (!_scroll.hasClients) return;
+    // Дар боли рӯйхат (паёмҳои кӯҳнатар) → саҳифаи навбатиро бор мекунем.
+    if (_scroll.position.pixels <= 80) _loadOlder();
+  }
+
+  Future<void> _loadOlder() async {
+    if (_loadingOlder || !_hasMoreOlder || _chatId.isEmpty) return;
+    _loadingOlder = true;
+    try {
+      final older = await _repo.fetchOlderMessages(_chatId, _msgPage + 1);
+      if (!mounted) { _loadingOlder = false; return; }
+      if (older.isEmpty) {
+        _hasMoreOlder = false;
+      } else {
+        final existing = _messages.map((m) => m.id).toSet();
+        final fresh = older.where((m) => !existing.contains(m.id)).toList();
+        if (fresh.isEmpty) {
+          _hasMoreOlder = false;
+        } else {
+          // Мавқеи скроллро нигоҳ медорем, то ҷаҳиш накунад.
+          final before = _scroll.hasClients ? _scroll.position.maxScrollExtent : 0.0;
+          setState(() {
+            _messages = [...fresh, ..._messages];
+            _msgPage++;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scroll.hasClients) {
+              final after = _scroll.position.maxScrollExtent;
+              _scroll.jumpTo(_scroll.position.pixels + (after - before));
+            }
+          });
+        }
+      }
+    } catch (_) {
+    } finally {
+      _loadingOlder = false;
+    }
+  }
+
   Future<void> _init() async {
     _myId = await TokenStorage.getUserId() ?? '';
+    _scroll.addListener(_onScrollLoadOlder);
     // chatId-и воқеиро ҳал мекунем, то ба ҳуҷраи socket ҳамроҳ шавем
     // ва typing/read кор кунад (пеш аз ин _chatId доимо холӣ буд).
     _chatId = await _repo.resolveChatId(widget.peer.id) ?? '';
@@ -159,7 +207,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _load() async {
     try {
       final msgs = await _repo.getMessagesWithUserEx(widget.peer.id);
-      if (mounted) setState(() { _messages = msgs; _loading = false; });
+      if (mounted) setState(() {
+        _messages = msgs;
+        _loading = false;
+        _msgPage = 1;
+        _hasMoreOlder = msgs.length >= _msgPageSize;
+      });
       _scrollBottom();
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -464,8 +517,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           // Messages list
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.neonBlue))
+                ? const _ChatRoomSkeleton()
                 : _messages.isEmpty
                     ? _emptyState()
                     : _messageList(),
@@ -728,6 +780,46 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Chat room loading skeleton (shimmer bubbles)
+// ─────────────────────────────────────────────────────────────────
+class _ChatRoomSkeleton extends StatelessWidget {
+  const _ChatRoomSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).colorScheme.surface;
+    // Чап/рост + бараҳои гуногун — то ба сӯҳбати воқеӣ монанд бошад.
+    const rows = [
+      (false, 200.0), (true, 140.0), (false, 240.0),
+      (true, 110.0), (false, 170.0), (true, 200.0),
+    ];
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: base.withOpacity(0.4),
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        children: rows.map((r) {
+          final isMine = r.$1;
+          return Align(
+            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Container(
+                width: r.$2, height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
