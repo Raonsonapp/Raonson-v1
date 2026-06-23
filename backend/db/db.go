@@ -532,6 +532,27 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
 
+	-- ── Perf indexes (block/view dedup lookups) ──
+	CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);
+	CREATE INDEX IF NOT EXISTS idx_post_views_user_post ON post_views(user_id, post_id);
+	CREATE INDEX IF NOT EXISTS idx_reel_views_dedup ON reel_views(user_id, reel_id);
+
+	-- ── Muted users ──
+	CREATE TABLE IF NOT EXISTS muted_users (
+		user_id  TEXT NOT NULL,
+		muted_id TEXT NOT NULL,
+		muted_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, muted_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_muted_users ON muted_users(user_id);
+
+	-- ── Post "not interested" ──
+	CREATE TABLE IF NOT EXISTS post_not_interested (
+		post_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		PRIMARY KEY (post_id, user_id)
+	);
+
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';

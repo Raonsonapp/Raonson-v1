@@ -67,7 +67,7 @@ func CreatePost(c *gin.Context) {
 	tx.Commit(context.Background())
 
 	// Invalidate feed cache for this user
-	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":")
+	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2", "smartfeed:"+myID+":1", "smartfeed:"+myID+":2")
 
 // ➕ ИЛОВА
 var uname, uavatar string

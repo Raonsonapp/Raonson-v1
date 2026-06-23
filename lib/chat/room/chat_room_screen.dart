@@ -13,7 +13,7 @@ import '../../widgets/avatar.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/webrtc_service.dart';
 import '../../core/presence_service.dart';
-import '../../core/socket_service.dart';
+import '../../core/services/socket_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
@@ -242,6 +242,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void _setupSocket() {
     if (!_socket.isConnected) _socket.autoConnect();
     if (_chatId.isNotEmpty) _socket.joinChat(_chatId);
+
+    // Listener-ҳои кӯҳнаро тоза мекунем, то ҳангоми бозкушоиш ҷамъ нашаванд.
+    _socket.off('chat:new');
+    _socket.off('chat:typing');
+    _socket.off('chat:read');
+    _socket.off('chat:reaction');
+    _socket.off('chat:delete');
 
     // New message
     _socket.on('chat:new', (data) {

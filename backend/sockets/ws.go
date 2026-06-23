@@ -229,6 +229,10 @@ func dispatch(cl *client, raw []byte) {
 		if p.ChatID == "" || p.Text == "" || p.Receiver == "" {
 			return
 		}
+		if len([]rune(p.Text)) > 1000 {
+			r := []rune(p.Text)
+			p.Text = string(r[:1000])
+		}
 		var msgID string
 		var createdAt interface{}
 		db.Pool.QueryRow(context.Background(),

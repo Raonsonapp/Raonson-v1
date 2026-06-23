@@ -402,6 +402,7 @@ func CreateReel(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`INSERT INTO reels(user_id,caption,video_url,video_url_low) VALUES($1,$2,$3,$4) RETURNING id`,
 		myID, b.Caption, b.VideoURL, b.VideoURLLow).Scan(&rid)
+	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": rid, "videoUrl": b.VideoURL, "videoUrlLow": b.VideoURLLow,
 		"caption": b.Caption, "likesCount": 0, "viewsCount": 0,

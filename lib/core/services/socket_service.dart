@@ -120,8 +120,9 @@ class SocketService {
     off('chat:typing');
   }
 
-  void sendTyping(String chatId, String userId) =>
-      emit('chat:typing', {'chatId': chatId, 'receiver': userId});
+  void sendTyping(String chatId, String userId, {bool isTyping = true}) =>
+      emit('chat:typing',
+          {'chatId': chatId, 'receiver': userId, 'isTyping': isTyping});
 
   void onNewMessage(void Function(Map<String, dynamic>) cb) =>
       on('chat:new', (d) { if (d is Map<String, dynamic>) cb(d); });

@@ -106,8 +106,10 @@ func UpdateProfile(c *gin.Context) {
 	}
 	changingUsername, allowed := usernameChangeAllowed(myID, b.Username)
 	if !allowed {
-		c.JSON(http.StatusTooManyRequests,
-			gin.H{"message": "Username can only be changed once every 14 days"})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"message":    "Username can only be changed once every 14 days",
+			"retryAfter": 14 * 24 * 3600,
+		})
 		return
 	}
 	var bioSongStr *string

@@ -137,6 +137,8 @@ class _PostCardState extends State<PostCard>
     _viewTracked = true;
     final id = widget.post.id;
     if (id.isEmpty) return;
+    AnalyticsService.instance
+        .logEvent(AnalyticsEvents.postView, params: {'postId': id});
     try {
       await ApiClient.instance.post('/posts/view/$id');
     } catch (_) {}

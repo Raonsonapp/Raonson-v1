@@ -77,6 +77,7 @@ class _FeedShellState extends State<_FeedShell> {
 
   @override
   void dispose() {
+    NotificationService.stopPolling();
     _scroll.dispose();
     super.dispose();
   }

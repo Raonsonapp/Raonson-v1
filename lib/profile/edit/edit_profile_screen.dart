@@ -122,7 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final err = _ctrl.error ?? 'Хатогӣ';
       final lower = err.toLowerCase();
       String msg;
-      if (err.contains('429') || lower.contains('14 days') || lower.contains('once every')) {
+      if (err.contains('429') || err.contains('422') || lower.contains('14 days') || lower.contains('once every')) {
         msg = 'Username can only be changed once every 14 days';
       } else if (err.contains('409') || lower.contains('taken')) {
         msg = 'Ин username банд аст';
