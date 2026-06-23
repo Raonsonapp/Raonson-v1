@@ -5,6 +5,8 @@ import '../../create/upload/upload_manager.dart';
 import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import '../../core/services/user_session.dart';
 import '../../models/note_model.dart';
 import '../../chat/inbox/music_picker_sheet.dart';
