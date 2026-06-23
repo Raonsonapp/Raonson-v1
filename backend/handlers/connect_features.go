@@ -44,6 +44,93 @@ func UnblockUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"unblocked": true})
 }
 
+// ═══════════════════════ MUTE / UNMUTE ═══════════════════════
+
+// POST /users/:id/mute
+func MuteUser(c *gin.Context) {
+	myID := mw.UID(c)
+	target := c.Param("id")
+	if target == "" || target == myID {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "bad target"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO muted_users(user_id, muted_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+		myID, target)
+	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
+		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2",
+		"smartreels:"+myID+":1", "smartreels:"+myID+":2")
+	c.JSON(http.StatusOK, gin.H{"muted": true})
+}
+
+// DELETE /users/:id/mute
+func UnmuteUser(c *gin.Context) {
+	myID := mw.UID(c)
+	target := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM muted_users WHERE user_id=$1 AND muted_id=$2`, myID, target)
+	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
+		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2",
+		"smartreels:"+myID+":1", "smartreels:"+myID+":2")
+	c.JSON(http.StatusOK, gin.H{"unmuted": true})
+}
+
+// ═══════════════════════ SUGGESTED USERS ═══════════════════════
+
+// GET /users/suggested?limit=10 (max 20)
+// Корбароне, ки худамон нестем, пайравӣ накардаем ва блок нашудаанд.
+func GetSuggestedUsers(c *gin.Context) {
+	myID := mw.UID(c)
+	limit := toInt(c.Query("limit"), 10)
+	if limit < 1 {
+		limit = 10
+	}
+	if limit > 20 {
+		limit = 20
+	}
+
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT u.id, u.username, u.avatar, u.verified, COALESCE(u.bio,''),
+		       u.followers_count
+		FROM users u
+		WHERE u.id <> $1
+		  AND COALESCE(u.banned,false) = FALSE
+		  AND NOT EXISTS (
+		      SELECT 1 FROM follows f
+		      WHERE f.follower_id=$1 AND f.following_id=u.id
+		  )
+		  AND NOT EXISTS (
+		      SELECT 1 FROM blocks b
+		      WHERE (b.blocker_id=$1 AND b.blocked_id=u.id)
+		         OR (b.blocker_id=u.id AND b.blocked_id=$1)
+		  )
+		ORDER BY u.followers_count DESC, u.created_at DESC
+		LIMIT $2
+	`, myID, limit)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"users": []gin.H{}})
+		return
+	}
+	defer rows.Close()
+
+	users := []gin.H{}
+	for rows.Next() {
+		var id, uname, avatar, bio string
+		var verified bool
+		var followers int
+		rows.Scan(&id, &uname, &avatar, &verified, &bio, &followers)
+		users = append(users, gin.H{
+			"_id":            id,
+			"username":       uname,
+			"avatar":         avatar,
+			"verified":       verified,
+			"bio":            bio,
+			"followersCount": followers,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
 // POST /users/:id/report — шикоят аз корбар
 func ReportUser(c *gin.Context) {
 	myID := mw.UID(c)

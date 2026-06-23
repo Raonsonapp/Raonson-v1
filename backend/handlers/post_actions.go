@@ -140,6 +140,23 @@ func MarkNotInterest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"not_interested": true, "hidden": true})
 }
 
+// ── POST /posts/:id/not-interested ────────────────────────────────
+// Пост аз feed-и алгоритмии ин корбар доимӣ пинҳон мешавад.
+func PostNotInterested(c *gin.Context) {
+	pid := c.Param("id")
+	myID := mw.UID(c)
+	if pid == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "bad post"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO post_not_interested(post_id, user_id) VALUES($1,$2)
+		 ON CONFLICT DO NOTHING`, pid, myID)
+	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
+		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2")
+	c.JSON(http.StatusOK, gin.H{"not_interested": true})
+}
+
 // ── PUT /posts/:id/caption ────────────────────────────────────────
 // Соҳиби пост → тавсифро тағир медиҳад
 func UpdatePostCaption(c *gin.Context) {

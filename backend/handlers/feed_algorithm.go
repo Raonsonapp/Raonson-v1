@@ -88,6 +88,10 @@ func GetSmartFeed(c *gin.Context) {
 		           OR (b.blocker_id=p.user_id AND b.blocked_id=$1))
 		  AND NOT EXISTS(SELECT 1 FROM post_interests pi
 		        WHERE pi.post_id=p.id AND pi.user_id=$1 AND pi.interested=FALSE)
+		  AND NOT EXISTS (SELECT 1 FROM muted_users mu
+		        WHERE mu.user_id=$1 AND mu.muted_id=p.user_id)
+		  AND NOT EXISTS (SELECT 1 FROM post_not_interested pni
+		        WHERE pni.post_id=p.id AND pni.user_id=$1)
 		  AND (
 		    (f.following_id IS NOT NULL AND p.created_at > NOW() - INTERVAL '7 days')
 		    OR

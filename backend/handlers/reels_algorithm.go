@@ -109,6 +109,11 @@ func GetSmartReels(c *gin.Context) {
 		      SELECT 1 FROM reel_not_interested rni
 		      WHERE rni.reel_id=r.id AND rni.user_id=$1
 		    )
+		    -- Корбари хомӯшкардашуда (muted)
+		    AND NOT EXISTS (
+		      SELECT 1 FROM muted_users mu
+		      WHERE mu.user_id=$1 AND mu.muted_id=r.user_id
+		    )
 		)
 		SELECT id, video_url, video_url_low, caption, views_count, likes_count,
 		       comments_count, created_at, uid, username, avatar,

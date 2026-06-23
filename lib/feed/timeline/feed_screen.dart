@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +22,7 @@ import '../../core/services/user_session.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
+import '../../widgets/avatar.dart';
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -255,8 +258,9 @@ class _FeedBody extends StatelessWidget {
             SliverToBoxAdapter(child: storyBar),
             SliverToBoxAdapter(
                 child: Divider(color: AppColors.card, height: 1)),
-            SliverFillRemaining(
-              child: Center(
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 40),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.photo_camera_outlined,
                       size: 64, color: AppColors.dividerFaint),
@@ -284,6 +288,7 @@ class _FeedBody extends StatelessWidget {
                 ]),
               ),
             ),
+            const SliverToBoxAdapter(child: _SuggestedUsersList()),
           ],
         ),
       );
@@ -409,6 +414,160 @@ class _NewPostsBanner extends StatelessWidget {
                   fontWeight: FontWeight.w600, fontSize: 13)),
           ]),
       ),
+    );
+  }
+}
+
+// ── Suggested users (when feed is empty) ─────────────────────────────
+class _SuggestedUsersList extends StatefulWidget {
+  const _SuggestedUsersList();
+
+  @override
+  State<_SuggestedUsersList> createState() => _SuggestedUsersListState();
+}
+
+class _SuggestedUser {
+  final String id;
+  final String username;
+  final String avatar;
+  final bool verified;
+  bool following;
+  _SuggestedUser({
+    required this.id,
+    required this.username,
+    required this.avatar,
+    required this.verified,
+    this.following = false,
+  });
+}
+
+class _SuggestedUsersListState extends State<_SuggestedUsersList> {
+  List<_SuggestedUser> _users = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final res = await ApiClient.instance.get('/users/suggested?limit=8');
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final list = (body['users'] as List?) ?? [];
+        final users = list.map((u) {
+          final m = u as Map<String, dynamic>;
+          return _SuggestedUser(
+            id:       (m['_id'] ?? '').toString(),
+            username: (m['username'] ?? '').toString(),
+            avatar:   (m['avatar'] ?? '').toString(),
+            verified: m['verified'] == true,
+          );
+        }).where((u) => u.id.isNotEmpty).toList();
+        if (mounted) setState(() { _users = users; _loading = false; });
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _follow(_SuggestedUser u) async {
+    setState(() => u.following = true);
+    try {
+      await ApiClient.instance.post('/follow/${u.id}');
+    } catch (_) {
+      if (mounted) setState(() => u.following = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading || _users.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 28),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text('Барои шумо тавсия',
+              style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15)),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 190,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _users.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, i) {
+              final u = _users[i];
+              return Container(
+                width: 140,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Avatar(imageUrl: u.avatar, size: 56),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(u.username,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13)),
+                        ),
+                        if (u.verified) ...[
+                          const SizedBox(width: 3),
+                          const Icon(Icons.verified_rounded,
+                              color: Color(0xFF00C853), size: 13),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 30,
+                      child: ElevatedButton(
+                        onPressed: u.following ? null : () => _follow(u),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: u.following
+                              ? AppColors.surface
+                              : AppColors.neonBlue,
+                          foregroundColor: AppColors.textPrimary,
+                          elevation: 0,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(u.following ? 'Пайравӣ ✓' : 'Пайравӣ',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 }
