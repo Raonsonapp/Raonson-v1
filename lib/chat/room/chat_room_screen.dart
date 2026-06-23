@@ -206,6 +206,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Future<void> _load() async {
     try {
+      // 1. Кэшро фавран нишон медиҳем (тез).
       final msgs = await _repo.getMessagesWithUserEx(widget.peer.id);
       if (mounted) setState(() {
         _messages = msgs;
@@ -217,6 +218,25 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+    // 2. Сипас аз шабака навтаринро мегирем ва ҷойгузин мекунем — то паёми
+    // навфиристода (ки ҳанӯз дар кэш нест) баъди бозкушоиш ГУМ нашавад.
+    // Кэши getMessagesWithUserEx навсозӣ мешавад, вале UI-ро навсозӣ намекард.
+    if (_chatId.isEmpty) return;
+    try {
+      final fresh = await _repo.fetchFreshByChatId(_chatId);
+      if (!mounted || fresh.isEmpty) return;
+      final pending = _messages.where((m) => m.isOptimistic).toList();
+      final freshIds = fresh.map((m) => m.id).toSet();
+      setState(() {
+        _messages = [
+          ...fresh,
+          ...pending.where((m) => !freshIds.contains(m.id)),
+        ];
+        _msgPage = 1;
+        _hasMoreOlder = fresh.length >= _msgPageSize;
+      });
+      _scrollBottom();
+    } catch (_) {}
   }
 
   void _setupSocket() {
@@ -228,11 +248,24 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (data is! Map<String, dynamic>) return;
       final msg = MessageModel.fromRoomJson(data, _myId);
       if (!mounted) return;
+      // Танҳо паёмҳои ҳамин чат — то паёми чати дигар ин ҷо наафтад.
+      if (_chatId.isNotEmpty && msg.chatId.isNotEmpty && msg.chatId != _chatId) {
+        return;
+      }
       setState(() {
-        // Remove optimistic version if exists
-        _messages.removeWhere((m) => m.isOptimistic && m.text == msg.text);
-        // Дубликат набошад (poll-refresh аллакай оварда бошад)
-        if (!_messages.any((m) => m.id == msg.id)) _messages.add(msg);
+        // Аллакай ҳаст (POST-и худам ё poll-refresh оварда) → дубликат накунем.
+        if (_messages.any((m) => m.id == msg.id)) return;
+        // Паёми оптимистии худро (агар ҳаст) бо нусхаи сервер ҷойгузин мекунем,
+        // на ин ки нав илова кунем — то дубликат пайдо нашавад. Барои матн аз
+        // рӯи text, барои медиа аз рӯи навъ мутобиқат мекунем (text холӣ аст).
+        final idx = _messages.indexWhere((m) =>
+            m.isOptimistic && m.isMine &&
+            (msg.text.isNotEmpty ? m.text == msg.text : m.type == msg.type));
+        if (idx >= 0) {
+          _messages[idx] = msg;
+        } else {
+          _messages.add(msg);
+        }
       });
       _scrollBottom();
       if (!msg.isMine && _chatId.isNotEmpty) _repo.markAsRead(_chatId);
