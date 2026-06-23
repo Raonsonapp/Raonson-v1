@@ -15,8 +15,14 @@ Future<void> _fcmBgHandler(RemoteMessage message) async {}
 
 class FirebaseInit {
   static Future<void> init() async {
-    await Firebase.initializeApp();
-    await _initFCM();
+    // Ҳама дар try — агар Firebase танзим нашуда бошад (google-services.json
+    // нест), барнома ҳаргиз crash намекунад, танҳо push кор намекунад.
+    try {
+      await Firebase.initializeApp();
+      await _initFCM();
+    } catch (_) {
+      // Firebase/FCM дастрас нест — барнома бе он кор мекунад.
+    }
   }
 
   static Future<void> _initFCM() async {
