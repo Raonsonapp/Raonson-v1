@@ -99,7 +99,13 @@ class AppTheme {
         titleTextStyle: TextStyle(
           color: Colors.white, fontSize: 32, fontWeight: FontWeight.w600),
       ),
-      iconTheme:   const IconThemeData(color: Colors.white),
+      iconTheme:   const IconThemeData(
+        color: Colors.white,
+        weight: 400,      // хатти ~2px — ҳама иконҳо як вазн (consistent weight)
+        opticalSize: 24,  // canvas 24×24 — хатти тоза дар андозаи хурд
+        grade: 0,
+        fill: 0,          // outline; танҳо Like/Save-и фаъол fill мегиранд
+      ),
       dividerColor: const Color(0xFF262626),
       textTheme: const TextTheme(
         bodyLarge:  TextStyle(color: Colors.white),
@@ -163,7 +169,13 @@ class AppTheme {
         titleTextStyle: TextStyle(
           color: lightText, fontSize: 32, fontWeight: FontWeight.w600),
       ),
-      iconTheme:    const IconThemeData(color: lightText),
+      iconTheme:    const IconThemeData(
+        color: lightText,
+        weight: 400,
+        opticalSize: 24,
+        grade: 0,
+        fill: 0,
+      ),
       dividerColor: lightDivider,
       textTheme: const TextTheme(
         bodyLarge:  TextStyle(color: lightText),

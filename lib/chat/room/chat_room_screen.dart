@@ -17,6 +17,7 @@ import '../../core/services/socket_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
+import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -667,7 +668,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       backgroundColor: AppColors.bg,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new_rounded,
+        icon: Icon(AppIcons.arrow_back_ios_new_rounded,
             color: AppColors.textPrimary, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
@@ -703,7 +704,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         fontSize: 15)),
                 if (widget.peer.isVerified) ...[
                   const SizedBox(width: 4),
-                  const Icon(Icons.verified_rounded,
+                  const Icon(AppIcons.verified_rounded,
                       color: Color(0xFF00C853), size: 14),
                 ],
               ]),
@@ -725,10 +726,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       ),
       actions: [
         _AppBarBtn(
-            icon: Icons.videocam_rounded,
+            icon: AppIcons.videocam_rounded,
             onTap: () => _startCall(CallType.video)),
         _AppBarBtn(
-            icon: Icons.call_rounded,
+            icon: AppIcons.call_rounded,
             onTap: () => _startCall(CallType.voice)),
         const SizedBox(width: 4),
       ],
@@ -809,12 +810,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _QuickBtn(
-                  icon: Icons.call_rounded,
+                  icon: AppIcons.call_rounded,
                   label: 'Зангӣ овозӣ',
                   onTap: () => _startCall(CallType.voice)),
               const SizedBox(width: 16),
               _QuickBtn(
-                  icon: Icons.videocam_rounded,
+                  icon: AppIcons.videocam_rounded,
                   label: 'Зангӣ видео',
                   onTap: () => _startCall(CallType.video)),
             ],

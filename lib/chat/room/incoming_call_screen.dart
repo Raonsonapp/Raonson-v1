@@ -6,6 +6,7 @@ import '../../widgets/avatar.dart';
 import '../../core/webrtc_service.dart';
 import '../../models/user_model.dart';
 import 'call_screen.dart';
+import '../../core/ui/app_icons.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final UserModel caller;
@@ -120,8 +121,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(
                       widget.callType == CallType.video
-                          ? Icons.videocam_rounded
-                          : Icons.call_rounded,
+                          ? AppIcons.videocam_rounded
+                          : AppIcons.call_rounded,
                       color: AppColors.neonBlue, size: 16,
                     ),
                     const SizedBox(width: 6),
@@ -181,15 +182,15 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _actionBtn(
-                      icon:  Icons.call_end_rounded,
+                      icon:  AppIcons.call_end_rounded,
                       label: 'Рад кун',
                       color: const Color(0xFFFF3B55),
                       onTap: _decline,
                     ),
                     _actionBtn(
                       icon:  widget.callType == CallType.video
-                          ? Icons.videocam_rounded
-                          : Icons.call_rounded,
+                          ? AppIcons.videocam_rounded
+                          : AppIcons.call_rounded,
                       label: 'Қабул',
                       color: const Color(0xFF00C853),
                       onTap: _accept,

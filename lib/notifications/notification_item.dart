@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
 import '../widgets/avatar.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 class NotificationItem extends StatelessWidget {
   final NotificationModel notification;
@@ -32,15 +33,15 @@ class NotificationItem extends StatelessWidget {
     switch (notification.type) {
       case 'like':
       case 'reel_like':
-      case 'story_like': return Icons.favorite;
+      case 'story_like': return AppIcons.favorite;
       case 'comment':
-      case 'reel_comment': return Icons.mode_comment_rounded;
+      case 'reel_comment': return AppIcons.mode_comment_rounded;
       case 'follow':
-      case 'follow_request': return Icons.person_add_rounded;
-      case 'story_view': return Icons.remove_red_eye_rounded;
+      case 'follow_request': return AppIcons.person_add_rounded;
+      case 'story_view': return AppIcons.remove_red_eye_rounded;
       case 'story_reply':
-      case 'message': return Icons.send_rounded;
-      default: return Icons.notifications_rounded;
+      case 'message': return AppIcons.send_rounded;
+      default: return AppIcons.notifications_rounded;
     }
   }
 

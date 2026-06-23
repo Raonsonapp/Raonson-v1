@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import 'my_promotions_screen.dart';
+import '../core/ui/app_icons.dart';
 
 class PromoteScreen extends StatefulWidget {
   final String postId;
@@ -27,11 +28,11 @@ class _PromoteScreenState extends State<PromoteScreen> {
 
   static const _goals = [
     ('Бештар ташрифи профил', 'Одамонро ба профили шумо равона мекунад',
-        Icons.person_outline_rounded, 'profile'),
+        AppIcons.person_outline_rounded, 'profile'),
     ('Ташриф ба вебсайт', 'Одамонро ба вебсайти шумо мебарад',
-        Icons.link_rounded, 'website'),
+        AppIcons.link_rounded, 'website'),
     ('Бештар паём', 'Сӯҳбатро дар Direct оғоз мекунад',
-        Icons.send_outlined, 'messages'),
+        AppIcons.send_outlined, 'messages'),
   ];
 
   @override
@@ -99,7 +100,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
               decoration: const BoxDecoration(
                   gradient: LinearGradient(colors: AppColors.storyGradient),
                   shape: BoxShape.circle),
-              child: Icon(Icons.check_rounded, color: AppColors.textPrimary, size: 36),
+              child: Icon(AppIcons.check_rounded, color: AppColors.textPrimary, size: 36),
             ),
             const SizedBox(height: 16),
             Text('Реклама ба баррасӣ фиристода шуд',
@@ -140,7 +141,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
             style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.bar_chart_rounded),
+            icon: const Icon(AppIcons.bar_chart_rounded),
             tooltip: 'Рекламаҳои ман',
             onPressed: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const MyPromotionsScreen())),
@@ -234,7 +235,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
               border: Border.all(color: AppColors.dividerFaint),
             ),
             child: Row(children: [
-              Icon(Icons.visibility_outlined,
+              Icon(AppIcons.visibility_outlined,
                   color: AppColors.textTertiary, size: 20),
               const SizedBox(width: 10),
               Expanded(
@@ -274,7 +275,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
 
   Widget _thumbPh() => Container(
       width: 56, height: 56, color: AppColors.card,
-      child: Icon(Icons.image_outlined, color: AppColors.textFaint));
+      child: Icon(AppIcons.image_outlined, color: AppColors.textFaint));
 
   Widget _section(String t) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -345,9 +346,9 @@ class _GoalCard extends StatelessWidget {
             ),
           ),
           if (selected)
-            Icon(Icons.check_circle, color: AppColors.storyEnd, size: 22)
+            Icon(AppIcons.check_circle, color: AppColors.storyEnd, size: 22)
           else
-            Icon(Icons.radio_button_unchecked,
+            Icon(AppIcons.radio_button_unchecked,
                 color: AppColors.textFaint, size: 22),
         ]),
       ),
@@ -372,8 +373,8 @@ class _RadioRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(children: [
           Icon(selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_unchecked,
+                  ? AppIcons.radio_button_checked
+                  : AppIcons.radio_button_unchecked,
               color: selected ? AppColors.storyEnd : AppColors.textFaint, size: 22),
           const SizedBox(width: 12),
           Expanded(

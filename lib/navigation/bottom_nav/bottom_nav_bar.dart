@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/services/user_session.dart';
 import '../../app/app_theme.dart';
+import '../../core/ui/app_icons.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -36,25 +37,25 @@ class BottomNavBar extends StatelessWidget {
                 index: 0, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_home.svg',
                 svgInactive: 'assets/icons/nav_home.svg',
-                fallback: Icons.home_rounded,
+                fallback: AppIcons.home_rounded,
               ),
               _SvgNavItem(
                 index: 1, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_reels.svg',
                 svgInactive: 'assets/icons/nav_reels.svg',
-                fallback: Icons.smart_display_outlined,
+                fallback: AppIcons.smart_display_outlined,
               ),
               _SvgNavItem(
                 index: 2, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_chat.svg',
                 svgInactive: 'assets/icons/nav_chat.svg',
-                fallback: Icons.chat_bubble_outline_rounded,
+                fallback: AppIcons.chat_bubble_outline_rounded,
               ),
               _SvgNavItem(
                 index: 3, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_search.svg',
                 svgInactive: 'assets/icons/nav_search.svg',
-                fallback: Icons.search_rounded,
+                fallback: AppIcons.search_rounded,
               ),
               // Profile — ValueListenableBuilder аватари live
               ValueListenableBuilder<String?>(
@@ -180,6 +181,6 @@ class _ProfileItem extends StatelessWidget {
 
   Widget _defaultIcon() => Container(
     color: AppColors.card,
-    child: Icon(Icons.person, size: 16, color: AppColors.textSecondary),
+    child: Icon(AppIcons.person, size: 16, color: AppColors.textSecondary),
   );
 }

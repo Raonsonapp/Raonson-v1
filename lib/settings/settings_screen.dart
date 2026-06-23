@@ -21,6 +21,7 @@ import '../core/services/region_service.dart';
 import '../core/services/vip_service.dart';
 import '../anime/anime_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
+import '../core/ui/app_icons.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -51,26 +52,26 @@ class SettingsScreen extends StatelessWidget {
               // ── ACCOUNT ───────────────────────────────────────────
               _Hdr(tr('section.account')),
               _NavTile(
-                icon:  Icons.person_outline_rounded,
+                icon:  AppIcons.person_outline_rounded,
                 title: tr('account.editProfile'),
                 onTap: () => _go(ctx,
                     EditProfileScreen(
                         userId: UserSession.userId ?? 'me')),
               ),
               _NavTile(
-                icon:  Icons.lock_outline_rounded,
+                icon:  AppIcons.lock_outline_rounded,
                 title: tr('account.changePassword'),
                 onTap: () => _go(ctx, const ChangePasswordScreen()),
               ),
               _NavTile(
-                icon:  Icons.email_outlined,
+                icon:  AppIcons.email_outlined,
                 title: tr('account.email'),
                 sub:   tr('account.emailSub'),
                 onTap: () => _go(ctx,
                     _SimpleScreen(title: tr('account.email'))),
               ),
               _NavTile(
-                icon:  Icons.phone_outlined,
+                icon:  AppIcons.phone_outlined,
                 title: tr('account.phone'),
                 onTap: () => _go(ctx,
                     _SimpleScreen(title: tr('account.phone'))),
@@ -79,7 +80,7 @@ class SettingsScreen extends StatelessWidget {
               // ── APPEARANCE ────────────────────────────────────────
               _Hdr(tr('section.appearance')),
               _NavTile(
-                icon:  Icons.palette_outlined,
+                icon:  AppIcons.palette_outlined,
                 title: tr('appearance.theme'),
                 sub:   _themeLabel(s.theme),
                 onTap: () => _go(ctx, const AppearanceScreen()),
@@ -88,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
               // ── LANGUAGE ──────────────────────────────────────────
               _Hdr(tr('section.language')),
               _NavTile(
-                icon:  Icons.language_rounded,
+                icon:  AppIcons.language_rounded,
                 title: tr('language.app'),
                 sub:   langDisplayName(s.lang),
                 onTap: () => _go(ctx, const LanguageScreen()),
@@ -97,7 +98,7 @@ class SettingsScreen extends StatelessWidget {
               // ── PRIVACY ───────────────────────────────────────────
               _Hdr(tr('section.privacy')),
               _NavTile(
-                icon:  Icons.privacy_tip_outlined,
+                icon:  AppIcons.privacy_tip_outlined,
                 title: tr('privacy.settings'),
                 onTap: () => _go(ctx, const PrivacyScreen()),
               ),
@@ -105,7 +106,7 @@ class SettingsScreen extends StatelessWidget {
               // ── NOTIFICATIONS ─────────────────────────────────────
               _Hdr(tr('section.notifications')),
               _NavTile(
-                icon:  Icons.notifications_outlined,
+                icon:  AppIcons.notifications_outlined,
                 title: tr('notifications.app'),
                 onTap: () => _go(ctx, const NotificationsScreen()),
               ),
@@ -113,7 +114,7 @@ class SettingsScreen extends StatelessWidget {
               // ── SECURITY ──────────────────────────────────────────
               _Hdr(tr('section.security')),
               _NavTile(
-                icon:  Icons.security_outlined,
+                icon:  AppIcons.security_outlined,
                 title: tr('security.settings'),
                 onTap: () => _go(ctx, const SecurityScreen()),
               ),
@@ -123,7 +124,7 @@ class SettingsScreen extends StatelessWidget {
                   == 'raonson') ...[
                 _Hdr(tr('section.admin')),
                 _NavTile(
-                  icon:  Icons.admin_panel_settings_outlined,
+                  icon:  AppIcons.admin_panel_settings_outlined,
                   title: tr('admin.panel'),
                   sub:   tr('admin.panelSub'),
                   onTap: () => _go(ctx, const AdminPanelScreen()),
@@ -138,7 +139,7 @@ class SettingsScreen extends StatelessWidget {
                   return Column(children: [
                     _Hdr('Дигар'),
                     _NavTile(
-                      icon:  Icons.movie_filter_outlined,
+                      icon:  AppIcons.movie_filter_outlined,
                       title: 'Аниме',
                       sub:   'Тамошои аниме · 480p ройгон, 720p/1080p VIP',
                       onTap: () => _go(ctx, const AnimeScreen()),
@@ -150,7 +151,7 @@ class SettingsScreen extends StatelessWidget {
               // ── ABOUT ─────────────────────────────────────────────
               _Hdr('Маълумот'),
               _NavTile(
-                icon:  Icons.info_outline_rounded,
+                icon:  AppIcons.info_outline_rounded,
                 title: 'Дар бораи барнома',
                 sub:   'Версия, муаллиф ва маълумот',
                 onTap: () => _go(ctx, const AboutScreen()),
@@ -159,13 +160,13 @@ class SettingsScreen extends StatelessWidget {
               // ── DANGER ZONE ───────────────────────────────────────
               _Hdr(''),
               _DangerTile(
-                icon:  Icons.logout_rounded,
+                icon:  AppIcons.logout_rounded,
                 title: tr('account.logout'),
                 onTap: () => _confirmLogout(ctx),
               ),
               const _ThinDiv(),
               _DangerTile(
-                icon:  Icons.delete_forever_rounded,
+                icon:  AppIcons.delete_forever_rounded,
                 title: tr('account.delete'),
                 onTap: () => _confirmDelete(ctx),
               ),
@@ -232,7 +233,7 @@ class AppearanceScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
             children: [
               _ChoiceCard(
-                icon:     Icons.dark_mode_rounded,
+                icon:     AppIcons.dark_mode_rounded,
                 label:    tr('theme.dark'),
                 selected: s.theme == ThemeMode.dark,
                 onTap:    () {
@@ -243,7 +244,7 @@ class AppearanceScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _ChoiceCard(
-                icon:     Icons.light_mode_rounded,
+                icon:     AppIcons.light_mode_rounded,
                 label:    tr('theme.light'),
                 selected: s.theme == ThemeMode.light,
                 onTap:    () {
@@ -316,7 +317,7 @@ class LanguageScreen extends StatelessWidget {
                                 ? FontWeight.w600 : FontWeight.normal,
                           ))),
                       if (selected)
-                        const Icon(Icons.check_circle_rounded,
+                        const Icon(AppIcons.check_circle_rounded,
                             color: AppColors.neonBlue, size: 22),
                     ]),
                   ),
@@ -385,7 +386,7 @@ class _PrivacyState extends State<PrivacyScreen> {
           ? const _Spinner()
           : ListView(children: [
               _SwTile(
-                icon:  Icons.lock_outline_rounded,
+                icon:  AppIcons.lock_outline_rounded,
                 title: 'Профили хусусӣ',
                 sub:   'Танҳо пайравони тасдиқшуда мӯҳтаворо мебинанд',
                 value: _private,
@@ -399,7 +400,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _NavTile(
-                icon:  Icons.block_rounded,
+                icon:  AppIcons.block_rounded,
                 title: 'Истифодабарандагони блокшуда',
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
@@ -407,7 +408,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _NavTile(
-                icon:  Icons.favorite_border_rounded,
+                icon:  AppIcons.favorite_border_rounded,
                 title: 'Дӯстони наздик',
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
@@ -416,7 +417,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _SwTile(
-                icon:  Icons.access_time_rounded,
+                icon:  AppIcons.access_time_rounded,
                 title: 'Вазъияти фаъолият',
                 sub:   'Ба дигарон нишон деҳ, ки шумо онлайн ҳастед',
                 value: _activityStatus,
@@ -427,7 +428,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _SwTile(
-                icon:  Icons.chat_bubble_outline_rounded,
+                icon:  AppIcons.chat_bubble_outline_rounded,
                 title: 'Назорати шарҳҳо',
                 sub:   'Ба ҳама иҷозати шарҳ диҳ',
                 value: _allowComments,
@@ -438,7 +439,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _SwTile(
-                icon:  Icons.alternate_email_rounded,
+                icon:  AppIcons.alternate_email_rounded,
                 title: 'Назорати зикрҳо',
                 sub:   'Кӣ метавонад шуморо зикр кунад',
                 value: _allowMentions,
@@ -512,27 +513,27 @@ class _NotifState extends State<NotificationsScreen> {
       body: _loading
           ? const _Spinner()
           : ListView(children: [
-              _SwTile(icon: Icons.favorite_rounded,
+              _SwTile(icon: AppIcons.favorite_rounded,
                   title: 'Лайкҳо', value: _likes,
                   onChanged: (v) { setState(() => _likes = v); _save(); }),
               const _ThinDiv(),
-              _SwTile(icon: Icons.chat_bubble_rounded,
+              _SwTile(icon: AppIcons.chat_bubble_rounded,
                   title: 'Шарҳҳо', value: _comments,
                   onChanged: (v) { setState(() => _comments = v); _save(); }),
               const _ThinDiv(),
-              _SwTile(icon: Icons.person_add_rounded,
+              _SwTile(icon: AppIcons.person_add_rounded,
                   title: 'Пайравони нав', value: _followers,
                   onChanged: (v) { setState(() => _followers = v); _save(); }),
               const _ThinDiv(),
-              _SwTile(icon: Icons.send_rounded,
+              _SwTile(icon: AppIcons.send_rounded,
                   title: 'Паёмҳо', value: _messages,
                   onChanged: (v) { setState(() => _messages = v); _save(); }),
               const _ThinDiv(),
-              _SwTile(icon: Icons.slow_motion_video_rounded,
+              _SwTile(icon: AppIcons.slow_motion_video_rounded,
                   title: 'Рилҳо', value: _reels,
                   onChanged: (v) { setState(() => _reels = v); _save(); }),
               Divider(color: AppColors.dividerFaint, height: 28, indent: 16, endIndent: 16),
-              _SwTile(icon: Icons.notifications_rounded,
+              _SwTile(icon: AppIcons.notifications_rounded,
                   title: 'Push-огоҳиҳо', sub: 'Огоҳиҳои телефонӣ',
                   value: _push,
                   onChanged: (v) { setState(() => _push = v); _save(); }),
@@ -553,7 +554,7 @@ class SecurityScreen extends StatelessWidget {
       appBar: _appBar(context, 'Амният'),
       body: ListView(children: [
         _NavTile(
-          icon:  Icons.lock_outline_rounded,
+          icon:  AppIcons.lock_outline_rounded,
           title: 'Иваз кардани рамз',
           onTap: () => Navigator.push(context,
               MaterialPageRoute(
@@ -561,7 +562,7 @@ class SecurityScreen extends StatelessWidget {
         ),
         const _ThinDiv(),
         _NavTile(
-          icon:  Icons.verified_user_outlined,
+          icon:  AppIcons.verified_user_outlined,
           title: 'Тасдиқи дутарафа (2FA)',
           onTap: () => Navigator.push(context,
               MaterialPageRoute(
@@ -569,7 +570,7 @@ class SecurityScreen extends StatelessWidget {
         ),
         const _ThinDiv(),
         _NavTile(
-          icon:  Icons.devices_rounded,
+          icon:  AppIcons.devices_rounded,
           title: 'Сессияҳои фаъол',
           onTap: () => Navigator.push(context,
               MaterialPageRoute(
@@ -653,7 +654,7 @@ class _CPState extends State<ChangePasswordScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded,
+            icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
         title: Text('Иваз кардани рамз',
@@ -704,7 +705,7 @@ class _CPState extends State<ChangePasswordScreen> {
                 border: Border.all(
                     color: Colors.red.withOpacity(0.3))),
               child: Row(children: [
-                const Icon(Icons.error_outline_rounded,
+                const Icon(AppIcons.error_outline_rounded,
                     color: Colors.redAccent, size: 18),
                 const SizedBox(width: 8),
                 Expanded(child: Text(_err!,
@@ -774,7 +775,7 @@ class TwoFAState extends State<TwoFactorScreen> {
           ? const _Spinner()
           : ListView(children: [
               _SwTile(
-                icon:  Icons.verified_user_outlined,
+                icon:  AppIcons.verified_user_outlined,
                 title: 'Тасдиқи дутарафа',
                 sub:   'Ба аккаунти шумо ҳимояи иловагӣ',
                 value: _enabled,
@@ -847,7 +848,7 @@ class _SessState extends State<SessionsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg, elevation: 0,
         leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded,
+            icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
         title: Text('Сессияҳои фаъол',
@@ -880,8 +881,8 @@ class _SessState extends State<SessionsScreen> {
                     return ListTile(
                       leading: Icon(
                           device.toLowerCase().contains('ios')
-                              ? Icons.phone_iphone_rounded
-                              : Icons.computer_rounded,
+                              ? AppIcons.phone_iphone_rounded
+                              : AppIcons.computer_rounded,
                           color: current
                               ? AppColors.neonBlue : AppColors.textTertiary),
                       title: Row(children: [
@@ -980,7 +981,7 @@ class _BUSState extends State<BlockedUsersScreen> {
                         backgroundImage: avatar.isNotEmpty
                             ? NetworkImage(avatar) : null,
                         child: avatar.isEmpty
-                            ? Icon(Icons.person,
+                            ? Icon(AppIcons.person,
                                 color: AppColors.textFaint) : null),
                       title: Text(username,
                           style: TextStyle(color: AppColors.textPrimary)),
@@ -1030,7 +1031,7 @@ class AboutScreen extends StatelessWidget {
               alignment: Alignment.center,
               child: Image.asset('assets/icon.png', height: 60,
                   errorBuilder: (_, __, ___) => Icon(
-                      Icons.bolt_rounded, color: AppColors.textPrimary, size: 48)),
+                      AppIcons.bolt_rounded, color: AppColors.textPrimary, size: 48)),
             ),
           ),
           const SizedBox(height: 16),
@@ -1049,19 +1050,19 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 28),
 
           const _AboutRow(
-              icon: Icons.calendar_today_rounded,
+              icon: AppIcons.calendar_today_rounded,
               label: 'Сол сохта шуд',
               value: _year),
           const _AboutRow(
-              icon: Icons.person_rounded,
+              icon: AppIcons.person_rounded,
               label: 'Муаллиф',
               value: 'Raonson Team'),
           const _AboutRow(
-              icon: Icons.public_rounded,
+              icon: AppIcons.public_rounded,
               label: 'Кишвар',
               value: 'Тоҷикистон 🇹🇯'),
           const _AboutRow(
-              icon: Icons.code_rounded,
+              icon: AppIcons.code_rounded,
               label: 'Технология',
               value: 'Flutter • Go • PostgreSQL'),
 
@@ -1122,7 +1123,7 @@ class _SimpleScreen extends StatelessWidget {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, title),
       body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.construction_rounded,
+        Icon(AppIcons.construction_rounded,
             size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
         const SizedBox(height: 12),
         Text('Дар таҳия аст',
@@ -1144,7 +1145,7 @@ AppBar _appBar(BuildContext ctx, String title, {bool showBack = true}) {
     automaticallyImplyLeading: showBack,
     leading: showBack
         ? IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded,
+            icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(ctx))
         : null,
@@ -1185,7 +1186,7 @@ class _NavTile extends StatelessWidget {
       subtitle: sub != null
           ? Text(sub!, style: TextStyle(
               color: AppColors.textFaint, fontSize: 12)) : null,
-      trailing: Icon(Icons.chevron_right_rounded,
+      trailing: Icon(AppIcons.chevron_right_rounded,
           color: AppColors.textFaint, size: 20),
       onTap: onTap);
   }
@@ -1265,7 +1266,7 @@ class _ChoiceCard extends StatelessWidget {
               fontWeight: selected
                   ? FontWeight.w600 : FontWeight.normal))),
           if (selected)
-            const Icon(Icons.check_circle_rounded,
+            const Icon(AppIcons.check_circle_rounded,
                 color: AppColors.neonBlue, size: 22),
         ]),
       ),
@@ -1295,12 +1296,12 @@ class _PwField extends StatelessWidget {
         decoration: InputDecoration(
           hintText:  hint,
           hintStyle: TextStyle(color: AppColors.textFaint),
-          prefixIcon: Icon(Icons.lock_outline_rounded,
+          prefixIcon: Icon(AppIcons.lock_outline_rounded,
               color: AppColors.textFaint, size: 18),
           suffixIcon: IconButton(
               icon: Icon(
-                  show ? Icons.visibility_off_rounded
-                      : Icons.visibility_rounded,
+                  show ? AppIcons.visibility_off_rounded
+                      : AppIcons.visibility_rounded,
                   color: AppColors.textFaint, size: 18),
               onPressed: onToggle),
           border: InputBorder.none,

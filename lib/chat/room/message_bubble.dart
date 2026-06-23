@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../../models/message_model.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
+import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  MessageBubble — 10/10 Instagram style
@@ -137,14 +138,14 @@ class _MessageBubbleState extends State<MessageBubble>
                   if (!isMine && _swipeDx > 20)
                     Padding(
                       padding: const EdgeInsets.only(left: 6),
-                      child: Icon(Icons.reply_rounded,
+                      child: Icon(AppIcons.reply_rounded,
                           color: AppColors.neonBlue.withOpacity(_swipeDx / 60),
                           size: 18),
                     ),
                   if (isMine && _swipeDx < -20)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
-                      child: Icon(Icons.reply_rounded,
+                      child: Icon(AppIcons.reply_rounded,
                           color: AppColors.neonBlue
                               .withOpacity(_swipeDx.abs() / 60),
                           size: 18),
@@ -188,7 +189,7 @@ class _BubbleBody extends StatelessWidget {
           border: Border.all(color: AppColors.dividerFaint),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.do_not_disturb_alt_rounded, color: AppColors.textFaint, size: 14),
+          Icon(AppIcons.do_not_disturb_alt_rounded, color: AppColors.textFaint, size: 14),
           SizedBox(width: 6),
           Text('Паём нест карда шуд',
               style: TextStyle(color: AppColors.textFaint, fontSize: 13, fontStyle: FontStyle.italic)),
@@ -278,7 +279,7 @@ class _ImageBubble extends StatelessWidget {
         errorWidget: (_, __, ___) => Container(
           width: 220, height: 260,
           color: AppColors.card,
-          child: Icon(Icons.broken_image_rounded,
+          child: Icon(AppIcons.broken_image_rounded,
               color: AppColors.textFaint, size: 40),
         ),
       ),
@@ -305,7 +306,7 @@ class _ChatImageScreen extends StatelessWidget {
           placeholder: (_, __) => CircularProgressIndicator(
               color: AppColors.textFaint, strokeWidth: 2),
           errorWidget: (_, __, ___) => Icon(
-              Icons.broken_image_rounded, color: AppColors.textFaint, size: 64),
+              AppIcons.broken_image_rounded, color: AppColors.textFaint, size: 64),
         ),
       ),
     ),
@@ -404,7 +405,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
         GestureDetector(
           onTap: _toggle,
           child: Icon(
-            _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            _playing ? AppIcons.pause_rounded : AppIcons.play_arrow_rounded,
             color: widget.isMine ? AppColors.neonBlue : AppColors.textPrimary,
             size: 26),
         ),
@@ -415,7 +416,7 @@ class _AudioBubbleState extends State<_AudioBubble> {
           decoration: BoxDecoration(
             color: widget.isMine ? AppColors.textPrimary : AppColors.neonBlue,
             shape: BoxShape.circle),
-          child: Icon(Icons.mic_rounded,
+          child: Icon(AppIcons.mic_rounded,
               color: widget.isMine ? AppColors.neonBlue : AppColors.textPrimary,
               size: 16),
         ),
@@ -470,7 +471,7 @@ class _VideoBubble extends StatelessWidget {
             child: CircleAvatar(
               radius: 26,
               backgroundColor: Colors.black54,
-              child: Icon(Icons.play_arrow_rounded,
+              child: Icon(AppIcons.play_arrow_rounded,
                   color: AppColors.textPrimary, size: 34),
             ),
           ),
@@ -656,17 +657,17 @@ class _ReadTick extends StatelessWidget {
       return SizedBox(
         width: 18,
         child: Stack(children: [
-          Icon(Icons.check_rounded, color: color, size: 12),
+          Icon(AppIcons.check_rounded, color: color, size: 12),
           Positioned(
             left: 5,
-            child: Icon(Icons.check_rounded, color: color, size: 12),
+            child: Icon(AppIcons.check_rounded, color: color, size: 12),
           ),
         ]),
       );
     }
 
     // single tick
-    return Icon(Icons.check_rounded, color: AppColors.textFaint, size: 12);
+    return Icon(AppIcons.check_rounded, color: AppColors.textFaint, size: 12);
   }
 }
 
@@ -728,12 +729,12 @@ class _MessageContextMenu extends StatelessWidget {
 
           // Actions
           _MenuItem(
-            icon:  Icons.reply_rounded,
+            icon:  AppIcons.reply_rounded,
             label: 'Ҷавоб дидан',
             onTap: () { Navigator.pop(context); onReply?.call(); },
           ),
           _MenuItem(
-            icon:  Icons.copy_rounded,
+            icon:  AppIcons.copy_rounded,
             label: 'Нусха',
             onTap: () {
               Clipboard.setData(ClipboardData(text: message.text));
@@ -742,7 +743,7 @@ class _MessageContextMenu extends StatelessWidget {
           ),
           if (message.isMine && !message.isDeleted)
             _MenuItem(
-              icon:  Icons.delete_outline_rounded,
+              icon:  AppIcons.delete_outline_rounded,
               label: 'Нест кардан',
               color: Colors.red,
               onTap: () { Navigator.pop(context); onDelete?.call(); },

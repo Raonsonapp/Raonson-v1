@@ -7,6 +7,7 @@ import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../models/reel_model.dart';
 import 'player/reel_player.dart';
+import '../core/ui/app_icons.dart';
 
 class SingleReelScreen extends StatefulWidget {
   final ReelModel reel;
@@ -48,7 +49,7 @@ class _SingleReelScreenState extends State<SingleReelScreen> {
             child: Align(
               alignment: Alignment.topLeft,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                icon: const Icon(AppIcons.arrow_back_ios_new_rounded,
                     color: Colors.white, size: 22),
                 onPressed: () => Navigator.pop(context),
               ),

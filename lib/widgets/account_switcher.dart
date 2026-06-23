@@ -6,6 +6,7 @@ import '../core/services/account_manager.dart';
 import '../core/services/user_session.dart';
 import 'avatar.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 void showAccountSwitcher(BuildContext context) {
   showModalBottomSheet(
@@ -40,10 +41,10 @@ void showAccountSwitcher(BuildContext context) {
                     style: TextStyle(
                         color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
                 trailing: active
-                    ? const Icon(Icons.check_circle_rounded,
+                    ? const Icon(AppIcons.check_circle_rounded,
                         color: Color(0xFF00C853))
                     : IconButton(
-                        icon: Icon(Icons.logout_rounded,
+                        icon: Icon(AppIcons.logout_rounded,
                             color: AppColors.textFaint, size: 20),
                         onPressed: () => AccountManager.remove(a.userId),
                       ),
@@ -65,7 +66,7 @@ void showAccountSwitcher(BuildContext context) {
                 leading: CircleAvatar(
                     radius: 21,
                     backgroundColor: Color(0xFF2A2A2C),
-                    child: Icon(Icons.add_rounded, color: AppColors.textPrimary)),
+                    child: Icon(AppIcons.add_rounded, color: AppColors.textPrimary)),
                 title: const Text('Илова кардани аккаунт',
                     style: TextStyle(
                         color: Color(0xFF1D9BF0), fontWeight: FontWeight.w600)),

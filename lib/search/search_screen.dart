@@ -25,6 +25,7 @@ import '../profile/profile_screen.dart';
 import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
 import 'search_history.dart';
+import '../core/ui/app_icons.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  MAIN SCREEN
@@ -403,7 +404,7 @@ class _SearchScreenState extends State<SearchScreen>
           padding: const EdgeInsets.fromLTRB(0, 10, 14, 6),
           child: Row(children: [
             IconButton(
-              icon: Icon(Icons.arrow_back_ios_new_rounded,
+              icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                   color: AppColors.textPrimary, size: 20),
               onPressed: _cancelSearch,
             ),
@@ -512,7 +513,7 @@ class _SearchScreenState extends State<SearchScreen>
               await SearchHistory.removeAccount(id);
               _loadHistory();
             },
-            child: Icon(Icons.close_rounded,
+            child: Icon(AppIcons.close_rounded,
                 color: AppColors.textFaint, size: 18),
           ),
         ]),
@@ -530,7 +531,7 @@ class _SearchScreenState extends State<SearchScreen>
             width: 44, height: 44,
             decoration: BoxDecoration(
                 color: AppColors.divider, shape: BoxShape.circle),
-            child: Icon(Icons.history_rounded,
+            child: Icon(AppIcons.history_rounded,
                 color: AppColors.textTertiary, size: 22),
           ),
           const SizedBox(width: 14),
@@ -543,7 +544,7 @@ class _SearchScreenState extends State<SearchScreen>
               await SearchHistory.remove(q);
               _loadHistory();
             },
-            child: Icon(Icons.close_rounded,
+            child: Icon(AppIcons.close_rounded,
                 color: AppColors.textFaint, size: 18),
           ),
         ]),
@@ -561,7 +562,7 @@ class _SearchScreenState extends State<SearchScreen>
           padding: const EdgeInsets.fromLTRB(0, 10, 14, 6),
           child: Row(children: [
             IconButton(
-              icon: Icon(Icons.arrow_back_ios_new_rounded,
+              icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                   color: AppColors.textPrimary, size: 20),
               onPressed: _cancelSearch,
             ),
@@ -705,7 +706,7 @@ class _SearchBarRaw extends StatelessWidget {
                     width: 16, height: 16,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppColors.neonBlue)))
-              : Icon(Icons.search_rounded,
+              : Icon(AppIcons.search_rounded,
                   color: AppColors.textFaint, size: 20),
           suffixIcon: ctrl.text.isNotEmpty
               ? GestureDetector(
@@ -713,7 +714,7 @@ class _SearchBarRaw extends StatelessWidget {
                     ctrl.clear();
                     onChanged('');
                   },
-                  child: Icon(Icons.close_rounded,
+                  child: Icon(AppIcons.close_rounded,
                       color: AppColors.textFaint, size: 18))
               : null,
           border: InputBorder.none,
@@ -760,7 +761,7 @@ class _ExploreGrid extends StatelessWidget {
     if (items.isEmpty) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.explore_outlined,
+          Icon(AppIcons.explore_outlined,
               size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
           const SizedBox(height: 12),
           Text('Мӯҳтаво ҳанӯз нест',
@@ -822,7 +823,7 @@ class _ExploreCell extends StatelessWidget {
         if (item.type == _ItemType.reel)
           Positioned(
             top: 6, right: 6,
-            child: Icon(Icons.slow_motion_video_rounded,
+            child: Icon(AppIcons.slow_motion_video_rounded,
                 color: AppColors.textPrimary, size: 16,
                 shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
           ),
@@ -830,7 +831,7 @@ class _ExploreCell extends StatelessWidget {
         if (item.isMulti && item.type != _ItemType.reel)
           Positioned(
             top: 6, right: 6,
-            child: Icon(Icons.collections_rounded,
+            child: Icon(AppIcons.collections_rounded,
                 color: AppColors.textPrimary, size: 16,
                 shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
           ),
@@ -839,7 +840,7 @@ class _ExploreCell extends StatelessWidget {
           Positioned(
             bottom: 5, left: 5,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.remove_red_eye_rounded,
+              Icon(AppIcons.remove_red_eye_rounded,
                   color: AppColors.textPrimary, size: 11,
                   shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
               const SizedBox(width: 3),
@@ -923,11 +924,11 @@ class _ExplorePreviewDialog extends StatelessWidget {
                 ),
               ),
               // Action row (мисли Instagram menu)
-              _act(Icons.open_in_full_rounded, 'Кушодан', onOpen),
+              _act(AppIcons.open_in_full_rounded, 'Кушодан', onOpen),
               if (onProfile != null)
-                _act(Icons.person_outline_rounded,
+                _act(AppIcons.person_outline_rounded,
                     'Профили @$authorName', onProfile!),
-              _act(Icons.share_outlined, 'Паҳн кардан', onShare),
+              _act(AppIcons.share_outlined, 'Паҳн кардан', onShare),
             ]),
           ),
         ),
@@ -1026,7 +1027,7 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.arrow_back_ios_new_rounded,
+                Icon(AppIcons.arrow_back_ios_new_rounded,
                     color: AppColors.textPrimary, size: 18),
                 SizedBox(width: 4),
                 Text('Reels',
@@ -1216,7 +1217,7 @@ class _FeedCardState extends State<_FeedCard> {
               onTap: _toggleMute,
               behavior: HitTestBehavior.opaque,
               child: Icon(
-                  _muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                  _muted ? AppIcons.volume_off_rounded : AppIcons.volume_up_rounded,
                   color: AppColors.textPrimary, size: 26),
             ),
           ],
@@ -1239,7 +1240,7 @@ class _FeedCardState extends State<_FeedCard> {
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 if (widget.item.postData!.user.isVerified) ...[
                   const SizedBox(width: 4),
-                  Icon(Icons.verified_rounded,
+                  Icon(AppIcons.verified_rounded,
                       color: AppColors.textPrimary, size: 14),
                 ],
                 const SizedBox(width: 10),
@@ -1281,7 +1282,7 @@ class _FeedCardState extends State<_FeedCard> {
                   ),
                   if (verified) ...[
                     const SizedBox(width: 4),
-                    Icon(Icons.verified_rounded,
+                    Icon(AppIcons.verified_rounded,
                         color: AppColors.textPrimary, size: 14),
                   ],
                   const SizedBox(width: 10),
@@ -1591,7 +1592,7 @@ class _HashtagTab extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(12)),
-                child: Icon(Icons.tag_rounded,
+                child: Icon(AppIcons.tag_rounded,
                     color: AppColors.textSecondary, size: 22),
               ),
               const SizedBox(width: 14),
@@ -1664,7 +1665,7 @@ class _UserRowState extends State<_UserRow> {
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 if (widget.user.isVerified) ...[
                   const SizedBox(width: 4),
-                  const Icon(Icons.verified_rounded,
+                  const Icon(AppIcons.verified_rounded,
                       color: Color(0xFF00C853), size: 14),
                 ],
               ]),
@@ -1824,8 +1825,8 @@ class _MusicRowState extends State<_MusicRow> {
             ),
             child: Icon(
                 _playing
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
+                    ? AppIcons.pause_rounded
+                    : AppIcons.play_arrow_rounded,
                 color: AppColors.textPrimary, size: 22),
           ),
         ),
@@ -1838,7 +1839,7 @@ class _MusicPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
       width: 50, height: 50, color: AppColors.card,
-      child: Icon(Icons.music_note_rounded,
+      child: Icon(AppIcons.music_note_rounded,
           color: AppColors.textFaint, size: 22));
 }
 
@@ -1860,7 +1861,7 @@ class _NoResult extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.search_off_rounded,
+      Icon(AppIcons.search_off_rounded,
           size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
       const SizedBox(height: 10),
       Text('Ёфт нашуд',
@@ -1878,7 +1879,7 @@ class _ErrView extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.all(24),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.wifi_off_rounded,
+        Icon(AppIcons.wifi_off_rounded,
             color: AppColors.textFaint, size: 48),
         const SizedBox(height: 12),
         Text('Пайвастшавӣ нашуд',
@@ -2011,7 +2012,7 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.send_rounded, color: Color(0xFF1D9BF0)),
+                icon: const Icon(AppIcons.send_rounded, color: Color(0xFF1D9BF0)),
                 onPressed: _send,
               ),
             ]),

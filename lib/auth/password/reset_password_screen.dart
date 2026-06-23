@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../app/app_theme.dart';
 import '../auth_repository.dart';
+import '../../core/ui/app_icons.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String identifier;
@@ -89,8 +90,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             style: TextStyle(color: AppColors.textPrimary),
             decoration: _dec('Пароли нав').copyWith(
               suffixIcon: IconButton(
-                icon: Icon(_obscure ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined, color: AppColors.textFaint, size: 20),
+                icon: Icon(_obscure ? AppIcons.visibility_off_outlined
+                    : AppIcons.visibility_outlined, color: AppColors.textFaint, size: 20),
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
             ),

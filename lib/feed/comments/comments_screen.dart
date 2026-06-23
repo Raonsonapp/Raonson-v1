@@ -11,6 +11,7 @@ import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../gifts/gift_sheet.dart';
+import '../../core/ui/app_icons.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -228,7 +229,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             : _comments.isEmpty
                 ? Center(child: Column(mainAxisSize: MainAxisSize.min,
                     children: [
-                    Icon(Icons.chat_bubble_outline,
+                    Icon(AppIcons.chat_bubble_outline,
                         color: AppColors.textFaint, size: 48),
                     const SizedBox(height: 12),
                     Text('Аввалин шарҳро шумо гузоред!',
@@ -257,14 +258,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
               color: AppColors.textPrimary.withOpacity(0.08),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(children: [
-                Icon(Icons.reply_rounded, color: AppColors.neonBlue, size: 16),
+                Icon(AppIcons.reply_rounded, color: AppColors.neonBlue, size: 16),
                 const SizedBox(width: 6),
                 Expanded(child: Text(
                   'Ҷавоб ба @${_replyTo!.user.username}',
                   style: TextStyle(color: AppColors.neonBlue, fontSize: 12))),
                 GestureDetector(
                   onTap: () => setState(() => _replyTo = null),
-                  child: Icon(Icons.close, color: AppColors.textFaint, size: 16)),
+                  child: Icon(AppIcons.close, color: AppColors.textFaint, size: 16)),
               ]),
             ),
 
@@ -299,7 +300,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 backgroundImage: (UserSession.avatar?.isNotEmpty == true)
                     ? NetworkImage(UserSession.avatar!) : null,
                 child: (UserSession.avatar?.isEmpty != false)
-                    ? Icon(Icons.person, size: 16, color: AppColors.textTertiary) : null,
+                    ? Icon(AppIcons.person, size: 16, color: AppColors.textTertiary) : null,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -332,7 +333,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: AppColors.neonBlue)))
                   : IconButton(
-                      icon: const Icon(Icons.send_rounded,
+                      icon: const Icon(AppIcons.send_rounded,
                           color: AppColors.neonBlue, size: 22),
                       onPressed: _send),
             ]),
@@ -411,12 +412,12 @@ class _CommentItemState extends State<_CommentItem> {
         children: [
           _handle(),
           ListTile(
-            leading: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
+            leading: const Icon(AppIcons.delete_outline, color: Colors.redAccent, size: 22),
             title: const Text('Нест кардан',
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
             onTap: () { Navigator.pop(context); widget.onDelete(); }),
           ListTile(
-            leading: Icon(Icons.edit_outlined, color: AppColors.textPrimary, size: 22),
+            leading: Icon(AppIcons.edit_outlined, color: AppColors.textPrimary, size: 22),
             title: Text('Таҳрир кардан',
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () { Navigator.pop(context); _editComment(); }),
@@ -438,7 +439,7 @@ class _CommentItemState extends State<_CommentItem> {
         children: [
           _handle(),
           ListTile(
-            leading: const Icon(Icons.flag_outlined,
+            leading: const Icon(AppIcons.flag_outlined,
                 color: Colors.redAccent, size: 22),
             title: const Text('Шикоят кардан',
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
@@ -455,7 +456,7 @@ class _CommentItemState extends State<_CommentItem> {
               }
             }),
           ListTile(
-            leading: Icon(Icons.block, color: AppColors.textPrimary, size: 22),
+            leading: Icon(AppIcons.block, color: AppColors.textPrimary, size: 22),
             title: Text('Маҳдуд кардан',
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () async {
@@ -472,7 +473,7 @@ class _CommentItemState extends State<_CommentItem> {
               }
             }),
           ListTile(
-            leading: Icon(Icons.link, color: AppColors.textPrimary, size: 22),
+            leading: Icon(AppIcons.link, color: AppColors.textPrimary, size: 22),
             title: Text('Нусха гирифтан',
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () {
@@ -558,7 +559,7 @@ class _CommentItemState extends State<_CommentItem> {
             backgroundImage: c.user.avatar.isNotEmpty
                 ? NetworkImage(c.user.avatar) : null,
             child: c.user.avatar.isEmpty
-                ? Icon(Icons.person, color: AppColors.textTertiary, size: 18) : null,
+                ? Icon(AppIcons.person, color: AppColors.textTertiary, size: 18) : null,
           ),
         ),
         const SizedBox(width: 10),
@@ -611,7 +612,7 @@ class _CommentItemState extends State<_CommentItem> {
               // ── ⋮ меню ──────────────────────────────────────
               GestureDetector(
                 onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
-                child: Icon(Icons.more_horiz,
+                child: Icon(AppIcons.more_horiz,
                     color: AppColors.textFaint, size: 18)),
             ]),
           ],
@@ -627,7 +628,7 @@ class _CommentItemState extends State<_CommentItem> {
               SizedBox(
                 width: 20, height: 20,
                 child: Icon(
-                  _liked ? Icons.favorite : Icons.favorite_border,
+                  _liked ? AppIcons.favorite : AppIcons.favorite_border,
                   size: 18,
                   color: _liked ? Colors.red : AppColors.textFaint,
                 ),

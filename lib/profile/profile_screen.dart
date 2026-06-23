@@ -33,6 +33,7 @@ import 'profile_repository.dart';
 import 'profile_skeleton.dart';
 import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
+import '../core/ui/app_icons.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -100,14 +101,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _avatarTap() {
     if (!_isMe) { _viewPhoto(); return; }
     _sheet([
-      _tile(Icons.person_rounded, 'Расмро бин',
+      _tile(AppIcons.person_rounded, 'Расмро бин',
           () { Navigator.pop(context); _viewPhoto(); }),
-      _tile(Icons.photo_library_rounded, 'Галерея',
+      _tile(AppIcons.photo_library_rounded, 'Галерея',
           () { Navigator.pop(context); _pick(ImageSource.gallery); }),
-      _tile(Icons.camera_alt_rounded, 'Камера',
+      _tile(AppIcons.camera_alt_rounded, 'Камера',
           () { Navigator.pop(context); _pick(ImageSource.camera); }),
       if ((_ctrl.profile?.avatar ?? '').isNotEmpty)
-        _tile(Icons.delete_outline_rounded, 'Расмро нест кун',
+        _tile(AppIcons.delete_outline_rounded, 'Расмро нест кун',
             () { Navigator.pop(context); _ctrl.removeAvatar(); },
             red: true),
     ]);
@@ -235,11 +236,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _otherMenu() {
     final u = _ctrl.profile; if (u == null) return;
     _sheet([
-      _tile(u.isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+      _tile(u.isBlocked ? AppIcons.lock_open_rounded : AppIcons.block_rounded,
           u.isBlocked ? 'Блокро бардор' : '${u.username}-ро блок кун',
           () { Navigator.pop(context); _confirmBlock(u.isBlocked); },
           red: !u.isBlocked),
-      _tile(Icons.flag_outlined, 'Шикоят кун',
+      _tile(AppIcons.flag_outlined, 'Шикоят кун',
           () async {
             Navigator.pop(context);
             try {
@@ -247,7 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             } catch (_) {}
             _snack('Шикоят фиристода шуд');
           }),
-      _tile(Icons.do_not_disturb_on_outlined, 'Маҳдуд кун',
+      _tile(AppIcons.do_not_disturb_on_outlined, 'Маҳдуд кун',
           () async {
             Navigator.pop(context);
             try {
@@ -255,7 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             } catch (_) {}
             _snack('Корбар маҳдуд карда шуд');
           }),
-      _tile(Icons.link_rounded, 'Линкро нусха кун', () {
+      _tile(AppIcons.link_rounded, 'Линкро нусха кун', () {
         Navigator.pop(context);
         Clipboard.setData(
             ClipboardData(text: 'https://raonson.app/${u.username}'));
@@ -287,10 +288,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _postMenu(PostModel p) {
     if (!_isMe) return;
     _sheet([
-      _tile(p.isPinned ? Icons.push_pin_outlined : Icons.push_pin_rounded,
+      _tile(p.isPinned ? AppIcons.push_pin_outlined : AppIcons.push_pin_rounded,
           p.isPinned ? 'Сабтро бардор' : 'Профилда сабт кун',
           () { Navigator.pop(context); _ctrl.togglePinPost(p); }),
-      _tile(Icons.delete_outline_rounded, 'Нест кун',
+      _tile(AppIcons.delete_outline_rounded, 'Нест кун',
           () { Navigator.pop(context); _confirmDelete(p); }, red: true),
     ]);
   }
@@ -354,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         appBar: AppBar(backgroundColor: AppColors.bg, elevation: 0,
             leading: BackButton(color: AppColors.textPrimary)),
         body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.person_off_rounded, size: 56, color: AppColors.textFaint),
+          Icon(AppIcons.person_off_rounded, size: 56, color: AppColors.textFaint),
           const SizedBox(height: 12),
           Text('Корбар ёфт нашуд',
               style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
@@ -393,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Row(children: [
                   if (Navigator.canPop(context))
                     IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new_rounded,
+                      icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                           color: AppColors.textPrimary, size: 20),
                       onPressed: () => Navigator.maybePop(context))
                   else
@@ -408,27 +409,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                         overflow: TextOverflow.ellipsis)),
                     if (user.isVerified) ...[
                       const SizedBox(width: 5),
-                      const Icon(Icons.verified_rounded,
+                      const Icon(AppIcons.verified_rounded,
                           color: Color(0xFF00C853), size: 16),
                     ],
                     if (_isMe) ...[
                       const SizedBox(width: 4),
-                      Icon(Icons.keyboard_arrow_down_rounded,
+                      Icon(AppIcons.keyboard_arrow_down_rounded,
                           color: AppColors.textPrimary, size: 22),
                     ],
                   ]))),
-                  IconButton(icon: Icon(Icons.share_outlined,
+                  IconButton(icon: Icon(AppIcons.share_outlined,
                       color: AppColors.textPrimary, size: 20),
                       onPressed: _shareProfile),
                   _isMe
                       ? IconButton(
-                          icon: Icon(Icons.more_horiz_rounded,
+                          icon: Icon(AppIcons.more_horiz_rounded,
                               color: AppColors.textPrimary, size: 22),
                           onPressed: () => Navigator.push(context,
                               MaterialPageRoute(
                                   builder: (_) => const SettingsScreen())))
                       : IconButton(
-                          icon: Icon(Icons.more_vert_rounded,
+                          icon: Icon(AppIcons.more_vert_rounded,
                               color: AppColors.textPrimary, size: 22),
                           onPressed: _otherMenu),
                 ]),
@@ -474,7 +475,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: GestureDetector(
                     onTap: () => _launchWeb(user.website!),
                     child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.link_rounded,
+                      const Icon(AppIcons.link_rounded,
                           color: AppColors.neonBlue, size: 14),
                       const SizedBox(width: 5),
                       Text(user.website!, style: const TextStyle(
@@ -525,7 +526,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               if (!_isMe && _mutualTxt(user).isNotEmpty)
                 Padding(padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                   child: Row(children: [
-                    Icon(Icons.people_outline_rounded,
+                    Icon(AppIcons.people_outline_rounded,
                         color: AppColors.textFaint, size: 14),
                     const SizedBox(width: 6),
                     Flexible(child: Text(_mutualTxt(user),
@@ -539,7 +540,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               TabBar(
                 controller: _tab,
                 tabs: [
-                  const Tab(icon: Icon(Icons.grid_on_rounded)),
+                  const Tab(icon: Icon(AppIcons.grid_on_rounded)),
                   Tab(icon: AnimatedBuilder(
                     animation: _tab,
                     builder: (_, __) => SvgPicture.asset(
@@ -549,9 +550,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                             _tab.index == 1 ? AppColors.textPrimary : AppColors.textFaint,
                             BlendMode.srcIn)),
                   )),
-                  const Tab(icon: Icon(Icons.person_pin_outlined)),
+                  const Tab(icon: Icon(AppIcons.person_pin_outlined)),
                   if (_isMe)
-                    const Tab(icon: Icon(Icons.bookmark_border_rounded)),
+                    const Tab(icon: Icon(AppIcons.bookmark_border_rounded)),
                 ],
                 indicatorColor:       AppColors.textPrimary,
                 indicatorWeight:      2,
@@ -626,7 +627,7 @@ class _Avatar extends StatelessWidget {
             errorWidget: (_, __, ___) => _icon(size))
         : _icon(size)));
   Widget _icon(double s) => Container(color: AppColors.card,
-      child: Icon(Icons.person_rounded, color: AppColors.textFaint, size: s*.5));
+      child: Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: s*.5));
 }
 
 // ─── Stat ──────────────────────────────────────────────────────────────
@@ -658,10 +659,10 @@ class _OwnBtns extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(children: [
     Expanded(child: _Btn(label: 'Таҳрири профил',
-        icon: Icons.edit_rounded, onTap: onEdit)),
+        icon: AppIcons.edit_rounded, onTap: onEdit)),
     const SizedBox(width: 8),
     Expanded(child: _Btn(label: 'Мубодила',
-        icon: Icons.share_rounded, onTap: onShare)),
+        icon: AppIcons.share_rounded, onTap: onShare)),
     const SizedBox(width: 8),
     GestureDetector(onTap: verified ? null : onVerify,
       child: Container(height: 36, width: 36,
@@ -670,7 +671,7 @@ class _OwnBtns extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
               color: const Color(0xFF00C853).withOpacity(0.5))),
-        child: const Icon(Icons.verified_rounded,
+        child: const Icon(AppIcons.verified_rounded,
             color: Color(0xFF00C853), size: 20))),
   ]);
 }
@@ -752,7 +753,7 @@ class _PostGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (posts.isEmpty) {
-      return const _Empty(icon: Icons.grid_off_rounded, label: 'Ҳанӯз пост нест');
+      return const _Empty(icon: AppIcons.grid_off_rounded, label: 'Ҳанӯз пост нест');
     }
     return GridView.builder(
       padding: EdgeInsets.zero,
@@ -776,19 +777,19 @@ class _PostGrid extends StatelessWidget {
                     placeholder: (_, __) => Container(color: AppColors.card),
                     errorWidget: (_, __, ___) => Container(color: AppColors.card))
                 : Container(color: AppColors.card,
-                    child: Icon(Icons.image_outlined,
+                    child: Icon(AppIcons.image_outlined,
                         color: AppColors.textFaint, size: 28)),
             if (p.media.length > 1)
               Positioned(top: 6, right: 6, child: Icon(
-                  Icons.collections_rounded, color: AppColors.textPrimary, size: 16,
+                  AppIcons.collections_rounded, color: AppColors.textPrimary, size: 16,
                   shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
             if (p.isPinned)
               Positioned(top: 6, left: 6, child: Icon(
-                  Icons.push_pin_rounded, color: AppColors.textPrimary, size: 15,
+                  AppIcons.push_pin_rounded, color: AppColors.textPrimary, size: 15,
                   shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
             Positioned(bottom: 5, left: 5,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.remove_red_eye_rounded,
+                Icon(AppIcons.remove_red_eye_rounded,
                     color: AppColors.textPrimary, size: 11,
                     shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
                 const SizedBox(width: 2),
@@ -826,7 +827,7 @@ class _ReelGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (reels.isEmpty) {
-      return const _Empty(icon: Icons.videocam_off_rounded,
+      return const _Empty(icon: AppIcons.videocam_off_rounded,
           label: 'Ҳанӯз рил нест');
     }
     return GridView.builder(
@@ -859,7 +860,7 @@ class _ReelGrid extends StatelessWidget {
               colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn))),
           Positioned(bottom: 5, left: 5,
             child: Row(children: [
-              Icon(Icons.remove_red_eye_rounded, color: AppColors.textPrimary,
+              Icon(AppIcons.remove_red_eye_rounded, color: AppColors.textPrimary,
                   size: 11, shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
               const SizedBox(width: 3),
               Text(_f(r.viewsCount), style: TextStyle(
@@ -885,7 +886,7 @@ class _TGS extends State<_TaggedGrid> {
   Widget build(BuildContext context) {
     final posts = widget.ctrl.taggedPosts;
     if (posts.isEmpty) {
-      return const _Empty(icon: Icons.person_pin_outlined,
+      return const _Empty(icon: AppIcons.person_pin_outlined,
           label: 'Ҳанӯз зикр нашудааст');
     }
     return GridView.builder(
@@ -919,7 +920,7 @@ class _SGS extends State<_SavedGrid> {
   Widget build(BuildContext context) {
     final posts = widget.ctrl.savedPosts;
     if (posts.isEmpty) {
-      return const _Empty(icon: Icons.bookmark_border_rounded,
+      return const _Empty(icon: AppIcons.bookmark_border_rounded,
           label: 'Сохташудаҳо нест');
     }
     return GridView.builder(
@@ -1004,7 +1005,7 @@ class _ULS extends State<_UserListSheet> {
               decoration: InputDecoration(
                 hintText: 'Ҷустуҷӯ',
                 hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
-                prefixIcon: Icon(Icons.search, color: AppColors.textFaint, size: 19),
+                prefixIcon: Icon(AppIcons.search, color: AppColors.textFaint, size: 19),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 9),
               ),
@@ -1028,7 +1029,7 @@ class _ULS extends State<_UserListSheet> {
                         backgroundImage: u.avatar.isNotEmpty
                             ? NetworkImage(u.avatar) : null,
                         child: u.avatar.isEmpty
-                            ? Icon(Icons.person, color: AppColors.textFaint) : null),
+                            ? Icon(AppIcons.person, color: AppColors.textFaint) : null),
                       title: Row(children: [
                         Flexible(child: Text(u.username,
                             overflow: TextOverflow.ellipsis,
@@ -1110,7 +1111,7 @@ class _VerifySheet extends StatelessWidget {
             color: const Color(0xFF00C853).withOpacity(0.12),
             border: Border.all(
                 color: const Color(0xFF00C853).withOpacity(0.4), width: 2)),
-          child: const Icon(Icons.verified_rounded,
+          child: const Icon(AppIcons.verified_rounded,
               color: Color(0xFF00C853), size: 36)),
         const SizedBox(height: 16),
         Text('Raonson Verified', style: TextStyle(color: AppColors.textPrimary,

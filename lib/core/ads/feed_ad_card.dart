@@ -1,6 +1,8 @@
+import '../ui/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 import '../../app/app_theme.dart';
+import '../ui/app_icons.dart';
 
 class FeedAdCard extends StatefulWidget {
   const FeedAdCard({super.key});
@@ -88,7 +90,7 @@ class _FeedAdCardState extends State<FeedAdCard>
                           ? AppColors.surface
                           : const Color(0xFFF0F0F0),
                     ),
-                    child: Icon(Icons.store_rounded,
+                    child: Icon(AppIcons.store_rounded,
                         size: 16,
                         color: isDark
                             ? AppColors.grey

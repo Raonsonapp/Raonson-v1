@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/services/notification_badge_controller.dart';
+import '../core/ui/app_icons.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -162,7 +163,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.textFaint, width: 2),
           ),
-          child: Icon(Icons.notifications_none_outlined,
+          child: Icon(AppIcons.notifications_none_outlined,
               color: AppColors.textTertiary, size: 40),
         ),
         const SizedBox(height: 16),

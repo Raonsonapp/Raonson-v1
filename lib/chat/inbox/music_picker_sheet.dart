@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../app/app_theme.dart';
 import '../../models/note_model.dart';
+import '../../core/ui/app_icons.dart';
 
 // ══════════════════════════════════════════════════════════════════
 //  ЭКРАНИ 1 — Рӯйхати сурудҳо
@@ -140,7 +141,7 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
         // Header
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(children: [
-            _IconBtn(Icons.close_rounded, onTap: () => Navigator.pop(context)),
+            _IconBtn(AppIcons.close_rounded, onTap: () => Navigator.pop(context)),
             const SizedBox(width: 14),
             Expanded(child: Text('Мусиқӣ интихоб кун',
                 style: TextStyle(color: AppColors.textPrimary,
@@ -165,7 +166,7 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
             child: Row(children: [
               if (_isTrending)
-                const Icon(Icons.trending_up_rounded,
+                const Icon(AppIcons.trending_up_rounded,
                     color: Color(0xFF00A8FF), size: 15),
               if (_isTrending) const SizedBox(width: 5),
               Text(
@@ -380,7 +381,7 @@ class _SegmentScreenState extends State<_SegmentScreen> {
         // ── TOP BAR ──────────────────────────────────────────────
         Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(children: [
-            _IconBtn(Icons.arrow_back_ios_new_rounded,
+            _IconBtn(AppIcons.arrow_back_ios_new_rounded,
                 onTap: () => Navigator.pop(context)),
             const Spacer(),
             // Gradient dot
@@ -439,7 +440,7 @@ class _SegmentScreenState extends State<_SegmentScreen> {
                         width: 52, height: 52, fit: BoxFit.cover)
                     : Container(width: 52, height: 52,
                         color: const Color(0xFF1C2333),
-                        child: const Icon(Icons.music_note_rounded,
+                        child: const Icon(AppIcons.music_note_rounded,
                             color: AppColors.neonBlue, size: 26)),
               ),
               const SizedBox(width: 12),
@@ -467,7 +468,7 @@ class _SegmentScreenState extends State<_SegmentScreen> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2.5, color: AppColors.textPrimary))
                       : Icon(
-                          _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          _playing ? AppIcons.pause_rounded : AppIcons.play_arrow_rounded,
                           color: AppColors.textPrimary, size: 26),
                 ),
               ),
@@ -821,7 +822,7 @@ class _BubblePreview extends StatelessWidget {
           shape: BoxShape.circle, color: const Color(0xFF1C2333),
           border: Border.all(color: AppColors.textPrimary.withOpacity(0.15), width: 1.5),
         ),
-        child: Icon(Icons.person_rounded, color: AppColors.textFaint, size: 28),
+        child: Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: 28),
       ),
     ],
   );
@@ -875,7 +876,7 @@ class _TrackRow extends StatelessWidget {
           ]),
         ])),
         const SizedBox(width: 8),
-        Icon(Icons.chevron_right_rounded,
+        Icon(AppIcons.chevron_right_rounded,
             color: AppColors.textPrimary.withOpacity(0.2)),
       ]),
     ),
@@ -883,7 +884,7 @@ class _TrackRow extends StatelessWidget {
 
   Widget _artPlaceholder() => Container(
     width: 50, height: 50, color: const Color(0xFF1C2333),
-    child: Icon(Icons.music_note_rounded, color: AppColors.textFaint, size: 24));
+    child: Icon(AppIcons.music_note_rounded, color: AppColors.textFaint, size: 24));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -907,14 +908,14 @@ class _SearchField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: 'Суруд ё хонанда...',
         hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
-        prefixIcon: Icon(Icons.search_rounded, color: AppColors.textFaint, size: 20),
+        prefixIcon: Icon(AppIcons.search_rounded, color: AppColors.textFaint, size: 20),
         suffixIcon: searching
             ? const Padding(padding: EdgeInsets.all(12),
                 child: SizedBox(width: 16, height: 16,
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: AppColors.neonBlue)))
             : ctrl.text.isNotEmpty
-                ? IconButton(icon: Icon(Icons.clear_rounded,
+                ? IconButton(icon: Icon(AppIcons.clear_rounded,
                       color: AppColors.textFaint, size: 18),
                     onPressed: () { ctrl.clear(); onChanged(''); })
                 : null,
@@ -935,7 +936,7 @@ class _EmptyHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.music_note_rounded, size: 58,
+      Icon(AppIcons.music_note_rounded, size: 58,
           color: AppColors.textPrimary.withOpacity(0.09)),
       const SizedBox(height: 12),
       Text(searched ? 'Ёфт нашуд' : 'Номи суруд ё хонандаро ворид кун',

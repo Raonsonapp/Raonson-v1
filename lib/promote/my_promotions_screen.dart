@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import '../core/ui/app_icons.dart';
 
 class MyPromotionsScreen extends StatefulWidget {
   const MyPromotionsScreen({super.key});
@@ -137,7 +138,7 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.delete_outline, color: AppColors.textFaint),
+            icon: Icon(AppIcons.delete_outline, color: AppColors.textFaint),
             onPressed: () => _delete((p['id'] ?? '').toString()),
           ),
         ]),
@@ -165,5 +166,5 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
 
   Widget _ph() => Container(width: 52, height: 52,
       color: AppColors.card,
-      child: Icon(Icons.image_outlined, color: AppColors.textFaint));
+      child: Icon(AppIcons.image_outlined, color: AppColors.textFaint));
 }

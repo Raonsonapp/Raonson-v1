@@ -26,6 +26,7 @@ import '../../gifts/gift_sheet.dart';
 // ── Ads (ТАНҲО ИН 2 ХАТИ НАВ) ───────────────────────────────────────────────
 import '../../core/ads/ads_manager.dart';
 import '../../core/ads/rewarded_ad_flow.dart';
+import '../../core/ui/app_icons.dart';
 
 class ReelsScreen extends StatelessWidget {
   final bool isActive;
@@ -196,7 +197,7 @@ class _ReelsViewState extends State<_ReelsView> {
                 borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 10),
           ListTile(
-            leading: const Icon(Icons.video_library_outlined, color: Colors.white),
+            leading: const Icon(AppIcons.video_library_outlined, color: Colors.white),
             title: const Text('Аз галерея', style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pop(context);
@@ -205,7 +206,7 @@ class _ReelsViewState extends State<_ReelsView> {
                   .then((ok) { if (ok == true && mounted) vm.load(); });
             }),
           ListTile(
-            leading: const Icon(Icons.link_rounded, color: Colors.white),
+            leading: const Icon(AppIcons.link_rounded, color: Colors.white),
             title: const Text('Аз силка (Aparat/YouTube)',
                 style: TextStyle(color: Colors.white)),
             subtitle: const Text('Силкаи видеоро гузоред',
@@ -329,7 +330,7 @@ class _ReelsViewState extends State<_ReelsView> {
                       Color(0xFFE1306C),
                       Color(0xFFF77737)
                     ])),
-                child: const Icon(Icons.video_collection_outlined,
+                child: const Icon(AppIcons.video_collection_outlined,
                     color: Colors.white, size: 38)),
             const SizedBox(height: 20),
             const Text('Рилсҳо нест',
@@ -727,22 +728,22 @@ class _ReelItemState extends State<_ReelItem> {
       builder: (_) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
-        _menuItem(Icons.edit_outlined, 'Таҳрир кардан',
+        _menuItem(AppIcons.edit_outlined, 'Таҳрир кардан',
             () {
           Navigator.pop(context);
           _editCaption();
         }),
-        _menuItem(Icons.bar_chart_rounded, 'Омор (Статистика)',
+        _menuItem(AppIcons.bar_chart_rounded, 'Омор (Статистика)',
             () {
           Navigator.pop(context);
           _showStats();
         }),
-        _menuItem(Icons.alternate_email, 'Илова кардани зикр',
+        _menuItem(AppIcons.alternate_email, 'Илова кардани зикр',
             () {
           Navigator.pop(context);
           _addMention();
         }),
-        _menuItem(Icons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
+        _menuItem(AppIcons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
             () async {
           Navigator.pop(context);
           try {
@@ -756,7 +757,7 @@ class _ReelItemState extends State<_ReelItem> {
           } catch (_) {}
           if (!_paused) _ctrl?.play();
         }),
-        _menuItem(Icons.delete_outline_rounded, 'Нест кардан', () {
+        _menuItem(AppIcons.delete_outline_rounded, 'Нест кардан', () {
           Navigator.pop(context);
           _deleteReel();
         }, color: Colors.redAccent),
@@ -777,37 +778,37 @@ class _ReelItemState extends State<_ReelItem> {
       builder: (_) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
-        _menuItem(_saved ? Icons.bookmark : Icons.bookmark_border_rounded,
+        _menuItem(_saved ? AppIcons.bookmark : AppIcons.bookmark_border_rounded,
             _saved ? 'Захира шуд' : 'Захира кардан', () {
           Navigator.pop(context);
           setState(() => _saved = !_saved);
           widget.onSave();
         }),
-        _menuItem(Icons.thumb_up_outlined, 'Ҷолиб аст', () {
+        _menuItem(AppIcons.thumb_up_outlined, 'Ҷолиб аст', () {
           Navigator.pop(context);
           _markInterest(true);
         }),
-        _menuItem(Icons.thumb_down_outlined, 'Ҷолиб нест', () {
+        _menuItem(AppIcons.thumb_down_outlined, 'Ҷолиб нест', () {
           Navigator.pop(context);
           widget.onNotInterested();
         }),
-        _menuItem(Icons.info_outline_rounded, 'Чаро ин рилсро мебинед', () {
+        _menuItem(AppIcons.info_outline_rounded, 'Чаро ин рилсро мебинед', () {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Ин рилс аз рӯи завқ ва фаъолияти шумо нишон дода шуд'),
               duration: Duration(seconds: 3)));
         }),
-        _menuItem(Icons.flag_outlined, 'Шикоят кардан', () {
+        _menuItem(AppIcons.flag_outlined, 'Шикоят кардан', () {
           Navigator.pop(context);
           _report();
         }, color: Colors.redAccent),
-        _menuItem(Icons.person_outline_rounded, 'Дидани профил', () {
+        _menuItem(AppIcons.person_outline_rounded, 'Дидани профил', () {
           Navigator.pop(context);
           _openProfile();
         }),
         // ── АД: Download menu item ───────────────────────────
         _menuItem(
-          _downloading ? Icons.hourglass_bottom_rounded : Icons.download_rounded,
+          _downloading ? AppIcons.hourglass_bottom_rounded : AppIcons.download_rounded,
           'Зеркашии видео',
           _downloading ? () {} : () {
             Navigator.pop(context);
@@ -910,7 +911,7 @@ class _ReelItemState extends State<_ReelItem> {
                     hintText: 'Ном ё username...',
                     hintStyle: TextStyle(color: Colors.white38),
                     prefixIcon:
-                        Icon(Icons.search, color: Colors.white38),
+                        Icon(AppIcons.search, color: Colors.white38),
                     filled: true,
                     fillColor: Color(0xFF1A1A1A),
                     border: OutlineInputBorder(
@@ -956,7 +957,7 @@ class _ReelItemState extends State<_ReelItem> {
                                         ? NetworkImage(u['avatar'])
                                         : null,
                                 child: (u['avatar']?.isEmpty != false)
-                                    ? const Icon(Icons.person)
+                                    ? const Icon(AppIcons.person)
                                     : null),
                             title: Text('@${u['username']}',
                                 style: const TextStyle(
@@ -1172,7 +1173,7 @@ class _ReelItemState extends State<_ReelItem> {
         ListTile(
             leading: const CircleAvatar(
                 backgroundColor: AppColors.neonBlue,
-                child: Icon(Icons.send_outlined,
+                child: Icon(AppIcons.send_outlined,
                     color: Colors.white, size: 18)),
             title: const Text('Дар паём фиристодан',
                 style: TextStyle(color: Colors.white)),
@@ -1185,7 +1186,7 @@ class _ReelItemState extends State<_ReelItem> {
         ListTile(
             leading: const CircleAvatar(
                 backgroundColor: Color(0xFF833AB4),
-                child: Icon(Icons.add_circle_outline,
+                child: Icon(AppIcons.add_circle_outline,
                     color: Colors.white, size: 18)),
             title: const Text('Ба история илова кун',
                 style: TextStyle(color: Colors.white)),
@@ -1214,7 +1215,7 @@ class _ReelItemState extends State<_ReelItem> {
         ListTile(
             leading: const CircleAvatar(
                 backgroundColor: Colors.white12,
-                child: Icon(Icons.link, color: Colors.white, size: 18)),
+                child: Icon(AppIcons.link, color: Colors.white, size: 18)),
             title: const Text('Линкро нусха кун',
                 style: TextStyle(color: Colors.white)),
             onTap: () {
@@ -1228,7 +1229,7 @@ class _ReelItemState extends State<_ReelItem> {
         ListTile(
             leading: const CircleAvatar(
                 backgroundColor: Colors.white12,
-                child: Icon(Icons.share_outlined,
+                child: Icon(AppIcons.share_outlined,
                     color: Colors.white, size: 18)),
             title: const Text('Дигар барномаҳо',
                 style: TextStyle(color: Colors.white)),
@@ -1380,8 +1381,8 @@ class _ReelItemState extends State<_ReelItem> {
                       color: Colors.black54, shape: BoxShape.circle),
                   child: Icon(
                       widget.isMuted
-                          ? Icons.volume_off_rounded
-                          : Icons.volume_up_rounded,
+                          ? AppIcons.volume_off_rounded
+                          : AppIcons.volume_up_rounded,
                       color: Colors.white, size: 20))),
               const SizedBox(height: 10),
               // Play button
@@ -1391,7 +1392,7 @@ class _ReelItemState extends State<_ReelItem> {
                   shape: BoxShape.circle,
                   boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 20)]),
                 padding: const EdgeInsets.all(16),
-                child: const Icon(Icons.play_arrow_rounded,
+                child: const Icon(AppIcons.play_arrow_rounded,
                     color: Colors.white, size: 48)),
             ])),
 
@@ -1440,7 +1441,7 @@ class _ReelItemState extends State<_ReelItem> {
                             color: Colors.white70, fontSize: 15,
                             shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
                     const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down_rounded,
+                    const Icon(AppIcons.keyboard_arrow_down_rounded,
                         color: Colors.white70, size: 18),
                   ])),
               // ── RIGHT: Upload SVG icon ────────────────────────
@@ -1490,7 +1491,7 @@ class _ReelItemState extends State<_ReelItem> {
                   child: const SizedBox(
                       width: 30,
                       height: 30,
-                      child: Icon(Icons.more_horiz_rounded,
+                      child: Icon(AppIcons.more_horiz_rounded,
                           color: Colors.white,
                           size: 28,
                           shadows: [
@@ -1707,7 +1708,7 @@ class _AudioBarState extends State<_AudioBar>
             : widget.title);
 
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.music_note_rounded,
+      const Icon(AppIcons.music_note_rounded,
           color: Colors.white,
           size: 15,
           shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
@@ -1843,7 +1844,7 @@ class _AvatarWithStoryRing extends StatelessWidget {
                   width: 42,
                   height: 42,
                   color: AppColors.card,
-                  child: const Icon(Icons.person,
+                  child: const Icon(AppIcons.person,
                       color: Colors.white54, size: 22))));
     }
     final gradientColors = storyViewed
@@ -1877,11 +1878,11 @@ class _AvatarWithStoryRing extends StatelessWidget {
                             Container(color: AppColors.card),
                         errorWidget: (_, __, ___) => Container(
                             color: AppColors.card,
-                            child: const Icon(Icons.person,
+                            child: const Icon(AppIcons.person,
                                 color: Colors.white54, size: 20)))
                     : Container(
                         color: AppColors.card,
-                        child: const Icon(Icons.person,
+                        child: const Icon(AppIcons.person,
                             color: Colors.white54, size: 20)))));
   }
 }
@@ -1965,9 +1966,9 @@ class _SpinningDiscState extends State<_SpinningDisc>
                     imageUrl: widget.avatar,
                     fit: BoxFit.cover,
                     errorWidget: (_, __, ___) => const Icon(
-                        Icons.music_note_rounded,
+                        AppIcons.music_note_rounded,
                         color: Colors.white54, size: 18))
-                : const Icon(Icons.music_note_rounded,
+                : const Icon(AppIcons.music_note_rounded,
                     color: Colors.white54, size: 18)));
   }
 }
@@ -2010,7 +2011,7 @@ class _HeartBurstState extends State<_HeartBurst>
           opacity: _opacity.value,
           child: Transform.scale(
               scale: _scale.value,
-              child: const Icon(Icons.favorite,
+              child: const Icon(AppIcons.favorite,
                   color: Colors.white,
                   size: 120,
                   shadows: [
@@ -2159,7 +2160,7 @@ class _ReelCommentsState extends State<_ReelComments> {
                                             ? NetworkImage(u['avatar'])
                                             : null,
                                     child: (u['avatar'] ?? '').isEmpty
-                                        ? const Icon(Icons.person,
+                                        ? const Icon(AppIcons.person,
                                             color: Colors.white54,
                                             size: 18)
                                         : null),
@@ -2210,7 +2211,7 @@ class _ReelCommentsState extends State<_ReelComments> {
                                         children: [
                                           Icon(
                                               liked
-                                                  ? Icons.favorite
+                                                  ? AppIcons.favorite
                                                   : Icons
                                                       .favorite_border_rounded,
                                               color: liked
@@ -2245,7 +2246,7 @@ class _ReelCommentsState extends State<_ReelComments> {
                         _replyToUsername = null;
                         _ctrl.clear();
                       }),
-                  child: const Icon(Icons.close,
+                  child: const Icon(AppIcons.close,
                       color: Colors.white38, size: 16)),
             ])),
       // Emoji quick-reaction row (мисли Instagram)
@@ -2324,7 +2325,7 @@ class _ReelCommentsState extends State<_ReelComments> {
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation(
                                 AppColors.neonBlue)))
-                    : const Icon(Icons.send_rounded,
+                    : const Icon(AppIcons.send_rounded,
                         color: AppColors.neonBlue, size: 28)),
           ]),
         ),

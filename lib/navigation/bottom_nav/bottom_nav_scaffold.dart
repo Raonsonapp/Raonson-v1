@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'bottom_nav_bar.dart';
 import 'bottom_nav_controller.dart';
+import '../../app/app_settings.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/notification_badge_controller.dart';
 import '../../notifications/notifications_repository.dart';
@@ -90,6 +91,15 @@ class _BottomNavViewState extends State<_BottomNavView> {
   Widget build(BuildContext context) {
     final nav = context.watch<BottomNavController>();
 
+    // Тағйири тема/забон фавран ба ҳамаи табҳо татбиқ шавад —
+    // вагарна табҳои аллакай сохташуда то иваз кардан кӯҳна мемонанд.
+    return AnimatedBuilder(
+      animation: AppSettingsState.instance,
+      builder: (context, _) => _buildBody(context, nav),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, BottomNavController nav) {
     // ✅ OfflineBanner — барномаи пурраро мепӯшад
     // Вақте offline → баннер дар боло пайдо мешавад
     return OfflineBanner(

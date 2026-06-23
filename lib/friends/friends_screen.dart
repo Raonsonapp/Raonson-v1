@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -188,7 +189,7 @@ class _FriendsScreenState extends State<FriendsScreen>
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 18, fontWeight: FontWeight.w700)),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded,
+          icon: Icon(AppIcons.arrow_back_ios_rounded,
               color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
@@ -260,7 +261,7 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Widget _empty(String text) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.people_outline_rounded,
+      Icon(AppIcons.people_outline_rounded,
           size: 64, color: AppColors.dividerFaint),
       const SizedBox(height: 16),
       Text(text, style: TextStyle(
@@ -420,7 +421,7 @@ Widget _avatar(String url, double size) {
 Widget _ph(double size) => Container(
   width: size, height: size,
   color: AppColors.card,
-  child: Icon(Icons.person, color: AppColors.textFaint, size: size * 0.5),
+  child: Icon(AppIcons.person, color: AppColors.textFaint, size: size * 0.5),
 );
 
 // ── Data model ───────────────────────────────────────────────────────
@@ -467,7 +468,7 @@ class _ContactsTab extends StatelessWidget {
     }
     if (users.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.contacts_outlined, color: AppColors.textFaint, size: 64),
+        Icon(AppIcons.contacts_outlined, color: AppColors.textFaint, size: 64),
         const SizedBox(height: 16),
         Text('Дӯстони шумо аз контактҳо',
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16,
@@ -485,7 +486,7 @@ class _ContactsTab extends StatelessWidget {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12))),
           onPressed: onLoad,
-          icon: const Icon(Icons.contacts_rounded, size: 18),
+          icon: const Icon(AppIcons.contacts_rounded, size: 18),
           label: const Text('Ёфтани дӯстон аз контактҳо')),
       ]));
     }

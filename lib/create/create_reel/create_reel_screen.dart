@@ -10,6 +10,7 @@ import '../../core/utils/media_compressor.dart';
 import '../upload/upload_manager.dart';
 import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
+import '../../core/ui/app_icons.dart';
 
 class CreateReelScreen extends StatefulWidget {
   final File? initialFile;
@@ -127,7 +128,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         backgroundColor: Colors.black,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: const Icon(AppIcons.close, color: Colors.white),
           onPressed: _busy ? null : () => Navigator.pop(context)),
         title: const Text('Reel гузоред',
             style: TextStyle(color: Colors.white,
@@ -180,7 +181,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                           end: Alignment.bottomRight,
                         ),
                       ),
-                      child: const Icon(Icons.videocam_rounded,
+                      child: const Icon(AppIcons.videocam_rounded,
                           color: Colors.white, size: 36),
                     ),
                     const SizedBox(height: 12),
@@ -248,7 +249,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(children: [
-                  const Icon(Icons.error_outline,
+                  const Icon(AppIcons.error_outline,
                       color: Colors.white, size: 18),
                   const SizedBox(width: 10),
                   Expanded(child: Text(_error!,
@@ -256,7 +257,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                           color: Colors.white, fontSize: 13))),
                   GestureDetector(
                     onTap: () => setState(() => _error = null),
-                    child: const Icon(Icons.close,
+                    child: const Icon(AppIcons.close,
                         color: Colors.white54, size: 16)),
                 ]),
               ),

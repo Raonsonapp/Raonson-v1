@@ -20,6 +20,7 @@ import '../../widgets/account_switcher.dart';
 import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 import '../room/call_screen.dart';
+import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatListScreen — 10/10 Instagram DM style
@@ -132,7 +133,7 @@ class _ChatView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
               child: Row(children: [
                 IconButton(
-                  icon: Icon(Icons.arrow_back_ios_new_rounded,
+                  icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                       color: AppColors.textPrimary, size: 20),
                   onPressed: () => Navigator.maybePop(context),
                 ),
@@ -158,7 +159,7 @@ class _ChatView extends StatelessWidget {
                               )),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.keyboard_arrow_down_rounded,
+                          Icon(AppIcons.keyboard_arrow_down_rounded,
                               color: AppColors.textPrimary, size: 24),
                         ],
                       ),
@@ -166,7 +167,7 @@ class _ChatView extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.video_call_outlined,
+                  icon: Icon(AppIcons.video_call_outlined,
                       color: AppColors.textPrimary, size: 26),
                   onPressed: () => Navigator.push(
                     context,
@@ -176,7 +177,7 @@ class _ChatView extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.edit_outlined,
+                  icon: Icon(AppIcons.edit_outlined,
                       color: AppColors.textPrimary, size: 22),
                   onPressed: () => Navigator.push(
                     context,
@@ -201,7 +202,7 @@ class _ChatView extends StatelessWidget {
                     hintText: 'Ҷустуҷӯ',
                     hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
                     prefixIcon:
-                        Icon(Icons.search, color: AppColors.textFaint, size: 18),
+                        Icon(AppIcons.search, color: AppColors.textFaint, size: 18),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 9),
                   ),
@@ -242,7 +243,7 @@ class _ChatView extends StatelessWidget {
                   border: Border.all(color: AppColors.dividerFaint),
                 ),
                 child: Row(children: [
-                  Icon(Icons.lock_outline_rounded,
+                  Icon(AppIcons.lock_outline_rounded,
                       color: AppColors.textTertiary, size: 18),
                   SizedBox(width: 10),
                   Expanded(
@@ -534,7 +535,7 @@ class _MyNoteBubble extends StatelessWidget {
                     border: Border.all(color: AppColors.bg, width: 1.5),
                   ),
                   child: Icon(
-                    hasNote ? Icons.edit_rounded : Icons.add_rounded,
+                    hasNote ? AppIcons.edit_rounded : AppIcons.add_rounded,
                     color: AppColors.textPrimary, size: 11,
                   ),
                 ),
@@ -552,7 +553,7 @@ class _MyNoteBubble extends StatelessWidget {
   }
 
   Widget _ph() => Container(color: AppColors.card,
-      child: Icon(Icons.person, color: AppColors.textFaint, size: 26));
+      child: Icon(AppIcons.person, color: AppColors.textFaint, size: 26));
 }
 
 class _FriendNoteBubble extends StatefulWidget {
@@ -641,7 +642,7 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
   }
 
   Widget _ph() => Container(color: AppColors.card,
-      child: Icon(Icons.person, color: AppColors.textFaint, size: 26));
+      child: Icon(AppIcons.person, color: AppColors.textFaint, size: 26));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -695,12 +696,12 @@ class _SpeechBubble extends StatelessWidget {
                     child: Image.network(song!.artUrl,
                         width: 16, height: 16, fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.music_note_rounded,
+                            const Icon(AppIcons.music_note_rounded,
                                 color: AppColors.neonBlue, size: 12)),
                   )
                 else
                   Icon(
-                    isPlaying ? Icons.pause_rounded : Icons.music_note_rounded,
+                    isPlaying ? AppIcons.pause_rounded : AppIcons.music_note_rounded,
                     color: AppColors.neonBlue, size: 12),
                 const SizedBox(width: 3),
                 Flexible(
@@ -861,7 +862,7 @@ class _ChatTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     // Camera icon
-                    Icon(Icons.camera_alt_outlined,
+                    Icon(AppIcons.camera_alt_outlined,
                         color: AppColors.textFaint, size: 18),
                     if (unread) ...[
                       const SizedBox(width: 8),

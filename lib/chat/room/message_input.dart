@@ -6,6 +6,7 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../app/app_theme.dart';
 import '../../models/message_model.dart';
+import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  MessageInput — 10/10 Instagram style (матн + медиа + овоз)
@@ -158,17 +159,17 @@ class _MessageInputState extends State<MessageInput>
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _AttachTile(
-                    icon: Icons.photo_library_rounded,
+                    icon: AppIcons.photo_library_rounded,
                     color: const Color(0xFFE1306C),
                     label: 'Галерея',
                     onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.gallery); }),
                 _AttachTile(
-                    icon: Icons.photo_camera_rounded,
+                    icon: AppIcons.photo_camera_rounded,
                     color: const Color(0xFF1D9BF0),
                     label: 'Камера',
                     onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.camera); }),
                 _AttachTile(
-                    icon: Icons.videocam_rounded,
+                    icon: AppIcons.videocam_rounded,
                     color: const Color(0xFF00C853),
                     label: 'Видео',
                     onTap: () { Navigator.pop(ctx); _pickVideo(); }),
@@ -272,7 +273,7 @@ class _MessageInputState extends State<MessageInput>
           behavior: HitTestBehavior.opaque,
           child: const Padding(
             padding: EdgeInsets.all(6),
-            child: Icon(Icons.delete_outline_rounded,
+            child: Icon(AppIcons.delete_outline_rounded,
                 color: Color(0xFFFF3040), size: 28)),
         ),
         const SizedBox(width: 10),
@@ -295,7 +296,7 @@ class _MessageInputState extends State<MessageInput>
             decoration: const BoxDecoration(
                 shape: BoxShape.circle, color: AppColors.neonBlue),
             child: Center(
-                child: Icon(Icons.send_rounded, color: AppColors.textPrimary, size: 20)),
+                child: Icon(AppIcons.send_rounded, color: AppColors.textPrimary, size: 20)),
           ),
         ),
       ],
@@ -312,7 +313,7 @@ class _MessageInputState extends State<MessageInput>
           onTap: _openAttachments,
           child: Padding(
             padding: EdgeInsets.only(right: 8, bottom: 8),
-            child: Icon(Icons.add_circle_outline_rounded,
+            child: Icon(AppIcons.add_circle_outline_rounded,
                 color: AppColors.textSecondary, size: 28),
           ),
         ),
@@ -352,7 +353,7 @@ class _MessageInputState extends State<MessageInput>
                   padding: const EdgeInsets.only(right: 10, bottom: 8),
                   child: GestureDetector(
                     onTap: _showEmojiPicker,
-                    child: Icon(Icons.emoji_emotions_outlined,
+                    child: Icon(AppIcons.emoji_emotions_outlined,
                         color: AppColors.textTertiary, size: 22),
                   ),
                 ),
@@ -374,7 +375,7 @@ class _MessageInputState extends State<MessageInput>
                     color: AppColors.neonBlue,
                   ),
                   child: Center(
-                      child: Icon(Icons.send_rounded,
+                      child: Icon(AppIcons.send_rounded,
                           color: AppColors.textPrimary, size: 20)),
                 ),
               )
@@ -385,7 +386,7 @@ class _MessageInputState extends State<MessageInput>
                   width: 44, height: 44,
                   decoration: const BoxDecoration(shape: BoxShape.circle),
                   child: Center(
-                      child: Icon(Icons.mic_rounded,
+                      child: Icon(AppIcons.mic_rounded,
                           color: AppColors.textSecondary, size: 26)),
                 ),
               ),
@@ -498,7 +499,7 @@ class _ReplyPreviewBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.close_rounded, color: AppColors.textFaint, size: 20),
+            icon: Icon(AppIcons.close_rounded, color: AppColors.textFaint, size: 20),
             onPressed: onCancel,
           ),
         ],
