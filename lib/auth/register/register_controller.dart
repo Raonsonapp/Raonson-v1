@@ -5,6 +5,8 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/services/user_session.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 
 class RegisterState {
   final String username;
@@ -93,7 +95,10 @@ class RegisterController extends ChangeNotifier {
           ApiClient.instance.setAuthToken(token);
 
           final refresh = data['refreshToken']?.toString() ?? '';
-          if (refresh.isNotEmpty) await TokenStorage.saveRefreshToken(refresh);
+          if (refresh.isNotEmpty) {
+            await TokenStorage.saveRefreshToken(refresh);
+            ApiClient.instance.setRefreshToken(refresh);
+          }
 
           final user = data['user'] as Map<String, dynamic>?;
           if (user != null) {
@@ -108,6 +113,7 @@ class RegisterController extends ChangeNotifier {
         }
       }
 
+      AnalyticsService.instance.logEvent(AnalyticsEvents.register);
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;

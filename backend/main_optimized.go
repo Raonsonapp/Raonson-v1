@@ -104,9 +104,12 @@ func main() {
 		u.GET("/by-username/:username", handlers.GetUserByUsername)
 		u.POST("/find-by-contacts",     handlers.FindUsersByContacts)
 		u.GET("/suggestions",           cache5m, handlers.GetSuggestions)
+		u.GET("/suggested",             handlers.GetSuggestedUsers)
 		u.GET("/blocked",               handlers.GetBlockedUsers)
 		u.POST("/:id/block",            handlers.BlockUser)
 		u.POST("/:id/unblock",          handlers.UnblockUser)
+		u.POST("/:id/mute",             handlers.MuteUser)
+		u.DELETE("/:id/mute",           handlers.UnmuteUser)
 		u.POST("/:id/report",           handlers.ReportUser)
 		u.POST("/:id/restrict",         handlers.RestrictUser)
 		u.POST("/:id/unrestrict",       handlers.UnrestrictUser)
@@ -156,6 +159,7 @@ func main() {
 		po.POST("/:id/archive",      handlers.TogglePostArchive)
 		po.POST("/:id/interest",     handlers.MarkInterest)
 		po.POST("/:id/not_interest", handlers.MarkNotInterest)
+		po.POST("/:id/not-interested", handlers.PostNotInterested)
 		po.POST("/:id/pin",          handlers.PinPost)
 		po.PUT("/:id/caption",       handlers.UpdatePostCaption)
 		po.PUT("/:id/music",         handlers.UpdatePostMusic)
@@ -196,6 +200,7 @@ func main() {
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)
 		re.POST("/:id/view",     handlers.TrackReelView)   // view dedup tracking
+		re.POST("/:id/watch",    handlers.TrackReelWatch)  // watch-time tracking
 		re.POST("/:id/like",     handlers.ToggleReelLike)
 		re.POST("/:id/save",     handlers.ToggleReelSave)
 		re.GET("/:id/comments",  cache30s, handlers.GetReelComments)
@@ -265,6 +270,12 @@ func main() {
 		no.POST("/read-all",    handlers.MarkAllNotifsRead)
 		no.POST("/:id/read",    handlers.MarkNotifRead)
 		no.DELETE("/:id",       handlers.DeleteNotification)
+	}
+
+	// ── ANALYTICS (батч-рӯйдодҳо аз client) ──
+	an := r.Group("/analytics", auth, rl100)
+	{
+		an.POST("/events", handlers.TrackAnalyticsEvents)
 	}
 
 	se := r.Group("/search", auth, rl100)

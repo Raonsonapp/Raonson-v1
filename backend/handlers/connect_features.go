@@ -44,6 +44,93 @@ func UnblockUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"unblocked": true})
 }
 
+// ═══════════════════════ MUTE / UNMUTE ═══════════════════════
+
+// POST /users/:id/mute
+func MuteUser(c *gin.Context) {
+	myID := mw.UID(c)
+	target := c.Param("id")
+	if target == "" || target == myID {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "bad target"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO muted_users(user_id, muted_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+		myID, target)
+	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
+		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2",
+		"smartreels:"+myID+":1", "smartreels:"+myID+":2")
+	c.JSON(http.StatusOK, gin.H{"muted": true})
+}
+
+// DELETE /users/:id/mute
+func UnmuteUser(c *gin.Context) {
+	myID := mw.UID(c)
+	target := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM muted_users WHERE user_id=$1 AND muted_id=$2`, myID, target)
+	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
+		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2",
+		"smartreels:"+myID+":1", "smartreels:"+myID+":2")
+	c.JSON(http.StatusOK, gin.H{"unmuted": true})
+}
+
+// ═══════════════════════ SUGGESTED USERS ═══════════════════════
+
+// GET /users/suggested?limit=10 (max 20)
+// Корбароне, ки худамон нестем, пайравӣ накардаем ва блок нашудаанд.
+func GetSuggestedUsers(c *gin.Context) {
+	myID := mw.UID(c)
+	limit := toInt(c.Query("limit"), 10)
+	if limit < 1 {
+		limit = 10
+	}
+	if limit > 20 {
+		limit = 20
+	}
+
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT u.id, u.username, u.avatar, u.verified, COALESCE(u.bio,''),
+		       u.followers_count
+		FROM users u
+		WHERE u.id <> $1
+		  AND COALESCE(u.banned,false) = FALSE
+		  AND NOT EXISTS (
+		      SELECT 1 FROM follows f
+		      WHERE f.follower_id=$1 AND f.following_id=u.id
+		  )
+		  AND NOT EXISTS (
+		      SELECT 1 FROM blocks b
+		      WHERE (b.blocker_id=$1 AND b.blocked_id=u.id)
+		         OR (b.blocker_id=u.id AND b.blocked_id=$1)
+		  )
+		ORDER BY u.followers_count DESC, u.created_at DESC
+		LIMIT $2
+	`, myID, limit)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"users": []gin.H{}})
+		return
+	}
+	defer rows.Close()
+
+	users := []gin.H{}
+	for rows.Next() {
+		var id, uname, avatar, bio string
+		var verified bool
+		var followers int
+		rows.Scan(&id, &uname, &avatar, &verified, &bio, &followers)
+		users = append(users, gin.H{
+			"_id":            id,
+			"username":       uname,
+			"avatar":         avatar,
+			"verified":       verified,
+			"bio":            bio,
+			"followersCount": followers,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
 // POST /users/:id/report — шикоят аз корбар
 func ReportUser(c *gin.Context) {
 	myID := mw.UID(c)
@@ -178,17 +265,71 @@ func MarkReelNotInterested(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"not_interested": true})
 }
 
-// GET /reels/:id/stats
+// GET /reels/:id/stats — танҳо соҳиби reel мебинад.
 func GetReelStats(c *gin.Context) {
 	rid := c.Param("id")
-	var likes, comments, views int
+	myID := mw.UID(c)
+
+	// Танҳо соҳиб мебинад (мисли GetPostStats).
+	var ownerID string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&ownerID)
+	if ownerID == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
+		return
+	}
+	if ownerID != myID {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Not your reel"})
+		return
+	}
+
+	var likes, comments, views, saves int
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COALESCE(likes_count,0), COALESCE(comments_count,0),
-		        COALESCE(views_count,0) FROM reels WHERE id=$1`, rid).
-		Scan(&likes, &comments, &views)
+		        COALESCE(views_count,0),
+		        (SELECT COUNT(*) FROM reel_saves WHERE reel_id=$1)
+		 FROM reels WHERE id=$1`, rid).
+		Scan(&likes, &comments, &views, &saves)
+
+	// Миёнаи тамошо (ms) аз reel_watch.
+	var avgWatchMs int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(ROUND(AVG(watch_ms)),0)::int
+		 FROM reel_watch WHERE reel_id=$1`, rid).Scan(&avgWatchMs)
+
+	// shares — ҳоло ҷадвали shares нест → 0.
 	c.JSON(http.StatusOK, gin.H{
-		"likesCount": likes, "commentsCount": comments, "viewsCount": views,
+		"views":      views,
+		"likes":      likes,
+		"comments":   comments,
+		"saves":      saves,
+		"shares":     0,
+		"avgWatchMs": avgWatchMs,
 	})
+}
+
+// POST /reels/:id/watch — сабти вақти тамошои як reel.
+// Body: {"watchMs":1234,"completed":true}
+func TrackReelWatch(c *gin.Context) {
+	myID := mw.UID(c)
+	rid := c.Param("id")
+	var b struct {
+		WatchMs   int  `json:"watchMs"`
+		Completed bool `json:"completed"`
+	}
+	c.ShouldBindJSON(&b)
+	if b.WatchMs < 0 {
+		b.WatchMs = 0
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO reel_watch(user_id, reel_id, watch_ms, completed, created_at)
+		 VALUES($1,$2,$3,$4,NOW())
+		 ON CONFLICT (user_id, reel_id) DO UPDATE
+		   SET watch_ms=EXCLUDED.watch_ms,
+		       completed=EXCLUDED.completed,
+		       created_at=NOW()`,
+		myID, rid, b.WatchMs, b.Completed)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 // POST /reels/:id/comments/:commentId/like — toggle

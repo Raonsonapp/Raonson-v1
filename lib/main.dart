@@ -11,6 +11,7 @@ import 'core/services/account_manager.dart';
 import 'core/services/network_service.dart';
 import 'core/services/network_quality.dart';
 import 'core/ads/ads_manager.dart';
+import 'core/firebase_init.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,9 @@ Future<void> main() async {
   // ✅ 6. Ads
   MobileAds.initialize();
   AdsManager.instance.init();
+
+  // ✅ 6.1 Firebase + FCM push (бехатар: агар танзим набошад, crash намешавад)
+  FirebaseInit.init();
 
   // ✅ 7. App-ро кушо — ФАВРАН, бе интернет интизор шудан
   runApp(const RaonsonApp());

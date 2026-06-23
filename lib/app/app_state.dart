@@ -5,6 +5,8 @@ import '../core/api/api_client.dart';
 import '../core/storage/token_storage.dart';
 import '../core/services/user_session.dart';
 import '../core/services/vip_service.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 
 class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -26,6 +28,7 @@ class AppState extends ChangeNotifier {
 
       // ✅ Token дорад → ФАВРАН login нишон деҳ аз cache
       ApiClient.instance.setAuthToken(token);
+      ApiClient.instance.setRefreshToken(await TokenStorage.getRefreshToken());
       await UserSession.loadCachedData();
 
       // Агар userId cache дорад → ФАВРАН кушода мешавад
@@ -70,6 +73,7 @@ class AppState extends ChangeNotifier {
             await UserSession.saveAll(
                 id: id, uname: uname, avatarUrl: keepAvatar);
             await TokenStorage.saveUserId(id);
+            AnalyticsService.instance.setUser(id);
           }
         } else if (res.statusCode == 401) {
           await TokenStorage.clearTokens();
@@ -90,6 +94,9 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.logout);
+    AnalyticsService.instance.clearUser();
+    await AnalyticsService.instance.flush();
     await TokenStorage.clearTokens();
     ApiClient.instance.setAuthToken(null);
     await UserSession.clear();

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../../core/api/api_client.dart';
@@ -46,6 +48,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
 
   Future<void> _publish() async {
     if (_file == null || _busy) return;
+    AnalyticsService.instance.logEvent(AnalyticsEvents.createReel);
 
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) {

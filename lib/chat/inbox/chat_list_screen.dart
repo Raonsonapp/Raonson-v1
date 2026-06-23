@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -42,6 +44,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _ctrl = ChatListController(ChatRepository());
     _ctrl.addListener(_onChatsLoaded);
     _ctrl.loadChats();
+    AnalyticsService.instance.logEvent(AnalyticsEvents.chatOpen);
     _presence.connect();
     _notes.load();
     _loadMyAvatar();
@@ -273,10 +276,36 @@ class _ChatView extends StatelessWidget {
                           color: AppColors.neonBlue,
                           backgroundColor: AppColors.card,
                           onRefresh: () => ctrl.loadChats(),
-                          child: ListView.builder(
-                            itemCount: ctrl.chats.length,
-                            itemBuilder: (_, i) =>
-                                _ChatTile(chat: ctrl.chats[i]),
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: (n) {
+                              if (n.metrics.pixels >=
+                                  n.metrics.maxScrollExtent - 200) {
+                                context
+                                    .read<ChatListController>()
+                                    .loadMoreChats();
+                              }
+                              return false;
+                            },
+                            child: ListView.builder(
+                              itemCount: ctrl.chats.length +
+                                  (ctrl.isLoadingMore ? 1 : 0),
+                              itemBuilder: (_, i) {
+                                if (i >= ctrl.chats.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 22, height: 22,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.neonBlue),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return _ChatTile(chat: ctrl.chats[i]);
+                              },
+                            ),
                           ),
                         ),
             ),

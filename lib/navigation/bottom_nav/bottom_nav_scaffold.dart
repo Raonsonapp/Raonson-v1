@@ -6,6 +6,8 @@ import 'bottom_nav_bar.dart';
 import 'bottom_nav_controller.dart';
 import '../../app/app_settings.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/notification_badge_controller.dart';
+import '../../notifications/notifications_repository.dart';
 import '../../feed/timeline/feed_screen.dart';
 import '../../reels/reels_feed/reels_screen.dart';
 import '../../chat/inbox/chat_list_screen.dart';
@@ -45,6 +47,17 @@ class _BottomNavViewState extends State<_BottomNavView> {
   void initState() {
     super.initState();
     _setupGlobalCalls();
+    _setupNotifBadge();
+  }
+
+  // Бейҷи огоҳиҳо: realtime socket + бори аввал шумора аз сервер.
+  Future<void> _setupNotifBadge() async {
+    NotificationBadgeController.instance.wireSocket();
+    try {
+      final data = await NotificationsRepository().fetchNotifications();
+      NotificationBadgeController.instance
+          .setCount((data['unreadCount'] as int?) ?? 0);
+    } catch (_) {/* best-effort */}
   }
 
   // Зангҳои воридшаванда дар тамоми барнома қабул мешаванд (на танҳо дар чат).
@@ -121,11 +134,14 @@ class _BottomNavViewState extends State<_BottomNavView> {
         ),
         bottomNavigationBar: ValueListenableBuilder<String?>(
           valueListenable: UserSession.avatarNotifier,
-          builder: (_, liveAvatar, __) => BottomNavBar(
-            currentIndex: nav.currentIndex,
-            onTap: nav.setIndex,
-            avatarUrl: liveAvatar,
-            notifCount: 0,
+          builder: (_, liveAvatar, __) => AnimatedBuilder(
+            animation: NotificationBadgeController.instance,
+            builder: (_, __) => BottomNavBar(
+              currentIndex: nav.currentIndex,
+              onTap: nav.setIndex,
+              avatarUrl: liveAvatar,
+              notifCount: NotificationBadgeController.instance.count,
+            ),
           ),
         ),
       ),

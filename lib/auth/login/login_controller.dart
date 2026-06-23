@@ -5,6 +5,8 @@ import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/account_manager.dart';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 
 class LoginState {
   final String email;
@@ -74,6 +76,7 @@ class LoginController extends ChangeNotifier {
       final refresh = data['refreshToken']?.toString() ?? '';
       if (refresh.isNotEmpty) {
         await TokenStorage.saveRefreshToken(refresh);
+        ApiClient.instance.setRefreshToken(refresh);
       }
 
       // Save user info
@@ -96,6 +99,7 @@ class LoginController extends ChangeNotifier {
         }
       }
 
+      AnalyticsService.instance.logEvent(AnalyticsEvents.login);
       _state = _state.copyWith(isLoading: false);
       notifyListeners();
       return true;

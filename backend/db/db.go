@@ -321,6 +321,9 @@ func migrate() {
 	-- ── VIP (720p/1080p-и аниме) — admin медиҳад ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS is_vip BOOLEAN DEFAULT FALSE;
 
+	-- ── Username change rate-limit (once every 14 days) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS username_changed_at TIMESTAMPTZ;
+
 	-- ── Pinned posts ──
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE;
 
@@ -505,6 +508,49 @@ func migrate() {
 		peer_id TEXT NOT NULL,
 		created_at TIMESTAMPTZ DEFAULT NOW(),
 		PRIMARY KEY (user_id, peer_id)
+	);
+
+	-- ── Analytics events (batch-inserted from client) ──
+	CREATE TABLE IF NOT EXISTS events (
+		id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id    TEXT,
+		event      TEXT NOT NULL,
+		params     JSONB DEFAULT '{}'::jsonb,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_events_user  ON events(user_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_events_event ON events(event, created_at DESC);
+
+	-- ── Reel watch-time tracking (avg watch / completion rate) ──
+	CREATE TABLE IF NOT EXISTS reel_watch (
+		user_id    TEXT NOT NULL,
+		reel_id    TEXT NOT NULL,
+		watch_ms   INTEGER DEFAULT 0,
+		completed  BOOLEAN DEFAULT FALSE,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, reel_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
+
+	-- ── Perf indexes (block/view dedup lookups) ──
+	CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);
+	CREATE INDEX IF NOT EXISTS idx_post_views_user_post ON post_views(user_id, post_id);
+	CREATE INDEX IF NOT EXISTS idx_reel_views_dedup ON reel_views(user_id, reel_id);
+
+	-- ── Muted users ──
+	CREATE TABLE IF NOT EXISTS muted_users (
+		user_id  TEXT NOT NULL,
+		muted_id TEXT NOT NULL,
+		muted_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, muted_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_muted_users ON muted_users(user_id);
+
+	-- ── Post "not interested" ──
+	CREATE TABLE IF NOT EXISTS post_not_interested (
+		post_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		PRIMARY KEY (post_id, user_id)
 	);
 
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──

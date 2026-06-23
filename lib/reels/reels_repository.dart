@@ -161,9 +161,10 @@ class ReelsRepository {
     required int    durationMs,
   }) async {
     try {
-      await _api.post('${ApiEndpoints.reels}/$reelId/view', body: {
-        'watchMs':    watchMs,
-        'durationMs': durationMs,
+      // POST /reels/:id/watch — калидҳо ДАҚИҚ мувофиқи backend: watchMs, completed.
+      await _api.post('${ApiEndpoints.reels}/$reelId/watch', body: {
+        'watchMs':   watchMs,
+        'completed': durationMs > 0 && watchMs >= (durationMs * 0.9).round(),
       }).timeout(const Duration(seconds: 5));
     } catch (_) {}
   }

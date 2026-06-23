@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -12,7 +13,7 @@ import '../../widgets/avatar.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/webrtc_service.dart';
 import '../../core/presence_service.dart';
-import '../../core/socket_service.dart';
+import '../../core/services/socket_service.dart';
 import 'message_bubble.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
@@ -42,6 +43,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   bool   _isPeerTyping = false;
   String _chatId      = '';
   String _myId        = '';
+
+  // Пагинатсия — паёмҳои кӯҳнатарро ҳангоми scroll-to-top бор мекунем.
+  int  _msgPage      = 1;
+  bool _loadingOlder = false;
+  bool _hasMoreOlder = true;
+  static const int _msgPageSize = 30;
 
   // Auto-refresh (safety net дар сурати кор накардани socket дар баъзе шабакаҳо)
   Timer? _pollTimer;
@@ -83,8 +90,49 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     super.dispose();
   }
 
+  void _onScrollLoadOlder() {
+    if (!_scroll.hasClients) return;
+    // Дар боли рӯйхат (паёмҳои кӯҳнатар) → саҳифаи навбатиро бор мекунем.
+    if (_scroll.position.pixels <= 80) _loadOlder();
+  }
+
+  Future<void> _loadOlder() async {
+    if (_loadingOlder || !_hasMoreOlder || _chatId.isEmpty) return;
+    _loadingOlder = true;
+    try {
+      final older = await _repo.fetchOlderMessages(_chatId, _msgPage + 1);
+      if (!mounted) { _loadingOlder = false; return; }
+      if (older.isEmpty) {
+        _hasMoreOlder = false;
+      } else {
+        final existing = _messages.map((m) => m.id).toSet();
+        final fresh = older.where((m) => !existing.contains(m.id)).toList();
+        if (fresh.isEmpty) {
+          _hasMoreOlder = false;
+        } else {
+          // Мавқеи скроллро нигоҳ медорем, то ҷаҳиш накунад.
+          final before = _scroll.hasClients ? _scroll.position.maxScrollExtent : 0.0;
+          setState(() {
+            _messages = [...fresh, ..._messages];
+            _msgPage++;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scroll.hasClients) {
+              final after = _scroll.position.maxScrollExtent;
+              _scroll.jumpTo(_scroll.position.pixels + (after - before));
+            }
+          });
+        }
+      }
+    } catch (_) {
+    } finally {
+      _loadingOlder = false;
+    }
+  }
+
   Future<void> _init() async {
     _myId = await TokenStorage.getUserId() ?? '';
+    _scroll.addListener(_onScrollLoadOlder);
     // chatId-и воқеиро ҳал мекунем, то ба ҳуҷраи socket ҳамроҳ шавем
     // ва typing/read кор кунад (пеш аз ин _chatId доимо холӣ буд).
     _chatId = await _repo.resolveChatId(widget.peer.id) ?? '';
@@ -159,28 +207,73 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Future<void> _load() async {
     try {
+      // 1. Кэшро фавран нишон медиҳем (тез).
       final msgs = await _repo.getMessagesWithUserEx(widget.peer.id);
-      if (mounted) setState(() { _messages = msgs; _loading = false; });
+      if (mounted) setState(() {
+        _messages = msgs;
+        _loading = false;
+        _msgPage = 1;
+        _hasMoreOlder = msgs.length >= _msgPageSize;
+      });
       _scrollBottom();
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+    // 2. Сипас аз шабака навтаринро мегирем ва ҷойгузин мекунем — то паёми
+    // навфиристода (ки ҳанӯз дар кэш нест) баъди бозкушоиш ГУМ нашавад.
+    // Кэши getMessagesWithUserEx навсозӣ мешавад, вале UI-ро навсозӣ намекард.
+    if (_chatId.isEmpty) return;
+    try {
+      final fresh = await _repo.fetchFreshByChatId(_chatId);
+      if (!mounted || fresh.isEmpty) return;
+      final pending = _messages.where((m) => m.isOptimistic).toList();
+      final freshIds = fresh.map((m) => m.id).toSet();
+      setState(() {
+        _messages = [
+          ...fresh,
+          ...pending.where((m) => !freshIds.contains(m.id)),
+        ];
+        _msgPage = 1;
+        _hasMoreOlder = fresh.length >= _msgPageSize;
+      });
+      _scrollBottom();
+    } catch (_) {}
   }
 
   void _setupSocket() {
     if (!_socket.isConnected) _socket.autoConnect();
     if (_chatId.isNotEmpty) _socket.joinChat(_chatId);
 
+    // Listener-ҳои кӯҳнаро тоза мекунем, то ҳангоми бозкушоиш ҷамъ нашаванд.
+    _socket.off('chat:new');
+    _socket.off('chat:typing');
+    _socket.off('chat:read');
+    _socket.off('chat:reaction');
+    _socket.off('chat:delete');
+
     // New message
     _socket.on('chat:new', (data) {
       if (data is! Map<String, dynamic>) return;
       final msg = MessageModel.fromRoomJson(data, _myId);
       if (!mounted) return;
+      // Танҳо паёмҳои ҳамин чат — то паёми чати дигар ин ҷо наафтад.
+      if (_chatId.isNotEmpty && msg.chatId.isNotEmpty && msg.chatId != _chatId) {
+        return;
+      }
       setState(() {
-        // Remove optimistic version if exists
-        _messages.removeWhere((m) => m.isOptimistic && m.text == msg.text);
-        // Дубликат набошад (poll-refresh аллакай оварда бошад)
-        if (!_messages.any((m) => m.id == msg.id)) _messages.add(msg);
+        // Аллакай ҳаст (POST-и худам ё poll-refresh оварда) → дубликат накунем.
+        if (_messages.any((m) => m.id == msg.id)) return;
+        // Паёми оптимистии худро (агар ҳаст) бо нусхаи сервер ҷойгузин мекунем,
+        // на ин ки нав илова кунем — то дубликат пайдо нашавад. Барои матн аз
+        // рӯи text, барои медиа аз рӯи навъ мутобиқат мекунем (text холӣ аст).
+        final idx = _messages.indexWhere((m) =>
+            m.isOptimistic && m.isMine &&
+            (msg.text.isNotEmpty ? m.text == msg.text : m.type == msg.type));
+        if (idx >= 0) {
+          _messages[idx] = msg;
+        } else {
+          _messages.add(msg);
+        }
       });
       _scrollBottom();
       if (!msg.isMine && _chatId.isNotEmpty) _repo.markAsRead(_chatId);
@@ -189,6 +282,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // Typing
     _socket.on('chat:typing', (data) {
       if (!mounted) return;
+      // Агар "stop typing" омада бошад (isTyping=false), фавран пинҳон мекунем.
+      final isTyping = data is Map && data['isTyping'] == false ? false : true;
+      if (!isTyping) {
+        _typingResetTimer?.cancel();
+        setState(() => _isPeerTyping = false);
+        return;
+      }
       setState(() => _isPeerTyping = true);
       _typingResetTimer?.cancel();
       _typingResetTimer = Timer(const Duration(seconds: 3), () {
@@ -398,9 +498,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } catch (_) {}
   }
 
-  void _onTyping() {
+  void _onTyping(bool isTyping) {
     if (_chatId.isNotEmpty) {
-      _socket.sendTyping(_chatId, widget.peer.id);
+      _socket.sendTyping(_chatId, widget.peer.id, isTyping: isTyping);
     }
   }
 
@@ -458,8 +558,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           // Messages list
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.neonBlue))
+                ? const _ChatRoomSkeleton()
                 : _messages.isEmpty
                     ? _emptyState()
                     : _messageList(),
@@ -722,6 +821,46 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Chat room loading skeleton (shimmer bubbles)
+// ─────────────────────────────────────────────────────────────────
+class _ChatRoomSkeleton extends StatelessWidget {
+  const _ChatRoomSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).colorScheme.surface;
+    // Чап/рост + бараҳои гуногун — то ба сӯҳбати воқеӣ монанд бошад.
+    const rows = [
+      (false, 200.0), (true, 140.0), (false, 240.0),
+      (true, 110.0), (false, 170.0), (true, 200.0),
+    ];
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: base.withOpacity(0.4),
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        children: rows.map((r) {
+          final isMine = r.$1;
+          return Align(
+            alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Container(
+                width: r.$2, height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

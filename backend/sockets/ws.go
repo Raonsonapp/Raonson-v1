@@ -229,6 +229,10 @@ func dispatch(cl *client, raw []byte) {
 		if p.ChatID == "" || p.Text == "" || p.Receiver == "" {
 			return
 		}
+		if len([]rune(p.Text)) > 1000 {
+			r := []rune(p.Text)
+			p.Text = string(r[:1000])
+		}
 		var msgID string
 		var createdAt interface{}
 		db.Pool.QueryRow(context.Background(),
@@ -257,16 +261,23 @@ func dispatch(cl *client, raw []byte) {
 		var p struct {
 			ChatID   string `json:"chatId"`
 			Receiver string `json:"receiver"`
+			IsTyping *bool  `json:"isTyping"`
 		}
 		json.Unmarshal(msg.Data, &p)
+		isTyping := true
+		if p.IsTyping != nil {
+			isTyping = *p.IsTyping
+		}
 		emit(p.Receiver, "chat:typing", map[string]interface{}{
-			"userId": cl.userID, "chatId": p.ChatID})
+			"userId": cl.userID, "chatId": p.ChatID, "isTyping": isTyping})
 
 	case "chat:read":
 		var p struct{ MessageID string `json:"messageId"` }
 		json.Unmarshal(msg.Data, &p)
+		// Танҳо паёмҳое, ки ба худи ҳамин корбар фиристода шудаанд, хонда
+		// эълон карда мешаванд — то касе паёми каси дигарро "read" накунад.
 		db.Pool.Exec(context.Background(),
-			`UPDATE messages SET read=TRUE WHERE id=$1`, p.MessageID)
+			`UPDATE messages SET read=TRUE WHERE id=$1 AND receiver_id=$2`, p.MessageID, cl.userID)
 
 	// ── WebRTC / Calls ────────────────────────────────────────
 	case "user:register":
@@ -317,26 +328,30 @@ func dispatch(cl *client, raw []byte) {
 		var p struct {
 			To       string `json:"to"`
 			Type     string `json:"type"`
-			From     string `json:"from"`
 			EntityID string `json:"entityId"`
 		}
 		json.Unmarshal(msg.Data, &p)
 		if p.To == "" || p.Type == "" { return }
+		// "From"-и аз ҷониби клиент дода нашударо қабул намекунем — фиристанда
+		// ҳамеша худи корбари пайвастшуда аст (cl.userID). Вагарна касе паёмро
+		// аз номи каси дигар фиристода метавонист.
 		var nid string
 		db.Pool.QueryRow(context.Background(),
 			`INSERT INTO notifications(user_id,from_user_id,type,target_id)
 			 VALUES($1,$2,$3,$4) RETURNING id`,
-			p.To, p.From, p.Type, nullIfEmpty(p.EntityID)).Scan(&nid)
+			p.To, cl.userID, p.Type, nullIfEmpty(p.EntityID)).Scan(&nid)
 		emit(p.To, "notification:new", map[string]interface{}{
 			"_id": nid, "type": p.Type,
-			"fromUser": map[string]interface{}{"_id": p.From},
+			"fromUser": map[string]interface{}{"_id": cl.userID},
 		})
 
 	case "notification:read":
 		var p struct{ NotificationID string `json:"notificationId"` }
 		json.Unmarshal(msg.Data, &p)
+		// Танҳо хабарномаҳои худи корбар хонда эълон карда мешаванд.
 		db.Pool.Exec(context.Background(),
-			`UPDATE notifications SET read=TRUE WHERE id=$1`, p.NotificationID)
+			`UPDATE notifications SET read=TRUE WHERE id=$1 AND user_id=$2`,
+			p.NotificationID, cl.userID)
 
 	case "call:decline":
 		var p struct{ To string `json:"to"` }

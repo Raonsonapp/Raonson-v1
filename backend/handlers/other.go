@@ -22,6 +22,7 @@ func AddComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Comment text required"})
 		return
 	}
+	b.Text = clampRunes(b.Text, 1000)
 
 	var exists, commentsOff bool
 	db.Pool.QueryRow(context.Background(),
@@ -151,9 +152,10 @@ func EditComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
 	}
+	b.Text = clampRunes(b.Text, 1000)
 
 	res, err := db.Pool.Exec(context.Background(),
-		`UPDATE comments 
+		`UPDATE comments
 		 SET text=$1, updated_at=NOW()
 		 WHERE id=$2 AND user_id=$3`,
 		b.Text, cid, myID)
@@ -282,7 +284,8 @@ func Search(c *gin.Context) {
 	// Users
 	uRows, _ := db.Pool.Query(context.Background(), `
 		SELECT id,username,avatar,verified,bio,followers_count
-		FROM users WHERE username ILIKE $1 AND banned=FALSE LIMIT 20`, like)
+		FROM users WHERE username ILIKE $1 AND banned=FALSE
+		ORDER BY followers_count DESC, username ASC LIMIT 20`, like)
 	users := []gin.H{}
 	if uRows != nil {
 		for uRows.Next() {
@@ -308,7 +311,8 @@ func Search(c *gin.Context) {
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
-		WHERE p.caption ILIKE $1 LIMIT 20`, like)
+		WHERE p.caption ILIKE $1
+		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 20`, like)
 	posts := []gin.H{}
 	if pRows != nil {
 		for pRows.Next() {
@@ -329,7 +333,8 @@ func Search(c *gin.Context) {
 	// Reels
 	rRows, _ := db.Pool.Query(context.Background(), `
 		SELECT id,video_url,caption,views_count,likes_count,created_at
-		FROM reels WHERE caption ILIKE $1 LIMIT 10`, like)
+		FROM reels WHERE caption ILIKE $1
+		ORDER BY views_count DESC, likes_count DESC LIMIT 10`, like)
 	reels := []gin.H{}
 	if rRows != nil {
 		for rRows.Next() {
@@ -357,7 +362,8 @@ func SearchUsers(c *gin.Context) {
 	}
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT id,username,avatar,verified,bio,followers_count
-		FROM users WHERE username ILIKE $1 AND banned=FALSE LIMIT 30`,
+		FROM users WHERE username ILIKE $1 AND banned=FALSE
+		ORDER BY followers_count DESC, username ASC LIMIT 30`,
 		"%"+q+"%")
 	users := []gin.H{}
 	if rows != nil {
@@ -391,10 +397,12 @@ func CreateReel(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "videoUrl is required"})
 		return
 	}
+	b.Caption = clampRunes(b.Caption, 2200)
 	var rid string
 	db.Pool.QueryRow(context.Background(),
 		`INSERT INTO reels(user_id,caption,video_url,video_url_low) VALUES($1,$2,$3,$4) RETURNING id`,
 		myID, b.Caption, b.VideoURL, b.VideoURLLow).Scan(&rid)
+	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": rid, "videoUrl": b.VideoURL, "videoUrlLow": b.VideoURLLow,
 		"caption": b.Caption, "likesCount": 0, "viewsCount": 0,
@@ -461,19 +469,25 @@ func ToggleReelLike(c *gin.Context) {
 		`SELECT EXISTS(SELECT 1 FROM reel_likes WHERE reel_id=$1::text AND user_id=$2::text)`,
 		rid, myID).Scan(&liked)
 	if liked {
-		db.Pool.Exec(context.Background(),
+		// UNLIKE — count танҳо вақте кам мешавад, ки сатр воқеан ҳазф шуд.
+		ct, _ := db.Pool.Exec(context.Background(),
 			`DELETE FROM reel_likes WHERE reel_id=$1::text AND user_id=$2::text`, rid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE reels SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, rid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE reels SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, rid)
+		}
 	} else {
-		db.Pool.Exec(context.Background(),
+		// LIKE — count танҳо вақте зиёд мешавад, ки сатр воқеан нав илова шуд.
+		ct, _ := db.Pool.Exec(context.Background(),
 			`INSERT INTO reel_likes(reel_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE reels SET likes_count=likes_count+1 WHERE id=$1`, rid)
-		var owner string
-		db.Pool.QueryRow(context.Background(),
-			`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
-		notify(owner, myID, "reel_like", rid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE reels SET likes_count=likes_count+1 WHERE id=$1`, rid)
+			var owner string
+			db.Pool.QueryRow(context.Background(),
+				`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
+			notify(owner, myID, "reel_like", rid)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }

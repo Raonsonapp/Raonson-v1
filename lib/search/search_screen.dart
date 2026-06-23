@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../core/analytics/analytics_service.dart';
+import '../core/analytics/analytics_events.dart';
 import 'package:http/http.dart' as http;
 
 import '../app/app_theme.dart';
@@ -14,6 +16,7 @@ import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:shimmer/shimmer.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
@@ -74,6 +77,7 @@ class _SearchScreenState extends State<SearchScreen>
     _tabs = TabController(length: 4, vsync: this);
     _loadHistory();
     _loadExplore();
+    AnalyticsService.instance.logEvent(AnalyticsEvents.searchView);
 
     _focus.addListener(() {
       if (!mounted) return;
@@ -955,33 +959,14 @@ class _ExplorePreviewDialog extends StatelessWidget {
 // ════════════════════════════════════════════════════════════════════
 //  SKELETON GRID
 // ════════════════════════════════════════════════════════════════════
-class _SkeletonGrid extends StatefulWidget {
-  @override
-  State<_SkeletonGrid> createState() => _SkeletonGridState();
-}
-
-class _SkeletonGridState extends State<_SkeletonGrid>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900))
-      ..repeat(reverse: true);
-    _anim = Tween(begin: 0.3, end: 0.7).animate(_ctrl);
-  }
-
-  @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
-
+class _SkeletonGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _anim,
-      builder: (_, __) => GridView.builder(
+    final base = Theme.of(context).colorScheme.surface;
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: base.withOpacity(0.4),
+      child: GridView.builder(
         padding: EdgeInsets.zero,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
@@ -989,10 +974,7 @@ class _SkeletonGridState extends State<_SkeletonGrid>
             crossAxisSpacing: 2,
             childAspectRatio: 1.0),
         itemCount: 18,
-        itemBuilder: (_, __) => Container(
-          color: Color.lerp(
-              AppColors.surface, AppColors.card, _anim.value),
-        ),
+        itemBuilder: (_, __) => Container(color: Colors.white),
       ),
     );
   }

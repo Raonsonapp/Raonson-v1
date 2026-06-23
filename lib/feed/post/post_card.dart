@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../../core/analytics/analytics_service.dart';
+import '../../core/analytics/analytics_events.dart';
 import 'dart:async';
 import 'dart:math' show Random;
 import 'package:flutter/material.dart';
@@ -49,6 +51,10 @@ class _PostCardState extends State<PostCard>
   bool        _hidden       = false;
   late String _caption;
   bool        _captionExpanded = false; // ← Show more/less
+
+  // ── View tracking — once per post, after 1s on screen ─────────
+  Timer? _viewTimer;
+  bool   _viewTracked = false;
 
   // ── Like bounce ──────────────────────────────────────────────
   late AnimationController _likeCtrl;
@@ -121,10 +127,27 @@ class _PostCardState extends State<PostCard>
         setState(() => _showHeart = false);
       }
     });
+
+    // Пост намоиш дода шуд → баъди 1с дебоунс як бор view-ро қайд мекунем.
+    _viewTimer = Timer(const Duration(seconds: 1), _trackView);
+  }
+
+  // POST /posts/view/:id — танҳо як бор барои ҳар пост (бе бастаи иловагӣ).
+  Future<void> _trackView() async {
+    if (_viewTracked) return;
+    _viewTracked = true;
+    final id = widget.post.id;
+    if (id.isEmpty) return;
+    AnalyticsService.instance
+        .logEvent(AnalyticsEvents.postView, params: {'postId': id});
+    try {
+      await ApiClient.instance.post('/posts/view/$id');
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    _viewTimer?.cancel();
     _likeDebounce?.cancel();
     _likeCtrl.dispose();
     _countCtrl.dispose();
@@ -143,7 +166,11 @@ class _PostCardState extends State<PostCard>
       _likeCount += _liked ? 1 : -1;
       if (_likeCount < 0) _likeCount = 0;
     });
-    if (_liked) _likeCtrl.forward(from: 0);
+    if (_liked) {
+      _likeCtrl.forward(from: 0);
+      AnalyticsService.instance.logEvent(AnalyticsEvents.postLike,
+          params: {'postId': widget.post.id});
+    }
     _countCtrl.forward(from: 0);
 
     _likeDebounce?.cancel();
@@ -178,6 +205,10 @@ class _PostCardState extends State<PostCard>
   Future<void> _toggleSave() async {
     final was = _saved;
     setState(() => _saved = !was);
+    if (!was) {
+      AnalyticsService.instance.logEvent(AnalyticsEvents.postSave,
+          params: {'postId': widget.post.id});
+    }
     try {
       final res = await ApiClient.instance
           .post('/posts/${widget.post.id}/save');
@@ -286,6 +317,9 @@ class _PostCardState extends State<PostCard>
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
+          _MenuItem(icon: Icons.volume_off_outlined,
+              label: 'Постҳои @${widget.post.user.username}-ро бандош',
+              onTap: () { Navigator.pop(context); _muteUser(); }),
           _MenuItem(icon: AppIcons.flag_outlined, iconColor: Colors.redAccent,
               label: 'Жалоб партофтан', labelColor: Colors.redAccent,
               onTap: () { Navigator.pop(context); _reportPost(); }),
@@ -572,10 +606,29 @@ class _PostCardState extends State<PostCard>
       backgroundColor: Colors.green, duration: Duration(seconds: 2)));
   }
 
+  Future<void> _muteUser() async {
+    setState(() => _hidden = true);
+    await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Постҳои @${widget.post.user.username} пинҳон шуд'),
+      backgroundColor: Colors.grey[800],
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+        label: 'Бекор',
+        textColor: Colors.white,
+        onPressed: () {
+          ApiClient.instance.delete('/users/${widget.post.user.id}/mute');
+          if (mounted) setState(() => _hidden = false);
+        },
+      ),
+    ));
+  }
+
   Future<void> _markInterest(bool interested) async {
     final endpoint = interested
         ? '/posts/${widget.post.id}/interest'
-        : '/posts/${widget.post.id}/not_interest';
+        : '/posts/${widget.post.id}/not-interested';
     await ApiClient.instance.post(endpoint);
     if (!interested && mounted) {
       setState(() => _hidden = true);
@@ -594,6 +647,8 @@ class _PostCardState extends State<PostCard>
   }
 
   void _showShare() {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.postShare,
+        params: {'postId': widget.post.id});
     final url = 'https://mahmadmurodov-raonson.hf.space/posts/preview/${widget.post.id}';
     showModalBottomSheet(
       context: context, backgroundColor: AppColors.card,
@@ -738,6 +793,8 @@ class _PostCardState extends State<PostCard>
   }
 
   void _openComments() {
+    AnalyticsService.instance.logEvent(AnalyticsEvents.postComment,
+        params: {'postId': widget.post.id});
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       backgroundColor: AppColors.surface,
