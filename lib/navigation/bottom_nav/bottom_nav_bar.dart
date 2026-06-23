@@ -35,7 +35,7 @@ class BottomNavBar extends StatelessWidget {
             children: [
               _SvgNavItem(
                 index: 0, currentIndex: currentIndex, onTap: onTap,
-                svgActive: 'assets/icons/nav_home.svg',
+                svgActive: 'assets/icons/nav_home_filled.svg',
                 svgInactive: 'assets/icons/nav_home.svg',
                 fallback: AppIcons.home_rounded,
               ),
@@ -47,7 +47,7 @@ class BottomNavBar extends StatelessWidget {
               ),
               _SvgNavItem(
                 index: 2, currentIndex: currentIndex, onTap: onTap,
-                svgActive: 'assets/icons/nav_chat.svg',
+                svgActive: 'assets/icons/nav_chat_filled.svg',
                 svgInactive: 'assets/icons/nav_chat.svg',
                 fallback: AppIcons.chat_bubble_outline_rounded,
               ),
