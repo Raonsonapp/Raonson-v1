@@ -533,7 +533,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                   if (_current.user.isVerified) ...[
                     const SizedBox(width: 4),
                     const Icon(AppIcons.verified_rounded,
-                        color: Colors.white, size: 14),
+                        fill: 1, color: Colors.white, size: 14),
                   ],
                 ]),
                 Text(_timeAgo(), style: const TextStyle(color: Colors.white70, fontSize: 12)),

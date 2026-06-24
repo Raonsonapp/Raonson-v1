@@ -121,3 +121,6 @@ app.*.symbols
 android/key.properties
 *.jks
 *.keystore
+
+# Secrets — never commit (rotate in hosting dashboard env vars)
+backend/render.yaml

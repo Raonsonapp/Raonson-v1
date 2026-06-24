@@ -705,7 +705,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 if (widget.peer.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(AppIcons.verified_rounded,
-                      color: Color(0xFF00C853), size: 14),
+                      fill: 1, color: Color(0xFF00C853), size: 14),
                 ],
               ]),
               Text(

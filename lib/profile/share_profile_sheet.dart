@@ -86,7 +86,7 @@ class _ShareState extends State<ShareProfileSheet> {
                       if (widget.user.isVerified) ...[
                         const SizedBox(width: 5),
                         const Icon(AppIcons.verified_rounded,
-                            color: Color(0xFF00C853), size: 14),
+                            fill: 1, color: Color(0xFF00C853), size: 14),
                       ],
                     ]),
                     const SizedBox(height: 2),
