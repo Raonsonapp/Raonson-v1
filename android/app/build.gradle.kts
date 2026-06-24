@@ -35,6 +35,8 @@ android {
     }
 
     compileOptions {
+        // flutter_local_notifications талаб мекунад — бе ин build шикаст мехӯрад.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -90,4 +92,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Core library desugaring — flutter_local_notifications-ро дастгирӣ мекунад.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

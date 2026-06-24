@@ -31,6 +31,10 @@
 # image_picker / image compress
 -keep class io.flutter.plugins.imagepicker.** { *; }
 
+# flutter_local_notifications (Gson reflection + scheduled receivers)
+-keep class com.dexterous.** { *; }
+-dontwarn com.dexterous.**
+
 # Firebase
 -keep class com.google.firebase.** { *; }
 -dontwarn com.google.firebase.**

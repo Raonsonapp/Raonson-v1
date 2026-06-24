@@ -48,6 +48,7 @@ dependencies:
   firebase_auth: ^5.1.0
   firebase_storage: ^12.3.0
   firebase_messaging: ^15.1.0
+  flutter_local_notifications: ^17.2.0
 
   country_picker: ^2.0.26
   country_code_picker: ^3.0.0
