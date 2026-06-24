@@ -535,8 +535,8 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
                         ),
                         if (u.verified) ...[
                           const SizedBox(width: 3),
-                          const Icon(Icons.verified_rounded,
-                              color: Color(0xFF00C853), size: 13),
+                          const Icon(AppIcons.verified_rounded,
+                              fill: 1, color: Color(0xFF00C853), size: 13),
                         ],
                       ],
                     ),

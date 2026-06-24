@@ -14,6 +14,7 @@ class VerifiedBadge extends StatelessWidget {
     return Icon(
       AppIcons.verified_rounded,
       size: size,
+      fill: 1,
       color: color ?? AppColors.verified,
     );
   }

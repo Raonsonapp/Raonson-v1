@@ -1241,7 +1241,7 @@ class _FeedCardState extends State<_FeedCard> {
                 if (widget.item.postData!.user.isVerified) ...[
                   const SizedBox(width: 4),
                   Icon(AppIcons.verified_rounded,
-                      color: AppColors.textPrimary, size: 14),
+                      fill: 1, color: AppColors.textPrimary, size: 14),
                 ],
                 const SizedBox(width: 10),
                 _FollowChip(userId: widget.item.postData!.user.id),
@@ -1283,7 +1283,7 @@ class _FeedCardState extends State<_FeedCard> {
                   if (verified) ...[
                     const SizedBox(width: 4),
                     Icon(AppIcons.verified_rounded,
-                        color: AppColors.textPrimary, size: 14),
+                        fill: 1, color: AppColors.textPrimary, size: 14),
                   ],
                   const SizedBox(width: 10),
                   _FollowChip(userId: (u['_id'] ?? u['id'] ?? '').toString()),
@@ -1666,7 +1666,7 @@ class _UserRowState extends State<_UserRow> {
                 if (widget.user.isVerified) ...[
                   const SizedBox(width: 4),
                   const Icon(AppIcons.verified_rounded,
-                      color: Color(0xFF00C853), size: 14),
+                      fill: 1, color: Color(0xFF00C853), size: 14),
                 ],
               ]),
               if ((widget.user.bio ?? '').isNotEmpty) ...[

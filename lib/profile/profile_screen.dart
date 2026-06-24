@@ -410,7 +410,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     if (user.isVerified) ...[
                       const SizedBox(width: 5),
                       const Icon(AppIcons.verified_rounded,
-                          color: Color(0xFF00C853), size: 16),
+                          fill: 1, color: Color(0xFF00C853), size: 16),
                     ],
                     if (_isMe) ...[
                       const SizedBox(width: 4),
@@ -672,7 +672,7 @@ class _OwnBtns extends StatelessWidget {
           border: Border.all(
               color: const Color(0xFF00C853).withOpacity(0.5))),
         child: const Icon(AppIcons.verified_rounded,
-            color: Color(0xFF00C853), size: 20))),
+            fill: 1, color: Color(0xFF00C853), size: 20))),
   ]);
 }
 
@@ -1112,7 +1112,7 @@ class _VerifySheet extends StatelessWidget {
             border: Border.all(
                 color: const Color(0xFF00C853).withOpacity(0.4), width: 2)),
           child: const Icon(AppIcons.verified_rounded,
-              color: Color(0xFF00C853), size: 36)),
+              fill: 1, color: Color(0xFF00C853), size: 36)),
         const SizedBox(height: 16),
         Text('Raonson Verified', style: TextStyle(color: AppColors.textPrimary,
             fontSize: 20, fontWeight: FontWeight.bold)),
