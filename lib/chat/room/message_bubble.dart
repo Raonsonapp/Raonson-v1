@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:video_player/video_player.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/message_model.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
@@ -210,7 +211,7 @@ class _BubbleBody extends StatelessWidget {
       return _ImageBubble(url: m.mediaUrl!, isMine: isMine);
     }
     if (m.type == MessageType.audio && m.mediaUrl != null) {
-      return _AudioBubble(url: m.mediaUrl!, isMine: isMine);
+      return _AudioBubble(url: m.mediaUrl!, isMine: isMine, messageId: m.id);
     }
     if (m.type == MessageType.video && m.mediaUrl != null) {
       return _VideoBubble(url: m.mediaUrl!, isMine: isMine);
@@ -338,7 +339,9 @@ class _UploadingBubble extends StatelessWidget {
 class _AudioBubble extends StatefulWidget {
   final String url;
   final bool   isMine;
-  const _AudioBubble({required this.url, required this.isMine});
+  final String messageId;
+  const _AudioBubble(
+      {required this.url, required this.isMine, this.messageId = ''});
   @override
   State<_AudioBubble> createState() => _AudioBubbleState();
 }
@@ -346,13 +349,21 @@ class _AudioBubble extends StatefulWidget {
 class _AudioBubbleState extends State<_AudioBubble> {
   final AudioPlayer _player = AudioPlayer();
   bool _playing = false;
+  bool _heard   = false;
   Duration _pos = Duration.zero;
   Duration _dur = Duration.zero;
   late final List<StreamSubscription> _subs;
+  late final List<double> _bars;
+
+  // Дар тӯли як session нигоҳ медорем (то ребилд ҳолатро гум накунад).
+  static final Set<String> _heardCache = {};
 
   @override
   void initState() {
     super.initState();
+    _bars  = _genBars(widget.url, 26);
+    _heard = _heardCache.contains(widget.messageId);
+    if (!_heard && widget.messageId.isNotEmpty) _loadHeard();
     _subs = [
       _player.onPositionChanged.listen((p) {
         if (mounted) setState(() => _pos = p);
@@ -373,12 +384,47 @@ class _AudioBubbleState extends State<_AudioBubble> {
     super.dispose();
   }
 
+  Future<void> _loadHeard() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      if (p.getBool('heard_${widget.messageId}') == true && mounted) {
+        _heardCache.add(widget.messageId);
+        setState(() => _heard = true);
+      }
+    } catch (_) {}
+  }
+
+  void _markHeard() {
+    if (_heard || widget.messageId.isEmpty) return;
+    _heard = true;
+    _heardCache.add(widget.messageId);
+    SharedPreferences.getInstance()
+        .then((p) => p.setBool('heard_${widget.messageId}', true))
+        .catchError((_) => false);
+  }
+
+  // Псевдо-waveform детерминистӣ аз url (барои ҳар паём устувор).
+  List<double> _genBars(String seed, int n) {
+    int h = 0;
+    for (var i = 0; i < seed.length; i++) {
+      h = (h * 31 + seed.codeUnitAt(i)) & 0x7fffffff;
+    }
+    var x = h == 0 ? 1 : h;
+    final bars = <double>[];
+    for (var i = 0; i < n; i++) {
+      x = (x * 1103515245 + 12345) & 0x7fffffff;
+      bars.add(0.22 + (x % 1000) / 1000.0 * 0.78); // 0.22..1.0
+    }
+    return bars;
+  }
+
   Future<void> _toggle() async {
     if (_playing) {
       await _player.pause();
       if (mounted) setState(() => _playing = false);
     } else {
       await _player.play(UrlSource(widget.url));
+      _markHeard();
       if (mounted) setState(() => _playing = true);
     }
   }
@@ -393,59 +439,62 @@ class _AudioBubbleState extends State<_AudioBubble> {
   Widget build(BuildContext context) {
     final total = _dur.inMilliseconds == 0 ? 1.0 : _dur.inMilliseconds.toDouble();
     final progress = (_pos.inMilliseconds / total).clamp(0.0, 1.0);
-    final accent = widget.isMine ? AppColors.textPrimary : AppColors.neonBlue;
+    final mine = widget.isMine;
+    final iconColor = mine ? Colors.white : AppColors.textPrimary;
     return Container(
-      width: 220,
+      width: 232,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: widget.isMine ? AppColors.neonBlue : AppColors.card,
-        borderRadius: BorderRadius.circular(20),
+        // 2-ранга gradient барои паёми худам (мисли story gradient).
+        gradient: mine
+            ? const LinearGradient(
+                colors: [Color(0xFF7A3BF5), Color(0xFFD42FCB)],
+                begin: Alignment.centerLeft, end: Alignment.centerRight)
+            : null,
+        color: mine ? null : AppColors.card,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Row(children: [
         GestureDetector(
           onTap: _toggle,
+          behavior: HitTestBehavior.opaque,
           child: Icon(
-            _playing ? AppIcons.pause_rounded : AppIcons.play_arrow_rounded,
-            color: widget.isMine ? AppColors.neonBlue : AppColors.textPrimary,
-            size: 26),
-        ),
-        const SizedBox(width: 4),
-        Container(
-          width: 28, height: 28,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: widget.isMine ? AppColors.textPrimary : AppColors.neonBlue,
-            shape: BoxShape.circle),
-          child: Icon(AppIcons.mic_rounded,
-              color: widget.isMine ? AppColors.neonBlue : AppColors.textPrimary,
-              size: 16),
+              _playing ? AppIcons.pause_rounded : AppIcons.play_arrow_rounded,
+              color: iconColor, size: 28),
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 3,
-                  backgroundColor: accent.withOpacity(0.25),
-                  valueColor: AlwaysStoppedAnimation(accent),
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                _pos.inMilliseconds > 0 ? _fmt(_pos) : _fmt(_dur),
-                style: TextStyle(
-                    color: widget.isMine ? AppColors.textSecondary : AppColors.textTertiary,
-                    fontSize: 11),
-              ),
-            ],
-          ),
+        Expanded(child: SizedBox(height: 30, child: _waveform(progress, mine))),
+        const SizedBox(width: 10),
+        Text(
+          _pos.inMilliseconds > 0 ? _fmt(_pos) : _fmt(_dur),
+          style: TextStyle(
+              color: mine ? Colors.white70 : AppColors.textTertiary,
+              fontSize: 11),
         ),
       ]),
+    );
+  }
+
+  Widget _waveform(double progress, bool mine) {
+    final active = mine ? Colors.white : AppColors.neonBlue;
+    // Гӯшнашуда → равшантар (даъваткунанда); гӯшшуда → хирае.
+    final idle = (mine ? Colors.white : AppColors.neonBlue)
+        .withOpacity(_heard ? 0.30 : 0.55);
+    final n = _bars.length;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: List.generate(n, (i) {
+        final played = (i + 0.5) / n <= progress;
+        return Container(
+          width: 2.6,
+          height: 5 + _bars[i] * 23,
+          decoration: BoxDecoration(
+            color: played ? active : idle,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+      }),
     );
   }
 }
