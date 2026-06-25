@@ -20,6 +20,7 @@ class MessageBubble extends StatefulWidget {
   final VoidCallback?                    onDelete;
   final void Function(double dx)?        onSwipeUpdate;
   final VoidCallback?                    onSwipeEnd;
+  final VoidCallback?                    onCallBack; // боззанг (занги аздастрафта)
 
   const MessageBubble({
     super.key,
@@ -29,6 +30,7 @@ class MessageBubble extends StatefulWidget {
     this.onDelete,
     this.onSwipeUpdate,
     this.onSwipeEnd,
+    this.onCallBack,
   });
 
   @override
@@ -133,7 +135,9 @@ class _MessageBubbleState extends State<MessageBubble>
                     ),
 
                   // Bubble
-                  Flexible(child: _BubbleBody(message: m)),
+                  Flexible(
+                      child: _BubbleBody(
+                          message: m, onCallBack: widget.onCallBack)),
 
                   // Swipe indicator
                   if (!isMine && _swipeDx > 20)
@@ -174,12 +178,17 @@ class _MessageBubbleState extends State<MessageBubble>
 // ─────────────────────────────────────────────────────────────────
 class _BubbleBody extends StatelessWidget {
   final MessageModel message;
-  const _BubbleBody({required this.message});
+  final VoidCallback? onCallBack;
+  const _BubbleBody({required this.message, this.onCallBack});
 
   @override
   Widget build(BuildContext context) {
     final m      = message;
     final isMine = m.isMine;
+
+    if (m.type == MessageType.call) {
+      return _CallBubble(message: m, onCallBack: onCallBack);
+    }
 
     if (m.isDeleted || m.type == MessageType.deleted) {
       return Container(
@@ -495,6 +504,110 @@ class _AudioBubbleState extends State<_AudioBubble> {
           ),
         );
       }),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Call log bubble — занги аудио/видео (оғоз/анҷом/аздастрафта) — мисли Instagram
+//  Матн: "status:kind:seconds"  (status=ended|missed, kind=audio|video)
+// ─────────────────────────────────────────────────────────────────
+class _CallBubble extends StatelessWidget {
+  final MessageModel message;
+  final VoidCallback? onCallBack;
+  const _CallBubble({required this.message, this.onCallBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final parts   = message.text.split(':');
+    final status  = parts.isNotEmpty ? parts[0] : 'ended';
+    final kind    = parts.length > 1 ? parts[1] : 'audio';
+    final secs    = parts.length > 2 ? (int.tryParse(parts[2]) ?? 0) : 0;
+    final missed  = status == 'missed';
+    final isVideo = kind == 'video';
+    final mine    = message.isMine;
+
+    final title = missed
+        ? (isVideo ? 'Занги видеоии аздастрафта' : 'Занги аудиоии аздастрафта')
+        : (isVideo ? 'Занги видеоӣ' : 'Занги аудиоӣ');
+
+    String subtitle = message.timeLabel;
+    if (!missed && secs > 0) {
+      final mm = (secs ~/ 60).toString();
+      final ss = (secs % 60).toString().padLeft(2, '0');
+      subtitle = '$mm:$ss · ${message.timeLabel}';
+    }
+
+    final iconBg = missed
+        ? const Color(0xFFE0245E)
+        : AppColors.textFaint.withOpacity(0.30);
+    final iconData = missed
+        ? (isVideo ? AppIcons.videocam_off_rounded : AppIcons.phone_missed_rounded)
+        : (isVideo ? AppIcons.videocam_rounded : AppIcons.call_rounded);
+
+    // Тугмаи «Боззанг» танҳо ба қабулкунандаи занги аздастрафта.
+    final showCallBack = missed && !mine && onCallBack != null;
+
+    return Container(
+      constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.72),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 38, height: 38, alignment: Alignment.center,
+                decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+                child: Icon(iconData, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: TextStyle(
+                            color: AppColors.textFaint, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+          if (showCallBack) ...[
+            const SizedBox(height: 2),
+            GestureDetector(
+              onTap: onCallBack,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text('Боззанг',
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

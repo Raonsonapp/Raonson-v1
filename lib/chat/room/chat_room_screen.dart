@@ -757,6 +757,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               onReply:  () => setState(() => _replyTo = msg),
               onReact:  (emoji) => _onReact(msg, emoji),
               onDelete: () => _onDelete(msg),
+              onCallBack: () {
+                final p = msg.text.split(':');
+                final isVid = p.length > 1 && p[1] == 'video';
+                _startCall(isVid ? CallType.video : CallType.voice);
+              },
             ),
           ],
         );
