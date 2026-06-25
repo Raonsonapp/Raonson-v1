@@ -112,15 +112,19 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
     // Optimistic — фавран нишон медиҳад
     final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    // Reply ҳамеша як сатҳ зери root мемонад (мисли Instagram): агар ба як
+    // reply ҷавоб диҳем, parent-аш ҳамон root-и аслӣ мешавад, на reply.
+    final parentId = _replyTo == null
+        ? ''
+        : (_replyTo!.parentId.isNotEmpty ? _replyTo!.parentId : _replyTo!.id);
     final optimistic = CommentModel(
       id:         tempId,
       postId:     widget.post.id,
-      text:       _replyTo != null
-          ? '@${_replyTo!.user.username} $text'
-          : text,
+      text:       text,
       liked:      false,
       likesCount: 0,
       createdAt:  DateTime.now(),
+      parentId:   parentId,
       user: UserModel(
         id:             UserSession.userId   ?? '',
         username:       UserSession.username ?? 'шумо',
@@ -145,12 +149,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
       // ✅ Ду endpoint санҷед
       var res = await ApiClient.instance.post(
         '/posts/${widget.post.id}/comments',
-        body: {'text': optimistic.text},
+        body: {'text': optimistic.text, 'parentId': parentId},
       );
       if (res.statusCode >= 400) {
         res = await ApiClient.instance.post(
           '/comments/${widget.post.id}',
-          body: {'text': optimistic.text},
+          body: {'text': optimistic.text, 'parentId': parentId},
         );
       }
       if (res.statusCode < 400) {
@@ -189,7 +193,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           id: comment.id, postId: comment.postId,
           user: comment.user, text: newText,
           liked: comment.liked, likesCount: comment.likesCount,
-          createdAt: comment.createdAt,
+          createdAt: comment.createdAt, parentId: comment.parentId,
         );
       }
     });
@@ -199,6 +203,33 @@ class _CommentsScreenState extends State<CommentsScreen> {
     setState(() => _replyTo = comment);
     _ctrl.text = '';
     _focus.requestFocus();
+  }
+
+  // Threaded: ҳар root, баъд reply-ҳояш (кӯҳна→нав) бо indent — мисли Instagram.
+  List<(CommentModel, bool)> _threaded() {
+    final repliesByParent = <String, List<CommentModel>>{};
+    for (final c in _comments) {
+      if (c.parentId.isNotEmpty) {
+        repliesByParent.putIfAbsent(c.parentId, () => []).add(c);
+      }
+    }
+    for (final list in repliesByParent.values) {
+      list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    }
+    final out = <(CommentModel, bool)>[];
+    for (final c in _comments) {
+      if (c.parentId.isNotEmpty) continue; // root-ҳо
+      out.add((c, false));
+      for (final r in (repliesByParent[c.id] ?? const <CommentModel>[])) {
+        out.add((r, true));
+      }
+    }
+    // Reply-ҳое, ки root-ашон дар ин саҳифа нест → ҳамчун root нишон деҳ.
+    final shown = out.map((e) => e.$1.id).toSet();
+    for (final c in _comments) {
+      if (c.parentId.isNotEmpty && !shown.contains(c.id)) out.add((c, false));
+    }
+    return out;
   }
 
   @override
@@ -235,16 +266,28 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     Text('Аввалин шарҳро шумо гузоред!',
                         style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
                   ]))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    itemCount: _comments.length,
-                    itemBuilder: (_, i) => _CommentItem(
-                      comment: _comments[i],
-                      onDelete: () => _onDelete(_comments[i].id),
-                      onEdit:   (t) => _onEdit(_comments[i], t),
-                      onReply:  () => _startReply(_comments[i]),
-                    ),
-                  ),
+                : Builder(builder: (_) {
+                    final items = _threaded();
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      itemCount: items.length,
+                      itemBuilder: (_, i) {
+                        final entry = items[i];
+                        final c = entry.$1;
+                        final isReply = entry.$2;
+                        return Padding(
+                          padding: EdgeInsets.only(left: isReply ? 40 : 0),
+                          child: _CommentItem(
+                            comment: c,
+                            isReply: isReply,
+                            onDelete: () => _onDelete(c.id),
+                            onEdit:   (t) => _onEdit(c, t),
+                            onReply:  () => _startReply(c),
+                          ),
+                        );
+                      },
+                    );
+                  }),
       ),
 
       // ── Input ────────────────────────────────────────────────
@@ -349,12 +392,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
 // ══════════════════════════════════════════════════════════════════
 class _CommentItem extends StatefulWidget {
   final CommentModel comment;
+  final bool isReply;
   final VoidCallback onDelete;
   final void Function(String) onEdit;
   final VoidCallback onReply;
 
   const _CommentItem({
     required this.comment,
+    this.isReply = false,
     required this.onDelete,
     required this.onEdit,
     required this.onReply,
@@ -554,12 +599,13 @@ class _CommentItemState extends State<_CommentItem> {
           onTap: () => Navigator.pushNamed(context, '/user-profile',
               arguments: c.user.id),
           child: CircleAvatar(
-            radius: 18,
+            radius: widget.isReply ? 14 : 18,
             backgroundColor: AppColors.card,
             backgroundImage: c.user.avatar.isNotEmpty
                 ? NetworkImage(c.user.avatar) : null,
             child: c.user.avatar.isEmpty
-                ? Icon(AppIcons.person, color: AppColors.textTertiary, size: 18) : null,
+                ? Icon(AppIcons.person, color: AppColors.textTertiary,
+                    size: widget.isReply ? 14 : 18) : null,
           ),
         ),
         const SizedBox(width: 10),

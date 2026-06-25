@@ -17,7 +17,10 @@ import (
 func AddComment(c *gin.Context) {
 	postID := c.Param("id")
 	myID   := mw.UID(c)
-	var b struct{ Text string `json:"text"` }
+	var b struct {
+		Text     string `json:"text"`
+		ParentID string `json:"parentId"`
+	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Comment text required"})
 		return
@@ -40,8 +43,9 @@ func AddComment(c *gin.Context) {
 	var cid string
 	var createdAt interface{}
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO comments(post_id,user_id,text) VALUES($1,$2,$3) RETURNING id,created_at`,
-		postID, myID, b.Text).Scan(&cid, &createdAt)
+		`INSERT INTO comments(post_id,user_id,text,parent_id)
+		 VALUES($1,$2,$3,NULLIF($4,'')) RETURNING id,created_at`,
+		postID, myID, b.Text, b.ParentID).Scan(&cid, &createdAt)
 	db.Pool.Exec(context.Background(),
 		`UPDATE posts SET comments_count=comments_count+1 WHERE id=$1`, postID)
 
@@ -51,6 +55,16 @@ func AddComment(c *gin.Context) {
 		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&postOwner)
 	notify(postOwner, myID, "comment", postID)
 
+	// Reply — соҳиби шарҳи волидро ҳам огоҳ кун (агар худаш набошад)
+	if b.ParentID != "" {
+		var parentOwner string
+		db.Pool.QueryRow(context.Background(),
+			`SELECT user_id FROM comments WHERE id=$1`, b.ParentID).Scan(&parentOwner)
+		if parentOwner != "" && parentOwner != myID && parentOwner != postOwner {
+			notify(parentOwner, myID, "reply", postID)
+		}
+	}
+
 	var uname, uavatar string
 	var verified bool
 	db.Pool.QueryRow(context.Background(),
@@ -58,7 +72,7 @@ func AddComment(c *gin.Context) {
 	).Scan(&uname, &uavatar, &verified)
 
 	c.JSON(http.StatusCreated, gin.H{
-		"_id": cid, "post": postID, "text": b.Text,
+		"_id": cid, "post": postID, "text": b.Text, "parentId": b.ParentID,
 		"liked": false, "likesCount": 0, "createdAt": createdAt,
 		"user": gin.H{"_id": myID, "username": uname, "avatar": uavatar, "verified": verified},
 	})
@@ -73,7 +87,7 @@ func GetComments(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT c.id, c.text, c.likes_count, c.created_at,
+		SELECT c.id, c.text, c.likes_count, c.created_at, COALESCE(c.parent_id,''),
 		       u.id, u.username, u.avatar, u.verified,
 		       EXISTS(SELECT 1 FROM comment_likes cl WHERE cl.comment_id=c.id AND cl.user_id=$2)
 		FROM comments c JOIN users u ON u.id=c.user_id
@@ -88,13 +102,14 @@ func GetComments(c *gin.Context) {
 	comments := []gin.H{}
 	for rows.Next() {
 		var cid, text, uid, uname, uavatar string
+		var parentID string
 		var likes int
 		var verified, liked bool
 		var createdAt interface{}
-		rows.Scan(&cid, &text, &likes, &createdAt, &uid, &uname, &uavatar, &verified, &liked)
+		rows.Scan(&cid, &text, &likes, &createdAt, &parentID, &uid, &uname, &uavatar, &verified, &liked)
 		comments = append(comments, gin.H{
 			"_id": cid, "text": text, "liked": liked, "likesCount": likes,
-			"createdAt": createdAt,
+			"createdAt": createdAt, "parentId": parentID,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
