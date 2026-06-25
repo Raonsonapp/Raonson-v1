@@ -823,9 +823,10 @@ class _ExploreCell extends StatelessWidget {
         if (item.type == _ItemType.reel)
           Positioned(
             top: 6, right: 6,
-            child: Icon(AppIcons.slow_motion_video_rounded,
-                color: AppColors.textPrimary, size: 16,
-                shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
+            child: SvgPicture.asset('assets/icons/nav_reels.svg',
+                width: 17, height: 17,
+                colorFilter: ColorFilter.mode(
+                    AppColors.textPrimary, BlendMode.srcIn)),
           ),
         // Multi icon
         if (item.isMulti && item.type != _ItemType.reel)
@@ -841,7 +842,7 @@ class _ExploreCell extends StatelessWidget {
             bottom: 5, left: 5,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(AppIcons.remove_red_eye_rounded,
-                  color: AppColors.textPrimary, size: 11,
+                  fill: 1, color: AppColors.textPrimary, size: 11,
                   shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
               const SizedBox(width: 3),
               Text(_fmtViews(item.views),
@@ -1135,6 +1136,7 @@ class _FeedCardState extends State<_FeedCard> {
       builder: (_) => _ExploreCommentsSheet(
         id: _id, isReel: _isReel,
         onAdded: () { if (mounted) setState(() => _commentCount++); },
+        onCount: (n) { if (mounted) setState(() => _commentCount = n); },
       ),
     );
   }
@@ -1226,7 +1228,7 @@ class _FeedCardState extends State<_FeedCard> {
       // Bottom info
       if (widget.item.postData != null)
         Positioned(
-          left: 14, right: 80, bottom: 40,
+          left: 14, right: 80, bottom: 96,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -1258,7 +1260,7 @@ class _FeedCardState extends State<_FeedCard> {
       // Reel: user/ном/галочка/caption (мисли пост)
       else if (widget.item.reelData != null)
         Positioned(
-          left: 14, right: 80, bottom: 40,
+          left: 14, right: 80, bottom: 96,
           child: Builder(builder: (_) {
             final u = (widget.item.reelData!['user'] ?? {}) as Map;
             final uname = (u['username'] ?? '').toString();
@@ -1298,6 +1300,31 @@ class _FeedCardState extends State<_FeedCard> {
             );
           }),
         ),
+      // Bottom "add comment" bar — мисли Instagram Reels (расми 2)
+      Positioned(
+        left: 0, right: 0, bottom: 0,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+            child: GestureDetector(
+              onTap: _openComments,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white24, width: 0.6),
+                ),
+                child: const Text('Изоҳ илова кунед…',
+                    style: TextStyle(color: Colors.white70, fontSize: 14)),
+              ),
+            ),
+          ),
+        ),
+      ),
     ]);
   }
 }
@@ -1901,8 +1928,10 @@ class _ExploreCommentsSheet extends StatefulWidget {
   final String id;
   final bool isReel;
   final VoidCallback onAdded;
+  final ValueChanged<int>? onCount;
   const _ExploreCommentsSheet(
-      {required this.id, required this.isReel, required this.onAdded});
+      {required this.id, required this.isReel, required this.onAdded,
+      this.onCount});
   @override
   State<_ExploreCommentsSheet> createState() => _ExploreCommentsSheetState();
 }
@@ -1930,6 +1959,7 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
           _comments = list.cast<Map<String, dynamic>>();
           _loading = false;
         });
+        widget.onCount?.call(_comments.length);
       } else {
         setState(() => _loading = false);
       }

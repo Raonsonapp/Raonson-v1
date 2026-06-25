@@ -790,7 +790,7 @@ class _PostGrid extends StatelessWidget {
             Positioned(bottom: 5, left: 5,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(AppIcons.remove_red_eye_rounded,
-                    color: AppColors.textPrimary, size: 11,
+                    fill: 1, color: AppColors.textPrimary, size: 11,
                     shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
                 const SizedBox(width: 2),
                 Text(_f(p.likesCount), style: TextStyle(
@@ -860,7 +860,7 @@ class _ReelGrid extends StatelessWidget {
               colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn))),
           Positioned(bottom: 5, left: 5,
             child: Row(children: [
-              Icon(AppIcons.remove_red_eye_rounded, color: AppColors.textPrimary,
+              Icon(AppIcons.remove_red_eye_rounded, fill: 1, color: AppColors.textPrimary,
                   size: 11, shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
               const SizedBox(width: 3),
               Text(_f(r.viewsCount), style: TextStyle(
