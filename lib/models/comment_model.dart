@@ -8,6 +8,7 @@ class CommentModel {
   final bool liked;
   final int likesCount;
   final DateTime createdAt;
+  final String parentId; // '' = root comment, else id of parent comment
 
   const CommentModel({
     required this.id,
@@ -17,6 +18,7 @@ class CommentModel {
     required this.liked,
     this.likesCount = 0,
     required this.createdAt,
+    this.parentId = '',
   });
 
   bool get isLiked => liked;
@@ -38,6 +40,7 @@ class CommentModel {
       liked: liked ?? this.liked,
       likesCount: likesCount ?? this.likesCount,
       createdAt: createdAt,
+      parentId: parentId,
     );
   }
 
@@ -55,6 +58,7 @@ class CommentModel {
           ? (json['likes'] as List).length
           : (json['likesCount'] ?? 0),
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      parentId: (json['parentId'] ?? json['parent_id'] ?? '').toString(),
     );
   }
 }

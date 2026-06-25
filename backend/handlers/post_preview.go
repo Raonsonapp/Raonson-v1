@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"html"
 	"net/http"
 
 	"raonson/db"
@@ -30,6 +31,12 @@ func PostPreview(c *gin.Context) {
 		c.Data(http.StatusNotFound, "text/html; charset=utf-8", notFoundHTML())
 		return
 	}
+
+	// XSS guard — ҳар арзиши аз БД пеш аз гузоштан ба HTML escape мешавад.
+	caption = html.EscapeString(caption)
+	username = html.EscapeString(username)
+	avatar = html.EscapeString(avatar)
+	mediaURL = html.EscapeString(mediaURL)
 
 	var mediaTag string
 	switch {

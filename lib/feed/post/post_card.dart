@@ -20,6 +20,7 @@ import '../../core/services/user_session.dart';
 import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
 import '../../app/app_theme.dart';
+import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
 
 class PostCard extends StatefulWidget {
@@ -649,7 +650,7 @@ class _PostCardState extends State<PostCard>
   void _showShare() {
     AnalyticsService.instance.logEvent(AnalyticsEvents.postShare,
         params: {'postId': widget.post.id});
-    final url = 'https://mahmadmurodov-raonson.hf.space/posts/preview/${widget.post.id}';
+    final url = '${AppConfig.baseUrl}/posts/preview/${widget.post.id}';
     showModalBottomSheet(
       context: context, backgroundColor: AppColors.card,
       isScrollControlled: true,
