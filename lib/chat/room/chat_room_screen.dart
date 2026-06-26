@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -406,6 +407,65 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
   }
 
+  // ─── Send location (GPS) — мисли Instagram/Telegram ─────────
+  Future<void> _sendLocation() async {
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm == LocationPermission.denied ||
+        perm == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Иҷозати ҷойгиршавӣ дода нашуд'),
+            duration: Duration(seconds: 2)));
+      }
+      return;
+    }
+    Position pos;
+    try {
+      pos = await Geolocator.getCurrentPosition()
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Ҷойгиршавӣ дастрас нашуд'),
+            duration: Duration(seconds: 2)));
+      }
+      return;
+    }
+    final text = '${pos.latitude},${pos.longitude}';
+    final optimistic = MessageModel(
+      id:        'opt_${DateTime.now().millisecondsSinceEpoch}',
+      chatId:    _chatId,
+      peer:      widget.peer,
+      text:      text,
+      createdAt: DateTime.now(),
+      isMine:    true,
+      status:    MessageStatus.sending,
+      type:      MessageType.location,
+    );
+    setState(() => _messages.add(optimistic));
+    _scrollBottom();
+    try {
+      final msg = await _repo.sendMessage(
+        toUserId:  widget.peer.id,
+        text:      text,
+        chatId:    _chatId,
+        mediaType: 'location',
+      );
+      if (!mounted) return;
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+        if (idx >= 0) { _messages[idx] = msg; } else { _messages.add(msg); }
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _messages.removeWhere((m) => m.id == optimistic.id));
+      }
+    }
+  }
+
   // ─── Send media (акс/видео) ─────────────────────────────────
   void _onSendMedia(File file) => _uploadAndSend(file, _typeByExt(file.path));
 
@@ -569,9 +629,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             _requestBanner()
           else
             MessageInput(
-              onSend:       _onSend,
-              onSendMedia:  _onSendMedia,
-              onSendVoice:  _onSendVoice,
+              onSend:         _onSend,
+              onSendMedia:    _onSendMedia,
+              onSendVoice:    _onSendVoice,
+              onSendLocation: _sendLocation,
               onTyping:     _onTyping,
               replyTo:      _replyTo,
               onCancelReply: () => setState(() => _replyTo = null),

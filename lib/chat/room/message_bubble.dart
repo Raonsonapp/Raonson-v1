@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/message_model.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
@@ -188,6 +189,10 @@ class _BubbleBody extends StatelessWidget {
 
     if (m.type == MessageType.call) {
       return _CallBubble(message: m, onCallBack: onCallBack);
+    }
+
+    if (m.type == MessageType.location && m.text.contains(',')) {
+      return _LocationBubble(text: m.text);
     }
 
     if (m.isDeleted || m.type == MessageType.deleted) {
@@ -607,6 +612,72 @@ class _CallBubble extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Location bubble — мубодилаи ҷойгиршавӣ (харита + кушодан дар Maps)
+// ─────────────────────────────────────────────────────────────────
+class _LocationBubble extends StatelessWidget {
+  final String text; // "lat,lng"
+  const _LocationBubble({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = text.split(',');
+    final lat = parts.isNotEmpty ? parts[0].trim() : '0';
+    final lng = parts.length > 1 ? parts[1].trim() : '0';
+    final staticMap = 'https://staticmap.openstreetmap.de/staticmap.php'
+        '?center=$lat,$lng&zoom=15&size=260x150&markers=$lat,$lng,red';
+    return GestureDetector(
+      onTap: () async {
+        final uri = Uri.parse('https://maps.google.com/?q=$lat,$lng');
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          width: 240, height: 140,
+          child: Stack(fit: StackFit.expand, children: [
+            CachedNetworkImage(
+              imageUrl: staticMap,
+              fit: BoxFit.cover,
+              placeholder: (_, __) =>
+                  Container(color: const Color(0xFF15352A)),
+              errorWidget: (_, __, ___) =>
+                  Container(color: const Color(0xFF15352A)),
+            ),
+            const Center(
+                child: Icon(AppIcons.location_on,
+                    color: Color(0xFFE0245E), size: 38)),
+            Positioned(
+              left: 0, right: 0, bottom: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black87],
+                  ),
+                ),
+                child: Row(children: const [
+                  Icon(AppIcons.location_on, color: Colors.white, size: 15),
+                  SizedBox(width: 6),
+                  Text('Ҷойгиршавӣ',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+          ]),
+        ),
       ),
     );
   }
