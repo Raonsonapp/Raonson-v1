@@ -37,6 +37,7 @@ class AppIcons {
   static const IconData calendar_today_rounded = Symbols.calendar_today;
   static const IconData call_end_rounded = Symbols.call_end;
   static const IconData call_rounded = Symbols.call;
+  static const IconData phone_missed_rounded = Symbols.phone_missed;
   static const IconData camera_alt_outlined = Symbols.camera_alt;
   static const IconData camera_alt_rounded = Symbols.camera_alt;
   static const IconData campaign_outlined = Symbols.campaign;

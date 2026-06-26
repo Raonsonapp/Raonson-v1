@@ -10,6 +10,7 @@ import '../../core/agora_service.dart';
 import '../../core/webrtc_service.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/ui/app_icons.dart';
+import '../chat_repository.dart';
 
 enum CallType { voice, video }
 
@@ -35,9 +36,12 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   final _agora  = AgoraService();
   final _signal = WebRTCService();
   final _player = AudioPlayer();
+  final _repo   = ChatRepository();
 
   int    _seconds = 0;
   Timer? _timer;
+  bool   _everConnected = false; // ягон бор пайваст шуд?
+  bool   _logged        = false; // паёми занг сабт шуд?
 
   late AnimationController _pulseCtrl;
   late Animation<double>   _pulseAnim;
@@ -97,6 +101,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   // ── AGORA ──
 
   void _onAgoraChange() {
+    if (_agora.remoteJoined) _everConnected = true;
     if (!mounted) return;
     if (_agora.remoteJoined && _timer == null) {
       _stopRing().then((_) => _playConnectSound());
@@ -132,7 +137,22 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   // ── CALL ACTIONS ──
 
+  // Танҳо тарафи зангзананда (на қабулкунанда) як паёми занг ба чат сабт
+  // мекунад — то ҳарду тараф онро бубинанд (мисли Instagram).
+  void _logCall() {
+    if (_logged || widget.isIncoming) return;
+    _logged = true;
+    final kind   = widget.callType == CallType.video ? 'video' : 'audio';
+    final status = _everConnected ? 'ended' : 'missed';
+    _repo.sendMessage(
+      toUserId:  widget.peer.id,
+      text:      '$status:$kind:$_seconds',
+      mediaType: 'call',
+    ).then((_) {}, onError: (_) {});
+  }
+
   Future<void> _endCall() async {
+    _logCall();
     await _stopRing();
     _signal.sendEnd(widget.peer.id);
     _agora.leaveCall();
@@ -140,12 +160,14 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   }
 
   void _onRemoteEnded() {
+    _logCall();
     _stopRing();
     _agora.leaveCall();
     if (mounted) Navigator.pop(context);
   }
 
   void _onDeclined() {
+    _logCall();
     _stopRing();
     _agora.leaveCall();
     if (!mounted) return;
@@ -158,6 +180,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _logCall(); // safety net — агар бо роҳи дигар пӯшида шавад
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _agora.removeListener(_onAgoraChange);
     _signal.onCallEnded    = null;
