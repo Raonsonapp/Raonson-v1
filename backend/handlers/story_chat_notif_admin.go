@@ -286,7 +286,7 @@ func GetChats(c *gin.Context) {
 	// One row per conversation (latest message), newest first — DISTINCT ON
 	// avoids the old "one row per message" duplication + 100-message truncation.
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT sub.id,sub.chat_id,sub.sender_id,sub.receiver_id,sub.text,sub.read,sub.created_at,
+		SELECT sub.id,sub.chat_id,sub.sender_id,sub.receiver_id,sub.text,sub.type,sub.read,sub.created_at,
 		       sub.s_username,sub.s_avatar,sub.s_verified,sub.r_username,sub.r_avatar,sub.r_verified,
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1
 		              AND f.following_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS i_follow,
@@ -299,7 +299,8 @@ func GetChats(c *gin.Context) {
 		              AND mu.receiver_id=$1 AND mu.read=false) AS unread_count
 		FROM (
 			SELECT DISTINCT ON (m.chat_id)
-			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,m.read,m.created_at,
+			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,
+			       COALESCE(m.type,'text') AS type,m.read,m.created_at,
 			       s.username AS s_username,s.avatar AS s_avatar,s.verified AS s_verified,
 			       r.username AS r_username,r.avatar AS r_avatar,r.verified AS r_verified
 			FROM messages m
@@ -318,13 +319,13 @@ func GetChats(c *gin.Context) {
 
 	result := []gin.H{}
 	for rows.Next() {
-		var msgID, chatID, senderID, receiverID, text string
+		var msgID, chatID, senderID, receiverID, text, msgType string
 		var read bool
 		var createdAt interface{}
 		var sUname, sAvatar, rUname, rAvatar string
 		var sVer, rVer, iFollow, iSent, accepted, hidden bool
 		var unreadCount int
-		rows.Scan(&msgID, &chatID, &senderID, &receiverID, &text, &read, &createdAt,
+		rows.Scan(&msgID, &chatID, &senderID, &receiverID, &text, &msgType, &read, &createdAt,
 			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent, &accepted, &hidden, &unreadCount)
 
 		if hidden {
@@ -344,7 +345,7 @@ func GetChats(c *gin.Context) {
 		isRequest := !iFollow && !iSent && !accepted
 		result = append(result, gin.H{
 			"_id": msgID, "chatId": chatID,
-			"isMine": isMine, "text": text, "read": read, "createdAt": createdAt,
+			"isMine": isMine, "text": text, "type": msgType, "read": read, "createdAt": createdAt,
 			"peer": peer, "isRequest": isRequest, "unreadCount": unreadCount,
 		})
 	}

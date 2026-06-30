@@ -630,7 +630,7 @@ class _LocationBubble extends StatelessWidget {
     final lat = parts.isNotEmpty ? parts[0].trim() : '0';
     final lng = parts.length > 1 ? parts[1].trim() : '0';
     final staticMap = 'https://staticmap.openstreetmap.de/staticmap.php'
-        '?center=$lat,$lng&zoom=15&size=260x150&markers=$lat,$lng,red';
+        '?center=$lat,$lng&zoom=17&size=300x180&markers=$lat,$lng,red';
     return GestureDetector(
       onTap: () async {
         final uri = Uri.parse('https://maps.google.com/?q=$lat,$lng');

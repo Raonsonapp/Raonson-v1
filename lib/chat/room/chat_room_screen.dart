@@ -137,6 +137,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // chatId-и воқеиро ҳал мекунем, то ба ҳуҷраи socket ҳамроҳ шавем
     // ва typing/read кор кунад (пеш аз ин _chatId доимо холӣ буд).
     _chatId = await _repo.resolveChatId(widget.peer.id) ?? '';
+    if (_chatId.isNotEmpty) _repo.markAsRead(_chatId); // хонда ҳисоб кун
     await _load();
     _setupSocket();
     _setupPresence();
