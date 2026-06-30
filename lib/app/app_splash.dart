@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
 
-/// Splash screen — барнома load мешавад
-/// Корбар blank screen намебинад
+/// Splash screen — мисли Instagram: логои барнома дар марказ,
+/// поён номи ширкат (HYPERION). Корбар экрани холӣ намебинад.
 class AppSplash extends StatefulWidget {
   const AppSplash({super.key});
 
@@ -24,7 +24,7 @@ class _AppSplashState extends State<AppSplash>
         vsync: this, duration: const Duration(milliseconds: 800));
     _fade  = Tween(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(parent: _ctrl, curve: Curves.easeIn));
-    _scale = Tween(begin: 0.8, end: 1.0).animate(
+    _scale = Tween(begin: 0.85, end: 1.0).animate(
         CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
     _ctrl.forward();
   }
@@ -39,39 +39,60 @@ class _AppSplashState extends State<AppSplash>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Center(
-        child: FadeTransition(
-          opacity: _fade,
-          child: ScaleTransition(
-            scale: _scale,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Logo
-                Text(
-                  'Raonson',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textPrimary,
-                    fontFamily: 'RaonsonFont',
-                    letterSpacing: 1,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // ── Логои марказӣ ─────────────────────────────────────
+            Center(
+              child: FadeTransition(
+                opacity: _fade,
+                child: ScaleTransition(
+                  scale: _scale,
+                  child: Text(
+                    'Raonson',
+                    style: TextStyle(
+                      fontSize: 52,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textPrimary,
+                      fontFamily: 'RaonsonFont',
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 40),
-                // Loading indicator
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(
-                        AppColors.storyStart),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+
+            // ── Номи ширкат (поён) — мисли «from Meta» ───────────
+            Positioned(
+              left: 0, right: 0, bottom: 34,
+              child: FadeTransition(
+                opacity: _fade,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'аз',
+                      style: TextStyle(
+                        color: AppColors.textFaint,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'HYPERION',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 3.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
