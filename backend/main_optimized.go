@@ -249,6 +249,21 @@ func main() {
 		ch.POST("/requests/:peerId/delete", handlers.DeleteChatRequest)
 	}
 
+	// ── Group chats (гурӯҳҳо) ──────────────────────────────────────
+	gr := r.Group("/groups", auth, rl100)
+	{
+		gr.POST("/",                       handlers.CreateGroup)
+		gr.GET("/",                        handlers.GetMyGroups)
+		gr.GET("/:id",                     handlers.GetGroupInfo)
+		gr.POST("/:id/members",            handlers.AddGroupMembers)
+		gr.DELETE("/:id/members/:userId",  handlers.RemoveGroupMember)
+		gr.POST("/:id/leave",              handlers.LeaveGroup)
+		gr.GET("/:id/messages",            handlers.GetGroupMessages)
+		gr.POST("/:id/messages",           handlers.SendGroupMessage)
+	}
+	// Join via invite — берун аз гурӯҳ, то бо /:id ихтилоф накунад.
+	r.POST("/group-join/:token", auth, rl100, handlers.JoinGroupByToken)
+
 	pr := r.Group("/promotions", auth, rl100)
 	{
 		pr.POST("/",     handlers.CreatePromotion)

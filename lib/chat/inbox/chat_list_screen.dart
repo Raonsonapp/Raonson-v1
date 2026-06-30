@@ -19,6 +19,7 @@ import '../../core/services/user_session.dart';
 import '../../widgets/account_switcher.dart';
 import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
+import '../group/groups_list_screen.dart';
 import '../room/call_screen.dart';
 import '../../core/ui/app_icons.dart';
 
@@ -174,6 +175,15 @@ class _ChatView extends StatelessWidget {
                     MaterialPageRoute(
                         builder: (_) =>
                             const NewChatScreen(callType: CallType.video)),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(AppIcons.group_rounded,
+                      color: AppColors.textPrimary, size: 24),
+                  tooltip: 'Гурӯҳҳо',
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GroupsListScreen()),
                   ),
                 ),
                 IconButton(

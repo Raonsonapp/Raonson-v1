@@ -359,6 +359,26 @@ func migrate() {
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id    TEXT;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted     BOOLEAN DEFAULT FALSE;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ DEFAULT NOW();
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS group_id       TEXT;
+
+	-- ── Group chats (гурӯҳҳои чат) ──────────────────────────────────
+	CREATE TABLE IF NOT EXISTS group_chats (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		name TEXT NOT NULL,
+		avatar TEXT DEFAULT '',
+		owner_id TEXT NOT NULL,
+		invite_token TEXT UNIQUE DEFAULT substr(md5(random()::text), 1, 12),
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE TABLE IF NOT EXISTS group_members (
+		group_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		role TEXT DEFAULT 'member',
+		joined_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (group_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
+	CREATE INDEX IF NOT EXISTS idx_messages_group ON messages(group_id, created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS post_reports (
 		post_id    TEXT NOT NULL,
