@@ -778,15 +778,19 @@ class _ChatTile extends StatelessWidget {
     final unread = unreadCount > 0;
 
     return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) =>
-                ChatRoomScreen(peer: chat.peer, isRequest: chat.isRequest)),
-      ).then((_) {
-        context.read<ChatListController>().loadChats();
-        presence.checkUser(chat.peer.id);
-      }),
+      onTap: () {
+        // Бейҷро фавран пок кун (мисли Instagram) — мунтазири refresh намешавем.
+        context.read<ChatListController>().clearUnread(chat.chatId);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) =>
+                  ChatRoomScreen(peer: chat.peer, isRequest: chat.isRequest)),
+        ).then((_) {
+          context.read<ChatListController>().loadChats();
+          presence.checkUser(chat.peer.id);
+        });
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

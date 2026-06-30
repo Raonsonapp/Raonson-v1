@@ -98,12 +98,28 @@ class _ShareState extends State<ShareProfileSheet> {
               ]),
               const SizedBox(height: 22),
 
-              // QR + Raonson logo
-              SizedBox(width: 190, height: 190,
-                child: CustomPaint(painter: _QrPainter(
-                    fg: _dark ? AppColors.textPrimary : AppColors.bg,
-                    bg: _dark ? AppColors.surface : AppColors.textPrimary,
-                    urlLen: _url.length))),
+              // QR — воқеӣ ва скан-шаванда (API-и ройгон); офлайн → fallback.
+              // Ҳамеша дар қуттии сафед, то ҳар сканер онро хонда тавонад.
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16)),
+                child: SizedBox(width: 180, height: 180,
+                  child: CachedNetworkImage(
+                    imageUrl:
+                        'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${Uri.encodeComponent(_url)}',
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) => const Center(
+                        child: SizedBox(width: 22, height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2))),
+                    errorWidget: (_, __, ___) => CustomPaint(
+                        painter: _QrPainter(
+                            fg: Colors.black, bg: Colors.white,
+                            urlLen: _url.length)),
+                  ),
+                ),
+              ),
               const SizedBox(height: 14),
 
               // Raonson brand row
@@ -146,6 +162,11 @@ class _ShareState extends State<ShareProfileSheet> {
               _ARow(icon: AppIcons.share_rounded, label: 'Мубодила',
                   onTap: () => Share.share(_url,
                       subject: widget.user.username)),
+              Divider(color: AppColors.dividerFaint, height: 0),
+              _ARow(icon: AppIcons.person_add_rounded,
+                  label: 'Дӯстонро даъват кун',
+                  onTap: () => Share.share(
+                      'Ба ман дар Raonson ҳамроҳ шав 👋\n$_url')),
             ])),
           const SizedBox(height: 20),
         ]))),

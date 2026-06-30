@@ -15,6 +15,7 @@ class MessageInput extends StatefulWidget {
   final void Function(String text)  onSend;
   final void Function(File file)?   onSendMedia;
   final void Function(File file)?   onSendVoice;
+  final VoidCallback?               onSendLocation;
   final void Function(bool isTyping)? onTyping;
   final MessageModel?               replyTo;
   final VoidCallback?               onCancelReply;
@@ -24,6 +25,7 @@ class MessageInput extends StatefulWidget {
     required this.onSend,
     this.onSendMedia,
     this.onSendVoice,
+    this.onSendLocation,
     this.onTyping,
     this.replyTo,
     this.onCancelReply,
@@ -173,6 +175,11 @@ class _MessageInputState extends State<MessageInput>
                     color: const Color(0xFF00C853),
                     label: 'Видео',
                     onTap: () { Navigator.pop(ctx); _pickVideo(); }),
+                _AttachTile(
+                    icon: AppIcons.location_on,
+                    color: const Color(0xFFFF6D00),
+                    label: 'Ҷойгиршавӣ',
+                    onTap: () { Navigator.pop(ctx); widget.onSendLocation?.call(); }),
               ],
             ),
           ),

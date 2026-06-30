@@ -2,7 +2,7 @@ import 'user_model.dart';
 
 // ── Enums ─────────────────────────────────────────────────────────
 enum MessageStatus { sending, sent, delivered, read, failed }
-enum MessageType   { text, image, video, audio, file, deleted, call }
+enum MessageType   { text, image, video, audio, file, deleted, call, location }
 
 // ── Reaction ──────────────────────────────────────────────────────
 class MessageReaction {
@@ -98,6 +98,7 @@ class MessageModel {
     if (type == MessageType.video) return '🎥 Видео';
     if (type == MessageType.audio) return '🎤 Паёми овозӣ';
     if (type == MessageType.call)  return '📞 Занг';
+    if (type == MessageType.location) return '📍 Ҷойгиршавӣ';
     return text;
   }
 
@@ -196,6 +197,7 @@ class MessageModel {
       case 'audio': return MessageType.audio;
       case 'file':  return MessageType.file;
       case 'call':  return MessageType.call;
+      case 'location': return MessageType.location;
       case 'deleted': return MessageType.deleted;
       default:      return MessageType.text;
     }

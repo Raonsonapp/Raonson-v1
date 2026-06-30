@@ -67,6 +67,16 @@ class ChatListController extends ChangeNotifier {
     await loadChats();
   }
 
+  /// Ҳисоби хонданашударо фавран барои як сӯҳбат пок мекунад (ҳангоми кушодан).
+  void clearUnread(String chatId) {
+    final i = _chats.indexWhere((c) => c.chatId == chatId);
+    if (i >= 0 && _chats[i].unreadCount > 0) {
+      _chats[i] = _chats[i].copyWith(unreadCount: 0);
+      _applyFilter();
+      notifyListeners();
+    }
+  }
+
   /// Дархостро нест/пинҳон мекунад.
   Future<void> deleteRequest(String peerId) async {
     _chats = _chats.where((c) => c.peer.id != peerId).toList();
