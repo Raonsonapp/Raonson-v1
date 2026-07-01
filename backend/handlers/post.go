@@ -25,6 +25,14 @@ func CreatePost(c *gin.Context) {
 		Location      string                   `json:"location"`
 		TaggedUsers   []string                 `json:"taggedUsers"`
 		Collaborators []string                 `json:"collaborators"`
+		// Shopping (маҳсулот барои фуруш)
+		IsProduct     bool                     `json:"isProduct"`
+		Price         float64                  `json:"price"`
+		Currency      string                   `json:"currency"`
+		ProductName   string                   `json:"productName"`
+		ShopLat       float64                  `json:"shopLat"`
+		ShopLng       float64                  `json:"shopLng"`
+		ShopAddress   string                   `json:"shopAddress"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || len(b.Media) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "At least one media item required"})
@@ -64,6 +72,20 @@ func CreatePost(c *gin.Context) {
 	}
 	tx.Exec(context.Background(),
 		`UPDATE users SET posts_count=posts_count+1 WHERE id=$1`, myID)
+
+	// Маҳсулот барои фуруш — маълумоти шоппинг + GPS-и магоза.
+	if b.IsProduct {
+		cur := b.Currency
+		if cur == "" {
+			cur = "TJS"
+		}
+		tx.Exec(context.Background(),
+			`UPDATE posts SET is_product=TRUE, price=$2, currency=$3,
+			 product_name=$4, shop_lat=$5, shop_lng=$6, shop_address=$7
+			 WHERE id=$1`,
+			postID, b.Price, cur, clampRunes(b.ProductName, 120),
+			b.ShopLat, b.ShopLng, clampRunes(b.ShopAddress, 200))
+	}
 	tx.Commit(context.Background())
 
 	// Invalidate feed cache for this user

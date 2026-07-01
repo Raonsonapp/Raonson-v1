@@ -1,0 +1,116 @@
+// lib/shop/shop_repository.dart
+import 'dart:convert';
+import 'dart:io';
+import '../core/api/api_client.dart';
+import '../create/upload/upload_manager.dart';
+
+class Product {
+  final String id, productName, currency, shopAddress, caption, image;
+  final double price, shopLat, shopLng;
+  final bool inStock;
+  final String sellerId, sellerName, sellerAvatar;
+  final bool sellerVerified;
+  Product({
+    required this.id, required this.productName, required this.currency,
+    required this.shopAddress, required this.caption, required this.image,
+    required this.price, required this.shopLat, required this.shopLng,
+    required this.inStock, required this.sellerId, required this.sellerName,
+    required this.sellerAvatar, required this.sellerVerified,
+  });
+  factory Product.fromJson(Map<String, dynamic> j) {
+    final s = (j['seller'] ?? {}) as Map;
+    return Product(
+      id: (j['_id'] ?? j['id'] ?? '').toString(),
+      productName: (j['productName'] ?? '').toString(),
+      currency: (j['currency'] ?? 'TJS').toString(),
+      shopAddress: (j['shopAddress'] ?? '').toString(),
+      caption: (j['caption'] ?? '').toString(),
+      image: (j['image'] ?? '').toString(),
+      price: (j['price'] as num?)?.toDouble() ?? 0,
+      shopLat: (j['shopLat'] as num?)?.toDouble() ?? 0,
+      shopLng: (j['shopLng'] as num?)?.toDouble() ?? 0,
+      inStock: j['inStock'] != false,
+      sellerId: (s['_id'] ?? s['id'] ?? '').toString(),
+      sellerName: (s['username'] ?? '').toString(),
+      sellerAvatar: (s['avatar'] ?? '').toString(),
+      sellerVerified: s['verified'] == true,
+    );
+  }
+  String get priceLabel => '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
+}
+
+class ShopRepository {
+  final _api = ApiClient.instance;
+
+  Future<List<Product>> getProducts() async {
+    try {
+      final r = await _api.get('/shop');
+      if (r.statusCode >= 400) return [];
+      final body = jsonDecode(r.body);
+      final list = (body['products'] ?? []) as List;
+      return list
+          .map((e) => Product.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> placeOrder(String postId, {String note = ''}) async {
+    try {
+      final r = await _api.post('/posts/$postId/order', body: {'note': note});
+      return r.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Маҳсулоти нав эълон мекунад (пости is_product).
+  Future<bool> createProduct({
+    required File image,
+    required String productName,
+    required double price,
+    required String currency,
+    required String caption,
+    required double shopLat,
+    required double shopLng,
+    required String shopAddress,
+  }) async {
+    try {
+      final url = await UploadManager().uploadFile(image);
+      if (url.isEmpty) return false;
+      final r = await _api.post('/posts/', body: {
+        'caption': caption,
+        'media': [
+          {'url': url, 'type': 'image'}
+        ],
+        'isProduct': true,
+        'price': price,
+        'currency': currency,
+        'productName': productName,
+        'shopLat': shopLat,
+        'shopLng': shopLng,
+        'shopAddress': shopAddress,
+      });
+      return r.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> myOrders() => _orders('/orders/');
+  Future<List<Map<String, dynamic>>> sellingOrders() =>
+      _orders('/orders/selling');
+
+  Future<List<Map<String, dynamic>>> _orders(String path) async {
+    try {
+      final r = await _api.get(path);
+      if (r.statusCode >= 400) return [];
+      final body = jsonDecode(r.body);
+      final list = (body['orders'] ?? []) as List;
+      return list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+}

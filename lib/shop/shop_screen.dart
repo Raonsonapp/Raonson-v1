@@ -1,0 +1,281 @@
+// lib/shop/shop_screen.dart
+import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../app/app_theme.dart';
+import '../core/ui/app_icons.dart';
+import '../widgets/avatar.dart';
+import 'shop_repository.dart';
+import 'sell_screen.dart';
+import 'orders_screen.dart';
+
+class ShopScreen extends StatefulWidget {
+  const ShopScreen({super.key});
+  @override
+  State<ShopScreen> createState() => _ShopScreenState();
+}
+
+class _ShopScreenState extends State<ShopScreen> {
+  final _repo = ShopRepository();
+  List<Product> _products = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final p = await _repo.getProducts();
+    if (!mounted) return;
+    setState(() {
+      _products = p;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        title: Text('Магоза',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 18,
+                fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: Icon(AppIcons.history_rounded, color: AppColors.textPrimary),
+            tooltip: 'Фармоишҳо',
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const OrdersScreen())),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.neonBlue,
+        onPressed: () async {
+          await Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const SellScreen()));
+          _load();
+        },
+        icon: Icon(AppIcons.add_rounded, color: AppColors.textPrimary),
+        label: Text('Фуруш',
+            style: TextStyle(color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold)),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _products.isEmpty
+              ? Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(AppIcons.card_giftcard_rounded,
+                      color: AppColors.textFaint, size: 56),
+                  const SizedBox(height: 12),
+                  Text('Ҳанӯз маҳсулот нест',
+                      style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
+                  Text('Аввалин маҳсулотро эълон кунед 👇',
+                      style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
+                ]))
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(10),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, mainAxisSpacing: 10,
+                      crossAxisSpacing: 10, childAspectRatio: 0.66,
+                    ),
+                    itemCount: _products.length,
+                    itemBuilder: (_, i) => _card(_products[i]),
+                  ),
+                ),
+    );
+  }
+
+  Widget _card(Product p) {
+    return GestureDetector(
+      onTap: () => _openProduct(p),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: p.image.isEmpty
+                  ? Container(color: AppColors.card,
+                      child: Icon(AppIcons.image_outlined,
+                          color: AppColors.textFaint))
+                  : CachedNetworkImage(
+                      imageUrl: p.image, fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: AppColors.card),
+                      errorWidget: (_, __, ___) =>
+                          Container(color: AppColors.card)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(p.productName.isEmpty ? p.caption : p.productName,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 3),
+                Text(p.priceLabel,
+                    style: TextStyle(
+                        color: AppColors.neonBlue, fontSize: 14,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 3),
+                Row(children: [
+                  Avatar(imageUrl: p.sellerAvatar, size: 16, name: p.sellerName),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(p.sellerName,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: AppColors.textFaint, fontSize: 11)),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  void _openProduct(Product p) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _ProductSheet(product: p, repo: _repo),
+    );
+  }
+}
+
+class _ProductSheet extends StatelessWidget {
+  final Product product;
+  final ShopRepository repo;
+  const _ProductSheet({required this.product, required this.repo});
+
+  Future<void> _buy(BuildContext context) async {
+    final ok = await repo.placeOrder(product.id);
+    if (!context.mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok
+          ? 'Фармоиш қабул шуд ✓ — фурӯшанда бо шумо тамос мегирад'
+          : 'Фармоиш нашуд'),
+      backgroundColor: ok ? Colors.green : Colors.red,
+    ));
+  }
+
+  Future<void> _openMap() async {
+    if (product.shopLat == 0 && product.shopLng == 0) return;
+    final uri = Uri.parse(
+        'https://maps.google.com/?q=${product.shopLat},${product.shopLng}');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = product;
+    final hasShop = p.shopLat != 0 || p.shopLng != 0;
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          if (p.image.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: CachedNetworkImage(
+                  imageUrl: p.image, height: 240, width: double.infinity,
+                  fit: BoxFit.cover),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(p.productName.isEmpty ? 'Маҳсулот' : p.productName,
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 18,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(p.priceLabel,
+                    style: TextStyle(
+                        color: AppColors.neonBlue, fontSize: 20,
+                        fontWeight: FontWeight.bold)),
+                if (p.caption.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(p.caption,
+                      style: TextStyle(color: AppColors.textSecondary)),
+                ],
+                const SizedBox(height: 10),
+                Row(children: [
+                  Avatar(imageUrl: p.sellerAvatar, size: 28, name: p.sellerName),
+                  const SizedBox(width: 8),
+                  Text(p.sellerName,
+                      style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                ]),
+                if (hasShop) ...[
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: _openMap,
+                    child: Row(children: [
+                      Icon(AppIcons.location_on, color: Color(0xFFE0245E), size: 20),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                            p.shopAddress.isEmpty
+                                ? 'Ба магоза (харита)'
+                                : p.shopAddress,
+                            style: TextStyle(color: AppColors.neonBlue)),
+                      ),
+                      Icon(AppIcons.chevron_right_rounded,
+                          color: AppColors.textFaint, size: 18),
+                    ]),
+                  ),
+                ],
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neonBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => _buy(context),
+                    child: Text('Харидан',
+                        style: TextStyle(
+                            color: AppColors.textPrimary, fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}

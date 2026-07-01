@@ -1,0 +1,186 @@
+package handlers
+
+import (
+	"context"
+	"net/http"
+
+	"raonson/db"
+	mw "raonson/middleware"
+
+	"github.com/gin-gonic/gin"
+)
+
+// Комиссияи платформа аз ҳар фуруш (5%).
+const commissionRate = 0.05
+
+// ── GET /shop → маҳсулотҳо (маркетплейс) ──────────────────────────
+func GetShop(c *gin.Context) {
+	page := toInt(c.Query("page"), 1)
+	limit := toInt(c.Query("limit"), 30)
+	offset := (page - 1) * limit
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT p.id, COALESCE(p.product_name,''), COALESCE(p.price,0),
+		       COALESCE(p.currency,'TJS'), COALESCE(p.shop_address,''),
+		       COALESCE(p.shop_lat,0), COALESCE(p.shop_lng,0),
+		       COALESCE(p.caption,''), COALESCE(p.in_stock,TRUE),
+		       COALESCE((SELECT url FROM post_media pm WHERE pm.post_id=p.id
+		                 ORDER BY position LIMIT 1),'') AS image,
+		       u.id, u.username, COALESCE(u.avatar,''), u.verified
+		FROM posts p JOIN users u ON u.id=p.user_id
+		WHERE p.is_product=TRUE
+		ORDER BY p.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "shop failed"})
+		return
+	}
+	defer rows.Close()
+	items := []gin.H{}
+	for rows.Next() {
+		var pid, pname, currency, addr, caption, image string
+		var uid, uname, uavatar string
+		var price, lat, lng float64
+		var inStock, verified bool
+		rows.Scan(&pid, &pname, &price, &currency, &addr, &lat, &lng,
+			&caption, &inStock, &image, &uid, &uname, &uavatar, &verified)
+		items = append(items, gin.H{
+			"_id": pid, "productName": pname, "price": price,
+			"currency": currency, "shopAddress": addr,
+			"shopLat": lat, "shopLng": lng, "caption": caption,
+			"inStock": inStock, "image": image,
+			"seller": gin.H{"_id": uid, "username": uname,
+				"avatar": uavatar, "verified": verified},
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"products": items})
+}
+
+// ── POST /posts/:id/order → фармоиш додан ─────────────────────────
+func PlaceOrder(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	var b struct {
+		Note string `json:"note"`
+	}
+	c.ShouldBindJSON(&b)
+
+	var sellerID, currency string
+	var price float64
+	var isProduct bool
+	err := db.Pool.QueryRow(context.Background(),
+		`SELECT user_id, COALESCE(price,0), COALESCE(currency,'TJS'),
+		        COALESCE(is_product,FALSE) FROM posts WHERE id=$1`,
+		postID).Scan(&sellerID, &price, &currency, &isProduct)
+	if err != nil || !isProduct {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "not a product"})
+		return
+	}
+	if sellerID == myID {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "cannot buy your own product"})
+		return
+	}
+	commission := price * commissionRate
+	var oid string
+	err = db.Pool.QueryRow(context.Background(),
+		`INSERT INTO orders(post_id,buyer_id,seller_id,price,commission,currency,note)
+		 VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+		postID, myID, sellerID, price, commission, currency,
+		clampRunes(b.Note, 300)).Scan(&oid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "order failed"})
+		return
+	}
+	notify(sellerID, myID, "order", postID)
+	c.JSON(http.StatusCreated, gin.H{
+		"_id": oid, "postId": postID, "price": price,
+		"commission": commission, "currency": currency, "status": "pending",
+	})
+}
+
+// ── GET /orders → фармоишҳои ман (харидор) ────────────────────────
+func GetMyOrders(c *gin.Context) {
+	myID := mw.UID(c)
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT o.id, o.post_id, o.price, o.commission, o.currency, o.status,
+		       o.created_at, COALESCE(p.product_name,''),
+		       u.username, COALESCE(u.avatar,'')
+		FROM orders o
+		JOIN posts p ON p.id=o.post_id
+		JOIN users u ON u.id=o.seller_id
+		WHERE o.buyer_id=$1 ORDER BY o.created_at DESC LIMIT 100`, myID)
+	c.JSON(http.StatusOK, gin.H{"orders": scanOrders(rows, err, "seller")})
+}
+
+// ── GET /orders/selling → фурӯшҳои ман (фурӯшанда) ────────────────
+func GetSellingOrders(c *gin.Context) {
+	myID := mw.UID(c)
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT o.id, o.post_id, o.price, o.commission, o.currency, o.status,
+		       o.created_at, COALESCE(p.product_name,''),
+		       u.username, COALESCE(u.avatar,'')
+		FROM orders o
+		JOIN posts p ON p.id=o.post_id
+		JOIN users u ON u.id=o.buyer_id
+		WHERE o.seller_id=$1 ORDER BY o.created_at DESC LIMIT 100`, myID)
+	c.JSON(http.StatusOK, gin.H{"orders": scanOrders(rows, err, "buyer")})
+}
+
+func scanOrders(rows interface {
+	Next() bool
+	Scan(...interface{}) error
+	Close()
+}, err error, party string) []gin.H {
+	out := []gin.H{}
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var oid, postID, currency, status, pname, uname, uavatar string
+		var price, commission float64
+		var createdAt interface{}
+		rows.Scan(&oid, &postID, &price, &commission, &currency, &status,
+			&createdAt, &pname, &uname, &uavatar)
+		out = append(out, gin.H{
+			"_id": oid, "postId": postID, "price": price,
+			"commission": commission, "currency": currency, "status": status,
+			"createdAt": createdAt, "productName": pname,
+			party: gin.H{"username": uname, "avatar": uavatar},
+		})
+	}
+	return out
+}
+
+// ── GET /admin/orders → ҳамаи фармоишҳо + комиссияи умумӣ (соҳиб) ──
+func AdminOrders(c *gin.Context) {
+	var total float64
+	var count int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(SUM(commission),0), COUNT(*) FROM orders`).Scan(&total, &count)
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT o.id, o.price, o.commission, o.currency, o.status, o.created_at,
+		       COALESCE(p.product_name,''), bs.username, ss.username
+		FROM orders o
+		JOIN posts p ON p.id=o.post_id
+		JOIN users bs ON bs.id=o.buyer_id
+		JOIN users ss ON ss.id=o.seller_id
+		ORDER BY o.created_at DESC LIMIT 200`)
+	list := []gin.H{}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var oid, currency, status, pname, buyer, seller string
+			var price, commission float64
+			var createdAt interface{}
+			rows.Scan(&oid, &price, &commission, &currency, &status,
+				&createdAt, &pname, &buyer, &seller)
+			list = append(list, gin.H{
+				"_id": oid, "price": price, "commission": commission,
+				"currency": currency, "status": status, "createdAt": createdAt,
+				"productName": pname, "buyer": buyer, "seller": seller,
+			})
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"totalCommission": total, "orderCount": count, "orders": list,
+	})
+}

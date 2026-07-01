@@ -380,6 +380,32 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
 	CREATE INDEX IF NOT EXISTS idx_messages_group ON messages(group_id, created_at DESC);
 
+	-- ── Shopping (маҳсулот дар пост + фармоишҳо + комиссия) ─────────
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_product   BOOLEAN DEFAULT FALSE;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS price        NUMERIC DEFAULT 0;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS currency     TEXT DEFAULT 'TJS';
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS product_name TEXT DEFAULT '';
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS shop_lat     DOUBLE PRECISION DEFAULT 0;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS shop_lng     DOUBLE PRECISION DEFAULT 0;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS shop_address TEXT DEFAULT '';
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS in_stock     BOOLEAN DEFAULT TRUE;
+	CREATE INDEX IF NOT EXISTS idx_posts_product ON posts(is_product, created_at DESC);
+
+	CREATE TABLE IF NOT EXISTS orders (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		post_id    TEXT NOT NULL,
+		buyer_id   TEXT NOT NULL,
+		seller_id  TEXT NOT NULL,
+		price      NUMERIC DEFAULT 0,
+		commission NUMERIC DEFAULT 0,
+		currency   TEXT DEFAULT 'TJS',
+		status     TEXT DEFAULT 'pending',
+		note       TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_orders_buyer  ON orders(buyer_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_id, created_at DESC);
+
 	CREATE TABLE IF NOT EXISTS post_reports (
 		post_id    TEXT NOT NULL,
 		user_id    TEXT NOT NULL,

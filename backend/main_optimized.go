@@ -164,6 +164,15 @@ func main() {
 		po.PUT("/:id/caption",       handlers.UpdatePostCaption)
 		po.PUT("/:id/music",         handlers.UpdatePostMusic)
 		po.GET("/:id/stats",         handlers.GetPostStats)
+		po.POST("/:id/order",        handlers.PlaceOrder) // хариди маҳсулот
+	}
+
+	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────
+	r.GET("/shop", auth, rl100, cache30s, handlers.GetShop)
+	og := r.Group("/orders", auth, rl100)
+	{
+		og.GET("/",        handlers.GetMyOrders)
+		og.GET("/selling", handlers.GetSellingOrders)
 	}
 
 	r.POST("/posts/view/:id", auth, handlers.TrackPostView)
@@ -321,6 +330,7 @@ func main() {
 		ad.POST("/vip/:id",     handlers.SetVip)
 		ad.POST("/unvip/:id",   handlers.UnsetVip)
 		ad.DELETE("/users/:id", handlers.AdminDeleteUser)
+		ad.GET("/orders",       handlers.AdminOrders) // фармоишҳо + комиссияи умумӣ
 	}
 
 	log.Printf("🚀 Raonson Go | Port:%s | PostgreSQL+R2+Redis | GZIP ON", port)
