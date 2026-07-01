@@ -23,6 +23,7 @@ class MessageBubble extends StatefulWidget {
   final VoidCallback?                    onSwipeEnd;
   final VoidCallback?                    onCallBack; // боззанг (занги аздастрафта)
   final String?                          senderName; // номи фиристанда (гурӯҳ)
+  final Color?                           myBubbleColor; // мавзӯи чат
 
   const MessageBubble({
     super.key,
@@ -34,6 +35,7 @@ class MessageBubble extends StatefulWidget {
     this.onSwipeEnd,
     this.onCallBack,
     this.senderName,
+    this.myBubbleColor,
   });
 
   @override
@@ -150,7 +152,8 @@ class _MessageBubbleState extends State<MessageBubble>
                   // Bubble
                   Flexible(
                       child: _BubbleBody(
-                          message: m, onCallBack: widget.onCallBack)),
+                          message: m, onCallBack: widget.onCallBack,
+                          myBubbleColor: widget.myBubbleColor)),
 
                   // Swipe indicator
                   if (!isMine && _swipeDx > 20)
@@ -192,7 +195,8 @@ class _MessageBubbleState extends State<MessageBubble>
 class _BubbleBody extends StatelessWidget {
   final MessageModel message;
   final VoidCallback? onCallBack;
-  const _BubbleBody({required this.message, this.onCallBack});
+  final Color? myBubbleColor;
+  const _BubbleBody({required this.message, this.onCallBack, this.myBubbleColor});
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +253,7 @@ class _BubbleBody extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.72),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isMine ? AppColors.neonBlue : AppColors.card,
+        color: isMine ? (myBubbleColor ?? AppColors.neonBlue) : AppColors.card,
         borderRadius: BorderRadius.only(
           topLeft:     const Radius.circular(18),
           topRight:    const Radius.circular(18),
@@ -258,7 +262,7 @@ class _BubbleBody extends StatelessWidget {
         ),
         boxShadow: isMine
             ? [BoxShadow(
-                color: AppColors.neonBlue.withOpacity(0.2),
+                color: (myBubbleColor ?? AppColors.neonBlue).withOpacity(0.2),
                 blurRadius: 8, offset: const Offset(0, 2))]
             : null,
       ),
