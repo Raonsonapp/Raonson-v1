@@ -16,6 +16,7 @@ import '../../core/webrtc_service.dart';
 import '../../core/presence_service.dart';
 import '../../core/services/socket_service.dart';
 import 'message_bubble.dart';
+import 'chat_theme.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
@@ -40,6 +41,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _socket   = SocketService.instance;
 
   List<MessageModel> _messages = [];
+  ChatTheme _theme = ChatThemes.all.first;
   bool   _loading     = true;
   bool   _isPeerTyping = false;
   String _chatId      = '';
@@ -134,11 +136,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _init() async {
     _myId = await TokenStorage.getUserId() ?? '';
     _scroll.addListener(_onScrollLoadOlder);
-    // chatId-и воқеиро ҳал мекунем, то ба ҳуҷраи socket ҳамроҳ шавем
-    // ва typing/read кор кунад (пеш аз ин _chatId доимо холӣ буд).
-    _chatId = await _repo.resolveChatId(widget.peer.id) ?? '';
-    if (_chatId.isNotEmpty) _repo.markAsRead(_chatId); // хонда ҳисоб кун
+    // ⚡ ТЕЗ: аввал паёмҳои кэшро фавран нишон медиҳем (бе интизори шабака),
+    // то чат дарҳол кушода шавад ва корбар интизор нашавад.
     await _load();
+    // Баъд chatId-и воқеиро дар background ҳал мекунем (socket/read/theme) ва
+    // навтарин паёмҳоро reconcile мекунем.
+    _chatId = await _repo.resolveChatId(widget.peer.id) ?? '';
+    if (_chatId.isNotEmpty) {
+      _repo.markAsRead(_chatId); // хонда ҳисоб кун
+      ChatThemes.load(_chatId).then((t) {
+        if (mounted) setState(() => _theme = t);
+      });
+      _load(); // fresh-by-chatId reconcile (дигар _loading нест)
+    }
     _setupSocket();
     _setupPresence();
     _setupConnectivity();
@@ -609,9 +619,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: _theme.bg != null ? _theme.bg!.last : AppColors.bg,
       appBar: _buildAppBar(),
-      body: Column(
+      body: Container(
+        decoration: _theme.bg != null
+            ? BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: _theme.bg!))
+            : null,
+        child: Column(
         children: [
           // Typing indicator
           if (_isPeerTyping) _TypingIndicator(name: widget.peer.username),
@@ -639,6 +657,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               onCancelReply: () => setState(() => _replyTo = null),
             ),
         ],
+        ),
       ),
     );
   }
@@ -793,8 +812,66 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         _AppBarBtn(
             icon: AppIcons.call_rounded,
             onTap: () => _startCall(CallType.voice)),
+        _AppBarBtn(
+            icon: AppIcons.palette_outlined,
+            onTap: _pickTheme),
         const SizedBox(width: 4),
       ],
+    );
+  }
+
+  void _pickTheme() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: AppColors.textFaint,
+                  borderRadius: BorderRadius.circular(2))),
+          Text('Мавзӯи чат',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600, fontSize: 15)),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 14, runSpacing: 14,
+            alignment: WrapAlignment.center,
+            children: ChatThemes.all.map((t) {
+              final sel = t.id == _theme.id;
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _theme = t);
+                  if (_chatId.isNotEmpty) ChatThemes.save(_chatId, t.id);
+                },
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                    width: 52, height: 52,
+                    decoration: BoxDecoration(
+                      color: t.bubble,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: sel ? AppColors.textPrimary : Colors.transparent,
+                          width: 3),
+                    ),
+                    child: sel
+                        ? Icon(AppIcons.check_rounded,
+                            color: Colors.white, size: 24)
+                        : null,
+                  ),
+                  const SizedBox(height: 5),
+                  Text(t.name,
+                      style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+                ]),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+        ]),
+      ),
     );
   }
 
@@ -816,6 +893,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             if (showDate) DateSeparator(date: msg.createdAt),
             MessageBubble(
               message:  msg,
+              myBubbleColor: _theme.bubble,
               onReply:  () => setState(() => _replyTo = msg),
               onReact:  (emoji) => _onReact(msg, emoji),
               onDelete: () => _onDelete(msg),

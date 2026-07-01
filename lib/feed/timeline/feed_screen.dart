@@ -24,7 +24,6 @@ import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
-import '../../news/news_screen.dart';
 import '../../shop/shop_screen.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -126,13 +125,6 @@ class _FeedShellState extends State<_FeedShell> {
                 tooltip: 'Магоза',
                 onPressed: () => Navigator.push(ctx,
                     MaterialPageRoute(builder: (_) => const ShopScreen())),
-              ),
-              IconButton(
-                icon: Icon(AppIcons.public_rounded,
-                    color: AppColors.textPrimary, size: 25),
-                tooltip: 'Ахбор',
-                onPressed: () => Navigator.push(ctx,
-                    MaterialPageRoute(builder: (_) => const NewsScreen())),
               ),
               IconButton(
                 icon: SvgPicture.asset('assets/icons/friends.svg',

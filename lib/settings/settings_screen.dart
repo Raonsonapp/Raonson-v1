@@ -20,6 +20,7 @@ import '../core/services/user_session.dart';
 import '../core/services/region_service.dart';
 import '../core/services/vip_service.dart';
 import '../anime/anime_screen.dart';
+import '../news/news_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
 import '../core/ui/app_icons.dart';
 
@@ -150,6 +151,12 @@ class SettingsScreen extends StatelessWidget {
 
               // ── ABOUT ─────────────────────────────────────────────
               _Hdr('Маълумот'),
+              _NavTile(
+                icon:  AppIcons.public_rounded,
+                title: 'Ахбор',
+                sub:   'Хабарҳои ҷаҳон аз манбаъҳои боэътимод',
+                onTap: () => _go(ctx, const NewsScreen()),
+              ),
               _NavTile(
                 icon:  AppIcons.info_outline_rounded,
                 title: 'Дар бораи барнома',
