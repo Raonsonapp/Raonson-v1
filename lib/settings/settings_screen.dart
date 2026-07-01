@@ -21,6 +21,7 @@ import '../core/services/region_service.dart';
 import '../core/services/vip_service.dart';
 import '../anime/anime_screen.dart';
 import '../news/news_screen.dart';
+import '../learn/learn_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
 import '../core/ui/app_icons.dart';
 
@@ -147,6 +148,15 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ]);
                 },
+              ),
+
+              // ── LEARN ─────────────────────────────────────────────
+              _Hdr('Омӯзиш'),
+              _NavTile(
+                icon:  AppIcons.code_rounded,
+                title: 'Омӯзиши коднависӣ бо AI',
+                sub:   'Устоз AI — код, backend, дизайн, icon, вебсайт',
+                onTap: () => _go(ctx, const LearnScreen()),
               ),
 
               // ── ABOUT ─────────────────────────────────────────────
