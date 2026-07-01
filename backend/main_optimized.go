@@ -313,6 +313,9 @@ func main() {
 	// Ахбор — RSS-и манбаъҳои боэътимод (cache дар худи handler).
 	r.GET("/news", auth, rl100, handlers.GetNews)
 
+	// AI-муаллими коднависӣ (proxy ба LLM-и open-source; калид дар env).
+	r.POST("/tutor/chat", auth, rl100, handlers.TutorChat)
+
 	r.POST("/upload",        auth, rl20, mw.AntiAbuse("upload", 50, 3600), handlers.UploadToR2)
 	r.POST("/upload/avatar", auth, rl20, handlers.UploadToR2)
 	r.POST("/upload/video",  auth, rl20, handlers.UploadToR2)
