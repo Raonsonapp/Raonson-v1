@@ -14,6 +14,8 @@ class AppIcons {
   static const IconData add_circle_outline = Symbols.add_circle_rounded;
   static const IconData add_circle_outline_rounded = Symbols.add_circle_rounded;
   static const IconData add_rounded = Symbols.add_rounded;
+  static const IconData add_a_photo_rounded = Symbols.add_a_photo_rounded;
+  static const IconData storefront_rounded = Symbols.storefront_rounded;
   static const IconData admin_panel_settings_outlined = Symbols.admin_panel_settings_rounded;
   static const IconData all_inclusive_rounded = Symbols.all_inclusive_rounded;
   static const IconData alternate_email = Symbols.alternate_email_rounded;

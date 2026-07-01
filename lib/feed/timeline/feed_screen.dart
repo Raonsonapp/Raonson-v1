@@ -25,6 +25,7 @@ import '../../notifications/notification_badge.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
 import '../../news/news_screen.dart';
+import '../../shop/shop_screen.dart';
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -119,6 +120,13 @@ class _FeedShellState extends State<_FeedShell> {
             )),
             centerTitle: true, // лого дар марказ — мисли скриншоти Instagram
             actions: [
+              IconButton(
+                icon: Icon(AppIcons.storefront_rounded,
+                    color: AppColors.textPrimary, size: 24),
+                tooltip: 'Магоза',
+                onPressed: () => Navigator.push(ctx,
+                    MaterialPageRoute(builder: (_) => const ShopScreen())),
+              ),
               IconButton(
                 icon: Icon(AppIcons.public_rounded,
                     color: AppColors.textPrimary, size: 25),
