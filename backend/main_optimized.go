@@ -301,6 +301,9 @@ func main() {
 
 	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)
 
+	// Ахбор — RSS-и манбаъҳои боэътимод (cache дар худи handler).
+	r.GET("/news", auth, rl100, handlers.GetNews)
+
 	r.POST("/upload",        auth, rl20, mw.AntiAbuse("upload", 50, 3600), handlers.UploadToR2)
 	r.POST("/upload/avatar", auth, rl20, handlers.UploadToR2)
 	r.POST("/upload/video",  auth, rl20, handlers.UploadToR2)

@@ -1,10 +1,17 @@
 // lib/chat/group/group_chat_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/socket_service.dart';
+import '../../models/message_model.dart';
+import '../../models/user_model.dart';
 import '../../widgets/avatar.dart';
+import '../chat_repository.dart';
+import '../room/message_bubble.dart';
+import '../room/message_input.dart';
 import 'group_model.dart';
 import 'group_repository.dart';
 import 'group_info_screen.dart';
@@ -18,10 +25,9 @@ class GroupChatScreen extends StatefulWidget {
 
 class _GroupChatScreenState extends State<GroupChatScreen> {
   final _repo = GroupRepository();
-  final _ctrl = TextEditingController();
-  final _scroll = ScrollController();
+  final _chatRepo = ChatRepository();
   List<GroupMessage> _messages = [];
-  bool _loading = true, _sending = false;
+  bool _loading = true;
 
   String get _gid => widget.group.id;
   String get _myId => UserSession.userId ?? '';
@@ -36,8 +42,6 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   @override
   void dispose() {
     SocketService.instance.off('group:new');
-    _ctrl.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
@@ -58,19 +62,77 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     });
   }
 
-  Future<void> _send() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty || _sending) return;
-    _ctrl.clear();
-    setState(() => _sending = true);
-    final msg = await _repo.sendMessage(_gid, text);
-    if (!mounted) return;
-    setState(() {
-      _sending = false;
-      if (msg != null && !_messages.any((x) => x.id == msg.id)) {
-        _messages.insert(0, msg);
-      }
-    });
+  void _addLocal(GroupMessage? m) {
+    if (m != null && mounted && !_messages.any((x) => x.id == m.id)) {
+      setState(() => _messages.insert(0, m));
+    }
+  }
+
+  Future<void> _sendText(String text) async {
+    if (text.trim().isEmpty) return;
+    _addLocal(await _repo.sendMessage(_gid, text.trim()));
+  }
+
+  String _typeByExt(String path) {
+    final e = path.split('.').last.toLowerCase();
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp'].contains(e)) return 'video';
+    if (['m4a', 'aac', 'mp3', 'ogg', 'opus', 'wav'].contains(e)) return 'audio';
+    return 'image';
+  }
+
+  Future<void> _sendMedia(File file) async {
+    final type = _typeByExt(file.path);
+    final url = await _chatRepo.uploadMedia(file);
+    if (url == null || url.isEmpty) return;
+    _addLocal(await _repo.sendMessage(_gid, '', type: type, mediaUrl: url));
+  }
+
+  Future<void> _sendVoice(File file) async {
+    final url = await _chatRepo.uploadMedia(file);
+    if (url == null || url.isEmpty) return;
+    _addLocal(await _repo.sendMessage(_gid, '', type: 'audio', mediaUrl: url));
+  }
+
+  Future<void> _sendLocation() async {
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm == LocationPermission.denied ||
+        perm == LocationPermission.deniedForever) return;
+    try {
+      final pos = await Geolocator.getCurrentPosition()
+          .timeout(const Duration(seconds: 12));
+      _addLocal(await _repo.sendMessage(
+          _gid, '${pos.latitude},${pos.longitude}', type: 'location'));
+    } catch (_) {}
+  }
+
+  // GroupMessage → MessageModel, то MessageBubble-и тайёрро истифода барем.
+  MessageModel _toMessage(GroupMessage m) {
+    MessageType t;
+    switch (m.type) {
+      case 'image': t = MessageType.image; break;
+      case 'video': t = MessageType.video; break;
+      case 'audio': t = MessageType.audio; break;
+      case 'location': t = MessageType.location; break;
+      case 'call': t = MessageType.call; break;
+      default: t = MessageType.text;
+    }
+    return MessageModel(
+      id: m.id,
+      chatId: _gid,
+      peer: UserModel(
+        id: m.senderId, username: m.senderName, avatar: m.senderAvatar,
+        verified: false, isPrivate: false,
+        postsCount: 0, followersCount: 0, followingCount: 0,
+      ),
+      text: m.text,
+      createdAt: m.createdAt,
+      isMine: m.senderId == _myId,
+      type: t,
+      mediaUrl: m.mediaUrl.isEmpty ? null : m.mediaUrl,
+    );
   }
 
   void _openInfo() {
@@ -126,86 +188,26 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       child: Text('Ҳанӯз паём нест — аввалин шавед!',
                           style: TextStyle(color: AppColors.textFaint)))
                   : ListView.builder(
-                      controller: _scroll,
                       reverse: true,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       itemCount: _messages.length,
-                      itemBuilder: (_, i) =>
-                          _bubble(_messages[i], _messages[i].senderId == _myId),
+                      itemBuilder: (_, i) {
+                        final m = _messages[i];
+                        final mine = m.senderId == _myId;
+                        return MessageBubble(
+                          message: _toMessage(m),
+                          senderName: mine ? null : m.senderName,
+                        );
+                      },
                     ),
         ),
-        _inputBar(),
+        MessageInput(
+          onSend:         _sendText,
+          onSendMedia:    _sendMedia,
+          onSendVoice:    _sendVoice,
+          onSendLocation: _sendLocation,
+        ),
       ]),
-    );
-  }
-
-  Widget _bubble(GroupMessage m, bool mine) {
-    return Padding(
-      padding: EdgeInsets.only(
-          left: mine ? 60 : 12, right: mine ? 12 : 60, top: 2, bottom: 2),
-      child: Column(
-        crossAxisAlignment:
-            mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          if (!mine)
-            Padding(
-              padding: const EdgeInsets.only(left: 10, bottom: 2),
-              child: Text(m.senderName,
-                  style: TextStyle(
-                      color: AppColors.neonBlue, fontSize: 11,
-                      fontWeight: FontWeight.w600)),
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: mine ? AppColors.neonBlue : AppColors.card,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16),
-                topRight: const Radius.circular(16),
-                bottomLeft: Radius.circular(mine ? 16 : 4),
-                bottomRight: Radius.circular(mine ? 4 : 16),
-              ),
-            ),
-            child: Text(m.text,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _inputBar() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
-        decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: AppColors.dividerFaint))),
-        child: Row(children: [
-          Expanded(
-            child: TextField(
-              controller: _ctrl,
-              style: TextStyle(color: AppColors.textPrimary),
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _send(),
-              decoration: InputDecoration(
-                hintText: 'Паём…',
-                hintStyle: TextStyle(color: AppColors.textFaint),
-                filled: true, fillColor: AppColors.surface,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: BorderSide.none),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(AppIcons.send_rounded, color: AppColors.neonBlue),
-            onPressed: _send,
-          ),
-        ]),
-      ),
     );
   }
 }

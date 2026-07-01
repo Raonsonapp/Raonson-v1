@@ -22,6 +22,7 @@ class MessageBubble extends StatefulWidget {
   final void Function(double dx)?        onSwipeUpdate;
   final VoidCallback?                    onSwipeEnd;
   final VoidCallback?                    onCallBack; // боззанг (занги аздастрафта)
+  final String?                          senderName; // номи фиристанда (гурӯҳ)
 
   const MessageBubble({
     super.key,
@@ -32,6 +33,7 @@ class MessageBubble extends StatefulWidget {
     this.onSwipeUpdate,
     this.onSwipeEnd,
     this.onCallBack,
+    this.senderName,
   });
 
   @override
@@ -119,6 +121,16 @@ class _MessageBubbleState extends State<MessageBubble>
             crossAxisAlignment:
                 isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
+              // Sender name (гурӯҳҳо) — болои паёми каси дигар
+              if (widget.senderName != null && !isMine)
+                Padding(
+                  padding: const EdgeInsets.only(left: 40, bottom: 2),
+                  child: Text(widget.senderName!,
+                      style: TextStyle(
+                          color: AppColors.neonBlue, fontSize: 11,
+                          fontWeight: FontWeight.w600)),
+                ),
+
               // Reply preview if replying to something
               if (m.replyTo != null) _ReplyQuote(replyTo: m.replyTo!),
 
