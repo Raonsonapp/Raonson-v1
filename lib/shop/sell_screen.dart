@@ -19,10 +19,13 @@ class _SellScreenState extends State<SellScreen> {
   final _price = TextEditingController();
   final _caption = TextEditingController();
   final _address = TextEditingController();
+  final _whatsapp = TextEditingController();
+  final _phone = TextEditingController();
   String _currency = 'TJS';
   File? _image;
   double _lat = 0, _lng = 0;
   bool _gpsOn = false, _publishing = false;
+  bool _raonson = true; // харидор ба чати Raonson дарояд
 
   @override
   void dispose() {
@@ -30,6 +33,8 @@ class _SellScreenState extends State<SellScreen> {
     _price.dispose();
     _caption.dispose();
     _address.dispose();
+    _whatsapp.dispose();
+    _phone.dispose();
     super.dispose();
   }
 
@@ -86,6 +91,9 @@ class _SellScreenState extends State<SellScreen> {
       shopLat: _lat,
       shopLng: _lng,
       shopAddress: _address.text.trim(),
+      contactRaonson: _raonson,
+      whatsapp: _whatsapp.text.trim(),
+      phone: _phone.text.trim(),
     );
     if (!mounted) return;
     setState(() => _publishing = false);
@@ -203,8 +211,35 @@ class _SellScreenState extends State<SellScreen> {
             ]),
           ),
         ),
+        const SizedBox(height: 18),
+        Text('Харидор чӣ тавр бо шумо алоқа кунад?',
+            style: TextStyle(
+                color: AppColors.textSecondary, fontSize: 13,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        Text('Комиссияи платформа: 5% аз ҳар фуруш',
+        Container(
+          decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12)),
+          child: SwitchListTile(
+            value: _raonson,
+            onChanged: (v) => setState(() => _raonson = v),
+            activeColor: AppColors.neonBlue,
+            title: Text('Чати Raonson',
+                style: TextStyle(color: AppColors.textPrimary)),
+            secondary: Icon(AppIcons.chat_bubble_rounded,
+                color: AppColors.neonBlue),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _field(_whatsapp, 'WhatsApp (мас. 992900000000)',
+            keyboard: TextInputType.phone),
+        const SizedBox(height: 10),
+        _field(_phone, 'Рақами телефон (ихтиёрӣ)',
+            keyboard: TextInputType.phone),
+        const SizedBox(height: 8),
+        Text('Метавонед ҳар се роҳро монед — харидор худаш интихоб мекунад.\n'
+            'Комиссияи платформа: 5% аз ҳар фуруш.',
             style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
       ]),
     );
