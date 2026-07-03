@@ -31,7 +31,7 @@ android {
         // versionCode худкор аз CI (APP_VERSION_CODE) — ҳамеша беназир ва
         // афзоянда, то дигар "version code already used" набошад.
         versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 3
-        versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.1"
+        versionName = System.getenv("APP_VERSION_NAME") ?: "2.0.0"
     }
 
     compileOptions {
