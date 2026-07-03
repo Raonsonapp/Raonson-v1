@@ -22,6 +22,7 @@ import '../core/services/vip_service.dart';
 import '../anime/anime_screen.dart';
 import '../news/news_screen.dart';
 import '../learn/learn_screen.dart';
+import '../effects/effects_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
 import '../core/ui/app_icons.dart';
 
@@ -157,6 +158,12 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Омӯзиши коднависӣ бо AI',
                 sub:   'Устоз AI — код, backend, дизайн, icon, вебсайт',
                 onTap: () => _go(ctx, const LearnScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.bolt_rounded,
+                title: 'Бозори эффектҳо',
+                sub:   'Эффектҳоро истифода баред ё худатон созед',
+                onTap: () => _go(ctx, const EffectsScreen()),
               ),
 
               // ── ABOUT ─────────────────────────────────────────────

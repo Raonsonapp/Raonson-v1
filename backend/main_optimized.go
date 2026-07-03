@@ -175,6 +175,15 @@ func main() {
 		og.GET("/selling", handlers.GetSellingOrders)
 	}
 
+	// ── Effects marketplace ────────────────────────────────────────
+	ef := r.Group("/effects", auth, rl100)
+	{
+		ef.GET("/",         handlers.GetEffects)
+		ef.GET("/mine",     handlers.GetMyEffects)
+		ef.POST("/",        handlers.CreateEffect)
+		ef.POST("/:id/use", handlers.UseEffect)
+	}
+
 	r.POST("/posts/view/:id", auth, handlers.TrackPostView)
 
 	r.GET("/comments/:id",       auth, rl100, cache30s, handlers.GetComments)

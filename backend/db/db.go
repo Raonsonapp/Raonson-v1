@@ -410,6 +410,27 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_orders_buyer  ON orders(buyer_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_id, created_at DESC);
 
+	-- ── Effects marketplace (эффектҳои корбарон) ────────────────────
+	CREATE TABLE IF NOT EXISTS effects (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		creator_id TEXT NOT NULL,
+		name       TEXT NOT NULL,
+		matrix     TEXT NOT NULL,          -- JSON: [20 double]
+		price      NUMERIC DEFAULT 0,      -- 0 = ройгон
+		downloads  INTEGER DEFAULT 0,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_effects_created ON effects(created_at DESC);
+	CREATE TABLE IF NOT EXISTS effect_purchases (
+		effect_id  TEXT NOT NULL,
+		buyer_id   TEXT NOT NULL,
+		creator_id TEXT NOT NULL,
+		price      NUMERIC DEFAULT 0,
+		commission NUMERIC DEFAULT 0,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (effect_id, buyer_id)
+	);
+
 	CREATE TABLE IF NOT EXISTS post_reports (
 		post_id    TEXT NOT NULL,
 		user_id    TEXT NOT NULL,
