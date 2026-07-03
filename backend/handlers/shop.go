@@ -23,6 +23,8 @@ func GetShop(c *gin.Context) {
 		       COALESCE(p.currency,'TJS'), COALESCE(p.shop_address,''),
 		       COALESCE(p.shop_lat,0), COALESCE(p.shop_lng,0),
 		       COALESCE(p.caption,''), COALESCE(p.in_stock,TRUE),
+		       COALESCE(p.contact_raonson,TRUE), COALESCE(p.shop_whatsapp,''),
+		       COALESCE(p.shop_phone,''),
 		       COALESCE((SELECT url FROM post_media pm WHERE pm.post_id=p.id
 		                 ORDER BY position LIMIT 1),'') AS image,
 		       u.id, u.username, COALESCE(u.avatar,''), u.verified
@@ -37,16 +39,20 @@ func GetShop(c *gin.Context) {
 	items := []gin.H{}
 	for rows.Next() {
 		var pid, pname, currency, addr, caption, image string
+		var whatsapp, phone string
 		var uid, uname, uavatar string
 		var price, lat, lng float64
-		var inStock, verified bool
+		var inStock, verified, contactRaonson bool
 		rows.Scan(&pid, &pname, &price, &currency, &addr, &lat, &lng,
-			&caption, &inStock, &image, &uid, &uname, &uavatar, &verified)
+			&caption, &inStock, &contactRaonson, &whatsapp, &phone,
+			&image, &uid, &uname, &uavatar, &verified)
 		items = append(items, gin.H{
 			"_id": pid, "productName": pname, "price": price,
 			"currency": currency, "shopAddress": addr,
 			"shopLat": lat, "shopLng": lng, "caption": caption,
 			"inStock": inStock, "image": image,
+			"contactRaonson": contactRaonson,
+			"shopWhatsapp": whatsapp, "shopPhone": phone,
 			"seller": gin.H{"_id": uid, "username": uname,
 				"avatar": uavatar, "verified": verified},
 		})

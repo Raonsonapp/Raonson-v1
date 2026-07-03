@@ -10,12 +10,15 @@ class Product {
   final bool inStock;
   final String sellerId, sellerName, sellerAvatar;
   final bool sellerVerified;
+  final bool contactRaonson;
+  final String whatsapp, phone;
   Product({
     required this.id, required this.productName, required this.currency,
     required this.shopAddress, required this.caption, required this.image,
     required this.price, required this.shopLat, required this.shopLng,
     required this.inStock, required this.sellerId, required this.sellerName,
     required this.sellerAvatar, required this.sellerVerified,
+    this.contactRaonson = true, this.whatsapp = '', this.phone = '',
   });
   factory Product.fromJson(Map<String, dynamic> j) {
     final s = (j['seller'] ?? {}) as Map;
@@ -34,6 +37,9 @@ class Product {
       sellerName: (s['username'] ?? '').toString(),
       sellerAvatar: (s['avatar'] ?? '').toString(),
       sellerVerified: s['verified'] == true,
+      contactRaonson: j['contactRaonson'] != false,
+      whatsapp: (j['shopWhatsapp'] ?? '').toString(),
+      phone: (j['shopPhone'] ?? '').toString(),
     );
   }
   String get priceLabel => '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
@@ -75,6 +81,9 @@ class ShopRepository {
     required double shopLat,
     required double shopLng,
     required String shopAddress,
+    bool contactRaonson = true,
+    String whatsapp = '',
+    String phone = '',
   }) async {
     try {
       final url = await UploadManager().uploadFile(image);
@@ -91,6 +100,9 @@ class ShopRepository {
         'shopLat': shopLat,
         'shopLng': shopLng,
         'shopAddress': shopAddress,
+        'contactRaonson': contactRaonson,
+        'shopWhatsapp': whatsapp,
+        'shopPhone': phone,
       });
       return r.statusCode < 400;
     } catch (_) {

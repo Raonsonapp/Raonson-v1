@@ -33,6 +33,9 @@ func CreatePost(c *gin.Context) {
 		ShopLat       float64                  `json:"shopLat"`
 		ShopLng       float64                  `json:"shopLng"`
 		ShopAddress   string                   `json:"shopAddress"`
+		ContactRaonson bool                    `json:"contactRaonson"`
+		ShopWhatsApp   string                  `json:"shopWhatsapp"`
+		ShopPhone      string                  `json:"shopPhone"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || len(b.Media) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "At least one media item required"})
@@ -81,10 +84,13 @@ func CreatePost(c *gin.Context) {
 		}
 		tx.Exec(context.Background(),
 			`UPDATE posts SET is_product=TRUE, price=$2, currency=$3,
-			 product_name=$4, shop_lat=$5, shop_lng=$6, shop_address=$7
+			 product_name=$4, shop_lat=$5, shop_lng=$6, shop_address=$7,
+			 contact_raonson=$8, shop_whatsapp=$9, shop_phone=$10
 			 WHERE id=$1`,
 			postID, b.Price, cur, clampRunes(b.ProductName, 120),
-			b.ShopLat, b.ShopLng, clampRunes(b.ShopAddress, 200))
+			b.ShopLat, b.ShopLng, clampRunes(b.ShopAddress, 200),
+			b.ContactRaonson, clampRunes(b.ShopWhatsApp, 30),
+			clampRunes(b.ShopPhone, 30))
 	}
 	tx.Commit(context.Background())
 

@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../widgets/avatar.dart';
+import '../models/user_model.dart';
+import '../chat/room/chat_room_screen.dart';
 import 'shop_repository.dart';
 import 'sell_screen.dart';
 import 'orders_screen.dart';
@@ -170,16 +172,96 @@ class _ProductSheet extends StatelessWidget {
   final ShopRepository repo;
   const _ProductSheet({required this.product, required this.repo});
 
-  Future<void> _buy(BuildContext context) async {
-    final ok = await repo.placeOrder(product.id);
-    if (!context.mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ok
-          ? 'Фармоиш қабул шуд ✓ — фурӯшанда бо шумо тамос мегирад'
-          : 'Фармоиш нашуд'),
-      backgroundColor: ok ? Colors.green : Colors.red,
-    ));
+  // Харидан → мустақим ба фурӯшанда. Комиссия ҳам сабт мешавад.
+  void _buy(BuildContext context) {
+    repo.placeOrder(product.id); // сабти фармоиш + комиссия (fire-and-forget)
+    final methods = <String>[];
+    if (product.contactRaonson && product.sellerId.isNotEmpty) {
+      methods.add('raonson');
+    }
+    if (product.whatsapp.trim().isNotEmpty) methods.add('whatsapp');
+    if (product.phone.trim().isNotEmpty) methods.add('phone');
+    if (methods.isEmpty && product.sellerId.isNotEmpty) methods.add('raonson');
+
+    if (methods.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Фурӯшанда роҳи алоқа нагузоштааст')));
+      return;
+    }
+    if (methods.length == 1) {
+      _openContact(context, methods.first);
+    } else {
+      _showContactChooser(context, methods);
+    }
+  }
+
+  void _showContactChooser(BuildContext context, List<String> methods) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Text('Чӣ тавр бо фурӯшанда алоқа мекунед?',
+              style: TextStyle(
+                  color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          if (methods.contains('raonson'))
+            ListTile(
+              leading: Icon(AppIcons.chat_bubble_rounded,
+                  color: AppColors.neonBlue),
+              title: const Text('Чати Raonson'),
+              textColor: AppColors.textPrimary,
+              onTap: () { Navigator.pop(context); _openContact(context, 'raonson'); },
+            ),
+          if (methods.contains('whatsapp'))
+            ListTile(
+              leading: const Icon(AppIcons.public_rounded,
+                  color: Color(0xFF25D366)),
+              title: const Text('WhatsApp'),
+              textColor: AppColors.textPrimary,
+              onTap: () { Navigator.pop(context); _openContact(context, 'whatsapp'); },
+            ),
+          if (methods.contains('phone'))
+            ListTile(
+              leading: Icon(AppIcons.call_rounded, color: AppColors.neonBlue),
+              title: const Text('Занг задан'),
+              textColor: AppColors.textPrimary,
+              onTap: () { Navigator.pop(context); _openContact(context, 'phone'); },
+            ),
+          const SizedBox(height: 16),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _openContact(BuildContext context, String method) async {
+    final msg = 'Салом! Маҳсули «${product.productName}» '
+        '(${product.priceLabel})-ро дар Raonson дидам, мехоҳам харам.';
+    if (method == 'raonson') {
+      final seller = UserModel(
+        id: product.sellerId, username: product.sellerName,
+        avatar: product.sellerAvatar, verified: product.sellerVerified,
+        isPrivate: false, postsCount: 0, followersCount: 0, followingCount: 0,
+      );
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: seller)));
+      return;
+    }
+    Uri? uri;
+    if (method == 'whatsapp') {
+      final num = product.whatsapp.replaceAll(RegExp(r'[^0-9]'), '');
+      uri = Uri.parse('https://wa.me/$num?text=${Uri.encodeComponent(msg)}');
+    } else if (method == 'phone') {
+      uri = Uri.parse('tel:${product.phone.trim()}');
+    }
+    if (uri != null) {
+      try {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {}
+    }
   }
 
   Future<void> _openMap() async {

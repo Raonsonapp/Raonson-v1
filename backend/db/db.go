@@ -389,6 +389,10 @@ func migrate() {
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS shop_lng     DOUBLE PRECISION DEFAULT 0;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS shop_address TEXT DEFAULT '';
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS in_stock     BOOLEAN DEFAULT TRUE;
+	-- Роҳҳои алоқа бо фурӯшанда (харидор кадомашро мехоҳад интихоб мекунад).
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS contact_raonson  BOOLEAN DEFAULT TRUE;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS shop_whatsapp    TEXT DEFAULT '';
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS shop_phone       TEXT DEFAULT '';
 	CREATE INDEX IF NOT EXISTS idx_posts_product ON posts(is_product, created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS orders (
