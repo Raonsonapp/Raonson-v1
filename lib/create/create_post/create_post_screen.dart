@@ -14,6 +14,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 import '../upload/post_upload_service.dart';
+import 'photo_filters.dart';
 import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────
@@ -180,6 +181,7 @@ enum _Tool { none, draw }
 
 class _PostEditorState extends State<_PostEditor> {
   final _canvasKey    = GlobalKey();
+  int _filterIndex = 0; // филтри интихобшудаи акс
   final _captionCtrl  = TextEditingController();
   _Tool _tool         = _Tool.none;
 
@@ -255,7 +257,7 @@ class _PostEditorState extends State<_PostEditor> {
       // Агар ягон overlay (матн/стикер/зикр/расм) НЕСТ → расми аслиро мегузорем,
       // то формат/нисбати тарафҳо нигоҳ дошта шавад (бе хатти ранга дар боло/поён).
       final hasOverlays = _texts.isNotEmpty || _stickers.isNotEmpty ||
-          _mentions.isNotEmpty || _drawPoints.isNotEmpty;
+          _mentions.isNotEmpty || _drawPoints.isNotEmpty || _filterIndex != 0;
       final fileToPost = hasOverlays ? await _captureCanvas() : widget.media;
       widget.onPublish(fileToPost, caption,
           musicTitle: mt, musicArtist: ma, location: _location,
@@ -520,6 +522,56 @@ class _PostEditorState extends State<_PostEditor> {
             ]),
           ),
 
+          // ── Филтрҳо (акс) — мисли Instagram ─────────
+          if (!widget.isVideo)
+            Positioned(
+              left: 0, right: 0, bottom: 100,
+              child: SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  itemCount: PhotoFilters.presets.length,
+                  itemBuilder: (_, i) {
+                    final f = PhotoFilters.presets[i];
+                    final sel = i == _filterIndex;
+                    return GestureDetector(
+                      onTap: () => setState(() => _filterIndex = i),
+                      child: Container(
+                        width: 62,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        child: Column(children: [
+                          Container(
+                            width: 54, height: 54,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: sel ? Colors.white : Colors.white24,
+                                  width: 2),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: ColorFiltered(
+                                colorFilter: f.colorFilter,
+                                child: Image.file(widget.media,
+                                    width: 54, height: 54, fit: BoxFit.cover),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(f.name,
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: sel ? Colors.white : Colors.white60,
+                                  fontSize: 9)),
+                        ]),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
           // ── Music badge ─────────────────────────
           if (_selectedTrack != null)
             Positioned(bottom: 130, left: 16, right: 16,
@@ -664,7 +716,10 @@ class _PostEditorState extends State<_PostEditor> {
       }
       return const CircularProgressIndicator(color: Colors.white30);
     }
-    return Image.file(widget.media, fit: BoxFit.contain);
+    return ColorFiltered(
+      colorFilter: PhotoFilters.presets[_filterIndex].colorFilter,
+      child: Image.file(widget.media, fit: BoxFit.contain),
+    );
   }
 }
 
