@@ -63,7 +63,7 @@ class AppIcons {
   static const IconData code_rounded = FeatherIcons.code;
   static const IconData collections_rounded = FeatherIcons.copy;
   static const IconData computer_rounded = FeatherIcons.monitor;
-  static const IconData construction_rounded = FeatherIcons.tool;
+  static const IconData construction_rounded = Symbols.construction_rounded;
   static const IconData contacts_outlined = FeatherIcons.users;
   static const IconData contacts_rounded = FeatherIcons.users;
   static const IconData copy_rounded = FeatherIcons.copy;
