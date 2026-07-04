@@ -24,6 +24,7 @@ import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
+import '../../live/live_screens.dart';
 import '../../shop/shop_screen.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -130,6 +131,13 @@ class _FeedShellState extends State<_FeedShell> {
             )),
             centerTitle: true, // лого дар марказ — мисли скриншоти Instagram
             actions: [
+              IconButton(
+                icon: Icon(AppIcons.videocam_rounded,
+                    color: AppColors.textPrimary, size: 25),
+                tooltip: 'Live',
+                onPressed: () => Navigator.push(ctx, MaterialPageRoute(
+                    builder: (_) => const LiveListScreen())),
+              ),
               IconButton(
                 icon: SvgPicture.asset('assets/icons/friends.svg',
                     width: 25, height: 25,

@@ -197,6 +197,15 @@ func main() {
 		og.PUT("/:id/status", handlers.UpdateOrderStatus) // тағйири ҳолат (фурӯшанда)
 	}
 
+	// ── Live-стримҳо ───────────────────────────────────────────────
+	lg := r.Group("/live", auth, rl100)
+	{
+		lg.GET("/",          handlers.ListLive)
+		lg.POST("/start",    handlers.StartLive)
+		lg.POST("/:id/end",  handlers.EndLive)
+		lg.POST("/:id/join", handlers.JoinLive)
+	}
+
 	// ── Effects marketplace ────────────────────────────────────────
 	ef := r.Group("/effects", auth, rl100)
 	{

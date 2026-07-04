@@ -92,6 +92,61 @@ class AgoraService extends ChangeNotifier {
     );
   }
 
+  // ─── LIVE (broadcast: host стрим мекунад, дигарон тамошо) ───
+  Future<void> joinLive({
+    required String channelName,
+    required bool   asHost,
+  }) async {
+    if (asHost) await _requestPermissions(true); // host: камера+микрофон
+
+    if (_engine != null) {
+      try { await _engine!.release(); } catch (_) {}
+      _engine = null;
+    }
+    _engine = createAgoraRtcEngine();
+    await _engine!.initialize(const RtcEngineContext(appId: kAgoraAppId));
+
+    _engine!.registerEventHandler(RtcEngineEventHandler(
+      onJoinChannelSuccess: (connection, elapsed) {
+        _localJoined = true;
+        notifyListeners();
+      },
+      onUserJoined: (connection, remoteUid, elapsed) {
+        _remoteUid    = remoteUid;
+        _remoteJoined = true;
+        notifyListeners();
+      },
+      onUserOffline: (connection, remoteUid, reason) {
+        if (_remoteUid == remoteUid) {
+          _remoteUid    = null;
+          _remoteJoined = false;
+          notifyListeners();
+        }
+      },
+      onError: (err, msg) => debugPrint('[AgoraLive] Error $err: $msg'),
+    ));
+
+    await _engine!.enableVideo();
+    if (asHost) await _engine!.startPreview();
+
+    _channelId = channelName;
+    await _engine!.joinChannel(
+      token:     '',
+      channelId: channelName,
+      uid:       0,
+      options: ChannelMediaOptions(
+        channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
+        clientRoleType: asHost
+            ? ClientRoleType.clientRoleBroadcaster
+            : ClientRoleType.clientRoleAudience,
+        publishMicrophoneTrack: asHost,
+        publishCameraTrack:     asHost,
+        autoSubscribeAudio:     true,
+        autoSubscribeVideo:     true,
+      ),
+    );
+  }
+
   // ─── LEAVE ───
   Future<void> leaveCall() async {
     await _engine?.leaveChannel();

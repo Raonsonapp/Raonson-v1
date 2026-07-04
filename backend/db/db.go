@@ -584,6 +584,19 @@ func migrate() {
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
 
+	-- ── Live-стримҳо (Agora broadcast) ──
+	CREATE TABLE IF NOT EXISTS live_streams (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		host_id    TEXT NOT NULL,
+		channel    TEXT NOT NULL,
+		title      TEXT DEFAULT '',
+		viewers    INTEGER DEFAULT 0,
+		active     BOOLEAN DEFAULT TRUE,
+		started_at TIMESTAMPTZ DEFAULT NOW(),
+		ended_at   TIMESTAMPTZ
+	);
+	CREATE INDEX IF NOT EXISTS idx_live_active ON live_streams(active, started_at DESC);
+
 	-- ── Шикоят аз корбар ва маҳдудкунӣ (report / restrict) ──
 	CREATE TABLE IF NOT EXISTS user_reports (
 		reported_id TEXT NOT NULL,
