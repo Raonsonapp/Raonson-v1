@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,16 +24,41 @@ type newsItem struct {
 	Source      string `json:"source"`
 	PubDate     string `json:"pubDate"`
 	IsoDate     string `json:"isoDate"` // ISO-8601 барои «вақт пеш»-и frontend
+	Region      string `json:"region"`  // "tj" | "cis" | "world"
+	Lang        string `json:"lang"`    // "tj" | "ru" | "en"
 	ts          time.Time
 }
 
-type newsSource struct{ name, url string }
-
-var newsSources = []newsSource{
-	{"BBC", "https://feeds.bbci.co.uk/russian/rss.xml"},
-	{"BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml"},
-	{"Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"},
+type newsSource struct {
+	name, url, region, lang string
 }
+
+// Манбаъҳо — бо вазни зиёд ба Тоҷикистон.
+var newsSources = []newsSource{
+	// Тоҷикистон (region "tj") — бояд бартарӣ дошта бошад.
+	{"Asia-Plus", "https://asiaplustj.info/ru/rss.xml", "tj", "ru"},
+	{"Радио Озоди", "https://www.ozodi.org/api/zrqiteuuir", "tj", "tj"},
+	{"Радио Озоди RU", "https://rus.ozodi.org/api/z-pqp_eu-r", "tj", "ru"},
+	{"Sputnik Тоҷикистон", "https://tj.sputniknews.ru/export/rss2/archive/index.xml", "tj", "ru"},
+	{"Khovar", "https://khovar.tj/feed/", "tj", "tj"},
+	{"Avesta", "https://avesta.tj/feed/", "tj", "ru"},
+
+	// СНГ / CIS (region "cis") — дуюмдараҷа.
+	{"РИА Новости", "https://ria.ru/export/rss2/archive/index.xml", "cis", "ru"},
+	{"Sputnik", "https://sputniknews.ru/export/rss2/archive/index.xml", "cis", "ru"},
+	{"Lenta", "https://lenta.ru/rss", "cis", "ru"},
+	{"Gazeta", "https://www.gazeta.ru/export/rss/lenta.xml", "cis", "ru"},
+
+	// Ҷаҳон (region "world").
+	{"BBC", "https://feeds.bbci.co.uk/russian/rss.xml", "world", "ru"},
+	{"BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml", "world", "en"},
+	{"Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml", "world", "en"},
+}
+
+const (
+	newsCacheTTL = 5 * time.Minute
+	newsMaxItems = 120
+)
 
 var (
 	newsCache     []newsItem
@@ -47,30 +73,93 @@ func cleanHTML(s string) string {
 	return strings.TrimSpace(s)
 }
 
-// GET /news — рӯйхати ахбор (cache 10 дақиқа).
+// regionRank — тартиб: tj аввал, баъд cis, баъд world.
+func regionRank(region string) int {
+	switch region {
+	case "tj":
+		return 0
+	case "cis":
+		return 1
+	default:
+		return 2
+	}
+}
+
+// GET /news — рӯйхати ахбор (cache 5 дақиқа).
+// Параметрҳо: ?page=<n>&limit=<m>&lang=tj|ru|en|all
 func GetNews(c *gin.Context) {
 	newsMu.Lock()
-	fresh := len(newsCache) > 0 && time.Since(newsCacheTime) < 10*time.Minute
+	fresh := len(newsCache) > 0 && time.Since(newsCacheTime) < newsCacheTTL
 	cached := newsCache
 	newsMu.Unlock()
 
-	if fresh {
-		c.JSON(http.StatusOK, gin.H{"news": cached})
-		return
+	items := cached
+	if !fresh {
+		fetched := fetchAllNews()
+		if len(fetched) > 0 {
+			newsMu.Lock()
+			newsCache = fetched
+			newsCacheTime = time.Now()
+			newsMu.Unlock()
+			items = fetched
+		}
+		// Агар шабака нашуд — кэши кӯҳна (items = cached) боқӣ мемонад.
 	}
 
-	items := fetchAllNews()
-	if len(items) == 0 {
-		// Шабака нашуд — кэши кӯҳнаро бармегардонем (агар бошад).
-		c.JSON(http.StatusOK, gin.H{"news": cached})
-		return
+	respondNews(c, items)
+}
+
+// respondNews — филтри забон + pagination аз рӯйхати тартибдодашуда.
+func respondNews(c *gin.Context, items []newsItem) {
+	// Филтри забон (пеш аз pagination).
+	lang := strings.ToLower(strings.TrimSpace(c.Query("lang")))
+	if lang == "" {
+		lang = "all"
+	}
+	if lang != "all" {
+		filtered := make([]newsItem, 0, len(items))
+		for _, it := range items {
+			if it.Lang == lang {
+				filtered = append(filtered, it)
+			}
+		}
+		items = filtered
 	}
 
-	newsMu.Lock()
-	newsCache = items
-	newsCacheTime = time.Now()
-	newsMu.Unlock()
-	c.JSON(http.StatusOK, gin.H{"news": items})
+	page := parsePositiveInt(c.Query("page"), 1)
+	limit := parsePositiveInt(c.Query("limit"), 20)
+
+	total := len(items)
+	start := (page - 1) * limit
+	end := start + limit
+	if start > total {
+		start = total
+	}
+	if end > total {
+		end = total
+	}
+
+	pageItems := items[start:end]
+	if pageItems == nil {
+		pageItems = []newsItem{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"news":    pageItems,
+		"page":    page,
+		"hasMore": page*limit < total,
+	})
+}
+
+func parsePositiveInt(s string, def int) int {
+	if s == "" {
+		return def
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		return def
+	}
+	return n
 }
 
 func fetchAllNews() []newsItem {
@@ -128,13 +217,22 @@ func fetchAllNews() []newsItem {
 				Source:      s.name,
 				PubDate:     it.PubDate,
 				IsoDate:     iso,
+				Region:      s.region,
+				Lang:        s.lang,
 				ts:          t,
 			})
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ts.After(out[j].ts) })
-	if len(out) > 60 {
-		out = out[:60]
+	// Тартиб: аввал минтақа (tj < cis < world), баъд навтарин дар дохили минтақа.
+	sort.SliceStable(out, func(i, j int) bool {
+		ri, rj := regionRank(out[i].Region), regionRank(out[j].Region)
+		if ri != rj {
+			return ri < rj
+		}
+		return out[i].ts.After(out[j].ts)
+	})
+	if len(out) > newsMaxItems {
+		out = out[:newsMaxItems]
 	}
 	return out
 }

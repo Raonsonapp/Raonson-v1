@@ -138,6 +138,7 @@ class AppIcons {
   static const IconData notifications_none_outlined = FeatherIcons.bell;
   static const IconData notifications_outlined = FeatherIcons.bell;
   static const IconData notifications_rounded = FeatherIcons.bell;
+  static const IconData open_in_new_rounded = FeatherIcons.externalLink;
   static const IconData open_in_full_rounded = FeatherIcons.maximize2;
   static const IconData palette_outlined = Symbols.palette_rounded;
   static const IconData pause_circle_filled_rounded = FeatherIcons.pauseCircle;
