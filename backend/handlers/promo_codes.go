@@ -125,3 +125,52 @@ func ValidatePromo(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"valid": true, "discountPct": pct})
 }
+
+// POST /shop/broadcast {text} → паём ба ҳамаи муштариён (Marketing, Business)
+func BroadcastToCustomers(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Text string `json:"text"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
+		return
+	}
+	text := strings.TrimSpace(b.Text)
+	if text == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Матн холӣ аст"})
+		return
+	}
+	if len(text) > 1000 {
+		text = text[:1000]
+	}
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT DISTINCT buyer_id FROM orders WHERE seller_id=$1`, myID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "хатои база"})
+		return
+	}
+	buyers := []string{}
+	for rows.Next() {
+		var id string
+		rows.Scan(&id)
+		if id != "" && id != myID {
+			buyers = append(buyers, id)
+		}
+	}
+	rows.Close()
+
+	sent := 0
+	for _, bid := range buyers {
+		chatID := sortedChatID(myID, bid)
+		_, e := db.Pool.Exec(context.Background(), `
+			INSERT INTO messages
+			  (chat_id, sender_id, receiver_id, text, type, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, 'text', NOW(), NOW())`,
+			chatID, myID, bid, text)
+		if e == nil {
+			sent++
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"sent": sent})
+}

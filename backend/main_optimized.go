@@ -190,6 +190,7 @@ func main() {
 	r.GET("/shop/promos", auth, rl100, handlers.ListPromos)              // промокодҳо
 	r.DELETE("/shop/promos/:id", auth, rl100, handlers.DeletePromo)      // ҳазф
 	r.POST("/shop/promos/validate", auth, rl100, handlers.ValidatePromo) // санҷиш
+	r.POST("/shop/broadcast", auth, rl20, handlers.BroadcastToCustomers)  // паём ба муштариён
 	og := r.Group("/orders", auth, rl100)
 	{
 		og.GET("/",           handlers.GetMyOrders)

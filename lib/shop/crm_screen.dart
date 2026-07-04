@@ -37,6 +37,48 @@ class _CrmScreenState extends State<CrmScreen> {
   String _money(double v) =>
       '${v.toStringAsFixed(v % 1 == 0 ? 0 : 2)} сом';
 
+  Future<void> _broadcast() async {
+    if (_customers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ҳанӯз муштарӣ нест')));
+      return;
+    }
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Паём ба ҳама муштариён',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        content: TextField(controller: ctrl, autofocus: true, maxLines: 4,
+          maxLength: 1000,
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(hintText: 'Матни паём (аксия, хабар…)',
+              hintStyle: TextStyle(color: AppColors.textFaint))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+              child: Text('Фиристодан', style: TextStyle(color: AppColors.neonBlue))),
+        ],
+      ),
+    );
+    final text = ctrl.text.trim();
+    if (ok == true && text.isNotEmpty) {
+      try {
+        final r = await ApiClient.instance.post('/shop/broadcast',
+            body: {'text': text});
+        if (r.statusCode < 400 && mounted) {
+          final sent = (jsonDecode(r.body)['sent'] as num?)?.toInt() ?? 0;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Паём ба $sent муштарӣ фиристода шуд ✓'),
+              backgroundColor: Colors.green));
+        }
+      } catch (_) {}
+    }
+    ctrl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,6 +89,13 @@ class _CrmScreenState extends State<CrmScreen> {
         title: Text('Муштариён (CRM)',
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            tooltip: 'Паём ба ҳама',
+            icon: Icon(AppIcons.send_rounded, color: AppColors.textPrimary),
+            onPressed: _broadcast,
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
