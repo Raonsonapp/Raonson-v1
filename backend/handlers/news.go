@@ -22,6 +22,7 @@ type newsItem struct {
 	Image       string `json:"image"`
 	Source      string `json:"source"`
 	PubDate     string `json:"pubDate"`
+	IsoDate     string `json:"isoDate"` // ISO-8601 барои «вақт пеш»-и frontend
 	ts          time.Time
 }
 
@@ -115,6 +116,10 @@ func fetchAllNews() []newsItem {
 			if t.IsZero() {
 				t, _ = time.Parse(time.RFC1123, it.PubDate)
 			}
+			iso := ""
+			if !t.IsZero() {
+				iso = t.UTC().Format(time.RFC3339)
+			}
 			out = append(out, newsItem{
 				Title:       strings.TrimSpace(it.Title),
 				Link:        strings.TrimSpace(it.Link),
@@ -122,6 +127,7 @@ func fetchAllNews() []newsItem {
 				Image:       img,
 				Source:      s.name,
 				PubDate:     it.PubDate,
+				IsoDate:     iso,
 				ts:          t,
 			})
 		}

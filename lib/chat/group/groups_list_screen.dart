@@ -40,6 +40,60 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
     _load();
   }
 
+  // Аз рӯи линк/код ба гурӯҳ ҳамроҳ шудан → POST /group-join/:token
+  Future<void> _joinByLink() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Ҳамроҳ шудан бо линк',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Линк ё коди даъватро гузоред…',
+            hintStyle: TextStyle(color: AppColors.textFaint),
+            filled: true, fillColor: AppColors.surface,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Бекор',
+                  style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Ҳамроҳ шудан',
+                  style: TextStyle(
+                      color: AppColors.neonBlue,
+                      fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    // Линки пурра «…/g/<token>» ё худи токен қабул мешавад.
+    var token = ctrl.text.trim();
+    if (token.contains('/')) token = token.split('/').last;
+    token = token.split('?').first.trim();
+    if (token.isEmpty) return;
+    final group = await _repo.joinByToken(token);
+    if (!mounted) return;
+    if (group == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Гурӯҳ ёфт нашуд ё линк нодуруст аст')));
+      return;
+    }
+    await Navigator.push(context,
+        MaterialPageRoute(builder: (_) => GroupChatScreen(group: group)));
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,6 +103,13 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         title: Text('Гурӯҳҳо',
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        actions: [
+          IconButton(
+            tooltip: 'Ҳамроҳ шудан бо линк',
+            icon: Icon(AppIcons.link_rounded, color: AppColors.textPrimary),
+            onPressed: _joinByLink,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.neonBlue,

@@ -484,7 +484,8 @@ class _NotesRow extends StatelessWidget {
             hasNote: hasNote,
             onTap:   onMyTap,
           ),
-          ...friends.map((n) => _FriendNoteBubble(note: n)),
+          ...friends.map((n) =>
+              _FriendNoteBubble(key: ValueKey(n.userId), note: n)),
         ],
       ),
     );
@@ -568,7 +569,7 @@ class _MyNoteBubble extends StatelessWidget {
 
 class _FriendNoteBubble extends StatefulWidget {
   final NoteModel note;
-  const _FriendNoteBubble({required this.note});
+  const _FriendNoteBubble({super.key, required this.note});
   @override
   State<_FriendNoteBubble> createState() => _FriendNoteBubbleState();
 }

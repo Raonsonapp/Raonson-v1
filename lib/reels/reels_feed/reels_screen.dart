@@ -399,6 +399,7 @@ class _ReelsViewState extends State<_ReelsView> {
         itemCount: vm.reels.length,
         onPageChanged: (i) => _onPageChanged(i, vm),
         itemBuilder: (_, i) => _ReelItem(
+          key: ValueKey(vm.reels[i].id),
           reel: vm.reels[i],
           isActive: i == _currentPage && widget.isActive,
           isMuted: vm.isMuted,
@@ -507,6 +508,7 @@ class _ReelItem extends StatefulWidget {
   final Future<bool> Function() onDownload; // ← НАВ
 
   const _ReelItem({
+    super.key,
     required this.reel,
     required this.isActive,
     required this.isMuted,

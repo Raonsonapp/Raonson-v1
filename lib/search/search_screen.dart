@@ -1017,7 +1017,8 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
           controller:  _page,
           scrollDirection: Axis.vertical,
           itemCount:   widget.items.length,
-          itemBuilder: (_, i) => _FeedCard(item: widget.items[i]),
+          itemBuilder: (_, i) =>
+              _FeedCard(key: ValueKey(widget.items[i].id), item: widget.items[i]),
         ),
         // Back button
         Positioned(
@@ -1047,7 +1048,7 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
 // Single card in the explore feed (image OR playing video/reel)
 class _FeedCard extends StatefulWidget {
   final _ExploreItem item;
-  const _FeedCard({required this.item});
+  const _FeedCard({super.key, required this.item});
   @override
   State<_FeedCard> createState() => _FeedCardState();
 }
@@ -1493,7 +1494,8 @@ class _ForYouTab extends StatelessWidget {
           SliverToBoxAdapter(
             child: Column(
               children: music.take(3)
-                  .map((m) => _MusicRow(m: m))
+                  .map((m) => _MusicRow(
+                      key: ValueKey(m['trackId'] ?? m['previewUrl']), m: m))
                   .toList(),
             ),
           ),
@@ -1566,8 +1568,10 @@ class _UsersTab extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 32),
       itemCount: users.length,
-      itemBuilder: (_, i) =>
-          _UserRow(user: users[i], onTap: () => onTap(users[i].id)),
+      itemBuilder: (_, i) => _UserRow(
+          key: ValueKey(users[i].id),
+          user: users[i],
+          onTap: () => onTap(users[i].id)),
     );
   }
 }
@@ -1585,7 +1589,9 @@ class _MusicTab extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 32),
       itemCount: music.length,
-      itemBuilder: (_, i) => _MusicRow(m: music[i]),
+      itemBuilder: (_, i) => _MusicRow(
+          key: ValueKey(music[i]['trackId'] ?? music[i]['previewUrl'] ?? i),
+          m: music[i]),
     );
   }
 }
@@ -1647,7 +1653,7 @@ class _HashtagTab extends StatelessWidget {
 class _UserRow extends StatefulWidget {
   final UserModel user;
   final VoidCallback onTap;
-  const _UserRow({required this.user, required this.onTap});
+  const _UserRow({super.key, required this.user, required this.onTap});
   @override
   State<_UserRow> createState() => _UserRowState();
 }
@@ -1758,7 +1764,7 @@ String? _playingUrl;
 
 class _MusicRow extends StatefulWidget {
   final dynamic m;
-  const _MusicRow({required this.m});
+  const _MusicRow({super.key, required this.m});
   @override
   State<_MusicRow> createState() => _MusicRowState();
 }

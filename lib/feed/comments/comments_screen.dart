@@ -278,6 +278,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         return Padding(
                           padding: EdgeInsets.only(left: isReply ? 40 : 0),
                           child: _CommentItem(
+                            key: ValueKey(c.id),
                             comment: c,
                             isReply: isReply,
                             onDelete: () => _onDelete(c.id),
@@ -398,6 +399,7 @@ class _CommentItem extends StatefulWidget {
   final VoidCallback onReply;
 
   const _CommentItem({
+    super.key,
     required this.comment,
     this.isReply = false,
     required this.onDelete,

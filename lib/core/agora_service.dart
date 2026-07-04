@@ -37,6 +37,11 @@ class AgoraService extends ChangeNotifier {
   }) async {
     await _requestPermissions(isVideo);
 
+    // Агар engine-и қаблӣ монда бошад — озод кун (то leak-и native нашавад).
+    if (_engine != null) {
+      try { await _engine!.release(); } catch (_) {}
+      _engine = null;
+    }
     _engine = createAgoraRtcEngine();
     await _engine!.initialize(const RtcEngineContext(appId: kAgoraAppId));
 

@@ -77,6 +77,15 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
   }
 
   Future<void> _onPick(AssetEntity a) async {
+    // Дар режими Reel танҳо видео қабул мешавад (акс compressVideo-ро вайрон мекунад).
+    if (_mode == CreateMode.reel && a.type != AssetType.video) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Барои Reel видео интихоб кунед'),
+            duration: Duration(seconds: 2)));
+      }
+      return;
+    }
     final file = await a.file;
     if (file == null) return;
     _openEditor(file, a.type == AssetType.video);

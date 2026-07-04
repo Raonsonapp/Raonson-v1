@@ -892,6 +892,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           children: [
             if (showDate) DateSeparator(date: msg.createdAt),
             MessageBubble(
+              key:      ValueKey(msg.id),
               message:  msg,
               myBubbleColor: _theme.bubble,
               onReply:  () => setState(() => _replyTo = msg),

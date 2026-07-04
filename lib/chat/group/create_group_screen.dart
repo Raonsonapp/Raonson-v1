@@ -47,7 +47,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       final r = await ApiClient.instance.get('/search/users', query: {'q': q});
       if (r.statusCode < 400) {
         final body = jsonDecode(r.body);
-        final users = (body['users'] ?? body['data'] ?? []) as List;
+        // /search/users рӯйхати холис бармегардонад — ҳам List, ҳам {users:[]}
+        final users =
+            (body is List ? body : (body['users'] ?? body['data'] ?? []))
+                as List;
         setState(() => _results =
             users.map((e) => (e as Map).cast<String, dynamic>()).toList());
       }

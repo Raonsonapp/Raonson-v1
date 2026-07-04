@@ -8,10 +8,11 @@ import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
 
 class NewsItem {
-  final String title, link, description, image, source, pubDate;
+  final String title, link, description, image, source, pubDate, isoDate;
   NewsItem({
     required this.title, required this.link, required this.description,
     required this.image, required this.source, required this.pubDate,
+    required this.isoDate,
   });
   factory NewsItem.fromJson(Map<String, dynamic> j) => NewsItem(
         title: (j['title'] ?? '').toString(),
@@ -20,10 +21,12 @@ class NewsItem {
         image: (j['image'] ?? '').toString(),
         source: (j['source'] ?? '').toString(),
         pubDate: (j['pubDate'] ?? '').toString(),
+        isoDate: (j['isoDate'] ?? '').toString(),
       );
 
   String get timeAgo {
-    final t = DateTime.tryParse(pubDate);
+    // isoDate (RFC3339 аз backend) қобили таҳлил аст; агар набошад — pubDate.
+    final t = DateTime.tryParse(isoDate.isNotEmpty ? isoDate : pubDate);
     if (t == null) return source;
     final d = DateTime.now().difference(t);
     if (d.inMinutes < 60) return '$source · ${d.inMinutes}д';
