@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../widgets/avatar.dart';
 import '../models/user_model.dart';
+import '../core/services/user_session.dart';
 import '../chat/room/chat_room_screen.dart';
 import 'shop_repository.dart';
 import 'sell_screen.dart';
@@ -106,21 +107,34 @@ class _ShopScreenState extends State<ShopScreen> {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: p.image.isEmpty
-                  ? Container(color: AppColors.card,
-                      child: Icon(AppIcons.image_outlined,
-                          color: AppColors.textFaint))
-                  : CachedNetworkImage(
-                      imageUrl: p.image, fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: AppColors.card),
-                      errorWidget: (_, __, ___) =>
-                          Container(color: AppColors.card)),
+          Stack(children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: p.image.isEmpty
+                    ? Container(color: AppColors.card,
+                        child: Icon(AppIcons.image_outlined,
+                            color: AppColors.textFaint))
+                    : CachedNetworkImage(
+                        imageUrl: p.image, fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: AppColors.card),
+                        errorWidget: (_, __, ___) =>
+                            Container(color: AppColors.card)),
+              ),
             ),
-          ),
+            if (p.featured)
+              Positioned(top: 6, left: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFFD700),
+                      borderRadius: BorderRadius.circular(5)),
+                  child: const Text('⭐ Беҳтарин',
+                      style: TextStyle(color: Colors.black, fontSize: 9,
+                          fontWeight: FontWeight.w800)),
+                )),
+          ]),
           Padding(
             padding: const EdgeInsets.all(8),
             child: Column(
@@ -317,6 +331,40 @@ class _ProductSheet extends StatelessWidget {
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w600)),
                 ]),
+                // Соҳиби маҳсул — тугмаи «Беҳтарин кардан» (featured).
+                if (p.sellerId == UserSession.userId && p.sellerId.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                            color: p.featured
+                                ? const Color(0xFFFFD700)
+                                : AppColors.divider),
+                      ),
+                      onPressed: () async {
+                        final on = await product.toggleFeature(p.id);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(on
+                                ? 'Маҳсул «беҳтарин» шуд ⭐'
+                                : 'Аз «беҳтарин» гирифта шуд'),
+                            backgroundColor: Colors.green));
+                        }
+                      },
+                      icon: Icon(AppIcons.star_rounded,
+                          color: p.featured
+                              ? const Color(0xFFFFD700) : AppColors.textFaint,
+                          size: 18),
+                      label: Text(
+                          p.featured
+                              ? 'Аз «беҳтарин» гирифтан'
+                              : 'Беҳтарин кардан (боло)',
+                          style: TextStyle(color: AppColors.textPrimary)),
+                    ),
+                  ),
+                ],
                 if (hasShop) ...[
                   const SizedBox(height: 8),
                   InkWell(

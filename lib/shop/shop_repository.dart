@@ -12,6 +12,7 @@ class Product {
   final bool sellerVerified;
   final bool contactRaonson;
   final String whatsapp, phone;
+  final bool featured;
   Product({
     required this.id, required this.productName, required this.currency,
     required this.shopAddress, required this.caption, required this.image,
@@ -19,6 +20,7 @@ class Product {
     required this.inStock, required this.sellerId, required this.sellerName,
     required this.sellerAvatar, required this.sellerVerified,
     this.contactRaonson = true, this.whatsapp = '', this.phone = '',
+    this.featured = false,
   });
   factory Product.fromJson(Map<String, dynamic> j) {
     final s = (j['seller'] ?? {}) as Map;
@@ -40,7 +42,18 @@ class Product {
       contactRaonson: j['contactRaonson'] != false,
       whatsapp: (j['shopWhatsapp'] ?? '').toString(),
       phone: (j['shopPhone'] ?? '').toString(),
+      featured: j['featured'] == true,
     );
+  }
+
+  Future<bool> toggleFeature(String postId) async {
+    try {
+      final r = await ApiClient.instance.post('/posts/$postId/feature');
+      if (r.statusCode >= 400) return false;
+      return (jsonDecode(r.body)['featured'] as bool?) ?? false;
+    } catch (_) {
+      return false;
+    }
   }
   String get priceLabel => '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
 }

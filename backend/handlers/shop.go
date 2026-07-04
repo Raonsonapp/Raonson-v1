@@ -27,10 +27,11 @@ func GetShop(c *gin.Context) {
 		       COALESCE(p.shop_phone,''),
 		       COALESCE((SELECT url FROM post_media pm WHERE pm.post_id=p.id
 		                 ORDER BY position LIMIT 1),'') AS image,
-		       u.id, u.username, COALESCE(u.avatar,''), u.verified
+		       u.id, u.username, COALESCE(u.avatar,''), u.verified,
+		       COALESCE(p.featured,FALSE)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE p.is_product=TRUE
-		ORDER BY p.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+		ORDER BY p.featured DESC, p.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "shop failed"})
 		return
@@ -42,15 +43,15 @@ func GetShop(c *gin.Context) {
 		var whatsapp, phone string
 		var uid, uname, uavatar string
 		var price, lat, lng float64
-		var inStock, verified, contactRaonson bool
+		var inStock, verified, contactRaonson, featured bool
 		rows.Scan(&pid, &pname, &price, &currency, &addr, &lat, &lng,
 			&caption, &inStock, &contactRaonson, &whatsapp, &phone,
-			&image, &uid, &uname, &uavatar, &verified)
+			&image, &uid, &uname, &uavatar, &verified, &featured)
 		items = append(items, gin.H{
 			"_id": pid, "productName": pname, "price": price,
 			"currency": currency, "shopAddress": addr,
 			"shopLat": lat, "shopLng": lng, "caption": caption,
-			"inStock": inStock, "image": image,
+			"inStock": inStock, "image": image, "featured": featured,
 			"contactRaonson": contactRaonson,
 			"shopWhatsapp": whatsapp, "shopPhone": phone,
 			"seller": gin.H{"_id": uid, "username": uname,
@@ -58,6 +59,22 @@ func GetShop(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"products": items})
+}
+
+// ── POST /posts/:id/feature → маҳсулро дар магоза «беҳтарин» кардан ──
+func ToggleProductFeature(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	var featured bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE posts SET featured = NOT COALESCE(featured,false)
+		 WHERE id=$1 AND user_id=$2 AND is_product=TRUE
+		 RETURNING featured`, postID, myID).Scan(&featured)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиби маҳсул"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"featured": featured})
 }
 
 // ── POST /posts/:id/order → фармоиш додан ─────────────────────────

@@ -180,6 +180,7 @@ func main() {
 		po.PUT("/:id/music",         handlers.UpdatePostMusic)
 		po.GET("/:id/stats",         handlers.GetPostStats)
 		po.POST("/:id/order",        handlers.PlaceOrder) // хариди маҳсулот
+		po.POST("/:id/feature",      handlers.ToggleProductFeature) // маҳсули беҳтарин
 	}
 
 	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────
