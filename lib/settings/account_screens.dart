@@ -192,7 +192,7 @@ class CloseFriendsScreen extends StatefulWidget {
 }
 
 class _CloseFriendsState extends State<CloseFriendsScreen> {
-  final _repo = ProfileRepository();
+  final _repo = ProfileRepository(ApiClient.instance);
   List<UserModel> _following = [];
   final Set<String> _close = {};
   final Set<String> _busy = {};
@@ -207,12 +207,8 @@ class _CloseFriendsState extends State<CloseFriendsScreen> {
   Future<void> _load() async {
     final myId = UserSession.userId ?? '';
     try {
-      final results = await Future.wait([
-        _repo.getFollowing(myId),
-        ApiClient.instance.get('/close-friends/ids'),
-      ]);
-      _following = results[0] as List<UserModel>;
-      final res = results[1] as dynamic;
+      _following = await _repo.getFollowing(myId);
+      final res = await ApiClient.instance.get('/close-friends/ids');
       if (res.statusCode < 400) {
         final b = jsonDecode(res.body);
         final ids = (b['ids'] ?? []) as List;

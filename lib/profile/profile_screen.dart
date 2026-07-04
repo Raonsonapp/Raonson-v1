@@ -15,6 +15,7 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
+import '../core/services/subscription_service.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
@@ -420,6 +421,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(width: 5),
                       Icon(AppIcons.lock_outline_rounded,
                           color: AppColors.textPrimary, size: 15),
+                    ],
+                    // Нишони PRO / BUSINESS (обунаи фаъол).
+                    if (_isMe && SubscriptionService.instance.isPro) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                              colors: SubscriptionService.instance.isBusiness
+                                  ? const [Color(0xFFF7971E), Color(0xFFFFD200)]
+                                  : const [Color(0xFF7F00FF), Color(0xFFE100FF)]),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                            SubscriptionService.instance.isBusiness
+                                ? 'BUSINESS' : 'PRO',
+                            style: const TextStyle(color: Colors.white,
+                                fontSize: 9, fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5)),
+                      ),
                     ],
                     if (_isMe) ...[
                       const SizedBox(width: 4),

@@ -57,6 +57,8 @@ class AppIcons {
   static const IconData check_rounded = FeatherIcons.check;
   static const IconData chevron_right_rounded = FeatherIcons.chevronRight;
   static const IconData circle = FeatherIcons.circle;
+  static const IconData business_center_rounded = FeatherIcons.briefcase;
+  static const IconData credit_card_rounded = FeatherIcons.creditCard;
   static const IconData clear_rounded = FeatherIcons.x;
   static const IconData close = FeatherIcons.x;
   static const IconData close_rounded = FeatherIcons.x;

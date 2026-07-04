@@ -27,6 +27,7 @@ import '../profile/edit/edit_profile_screen.dart';
 import 'account_screens.dart';
 import 'insights_screen.dart';
 import 'seller_dashboard_screen.dart';
+import '../subscription/subscription_screen.dart';
 import '../core/ui/app_icons.dart';
 
 /// Theme label in the active language.
@@ -54,6 +55,29 @@ class SettingsScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.only(bottom: 50),
             children: [
+
+              // ── RAONSON PRO / BUSINESS (мисли Meta Verified) ──────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                child: Row(children: [
+                  Expanded(child: _PlanBanner(
+                    title: 'Raonson Pro',
+                    subtitle: '29.90 сом/моҳ',
+                    icon: AppIcons.star_rounded,
+                    colors: const [Color(0xFF7F00FF), Color(0xFFE100FF)],
+                    onTap: () => _go(ctx, const SubscriptionScreen()),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: _PlanBanner(
+                    title: 'Business',
+                    subtitle: '99.90 сом/моҳ',
+                    icon: AppIcons.business_center_rounded,
+                    colors: const [Color(0xFFF7971E), Color(0xFFFFD200)],
+                    onTap: () => _go(ctx,
+                        const SubscriptionScreen(business: true)),
+                  )),
+                ]),
+              ),
 
               // ── ACCOUNT ───────────────────────────────────────────
               _Hdr(tr('section.account')),
@@ -1065,25 +1089,26 @@ class AboutScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 24),
         children: [
-          // Logo + name
+          // Logo — танҳо худи лого, бе чаҳорчӯба/ранги иловагӣ дар гӯшаҳо
           Center(
             child: Container(
-              width: 96, height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.neonBlue, Color(0xFF00E87A)],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.neonBlue.withOpacity(0.35),
-                    blurRadius: 24, spreadRadius: 1),
+                    color: AppColors.neonBlue.withOpacity(0.30),
+                    blurRadius: 34, spreadRadius: 2),
                 ],
               ),
-              alignment: Alignment.center,
-              child: Image.asset('assets/icon.png', height: 60,
-                  errorBuilder: (_, __, ___) => Icon(
-                      AppIcons.bolt_rounded, color: AppColors.textPrimary, size: 48)),
+              child: ClipOval(
+                child: Image.asset('assets/icon.png',
+                    width: 118, height: 118, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                        width: 118, height: 118, color: AppColors.card,
+                        alignment: Alignment.center,
+                        child: Icon(AppIcons.bolt_rounded,
+                            color: AppColors.textPrimary, size: 52))),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1108,7 +1133,7 @@ class AboutScreen extends StatelessWidget {
           const _AboutRow(
               icon: AppIcons.person_rounded,
               label: 'Муаллиф',
-              value: 'Raonson Team'),
+              value: 'Маҳмадмуродов Эҳсон'),
           const _AboutRow(
               icon: AppIcons.public_rounded,
               label: 'Кишвар',
@@ -1159,6 +1184,39 @@ class _AboutRow extends StatelessWidget {
             style: TextStyle(
                 color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
       ]),
+    );
+  }
+}
+
+// ── Банери план (Pro / Business) ────────────────────────────────────
+class _PlanBanner extends StatelessWidget {
+  final String title, subtitle;
+  final IconData icon;
+  final List<Color> colors;
+  final VoidCallback onTap;
+  const _PlanBanner({required this.title, required this.subtitle,
+      required this.icon, required this.colors, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: colors,
+              begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: Colors.white, size: 24),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(color: Colors.white,
+              fontSize: 15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: const TextStyle(
+              color: Colors.white70, fontSize: 11.5)),
+        ]),
+      ),
     );
   }
 }
