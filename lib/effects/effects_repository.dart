@@ -35,7 +35,7 @@ class EffectItem {
       creatorVerified: c['verified'] == true,
     );
   }
-  static const _identity = [
+  static const List<double> _identity = [
     1.0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0
   ];
 }
