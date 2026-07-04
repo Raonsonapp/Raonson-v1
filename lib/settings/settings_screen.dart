@@ -28,6 +28,7 @@ import 'account_screens.dart';
 import 'insights_screen.dart';
 import 'seller_dashboard_screen.dart';
 import '../subscription/subscription_screen.dart';
+import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
 
 /// Theme label in the active language.
@@ -131,6 +132,12 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Дӯстони наздик',
                 sub:   'Рӯйхати дӯстони наздик барои сторис',
                 onTap: () => _go(ctx, const CloseFriendsScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.schedule_rounded,
+                title: 'Постҳои ба нақша',
+                sub:   'Постҳои дар вақти муайян нашршаванда (Pro)',
+                onTap: () => _go(ctx, const ScheduledPostsScreen()),
               ),
 
               // ── APPEARANCE ────────────────────────────────────────

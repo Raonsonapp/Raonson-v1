@@ -108,6 +108,7 @@ func GetUserPosts(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
 		WHERE p.user_id=$2 AND COALESCE(p.archived,false)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY COALESCE(p.is_pinned,false) DESC, p.created_at DESC
 		LIMIT $3 OFFSET $4`,
 		myID, id, limit, offset)

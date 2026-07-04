@@ -582,6 +582,7 @@ func ExploreGrid(c *gin.Context) {
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
 		  AND COALESCE(u.banned,false)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`)
 	posts := []gin.H{}
 	if pRows != nil {

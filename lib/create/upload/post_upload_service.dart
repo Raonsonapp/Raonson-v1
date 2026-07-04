@@ -37,6 +37,7 @@ class PostUploadService {
     String location = '',
     List<String> taggedUsers = const [],
     List<String> collaborators = const [],
+    String scheduledAt = '', // ISO-8601 — агар холӣ набошад, ба нақша гирифта мешавад
   }) async {
     state.value = UploadState(thumb: file, progress: 0.08);
     try {
@@ -62,6 +63,7 @@ class PostUploadService {
         'location': location,
         'taggedUsers': taggedUsers,
         'collaborators': collaborators,
+        if (scheduledAt.isNotEmpty) 'scheduledAt': scheduledAt,
       });
       if (res.statusCode >= 400) {
         throw Exception(_msg(res.body, res.statusCode));

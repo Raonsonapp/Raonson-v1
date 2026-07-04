@@ -157,6 +157,7 @@ func main() {
 		po.GET("/",                  cache30s, handlers.GetFeed)
 		po.GET("/feed",              cache30s, handlers.GetFeed)
 		po.GET("/smart-feed",        handlers.GetSmartFeed) // has own cache
+		po.GET("/scheduled",         handlers.GetScheduledPosts)
 		po.GET("/hashtag/:tag",      cache30s, handlers.HashtagPosts)
 		po.GET("/:id",               cache30s, handlers.GetPost)
 		po.GET("/:id/likes",         handlers.GetPostLikers)

@@ -152,6 +152,7 @@ func postsForUser(userID string, limit int) []gin.H {
 		                ORDER BY m.position), '[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p WHERE p.user_id=$1 AND COALESCE(p.archived,false)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY p.created_at DESC LIMIT $2`, userID, limit)
 	if err != nil {
 		log.Printf("[postsForUser] error: %v", err)

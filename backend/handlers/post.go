@@ -36,6 +36,8 @@ func CreatePost(c *gin.Context) {
 		ContactRaonson bool                    `json:"contactRaonson"`
 		ShopWhatsApp   string                  `json:"shopWhatsapp"`
 		ShopPhone      string                  `json:"shopPhone"`
+		// Post scheduling (нашри вақтбандӣ) — RFC3339, оянда
+		ScheduledAt    string                  `json:"scheduledAt"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || len(b.Media) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "At least one media item required"})
@@ -49,6 +51,14 @@ func CreatePost(c *gin.Context) {
 		b.Collaborators = []string{}
 	}
 
+	// Нашри вақтбандӣ: агар вақти оянда бошад, то он вақт пинҳон мемонад.
+	var scheduledAt *time.Time
+	if b.ScheduledAt != "" {
+		if t, perr := time.Parse(time.RFC3339, b.ScheduledAt); perr == nil && t.After(time.Now()) {
+			scheduledAt = &t
+		}
+	}
+
 	tx, err := db.Pool.Begin(context.Background())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
@@ -58,9 +68,9 @@ func CreatePost(c *gin.Context) {
 
 	var postID string
 	if err = tx.QueryRow(context.Background(),
-		`INSERT INTO posts(user_id,caption,music_title,music_artist,location,tagged_users,collaborators)
-		 VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-		myID, b.Caption, b.MusicTitle, b.MusicArtist, b.Location, b.TaggedUsers, b.Collaborators).Scan(&postID); err != nil {
+		`INSERT INTO posts(user_id,caption,music_title,music_artist,location,tagged_users,collaborators,scheduled_at)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+		myID, b.Caption, b.MusicTitle, b.MusicArtist, b.Location, b.TaggedUsers, b.Collaborators, scheduledAt).Scan(&postID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
 		return
 	}
@@ -174,6 +184,7 @@ func GetFeed(c *gin.Context) {
 		       COALESCE(p.shop_phone,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.archived,false) = FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY p.created_at DESC
 		LIMIT $2 OFFSET $3`, myID, limit, offset)
 	if err != nil {
@@ -247,7 +258,8 @@ func GetPost(c *gin.Context) {
 		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
 		       COALESCE(p.shop_phone,'')
-		FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=$1`,
+		FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=$1
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now() OR p.user_id=$2::text)`,
 		pid, myID).Scan(&pid2, &cap, &likes, &comms, &createdAt,
 		&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 		&hideLikes, &commentsOff,
@@ -266,6 +278,38 @@ func GetPost(c *gin.Context) {
 		"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 	})
+}
+
+// GET /posts/scheduled — постҳои вақтбандишудаи корбар (ҳанӯз нашрнашуда)
+func GetScheduledPosts(c *gin.Context) {
+	myID := mw.UID(c)
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT p.id, p.caption, p.scheduled_at,
+		       (SELECT COALESCE(json_agg(
+		                json_build_object('url',m.url,'type',m.type)
+		                ORDER BY m.position),'[]'::json)
+		        FROM post_media m WHERE m.post_id=p.id)
+		FROM posts p
+		WHERE p.user_id=$1::text AND p.scheduled_at IS NOT NULL AND p.scheduled_at > now()
+		ORDER BY p.scheduled_at ASC`, myID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
+		return
+	}
+	defer rows.Close()
+	posts := []gin.H{}
+	for rows.Next() {
+		var pid, cap string
+		var scheduledAt, media interface{}
+		if rows.Scan(&pid, &cap, &scheduledAt, &media) != nil {
+			continue
+		}
+		posts = append(posts, gin.H{
+			"_id": pid, "caption": cap,
+			"media": nilToEmpty(media), "scheduledAt": scheduledAt,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"posts": posts})
 }
 
 // DELETE /posts/:id

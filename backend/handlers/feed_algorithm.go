@@ -89,6 +89,7 @@ func GetSmartFeed(c *gin.Context) {
 		  u.banned = FALSE
 		  AND COALESCE(p.hidden,false) = FALSE
 		  AND COALESCE(p.archived,false) = FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  AND NOT EXISTS(SELECT 1 FROM blocks b
 		        WHERE (b.blocker_id=$1 AND b.blocked_id=p.user_id)
 		           OR (b.blocker_id=p.user_id AND b.blocked_id=$1))

@@ -131,12 +131,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   // Загрузкаи фонӣ: корбар фавран ба Home бармегардад, бор кардан дар
   // фон давом мекунад ва progress дар боли Home нишон дода мешавад.
-  void _publish(File capturedFile, String caption,
+  Future<void> _publish(File capturedFile, String caption,
       {String musicTitle = '',
       String musicArtist = '',
       String location = '',
       List<String> taggedUsers = const [],
-      List<String> collaborators = const []}) {
+      List<String> collaborators = const []}) async {
+    // Интихоб: ҳозир ё ба нақша (Pro).
+    final scheduledAt = await _askSchedule();
+    if (!mounted) return;
     AnalyticsService.instance.logEvent(AnalyticsEvents.createPost);
     PostUploadService.instance.publishPost(
       file: capturedFile,
@@ -147,8 +150,56 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       location: location,
       taggedUsers: taggedUsers,
       collaborators: collaborators,
+      scheduledAt: scheduledAt ?? '',
     );
     if (mounted) Navigator.of(context).pop(true);
+  }
+
+  // Бармегардонад: '' → ҳозир, ISO → ба нақша, ё агар корбар бекор кард — ''.
+  Future<String> _askSchedule() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(AppIcons.check_circle_rounded,
+                color: Color(0xFF00C853)),
+            title: const Text('Нашри фаврӣ',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            onTap: () => Navigator.pop(context, 'now'),
+          ),
+          ListTile(
+            leading: const Icon(AppIcons.schedule_rounded, color: Color(0xFFE100FF)),
+            title: const Text('Ба нақша гирифтан',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            subtitle: const Text('Дар вақти муайян нашр мешавад (Pro)',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            onTap: () => Navigator.pop(context, 'schedule'),
+          ),
+          const SizedBox(height: 10),
+        ])),
+    );
+    if (choice == 'schedule') {
+      final now = DateTime.now();
+      final date = await showDatePicker(
+        context: context, initialDate: now.add(const Duration(hours: 1)),
+        firstDate: now, lastDate: now.add(const Duration(days: 60)),
+      );
+      if (date == null) return '';
+      if (!mounted) return '';
+      final time = await showTimePicker(
+        context: context, initialTime: TimeOfDay.fromDateTime(
+            now.add(const Duration(hours: 1))),
+      );
+      if (time == null) return '';
+      final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      if (dt.isAfter(now)) return dt.toUtc().toIso8601String();
+    }
+    return '';
   }
 
   @override
