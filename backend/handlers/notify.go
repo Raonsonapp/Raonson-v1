@@ -2,9 +2,54 @@ package handlers
 
 import (
 	"context"
+	"regexp"
+	"strings"
 
 	"raonson/db"
 )
+
+// mentionRe як @username-ро аз матн ҷудо мекунад (2..30 аломат: ҳарф, рақам, _ ё .).
+var mentionRe = regexp.MustCompile(`@([a-zA-Z0-9_.]{2,30})`)
+
+// notifyMentions ҳар корбари @зикршударо дар матн (шарҳ ё тавсиф) огоҳ мекунад.
+//   - Ҳамаи @username-ҳоро мегирад, такрориро нест мекунад ва то 10-то маҳдуд.
+//   - Барои ҳар як username id-ро меёбад; агар ёфт шуд ва id != fromID бошад,
+//     pushNotify (row дохилӣ + FCM) мефиристад.
+//   - Best-effort: дар background иҷро мешавад ва хатогиҳоро фуру мебарад.
+func notifyMentions(fromID, ntype, targetID, text, bodyTmpl string) {
+	if text == "" {
+		return
+	}
+	go func() {
+		matches := mentionRe.FindAllStringSubmatch(text, -1)
+		if len(matches) == 0 {
+			return
+		}
+		seen := make(map[string]bool)
+		var unames []string
+		for _, m := range matches {
+			uname := strings.ToLower(m[1])
+			if seen[uname] {
+				continue
+			}
+			seen[uname] = true
+			unames = append(unames, uname)
+			if len(unames) >= 10 {
+				break
+			}
+		}
+		for _, uname := range unames {
+			var resolvedID string
+			if err := db.Pool.QueryRow(context.Background(),
+				`SELECT id FROM users WHERE lower(username)=lower($1)`, uname).Scan(&resolvedID); err != nil {
+				continue
+			}
+			if resolvedID != "" && resolvedID != fromID {
+				pushNotify(resolvedID, fromID, ntype, targetID, bodyTmpl)
+			}
+		}
+	}()
+}
 
 // notify як огоҳии дохилиро месозад (follow / like / comment ва ғ.).
 //   - Худи коратарро огоҳ намекунад (userID == fromID → skip)

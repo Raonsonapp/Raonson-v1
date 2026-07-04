@@ -60,6 +60,9 @@ func AddComment(c *gin.Context) {
 	}
 	pushNotify(postOwner, myID, "comment", postID, "шарҳ гузошт: "+preview)
 
+	// @зикр дар шарҳ — ҳар корбари зикршударо огоҳ кун
+	notifyMentions(myID, "mention", postID, b.Text, "шуморо дар шарҳ зикр кард")
+
 	// Reply — соҳиби шарҳи волидро ҳам огоҳ кун (агар худаш набошад)
 	if b.ParentID != "" {
 		var parentOwner string
@@ -601,5 +604,6 @@ func AddReelComment(c *gin.Context) {
 		`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
 	notify(owner, myID, "reel_comment", rid)
 	pushNotify(owner, myID, "reel_comment", rid, "ба Reel-и шумо шарҳ гузошт")
+	notifyMentions(myID, "mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
 	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
 }

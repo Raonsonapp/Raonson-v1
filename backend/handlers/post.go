@@ -97,6 +97,9 @@ func CreatePost(c *gin.Context) {
 	// Invalidate feed cache for this user
 	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2", "smartfeed:"+myID+":1", "smartfeed:"+myID+":2")
 
+	// @зикр дар тавсиф — ҳар корбари зикршударо огоҳ кун
+	notifyMentions(myID, "mention", postID, b.Caption, "шуморо дар публикатсия зикр кард")
+
 // ➕ ИЛОВА
 var uname, uavatar string
 var verified bool
