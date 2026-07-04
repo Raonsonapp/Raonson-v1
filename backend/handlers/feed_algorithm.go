@@ -65,6 +65,10 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.comments_off,false) AS comments_off,
 		  COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
+		  COALESCE(p.is_product,false), COALESCE(p.price,0),
+		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
+		  COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
+		  COALESCE(p.shop_phone,''),
 		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW()),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
@@ -120,10 +124,16 @@ func GetSmartFeed(c *gin.Context) {
 		var tagged []string
 		var hasStory bool
 		var score float64
+		var isProduct, contactRaonson bool
+		var price float64
+		var currency, productName, shopWhatsapp, shopPhone string
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 			&hideLikes, &commentsOff,
-			&musicTitle, &musicArtist, &location, &tagged, &hasStory, &score)
+			&musicTitle, &musicArtist, &location, &tagged,
+			&isProduct, &price, &currency, &productName,
+			&contactRaonson, &shopWhatsapp, &shopPhone,
+			&hasStory, &score)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
@@ -131,6 +141,9 @@ func GetSmartFeed(c *gin.Context) {
 			"hideLikes": hideLikes, "commentsOff": commentsOff,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
 			"location": location, "taggedUsers": tagged,
+			"isProduct": isProduct, "price": price, "currency": currency,
+			"productName": productName, "contactRaonson": contactRaonson,
+			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 			"user": gin.H{
 				"_id": uid, "username": uname,
 				"avatar": uavatar, "verified": verified, "hasStory": hasStory,

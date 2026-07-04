@@ -20,6 +20,7 @@ import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
+import '../../shop/buy_sheet.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
@@ -1193,6 +1194,36 @@ class _PostCardState extends State<PostCard>
             inactiveColor: AppColors.textPrimary, size: 25, count: 0, fmt: _fmt),
         ]),
       ),
+
+      // ── BUY CTA — пости магоза мисли реклама (мисли Instagram «В магазин») ──
+      if (post.isProduct)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+          child: GestureDetector(
+            onTap: () => showBuySheet(context, post),
+            child: Container(
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppColors.neonBlue,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(AppIcons.storefront_rounded,
+                      color: AppColors.textPrimary, size: 19),
+                  const SizedBox(width: 8),
+                  Text(
+                    post.price > 0 ? 'Харид · ${post.priceLabel}' : 'Харид',
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
 
       // ── CAPTION бо Show more / less ───────────────────────────
       if (_caption.isNotEmpty)

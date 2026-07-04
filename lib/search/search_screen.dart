@@ -26,6 +26,7 @@ import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
 import 'search_history.dart';
 import '../core/ui/app_icons.dart';
+import '../shop/buy_sheet.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  MAIN SCREEN
@@ -123,6 +124,7 @@ class _SearchScreenState extends State<SearchScreen>
               url:     post.mediaUrl,
               type:    post.mediaType == 'video' ? _ItemType.video : _ItemType.image,
               isMulti: post.media.length > 1,
+              isProduct: post.isProduct,
               views:   post.likesCount, // use likes as proxy; backend adds views later
               postData: post,
             ));
@@ -735,6 +737,7 @@ class _ExploreItem {
   final String     url;
   final _ItemType  type;
   final bool       isMulti;
+  final bool       isProduct;
   final int        views;
   final PostModel? postData;
   final Map<String, dynamic>? reelData;
@@ -744,6 +747,7 @@ class _ExploreItem {
     required this.url,
     required this.type,
     this.isMulti  = false,
+    this.isProduct = false,
     this.views    = 0,
     this.postData,
     this.reelData,
@@ -834,6 +838,14 @@ class _ExploreCell extends StatelessWidget {
             top: 6, right: 6,
             child: Icon(AppIcons.collections_rounded,
                 color: AppColors.textPrimary, size: 16,
+                shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
+          ),
+        // Shop icon (top-left) — пости магоза аст
+        if (item.isProduct)
+          Positioned(
+            top: 6, left: 6,
+            child: Icon(AppIcons.storefront_rounded,
+                color: AppColors.textPrimary, size: 15,
                 shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
           ),
         // Views counter (bottom-left) — shown if > 0
@@ -1204,6 +1216,23 @@ class _FeedCardState extends State<_FeedCard> {
               svg: 'assets/icons/comment.svg',
               label: _commentCount > 0 ? _fmt(_commentCount) : null,
               onTap: _openComments),
+          // Харид — танҳо барои пости магоза (мисли Instagram search + харид).
+          if (widget.item.isProduct && widget.item.postData != null) ...[
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: () => showBuySheet(context, widget.item.postData!),
+              behavior: HitTestBehavior.opaque,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(AppIcons.storefront_rounded,
+                    color: AppColors.textPrimary, size: 26),
+                const SizedBox(height: 3),
+                Text('Харид',
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 11,
+                        fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ],
           const SizedBox(height: 18),
           _ActionBtn(
               svg: 'assets/icons/share.svg',

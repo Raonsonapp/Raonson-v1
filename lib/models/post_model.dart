@@ -18,6 +18,14 @@ class PostModel {
   final String       musicArtist;  // ✅ НАВ
   final bool         hideLikes;        // лайкҳо пинҳонанд (танҳо соҳиб мебинад)
   final bool         commentsDisabled; // шарҳҳо хомӯшанд
+  // ── Магоза (пости маҳсулот) ──
+  final bool         isProduct;
+  final double       price;
+  final String       currency;
+  final String       productName;
+  final bool         contactRaonson;
+  final String       shopWhatsapp;
+  final String       shopPhone;
 
   const PostModel({
     required this.id,
@@ -37,7 +45,17 @@ class PostModel {
     this.musicArtist = '',
     this.hideLikes        = false,
     this.commentsDisabled = false,
+    this.isProduct      = false,
+    this.price          = 0,
+    this.currency       = 'TJS',
+    this.productName    = '',
+    this.contactRaonson = true,
+    this.shopWhatsapp   = '',
+    this.shopPhone      = '',
   });
+
+  String get priceLabel =>
+      '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
 
   bool get isLiked  => liked;
   bool get isSaved  => saved;
@@ -56,6 +74,8 @@ class PostModel {
     List<String>? collaborators,
     String? musicTitle, String? musicArtist,
     bool? hideLikes, bool? commentsDisabled,
+    bool? isProduct, double? price, String? currency, String? productName,
+    bool? contactRaonson, String? shopWhatsapp, String? shopPhone,
   }) => PostModel(
     id:            id            ?? this.id,
     user:          user          ?? this.user,
@@ -74,6 +94,13 @@ class PostModel {
     musicArtist:   musicArtist   ?? this.musicArtist,
     hideLikes:        hideLikes        ?? this.hideLikes,
     commentsDisabled: commentsDisabled ?? this.commentsDisabled,
+    isProduct:      isProduct      ?? this.isProduct,
+    price:          price          ?? this.price,
+    currency:       currency       ?? this.currency,
+    productName:    productName    ?? this.productName,
+    contactRaonson: contactRaonson ?? this.contactRaonson,
+    shopWhatsapp:   shopWhatsapp   ?? this.shopWhatsapp,
+    shopPhone:      shopPhone      ?? this.shopPhone,
   );
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -115,6 +142,13 @@ class PostModel {
       hideLikes:        likesHidden,
       commentsDisabled: json['commentsOff'] == true
           || json['commentsDisabled'] == true,
+      isProduct:      json['isProduct'] == true,
+      price:          (json['price'] as num?)?.toDouble() ?? 0,
+      currency:       (json['currency'] ?? 'TJS').toString(),
+      productName:    (json['productName'] ?? '').toString(),
+      contactRaonson: json['contactRaonson'] != false,
+      shopWhatsapp:   (json['shopWhatsapp'] ?? '').toString(),
+      shopPhone:      (json['shopPhone'] ?? '').toString(),
     );
   }
 

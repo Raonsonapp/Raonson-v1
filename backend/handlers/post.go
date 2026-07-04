@@ -164,7 +164,11 @@ func GetFeed(c *gin.Context) {
 		        FROM post_media m WHERE m.post_id=p.id),
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1::text),
 		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1::text),
-		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false)
+		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false),
+		       COALESCE(p.is_product,false), COALESCE(p.price,0),
+		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
+		       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
+		       COALESCE(p.shop_phone,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.archived,false) = FALSE
 		ORDER BY p.created_at DESC
@@ -182,14 +186,22 @@ func GetFeed(c *gin.Context) {
 		var likes, comms int
 		var verified, liked, saved, hideLikes, commentsOff bool
 		var createdAt, media interface{}
+		var isProduct, contactRaonson bool
+		var price float64
+		var currency, productName, shopWhatsapp, shopPhone string
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
-			&hideLikes, &commentsOff)
+			&hideLikes, &commentsOff,
+			&isProduct, &price, &currency, &productName,
+			&contactRaonson, &shopWhatsapp, &shopPhone)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes, "commentsCount": comms,
 			"createdAt": createdAt, "media": nilToEmpty(media),
 			"liked": liked, "saved": saved,
 			"hideLikes": hideLikes, "commentsOff": commentsOff,
+			"isProduct": isProduct, "price": price, "currency": currency,
+			"productName": productName, "contactRaonson": contactRaonson,
+			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
@@ -211,6 +223,9 @@ func GetPost(c *gin.Context) {
 	var likes, comms int
 	var verified, liked, saved, hideLikes, commentsOff bool
 	var createdAt, media interface{}
+	var isProduct, contactRaonson bool
+	var price float64
+	var currency, productName, shopWhatsapp, shopPhone string
 
 	err := db.Pool.QueryRow(context.Background(), `
 		SELECT p.id, p.caption,
@@ -224,11 +239,17 @@ func GetPost(c *gin.Context) {
 		        FROM post_media m WHERE m.post_id=p.id),
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$2::text),
 		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$2::text),
-		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false)
+		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false),
+		       COALESCE(p.is_product,false), COALESCE(p.price,0),
+		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
+		       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
+		       COALESCE(p.shop_phone,'')
 		FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=$1`,
 		pid, myID).Scan(&pid2, &cap, &likes, &comms, &createdAt,
 		&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
-		&hideLikes, &commentsOff)
+		&hideLikes, &commentsOff,
+		&isProduct, &price, &currency, &productName,
+		&contactRaonson, &shopWhatsapp, &shopPhone)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
@@ -237,6 +258,9 @@ func GetPost(c *gin.Context) {
 		"_id": pid2, "caption": cap, "likesCount": likes, "commentsCount": comms,
 		"createdAt": createdAt, "media": nilToEmpty(media), "liked": liked, "saved": saved,
 		"hideLikes": hideLikes, "commentsOff": commentsOff,
+		"isProduct": isProduct, "price": price, "currency": currency,
+		"productName": productName, "contactRaonson": contactRaonson,
+		"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 	})
 }

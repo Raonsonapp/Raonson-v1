@@ -574,7 +574,9 @@ func ExploreGrid(c *gin.Context) {
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       u.id, u.username, u.avatar,
-		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id)
+		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
+		       COALESCE(p.is_product,false), COALESCE(p.price,0),
+		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
@@ -588,11 +590,17 @@ func ExploreGrid(c *gin.Context) {
 			var likes int
 			var views int64
 			var createdAt, media interface{}
-			pRows.Scan(&pid, &likes, &createdAt, &media, &uid, &uname, &uavatar, &views)
+			var isProduct bool
+			var price float64
+			var currency, productName string
+			pRows.Scan(&pid, &likes, &createdAt, &media, &uid, &uname, &uavatar, &views,
+				&isProduct, &price, &currency, &productName)
 			posts = append(posts, gin.H{
 				"_id": pid, "likesCount": likes, "viewsCount": views,
 				"createdAt": createdAt,
 				"media": nilToEmpty(media),
+				"isProduct": isProduct, "price": price,
+				"currency": currency, "productName": productName,
 				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar},
 			})
 		}
