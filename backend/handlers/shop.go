@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"raonson/db"
 	mw "raonson/middleware"
@@ -59,6 +60,56 @@ func GetShop(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"products": items})
+}
+
+// ── GET /posts/:id/translations → тарҷумаҳои номи маҳсул ──────────
+func GetProductTranslations(c *gin.Context) {
+	postID := c.Param("id")
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT lang, COALESCE(name,'') FROM product_translations WHERE post_id=$1`,
+		postID)
+	out := gin.H{}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var lang, name string
+			rows.Scan(&lang, &name)
+			if name != "" {
+				out[lang] = name
+			}
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"translations": out})
+}
+
+// ── PUT /posts/:id/translations {tj,ru,en} (соҳиб) ────────────────
+func SetProductTranslations(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	var owner string
+	err := db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&owner)
+	if err != nil || owner != myID {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	var b map[string]string
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
+		return
+	}
+	for _, lang := range []string{"tj", "ru", "en"} {
+		name := strings.TrimSpace(b[lang])
+		if len(name) > 200 {
+			name = name[:200]
+		}
+		db.Pool.Exec(context.Background(), `
+			INSERT INTO product_translations(post_id, lang, name)
+			VALUES($1,$2,$3)
+			ON CONFLICT (post_id, lang) DO UPDATE SET name=EXCLUDED.name`,
+			postID, lang, name)
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 // ── POST /posts/:id/feature → маҳсулро дар магоза «беҳтарин» кардан ──

@@ -183,6 +183,8 @@ func main() {
 		po.GET("/:id/stats",         handlers.GetPostStats)
 		po.POST("/:id/order",        handlers.PlaceOrder) // хариди маҳсулот
 		po.POST("/:id/feature",      handlers.ToggleProductFeature) // маҳсули беҳтарин
+		po.GET("/:id/translations",  handlers.GetProductTranslations)
+		po.PUT("/:id/translations",  handlers.SetProductTranslations)
 	}
 
 	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────

@@ -278,6 +278,52 @@ class _ProductSheet extends StatelessWidget {
     }
   }
 
+  Future<void> _editTranslations(BuildContext context) async {
+    final cur = await product.getTranslations(product.id);
+    final ru = TextEditingController(text: cur['ru'] ?? '');
+    final en = TextEditingController(text: cur['en'] ?? '');
+    final tj = TextEditingController(text: cur['tj'] ?? product.productName);
+    if (!context.mounted) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Тарҷумаи ном',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          _tf(tj, 'Тоҷикӣ'),
+          _tf(ru, 'Русӣ'),
+          _tf(en, 'English'),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+              child: Text('Сабт', style: TextStyle(color: AppColors.neonBlue))),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await product.setTranslations(product.id, {
+        'tj': tj.text.trim(), 'ru': ru.text.trim(), 'en': en.text.trim(),
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Тарҷумаҳо сабт шуданд ✓'),
+            backgroundColor: Colors.green));
+      }
+    }
+    tj.dispose(); ru.dispose(); en.dispose();
+  }
+
+  Widget _tf(TextEditingController c, String hint) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: TextField(controller: c,
+      style: TextStyle(color: AppColors.textPrimary),
+      decoration: InputDecoration(hintText: hint,
+          hintStyle: TextStyle(color: AppColors.textFaint))),
+  );
+
   Future<void> _openMap() async {
     if (product.shopLat == 0 && product.shopLng == 0) return;
     final uri = Uri.parse(
@@ -361,6 +407,17 @@ class _ProductSheet extends StatelessWidget {
                           p.featured
                               ? 'Аз «беҳтарин» гирифтан'
                               : 'Беҳтарин кардан (боло)',
+                          style: TextStyle(color: AppColors.textPrimary)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _editTranslations(context),
+                      icon: Icon(AppIcons.language_rounded,
+                          color: AppColors.textFaint, size: 18),
+                      label: Text('Тарҷумаҳо (ру/en)',
                           style: TextStyle(color: AppColors.textPrimary)),
                     ),
                   ),

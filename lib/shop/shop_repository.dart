@@ -55,6 +55,23 @@ class Product {
       return false;
     }
   }
+
+  Future<Map<String, String>> getTranslations(String postId) async {
+    try {
+      final r = await ApiClient.instance.get('/posts/$postId/translations');
+      if (r.statusCode >= 400) return {};
+      final t = (jsonDecode(r.body)['translations'] ?? {}) as Map;
+      return t.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setTranslations(String postId, Map<String, String> t) async {
+    try {
+      await ApiClient.instance.put('/posts/$postId/translations', body: t);
+    } catch (_) {}
+  }
   String get priceLabel => '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
 }
 

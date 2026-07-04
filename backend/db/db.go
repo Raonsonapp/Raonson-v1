@@ -310,6 +310,14 @@ func migrate() {
 	-- ── Ҷавоби худкор (Auto-reply барои фурӯшанда) ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_reply TEXT DEFAULT '';
 
+	-- ── Тарҷумаи номи маҳсул (Multi-language shop) ──
+	CREATE TABLE IF NOT EXISTS product_translations (
+		post_id TEXT NOT NULL,
+		lang    TEXT NOT NULL,
+		name    TEXT DEFAULT '',
+		PRIMARY KEY(post_id, lang)
+	);
+
 	-- ── Таърихи воридшавӣ / дастгоҳҳо (Login history) ──
 	CREATE TABLE IF NOT EXISTS login_sessions (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
