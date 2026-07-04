@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"raonson/db"
@@ -12,6 +14,61 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// username: 3–30 char, ҳарфҳои хурд/рақам/`_`/`.`
+var usernameRe = regexp.MustCompile(`^[a-z0-9_.]{3,30}$`)
+
+// PUT /profile/username — тағйири номи корбарӣ
+func ChangeUsername(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Username string `json:"username"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
+		return
+	}
+	uname := strings.ToLower(strings.TrimSpace(b.Username))
+	if !usernameRe.MatchString(uname) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Номи корбарӣ нодуруст аст"})
+		return
+	}
+	var exists bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(username)=$1 AND id<>$2)`,
+		uname, myID).Scan(&exists)
+	if exists {
+		c.JSON(http.StatusConflict, gin.H{"message": "Ин ном банд аст"})
+		return
+	}
+	if _, err := db.Pool.Exec(context.Background(),
+		`UPDATE users SET username=$1 WHERE id=$2`, uname, myID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+	mw.CacheDel("profile:me:" + myID)
+	c.JSON(http.StatusOK, gin.H{"username": uname})
+}
+
+// PUT /profile/phone — тағйири рақами телефон
+func ChangePhone(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Phone string `json:"phone"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
+		return
+	}
+	phone := strings.TrimSpace(b.Phone)
+	if _, err := db.Pool.Exec(context.Background(),
+		`UPDATE users SET phone=$1 WHERE id=$2`, phone, myID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+	mw.CacheDel("profile:me:" + myID)
+	c.JSON(http.StatusOK, gin.H{"phone": phone})
+}
 
 // GET /profile/me — with 30s personal cache
 func GetMyProfile(c *gin.Context) {

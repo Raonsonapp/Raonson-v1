@@ -127,6 +127,7 @@ func main() {
 	p := r.Group("/profile", auth, rl100)
 	{
 		p.GET("/me",            handlers.GetMyProfile)
+		p.GET("/insights",      handlers.GetProfileInsights) // обзори 30-рӯза
 		p.GET("/notes/friends", cache30s, handlers.GetFriendsNotes)
 		p.POST("/note",         handlers.SetNote)
 		p.PUT("/",              handlers.UpdateProfile)
@@ -134,8 +135,19 @@ func main() {
 		p.GET("/saved",         handlers.GetSavedPosts)
 		p.GET("/notifications", handlers.GetNotifPrefs)
 		p.PUT("/notifications", handlers.UpdateNotifPrefs)
+		p.PUT("/username",      handlers.ChangeUsername)
+		p.PUT("/phone",         handlers.ChangePhone)
 		p.DELETE("/avatar",     handlers.DeleteAvatar)
 		p.GET("/:username",     cache30s, handlers.GetProfile)
+	}
+
+	// ── CLOSE FRIENDS (Близкие друзья) ──────────────────────────
+	cf := r.Group("/close-friends", auth, rl100)
+	{
+		cf.GET("",         handlers.GetCloseFriends)
+		cf.GET("/ids",     handlers.GetCloseFriendIDs)
+		cf.POST("/:id",    handlers.AddCloseFriend)
+		cf.DELETE("/:id",  handlers.RemoveCloseFriend)
 	}
 
 	// ── POSTS ────────────────────────────────────────────────────
@@ -169,6 +181,7 @@ func main() {
 
 	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────
 	r.GET("/shop", auth, rl100, handlers.GetShop) // бе cache — маҳсулоти нав фавран
+	r.GET("/shop/insights", auth, rl100, handlers.GetShopInsights) // панели фурӯшанда
 	og := r.Group("/orders", auth, rl100)
 	{
 		og.GET("/",        handlers.GetMyOrders)

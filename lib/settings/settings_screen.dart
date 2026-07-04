@@ -24,6 +24,9 @@ import '../news/news_screen.dart';
 import '../learn/learn_screen.dart';
 import '../effects/effects_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
+import 'account_screens.dart';
+import 'insights_screen.dart';
+import 'seller_dashboard_screen.dart';
 import '../core/ui/app_icons.dart';
 
 /// Theme label in the active language.
@@ -62,6 +65,12 @@ class SettingsScreen extends StatelessWidget {
                         userId: UserSession.userId ?? 'me')),
               ),
               _NavTile(
+                icon:  AppIcons.alternate_email_rounded,
+                title: 'Номи корбарӣ',
+                sub:   '@${UserSession.username ?? ''}',
+                onTap: () => _go(ctx, const ChangeUsernameScreen()),
+              ),
+              _NavTile(
                 icon:  AppIcons.lock_outline_rounded,
                 title: tr('account.changePassword'),
                 onTap: () => _go(ctx, const ChangePasswordScreen()),
@@ -76,8 +85,28 @@ class SettingsScreen extends StatelessWidget {
               _NavTile(
                 icon:  AppIcons.phone_outlined,
                 title: tr('account.phone'),
-                onTap: () => _go(ctx,
-                    _SimpleScreen(title: tr('account.phone'))),
+                onTap: () => _go(ctx, const ChangePhoneScreen()),
+              ),
+
+              // ── ОМОР / МАГОЗА ─────────────────────────────────────
+              _Hdr('Омор ва магоза'),
+              _NavTile(
+                icon:  AppIcons.bar_chart_rounded,
+                title: 'Статистика (омор)',
+                sub:   'Обзори 1-моҳа: обуна, лайк, топ видео, идеяҳо',
+                onTap: () => _go(ctx, const InsightsScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.storefront_rounded,
+                title: 'Магозаи ман',
+                sub:   'Фурӯш, даромад, махсули беҳтарин, боздидҳо',
+                onTap: () => _go(ctx, const SellerDashboardScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.star_rounded,
+                title: 'Дӯстони наздик',
+                sub:   'Рӯйхати дӯстони наздик барои сторис',
+                onTap: () => _go(ctx, const CloseFriendsScreen()),
               ),
 
               // ── APPEARANCE ────────────────────────────────────────
@@ -432,12 +461,11 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _NavTile(
-                icon:  AppIcons.favorite_border_rounded,
+                icon:  AppIcons.star_rounded,
                 title: 'Дӯстони наздик',
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
-                        builder: (_) =>
-                            const _SimpleScreen(title: 'Дӯстони наздик'))),
+                        builder: (_) => const CloseFriendsScreen())),
               ),
               const _ThinDiv(),
               _SwTile(

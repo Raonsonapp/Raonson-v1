@@ -626,6 +626,16 @@ func migrate() {
 		PRIMARY KEY (post_id, user_id)
 	);
 
+	-- ── Дӯстони наздик (close friends, мисли Instagram «Близкие друзья») ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT '';
+	CREATE TABLE IF NOT EXISTS close_friends (
+		user_id    TEXT NOT NULL,
+		friend_id  TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT now(),
+		PRIMARY KEY (user_id, friend_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_close_friends_user ON close_friends(user_id);
+
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';

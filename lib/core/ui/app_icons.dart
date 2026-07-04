@@ -197,6 +197,7 @@ class AppIcons {
   static const IconData thumb_down_outlined = FeatherIcons.thumbsDown;
   static const IconData thumb_up_outlined = FeatherIcons.thumbsUp;
   static const IconData trending_up_rounded = FeatherIcons.trendingUp;
+  static const IconData trending_down_rounded = FeatherIcons.trendingDown;
   static const IconData undo = FeatherIcons.rotateCcw;
   static const IconData verified_outlined = Symbols.verified_rounded;
   static const IconData verified_rounded = Symbols.verified_rounded;
