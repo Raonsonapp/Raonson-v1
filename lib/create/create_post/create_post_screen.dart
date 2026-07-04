@@ -15,6 +15,7 @@ import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 import '../upload/post_upload_service.dart';
 import 'photo_filters.dart';
+import '../../effects/effects_repository.dart';
 import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────
@@ -182,6 +183,9 @@ enum _Tool { none, draw }
 class _PostEditorState extends State<_PostEditor> {
   final _canvasKey    = GlobalKey();
   int _filterIndex = 0; // филтри интихобшудаи акс
+  List<PhotoFilter> _communityFilters = []; // эффектҳои харида/истифодашуда
+  List<PhotoFilter> get _allFilters =>
+      [...PhotoFilters.presets, ..._communityFilters];
   final _captionCtrl  = TextEditingController();
   _Tool _tool         = _Tool.none;
 
@@ -207,7 +211,19 @@ class _PostEditorState extends State<_PostEditor> {
   void initState() {
     super.initState();
     if (widget.isVideo) { _initVideo(); }
-    else { _detectBgColor(); }
+    else { _detectBgColor(); _loadCommunityFilters(); }
+  }
+
+  Future<void> _loadCommunityFilters() async {
+    final saved = await EffectsRepository.loadSaved();
+    if (!mounted || saved.isEmpty) return;
+    setState(() {
+      _communityFilters = saved
+          .map((m) => PhotoFilter(
+              (m['name'] ?? 'Эффект').toString(),
+              (m['matrix'] as List).map((e) => (e as num).toDouble()).toList()))
+          .toList();
+    });
   }
 
   Future<void> _detectBgColor() async {
@@ -531,9 +547,9 @@ class _PostEditorState extends State<_PostEditor> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
-                  itemCount: PhotoFilters.presets.length,
+                  itemCount: _allFilters.length,
                   itemBuilder: (_, i) {
-                    final f = PhotoFilters.presets[i];
+                    final f = _allFilters[i];
                     final sel = i == _filterIndex;
                     return GestureDetector(
                       onTap: () => setState(() => _filterIndex = i),
@@ -717,7 +733,9 @@ class _PostEditorState extends State<_PostEditor> {
       return const CircularProgressIndicator(color: Colors.white30);
     }
     return ColorFiltered(
-      colorFilter: PhotoFilters.presets[_filterIndex].colorFilter,
+      colorFilter: _allFilters[
+              _filterIndex < _allFilters.length ? _filterIndex : 0]
+          .colorFilter,
       child: Image.file(widget.media, fit: BoxFit.contain),
     );
   }
