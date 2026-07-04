@@ -466,6 +466,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ]),
               )),
 
+              // ── COVER BANNER (Pro) ──────────────────────────────────
+              if (user.coverUrl.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(0),
+                    child: CachedNetworkImage(
+                      imageUrl: user.coverUrl,
+                      width: double.infinity, height: 130, fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                          height: 130, color: AppColors.surface),
+                      errorWidget: (_, __, ___) => const SizedBox.shrink()),
+                  ),
+                ),
+
               // ── AVATAR + STATS ──────────────────────────────────────
               Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.center,
@@ -513,6 +528,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                           color: AppColors.neonBlue,
                           fontSize: 13.5, fontWeight: FontWeight.w500)),
                     ]))),
+
+              // ── BIO LINKS (Pro — зиёда аз як линк) ──────────────────
+              if (user.links.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 7, 16, 0),
+                  child: Wrap(spacing: 8, runSpacing: 6,
+                    children: user.links.map((l) {
+                      final title = (l['title'] ?? '').isNotEmpty
+                          ? l['title']! : l['url']!;
+                      return GestureDetector(
+                        onTap: () => _launchWeb(l['url']!),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(AppIcons.link_rounded,
+                                color: AppColors.neonBlue, size: 13),
+                            const SizedBox(width: 5),
+                            Text(title,
+                                style: const TextStyle(color: AppColors.neonBlue,
+                                    fontSize: 12.5, fontWeight: FontWeight.w600)),
+                          ]),
+                        ),
+                      );
+                    }).toList()),
+                ),
 
               // ── HIGHLIGHTS ──────────────────────────────────────────
               const SizedBox(height: 12),

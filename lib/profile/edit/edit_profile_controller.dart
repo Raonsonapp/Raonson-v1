@@ -15,6 +15,9 @@ class EditProfileController extends ChangeNotifier {
   bool isSaving = false;
   String? error;
 
+  String coverUrl = '';                       // баннери профил (Pro)
+  List<Map<String, String>> links = [];       // линкҳои био (Pro)
+
   late UserModel _original;
 
   String? get currentAvatarUrl => _original.avatar.isNotEmpty ? _original.avatar : null;
@@ -28,6 +31,8 @@ class EditProfileController extends ChangeNotifier {
       usernameController.text = _original.username;
       bioController.text = _original.bio ?? '';
       isPrivate = _original.isPrivate;
+      coverUrl = _original.coverUrl;
+      links = _original.links.map((e) => Map<String, String>.from(e)).toList();
       error = null;
     } catch (e) {
       error = e.toString();
@@ -55,6 +60,8 @@ class EditProfileController extends ChangeNotifier {
         bioSong:   (bioSong != null && bioSong.isEmpty != true)
             ? (bioSong.toJson() as Map<String, dynamic>)
             : null,
+        coverUrl:  coverUrl,
+        links:     links,
       );
       return true;
     } catch (e) {

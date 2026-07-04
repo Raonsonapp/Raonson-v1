@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"strings"
 	"strconv"
@@ -29,7 +30,8 @@ const userSelectSQL = `
 	       COALESCE(note_song_end_ms,30000),
 	       COALESCE(website,''), COALESCE(location,''),
 	       COALESCE(full_name,''), COALESCE(phone,''),
-	       COALESCE(is_vip,false)
+	       COALESCE(is_vip,false),
+	       COALESCE(cover_url,''), COALESCE(bio_links,'')
 	FROM users`
 
 func scanFullUser(row pgx.Row) (gin.H, error) {
@@ -45,6 +47,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		website, location               string
 		fullName, phone                 string
 		isVip                           bool
+		coverUrl, bioLinks              string
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -54,10 +57,18 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&stTrackMs, &stStartMs, &stEndMs,
 		&website, &location, &fullName, &phone,
 		&isVip,
+		&coverUrl, &bioLinks,
 	)
 	if err != nil {
 		log.Printf("[scanFullUser] error: %v", err)
 		return nil, err
+	}
+	// bio_links — JSON array of {title,url}; on empty/invalid emit [].
+	links := []map[string]string{}
+	if bioLinks != "" {
+		if err := json.Unmarshal([]byte(bioLinks), &links); err != nil {
+			links = []map[string]string{}
+		}
 	}
 	// Соҳиби барнома (@raonson) ҳамеша VIP аст.
 	if strings.EqualFold(username, "raonson") {
@@ -76,6 +87,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"isFollowing": false,
 		"website": website, "location": location,
 		"fullName": fullName, "phone": phone,
+		"coverUrl": coverUrl, "links": links,
 		"note": note, "noteExpiresAt": noteExpiresAt,
 		"noteSong": gin.H{
 			"title": stTitle, "artist": stArtist,

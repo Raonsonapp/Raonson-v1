@@ -12,6 +12,8 @@ import '../../models/note_model.dart';
 import '../../chat/inbox/music_picker_sheet.dart';
 import '../profile_repository.dart';
 import 'edit_profile_controller.dart';
+import '../../core/services/subscription_service.dart';
+import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -28,6 +30,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   File?     _localAvatar;
   String?   _uploadedAvatarUrl;
   bool      _uploadingAvatar = false;
+  bool      _uploadingCover  = false;
 
   // Username validation
   Timer?  _debounce;
@@ -96,6 +99,69 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) { setState(() => _uploadingAvatar = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Расм бор нашуд: $e'), backgroundColor: Colors.red.shade800)); }
     }
+  }
+
+  bool _requirePro() {
+    if (SubscriptionService.instance.isPro) return true;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Ин хусусияти Raonson Pro аст'),
+      action: SnackBarAction(label: 'Pro гирифтан',
+          onPressed: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => const SubscriptionScreen()))),
+    ));
+    return false;
+  }
+
+  Future<void> _pickCover() async {
+    if (!_requirePro()) return;
+    final file = await MediaPicker.pickImageOnly();
+    if (file == null || !mounted) return;
+    setState(() => _uploadingCover = true);
+    try {
+      final url = await UploadManager().uploadFile(file);
+      if (mounted) setState(() { _ctrl.coverUrl = url; _uploadingCover = false; });
+    } catch (_) {
+      if (mounted) { setState(() => _uploadingCover = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Баннер бор нашуд'))); }
+    }
+  }
+
+  Future<void> _addLink() async {
+    if (!_requirePro()) return;
+    if (_ctrl.links.length >= 20) return;
+    final titleCtrl = TextEditingController();
+    final urlCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Линки нав',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: titleCtrl,
+            style: TextStyle(color: AppColors.textPrimary),
+            decoration: InputDecoration(hintText: 'Ном (ихтиёрӣ)',
+                hintStyle: TextStyle(color: AppColors.textFaint))),
+          TextField(controller: urlCtrl, keyboardType: TextInputType.url,
+            style: TextStyle(color: AppColors.textPrimary),
+            decoration: InputDecoration(hintText: 'https://…',
+                hintStyle: TextStyle(color: AppColors.textFaint))),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+              child: Text('Илова', style: TextStyle(color: AppColors.neonBlue))),
+        ],
+      ),
+    );
+    var url = urlCtrl.text.trim();
+    if (ok == true && url.isNotEmpty) {
+      if (!url.startsWith('http')) url = 'https://$url';
+      setState(() => _ctrl.links.add({'title': titleCtrl.text.trim(), 'url': url}));
+    }
+    titleCtrl.dispose(); urlCtrl.dispose();
   }
 
   Future<void> _openMusicPicker() async {
@@ -177,7 +243,61 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ]))),
         const SizedBox(height: 6),
         const Text('Аксро тағир бидеҳ', style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
-        const SizedBox(height: 28),
+        const SizedBox(height: 24),
+
+        // Cover banner (Pro)
+        Row(children: [
+          Text('Баннери профил', style: TextStyle(
+              color: AppColors.textPrimary.withOpacity(0.5),
+              fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 6),
+          const _ProChip(),
+        ]),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: _uploadingCover ? null : _pickCover,
+          child: Container(
+            height: 96,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.textPrimary.withOpacity(0.08)),
+              image: _ctrl.coverUrl.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(_ctrl.coverUrl), fit: BoxFit.cover)
+                  : null,
+            ),
+            child: _uploadingCover
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                : (_ctrl.coverUrl.isEmpty
+                    ? Center(child: Column(mainAxisSize: MainAxisSize.min,
+                        children: [
+                        Icon(AppIcons.image_outlined,
+                            color: AppColors.textFaint, size: 26),
+                        const SizedBox(height: 4),
+                        Text('Баннер илова кунед',
+                            style: TextStyle(color: AppColors.textFaint,
+                                fontSize: 12)),
+                      ]))
+                    : Align(
+                        alignment: Alignment.topRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: GestureDetector(
+                            onTap: () => setState(() => _ctrl.coverUrl = ''),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                  color: Colors.black54, shape: BoxShape.circle),
+                              child: const Icon(AppIcons.close,
+                                  color: Colors.white, size: 14),
+                            ),
+                          ),
+                        ),
+                      )),
+          ),
+        ),
+        const SizedBox(height: 20),
 
         // Username
         _label('Номи корбарӣ'),
@@ -205,6 +325,65 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _bioSong == null || _bioSong!.isEmpty
             ? _AddMusicTile(onTap: _openMusicPicker)
             : _MusicCard(song: _bioSong!, onChange: _openMusicPicker, onRemove: () => setState(() => _bioSong = null)),
+        const SizedBox(height: 20),
+
+        // Bio links (Pro)
+        Row(children: [
+          Text('Линкҳо', style: TextStyle(
+              color: AppColors.textPrimary.withOpacity(0.5),
+              fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 6),
+          const _ProChip(),
+          const Spacer(),
+          Text('${_ctrl.links.length}/20',
+              style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+        ]),
+        const SizedBox(height: 6),
+        ..._ctrl.links.asMap().entries.map((e) {
+          final l = e.value;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
+            child: Row(children: [
+              const Icon(AppIcons.link_rounded,
+                  color: AppColors.neonBlue, size: 16),
+              const SizedBox(width: 8),
+              Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if ((l['title'] ?? '').isNotEmpty)
+                  Text(l['title']!, style: TextStyle(
+                      color: AppColors.textPrimary, fontSize: 13,
+                      fontWeight: FontWeight.w600)),
+                Text(l['url'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+              ])),
+              GestureDetector(
+                onTap: () => setState(() => _ctrl.links.removeAt(e.key)),
+                child: Icon(AppIcons.close, color: AppColors.textFaint, size: 18),
+              ),
+            ]),
+          );
+        }),
+        GestureDetector(
+          onTap: _addLink,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.neonBlue.withOpacity(0.5)),
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(AppIcons.add_circle, color: AppColors.neonBlue, size: 18),
+              const SizedBox(width: 6),
+              Text('Илова кардани линк',
+                  style: TextStyle(color: AppColors.neonBlue,
+                      fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ),
         const SizedBox(height: 20),
 
         // Private
@@ -263,6 +442,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _label(String t) => Align(alignment: Alignment.centerLeft,
     child: Text(t, style: TextStyle(color: AppColors.textPrimary.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w600)));
+}
+
+class _ProChip extends StatelessWidget {
+  const _ProChip();
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+          colors: [Color(0xFF7F00FF), Color(0xFFE100FF)]),
+      borderRadius: BorderRadius.circular(5),
+    ),
+    child: const Text('PRO', style: TextStyle(color: Colors.white,
+        fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+  );
 }
 
 class _AddMusicTile extends StatelessWidget {

@@ -152,6 +152,11 @@ func UpdateProfile(c *gin.Context) {
 		FullName  *string `json:"fullName"`
 		Phone     *string `json:"phone"`
 		BioSong   *json.RawMessage `json:"bioSong"`
+		CoverUrl  *string `json:"coverUrl"`
+		Links     *[]struct {
+			Title string `json:"title"`
+			URL   string `json:"url"`
+		} `json:"links"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
@@ -174,6 +179,18 @@ func UpdateProfile(c *gin.Context) {
 		s := string(*b.BioSong)
 		bioSongStr = &s
 	}
+	// links → re-serialize to JSON string; cap at 20 links.
+	var bioLinksStr *string
+	if b.Links != nil {
+		links := *b.Links
+		if len(links) > 20 {
+			links = links[:20]
+		}
+		if raw, err := json.Marshal(links); err == nil {
+			s := string(raw)
+			bioLinksStr = &s
+		}
+	}
 	_, err := db.Pool.Exec(context.Background(), `
 		UPDATE users SET
 		  bio        = COALESCE($1, bio),
@@ -185,11 +202,14 @@ func UpdateProfile(c *gin.Context) {
 		  full_name  = COALESCE($7, full_name),
 		  phone      = COALESCE($8, phone),
 		  bio_song   = COALESCE($10::jsonb, bio_song),
+		  cover_url  = COALESCE($12, cover_url),
+		  bio_links  = COALESCE($13, bio_links),
 		  username_changed_at = CASE WHEN $11 THEN NOW() ELSE username_changed_at END,
 		  updated_at = NOW()
 		WHERE id=$9`,
 		b.Bio, b.Avatar, b.IsPrivate, b.Username,
-		b.Website, b.Location, b.FullName, b.Phone, myID, bioSongStr, changingUsername)
+		b.Website, b.Location, b.FullName, b.Phone, myID, bioSongStr, changingUsername,
+		b.CoverUrl, bioLinksStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
