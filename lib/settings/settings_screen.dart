@@ -27,6 +27,7 @@ import '../profile/edit/edit_profile_screen.dart';
 import 'account_screens.dart';
 import 'insights_screen.dart';
 import 'seller_dashboard_screen.dart';
+import '../shop/auto_reply_screen.dart';
 import '../subscription/subscription_screen.dart';
 import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
@@ -126,6 +127,12 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Магозаи ман',
                 sub:   'Фурӯш, даромад, махсули беҳтарин, боздидҳо',
                 onTap: () => _go(ctx, const SellerDashboardScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.chat_bubble_rounded,
+                title: 'Ҷавоби худкор',
+                sub:   'Ба муштариён худкор ҷавоб диҳед',
+                onTap: () => _go(ctx, const AutoReplyScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.star_rounded,

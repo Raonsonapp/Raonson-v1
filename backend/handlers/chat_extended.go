@@ -184,6 +184,9 @@ func SendMessageExt(c *gin.Context) {
 	// response / optimistic insert). Бе ин таъхири чанддақиқагӣ мешуд.
 	emitChat("chat:new", msg, body.ReceiverID)
 
+	// Ҷавоби худкор — агар ин аввалин паём ба корбари дорои auto-reply бошад.
+	maybeAutoReply(chatID, myID, body.ReceiverID)
+
 	c.JSON(http.StatusCreated, msg)
 }
 

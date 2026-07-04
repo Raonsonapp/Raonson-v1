@@ -307,6 +307,9 @@ func migrate() {
 		UNIQUE(user_id, platform)
 	);
 
+	-- ── Ҷавоби худкор (Auto-reply барои фурӯшанда) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_reply TEXT DEFAULT '';
+
 	-- ── Таърихи воридшавӣ / дастгоҳҳо (Login history) ──
 	CREATE TABLE IF NOT EXISTS login_sessions (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

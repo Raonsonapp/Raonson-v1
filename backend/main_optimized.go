@@ -139,6 +139,8 @@ func main() {
 		p.PUT("/notifications", handlers.UpdateNotifPrefs)
 		p.PUT("/username",      handlers.ChangeUsername)
 		p.PUT("/phone",         handlers.ChangePhone)
+		p.GET("/auto-reply",    handlers.GetAutoReply)
+		p.PUT("/auto-reply",    handlers.SetAutoReply)
 		p.DELETE("/avatar",     handlers.DeleteAvatar)
 		p.GET("/:username",     cache30s, handlers.GetProfile)
 	}

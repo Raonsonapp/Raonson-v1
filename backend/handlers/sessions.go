@@ -84,3 +84,54 @@ func RevokeAllSessions(c *gin.Context) {
 		`DELETE FROM login_sessions WHERE user_id=$1`, myID)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
+// PUT /profile/auto-reply {text} → танзими ҷавоби худкор
+func SetAutoReply(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Text string `json:"text"`
+	}
+	c.ShouldBindJSON(&b)
+	text := strings.TrimSpace(b.Text)
+	if len(text) > 500 {
+		text = text[:500]
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET auto_reply=$1 WHERE id=$2`, text, myID)
+	c.JSON(http.StatusOK, gin.H{"autoReply": text})
+}
+
+// GET /profile/auto-reply → матни ҷории ҷавоби худкор
+func GetAutoReply(c *gin.Context) {
+	myID := mw.UID(c)
+	var text string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(auto_reply,'') FROM users WHERE id=$1`, myID).Scan(&text)
+	c.JSON(http.StatusOK, gin.H{"autoReply": text})
+}
+
+// maybeAutoReply — вақте ин аввалин паёми фиристанда дар чат бошад ва
+// қабулкунанда ҷавоби худкор дошта бошад, як ҷавоби худкор мефиристад.
+func maybeAutoReply(chatID, senderID, receiverID string) {
+	go func() {
+		var reply string
+		db.Pool.QueryRow(context.Background(),
+			`SELECT COALESCE(auto_reply,'') FROM users WHERE id=$1`,
+			receiverID).Scan(&reply)
+		if strings.TrimSpace(reply) == "" {
+			return
+		}
+		var cnt int
+		db.Pool.QueryRow(context.Background(),
+			`SELECT COUNT(*) FROM messages WHERE chat_id=$1 AND sender_id=$2`,
+			chatID, senderID).Scan(&cnt)
+		if cnt != 1 { // на аввалин паём
+			return
+		}
+		db.Pool.Exec(context.Background(), `
+			INSERT INTO messages
+			  (chat_id, sender_id, receiver_id, text, type, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, 'text', NOW(), NOW())`,
+			chatID, receiverID, senderID, reply)
+	}()
+}
