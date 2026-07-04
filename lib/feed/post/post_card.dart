@@ -6,6 +6,7 @@ import 'dart:math' show Random;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
@@ -685,31 +686,31 @@ class _PostCardState extends State<PostCard>
               color: const Color(0xFF833AB4), label: 'Сторис',
               onTap: () { Navigator.pop(sheetCtx);
                 Navigator.pushNamed(context, '/create-story'); }),
-            _ShareActionBtn(svgPath: 'assets/icons/logo_whatsapp.svg',
-              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'WhatsApp',
+            _ShareActionBtn(icon: FontAwesomeIcons.whatsapp,
+              color: const Color(0xFF25D366), label: 'WhatsApp',
               onTap: () {
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
                 if (mounted) setState(() => _shareCount++);
               }),
-            _ShareActionBtn(svgPath: 'assets/icons/logo_telegram.svg',
-              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'Telegram',
+            _ShareActionBtn(icon: FontAwesomeIcons.telegram,
+              color: const Color(0xFF0088CC), label: 'Telegram',
               onTap: () {
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
                 if (mounted) setState(() => _shareCount++);
               }),
-            _ShareActionBtn(svgPath: 'assets/icons/logo_instagram.svg',
-              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'Instagram',
+            _ShareActionBtn(icon: FontAwesomeIcons.instagram,
+              color: const Color(0xFFE1306C), label: 'Instagram',
               onTap: () {
                 Navigator.pop(sheetCtx);
                 Share.share(url);
                 if (mounted) setState(() => _shareCount++);
               }),
-            _ShareActionBtn(svgPath: 'assets/icons/logo_facebook.svg',
-              brandLogo: true, color: const Color(0xFF1F2A2E), label: 'Facebook',
+            _ShareActionBtn(icon: FontAwesomeIcons.facebookF,
+              color: const Color(0xFF1877F2), label: 'Facebook',
               onTap: () {
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(url)}'),

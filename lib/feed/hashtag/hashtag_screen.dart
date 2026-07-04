@@ -94,7 +94,8 @@ class _HashtagScreenState extends State<HashtagScreen> {
                       child: ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: _posts.length,
-                        itemBuilder: (_, i) => PostCard(post: _posts[i]),
+                        itemBuilder: (_, i) =>
+                            PostCard(key: ValueKey(_posts[i].id), post: _posts[i]),
                       ),
                     ),
     );

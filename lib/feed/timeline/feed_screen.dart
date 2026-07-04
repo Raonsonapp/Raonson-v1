@@ -101,31 +101,35 @@ class _FeedShellState extends State<_FeedShell> {
             floating: true,   // зуд намоён мешавад
             snap: true,       // яклухт пайдо мешавад
             pinned: false,    // scroll кунӣ пинҳон мешавад
-            leading: IconButton(
-              icon: SvgPicture.asset('assets/icons/upload.svg',
-                width: 26, height: 26,
-                colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
-              onPressed: () async {
-                final r = await Navigator.pushNamed(ctx, AppRoutes.create);
-                if (r == true && ctx.mounted) {
-                  ctx.read<FeedController>().refresh();
-                  widget.onCreatePost?.call();
-                }
-              },
-            ),
+            leadingWidth: 100,
+            leading: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(
+                icon: SvgPicture.asset('assets/icons/upload.svg',
+                  width: 26, height: 26,
+                  colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
+                onPressed: () async {
+                  final r = await Navigator.pushNamed(ctx, AppRoutes.create);
+                  if (r == true && ctx.mounted) {
+                    ctx.read<FeedController>().refresh();
+                    widget.onCreatePost?.call();
+                  }
+                },
+              ),
+              // Магоза — тарафи чапи Raonson (мисли дархост)
+              IconButton(
+                icon: Icon(AppIcons.storefront_rounded,
+                    color: AppColors.textPrimary, size: 21),
+                tooltip: 'Магоза',
+                onPressed: () => Navigator.push(ctx,
+                    MaterialPageRoute(builder: (_) => const ShopScreen())),
+              ),
+            ]),
             title: Text('Raonson', style: TextStyle(
               fontSize: 30, fontWeight: FontWeight.w400, color: AppColors.textPrimary,
               fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1,
             )),
             centerTitle: true, // лого дар марказ — мисли скриншоти Instagram
             actions: [
-              IconButton(
-                icon: Icon(AppIcons.storefront_rounded,
-                    color: AppColors.textPrimary, size: 24),
-                tooltip: 'Магоза',
-                onPressed: () => Navigator.push(ctx,
-                    MaterialPageRoute(builder: (_) => const ShopScreen())),
-              ),
               IconButton(
                 icon: SvgPicture.asset('assets/icons/friends.svg',
                     width: 25, height: 25,
@@ -379,6 +383,7 @@ class _FeedBody extends StatelessWidget {
                       : const SizedBox(height: 40);
                 }
                 return PostCard(
+                  key: ValueKey(state.posts[index].id), // ҳар пост state-и худаш
                   post: state.posts[index],
                   isActive: isActive,
                   onDeleted: () => context.read<FeedController>()
