@@ -17,6 +17,7 @@ import '../upload/post_upload_service.dart';
 import 'photo_filters.dart';
 import '../../effects/effects_repository.dart';
 import '../../core/ui/app_icons.dart';
+import '../../ai/ai_tools.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -612,18 +613,27 @@ class _PostEditorState extends State<_PostEditor> {
               child: Container(
                 decoration: BoxDecoration(color: Colors.black.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                child: TextField(
-                  controller: _captionCtrl, autofocus: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
-                  maxLines: 4, maxLength: 500,
-                  decoration: const InputDecoration(
-                    hintText: 'Тавсиф нависед...',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    contentPadding: EdgeInsets.all(12),
-                    border: InputBorder.none,
-                    counterStyle: TextStyle(color: Colors.white24)),
-                  onSubmitted: (_) => setState(() => _showCaption = false),
-                ))),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 8, 0),
+                      child: AiToolsButton(controller: _captionCtrl),
+                    ),
+                  ),
+                  TextField(
+                    controller: _captionCtrl, autofocus: true,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    maxLines: 4, maxLength: 500,
+                    decoration: const InputDecoration(
+                      hintText: 'Тавсиф нависед...',
+                      hintStyle: TextStyle(color: Colors.white38),
+                      contentPadding: EdgeInsets.all(12),
+                      border: InputBorder.none,
+                      counterStyle: TextStyle(color: Colors.white24)),
+                    onSubmitted: (_) => setState(() => _showCaption = false),
+                  ),
+                ]))),
 
           // ── Draw color bar ──────────────────────
           if (_tool == _Tool.draw)

@@ -21,6 +21,7 @@ import '../../core/services/user_session.dart';
 import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
 import '../../shop/buy_sheet.dart';
+import '../../ai/ai_tools.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
@@ -482,7 +483,10 @@ class _PostCardState extends State<PostCard>
                 imageUrl: widget.post.media.first['url'] ?? '',
                 height: 120, width: double.infinity, fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => const SizedBox.shrink())),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          Align(alignment: Alignment.centerRight,
+              child: AiToolsButton(controller: ctrl)),
+          const SizedBox(height: 4),
           TextField(
             controller: ctrl, autofocus: true, maxLines: 6, maxLength: 2200,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 15),

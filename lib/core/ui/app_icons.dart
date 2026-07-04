@@ -28,6 +28,7 @@ class AppIcons {
   static const IconData arrow_back_ios_new = FeatherIcons.chevronLeft;
   static const IconData arrow_back_ios_new_rounded = FeatherIcons.chevronLeft;
   static const IconData arrow_back_ios_rounded = FeatherIcons.chevronLeft;
+  static const IconData auto_awesome_rounded = FeatherIcons.zap;
   static const IconData arrow_forward_rounded = FeatherIcons.arrowRight;
   static const IconData arrow_upward_rounded = FeatherIcons.arrowUp;
   static const IconData bar_chart_rounded = FeatherIcons.barChart2;
