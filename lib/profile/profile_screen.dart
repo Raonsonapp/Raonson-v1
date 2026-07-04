@@ -372,6 +372,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     final avatarUrl = user.avatar.isNotEmpty
         ? user.avatar : (_isMe ? (UserSession.avatar ?? '') : '');
 
+    // Аккаунт закрытый ва ту обуна нести → мӯҳтаво пинҳон (мисли Instagram).
+    final locked = !_isMe && user.isPrivate && !user.isFollowing;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: RefreshIndicator(
@@ -411,6 +414,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(width: 5),
                       const Icon(AppIcons.verified_rounded,
                           fill: 1, color: Color(0xFF00C853), size: 16),
+                    ],
+                    // Кулф — аккаунт закрытый аст (то корбар фаҳмад).
+                    if (user.isPrivate) ...[
+                      const SizedBox(width: 5),
+                      Icon(AppIcons.lock_outline_rounded,
+                          color: AppColors.textPrimary, size: 15),
                     ],
                     if (_isMe) ...[
                       const SizedBox(width: 4),
@@ -535,34 +544,38 @@ class _ProfileScreenState extends State<ProfileScreen>
                         maxLines: 2)),
                   ])),
 
-              // ── TAB BAR ─────────────────────────────────────────────
-              const SizedBox(height: 12),
-              TabBar(
-                controller: _tab,
-                tabs: [
-                  const Tab(icon: Icon(AppIcons.grid_on_rounded)),
-                  Tab(icon: AnimatedBuilder(
-                    animation: _tab,
-                    builder: (_, __) => SvgPicture.asset(
-                        'assets/icons/nav_reels.svg',
-                        width: 22, height: 22,
-                        colorFilter: ColorFilter.mode(
-                            _tab.index == 1 ? AppColors.textPrimary : AppColors.textFaint,
-                            BlendMode.srcIn)),
-                  )),
-                  const Tab(icon: Icon(AppIcons.person_pin_outlined)),
-                  if (_isMe)
-                    const Tab(icon: Icon(AppIcons.bookmark_border_rounded)),
-                ],
-                indicatorColor:       AppColors.textPrimary,
-                indicatorWeight:      2,
-                indicatorSize:        TabBarIndicatorSize.tab,
-                labelColor:           AppColors.textPrimary,
-                unselectedLabelColor: AppColors.textFaint,
-                dividerColor:         AppColors.dividerFaint,
-              ),
+              // ── TAB BAR (танҳо вақте пӯшида нест) ───────────────────
+              if (!locked) ...[
+                const SizedBox(height: 12),
+                TabBar(
+                  controller: _tab,
+                  tabs: [
+                    const Tab(icon: Icon(AppIcons.grid_on_rounded)),
+                    Tab(icon: AnimatedBuilder(
+                      animation: _tab,
+                      builder: (_, __) => SvgPicture.asset(
+                          'assets/icons/nav_reels.svg',
+                          width: 22, height: 22,
+                          colorFilter: ColorFilter.mode(
+                              _tab.index == 1 ? AppColors.textPrimary : AppColors.textFaint,
+                              BlendMode.srcIn)),
+                    )),
+                    const Tab(icon: Icon(AppIcons.person_pin_outlined)),
+                    if (_isMe)
+                      const Tab(icon: Icon(AppIcons.bookmark_border_rounded)),
+                  ],
+                  indicatorColor:       AppColors.textPrimary,
+                  indicatorWeight:      2,
+                  indicatorSize:        TabBarIndicatorSize.tab,
+                  labelColor:           AppColors.textPrimary,
+                  unselectedLabelColor: AppColors.textFaint,
+                  dividerColor:         AppColors.dividerFaint,
+                ),
+              ],
             ]))],
-        body: TabBarView(controller: _tab, children: [
+        body: locked
+            ? const _PrivateAccountView()
+            : TabBarView(controller: _tab, children: [
           _PostGrid(
               posts:       _ctrl.sortedPosts,
               isMe:        _isMe,
@@ -734,6 +747,45 @@ class _Btn extends StatelessWidget {
             fontWeight: FontWeight.bold, fontSize: 12),
             overflow: TextOverflow.ellipsis)),
       ])));
+}
+
+// ─── Private account view (мисли Instagram «Это закрытый профиль») ──────
+class _PrivateAccountView extends StatelessWidget {
+  const _PrivateAccountView();
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(top: 60),
+      children: [
+        Column(children: [
+          Container(
+            width: 88, height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.textPrimary, width: 2.5),
+            ),
+            child: Icon(AppIcons.lock_outline_rounded,
+                color: AppColors.textPrimary, size: 40),
+          ),
+          const SizedBox(height: 20),
+          Text('Ин аккаунти пӯшида аст',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Барои дидани публикатсияҳо, ба ин аккаунт обуна шавед. '
+              'Дӯстон дар Raonson метавонанд бо ҳам нома нависанд ва '
+              'сторисҳои якдигарро бинанд.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 14,
+                  height: 1.4)),
+          ),
+        ]),
+      ],
+    );
+  }
 }
 
 // ─── Post Grid ─────────────────────────────────────────────────────────

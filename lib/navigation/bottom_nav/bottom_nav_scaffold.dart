@@ -13,6 +13,7 @@ import '../../reels/reels_feed/reels_screen.dart';
 import '../../chat/inbox/chat_list_screen.dart';
 import '../../search/search_screen.dart';
 import '../../profile/profile_screen.dart';
+import '../../widgets/account_switcher.dart';
 import '../../create/upload/upload_progress_bar.dart';
 import '../../widgets/offline_banner.dart'; // ← НАВ
 import '../../core/webrtc_service.dart';
@@ -138,7 +139,15 @@ class _BottomNavViewState extends State<_BottomNavView> {
             animation: NotificationBadgeController.instance,
             builder: (_, __) => BottomNavBar(
               currentIndex: nav.currentIndex,
-              onTap: nav.setIndex,
+              onTap: (i) {
+                // Дубора зеркунии tab-и профил → account switcher (мисли Instagram).
+                if (i == 4 && nav.currentIndex == 4) {
+                  showAccountSwitcher(context);
+                } else {
+                  nav.setIndex(i);
+                }
+              },
+              onProfileLongPress: () => showAccountSwitcher(context),
               avatarUrl: liveAvatar,
               notifCount: NotificationBadgeController.instance.count,
             ),
