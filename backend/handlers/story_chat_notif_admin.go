@@ -132,6 +132,7 @@ func LikeStory(c *gin.Context) {
 		db.Pool.QueryRow(context.Background(),
 			`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
 		notify(owner, myID, "story_like", sid)
+		pushNotify(owner, myID, "story_like", sid, "сторисатонро писандид")
 	}
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }

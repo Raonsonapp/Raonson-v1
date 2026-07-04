@@ -108,6 +108,7 @@ func UseEffect(c *gin.Context) {
 				 VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
 				eid, myID, creatorID, price, commission)
 			notify(creatorID, myID, "effect_sale", eid)
+			pushNotify(creatorID, myID, "effect_sale", eid, "эффекти шуморо харид")
 		}
 	}
 	db.Pool.Exec(context.Background(),

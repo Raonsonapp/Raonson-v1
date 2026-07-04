@@ -96,6 +96,7 @@ func PlaceOrder(c *gin.Context) {
 		return
 	}
 	notify(sellerID, myID, "order", postID)
+	pushNotify(sellerID, myID, "order", postID, "маҳсули шуморо фармоиш дод")
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": oid, "postId": postID, "price": price,
 		"commission": commission, "currency": currency, "status": "pending",

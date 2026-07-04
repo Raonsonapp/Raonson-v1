@@ -54,6 +54,11 @@ func AddComment(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&postOwner)
 	notify(postOwner, myID, "comment", postID)
+	preview := b.Text
+	if r := []rune(preview); len(r) > 40 {
+		preview = string(r[:40])
+	}
+	pushNotify(postOwner, myID, "comment", postID, "шарҳ гузошт: "+preview)
 
 	// Reply — соҳиби шарҳи волидро ҳам огоҳ кун (агар худаш набошад)
 	if b.ParentID != "" {
@@ -62,6 +67,7 @@ func AddComment(c *gin.Context) {
 			`SELECT user_id FROM comments WHERE id=$1`, b.ParentID).Scan(&parentOwner)
 		if parentOwner != "" && parentOwner != myID && parentOwner != postOwner {
 			notify(parentOwner, myID, "reply", postID)
+			pushNotify(parentOwner, myID, "reply", postID, "ба шарҳи шумо ҷавоб дод")
 		}
 	}
 
@@ -223,6 +229,7 @@ func FollowUser(c *gin.Context) {
 			`INSERT INTO follow_requests(requester_id,target_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 			myID, targetID)
 		notify(targetID, myID, "follow_request", myID)
+		pushNotify(targetID, myID, "follow_request", myID, "мехоҳад обуна шавад")
 		c.JSON(http.StatusOK, gin.H{"requested": true})
 		return
 	}
@@ -505,6 +512,7 @@ func ToggleReelLike(c *gin.Context) {
 			db.Pool.QueryRow(context.Background(),
 				`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
 			notify(owner, myID, "reel_like", rid)
+			pushNotify(owner, myID, "reel_like", rid, "Reel-и шуморо писандид")
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
@@ -592,5 +600,6 @@ func AddReelComment(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
 	notify(owner, myID, "reel_comment", rid)
+	pushNotify(owner, myID, "reel_comment", rid, "ба Reel-и шумо шарҳ гузошт")
 	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
 }
