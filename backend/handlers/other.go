@@ -434,11 +434,12 @@ func GetReels(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''), r.caption, r.views_count,
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
-		            THEN -1 ELSE r.likes_count END, r.created_at,
+		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
-		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id)
+		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
+		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false)
 		FROM reels r JOIN users u ON u.id=r.user_id
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset)
@@ -452,15 +453,17 @@ func GetReels(c *gin.Context) {
 	reels := []gin.H{}
 	for rows.Next() {
 		var rid, vurl, vurlLow, cap, uid, uname, uavatar string
-		var views, likes int
-		var verified, liked, saved, following bool
+		var views, likes, comms int
+		var verified, liked, saved, following, hideLikes, commentsOff bool
 		var createdAt interface{}
-		rows.Scan(&rid, &vurl, &vurlLow, &cap, &views, &likes, &createdAt,
-			&uid, &uname, &uavatar, &verified, &liked, &saved, &following)
+		rows.Scan(&rid, &vurl, &vurlLow, &cap, &views, &likes, &comms, &createdAt,
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
+			&hideLikes, &commentsOff)
 		reels = append(reels, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow, "caption": cap,
-			"viewsCount": views, "likesCount": likes,
+			"viewsCount": views, "likesCount": likes, "commentsCount": comms,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
+			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 				"verified": verified, "isFollowing": following},
 		})
@@ -570,6 +573,13 @@ func AddReelComment(c *gin.Context) {
 	var b struct{ Text string `json:"text"` }
 	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
+		return
+	}
+	var commentsOff bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(comments_off,false) FROM reels WHERE id=$1`, rid).Scan(&commentsOff)
+	if commentsOff {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Шарҳҳо барои ин Reel хомӯш карда шудаанд"})
 		return
 	}
 	var cid string

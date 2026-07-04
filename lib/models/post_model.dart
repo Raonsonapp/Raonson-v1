@@ -16,6 +16,8 @@ class PostModel {
   final List<String> collaborators;
   final String       musicTitle;   // ✅ НАВ
   final String       musicArtist;  // ✅ НАВ
+  final bool         hideLikes;        // лайкҳо пинҳонанд (танҳо соҳиб мебинад)
+  final bool         commentsDisabled; // шарҳҳо хомӯшанд
 
   const PostModel({
     required this.id,
@@ -33,6 +35,8 @@ class PostModel {
     this.collaborators = const [],
     this.musicTitle  = '',
     this.musicArtist = '',
+    this.hideLikes        = false,
+    this.commentsDisabled = false,
   });
 
   bool get isLiked  => liked;
@@ -51,6 +55,7 @@ class PostModel {
     DateTime? createdAt, String? location, List<String>? taggedUsers,
     List<String>? collaborators,
     String? musicTitle, String? musicArtist,
+    bool? hideLikes, bool? commentsDisabled,
   }) => PostModel(
     id:            id            ?? this.id,
     user:          user          ?? this.user,
@@ -67,6 +72,8 @@ class PostModel {
     collaborators: collaborators ?? this.collaborators,
     musicTitle:    musicTitle    ?? this.musicTitle,
     musicArtist:   musicArtist   ?? this.musicArtist,
+    hideLikes:        hideLikes        ?? this.hideLikes,
+    commentsDisabled: commentsDisabled ?? this.commentsDisabled,
   );
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -84,13 +91,17 @@ class PostModel {
     const empty = UserModel(id:'',username:'',avatar:'',verified:false,
         isPrivate:false,postsCount:0,followersCount:0,followingCount:0);
 
+    // Сервер вақте лайкҳо пинҳонанд ва бинанда соҳиб нест → likesCount = -1.
+    final rawLikes = (json['likesCount'] as num?)?.toInt() ?? 0;
+    final likesHidden = (json['hideLikes'] == true) || rawLikes < 0;
+
     return PostModel(
       id:            (json['_id'] ?? json['id'] ?? '').toString(),
       user:          json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String,dynamic>) : empty,
       caption:       (json['caption']  ?? '').toString(),
       media:         media,
-      likesCount:    (json['likesCount']    as num?)?.toInt() ?? 0,
+      likesCount:    rawLikes < 0 ? 0 : rawLikes,
       commentsCount: (json['commentsCount'] as num?)?.toInt() ?? 0,
       liked:         json['liked'] == true,
       saved:         json['saved'] == true,
@@ -101,6 +112,9 @@ class PostModel {
       collaborators: (json['collaborators'] as List? ?? []).map((e)=>e.toString()).toList(),
       musicTitle:    (json['musicTitle']  ?? json['music']?['title'] ?? '').toString(),
       musicArtist:   (json['musicArtist'] ?? json['music']?['artist'] ?? '').toString(),
+      hideLikes:        likesHidden,
+      commentsDisabled: json['commentsOff'] == true
+          || json['commentsDisabled'] == true,
     );
   }
 

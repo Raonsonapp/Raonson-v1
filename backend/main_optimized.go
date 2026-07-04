@@ -225,6 +225,7 @@ func main() {
 		re.POST("/:id/comments", handlers.AddReelComment)
 		re.POST("/:id/report",       handlers.ReportReel)
 		re.POST("/:id/hide-likes",   handlers.ToggleReelHideLikes)
+		re.POST("/:id/toggle-comments", handlers.ToggleReelComments)
 		re.POST("/:id/not_interest", handlers.MarkReelNotInterested)
 		re.GET("/:id/stats",         handlers.GetReelStats)
 		re.POST("/:id/comments/:commentId/like",  handlers.LikeReelComment)

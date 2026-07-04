@@ -61,6 +61,8 @@ func GetSmartFeed(c *gin.Context) {
 		   FROM post_media m WHERE m.post_id=p.id) AS media,
 		  EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1) AS liked,
 		  EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1) AS saved,
+		  COALESCE(p.hide_likes,false) AS hide_likes,
+		  COALESCE(p.comments_off,false) AS comments_off,
 		  COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW()),
@@ -112,7 +114,7 @@ func GetSmartFeed(c *gin.Context) {
 	for rows.Next() {
 		var pid, cap, uid, uname, uavatar string
 		var likes, comms int
-		var verified, liked, saved bool
+		var verified, liked, saved, hideLikes, commentsOff bool
 		var createdAt, media interface{}
 		var musicTitle, musicArtist, location string
 		var tagged []string
@@ -120,11 +122,13 @@ func GetSmartFeed(c *gin.Context) {
 		var score float64
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
+			&hideLikes, &commentsOff,
 			&musicTitle, &musicArtist, &location, &tagged, &hasStory, &score)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
 			"media": nilToEmpty(media), "liked": liked, "saved": saved,
+			"hideLikes": hideLikes, "commentsOff": commentsOff,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
 			"location": location, "taggedUsers": tagged,
 			"user": gin.H{

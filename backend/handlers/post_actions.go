@@ -102,6 +102,21 @@ func ToggleReelHideLikes(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"hideLikes": hide})
 }
 
+// ── POST /reels/:id/toggle-comments ── (toggle) танҳо соҳиб ──
+func ToggleReelComments(c *gin.Context) {
+	rid := c.Param("id")
+	myID := mw.UID(c)
+	var off bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE reels SET comments_off = NOT COALESCE(comments_off,false)
+		 WHERE id=$1 AND user_id=$2::text RETURNING comments_off`, rid, myID).Scan(&off)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"commentsOff": off})
+}
+
 // ── POST /posts/:id/interest ──────────────────────────────────────
 // "Интересно" — алгоритм бештар нишон медиҳад
 func MarkInterest(c *gin.Context) {

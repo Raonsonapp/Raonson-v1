@@ -539,6 +539,8 @@ class _ReelItemState extends State<_ReelItem> {
   bool _captionExpanded = false;
   bool _isBuffering = false;
   bool _downloading = false; // ← НАВ
+  late bool _hideLikes;      // ҳолати маҳаллӣ (то дарҳол нав шавад)
+  late bool _commentsOff;    // ҳолати маҳаллӣ
 
   DateTime? _watchStart;
   int _totalWatchMs = 0;
@@ -555,6 +557,8 @@ class _ReelItemState extends State<_ReelItem> {
   void initState() {
     super.initState();
     _saved = widget.reel.isSaved;
+    _hideLikes   = widget.reel.hideLikes;
+    _commentsOff = widget.reel.commentsDisabled;
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
     FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
     _initVideo();
@@ -745,18 +749,62 @@ class _ReelItemState extends State<_ReelItem> {
           Navigator.pop(context);
           _addMention();
         }),
-        _menuItem(AppIcons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
+        _menuItem(
+            _hideLikes ? AppIcons.visibility_rounded : AppIcons.visibility_off_outlined,
+            _hideLikes ? 'Нишон додани лайкҳо' : 'Пинҳон кардани лайкҳо',
             () async {
           Navigator.pop(context);
+          final target = !_hideLikes;
+          setState(() => _hideLikes = target);
           try {
-            await ApiClient.instance.post('/reels/${widget.reel.id}/hide-likes');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Танзими лайкҳо нав шуд ✓'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2)));
+            final res = await ApiClient.instance
+                .post('/reels/${widget.reel.id}/hide-likes');
+            if (res.statusCode < 400) {
+              final b = jsonDecode(res.body);
+              if (b['hideLikes'] is bool && mounted) {
+                setState(() => _hideLikes = b['hideLikes'] as bool);
+              }
+            } else if (mounted) {
+              setState(() => _hideLikes = !target);
             }
-          } catch (_) {}
+          } catch (_) { if (mounted) setState(() => _hideLikes = !target); }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(_hideLikes
+                    ? 'Лайкҳо пинҳон шуданд ✓'
+                    : 'Лайкҳо намоён шуданд ✓'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2)));
+          }
+          if (!_paused) _ctrl?.play();
+        }),
+        _menuItem(
+            _commentsOff ? AppIcons.mode_comment_rounded : AppIcons.mode_comment_outlined,
+            _commentsOff ? 'Фаъол кардани шарҳҳо' : 'Хомӯш кардани шарҳҳо',
+            () async {
+          Navigator.pop(context);
+          final target = !_commentsOff;
+          setState(() => _commentsOff = target);
+          try {
+            final res = await ApiClient.instance
+                .post('/reels/${widget.reel.id}/toggle-comments');
+            if (res.statusCode < 400) {
+              final b = jsonDecode(res.body);
+              if (b['commentsOff'] is bool && mounted) {
+                setState(() => _commentsOff = b['commentsOff'] as bool);
+              }
+            } else if (mounted) {
+              setState(() => _commentsOff = !target);
+            }
+          } catch (_) { if (mounted) setState(() => _commentsOff = !target); }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(_commentsOff
+                    ? 'Шарҳҳо хомӯш шуданд ✓'
+                    : 'Шарҳҳо фаъол шуданд ✓'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2)));
+          }
           if (!_paused) _ctrl?.play();
         }),
         _menuItem(AppIcons.delete_outline_rounded, 'Нест кардан', () {
@@ -1132,6 +1180,13 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _openComments() {
+    // Шарҳҳо хомӯшанд ва бинанда соҳиб нест → пайғоми маҳдудият.
+    if (_commentsOff && !_isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Шарҳҳо барои ин Reel хомӯш карда шудаанд'),
+          duration: Duration(seconds: 2)));
+      return;
+    }
     _ctrl?.pause();
     showModalBottomSheet(
       context: context,
@@ -1464,14 +1519,20 @@ class _ReelItemState extends State<_ReelItem> {
                 Column(mainAxisSize: MainAxisSize.min, children: [
               _LikeBtn(
                   isLiked: reel.isLiked,
-                  count: _fmt(reel.likesCount),
+                  // Лайкҳо пинҳонанд ва бинанда соҳиб нест → калима, на рақам.
+                  count: (_hideLikes && !_isOwner)
+                      ? 'Лайкҳо'
+                      : _fmt(reel.likesCount),
                   onTap: widget.onLike),
               const SizedBox(height: 22),
-              _ReelStableBtn(
-                  svgPath: 'assets/icons/comment.svg',
-                  count: _fmt(reel.commentsCount),
-                  onTap: _openComments),
-              const SizedBox(height: 22),
+              // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад (мисли Instagram).
+              if (!_commentsOff) ...[
+                _ReelStableBtn(
+                    svgPath: 'assets/icons/comment.svg',
+                    count: _fmt(reel.commentsCount),
+                    onTap: _openComments),
+                const SizedBox(height: 22),
+              ],
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',
                   count: '',

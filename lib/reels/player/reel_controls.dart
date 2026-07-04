@@ -7,6 +7,7 @@ import '../../models/reel_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
+import '../../core/services/user_session.dart';
 import '../../core/ui/app_icons.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
@@ -31,6 +32,10 @@ class _ReelControlsState extends State<ReelControls> {
   late int  _commentCount;
 
   ReelModel get reel => widget.reel;
+  bool get _isOwner {
+    final myId = UserSession.userId?.trim() ?? '';
+    return myId.isNotEmpty && myId == reel.user.id.trim();
+  }
 
   @override
   void initState() {
@@ -131,14 +136,19 @@ class _ReelControlsState extends State<ReelControls> {
                   ? 'assets/icons/heart_filled.svg'
                   : 'assets/icons/heart.svg',
               color: _liked ? const Color(0xFFFF3040) : Colors.white,
-              label: _fmt(_likeCount),
+              label: (reel.hideLikes && !_isOwner)
+                  ? 'Лайкҳо'
+                  : _fmt(_likeCount),
               onTap: _toggleLike),
           const SizedBox(height: 18),
-          _SvgBtn(
-              asset: 'assets/icons/comment.svg',
-              label: _fmt(_commentCount),
-              onTap: _openComments),
-          const SizedBox(height: 18),
+          // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад.
+          if (!reel.commentsDisabled) ...[
+            _SvgBtn(
+                asset: 'assets/icons/comment.svg',
+                label: _fmt(_commentCount),
+                onTap: _openComments),
+            const SizedBox(height: 18),
+          ],
           _SvgBtn(asset: 'assets/icons/share.svg', onTap: _share),
           const SizedBox(height: 18),
           _SvgBtn(

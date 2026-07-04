@@ -19,6 +19,8 @@ class ReelModel {
   final String    location;      // ← нав
   final List<String> taggedUsers;// ← нав
   final DateTime? createdAt;     // ← нав
+  final bool      hideLikes;        // лайкҳо пинҳонанд
+  final bool      commentsDisabled; // шарҳҳо хомӯшанд
 
   const ReelModel({
     required this.id,
@@ -39,6 +41,8 @@ class ReelModel {
     this.location      = '',
     this.taggedUsers   = const [],
     this.createdAt,
+    this.hideLikes        = false,
+    this.commentsDisabled = false,
   });
 
   // ── copyWith ─────────────────────────────────────────────────
@@ -61,6 +65,8 @@ class ReelModel {
     String?    location,
     List<String>? taggedUsers,
     DateTime?  createdAt,
+    bool?      hideLikes,
+    bool?      commentsDisabled,
   }) {
     return ReelModel(
       id:            id            ?? this.id,
@@ -81,6 +87,8 @@ class ReelModel {
       location:      location      ?? this.location,
       taggedUsers:   taggedUsers   ?? this.taggedUsers,
       createdAt:     createdAt     ?? this.createdAt,
+      hideLikes:        hideLikes        ?? this.hideLikes,
+      commentsDisabled: commentsDisabled ?? this.commentsDisabled,
     );
   }
 
@@ -88,6 +96,8 @@ class ReelModel {
     final rawTagged = (json['taggedUsers'] ?? []) as List;
     // audio маълумот
     final audio = json['audio'] as Map? ?? {};
+    // Сервер вақте лайкҳо пинҳонанд ва бинанда соҳиб нест → likesCount = -1.
+    final rawLikes = (json['likesCount'] as num?)?.toInt() ?? 0;
     return ReelModel(
       id:            (json['_id'] ?? json['id'] ?? '').toString(),
       videoUrl:      (json['videoUrl'] ?? json['video_url'] ?? '').toString(),
@@ -99,7 +109,7 @@ class ReelModel {
           : const UserModel(id: '', username: '', avatar: '', verified: false,
               isPrivate: false, postsCount: 0, followersCount: 0,
               followingCount: 0),
-      likesCount:    json['likesCount']    ?? 0,
+      likesCount:    rawLikes < 0 ? 0 : rawLikes,
       commentsCount: json['commentsCount'] ?? 0,
       viewsCount:    json['viewsCount']    ?? json['views'] ?? 0,
       sharesCount:   json['sharesCount']   ?? 0,
@@ -113,6 +123,9 @@ class ReelModel {
       createdAt:     json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
+      hideLikes:        (json['hideLikes'] == true) || rawLikes < 0,
+      commentsDisabled: json['commentsDisabled'] == true
+          || json['commentsOff'] == true,
     );
   }
 
@@ -134,6 +147,8 @@ class ReelModel {
     'location':     location,
     'taggedUsers':  taggedUsers,
     'createdAt':    createdAt?.toIso8601String(),
+    'hideLikes':        hideLikes,
+    'commentsDisabled': commentsDisabled,
     'user': {
       '_id':            user.id,
       'username':       user.username,

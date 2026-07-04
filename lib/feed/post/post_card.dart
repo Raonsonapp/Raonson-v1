@@ -51,6 +51,8 @@ class _PostCardState extends State<PostCard>
   late bool   _serverLiked; // ҳолати тасдиқшудаи сервер
   bool        _likeSyncing  = false;
   bool        _hidden       = false;
+  late bool   _hideLikes;        // лайкҳо пинҳонанд
+  late bool   _commentsDisabled; // шарҳҳо хомӯшанд
   late String _caption;
   bool        _captionExpanded = false; // ← Show more/less
 
@@ -97,6 +99,8 @@ class _PostCardState extends State<PostCard>
     _saved        = widget.post.isSaved;
     _likeCount    = widget.post.likesCount;
     _commentCount = widget.post.commentsCount;
+    _hideLikes        = widget.post.hideLikes;
+    _commentsDisabled = widget.post.commentsDisabled;
     _caption      = widget.post.caption;
 
     _likeCtrl = AnimationController(vsync: this,
@@ -221,6 +225,8 @@ class _PostCardState extends State<PostCard>
 
   // ── WHO LIKED ────────────────────────────────────────────────
   Future<void> _showWhoLiked() async {
+    // Агар лайкҳо пинҳон бошанд — танҳо соҳиб рӯйхатро мебинад.
+    if (_hideLikes && !_isOwner) return;
     if (_likeCount == 0) return;
     showModalBottomSheet(
       context: context,
@@ -239,10 +245,15 @@ class _PostCardState extends State<PostCard>
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
+      isScrollControlled: true, // ← то ҳама пунктҳо ба поён нарасида буриш нашаванд
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
+      builder: (_) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
           _handle(),
           _SvgMenuTile(assetPath: 'assets/icons/delete.svg',
               label: 'Ҳазф кардан', color: Colors.redAccent,
@@ -262,30 +273,82 @@ class _PostCardState extends State<PostCard>
           _MenuItem(icon: AppIcons.campaign_outlined, iconColor: AppColors.storyEnd,
               label: 'Тарғиб кардан (реклама)', labelColor: AppColors.storyEnd,
               onTap: () { Navigator.pop(context); _promotePost(); }),
-          _MenuItem(icon: AppIcons.favorite_border_rounded,
-              label: 'Пинҳон кардани лайкҳо',
-              onTap: () { Navigator.pop(context); _toggleAction('hide-likes', 'Танзими лайкҳо нав шуд'); }),
-          _MenuItem(icon: AppIcons.mode_comment_outlined,
-              label: 'Хомӯш/фаъол кардани шарҳҳо',
-              onTap: () { Navigator.pop(context); _toggleAction('toggle-comments', 'Танзими шарҳҳо нав шуд'); }),
+          _MenuItem(
+              icon: _hideLikes
+                  ? AppIcons.favorite_rounded
+                  : AppIcons.favorite_border_rounded,
+              label: _hideLikes
+                  ? 'Нишон додани лайкҳо'
+                  : 'Пинҳон кардани лайкҳо',
+              onTap: () { Navigator.pop(context); _toggleHideLikes(); }),
+          _MenuItem(
+              icon: _commentsDisabled
+                  ? AppIcons.mode_comment_rounded
+                  : AppIcons.mode_comment_outlined,
+              label: _commentsDisabled
+                  ? 'Фаъол кардани шарҳҳо'
+                  : 'Хомӯш кардани шарҳҳо',
+              onTap: () { Navigator.pop(context); _toggleComments(); }),
           _MenuItem(icon: AppIcons.archive_outlined,
               label: 'Бойгонӣ кардан',
               onTap: () { Navigator.pop(context); _archivePost(); }),
           const SizedBox(height: 8),
-        ])),
+        ])))),
     );
   }
 
-  Future<void> _toggleAction(String path, String msg) async {
+  // Пинҳон/нишон додани лайкҳо — ҳолати UI дарҳол нав мешавад.
+  Future<void> _toggleHideLikes() async {
+    final target = !_hideLikes;
+    setState(() => _hideLikes = target);
     try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/$path');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$msg ✓'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2)));
+      final res = await ApiClient.instance
+          .post('/posts/${widget.post.id}/hide-likes');
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        if (b['hideLikes'] is bool && mounted) {
+          setState(() => _hideLikes = b['hideLikes'] as bool);
+        }
+      } else if (mounted) {
+        setState(() => _hideLikes = !target); // баргардон
       }
-    } catch (_) {}
+    } catch (_) { if (mounted) setState(() => _hideLikes = !target); }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_hideLikes
+            ? 'Лайкҳо пинҳон шуданд ✓'
+            : 'Лайкҳо намоён шуданд ✓'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2)));
+    }
+  }
+
+  // Хомӯш/фаъол кардани шарҳҳо — ҳолати UI дарҳол нав мешавад.
+  Future<void> _toggleComments() async {
+    final target = !_commentsDisabled;
+    setState(() => _commentsDisabled = target);
+    try {
+      final res = await ApiClient.instance
+          .post('/posts/${widget.post.id}/toggle-comments');
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        // Backend-и пост калиди «commentsOff»-ро бармегардонад.
+        final v = b['commentsOff'] ?? b['commentsDisabled'];
+        if (v is bool && mounted) {
+          setState(() => _commentsDisabled = v);
+        }
+      } else if (mounted) {
+        setState(() => _commentsDisabled = !target);
+      }
+    } catch (_) { if (mounted) setState(() => _commentsDisabled = !target); }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_commentsDisabled
+            ? 'Шарҳҳо хомӯш шуданд ✓'
+            : 'Шарҳҳо фаъол шуданд ✓'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2)));
+    }
   }
 
   Future<void> _archivePost() async {
@@ -795,6 +858,13 @@ class _PostCardState extends State<PostCard>
   }
 
   void _openComments() {
+    // Шарҳҳо хомӯшанд → пайғоми маҳдудият (соҳиб метавонад боз кунад).
+    if (_commentsDisabled && !_isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Шарҳҳо барои ин пост хомӯш карда шудаанд'),
+        duration: Duration(seconds: 2)));
+      return;
+    }
     AnalyticsService.instance.logEvent(AnalyticsEvents.postComment,
         params: {'postId': widget.post.id});
     showModalBottomSheet(
@@ -908,6 +978,14 @@ class _PostCardState extends State<PostCard>
 
   // ── Like count animated counter ───────────────────────────────
   Widget _animatedLikeCount() {
+    // Лайкҳо пинҳонанд ва бинанда соҳиб нест → рақам не, танҳо калима
+    // «Лайкҳо» (мисли Instagram — «отметки Нравится»).
+    if (_hideLikes && !_isOwner) {
+      return Text('Лайкҳо',
+          style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14, fontWeight: FontWeight.w600));
+    }
     if (_likeCount <= 0) return const SizedBox.shrink();
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
@@ -1157,7 +1235,20 @@ class _PostCardState extends State<PostCard>
             ]),
           ),
         ),
-      if (_commentCount > 0)
+      if (_commentsDisabled)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(AppIcons.mode_comment_outlined,
+                size: 13, color: AppColors.grey),
+            const SizedBox(width: 5),
+            Text('Шарҳҳо хомӯш карда шудаанд',
+                style: TextStyle(
+                    color: AppColors.grey, fontSize: 13,
+                    fontWeight: FontWeight.w500)),
+          ]),
+        )
+      else if (_commentCount > 0)
         GestureDetector(
           onTap: _openComments,
           child: Padding(
@@ -1489,6 +1580,51 @@ class _MediaCarousel extends StatefulWidget {
 class _MediaCarouselState extends State<_MediaCarousel> {
   int _current = 0;
   double? _videoRatio; // ратиои аслии видео (вақте маълум шуд)
+  double? _imageRatio; // ратиои аслии расм (аз пиксели воқеӣ)
+  ImageStream? _imgStream;
+  ImageStreamListener? _imgListener;
+
+  // Instagram: портрет то 4:5 (0.8), пейзаж то 1.91:1. Дар ин ҳудуд —
+  // формати аслӣ 100% нигоҳ дошта мешавад, берун аз он каме буридан.
+  static const double _minRatio = 0.5;  // хеле дарози амудӣ
+  static const double _maxRatio = 1.91; // хеле паҳни уфуқӣ
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveFirstImageRatio();
+  }
+
+  // Ратиои аслии расми якумро аз пикселҳояш мегирем (бе метадоти сервер).
+  void _resolveFirstImageRatio() {
+    if (widget.media.isEmpty) return;
+    final first = widget.media.first;
+    if ((first['type'] ?? 'image') == 'video') return;
+    final url = first['url'] ?? '';
+    if (url.isEmpty) return;
+    // Агар сервер аллакай ратио дода бошад — ҳамонро истифода мебарем.
+    final meta = first['aspectRatio'] ?? '';
+    if (meta.isNotEmpty && double.tryParse(meta) != null) return;
+
+    final provider = CachedNetworkImageProvider(url);
+    _imgStream = provider.resolve(ImageConfiguration.empty);
+    _imgListener = ImageStreamListener((info, _) {
+      final w = info.image.width.toDouble();
+      final h = info.image.height.toDouble();
+      if (h > 0 && mounted && _imageRatio == null) {
+        setState(() => _imageRatio = w / h);
+      }
+    }, onError: (_, __) {});
+    _imgStream!.addListener(_imgListener!);
+  }
+
+  @override
+  void dispose() {
+    if (_imgStream != null && _imgListener != null) {
+      _imgStream!.removeListener(_imgListener!);
+    }
+    super.dispose();
+  }
 
   double _getAspectRatio() {
     // ✅ Формати аслиро нигоҳ дор — мисли Instagram (4:5 … 1.91:1)
@@ -1497,13 +1633,16 @@ class _MediaCarouselState extends State<_MediaCarousel> {
     final ratio = widget.media.first['aspectRatio'] ?? '';
     if (ratio.isNotEmpty) {
       final r = double.tryParse(ratio);
-      if (r != null && r > 0) return r.clamp(0.5, 1.91);
+      if (r != null && r > 0) return r.clamp(_minRatio, _maxRatio);
     }
     if (type == 'video' && _videoRatio != null) {
-      return _videoRatio!.clamp(0.5, 1.91);
+      return _videoRatio!.clamp(_minRatio, _maxRatio);
     }
-    // Default: portrait 4:5 мисли Instagram
-    return 4 / 5;
+    if (type != 'video' && _imageRatio != null) {
+      return _imageRatio!.clamp(_minRatio, _maxRatio);
+    }
+    // Default: квадрат 1:1 то ратиои аслӣ маълум шавад (беҳтар аз буридани 4:5).
+    return 1.0;
   }
 
   @override

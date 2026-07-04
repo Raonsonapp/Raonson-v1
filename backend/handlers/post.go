@@ -163,7 +163,8 @@ func GetFeed(c *gin.Context) {
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1::text),
-		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1::text)
+		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1::text),
+		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.archived,false) = FALSE
 		ORDER BY p.created_at DESC
@@ -179,14 +180,16 @@ func GetFeed(c *gin.Context) {
 	for rows.Next() {
 		var pid, cap, uid, uname, uavatar string
 		var likes, comms int
-		var verified, liked, saved bool
+		var verified, liked, saved, hideLikes, commentsOff bool
 		var createdAt, media interface{}
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
-			&uid, &uname, &uavatar, &verified, &media, &liked, &saved)
+			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
+			&hideLikes, &commentsOff)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes, "commentsCount": comms,
 			"createdAt": createdAt, "media": nilToEmpty(media),
 			"liked": liked, "saved": saved,
+			"hideLikes": hideLikes, "commentsOff": commentsOff,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
@@ -206,21 +209,26 @@ func GetPost(c *gin.Context) {
 
 	var pid2, cap, uid, uname, uavatar string
 	var likes, comms int
-	var verified, liked, saved bool
+	var verified, liked, saved, hideLikes, commentsOff bool
 	var createdAt, media interface{}
 
 	err := db.Pool.QueryRow(context.Background(), `
-		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
+		SELECT p.id, p.caption,
+		       CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $2::text
+		            THEN -1 ELSE p.likes_count END,
+		       p.comments_count, p.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type)
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$2::text),
-		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$2::text)
+		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$2::text),
+		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false)
 		FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=$1`,
 		pid, myID).Scan(&pid2, &cap, &likes, &comms, &createdAt,
-		&uid, &uname, &uavatar, &verified, &media, &liked, &saved)
+		&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
+		&hideLikes, &commentsOff)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
@@ -228,6 +236,7 @@ func GetPost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"_id": pid2, "caption": cap, "likesCount": likes, "commentsCount": comms,
 		"createdAt": createdAt, "media": nilToEmpty(media), "liked": liked, "saved": saved,
+		"hideLikes": hideLikes, "commentsOff": commentsOff,
 		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 	})
 }
