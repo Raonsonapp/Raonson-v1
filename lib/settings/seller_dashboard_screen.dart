@@ -8,6 +8,7 @@ import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../shop/order_management_screen.dart';
 import '../shop/crm_screen.dart';
+import '../shop/promo_codes_screen.dart';
 
 class SellerDashboardScreen extends StatefulWidget {
   const SellerDashboardScreen({super.key});
@@ -102,6 +103,14 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
                         _action('👥', 'Муштариён', 'CRM ва таърих',
                             () => Navigator.push(context, MaterialPageRoute(
                                 builder: (_) => const CrmScreen()))),
+                      ]),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        _action('🏷️', 'Промокодҳо', 'Тахфиф ва купон',
+                            () => Navigator.push(context, MaterialPageRoute(
+                                builder: (_) => const PromoCodesScreen()))),
+                        const SizedBox(width: 10),
+                        const Expanded(child: SizedBox()),
                       ]),
                       const SizedBox(height: 20),
                       _topProducts(),

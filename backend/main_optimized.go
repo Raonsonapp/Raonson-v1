@@ -183,6 +183,10 @@ func main() {
 	r.GET("/shop", auth, rl100, handlers.GetShop) // бе cache — маҳсулоти нав фавран
 	r.GET("/shop/insights", auth, rl100, handlers.GetShopInsights) // панели фурӯшанда
 	r.GET("/shop/customers", auth, rl100, handlers.GetCustomers)   // CRM: харидорон
+	r.POST("/shop/promos", auth, rl100, handlers.CreatePromo)            // промокод сохтан
+	r.GET("/shop/promos", auth, rl100, handlers.ListPromos)              // промокодҳо
+	r.DELETE("/shop/promos/:id", auth, rl100, handlers.DeletePromo)      // ҳазф
+	r.POST("/shop/promos/validate", auth, rl100, handlers.ValidatePromo) // санҷиш
 	og := r.Group("/orders", auth, rl100)
 	{
 		og.GET("/",           handlers.GetMyOrders)

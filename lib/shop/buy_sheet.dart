@@ -1,105 +1,222 @@
 // lib/shop/buy_sheet.dart
-// Варақаи «Харид» барои пости магоза — дар феед, риелс ва search истифода мешавад.
-// Фармоишро сабт мекунад (комиссияи 5%) ва ба фурӯшанда мерасонад:
-// Чати Raonson / WhatsApp / Занг.
+// Варақаи «Харид» — нарх, промокод (тахфиф) ва алоқа бо фурӯшанда
+// (Чати Raonson / WhatsApp / Занг). Фармоиш + комиссияи 5% сабт мешавад.
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/api/api_client.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
 import '../chat/room/chat_room_screen.dart';
 import 'shop_repository.dart';
 
 void showBuySheet(BuildContext context, PostModel post) {
-  final methods = <String>[];
-  if (post.contactRaonson && post.user.id.isNotEmpty) methods.add('raonson');
-  if (post.shopWhatsapp.trim().isNotEmpty) methods.add('whatsapp');
-  if (post.shopPhone.trim().isNotEmpty) methods.add('phone');
-  if (methods.isEmpty && post.user.id.isNotEmpty) methods.add('raonson');
-
-  // Фармоишро сабт мекунем (fire-and-forget) — комиссия дар backend.
-  ShopRepository().placeOrder(post.id);
-
-  if (methods.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Фурӯшанда роҳи алоқа нагузоштааст')));
-    return;
-  }
-  if (methods.length == 1) {
-    _openContact(context, post, methods.first);
-    return;
-  }
-
   showModalBottomSheet(
     context: context,
     backgroundColor: AppColors.surface,
+    isScrollControlled: true,
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    builder: (_) => SafeArea(
+    builder: (_) => _BuySheet(post: post),
+  );
+}
+
+class _BuySheet extends StatefulWidget {
+  final PostModel post;
+  const _BuySheet({required this.post});
+  @override
+  State<_BuySheet> createState() => _BuySheetState();
+}
+
+class _BuySheetState extends State<_BuySheet> {
+  final _promoCtrl = TextEditingController();
+  int _discountPct = 0;
+  String _promoCode = '';
+  bool _checking = false;
+  String? _promoMsg;
+
+  PostModel get post => widget.post;
+
+  double get _finalPrice =>
+      post.price * (1 - _discountPct / 100);
+
+  List<String> get _methods {
+    final m = <String>[];
+    if (post.contactRaonson && post.user.id.isNotEmpty) m.add('raonson');
+    if (post.shopWhatsapp.trim().isNotEmpty) m.add('whatsapp');
+    if (post.shopPhone.trim().isNotEmpty) m.add('phone');
+    if (m.isEmpty && post.user.id.isNotEmpty) m.add('raonson');
+    return m;
+  }
+
+  @override
+  void dispose() { _promoCtrl.dispose(); super.dispose(); }
+
+  Future<void> _applyPromo() async {
+    final code = _promoCtrl.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+    setState(() { _checking = true; _promoMsg = null; });
+    try {
+      final r = await ApiClient.instance.post('/shop/promos/validate',
+          body: {'code': code, 'sellerId': post.user.id});
+      final b = jsonDecode(r.body) as Map<String, dynamic>;
+      if (b['valid'] == true) {
+        setState(() {
+          _discountPct = (b['discountPct'] as num?)?.toInt() ?? 0;
+          _promoCode = code;
+          _promoMsg = 'Тахфиф $_discountPct% татбиқ шуд ✓';
+        });
+      } else {
+        setState(() {
+          _discountPct = 0; _promoCode = '';
+          _promoMsg = (b['message'] ?? 'Код нодуруст').toString();
+        });
+      }
+    } catch (_) {
+      setState(() => _promoMsg = 'Санҷиш нашуд');
+    }
+    if (mounted) setState(() => _checking = false);
+  }
+
+  String _priceLabel(double v) =>
+      '${v.toStringAsFixed(v % 1 == 0 ? 0 : 2)} ${post.currency}';
+
+  Future<void> _contact(String method) async {
+    // Фармоишро сабт мекунем (комиссия дар backend).
+    ShopRepository().placeOrder(post.id);
+    final name = post.productName.isNotEmpty ? post.productName : 'маҳсул';
+    var msg = 'Салом! «$name» (${_priceLabel(_finalPrice)})-ро дар Raonson '
+        'дидам, мехоҳам харам.';
+    if (_promoCode.isNotEmpty) {
+      msg += ' Промокод: $_promoCode ($_discountPct% тахфиф).';
+    }
+    if (mounted) Navigator.pop(context);
+    if (method == 'raonson') {
+      final seller = UserModel(
+        id: post.user.id, username: post.user.username,
+        avatar: post.user.avatar, verified: post.user.verified,
+        isPrivate: false, postsCount: 0, followersCount: 0, followingCount: 0,
+      );
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: seller)));
+      return;
+    }
+    Uri? uri;
+    if (method == 'whatsapp') {
+      final num = post.shopWhatsapp.replaceAll(RegExp(r'[^0-9]'), '');
+      uri = Uri.parse('https://wa.me/$num?text=${Uri.encodeComponent(msg)}');
+    } else if (method == 'phone') {
+      uri = Uri.parse('tel:${post.shopPhone.trim()}');
+    }
+    if (uri != null) {
+      try { await launchUrl(uri, mode: LaunchMode.externalApplication); }
+      catch (_) {}
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final methods = _methods;
+    return SafeArea(child: Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const SizedBox(height: 14),
         if (post.productName.isNotEmpty)
           Text(post.productName,
               maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700, fontSize: 15)),
-        Text('${post.priceLabel} · алоқа бо фурӯшанда',
-            style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-        const SizedBox(height: 8),
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700, fontSize: 16)),
+        const SizedBox(height: 4),
+        // Нарх (бо тахфиф)
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          if (_discountPct > 0) ...[
+            Text(_priceLabel(post.price),
+                style: TextStyle(color: AppColors.textFaint, fontSize: 14,
+                    decoration: TextDecoration.lineThrough)),
+            const SizedBox(width: 8),
+          ],
+          Text(_priceLabel(_finalPrice),
+              style: TextStyle(color: const Color(0xFF00C853),
+                  fontWeight: FontWeight.w800, fontSize: 20)),
+        ]),
+        const SizedBox(height: 12),
+        // Промокод
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(children: [
+            Expanded(child: TextField(
+              controller: _promoCtrl,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+              ],
+              style: TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Промокод',
+                hintStyle: TextStyle(color: AppColors.textFaint),
+                prefixIcon: Icon(AppIcons.tag_rounded,
+                    color: AppColors.textFaint, size: 18),
+                filled: true, fillColor: AppColors.card,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+              ),
+            )),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: _checking ? null : _applyPromo,
+              child: _checking
+                  ? const SizedBox(width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text('Татбиқ',
+                      style: TextStyle(color: AppColors.neonBlue,
+                          fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        ),
+        if (_promoMsg != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(_promoMsg!,
+                style: TextStyle(
+                    color: _discountPct > 0
+                        ? const Color(0xFF00C853) : Colors.redAccent,
+                    fontSize: 12)),
+          ),
+        const SizedBox(height: 6),
+        Divider(color: AppColors.dividerFaint),
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 4),
+          child: Text('Алоқа бо фурӯшанда',
+              style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+        ),
         if (methods.contains('raonson'))
           ListTile(
             leading: Icon(AppIcons.chat_bubble_rounded, color: AppColors.neonBlue),
             title: Text('Чати Raonson',
                 style: TextStyle(color: AppColors.textPrimary)),
-            onTap: () { Navigator.pop(context); _openContact(context, post, 'raonson'); },
+            onTap: () => _contact('raonson'),
           ),
         if (methods.contains('whatsapp'))
           ListTile(
             leading: const Icon(AppIcons.public_rounded, color: Color(0xFF25D366)),
             title: Text('WhatsApp',
                 style: TextStyle(color: AppColors.textPrimary)),
-            onTap: () { Navigator.pop(context); _openContact(context, post, 'whatsapp'); },
+            onTap: () => _contact('whatsapp'),
           ),
         if (methods.contains('phone'))
           ListTile(
             leading: Icon(AppIcons.call_rounded, color: AppColors.neonBlue),
             title: Text('Занг задан',
                 style: TextStyle(color: AppColors.textPrimary)),
-            onTap: () { Navigator.pop(context); _openContact(context, post, 'phone'); },
+            onTap: () => _contact('phone'),
           ),
         const SizedBox(height: 16),
       ]),
-    ),
-  );
-}
-
-Future<void> _openContact(
-    BuildContext context, PostModel post, String method) async {
-  final name = post.productName.isNotEmpty ? post.productName : 'маҳсул';
-  final msg = 'Салом! «$name» (${post.priceLabel})-ро дар Raonson дидам, '
-      'мехоҳам харам.';
-  if (method == 'raonson') {
-    final seller = UserModel(
-      id: post.user.id, username: post.user.username,
-      avatar: post.user.avatar, verified: post.user.verified,
-      isPrivate: false, postsCount: 0, followersCount: 0, followingCount: 0,
-    );
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: seller)));
-    return;
-  }
-  Uri? uri;
-  if (method == 'whatsapp') {
-    final num = post.shopWhatsapp.replaceAll(RegExp(r'[^0-9]'), '');
-    uri = Uri.parse('https://wa.me/$num?text=${Uri.encodeComponent(msg)}');
-  } else if (method == 'phone') {
-    uri = Uri.parse('tel:${post.shopPhone.trim()}');
-  }
-  if (uri != null) {
-    try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    ));
   }
 }

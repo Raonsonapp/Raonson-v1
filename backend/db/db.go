@@ -412,6 +412,20 @@ func migrate() {
 	-- ── Order status management (seller CRM) ──
 	ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 
+	-- ── Промокодҳо / купонҳо (Business) ──
+	CREATE TABLE IF NOT EXISTS promo_codes (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		seller_id    TEXT NOT NULL,
+		code         TEXT NOT NULL,
+		discount_pct INT  DEFAULT 0,
+		max_uses     INT  DEFAULT 0,
+		used_count   INT  DEFAULT 0,
+		expires_at   TIMESTAMPTZ,
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		UNIQUE(seller_id, code)
+	);
+	CREATE INDEX IF NOT EXISTS idx_promo_seller ON promo_codes(seller_id);
+
 	-- ── Effects marketplace (эффектҳои корбарон) ────────────────────
 	CREATE TABLE IF NOT EXISTS effects (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
