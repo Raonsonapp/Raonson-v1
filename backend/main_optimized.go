@@ -96,6 +96,8 @@ func main() {
 		a.POST("/logout",          auth, handlers.Logout)
 		a.POST("/forgot-password", rl20, handlers.ForgotPassword)
 		a.POST("/reset-password",  rl20, handlers.ResetPassword)
+		a.GET("/sessions",     auth, handlers.GetSessions)        // таърихи воридшавӣ
+		a.POST("/revoke-all",  auth, handlers.RevokeAllSessions)  // тоза кардани таърих
 	}
 
 	// ── USERS ────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
+import 'receipt_screen.dart';
 
 const Map<String, ({String label, Color color})> kOrderStatuses = {
   'pending':   (label: 'Дар интизор',    color: Color(0xFFF7971E)),
@@ -155,7 +156,10 @@ class _OrderManagementState extends State<OrderManagementScreen> {
     final product = (o['product'] ?? {}) as Map;
     final amount = (o['amount'] as num?)?.toDouble() ?? 0;
     final thumb = (product['image'] ?? '').toString();
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(
+          builder: (_) => ReceiptScreen(order: o))),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: AppColors.card,
@@ -214,6 +218,7 @@ class _OrderManagementState extends State<OrderManagementScreen> {
           ),
         ]),
       ]),
+    ),
     );
   }
 }

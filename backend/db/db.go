@@ -307,6 +307,17 @@ func migrate() {
 		UNIQUE(user_id, platform)
 	);
 
+	-- ── Таърихи воридшавӣ / дастгоҳҳо (Login history) ──
+	CREATE TABLE IF NOT EXISTS login_sessions (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id    TEXT NOT NULL,
+		device     TEXT DEFAULT '',
+		ip         TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_login_sessions_user
+		ON login_sessions(user_id, created_at DESC);
+
 	-- ── App settings persistence (theme / language) ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS theme    VARCHAR(10) DEFAULT 'dark';
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(5)  DEFAULT 'tj';

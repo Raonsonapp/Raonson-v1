@@ -135,6 +135,8 @@ func Login(c *gin.Context) {
 	secret        := mw.JWTSecret()
 	refreshSecret := mw.RefreshSecret()
 
+	recordLogin(id, c) // таърихи воридшавӣ (device + IP)
+
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken":  makeJWT(id, secret, 7*24*time.Hour),
 		"refreshToken": makeJWT(id, refreshSecret, 30*24*time.Hour),
