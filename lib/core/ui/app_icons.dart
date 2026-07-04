@@ -6,6 +6,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class AppIcons {
   AppIcons._();
@@ -17,7 +18,7 @@ class AppIcons {
   static const IconData add_circle_outline_rounded = FeatherIcons.plusCircle;
   static const IconData add_rounded = FeatherIcons.plus;
   static const IconData add_a_photo_rounded = FeatherIcons.camera;
-  static const IconData storefront_rounded = FeatherIcons.shoppingBag;
+  static const IconData storefront_rounded = FontAwesomeIcons.shop;
   static const IconData admin_panel_settings_outlined = FeatherIcons.shield;
   static const IconData all_inclusive_rounded = Symbols.all_inclusive_rounded;
   static const IconData alternate_email = FeatherIcons.atSign;
@@ -154,7 +155,7 @@ class AppIcons {
   static const IconData photo_camera_rounded = FeatherIcons.camera;
   static const IconData photo_library_outlined = FeatherIcons.image;
   static const IconData photo_library_rounded = FeatherIcons.image;
-  static const IconData play_arrow_rounded = FeatherIcons.play;
+  static const IconData play_arrow_rounded = FontAwesomeIcons.play;
   static const IconData play_circle_fill = FeatherIcons.playCircle;
   static const IconData play_circle_fill_rounded = FeatherIcons.playCircle;
   static const IconData play_circle_filled_rounded = FeatherIcons.playCircle;
