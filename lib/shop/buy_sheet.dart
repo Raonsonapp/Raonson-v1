@@ -43,6 +43,11 @@ class _BuySheetState extends State<_BuySheet> {
   double get _finalPrice =>
       post.price * (1 - _discountPct / 100);
 
+  int get _cashback {
+    final v = (_finalPrice * 0.05).floor();
+    return v < 1 ? 1 : v;
+  }
+
   List<String> get _methods {
     final m = <String>[];
     if (post.contactRaonson && post.user.id.isNotEmpty) m.add('raonson');
@@ -142,6 +147,11 @@ class _BuySheetState extends State<_BuySheet> {
               style: TextStyle(color: const Color(0xFF00C853),
                   fontWeight: FontWeight.w800, fontSize: 20)),
         ]),
+        const SizedBox(height: 4),
+        // Cashback — 5% ҳамчун ситора баргардонида мешавад.
+        Text('💰 Cashback: ${_cashback} ⭐',
+            style: TextStyle(color: const Color(0xFFFFD700), fontSize: 12,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),
         // Промокод
         Padding(

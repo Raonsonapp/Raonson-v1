@@ -97,9 +97,20 @@ func PlaceOrder(c *gin.Context) {
 	}
 	notify(sellerID, myID, "order", postID)
 	pushNotify(sellerID, myID, "order", postID, "маҳсули шуморо фармоиш дод")
+
+	// Cashback — харидор 5% арзиши харидро ҳамчун ситора мегирад (ҳадди ақал 1).
+	cashback := int(price * 0.05)
+	if cashback < 1 {
+		cashback = 1
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET stars_balance = COALESCE(stars_balance,0) + $1 WHERE id=$2`,
+		cashback, myID)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": oid, "postId": postID, "price": price,
 		"commission": commission, "currency": currency, "status": "pending",
+		"cashback": cashback,
 	})
 }
 
