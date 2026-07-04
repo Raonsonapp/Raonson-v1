@@ -6,6 +6,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
+import '../shop/order_management_screen.dart';
+import '../shop/crm_screen.dart';
 
 class SellerDashboardScreen extends StatefulWidget {
   const SellerDashboardScreen({super.key});
@@ -90,6 +92,17 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
                         _tile('📦', _fmt(_i('productsCount')), 'Махсулот'),
                         _tile('👁', _fmt(_i('viewsTotal')), 'Боздидҳо'),
                       ]),
+                      const SizedBox(height: 16),
+                      // Идоракунӣ — Фармоишҳо ва Муштариён (CRM)
+                      Row(children: [
+                        _action('📦', 'Фармоишҳо', 'Идоракунии ҳолат',
+                            () => Navigator.push(context, MaterialPageRoute(
+                                builder: (_) => const OrderManagementScreen()))),
+                        const SizedBox(width: 10),
+                        _action('👥', 'Муштариён', 'CRM ва таърих',
+                            () => Navigator.push(context, MaterialPageRoute(
+                                builder: (_) => const CrmScreen()))),
+                      ]),
                       const SizedBox(height: 20),
                       _topProducts(),
                       _dailyChart(),
@@ -125,6 +138,31 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
         ]),
       ]),
     );
+  }
+
+  Widget _action(String emoji, String title, String sub, VoidCallback onTap) {
+    return Expanded(child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.neonBlue.withOpacity(0.3)),
+        ),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: TextStyle(color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+            ])),
+        ]),
+      ),
+    ));
   }
 
   Widget _tile(String emoji, String value, String label) {

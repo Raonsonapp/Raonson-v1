@@ -123,12 +123,96 @@ func GetSellingOrders(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT o.id, o.post_id, o.price, o.commission, o.currency, o.status,
 		       o.created_at, COALESCE(p.product_name,''),
-		       u.username, COALESCE(u.avatar,'')
+		       o.buyer_id, u.username, COALESCE(u.avatar,''),
+		       COALESCE((SELECT url FROM post_media pm WHERE pm.post_id=o.post_id
+		                 ORDER BY position LIMIT 1),'') AS image
 		FROM orders o
 		JOIN posts p ON p.id=o.post_id
 		JOIN users u ON u.id=o.buyer_id
 		WHERE o.seller_id=$1 ORDER BY o.created_at DESC LIMIT 100`, myID)
-	c.JSON(http.StatusOK, gin.H{"orders": scanOrders(rows, err, "buyer")})
+	out := []gin.H{}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var oid, postID, currency, status, pname string
+			var buyerID, uname, uavatar, image string
+			var price, commission float64
+			var createdAt interface{}
+			rows.Scan(&oid, &postID, &price, &commission, &currency, &status,
+				&createdAt, &pname, &buyerID, &uname, &uavatar, &image)
+			out = append(out, gin.H{
+				"_id": oid, "id": oid, "postId": postID,
+				"price": price, "amount": price, "commission": commission,
+				"currency": currency, "status": status, "createdAt": createdAt,
+				"productName": pname,
+				"buyer":   gin.H{"_id": buyerID, "username": uname, "avatar": uavatar},
+				"product": gin.H{"_id": postID, "productName": pname, "image": image},
+			})
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"orders": out})
+}
+
+// ── PUT /orders/:id/status → тағйири ҳолати фармоиш (танҳо фурӯшанда) ──
+var validOrderStatuses = map[string]bool{
+	"pending": true, "confirmed": true, "packed": true, "shipping": true,
+	"delivered": true, "returned": true, "refunded": true, "cancelled": true,
+}
+
+func UpdateOrderStatus(c *gin.Context) {
+	myID := mw.UID(c)
+	orderID := c.Param("id")
+	var b struct {
+		Status string `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil || !validOrderStatuses[b.Status] {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid status"})
+		return
+	}
+	tag, err := db.Pool.Exec(context.Background(),
+		`UPDATE orders SET status=$1 WHERE id=$2 AND seller_id=$3`,
+		b.Status, orderID, myID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "update failed"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"message": "not your order"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": b.Status})
+}
+
+// ── GET /shop/customers → CRM: харидорони фурӯшанда ────────────────
+func GetCustomers(c *gin.Context) {
+	myID := mw.UID(c)
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT o.buyer_id, u.username, COALESCE(u.avatar,''),
+		       COUNT(*)                         AS orders_count,
+		       COALESCE(SUM(o.price),0)         AS total_spent,
+		       MAX(o.created_at)                AS last_order_at
+		FROM orders o
+		JOIN users u ON u.id=o.buyer_id
+		WHERE o.seller_id=$1
+		GROUP BY o.buyer_id, u.username, u.avatar
+		ORDER BY total_spent DESC LIMIT 200`, myID)
+	out := []gin.H{}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var buyerID, uname, uavatar string
+			var ordersCount int
+			var totalSpent float64
+			var lastOrderAt interface{}
+			rows.Scan(&buyerID, &uname, &uavatar, &ordersCount, &totalSpent, &lastOrderAt)
+			out = append(out, gin.H{
+				"_id": buyerID, "username": uname, "avatar": uavatar,
+				"ordersCount": ordersCount, "totalSpent": totalSpent,
+				"lastOrderAt": lastOrderAt,
+			})
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"customers": out})
 }
 
 func scanOrders(rows interface {

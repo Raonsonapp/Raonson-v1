@@ -409,6 +409,8 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_orders_buyer  ON orders(buyer_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_id, created_at DESC);
+	-- ── Order status management (seller CRM) ──
+	ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 
 	-- ── Effects marketplace (эффектҳои корбарон) ────────────────────
 	CREATE TABLE IF NOT EXISTS effects (

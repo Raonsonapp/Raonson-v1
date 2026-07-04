@@ -182,10 +182,12 @@ func main() {
 	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────
 	r.GET("/shop", auth, rl100, handlers.GetShop) // бе cache — маҳсулоти нав фавран
 	r.GET("/shop/insights", auth, rl100, handlers.GetShopInsights) // панели фурӯшанда
+	r.GET("/shop/customers", auth, rl100, handlers.GetCustomers)   // CRM: харидорон
 	og := r.Group("/orders", auth, rl100)
 	{
-		og.GET("/",        handlers.GetMyOrders)
-		og.GET("/selling", handlers.GetSellingOrders)
+		og.GET("/",           handlers.GetMyOrders)
+		og.GET("/selling",    handlers.GetSellingOrders)
+		og.PUT("/:id/status", handlers.UpdateOrderStatus) // тағйири ҳолат (фурӯшанда)
 	}
 
 	// ── Effects marketplace ────────────────────────────────────────
