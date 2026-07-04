@@ -8,7 +8,9 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../core/agora_service.dart';
+import '../core/services/user_session.dart';
 import '../widgets/avatar.dart';
+import 'live_overlay.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  РӮЙХАТИ LIVE + Go Live
@@ -253,62 +255,33 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
                 : const Center(child: CircularProgressIndicator(
                     color: Colors.white)),
           ),
-          SafeArea(child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(children: [
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: Colors.red,
-                      borderRadius: BorderRadius.circular(6)),
-                  child: const Text('🔴 LIVE',
-                      style: TextStyle(color: Colors.white,
-                          fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: Colors.black54,
-                      borderRadius: BorderRadius.circular(6)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(AppIcons.remove_red_eye_rounded,
-                        color: Colors.white, size: 14),
-                    const SizedBox(width: 4),
-                    Text('$_viewers', style: const TextStyle(color: Colors.white)),
-                  ]),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: _end,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(color: Colors.red,
-                        borderRadius: BorderRadius.circular(20)),
-                    child: const Text('Тамом',
-                        style: TextStyle(color: Colors.white,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ]),
-              const Spacer(),
-              Row(children: [
-                GestureDetector(
-                  onTap: () => _agora.flipCamera(),
-                  child: const CircleAvatar(backgroundColor: Colors.black45,
-                      child: Icon(AppIcons.flip_camera_ios_rounded,
-                          color: Colors.white)),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  onTap: () => _agora.toggleMute(),
-                  child: CircleAvatar(backgroundColor: Colors.black45,
-                      child: Icon(_agora.muted
-                          ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
-                          color: Colors.white)),
-                ),
-              ]),
-            ]),
-          )),
+          if (!_starting && _id.isNotEmpty)
+            LiveInteractionOverlay(
+              streamId: _id,
+              hostUsername: UserSession.username ?? 'шумо',
+              hostAvatar: UserSession.avatar ?? '',
+              onClose: _end,
+            ),
+          // Идораи host — flip камера ва mic (тарафи рост, боло).
+          Positioned(right: 12, top: 64,
+            child: SafeArea(child: Column(children: [
+              GestureDetector(
+                onTap: () => _agora.flipCamera(),
+                child: const CircleAvatar(radius: 20,
+                    backgroundColor: Colors.black45,
+                    child: Icon(AppIcons.flip_camera_ios_rounded,
+                        color: Colors.white, size: 20)),
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () => setState(() => _agora.toggleMute()),
+                child: CircleAvatar(radius: 20, backgroundColor: Colors.black45,
+                    child: Icon(_agora.muted
+                        ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
+                        color: Colors.white, size: 20)),
+              ),
+            ])),
+          ),
         ]),
       ),
     );
@@ -383,38 +356,12 @@ class _LiveViewerState extends State<LiveViewerScreen> {
                       ])),
                   ),
           ),
-          SafeArea(child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                decoration: BoxDecoration(color: Colors.black45,
-                    borderRadius: BorderRadius.circular(20)),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Avatar(imageUrl: (host['avatar'] ?? '').toString(),
-                      size: 26, name: (host['username'] ?? '').toString()),
-                  const SizedBox(width: 8),
-                  Text('@${host['username'] ?? ''}',
-                      style: const TextStyle(color: Colors.white,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.red,
-                        borderRadius: BorderRadius.circular(4)),
-                    child: const Text('LIVE', style: TextStyle(color: Colors.white,
-                        fontSize: 9, fontWeight: FontWeight.w800)),
-                  ),
-                ]),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: _leave,
-                child: const CircleAvatar(backgroundColor: Colors.black45,
-                    child: Icon(AppIcons.close, color: Colors.white)),
-              ),
-            ]),
-          )),
+          LiveInteractionOverlay(
+            streamId: _id,
+            hostUsername: (host['username'] ?? '').toString(),
+            hostAvatar: (host['avatar'] ?? '').toString(),
+            onClose: _leave,
+          ),
         ]),
       ),
     );

@@ -592,11 +592,22 @@ func migrate() {
 		channel    TEXT NOT NULL,
 		title      TEXT DEFAULT '',
 		viewers    INTEGER DEFAULT 0,
+		likes      INTEGER DEFAULT 0,
 		active     BOOLEAN DEFAULT TRUE,
 		started_at TIMESTAMPTZ DEFAULT NOW(),
 		ended_at   TIMESTAMPTZ
 	);
 	CREATE INDEX IF NOT EXISTS idx_live_active ON live_streams(active, started_at DESC);
+	ALTER TABLE live_streams ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0;
+
+	CREATE TABLE IF NOT EXISTS live_comments (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		stream_id  TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		text       TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_live_comments ON live_comments(stream_id, created_at);
 
 	-- ── Шикоят аз корбар ва маҳдудкунӣ (report / restrict) ──
 	CREATE TABLE IF NOT EXISTS user_reports (

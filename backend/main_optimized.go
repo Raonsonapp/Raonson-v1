@@ -202,10 +202,13 @@ func main() {
 	// ── Live-стримҳо ───────────────────────────────────────────────
 	lg := r.Group("/live", auth, rl100)
 	{
-		lg.GET("/",          handlers.ListLive)
-		lg.POST("/start",    handlers.StartLive)
-		lg.POST("/:id/end",  handlers.EndLive)
-		lg.POST("/:id/join", handlers.JoinLive)
+		lg.GET("/",             handlers.ListLive)
+		lg.POST("/start",       handlers.StartLive)
+		lg.POST("/:id/end",     handlers.EndLive)
+		lg.POST("/:id/join",    handlers.JoinLive)
+		lg.POST("/:id/comment", handlers.LiveComment)
+		lg.GET("/:id/comments", handlers.LiveComments)
+		lg.POST("/:id/like",    handlers.LiveLike)
 	}
 
 	// ── Effects marketplace ────────────────────────────────────────

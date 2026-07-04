@@ -25,6 +25,7 @@ import '../../notifications/notification_badge.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
 import '../../live/live_screens.dart';
+import '../../live/live_rail.dart';
 import '../../shop/shop_screen.dart';
 
 class FeedScreen extends StatelessWidget {
@@ -276,6 +277,7 @@ class _FeedBody extends StatelessWidget {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
+            const SliverToBoxAdapter(child: LiveRail()),
             SliverToBoxAdapter(child: storyBar),
             SliverToBoxAdapter(
                 child: Divider(color: AppColors.card, height: 1)),
@@ -323,6 +325,7 @@ class _FeedBody extends StatelessWidget {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
+            const SliverToBoxAdapter(child: LiveRail()),
             SliverToBoxAdapter(child: storyBar),
             SliverToBoxAdapter(
                 child: Divider(color: AppColors.card, height: 1)),
