@@ -361,18 +361,60 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               fontSize: 15, fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: 8),
-        ...g.items.map((f) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(AppIcons.check_circle_rounded,
-                color: const Color(0xFF00C853), size: 17),
-            const SizedBox(width: 8),
-            Expanded(child: Text(f,
-                style: TextStyle(color: AppColors.textSecondary,
-                    fontSize: 13.5, height: 1.3))),
-          ]),
-        )),
+        ...g.items.map((f) {
+          final on = _kAvailable.contains(f);
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(on ? AppIcons.check_circle_rounded : AppIcons.schedule_rounded,
+                  color: on ? const Color(0xFF00C853) : AppColors.textFaint,
+                  size: 17),
+              const SizedBox(width: 8),
+              Expanded(child: Text(f,
+                  style: TextStyle(
+                      color: on ? AppColors.textSecondary : AppColors.textFaint,
+                      fontSize: 13.5, height: 1.3))),
+              if (!on)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(5)),
+                  child: Text('ба зудӣ',
+                      style: TextStyle(color: AppColors.textFaint, fontSize: 9)),
+                ),
+            ]),
+          );
+        }),
       ]),
     );
   }
 }
+
+// Функсияҳое ки ҲОЗИР воқеан фаъоланд (сабз ✓); дигарон «ба зудӣ».
+const Set<String> _kAvailable = {
+  // Pro
+  'Badge «PRO»', 'Cover Profile (баннер)', 'Бештар аз 5 линк дар био',
+  'Highlights бемаҳдуд',
+  'Боздидҳои профил', 'Беҳтарин постҳо', 'Афзоиши пайравон',
+  'AI барои навиштани Caption', 'AI барои интихоби Hashtag',
+  'AI барои беҳтар кардани матн', 'AI барои тарҷума',
+  'Schedule кардани пост', 'Insights-и касбӣ',
+  'Login History', 'Дастгоҳҳои фаъол',
+  'Нишони Pro дар профил', 'Priority Support',
+  // Business
+  'Анбор (Inventory)', 'Каталоги бемаҳдуд',
+  'Фурӯш аз рӯи рӯз/ҳафта/моҳ', 'Даромад', 'Top Products',
+  'Boost Post', 'Boost Product',
+  'Купонҳо', 'Промокод', 'Discount', 'Cashback',
+  'AI Translation',
+  'Pending', 'Confirmed', 'Packed', 'Shipping', 'Delivered',
+  'Returned', 'Refunded', 'Cancelled',
+  'Live Chat', 'Auto Reply',
+  'Ба нақша гирифтани постҳо',
+  'Broadcast Message', 'Push Notification', 'Loyalty Program',
+  'Live Stream',
+  'Featured Products',
+  'Базаи муштариён', 'Таърихи харид',
+  'Тоҷикӣ', 'Русӣ', 'English', 'Тарҷумаи автоматии маҳсулот',
+  'Receipt',
+};
