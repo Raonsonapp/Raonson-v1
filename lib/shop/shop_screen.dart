@@ -135,6 +135,23 @@ class _ShopScreenState extends State<ShopScreen> {
                       style: TextStyle(color: Colors.black, fontSize: 9,
                           fontWeight: FontWeight.w800)),
                 )),
+            // Тамом шуд (набудани маҳсул).
+            if (!p.inStock)
+              Positioned.fill(child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                child: Container(
+                  color: Colors.black54,
+                  alignment: Alignment.center,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: Colors.red,
+                        borderRadius: BorderRadius.circular(6)),
+                    child: const Text('Тамом шуд',
+                        style: TextStyle(color: Colors.white, fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              )),
           ]),
           Padding(
             padding: const EdgeInsets.all(8),
@@ -510,13 +527,14 @@ class _ProductSheet extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.neonBlue,
+                      backgroundColor: p.inStock
+                          ? AppColors.neonBlue : AppColors.divider,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () => _buy(context),
-                    child: Text('Харидан',
+                    onPressed: p.inStock ? () => _buy(context) : null,
+                    child: Text(p.inStock ? 'Харидан' : 'Тамом шуд',
                         style: TextStyle(
                             color: AppColors.textPrimary, fontSize: 16,
                             fontWeight: FontWeight.bold)),
