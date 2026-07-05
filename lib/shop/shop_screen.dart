@@ -8,6 +8,7 @@ import '../widgets/avatar.dart';
 import '../models/user_model.dart';
 import '../core/services/user_session.dart';
 import '../app/app_settings.dart';
+import 'product_reviews_screen.dart';
 import '../chat/room/chat_room_screen.dart';
 import 'shop_repository.dart';
 import 'sell_screen.dart';
@@ -522,7 +523,27 @@ class _ProductSheet extends StatelessWidget {
                     ]),
                   ),
                 ],
-                const SizedBox(height: 18),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => ProductReviewsScreen(
+                          postId: p.id, productName: p.productName))),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(children: [
+                      Icon(AppIcons.star_rounded,
+                          color: const Color(0xFFFFD700), size: 18),
+                      const SizedBox(width: 8),
+                      Text('Баҳоҳо ва шарҳҳо',
+                          style: TextStyle(color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      Icon(AppIcons.chevron_right_rounded,
+                          color: AppColors.textFaint, size: 18),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(

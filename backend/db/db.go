@@ -318,6 +318,17 @@ func migrate() {
 		PRIMARY KEY(post_id, lang)
 	);
 
+	-- ── Баҳо ва шарҳи маҳсул (Reviews) ──
+	CREATE TABLE IF NOT EXISTS product_reviews (
+		post_id    TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		rating     INT DEFAULT 5,
+		text       TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY(post_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_reviews_post ON product_reviews(post_id, created_at DESC);
+
 	-- ── Таърихи воридшавӣ / дастгоҳҳо (Login history) ──
 	CREATE TABLE IF NOT EXISTS login_sessions (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

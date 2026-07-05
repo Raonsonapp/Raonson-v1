@@ -62,6 +62,67 @@ func GetShop(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"products": items})
 }
 
+// ── POST /posts/:id/review {rating,text} → баҳо (як нафар — як баҳо) ──
+func AddReview(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	var b struct {
+		Rating int    `json:"rating"`
+		Text   string `json:"text"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
+		return
+	}
+	if b.Rating < 1 {
+		b.Rating = 1
+	}
+	if b.Rating > 5 {
+		b.Rating = 5
+	}
+	text := strings.TrimSpace(b.Text)
+	if len(text) > 500 {
+		text = text[:500]
+	}
+	db.Pool.Exec(context.Background(), `
+		INSERT INTO product_reviews(post_id, user_id, rating, text)
+		VALUES($1,$2,$3,$4)
+		ON CONFLICT (post_id, user_id) DO UPDATE
+		  SET rating=EXCLUDED.rating, text=EXCLUDED.text, created_at=NOW()`,
+		postID, myID, b.Rating, text)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ── GET /posts/:id/reviews → рӯйхат + миёна ──────────────────────
+func GetReviews(c *gin.Context) {
+	postID := c.Param("id")
+	var avg float64
+	var cnt int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(AVG(rating),0), COUNT(*) FROM product_reviews WHERE post_id=$1`,
+		postID).Scan(&avg, &cnt)
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT r.rating, r.text, u.username, COALESCE(u.avatar,'')
+		FROM product_reviews r JOIN users u ON u.id=r.user_id
+		WHERE r.post_id=$1 ORDER BY r.created_at DESC LIMIT 50`, postID)
+	out := []gin.H{}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var rating int
+			var text, uname, uavatar string
+			rows.Scan(&rating, &text, &uname, &uavatar)
+			out = append(out, gin.H{
+				"rating": rating, "text": text,
+				"username": uname, "avatar": uavatar,
+			})
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"avg": avg, "count": cnt, "reviews": out,
+	})
+}
+
 // ── PUT /posts/:id/product → таҳрири маҳсул (ном, нарх, мавҷудӣ) ──
 func UpdateProduct(c *gin.Context) {
 	myID := mw.UID(c)
