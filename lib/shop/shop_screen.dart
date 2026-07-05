@@ -7,6 +7,7 @@ import '../core/ui/app_icons.dart';
 import '../widgets/avatar.dart';
 import '../models/user_model.dart';
 import '../core/services/user_session.dart';
+import '../app/app_settings.dart';
 import '../chat/room/chat_room_screen.dart';
 import 'shop_repository.dart';
 import 'sell_screen.dart';
@@ -278,6 +279,52 @@ class _ProductSheet extends StatelessWidget {
     }
   }
 
+  Future<void> _editProduct(BuildContext context) async {
+    final name = TextEditingController(text: product.productName);
+    final price = TextEditingController(
+        text: product.price == 0 ? '' : product.price.toStringAsFixed(
+            product.price % 1 == 0 ? 0 : 2));
+    bool inStock = product.inStock;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => StatefulBuilder(builder: (_, setD) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Таҳрири маҳсул',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          _tf(name, 'Ном'),
+          _tf(price, 'Нарх'),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: inStock,
+            activeColor: const Color(0xFF00C853),
+            title: Text('Дар анбор ҳаст',
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            onChanged: (v) => setD(() => inStock = v),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+              child: Text('Сабт', style: TextStyle(color: AppColors.neonBlue))),
+        ],
+      )),
+    );
+    if (ok == true) {
+      await product.updateProduct(product.id,
+          name: name.text.trim(),
+          price: double.tryParse(price.text.trim()),
+          inStock: inStock);
+      if (context.mounted) {
+        Navigator.pop(context); // варақаро мебандем то магоза нав шавад
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Маҳсул нав шуд ✓'), backgroundColor: Colors.green));
+      }
+    }
+    name.dispose(); price.dispose();
+  }
+
   Future<void> _editTranslations(BuildContext context) async {
     final cur = await product.getTranslations(product.id);
     final ru = TextEditingController(text: cur['ru'] ?? '');
@@ -354,10 +401,20 @@ class _ProductSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p.productName.isEmpty ? 'Маҳсулот' : p.productName,
-                    style: TextStyle(
+                // Номи маҳсул бо забони апп (агар тарҷума бошад).
+                FutureBuilder<Map<String, String>>(
+                  future: product.getTranslations(p.id),
+                  builder: (_, snap) {
+                    final lang = AppSettingsState.instance.lang;
+                    final tr = snap.data?[lang];
+                    final name = (tr != null && tr.isNotEmpty)
+                        ? tr
+                        : (p.productName.isEmpty ? 'Маҳсулот' : p.productName);
+                    return Text(name, style: TextStyle(
                         color: AppColors.textPrimary, fontSize: 18,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.bold));
+                  },
+                ),
                 const SizedBox(height: 6),
                 Text(p.priceLabel,
                     style: TextStyle(
@@ -411,16 +468,23 @@ class _ProductSheet extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
+                  Row(children: [
+                    Expanded(child: OutlinedButton.icon(
+                      onPressed: () => _editProduct(context),
+                      icon: Icon(AppIcons.edit_outlined,
+                          color: AppColors.textFaint, size: 16),
+                      label: Text('Таҳрир',
+                          style: TextStyle(color: AppColors.textPrimary)),
+                    )),
+                    const SizedBox(width: 8),
+                    Expanded(child: OutlinedButton.icon(
                       onPressed: () => _editTranslations(context),
                       icon: Icon(AppIcons.language_rounded,
-                          color: AppColors.textFaint, size: 18),
-                      label: Text('Тарҷумаҳо (ру/en)',
+                          color: AppColors.textFaint, size: 16),
+                      label: Text('Тарҷума',
                           style: TextStyle(color: AppColors.textPrimary)),
-                    ),
-                  ),
+                    )),
+                  ]),
                 ],
                 if (hasShop) ...[
                   const SizedBox(height: 8),

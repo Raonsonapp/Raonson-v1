@@ -62,6 +62,35 @@ func GetShop(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"products": items})
 }
 
+// ── PUT /posts/:id/product → таҳрири маҳсул (ном, нарх, мавҷудӣ) ──
+func UpdateProduct(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	var b struct {
+		ProductName *string  `json:"productName"`
+		Price       *float64 `json:"price"`
+		Currency    *string  `json:"currency"`
+		InStock     *bool    `json:"inStock"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
+		return
+	}
+	tag, err := db.Pool.Exec(context.Background(), `
+		UPDATE posts SET
+		  product_name = COALESCE($1, product_name),
+		  price        = COALESCE($2, price),
+		  currency     = COALESCE($3, currency),
+		  in_stock     = COALESCE($4, in_stock)
+		WHERE id=$5 AND user_id=$6 AND is_product=TRUE`,
+		b.ProductName, b.Price, b.Currency, b.InStock, postID, myID)
+	if err != nil || tag.RowsAffected() == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиби маҳсул"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 // ── GET /posts/:id/translations → тарҷумаҳои номи маҳсул ──────────
 func GetProductTranslations(c *gin.Context) {
 	postID := c.Param("id")

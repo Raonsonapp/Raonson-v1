@@ -72,6 +72,20 @@ class Product {
       await ApiClient.instance.put('/posts/$postId/translations', body: t);
     } catch (_) {}
   }
+
+  Future<bool> updateProduct(String postId,
+      {String? name, double? price, bool? inStock}) async {
+    try {
+      final r = await ApiClient.instance.put('/posts/$postId/product', body: {
+        if (name != null) 'productName': name,
+        if (price != null) 'price': price,
+        if (inStock != null) 'inStock': inStock,
+      });
+      return r.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
+  }
   String get priceLabel => '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
 }
 

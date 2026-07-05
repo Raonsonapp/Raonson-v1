@@ -185,6 +185,7 @@ func main() {
 		po.POST("/:id/feature",      handlers.ToggleProductFeature) // маҳсули беҳтарин
 		po.GET("/:id/translations",  handlers.GetProductTranslations)
 		po.PUT("/:id/translations",  handlers.SetProductTranslations)
+		po.PUT("/:id/product",       handlers.UpdateProduct) // таҳрири маҳсул
 	}
 
 	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────
