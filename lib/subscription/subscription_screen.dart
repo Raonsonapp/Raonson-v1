@@ -2,9 +2,11 @@
 // Raonson Pro (29.90 сом) ва Raonson Business (99.90 сом) — саҳифаи обуна.
 // Ҳамаи хусусиятҳо аз рӯи категория нишон дода мешаванд.
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
-import '../core/services/subscription_service.dart';
 
 class _Group {
   final String emoji, title;
@@ -158,7 +160,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ? const [Color(0xFFF7971E), Color(0xFFFFD200)]
       : const [Color(0xFF7F00FF), Color(0xFFE100FF)];
 
+  // Алоқа барои пардохт — то API-и пардохт васл шавад, ба воситаи соҳиб.
+  static const String _waNumber = '992971769009';
+  static const String _tgUser   = 'Raonsonofficial';
+  static const String _igUser   = 'raonsonofficial';
+
+  Future<void> _open(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
   void _subscribe() {
+    final msg = 'Салом! Мехоҳам обунаи $_name ($_price сомонӣ/моҳ)-ро '
+        'фаъол кунам. Чӣ тавр пардохт кунам?';
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -168,56 +183,57 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 14),
-          Text('Пардохти $_name',
+          Text('Фаъол кардани $_name',
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold, fontSize: 16)),
           Text('$_price сомонӣ / моҳ',
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
-          const SizedBox(height: 10),
-          for (final m in const ['Душанбе Сити', 'Alif', 'Корти Миллӣ',
-              'Visa / Mastercard'])
-            ListTile(
-              leading: Icon(AppIcons.credit_card_rounded, color: AppColors.neonBlue),
-              title: Text(m, style: TextStyle(color: AppColors.textPrimary)),
-              trailing: Icon(AppIcons.chevron_right_rounded,
-                  color: AppColors.textFaint, size: 18),
-              onTap: () { Navigator.pop(context); _activate(); },
-            ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-                'Пардохти воқеӣ ба зудӣ васл мешавад. Ҳозир барои санҷиш '
+                'Барои пардохт бо мо тамос гиред — баъди пардохт обунаатон '
                 'фаъол мешавад.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           ),
-          const SizedBox(height: 16),
-        ])),
-    );
-  }
-
-  Future<void> _activate() async {
-    await SubscriptionService.instance
-        .setTier(_biz ? PlanTier.business : PlanTier.pro);
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text('Табрик! 🎉',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Шумо акнун $_name доред. Ҳамаи имтиёзҳо фаъол шуданд.',
-            style: TextStyle(color: AppColors.textSecondary)),
-        actions: [
+          const SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(FontAwesomeIcons.whatsapp, color: Color(0xFF25D366)),
+            title: Text('WhatsApp', style: TextStyle(color: AppColors.textPrimary)),
+            subtitle: Text('+992 97 176 9009',
+                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+            onTap: () { Navigator.pop(context);
+              _open('https://wa.me/$_waNumber?text=${Uri.encodeComponent(msg)}'); },
+          ),
+          ListTile(
+            leading: const Icon(FontAwesomeIcons.telegram, color: Color(0xFF0088CC)),
+            title: Text('Telegram', style: TextStyle(color: AppColors.textPrimary)),
+            subtitle: Text('t.me/$_tgUser',
+                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+            onTap: () { Navigator.pop(context);
+              _open('https://t.me/$_tgUser'); },
+          ),
+          ListTile(
+            leading: const Icon(FontAwesomeIcons.instagram, color: Color(0xFFE1306C)),
+            title: Text('Instagram', style: TextStyle(color: AppColors.textPrimary)),
+            subtitle: Text('@$_igUser',
+                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+            onTap: () { Navigator.pop(context);
+              _open('https://www.instagram.com/$_igUser'); },
+          ),
+          const SizedBox(height: 8),
           TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              child: Text('Хуб', style: TextStyle(color: AppColors.neonBlue))),
-        ],
-      ),
+            onPressed: () {
+              Clipboard.setData(const ClipboardData(text: '+992 97 176 9009'));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Рақам нусхабардорӣ шуд')));
+            },
+            child: Text('Нусхаи рақам',
+                style: TextStyle(color: AppColors.neonBlue)),
+          ),
+          const SizedBox(height: 12),
+        ])),
     );
   }
 

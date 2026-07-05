@@ -318,6 +318,15 @@ func migrate() {
 		PRIMARY KEY(post_id, lang)
 	);
 
+	-- ── Мубодила (share) — беназир барои ҳар корбар ──
+	CREATE TABLE IF NOT EXISTS post_shares (
+		user_id TEXT NOT NULL,
+		post_id TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY(user_id, post_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_post_shares ON post_shares(post_id);
+
 	-- ── Баҳо ва шарҳи маҳсул (Reviews) ──
 	CREATE TABLE IF NOT EXISTS product_reviews (
 		post_id    TEXT NOT NULL,

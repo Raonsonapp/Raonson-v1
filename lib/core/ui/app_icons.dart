@@ -18,7 +18,7 @@ class AppIcons {
   static const IconData add_circle_outline_rounded = FeatherIcons.plusCircle;
   static const IconData add_rounded = FeatherIcons.plus;
   static const IconData add_a_photo_rounded = FeatherIcons.camera;
-  static const IconData storefront_rounded = FontAwesomeIcons.shop;
+  static const IconData storefront_rounded = FeatherIcons.shoppingBag;
   static const IconData admin_panel_settings_outlined = FeatherIcons.shield;
   static const IconData all_inclusive_rounded = Symbols.all_inclusive_rounded;
   static const IconData alternate_email = FeatherIcons.atSign;

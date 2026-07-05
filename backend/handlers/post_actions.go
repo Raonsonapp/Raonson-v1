@@ -41,6 +41,19 @@ func ReportPost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"reported": true})
 }
 
+// POST /posts/:id/share → мубодила (беназир: 1 корбар = 1 бор) → shares
+func SharePost(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO post_shares(user_id, post_id) VALUES($1,$2)
+		 ON CONFLICT (user_id, post_id) DO NOTHING`, myID, postID)
+	var shares int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM post_shares WHERE post_id=$1`, postID).Scan(&shares)
+	c.JSON(http.StatusOK, gin.H{"shares": shares})
+}
+
 // ── POST /posts/:id/hide-likes ── (toggle) танҳо соҳиб ──
 func TogglePostHideLikes(c *gin.Context) {
 	pid := c.Param("id")

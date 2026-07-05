@@ -27,6 +27,7 @@ import '../widgets/verified_badge.dart';
 import 'search_history.dart';
 import '../core/ui/app_icons.dart';
 import '../shop/buy_sheet.dart';
+import '../live/live_rail.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  MAIN SCREEN
@@ -383,6 +384,7 @@ class _SearchScreenState extends State<SearchScreen>
           onChanged:  _onChanged,
           onCancel:   _cancelSearch,
         ),
+        const LiveRail(), // «Live ҳозир» — дар search (на home)
         Expanded(
           child: _exploreLoading
               ? _SkeletonGrid()

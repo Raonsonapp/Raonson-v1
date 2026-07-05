@@ -170,6 +170,7 @@ func main() {
 		po.DELETE("/:id",            handlers.DeletePost)
 		po.POST("/:id/like",         handlers.TogglePostLike)
 		po.POST("/:id/save",         handlers.TogglePostSave)
+		po.POST("/:id/share",        handlers.SharePost) // мубодилаи беназир
 		po.POST("/:id/report",       handlers.ReportPost)
 		po.POST("/:id/hide-likes",   handlers.TogglePostHideLikes)
 		po.POST("/:id/toggle-comments", handlers.TogglePostComments)

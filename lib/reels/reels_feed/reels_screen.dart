@@ -1554,7 +1554,7 @@ class _ReelItemState extends State<_ReelItem> {
                   child: const SizedBox(
                       width: 30,
                       height: 30,
-                      child: Icon(AppIcons.more_horiz_rounded,
+                      child: Icon(AppIcons.more_vert_rounded,
                           color: Colors.white,
                           size: 28,
                           shadows: [

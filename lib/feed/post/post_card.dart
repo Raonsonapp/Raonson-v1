@@ -716,6 +716,18 @@ class _PostCardState extends State<PostCard>
     }
   }
 
+  // Мубодила — беназир (1 корбар = 1 бор, ҳатто агар 50 бор фиристад).
+  Future<void> _recordShare() async {
+    try {
+      final res = await ApiClient.instance
+          .post('/posts/${widget.post.id}/share');
+      if (res.statusCode < 400 && mounted) {
+        final b = jsonDecode(res.body);
+        if (b['shares'] is int) setState(() => _shareCount = b['shares'] as int);
+      }
+    } catch (_) {}
+  }
+
   void _showShare() {
     AnalyticsService.instance.logEvent(AnalyticsEvents.postShare,
         params: {'postId': widget.post.id});
@@ -760,7 +772,7 @@ class _PostCardState extends State<PostCard>
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(icon: FontAwesomeIcons.telegram,
               color: const Color(0xFF0088CC), label: 'Telegram',
@@ -768,14 +780,14 @@ class _PostCardState extends State<PostCard>
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(icon: FontAwesomeIcons.instagram,
               color: const Color(0xFFE1306C), label: 'Instagram',
               onTap: () {
                 Navigator.pop(sheetCtx);
                 Share.share(url);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(icon: FontAwesomeIcons.facebookF,
               color: const Color(0xFF1877F2), label: 'Facebook',
@@ -783,7 +795,7 @@ class _PostCardState extends State<PostCard>
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(svgPath: 'assets/icons/link.svg',
               color: AppColors.divider, label: 'Линк',
@@ -810,7 +822,7 @@ class _PostCardState extends State<PostCard>
               color: AppColors.divider, label: 'Бештар',
               onTap: () { Navigator.pop(sheetCtx);
                 Share.share(url).then((_) {
-                  if (mounted) setState(() => _shareCount++); }); }),
+                  _recordShare(); }); }),
           ])),
         Divider(color: AppColors.dividerFaint, height: 1),
         ListTile(
@@ -1080,7 +1092,7 @@ class _PostCardState extends State<PostCard>
           GestureDetector(
             onTap: _showMenu,
             child: Padding(padding: EdgeInsets.all(8),
-              child: Icon(AppIcons.more_horiz, color: AppColors.textPrimary, size: 22))),
+              child: Icon(AppIcons.more_vert, color: AppColors.textPrimary, size: 22))),
         ]),
       ),
 
