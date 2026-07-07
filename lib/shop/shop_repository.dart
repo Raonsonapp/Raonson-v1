@@ -15,6 +15,7 @@ class Product {
   final String whatsapp, phone;
   final bool featured;
   final int salePct;
+  final String category;
   Product({
     required this.id, required this.productName, required this.currency,
     required this.shopAddress, required this.caption, required this.image,
@@ -22,7 +23,7 @@ class Product {
     required this.inStock, required this.sellerId, required this.sellerName,
     required this.sellerAvatar, required this.sellerVerified,
     this.contactRaonson = true, this.whatsapp = '', this.phone = '',
-    this.featured = false, this.salePct = 0,
+    this.featured = false, this.salePct = 0, this.category = '',
   });
 
   bool   get onSale     => salePct > 0;
@@ -51,8 +52,15 @@ class Product {
       phone: (j['shopPhone'] ?? '').toString(),
       featured: j['featured'] == true,
       salePct: (j['salePct'] as num?)?.toInt() ?? 0,
+      category: (j['category'] ?? '').toString(),
     );
   }
+
+  // Категорияҳои маҳсулот (собит).
+  static const List<String> categories = [
+    'Либос', 'Электроника', 'Зебоӣ', 'Хона', 'Хӯрокворӣ',
+    'Бачагона', 'Варзиш', 'Дигар',
+  ];
 
   Future<bool> setSale(String postId, int pct, int days) async {
     try {
@@ -92,12 +100,13 @@ class Product {
   }
 
   Future<bool> updateProduct(String postId,
-      {String? name, double? price, bool? inStock}) async {
+      {String? name, double? price, bool? inStock, String? category}) async {
     try {
       final r = await ApiClient.instance.put('/posts/$postId/product', body: {
         if (name != null) 'productName': name,
         if (price != null) 'price': price,
         if (inStock != null) 'inStock': inStock,
+        if (category != null) 'category': category,
       });
       return r.statusCode < 400;
     } catch (_) {
@@ -110,9 +119,10 @@ class Product {
 class ShopRepository {
   final _api = ApiClient.instance;
 
-  Future<List<Product>> getProducts() async {
+  Future<List<Product>> getProducts({String category = ''}) async {
     try {
-      final r = await _api.get('/shop');
+      final r = await _api.get('/shop',
+          query: category.isEmpty ? null : {'category': category});
       if (r.statusCode >= 400) return [];
       final body = jsonDecode(r.body);
       final list = (body['products'] ?? []) as List;

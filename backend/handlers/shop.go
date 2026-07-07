@@ -20,6 +20,7 @@ func GetShop(c *gin.Context) {
 	page := toInt(c.Query("page"), 1)
 	limit := toInt(c.Query("limit"), 30)
 	offset := (page - 1) * limit
+	category := strings.TrimSpace(c.Query("category"))
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT p.id, COALESCE(p.product_name,''), COALESCE(p.price,0),
 		       COALESCE(p.currency,'TJS'), COALESCE(p.shop_address,''),
@@ -33,10 +34,13 @@ func GetShop(c *gin.Context) {
 		       COALESCE(p.featured,FALSE),
 		       CASE WHEN COALESCE(p.sale_pct,0) > 0
 		             AND (p.sale_until IS NULL OR p.sale_until > now())
-		            THEN COALESCE(p.sale_pct,0) ELSE 0 END AS sale_pct
+		            THEN COALESCE(p.sale_pct,0) ELSE 0 END AS sale_pct,
+		       COALESCE(p.product_category,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE p.is_product=TRUE
-		ORDER BY p.featured DESC, p.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+		  AND ($3 = '' OR p.product_category = $3)
+		ORDER BY p.featured DESC, p.created_at DESC LIMIT $1 OFFSET $2`,
+		limit, offset, category)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "shop failed"})
 		return
@@ -50,15 +54,17 @@ func GetShop(c *gin.Context) {
 		var price, lat, lng float64
 		var inStock, verified, contactRaonson, featured bool
 		var salePct int
+		var pcategory string
 		rows.Scan(&pid, &pname, &price, &currency, &addr, &lat, &lng,
 			&caption, &inStock, &contactRaonson, &whatsapp, &phone,
-			&image, &uid, &uname, &uavatar, &verified, &featured, &salePct)
+			&image, &uid, &uname, &uavatar, &verified, &featured, &salePct,
+			&pcategory)
 		items = append(items, gin.H{
 			"_id": pid, "productName": pname, "price": price,
 			"currency": currency, "shopAddress": addr,
 			"shopLat": lat, "shopLng": lng, "caption": caption,
 			"inStock": inStock, "image": image, "featured": featured,
-			"salePct": salePct,
+			"salePct": salePct, "category": pcategory,
 			"contactRaonson": contactRaonson,
 			"shopWhatsapp": whatsapp, "shopPhone": phone,
 			"seller": gin.H{"_id": uid, "username": uname,
@@ -168,6 +174,7 @@ func UpdateProduct(c *gin.Context) {
 		Price       *float64 `json:"price"`
 		Currency    *string  `json:"currency"`
 		InStock     *bool    `json:"inStock"`
+		Category    *string  `json:"category"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
@@ -178,9 +185,10 @@ func UpdateProduct(c *gin.Context) {
 		  product_name = COALESCE($1, product_name),
 		  price        = COALESCE($2, price),
 		  currency     = COALESCE($3, currency),
-		  in_stock     = COALESCE($4, in_stock)
+		  in_stock     = COALESCE($4, in_stock),
+		  product_category = COALESCE($7, product_category)
 		WHERE id=$5 AND user_id=$6 AND is_product=TRUE`,
-		b.ProductName, b.Price, b.Currency, b.InStock, postID, myID)
+		b.ProductName, b.Price, b.Currency, b.InStock, postID, myID, b.Category)
 	if err != nil || tag.RowsAffected() == 0 {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиби маҳсул"})
 		return

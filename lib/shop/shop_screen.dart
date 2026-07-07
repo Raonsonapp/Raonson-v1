@@ -24,6 +24,7 @@ class _ShopScreenState extends State<ShopScreen> {
   final _repo = ShopRepository();
   List<Product> _products = [];
   bool _loading = true;
+  String _category = '';
 
   @override
   void initState() {
@@ -32,12 +33,33 @@ class _ShopScreenState extends State<ShopScreen> {
   }
 
   Future<void> _load() async {
-    final p = await _repo.getProducts();
+    setState(() => _loading = true);
+    final p = await _repo.getProducts(category: _category);
     if (!mounted) return;
     setState(() {
       _products = p;
       _loading = false;
     });
+  }
+
+  Widget _catChip(String key, String label) {
+    final sel = _category == key;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8, bottom: 8),
+      child: GestureDetector(
+        onTap: () { if (_category != key) { _category = key; _load(); } },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: sel ? AppColors.neonBlue : AppColors.card,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(label, style: TextStyle(
+              color: sel ? Colors.white : AppColors.textSecondary,
+              fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ),
+      ),
+    );
   }
 
   @override
@@ -58,6 +80,17 @@ class _ShopScreenState extends State<ShopScreen> {
                 MaterialPageRoute(builder: (_) => const OrdersScreen())),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(46),
+          child: SizedBox(height: 46, child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            children: [
+              _catChip('', 'Ҳама'),
+              ...Product.categories.map((c) => _catChip(c, c)),
+            ],
+          )),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.neonBlue,
@@ -364,6 +397,7 @@ class _ProductSheet extends StatelessWidget {
         text: product.price == 0 ? '' : product.price.toStringAsFixed(
             product.price % 1 == 0 ? 0 : 2));
     bool inStock = product.inStock;
+    String cat = product.category;
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(builder: (_, setD) => AlertDialog(
@@ -373,6 +407,26 @@ class _ProductSheet extends StatelessWidget {
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _tf(name, 'Ном'),
           _tf(price, 'Нарх'),
+          const SizedBox(height: 6),
+          Align(alignment: Alignment.centerLeft,
+              child: Text('Категория',
+                  style: TextStyle(color: AppColors.textFaint, fontSize: 12))),
+          Wrap(spacing: 6, runSpacing: 6,
+            children: Product.categories.map((c) {
+              final on = cat == c;
+              return GestureDetector(
+                onTap: () => setD(() => cat = on ? '' : c),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: on ? AppColors.neonBlue : AppColors.surface,
+                    borderRadius: BorderRadius.circular(16)),
+                  child: Text(c, style: TextStyle(
+                      color: on ? Colors.white : AppColors.textSecondary,
+                      fontSize: 12)),
+                ),
+              );
+            }).toList()),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: inStock,
@@ -392,6 +446,7 @@ class _ProductSheet extends StatelessWidget {
     );
     if (ok == true) {
       await product.updateProduct(product.id,
+          category: cat,
           name: name.text.trim(),
           price: double.tryParse(price.text.trim()),
           inStock: inStock);

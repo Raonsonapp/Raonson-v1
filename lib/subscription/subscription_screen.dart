@@ -403,7 +403,7 @@ const Set<String> _kAvailable = {
   'Login History', 'Дастгоҳҳои фаъол', 'PIN барои Chat',
   'Нишони Pro дар профил', 'Priority Support',
   // Business
-  'Анбор (Inventory)', 'Каталоги бемаҳдуд',
+  'Анбор (Inventory)', 'Каталоги бемаҳдуд', 'Категорияҳои маҳсулот',
   'Фурӯш аз рӯи рӯз/ҳафта/моҳ', 'Даромад', 'Top Products',
   'Boost Post', 'Boost Product',
   'Купонҳо', 'Промокод', 'Discount', 'Cashback', 'Flash Sale',
