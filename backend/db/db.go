@@ -149,7 +149,8 @@ func migrate() {
 		post_id TEXT NOT NULL,
 		url TEXT NOT NULL,
 		type VARCHAR(10) DEFAULT 'image',
-		position INTEGER DEFAULT 0
+		position INTEGER DEFAULT 0,
+		aspect_ratio REAL DEFAULT 0
 	);
 	CREATE INDEX IF NOT EXISTS idx_post_media_post ON post_media(post_id, position);
 
@@ -617,6 +618,7 @@ func migrate() {
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
+	ALTER TABLE post_media ADD COLUMN IF NOT EXISTS aspect_ratio REAL DEFAULT 0;
 
 	-- ── Live-стримҳо (Agora broadcast) ──
 	CREATE TABLE IF NOT EXISTS live_streams (

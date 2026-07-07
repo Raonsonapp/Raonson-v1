@@ -22,6 +22,7 @@ import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
 import '../../shop/buy_sheet.dart';
 import '../../ai/ai_tools.dart';
+import '../../widgets/media_view.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
@@ -1114,7 +1115,7 @@ class _PostCardState extends State<PostCard>
               setState(() => _showHeart = true);
               _heartCtrl.forward(from: 0);
             },
-            child: _MediaCarousel(media: post.media, isActive: widget.isActive),
+            child: MediaCarousel(media: post.media, isActive: widget.isActive),
           ),
 
           // ── Music / mention chips (мисли Instagram) ──

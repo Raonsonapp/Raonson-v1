@@ -332,7 +332,7 @@ func Search(c *gin.Context) {
 		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type)
+		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id

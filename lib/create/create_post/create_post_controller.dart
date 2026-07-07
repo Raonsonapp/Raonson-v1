@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import '../upload/post_upload_service.dart' show mediaAspectRatio;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -139,12 +140,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString().trim();
       if (mediaUrl.isEmpty) throw Exception('URL нест');
 
+      final ar = await mediaAspectRatio(capturedFile, _isVideo);
       final res = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/posts/'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode({
           'caption': caption,
-          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image', 'aspectRatio': ''}],
+          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image',
+              if (ar > 0) 'aspectRatio': ar}],
         }),
       ).timeout(const Duration(seconds: 30));
 

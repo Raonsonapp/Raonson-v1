@@ -148,7 +148,7 @@ func postsForUser(userID string, limit int) []gin.H {
 		       COALESCE(p.likes_count,0), COALESCE(p.comments_count,0),
 		       p.created_at,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type)
+		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position), '[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p WHERE p.user_id=$1 AND COALESCE(p.archived,false)=FALSE

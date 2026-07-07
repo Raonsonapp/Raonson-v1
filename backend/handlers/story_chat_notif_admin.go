@@ -571,7 +571,7 @@ func ExploreGrid(c *gin.Context) {
 	pRows, _ := db.Pool.Query(context.Background(), `
 		SELECT p.id, p.likes_count, p.created_at,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type)
+		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       u.id, u.username, u.avatar,

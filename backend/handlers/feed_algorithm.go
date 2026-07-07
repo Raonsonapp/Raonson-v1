@@ -56,7 +56,7 @@ func GetSmartFeed(c *gin.Context) {
 		  p.comments_count, p.created_at,
 		  u.id, u.username, u.avatar, u.verified,
 		  (SELECT COALESCE(json_agg(
-		           json_build_object('url',m.url,'type',m.type)
+		           json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		           ORDER BY m.position),'[]'::json)
 		   FROM post_media m WHERE m.post_id=p.id) AS media,
 		  EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1) AS liked,

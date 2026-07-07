@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../core/api/api_client.dart';
 import '../create/upload/upload_manager.dart';
+import '../create/upload/post_upload_service.dart' show mediaAspectRatio;
 
 class Product {
   final String id, productName, currency, shopAddress, caption, image;
@@ -149,10 +150,11 @@ class ShopRepository {
     try {
       final url = await UploadManager().uploadFile(image);
       if (url.isEmpty) return false;
+      final ar = await mediaAspectRatio(image, false);
       final r = await _api.post('/posts/', body: {
         'caption': caption,
         'media': [
-          {'url': url, 'type': 'image'}
+          {'url': url, 'type': 'image', if (ar > 0) 'aspectRatio': ar}
         ],
         'isProduct': true,
         'price': price,
