@@ -134,10 +134,16 @@ class MediaView extends StatelessWidget {
     if (type == 'video') {
       return _VideoView(url: url, isActive: isActive, onRatio: onRatio);
     }
+    // Оптимизатсия: расмро дар андозаи намоиш decode мекунем (на full-res)
+    // — хотираро якчанд маротиба кам мекунад, бе талафи сифат.
+    final mq = MediaQuery.of(context);
+    final cacheW = (mq.size.width * mq.devicePixelRatio).round();
     return CachedNetworkImage(
       imageUrl: url,
       fit: BoxFit.cover, // қуттӣ == ratio → буриш нест
       width: double.infinity, height: double.infinity,
+      memCacheWidth: cacheW,
+      fadeInDuration: const Duration(milliseconds: 150),
       placeholder: (_, __) => Container(color: AppColors.surface,
           child: Center(child: CircularProgressIndicator(
               strokeWidth: 2, color: AppColors.textFaint))),

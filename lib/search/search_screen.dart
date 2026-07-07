@@ -820,6 +820,7 @@ class _ExploreCell extends StatelessWidget {
         CachedNetworkImage(
           imageUrl: item.url,
           fit: BoxFit.cover,
+          memCacheWidth: 450,
           placeholder: (_, __) =>
               Container(color: AppColors.surface),
           errorWidget: (_, __, ___) =>
@@ -932,6 +933,7 @@ class _ExplorePreviewDialog extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl: item.url,
                   fit: BoxFit.cover,
+          memCacheWidth: 450,
                   placeholder: (_, __) =>
                       Container(color: AppColors.surface),
                   errorWidget: (_, __, ___) =>

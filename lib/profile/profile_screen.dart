@@ -701,7 +701,7 @@ class _Avatar extends StatelessWidget {
     decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.card,
         border: Border.all(color: AppColors.dividerFaint, width: 1.5)),
     child: ClipOval(child: url.isNotEmpty
-        ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+        ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover, memCacheWidth: 450,
             width: size, height: size,
             placeholder: (_, __) => Container(color: AppColors.card),
             errorWidget: (_, __, ___) => _icon(size))
@@ -892,7 +892,7 @@ class _PostGrid extends StatelessWidget {
           onLongPress: isMe ? () => onLongPress(p) : null,
           child: Stack(fit: StackFit.expand, children: [
             url.isNotEmpty
-                ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+                ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover, memCacheWidth: 450,
                     placeholder: (_, __) => Container(color: AppColors.card),
                     errorWidget: (_, __, ___) => Container(color: AppColors.card))
                 : Container(color: AppColors.card,
@@ -965,7 +965,7 @@ class _ReelGrid extends StatelessWidget {
               builder: (_) => SingleReelScreen(reel: r))),
           child: Stack(fit: StackFit.expand, children: [
           thumb.isNotEmpty
-              ? CachedNetworkImage(imageUrl: thumb, fit: BoxFit.cover,
+              ? CachedNetworkImage(imageUrl: thumb, fit: BoxFit.cover, memCacheWidth: 450,
                   placeholder: (_, __) => Container(color: AppColors.card),
                   errorWidget: (_, __, ___) => _reelPlaceholder())
               : _reelPlaceholder(),
@@ -1019,7 +1019,7 @@ class _TGS extends State<_TaggedGrid> {
             builder: (_) => PostDetailScreen(
                 posts: posts, initialIndex: i, title: 'Зикршуда'))),
         child: CachedNetworkImage(
-            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
+            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover, memCacheWidth: 450,
             placeholder: (_, __) => Container(color: AppColors.card),
             errorWidget: (_, __, ___) => Container(color: AppColors.card))));
   }
@@ -1053,7 +1053,7 @@ class _SGS extends State<_SavedGrid> {
             builder: (_) => PostDetailScreen(
                 posts: posts, initialIndex: i, title: 'Сохташуда'))),
         child: CachedNetworkImage(
-            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
+            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover, memCacheWidth: 450,
             placeholder: (_, __) => Container(color: AppColors.card),
             errorWidget: (_, __, ___) => Container(color: AppColors.card))));
   }
