@@ -11,6 +11,9 @@ import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../gifts/gift_sheet.dart';
+import '../../ai/ai_tools.dart';
+import '../../core/services/subscription_service.dart';
+import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
 
 class CommentsScreen extends StatefulWidget {
@@ -232,6 +235,71 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return out;
   }
 
+  // AI ҷамъбасти шарҳҳо (Pro).
+  Future<void> _summarize() async {
+    if (!SubscriptionService.instance.isPro) {
+      showModalBottomSheet(
+        context: context, backgroundColor: AppColors.surface,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (_) => SafeArea(child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 38),
+            const SizedBox(height: 10),
+            Text('Ҷамъбасти шарҳҳо бо AI — хусусияти Raonson Pro',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textPrimary,
+                    fontSize: 15, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 14),
+            SizedBox(width: double.infinity, child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE100FF)),
+              onPressed: () { Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const SubscriptionScreen())); },
+              child: const Text('Raonson Pro гирифтан',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            )),
+          ]),
+        )),
+      );
+      return;
+    }
+    final text = _comments.take(40).map((c) => c.text).join('\n');
+    if (text.trim().isEmpty) return;
+    showDialog(context: context, barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()));
+    final res = await AiService.text('summarize', text);
+    if (!mounted) return;
+    Navigator.pop(context); // loader
+    final msg = res == '__NOT_CONFIGURED__'
+        ? 'AI ҳанӯз танзим нашудааст.'
+        : (res.isEmpty ? 'Ҷамъбаст нашуд, дубора кӯшиш кунед.' : res);
+    showModalBottomSheet(
+      context: context, backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 18),
+              const SizedBox(width: 6),
+              Text('Ҷамъбасти шарҳҳо',
+                  style: TextStyle(color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold, fontSize: 15)),
+            ]),
+            const SizedBox(height: 12),
+            Text(msg, style: TextStyle(color: AppColors.textSecondary,
+                fontSize: 14, height: 1.5)),
+            const SizedBox(height: 16),
+          ]),
+      )),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(children: [
@@ -241,13 +309,34 @@ class _CommentsScreenState extends State<CommentsScreen> {
         decoration: BoxDecoration(color: AppColors.textFaint,
             borderRadius: BorderRadius.circular(2))),
 
-      // Title + count
+      // Title + count + AI summary
       Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
-          style: TextStyle(color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold, fontSize: 16)),
+        padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
+        child: Row(children: [
+          Text(
+            'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
+            style: TextStyle(color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold, fontSize: 16)),
+          const Spacer(),
+          if (_comments.length >= 3)
+            GestureDetector(
+              onTap: _summarize,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF7F00FF), Color(0xFFE100FF)]),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(AppIcons.bolt_rounded, color: Colors.white, size: 14),
+                  SizedBox(width: 4),
+                  Text('Ҷамъбаст', style: TextStyle(color: Colors.white,
+                      fontSize: 12, fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            ),
+        ]),
       ),
       Divider(color: AppColors.dividerFaint, height: 1),
 
