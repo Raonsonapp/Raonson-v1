@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"raonson/db"
 	mw "raonson/middleware"
@@ -29,7 +30,10 @@ func GetShop(c *gin.Context) {
 		       COALESCE((SELECT url FROM post_media pm WHERE pm.post_id=p.id
 		                 ORDER BY position LIMIT 1),'') AS image,
 		       u.id, u.username, COALESCE(u.avatar,''), u.verified,
-		       COALESCE(p.featured,FALSE)
+		       COALESCE(p.featured,FALSE),
+		       CASE WHEN COALESCE(p.sale_pct,0) > 0
+		             AND (p.sale_until IS NULL OR p.sale_until > now())
+		            THEN COALESCE(p.sale_pct,0) ELSE 0 END AS sale_pct
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE p.is_product=TRUE
 		ORDER BY p.featured DESC, p.created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
@@ -45,14 +49,16 @@ func GetShop(c *gin.Context) {
 		var uid, uname, uavatar string
 		var price, lat, lng float64
 		var inStock, verified, contactRaonson, featured bool
+		var salePct int
 		rows.Scan(&pid, &pname, &price, &currency, &addr, &lat, &lng,
 			&caption, &inStock, &contactRaonson, &whatsapp, &phone,
-			&image, &uid, &uname, &uavatar, &verified, &featured)
+			&image, &uid, &uname, &uavatar, &verified, &featured, &salePct)
 		items = append(items, gin.H{
 			"_id": pid, "productName": pname, "price": price,
 			"currency": currency, "shopAddress": addr,
 			"shopLat": lat, "shopLng": lng, "caption": caption,
 			"inStock": inStock, "image": image, "featured": featured,
+			"salePct": salePct,
 			"contactRaonson": contactRaonson,
 			"shopWhatsapp": whatsapp, "shopPhone": phone,
 			"seller": gin.H{"_id": uid, "username": uname,
@@ -121,6 +127,36 @@ func GetReviews(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"avg": avg, "count": cnt, "reviews": out,
 	})
+}
+
+// ── PUT /posts/:id/sale {salePct, saleDays} → тахфифи муддатнок ──
+func SetProductSale(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	var b struct {
+		SalePct  int `json:"salePct"`
+		SaleDays int `json:"saleDays"` // 0 = бе муҳлат; хомӯш = salePct 0
+	}
+	c.ShouldBindJSON(&b)
+	if b.SalePct < 0 {
+		b.SalePct = 0
+	}
+	if b.SalePct > 90 {
+		b.SalePct = 90
+	}
+	var until interface{}
+	if b.SalePct > 0 && b.SaleDays > 0 {
+		until = time.Now().Add(time.Duration(b.SaleDays) * 24 * time.Hour)
+	}
+	tag, err := db.Pool.Exec(context.Background(), `
+		UPDATE posts SET sale_pct=$1, sale_until=$2
+		WHERE id=$3 AND user_id=$4 AND is_product=TRUE`,
+		b.SalePct, until, postID, myID)
+	if err != nil || tag.RowsAffected() == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиби маҳсул"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"salePct": b.SalePct})
 }
 
 // ── PUT /posts/:id/product → таҳрири маҳсул (ном, нарх, мавҷудӣ) ──

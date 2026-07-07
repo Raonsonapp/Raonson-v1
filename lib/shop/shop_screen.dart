@@ -136,6 +136,17 @@ class _ShopScreenState extends State<ShopScreen> {
                       style: TextStyle(color: Colors.black, fontSize: 9,
                           fontWeight: FontWeight.w800)),
                 )),
+            if (p.onSale)
+              Positioned(top: 6, right: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFFF3040),
+                      borderRadius: BorderRadius.circular(5)),
+                  child: Text('-${p.salePct}%',
+                      style: const TextStyle(color: Colors.white, fontSize: 10,
+                          fontWeight: FontWeight.w800)),
+                )),
             // Тамом шуд (набудани маҳсул).
             if (!p.inStock)
               Positioned.fill(child: ClipRRect(
@@ -165,10 +176,22 @@ class _ShopScreenState extends State<ShopScreen> {
                         color: AppColors.textPrimary, fontSize: 13,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 3),
-                Text(p.priceLabel,
-                    style: TextStyle(
-                        color: AppColors.neonBlue, fontSize: 14,
-                        fontWeight: FontWeight.bold)),
+                if (p.onSale)
+                  Row(children: [
+                    Text(p.salePriceLabel,
+                        style: const TextStyle(color: Color(0xFFFF3040),
+                            fontSize: 14, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 5),
+                    Flexible(child: Text(p.priceLabel,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: AppColors.textFaint, fontSize: 11,
+                            decoration: TextDecoration.lineThrough))),
+                  ])
+                else
+                  Text(p.priceLabel,
+                      style: TextStyle(
+                          color: AppColors.neonBlue, fontSize: 14,
+                          fontWeight: FontWeight.bold)),
                 const SizedBox(height: 3),
                 Row(children: [
                   Avatar(imageUrl: p.sellerAvatar, size: 16, name: p.sellerName),
@@ -295,6 +318,44 @@ class _ProductSheet extends StatelessWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } catch (_) {}
     }
+  }
+
+  Future<void> _editSale(BuildContext context) async {
+    final pct = TextEditingController(
+        text: product.salePct > 0 ? '${product.salePct}' : '');
+    final days = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Flash Sale (тахфиф)',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          _tf(pct, 'Тахфиф % (1–90)'),
+          _tf(days, 'Чанд рӯз (0 = бе муҳлат)'),
+          const SizedBox(height: 4),
+          Text('Барои хомӯш кардан — 0 гузоред.',
+              style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+              child: Text('Сабт', style: TextStyle(color: AppColors.neonBlue))),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await product.setSale(product.id,
+          int.tryParse(pct.text.trim()) ?? 0,
+          int.tryParse(days.text.trim()) ?? 0);
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Тахфиф нав шуд ✓'), backgroundColor: Colors.green));
+      }
+    }
+    pct.dispose(); days.dispose();
   }
 
   Future<void> _editProduct(BuildContext context) async {
@@ -434,10 +495,30 @@ class _ProductSheet extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 6),
-                Text(p.priceLabel,
-                    style: TextStyle(
-                        color: AppColors.neonBlue, fontSize: 20,
-                        fontWeight: FontWeight.bold)),
+                if (p.onSale)
+                  Row(children: [
+                    Text(p.salePriceLabel,
+                        style: const TextStyle(color: Color(0xFFFF3040),
+                            fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    Text(p.priceLabel,
+                        style: TextStyle(color: AppColors.textFaint, fontSize: 14,
+                            decoration: TextDecoration.lineThrough)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: const Color(0xFFFF3040),
+                          borderRadius: BorderRadius.circular(5)),
+                      child: Text('-${p.salePct}%',
+                          style: const TextStyle(color: Colors.white, fontSize: 11,
+                              fontWeight: FontWeight.w800)),
+                    ),
+                  ])
+                else
+                  Text(p.priceLabel,
+                      style: TextStyle(
+                          color: AppColors.neonBlue, fontSize: 20,
+                          fontWeight: FontWeight.bold)),
                 if (p.caption.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(p.caption,
@@ -503,6 +584,19 @@ class _ProductSheet extends StatelessWidget {
                           style: TextStyle(color: AppColors.textPrimary)),
                     )),
                   ]),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _editSale(context),
+                      icon: const Icon(AppIcons.tag_rounded,
+                          color: Color(0xFFFF3040), size: 16),
+                      label: Text(p.onSale
+                              ? 'Тахфиф: -${p.salePct}% (тағйир)'
+                              : 'Flash Sale (тахфиф)',
+                          style: TextStyle(color: AppColors.textPrimary)),
+                    ),
+                  ),
                 ],
                 if (hasShop) ...[
                   const SizedBox(height: 8),

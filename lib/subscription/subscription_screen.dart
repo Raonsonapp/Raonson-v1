@@ -405,7 +405,7 @@ const Set<String> _kAvailable = {
   'Анбор (Inventory)', 'Каталоги бемаҳдуд',
   'Фурӯш аз рӯи рӯз/ҳафта/моҳ', 'Даромад', 'Top Products',
   'Boost Post', 'Boost Product',
-  'Купонҳо', 'Промокод', 'Discount', 'Cashback',
+  'Купонҳо', 'Промокод', 'Discount', 'Cashback', 'Flash Sale',
   'AI Translation',
   'Pending', 'Confirmed', 'Packed', 'Shipping', 'Delivered',
   'Returned', 'Refunded', 'Cancelled',

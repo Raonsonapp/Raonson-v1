@@ -13,6 +13,7 @@ class Product {
   final bool contactRaonson;
   final String whatsapp, phone;
   final bool featured;
+  final int salePct;
   Product({
     required this.id, required this.productName, required this.currency,
     required this.shopAddress, required this.caption, required this.image,
@@ -20,8 +21,13 @@ class Product {
     required this.inStock, required this.sellerId, required this.sellerName,
     required this.sellerAvatar, required this.sellerVerified,
     this.contactRaonson = true, this.whatsapp = '', this.phone = '',
-    this.featured = false,
+    this.featured = false, this.salePct = 0,
   });
+
+  bool   get onSale     => salePct > 0;
+  double get salePrice  => price * (1 - salePct / 100);
+  String get salePriceLabel =>
+      '${salePrice.toStringAsFixed(salePrice % 1 == 0 ? 0 : 2)} $currency';
   factory Product.fromJson(Map<String, dynamic> j) {
     final s = (j['seller'] ?? {}) as Map;
     return Product(
@@ -43,7 +49,18 @@ class Product {
       whatsapp: (j['shopWhatsapp'] ?? '').toString(),
       phone: (j['shopPhone'] ?? '').toString(),
       featured: j['featured'] == true,
+      salePct: (j['salePct'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  Future<bool> setSale(String postId, int pct, int days) async {
+    try {
+      final r = await ApiClient.instance.put('/posts/$postId/sale',
+          body: {'salePct': pct, 'saleDays': days});
+      return r.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> toggleFeature(String postId) async {

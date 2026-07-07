@@ -187,6 +187,7 @@ func main() {
 		po.GET("/:id/translations",  handlers.GetProductTranslations)
 		po.PUT("/:id/translations",  handlers.SetProductTranslations)
 		po.PUT("/:id/product",       handlers.UpdateProduct) // таҳрири маҳсул
+		po.PUT("/:id/sale",          handlers.SetProductSale) // тахфифи муддатнок
 		po.POST("/:id/review",       handlers.AddReview)     // баҳои маҳсул
 		po.GET("/:id/reviews",       handlers.GetReviews)
 	}
