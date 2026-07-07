@@ -400,7 +400,7 @@ const Set<String> _kAvailable = {
   'AI барои беҳтар кардани матн', 'AI барои тарҷума',
   'AI барои ҷамъбасти шарҳҳо',
   'Schedule кардани пост', 'Insights-и касбӣ',
-  'Login History', 'Дастгоҳҳои фаъол',
+  'Login History', 'Дастгоҳҳои фаъол', 'PIN барои Chat',
   'Нишони Pro дар профил', 'Priority Support',
   // Business
   'Анбор (Inventory)', 'Каталоги бемаҳдуд',

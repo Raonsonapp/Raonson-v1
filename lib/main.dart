@@ -9,6 +9,7 @@ import 'app/app_settings.dart';
 import 'core/services/user_session.dart';
 import 'core/services/account_manager.dart';
 import 'core/services/subscription_service.dart';
+import 'core/services/chat_lock_service.dart';
 import 'core/services/network_service.dart';
 import 'core/services/network_quality.dart';
 import 'core/ads/ads_manager.dart';
@@ -37,6 +38,7 @@ Future<void> main() async {
   await UserSession.loadCachedData();
   await AccountManager.load(); // multi-account рӯйхатро бор мекунад
   await SubscriptionService.instance.load(); // Pro / Business ҳолат
+  await ChatLockService.instance.load();     // PIN-и чат
   await NetworkQuality.init(); // сифати видео вобаста ба интернет (адаптивӣ)
 
   // ✅ 3.1 Theme + language preferences — то app кушода шавад

@@ -13,6 +13,8 @@ import '../../models/message_model.dart';
 import '../../models/note_model.dart';
 import '../../widgets/avatar.dart';
 import '../../app/app_theme.dart';
+import '../../core/services/chat_lock_service.dart';
+import '../chat_pin_screen.dart';
 import '../../core/presence_service.dart';
 import '../../core/note_service.dart';
 import '../../core/services/user_session.dart';
@@ -120,9 +122,25 @@ class _ChatView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Қулфи PIN-и чат (Pro) — агар гузошта бошад ва кушода набошад.
+    if (ChatLockService.instance.hasPin
+        && !ChatLockService.instance.unlocked.value) {
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        body: SafeArea(child: ValueListenableBuilder<bool>(
+          valueListenable: ChatLockService.instance.unlocked,
+          builder: (_, unlocked, __) => unlocked
+              ? _buildChats(context)
+              : const ChatLockGate(),
+        )),
+      );
+    }
+    return _buildChats(context);
+  }
+
+  Widget _buildChats(BuildContext context) {
     final ctrl  = context.watch<ChatListController>();
     final notes = context.watch<NoteService>();
-
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(

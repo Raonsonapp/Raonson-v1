@@ -28,6 +28,7 @@ import 'account_screens.dart';
 import 'insights_screen.dart';
 import 'seller_dashboard_screen.dart';
 import '../shop/auto_reply_screen.dart';
+import '../chat/chat_pin_screen.dart';
 import '../subscription/subscription_screen.dart';
 import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
@@ -133,6 +134,12 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Ҷавоби худкор',
                 sub:   'Ба муштариён худкор ҷавоб диҳед',
                 onTap: () => _go(ctx, const AutoReplyScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.lock_outline_rounded,
+                title: 'PIN-и чат',
+                sub:   'Чатҳоро бо PIN муҳофизат кунед',
+                onTap: () => _go(ctx, const ChatPinScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.star_rounded,
