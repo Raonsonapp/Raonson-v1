@@ -59,7 +59,8 @@ class _ReelsVM extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      reels = await _repo.fetchReels(page: 1, smart: true);
+      reels = await _repo.fetchReels(
+          page: 1, smart: !_friendsFilter, friends: _friendsFilter);
       _page = 1;
     } catch (e) {
       error = e.toString();
@@ -72,7 +73,8 @@ class _ReelsVM extends ChangeNotifier {
     if (loadingMore) return;
     loadingMore = true;
     try {
-      final more = await _repo.fetchReels(page: _page + 1, smart: true);
+      final more = await _repo.fetchReels(
+          page: _page + 1, smart: !_friendsFilter, friends: _friendsFilter);
       if (more.isNotEmpty) {
         reels = [...reels, ...more];
         _page++;
@@ -131,6 +133,7 @@ class _ReelsVM extends ChangeNotifier {
   void toggleFilter() {
     _friendsFilter = !_friendsFilter;
     notifyListeners();
+    load(); // филтр иваз шуд → лента аз нав бор мешавад
   }
 
   void trackWatch({
@@ -2011,11 +2014,38 @@ class _SpinningDisc extends StatefulWidget {
 
 class _SpinningDiscState extends State<_SpinningDisc>
     with SingleTickerProviderStateMixin {
+  late final AnimationController _spinCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _spinCtrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 3));
+    if (widget.isPlaying) _spinCtrl.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_SpinningDisc old) {
+    super.didUpdateWidget(old);
+    if (widget.isPlaying && !old.isPlaying) {
+      _spinCtrl.repeat();
+    } else if (!widget.isPlaying && old.isPlaying) {
+      _spinCtrl.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spinCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final r = widget.size * 0.22;
-    return Container(
+    return RotationTransition(
+      turns: _spinCtrl,
+      child: Container(
         width: widget.size,
         height: widget.size,
         decoration: BoxDecoration(
@@ -2032,7 +2062,7 @@ class _SpinningDiscState extends State<_SpinningDisc>
                         AppIcons.music_note_rounded,
                         color: Colors.white54, size: 18))
                 : const Icon(AppIcons.music_note_rounded,
-                    color: Colors.white54, size: 18)));
+                    color: Colors.white54, size: 18))));
   }
 }
 

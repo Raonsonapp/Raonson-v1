@@ -47,7 +47,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     if (mounted) setState(() { _file = File(xf.path); _isVideo = isVideo; _error = null; });
   }
 
-  Future<void> _publish(File capturedFile, String caption) async {
+  Future<void> _publish(File capturedFile, String caption, String audience) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });
@@ -73,7 +73,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       final res = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/stories/'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-        body: jsonEncode({'mediaUrl': mediaUrl, 'mediaType': _isVideo ? 'video' : 'image', 'caption': caption}),
+        body: jsonEncode({'mediaUrl': mediaUrl, 'mediaType': _isVideo ? 'video' : 'image', 'caption': caption, 'audience': audience}),
       ).timeout(const Duration(seconds: 30));
 
       if (res.statusCode >= 400) throw Exception('Story хато ${res.statusCode}');

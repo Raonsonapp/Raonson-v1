@@ -50,7 +50,7 @@ class _MusicTrack {
 class StoryEditor extends StatefulWidget {
   final File media;
   final bool isVideo, isUploading;
-  final void Function(File, String) onPublish;
+  final void Function(File, String, String) onPublish;
   final VoidCallback onCancel;
   final String? errorMessage;
 
@@ -145,14 +145,15 @@ class _StoryEditorState extends State<StoryEditor> {
     } catch (_) {}
   }
 
-  Future<void> _onPublish() async {
+  Future<void> _onPublish({String audience = 'all'}) async {
     if (widget.isVideo) {
       widget.onPublish(widget.media,
-          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '');
+          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '', audience);
     } else {
       final captured = await _captureCanvas();
+      if (!mounted) return;
       widget.onPublish(captured,
-          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '');
+          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '', audience);
     }
   }
 
@@ -456,7 +457,9 @@ class _StoryEditorState extends State<StoryEditor> {
                 const SizedBox(width: 10),
                 // «Наздикон» — close friends
                 GestureDetector(
-                  onTap: widget.isUploading ? null : _onPublish,
+                  onTap: widget.isUploading
+                      ? null
+                      : () => _onPublish(audience: 'close'),
                   child: Container(
                     height: 48, padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(

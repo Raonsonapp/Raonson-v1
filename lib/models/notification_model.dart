@@ -23,6 +23,8 @@ class NotificationModel {
     switch (type) {
       case 'like': return 'постатро писанд кард';
       case 'comment': return 'комментария гузошт';
+      case 'reply': return 'ба шарҳи шумо ҷавоб дод';
+      case 'mention': return 'шуморо зикр кард';
       case 'follow': return 'шуморо пайравӣ кард';
       case 'follow_request': return 'дархости пайравӣ фиристод';
       case 'reel_like': return 'Reels-атро писанд кард';
@@ -31,6 +33,8 @@ class NotificationModel {
       case 'story_reply': return 'ба Сторисат ҷавоб дод';
       case 'story_view': return 'Сторисататро дид';
       case 'message': return 'паём фиристод';
+      case 'effect_sale': return 'эффекти шуморо харид';
+      case 'order': return 'маҳсули шуморо фармоиш дод';
       default: return 'бо шумо амал кард';
     }
   }

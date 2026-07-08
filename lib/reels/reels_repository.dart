@@ -50,10 +50,11 @@ class ReelsRepository {
   // ✅ МУШКИЛИ АСОСӢ ИСЛОҲ ШУД:
   // Page 1 → аввал кэш, баъд network background-да
   Future<List<ReelModel>> fetchReels({
-    int page = 1, int limit = 20, bool smart = true}) async {
+    int page = 1, int limit = 20, bool smart = true,
+    bool friends = false}) async {
 
-    // ── Page 1: cache аввал ──────────────────────────────────────
-    if (page == 1) {
+    // ── Page 1: cache аввал (кэш танҳо барои лентаи умумӣ) ───────
+    if (page == 1 && !friends) {
       if (_memCacheValid) return _memCache!;
 
       final disk = await _loadFromDisk();
@@ -68,7 +69,7 @@ class ReelsRepository {
 
     // ── Network ──────────────────────────────────────────────────
     try {
-      if (smart) {
+      if (smart && !friends) {
         try {
           final res = await _api.get('/reels/smart',
               query: {'page': '$page', 'limit': '$limit'})
@@ -91,14 +92,15 @@ class ReelsRepository {
       }
 
       final res = await _api.get(ApiEndpoints.reels,
-          query: {'page': '$page', 'limit': '$limit'})
+          query: {'page': '$page', 'limit': '$limit',
+            if (friends) 'friends': '1'})
           .timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 401) throw Exception('Unauthorized');
       if (res.statusCode >= 400) throw Exception('Server ${res.statusCode}');
 
       final reels = _parse(jsonDecode(res.body));
-      if (page == 1) {
+      if (page == 1 && !friends) {
         _memCache     = reels;
         _memCacheTime = DateTime.now();
         _saveToDisk(reels);
@@ -108,7 +110,7 @@ class ReelsRepository {
     } catch (e) {
       if (e.toString().contains('Unauthorized')) rethrow;
       // ✅ Хато → кэш нишон деҳ
-      if (page == 1) {
+      if (page == 1 && !friends) {
         if (_memCache != null && _memCache!.isNotEmpty) return _memCache!;
         final disk = await _loadFromDisk();
         if (disk != null && disk.isNotEmpty) return disk;

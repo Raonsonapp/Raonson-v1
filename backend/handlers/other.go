@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 
 	"raonson/db"
 	mw "raonson/middleware"
@@ -375,7 +376,33 @@ func Search(c *gin.Context) {
 		rRows.Close()
 	}
 
-	c.JSON(http.StatusOK, gin.H{"users": users, "posts": posts, "reels": reels})
+	// Хэштегҳо — аз caption-ҳо ҷамъ мешаванд (то tab-и «Тегҳо» холӣ намонад).
+	hq := strings.TrimPrefix(strings.TrimSpace(c.Query("q")), "#")
+	hashtags := []gin.H{}
+	if hq != "" {
+		hRows, _ := db.Pool.Query(context.Background(), `
+			SELECT tag, COUNT(*) AS cnt FROM (
+			  SELECT lower(m[1]) AS tag
+			  FROM posts p, regexp_matches(p.caption, '#(\w+)', 'g') AS m
+			  WHERE p.caption ILIKE $1
+			) t
+			WHERE tag LIKE $2
+			GROUP BY tag ORDER BY cnt DESC LIMIT 15`,
+			"%#"+hq+"%", strings.ToLower(hq)+"%")
+		if hRows != nil {
+			for hRows.Next() {
+				var tag string
+				var cnt int
+				hRows.Scan(&tag, &cnt)
+				hashtags = append(hashtags, gin.H{"tag": tag, "count": cnt})
+			}
+			hRows.Close()
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"users": users, "posts": posts, "reels": reels, "hashtags": hashtags,
+	})
 }
 
 // GET /search/users?q=...
@@ -451,8 +478,11 @@ func GetReels(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false)
 		FROM reels r JOIN users u ON u.id=r.user_id
+		WHERE ($4 = FALSE OR EXISTS (
+		    SELECT 1 FROM follows f2
+		    WHERE f2.follower_id=$1::text AND f2.following_id=r.user_id))
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
-		myID, limit, offset)
+		myID, limit, offset, c.Query("friends") == "1")
 	if err != nil {
 		log.Printf("[GetReels] query error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get reels failed"})

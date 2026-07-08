@@ -625,6 +625,7 @@ func migrate() {
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS audience    TEXT DEFAULT 'all';
 	ALTER TABLE post_media ADD COLUMN IF NOT EXISTS aspect_ratio REAL DEFAULT 0;
 
 	-- ── Live-стримҳо (Agora broadcast) ──

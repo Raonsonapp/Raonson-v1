@@ -285,8 +285,19 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             onTap: () { Navigator.pop(context); _resume(); _saveMedia(); }),
         _menuRow('Мубодила кардан',
             onTap: () { Navigator.pop(context); _shareStory(); }),
-        _menuRow('Танзимоти сторис',
-            onTap: () { Navigator.pop(context); _resume(); }),
+        _menuRow('Танзимоти сторис', onTap: () async {
+            Navigator.pop(context);
+            try {
+              final res = await ApiClient.instance
+                  .post('/stories/${_current.id}/toggle-replies');
+              if (res.statusCode >= 400) throw Exception();
+              final b = jsonDecode(res.body) as Map<String, dynamic>;
+              _toast(b['repliesOff'] == true
+                  ? 'Ҷавобҳо хомӯш ✓'
+                  : 'Ҷавобҳо фаъол ✓');
+            } catch (_) { _toast('Хато'); }
+            if (mounted) _resume();
+          }),
         _menuRow('Шарҳҳоро хомӯш кардан', onTap: () async {
             Navigator.pop(context);
             try {
@@ -467,7 +478,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           if (v < -250) {
             if (_isOwner) {
               _showViewersSheet();
-            } else {
+            } else if (!_current.repliesOff) {
               _pause();
               setState(() => _showReply = true);
             }
@@ -535,6 +546,18 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                     const Icon(AppIcons.verified_rounded,
                         fill: 1, color: Colors.white, size: 14),
                   ],
+                  if (_current.audience == 'close') ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF00C853),
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Text('Наздикон',
+                          style: TextStyle(color: Colors.white, fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ],
                 ]),
                 Text(_timeAgo(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
               ])),
@@ -598,37 +621,42 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           _ActionBtn(icon: AppIcons.add_box_outlined, label: 'Актуалӣ',
               onTap: _addToHighlight),
           const SizedBox(width: 4),
-          _ActionBtn(icon: AppIcons.alternate_email_rounded, label: 'Зикр',
-              onTap: _shareStory),
-          const SizedBox(width: 4),
           _ActionBtn(icon: AppIcons.more_horiz_rounded, label: 'Бештар',
               onTap: _showOwnerMenu),
         ],
       );
     }
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      SizedBox(height: 44, child: ListView(scrollDirection: Axis.horizontal,
-        children: _emojis.map((e) => GestureDetector(
-          onTap: () => _sendEmoji(e),
-          child: Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: Colors.white12,
-                borderRadius: BorderRadius.circular(20)),
-            child: Text(e, style: const TextStyle(fontSize: 22))),
-        )).toList())),
-      const SizedBox(height: 10),
+      if (!_current.repliesOff) ...[
+        SizedBox(height: 44, child: ListView(scrollDirection: Axis.horizontal,
+          children: _emojis.map((e) => GestureDetector(
+            onTap: () => _sendEmoji(e),
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: Colors.white12,
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text(e, style: const TextStyle(fontSize: 22))),
+          )).toList())),
+        const SizedBox(height: 10),
+      ],
       Row(children: [
-        Expanded(child: GestureDetector(
-          onTap: () { _pause(); setState(() => _showReply = true); },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.white38, width: 1.5),
-              borderRadius: BorderRadius.circular(24)),
-            child: Text('${_current.user.username}-га ҷавоб...',
-                style: const TextStyle(color: Colors.white70, fontSize: 14))),
-        )),
+        Expanded(child: _current.repliesOff
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              alignment: Alignment.centerLeft,
+              child: const Text('Ҷавобҳо хомӯшанд',
+                  style: TextStyle(color: Colors.white54, fontSize: 13)))
+          : GestureDetector(
+              onTap: () { _pause(); setState(() => _showReply = true); },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white38, width: 1.5),
+                  borderRadius: BorderRadius.circular(24)),
+                child: Text('${_current.user.username}-га ҷавоб...',
+                    style: const TextStyle(color: Colors.white70, fontSize: 14))),
+            )),
         const SizedBox(width: 12),
         GestureDetector(
           onTap: _toggleLike,

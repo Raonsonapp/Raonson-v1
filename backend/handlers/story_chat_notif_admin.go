@@ -18,12 +18,20 @@ import (
 
 // GET /stories
 func GetStories(c *gin.Context) {
+	myID := mw.UID(c)
+	// Сторисҳои «наздикон» танҳо ба дӯстони наздики соҳиб намоён мешаванд.
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
-		       u.id,u.username,u.avatar,u.verified
+		       u.id,u.username,u.avatar,u.verified,
+		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
-		ORDER BY s.created_at DESC`)
+		  AND ( s.user_id = $1::text
+		        OR COALESCE(s.audience,'all') = 'all'
+		        OR (COALESCE(s.audience,'all') = 'close' AND EXISTS (
+		              SELECT 1 FROM close_friends cf
+		              WHERE cf.user_id = s.user_id AND cf.friend_id = $1::text)) )
+		ORDER BY s.created_at DESC`, myID)
 	c.JSON(http.StatusOK, scanStoryRows(rows))
 }
 
@@ -62,7 +70,8 @@ func GetMyStories(c *gin.Context) {
 	myID := mw.UID(c)
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
-		       u.id,u.username,u.avatar,u.verified
+		       u.id,u.username,u.avatar,u.verified,
+		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.user_id=$1 AND s.expires_at > NOW()
 		ORDER BY s.created_at DESC`, myID)
@@ -76,6 +85,7 @@ func CreateStory(c *gin.Context) {
 		MediaURL  string `json:"mediaUrl"`
 		MediaType string `json:"mediaType"`
 		Caption   string `json:"caption"`
+		Audience  string `json:"audience"` // all | close (дӯстони наздик)
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.MediaURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
@@ -86,14 +96,18 @@ func CreateStory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl must be https"})
 		return
 	}
+	if b.Audience != "close" {
+		b.Audience = "all"
+	}
 	exp := time.Now().Add(24 * time.Hour)
 	var sid string
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption) VALUES($1,$2,$3,$4,$5) RETURNING id`,
-		myID, b.MediaURL, b.MediaType, exp, b.Caption).Scan(&sid)
+		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption,audience)
+		 VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
+		myID, b.MediaURL, b.MediaType, exp, b.Caption, b.Audience).Scan(&sid)
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
-		"expiresAt": exp, "caption": b.Caption,
+		"expiresAt": exp, "caption": b.Caption, "audience": b.Audience,
 	})
 }
 
@@ -247,13 +261,15 @@ func scanStoryRows(rows interface {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sid, murl, mtype, uid, uname, uavatar string
-		var verified bool
+		var sid, murl, mtype, uid, uname, uavatar, audience string
+		var verified, repliesOff bool
 		var exp, createdAt interface{}
-		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar, &verified)
+		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar,
+			&verified, &audience, &repliesOff)
 		stories = append(stories, gin.H{
 			"_id": sid, "mediaUrl": murl, "mediaType": mtype,
 			"expiresAt": exp, "createdAt": createdAt,
+			"audience": audience, "repliesOff": repliesOff,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}

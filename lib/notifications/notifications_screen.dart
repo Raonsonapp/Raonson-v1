@@ -1,8 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'notifications_repository.dart';
 import 'notification_item.dart';
 import '../models/notification_model.dart';
+import '../models/post_model.dart';
+import '../models/reel_model.dart';
+import '../feed/post/post_detail_screen.dart';
+import '../reels/single_reel_screen.dart';
+import '../shop/orders_screen.dart';
+import '../effects/effects_screen.dart';
+import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
@@ -70,6 +78,88 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       });
       NotificationBadgeController.instance.decrement();
     }
+    if (!mounted) return;
+    await _navigate(n);
+  }
+
+  // ── Deep-link: аз рӯи навъи огоҳинома ба саҳифаи дахлдор ─────────
+  Future<void> _navigate(NotificationModel n) async {
+    switch (n.type) {
+      case 'like':
+      case 'comment':
+      case 'reply':
+      case 'mention':
+        await _openPost(n.targetId);
+        break;
+      case 'reel_like':
+      case 'reel_comment':
+        await _openReel(n.targetId);
+        break;
+      case 'follow':
+      case 'follow_request':
+      case 'story_like':
+      case 'story_reply':
+        _openProfile(n.fromUser?.id);
+        break;
+      case 'order':
+        try {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const OrdersScreen()));
+        } catch (_) {}
+        break;
+      case 'effect_sale':
+        try {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const EffectsScreen()));
+        } catch (_) {}
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _openPost(String? postId) async {
+    if (postId == null || postId.isEmpty) return;
+    try {
+      final res = await ApiClient.instance.get('/posts/$postId');
+      if (res.statusCode >= 400) return;
+      final post =
+          PostModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+      if (!mounted) return;
+      Navigator.push(context, MaterialPageRoute(
+          builder: (_) => PostDetailScreen(
+              posts: [post], initialIndex: 0, title: 'Пост')));
+    } catch (_) {}
+  }
+
+  Future<void> _openReel(String? reelId) async {
+    if (reelId == null || reelId.isEmpty) return;
+    try {
+      // GET /reels/:id нест — реели худамонро аз рӯйхат меёбем.
+      final res = await ApiClient.instance.get('/users/me/reels');
+      if (res.statusCode >= 400) return;
+      final body = jsonDecode(res.body);
+      final raw = body is List ? body : (body['reels'] ?? []) as List;
+      ReelModel? reel;
+      for (final e in raw) {
+        final r = ReelModel.fromJson(e as Map<String, dynamic>);
+        if (r.id == reelId) {
+          reel = r;
+          break;
+        }
+      }
+      if (reel == null || !mounted) return;
+      final target = reel;
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => SingleReelScreen(reel: target)));
+    } catch (_) {}
+  }
+
+  void _openProfile(String? userId) {
+    if (userId == null || userId.isEmpty) return;
+    try {
+      Navigator.pushNamed(context, '/profile', arguments: userId);
+    } catch (_) {}
   }
 
   @override

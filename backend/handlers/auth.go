@@ -54,6 +54,12 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
+	// Парол дар сервер ҳам санҷида мешавад (на танҳо дар клиент).
+	if len(b.Password) < 8 {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"message": "Рамз ҳадди аққал 8 аломат бошад"})
+		return
+	}
 
 	var exists bool
 	db.Pool.QueryRow(context.Background(),
@@ -117,10 +123,12 @@ func Login(c *gin.Context) {
 
 	// Логин бо почта Ё номи корбар Ё рақами телефон
 	var id, username, email, hash, avatar, fullName string
+	var banned bool
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id,username,email,password,COALESCE(avatar,''),COALESCE(full_name,'')
+		`SELECT id,username,email,password,COALESCE(avatar,''),COALESCE(full_name,''),
+		        COALESCE(banned,false)
 		 FROM users WHERE email=$1 OR username=$1 OR phone=$1`,
-		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName)
+		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName, &banned)
 	if err != nil {
 		log.Printf("[Login] User not found: email=%s err=%v", b.Email, err)
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
@@ -129,6 +137,11 @@ func Login(c *gin.Context) {
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.Password)) != nil {
 		log.Printf("[Login] Wrong password for: email=%s", b.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
+		return
+	}
+	if banned {
+		c.JSON(http.StatusForbidden,
+			gin.H{"message": "Ҳисоби шумо баста шудааст"})
 		return
 	}
 
@@ -310,7 +323,7 @@ func ResetPassword(c *gin.Context) {
 	if ident == "" {
 		ident = strings.ToLower(strings.TrimSpace(b.Email))
 	}
-	if ident == "" || b.OTP == "" || len(b.NewPassword) < 6 {
+	if ident == "" || b.OTP == "" || len(b.NewPassword) < 8 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Майдонҳо нопурра (парол ≥6)"})
 		return
 	}

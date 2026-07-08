@@ -407,6 +407,20 @@ func ReplyStory(c *gin.Context) {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO notifications(user_id, from_user_id, type, target_id)
 			 VALUES($1,$2,'story_reply',$3)`, ownerID, myID, sid)
+		// Мисли Instagram: ҷавоби сторис ба DM-и соҳиб меравад (realtime).
+		chatID := sortedChatID(myID, ownerID)
+		var msgID string
+		if e := db.Pool.QueryRow(context.Background(), `
+			INSERT INTO messages
+			  (chat_id, sender_id, receiver_id, text, type, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,'text',NOW(),NOW()) RETURNING id`,
+			chatID, myID, ownerID,
+			"💬 Ҷавоб ба сторис: "+b.Text).Scan(&msgID); e == nil {
+			if msg, fe := fetchMessageByID(msgID, ownerID); fe == nil {
+				emitChat("chat:new", msg, ownerID)
+			}
+		}
+		pushNotify(ownerID, myID, "story_reply", sid, "ба сторисатон ҷавоб дод")
 	}
 	c.JSON(http.StatusCreated, gin.H{"sent": true})
 }
