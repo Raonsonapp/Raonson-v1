@@ -252,18 +252,32 @@ class _ShopScreenState extends State<ShopScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _ProductSheet(product: p, repo: _repo),
-    );
+    ).whenComplete(() {
+      if (mounted) _load(); // баъди таҳрир/тахфиф грид нав мешавад
+    });
   }
 }
 
-class _ProductSheet extends StatelessWidget {
+class _ProductSheet extends StatefulWidget {
   final Product product;
   final ShopRepository repo;
   const _ProductSheet({required this.product, required this.repo});
+  @override
+  State<_ProductSheet> createState() => _ProductSheetState();
+}
 
-  // Харидан → мустақим ба фурӯшанда. Комиссия ҳам сабт мешавад.
+class _ProductSheetState extends State<_ProductSheet> {
+  Product get product => widget.product;
+  ShopRepository get repo => widget.repo;
+
+  // Future кэш мешавад — то дар ҳар rebuild дархости нав наравад.
+  late final Future<Map<String, String>> _trFuture =
+      product.getTranslations(product.id);
+  late bool _featured = product.featured;
+  bool _ordered = false; // фармоиш танҳо як бор
+
+  // Харидан → аввал интихоби алоқа, фармоиш танҳо баъд аз он сабт мешавад.
   void _buy(BuildContext context) {
-    repo.placeOrder(product.id); // сабти фармоиш + комиссия (fire-and-forget)
     final methods = <String>[];
     if (product.contactRaonson && product.sellerId.isNotEmpty) {
       methods.add('raonson');
@@ -327,8 +341,15 @@ class _ProductSheet extends StatelessWidget {
   }
 
   Future<void> _openContact(BuildContext context, String method) async {
+    // Фармоиш танҳо ҲОЛО (баъди интихоби роҳи алоқа) сабт мешавад —
+    // на ҳангоми кушодани варақа; такрор ҳам намешавад.
+    if (!_ordered) {
+      _ordered = true;
+      repo.placeOrder(product.id);
+    }
+    final effPrice = product.onSale ? product.salePriceLabel : product.priceLabel;
     final msg = 'Салом! Маҳсули «${product.productName}» '
-        '(${product.priceLabel})-ро дар Raonson дидам, мехоҳам харам.';
+        '($effPrice)-ро дар Raonson дидам, мехоҳам харам.';
     if (method == 'raonson') {
       final seller = UserModel(
         id: product.sellerId, username: product.sellerName,
@@ -379,13 +400,18 @@ class _ProductSheet extends StatelessWidget {
       ),
     );
     if (ok == true) {
-      await product.setSale(product.id,
+      final saved = await product.setSale(product.id,
           int.tryParse(pct.text.trim()) ?? 0,
           int.tryParse(days.text.trim()) ?? 0);
       if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Тахфиф нав шуд ✓'), backgroundColor: Colors.green));
+        if (saved) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Тахфиф нав шуд ✓'), backgroundColor: Colors.green));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Тахфиф сабт нашуд — дубора кӯшиш кунед')));
+        }
       }
     }
     pct.dispose(); days.dispose();
@@ -445,15 +471,20 @@ class _ProductSheet extends StatelessWidget {
       )),
     );
     if (ok == true) {
-      await product.updateProduct(product.id,
+      final saved = await product.updateProduct(product.id,
           category: cat,
           name: name.text.trim(),
           price: double.tryParse(price.text.trim()),
           inStock: inStock);
       if (context.mounted) {
-        Navigator.pop(context); // варақаро мебандем то магоза нав шавад
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Маҳсул нав шуд ✓'), backgroundColor: Colors.green));
+        if (saved) {
+          Navigator.pop(context); // варақа пӯшида → грид нав мешавад
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Маҳсул нав шуд ✓'), backgroundColor: Colors.green));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Сабт нашуд — дубора кӯшиш кунед')));
+        }
       }
     }
     name.dispose(); price.dispose();
@@ -537,7 +568,7 @@ class _ProductSheet extends StatelessWidget {
               children: [
                 // Номи маҳсул бо забони апп (агар тарҷума бошад).
                 FutureBuilder<Map<String, String>>(
-                  future: product.getTranslations(p.id),
+                  future: _trFuture,
                   builder: (_, snap) {
                     final lang = AppSettingsState.instance.lang;
                     final tr = snap.data?[lang];
@@ -596,26 +627,32 @@ class _ProductSheet extends StatelessWidget {
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                            color: p.featured
+                            color: _featured
                                 ? const Color(0xFFFFD700)
                                 : AppColors.divider),
                       ),
                       onPressed: () async {
                         final on = await product.toggleFeature(p.id);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(on
-                                ? 'Маҳсул «беҳтарин» шуд ⭐'
-                                : 'Аз «беҳтарин» гирифта шуд'),
-                            backgroundColor: Colors.green));
+                        if (!mounted) return;
+                        if (on == null) {
+                          // Хато — статуси кӯҳна мемонад, дурӯғи «муваффақ» нест.
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Иваз нашуд — дубора кӯшиш кунед')));
+                          return;
                         }
+                        setState(() => _featured = on);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(on
+                              ? 'Маҳсул «беҳтарин» шуд ⭐'
+                              : 'Аз «беҳтарин» гирифта шуд'),
+                          backgroundColor: Colors.green));
                       },
                       icon: Icon(AppIcons.star_rounded,
-                          color: p.featured
+                          color: _featured
                               ? const Color(0xFFFFD700) : AppColors.textFaint,
                           size: 18),
                       label: Text(
-                          p.featured
+                          _featured
                               ? 'Аз «беҳтарин» гирифтан'
                               : 'Беҳтарин кардан (боло)',
                           style: TextStyle(color: AppColors.textPrimary)),

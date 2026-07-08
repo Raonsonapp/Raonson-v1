@@ -17,12 +17,14 @@ class LiveInteractionOverlay extends StatefulWidget {
   final String hostUsername;
   final String hostAvatar;
   final VoidCallback onClose;
+  final VoidCallback? onStreamGone; // стрим аз рӯйхати фаъол нопадид шуд
   const LiveInteractionOverlay({
     super.key,
     required this.streamId,
     required this.hostUsername,
     required this.hostAvatar,
     required this.onClose,
+    this.onStreamGone,
   });
   @override
   State<LiveInteractionOverlay> createState() => _LiveInteractionOverlayState();
@@ -69,13 +71,21 @@ class _LiveInteractionOverlayState extends State<LiveInteractionOverlay> {
       final r = await ApiClient.instance.get('/live/');
       if (r.statusCode < 400 && mounted) {
         final list = (jsonDecode(r.body)['streams'] ?? []) as List;
+        var found = false;
         for (final s in list) {
           if ((s['id'] ?? '') == widget.streamId) {
+            found = true;
             setState(() {
               _viewers = (s['viewers'] as num?)?.toInt() ?? 0;
               _likes = (s['likes'] as num?)?.toInt() ?? 0;
             });
           }
+        }
+        // Стрим дигар фаъол нест → ба бинанда хабар медиҳем.
+        if (!found && widget.onStreamGone != null) {
+          _pollC?.cancel();
+          _pollS?.cancel();
+          widget.onStreamGone!();
         }
       }
     } catch (_) {}

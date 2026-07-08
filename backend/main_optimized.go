@@ -96,6 +96,7 @@ func main() {
 		a.POST("/logout",          auth, handlers.Logout)
 		a.POST("/forgot-password", rl20, handlers.ForgotPassword)
 		a.POST("/reset-password",  rl20, handlers.ResetPassword)
+		a.POST("/change-password", auth, rl20, handlers.ChangePassword)
 		a.GET("/sessions",     auth, handlers.GetSessions)        // таърихи воридшавӣ
 		a.POST("/revoke-all",  auth, handlers.RevokeAllSessions)  // тоза кардани таърих
 	}
@@ -215,6 +216,7 @@ func main() {
 		lg.POST("/start",       handlers.StartLive)
 		lg.POST("/:id/end",     handlers.EndLive)
 		lg.POST("/:id/join",    handlers.JoinLive)
+		lg.POST("/:id/leave",   handlers.LeaveLive)
 		lg.POST("/:id/comment", handlers.LiveComment)
 		lg.GET("/:id/comments", handlers.LiveComments)
 		lg.POST("/:id/like",    handlers.LiveLike)

@@ -275,14 +275,17 @@ func GetPostStats(c *gin.Context) {
 		   ON f.follower_id = pv.user_id AND f.following_id = $2
 		 WHERE pv.post_id = $1`, pid, myID).Scan(&fromFollowers, &fromOthers)
 
-	// shares — ҳоло ҷадвали post_shares нест → 0.
+	var shares int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM post_shares WHERE post_id=$1`, pid).Scan(&shares)
+
 	c.JSON(http.StatusOK, gin.H{
 		"likes":         likes,
 		"comments":      comments,
 		"views":         views,
 		"saves":         saves,
 		"reports":       reports,
-		"shares":        0,
+		"shares":        shares,
 		"fromFollowers": fromFollowers,
 		"fromOthers":    fromOthers,
 	})

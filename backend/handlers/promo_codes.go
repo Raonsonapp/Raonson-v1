@@ -163,13 +163,18 @@ func BroadcastToCustomers(c *gin.Context) {
 	sent := 0
 	for _, bid := range buyers {
 		chatID := sortedChatID(myID, bid)
-		_, e := db.Pool.Exec(context.Background(), `
+		var msgID string
+		e := db.Pool.QueryRow(context.Background(), `
 			INSERT INTO messages
 			  (chat_id, sender_id, receiver_id, text, type, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, 'text', NOW(), NOW())`,
-			chatID, myID, bid, text)
+			VALUES ($1, $2, $3, $4, 'text', NOW(), NOW()) RETURNING id`,
+			chatID, myID, bid, text).Scan(&msgID)
 		if e == nil {
 			sent++
+			// Муштарӣ паёмро фавран мебинад (realtime).
+			if msg, fe := fetchMessageByID(msgID, bid); fe == nil {
+				emitChat("chat:new", msg, bid)
+			}
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"sent": sent})

@@ -113,6 +113,9 @@ func GetAutoReply(c *gin.Context) {
 // maybeAutoReply — вақте ин аввалин паёми фиристанда дар чат бошад ва
 // қабулкунанда ҷавоби худкор дошта бошад, як ҷавоби худкор мефиристад.
 func maybeAutoReply(chatID, senderID, receiverID string) {
+	if senderID == receiverID { // ба худ ҷавоби худкор намеравад
+		return
+	}
 	go func() {
 		var reply string
 		db.Pool.QueryRow(context.Background(),
@@ -128,10 +131,18 @@ func maybeAutoReply(chatID, senderID, receiverID string) {
 		if cnt != 1 { // на аввалин паём
 			return
 		}
-		db.Pool.Exec(context.Background(), `
+		var msgID string
+		err := db.Pool.QueryRow(context.Background(), `
 			INSERT INTO messages
 			  (chat_id, sender_id, receiver_id, text, type, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, 'text', NOW(), NOW())`,
-			chatID, receiverID, senderID, reply)
+			VALUES ($1, $2, $3, $4, 'text', NOW(), NOW()) RETURNING id`,
+			chatID, receiverID, senderID, reply).Scan(&msgID)
+		if err != nil {
+			return
+		}
+		// Фиристанда ҷавобро фавран мебинад (на танҳо баъди refresh).
+		if msg, e := fetchMessageByID(msgID, senderID); e == nil {
+			emitChat("chat:new", msg, senderID)
+		}
 	}()
 }

@@ -114,17 +114,23 @@ class _OrderManagementState extends State<OrderManagementScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-          : _filtered.isEmpty
-              ? Center(child: Text('Фармоиш нест',
-                  style: TextStyle(color: AppColors.textFaint)))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _filtered.length,
-                    itemBuilder: (_, i) => _orderCard(_filtered[i]),
-                  ),
-                ),
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: _filtered.isEmpty
+                  // Холӣ ҳам scroll мешавад — то pull-to-refresh кор кунад.
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        const SizedBox(height: 180),
+                        Center(child: Text('Фармоиш нест',
+                            style: TextStyle(color: AppColors.textFaint))),
+                      ])
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _filtered.length,
+                      itemBuilder: (_, i) => _orderCard(_filtered[i]),
+                    ),
+            ),
     );
   }
 

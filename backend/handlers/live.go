@@ -62,6 +62,15 @@ func JoinLive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+// POST /live/:id/leave → шумораи бинандаро -1 (то счётчик воқеӣ бошад)
+func LeaveLive(c *gin.Context) {
+	id := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`UPDATE live_streams SET viewers=GREATEST(viewers-1,0)
+		 WHERE id=$1 AND active=TRUE`, id)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 // GET /live → стримҳои фаъол
 func ListLive(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `

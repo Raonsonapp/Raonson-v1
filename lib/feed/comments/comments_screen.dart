@@ -268,11 +268,19 @@ class _CommentsScreenState extends State<CommentsScreen> {
     }
     final text = _comments.take(40).map((c) => c.text).join('\n');
     if (text.trim().isEmpty) return;
+    // Loader бо context-и худи диалог — то дар ҳар ҳолат дуруст пӯшида шавад
+    // ва ҳеҷ гоҳ маршрути нодуруст pop нашавад.
+    BuildContext? loaderCtx;
     showDialog(context: context, barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()));
+        builder: (dctx) {
+          loaderCtx = dctx;
+          return const Center(child: CircularProgressIndicator());
+        });
     final res = await AiService.text('summarize', text);
+    if (loaderCtx != null && loaderCtx!.mounted) {
+      Navigator.of(loaderCtx!).pop(); // танҳо худи loader пӯшида мешавад
+    }
     if (!mounted) return;
-    Navigator.pop(context); // loader
     final msg = res == '__NOT_CONFIGURED__'
         ? 'AI ҳанӯз танзим нашудааст.'
         : (res.isEmpty ? 'Ҷамъбаст нашуд, дубора кӯшиш кунед.' : res);

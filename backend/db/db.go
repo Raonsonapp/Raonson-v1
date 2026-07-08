@@ -311,6 +311,12 @@ func migrate() {
 	-- ── Ҷавоби худкор (Auto-reply барои фурӯшанда) ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_reply TEXT DEFAULT '';
 
+	-- ── Танзимоти махфият (то toggle-ҳо воқеӣ бошанд) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS activity_status BOOLEAN DEFAULT TRUE;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_comments  BOOLEAN DEFAULT TRUE;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_mentions  BOOLEAN DEFAULT TRUE;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor      BOOLEAN DEFAULT FALSE;
+
 	-- ── Тарҷумаи номи маҳсул (Multi-language shop) ──
 	CREATE TABLE IF NOT EXISTS product_translations (
 		post_id TEXT NOT NULL,

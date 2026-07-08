@@ -173,6 +173,42 @@ func Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+// POST /auth/change-password {oldPassword,newPassword} — корбари воридшуда.
+func ChangePassword(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		OldPassword string `json:"oldPassword"`
+		NewPassword string `json:"newPassword"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
+		return
+	}
+	if len(b.NewPassword) < 8 {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"message": "Рамзи нав ҳадди аққал 8 аломат бошад"})
+		return
+	}
+	var hash string
+	if err := db.Pool.QueryRow(context.Background(),
+		`SELECT password FROM users WHERE id=$1`, myID).Scan(&hash); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Корбар ёфт нашуд"})
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.OldPassword)) != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Рамзи кӯҳна нодуруст аст"})
+		return
+	}
+	newHash, err := bcrypt.GenerateFromPassword([]byte(b.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "хатои дохилӣ"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET password=$1 WHERE id=$2`, string(newHash), myID)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 // POST /auth/forgot-password
 func ForgotPassword(c *gin.Context) {
 	var b struct {

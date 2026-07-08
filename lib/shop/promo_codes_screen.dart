@@ -21,6 +21,7 @@ class _PromoCodesState extends State<PromoCodesScreen> {
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final r = await ApiClient.instance.get('/shop/promos')
@@ -86,7 +87,7 @@ class _PromoCodesState extends State<PromoCodesScreen> {
         try {
           final r = await ApiClient.instance.post('/shop/promos',
               body: {'code': code, 'discountPct': pct, 'maxUses': uses});
-          if (r.statusCode < 400) _load();
+          if (r.statusCode < 400 && mounted) _load();
         } catch (_) {}
       }
     }

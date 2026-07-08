@@ -58,7 +58,9 @@ class _MediaCarouselState extends State<MediaCarousel> {
     if ((_first['type'] ?? 'image') == 'video') return; // видео дар _VideoView
     final url = _first['url'] ?? '';
     if (url.isEmpty) return;
-    final provider = CachedNetworkImageProvider(url);
+    // ResizeImage → танҳо нусхаи хурд decode мешавад (ratio ҳамон мемонад),
+    // на расми пурраи 12MP — хотира сарфа мешавад.
+    final provider = ResizeImage(CachedNetworkImageProvider(url), width: 120);
     _imgStream = provider.resolve(ImageConfiguration.empty);
     _imgListener = ImageStreamListener((info, _) {
       final w = info.image.width.toDouble();
@@ -138,18 +140,23 @@ class MediaView extends StatelessWidget {
     // — хотираро якчанд маротиба кам мекунад, бе талафи сифат.
     final mq = MediaQuery.of(context);
     final cacheW = (mq.size.width * mq.devicePixelRatio).round();
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: BoxFit.cover, // қуттӣ == ratio → буриш нест
-      width: double.infinity, height: double.infinity,
-      memCacheWidth: cacheW,
-      fadeInDuration: const Duration(milliseconds: 150),
-      placeholder: (_, __) => Container(color: AppColors.surface,
-          child: Center(child: CircularProgressIndicator(
-              strokeWidth: 2, color: AppColors.textFaint))),
-      errorWidget: (_, __, ___) => Container(color: AppColors.surface,
-          child: Center(child: Icon(AppIcons.broken_image_outlined,
-              color: AppColors.textFaint, size: 48))),
+    return GestureDetector(
+      // Тапи расм → намоиши тамоми экран бо zoom (сифати аслӣ).
+      onTap: () => Navigator.push(context, MaterialPageRoute(
+          builder: (_) => FullscreenImage(url: url))),
+      child: CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover, // қуттӣ == ratio → буриш нест
+        width: double.infinity, height: double.infinity,
+        memCacheWidth: cacheW,
+        fadeInDuration: const Duration(milliseconds: 150),
+        placeholder: (_, __) => Container(color: AppColors.surface,
+            child: Center(child: CircularProgressIndicator(
+                strokeWidth: 2, color: AppColors.textFaint))),
+        errorWidget: (_, __, ___) => Container(color: AppColors.surface,
+            child: Center(child: Icon(AppIcons.broken_image_outlined,
+                color: AppColors.textFaint, size: 48))),
+      ),
     );
   }
 }

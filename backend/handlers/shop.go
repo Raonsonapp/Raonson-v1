@@ -38,6 +38,9 @@ func GetShop(c *gin.Context) {
 		       COALESCE(p.product_category,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE p.is_product=TRUE
+		  AND COALESCE(p.hidden,FALSE)=FALSE
+		  AND COALESCE(p.archived,FALSE)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  AND ($3 = '' OR p.product_category = $3)
 		ORDER BY p.featured DESC, p.created_at DESC LIMIT $1 OFFSET $2`,
 		limit, offset, category)
@@ -267,17 +270,24 @@ func PlaceOrder(c *gin.Context) {
 	myID := mw.UID(c)
 	postID := c.Param("id")
 	var b struct {
-		Note string `json:"note"`
+		Note      string `json:"note"`
+		PromoCode string `json:"promoCode"`
 	}
 	c.ShouldBindJSON(&b)
 
+	// Нарх БО тахфифи фаъол (Flash Sale) — ҳамон нархе ки харидор мебинад.
 	var sellerID, currency string
 	var price float64
-	var isProduct bool
-	err := db.Pool.QueryRow(context.Background(),
-		`SELECT user_id, COALESCE(price,0), COALESCE(currency,'TJS'),
-		        COALESCE(is_product,FALSE) FROM posts WHERE id=$1`,
-		postID).Scan(&sellerID, &price, &currency, &isProduct)
+	var isProduct, inStock bool
+	err := db.Pool.QueryRow(context.Background(), `
+		SELECT user_id,
+		       COALESCE(price,0) * (1 - (CASE WHEN COALESCE(sale_pct,0) > 0
+		             AND (sale_until IS NULL OR sale_until > now())
+		             THEN COALESCE(sale_pct,0) ELSE 0 END)/100.0),
+		       COALESCE(currency,'TJS'), COALESCE(is_product,FALSE),
+		       COALESCE(in_stock,TRUE)
+		FROM posts WHERE id=$1`,
+		postID).Scan(&sellerID, &price, &currency, &isProduct, &inStock)
 	if err != nil || !isProduct {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "not a product"})
 		return
@@ -286,6 +296,42 @@ func PlaceOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "cannot buy your own product"})
 		return
 	}
+	if !inStock {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Маҳсул тамом шудааст"})
+		return
+	}
+
+	// Зидди фармоиши такрорӣ ва фарми ситора: ҳамон харидор+маҳсул
+	// дар 10 дақиқаи охир → фармоиши мавҷуда бармегардад (бе cashback-и нав).
+	var existingID string
+	db.Pool.QueryRow(context.Background(), `
+		SELECT id FROM orders
+		WHERE buyer_id=$1 AND post_id=$2 AND status='pending'
+		  AND created_at > NOW() - INTERVAL '10 minutes'
+		ORDER BY created_at DESC LIMIT 1`, myID, postID).Scan(&existingID)
+	if existingID != "" {
+		c.JSON(http.StatusOK, gin.H{
+			"_id": existingID, "postId": postID, "price": price,
+			"currency": currency, "status": "pending", "duplicate": true,
+		})
+		return
+	}
+
+	// Промокод — атомӣ redeem: used_count++ танҳо агар лимит/муҳлат иҷозат
+	// диҳад; тахфифаш ба нарх татбиқ мешавад.
+	if code := strings.ToUpper(strings.TrimSpace(b.PromoCode)); code != "" {
+		var promoPct int
+		db.Pool.QueryRow(context.Background(), `
+			UPDATE promo_codes SET used_count = used_count + 1
+			WHERE seller_id=$1 AND code=$2
+			  AND (max_uses=0 OR used_count < max_uses)
+			  AND (expires_at IS NULL OR expires_at > now())
+			RETURNING discount_pct`, sellerID, code).Scan(&promoPct)
+		if promoPct > 0 && promoPct <= 90 {
+			price = price * (1 - float64(promoPct)/100.0)
+		}
+	}
+
 	commission := price * commissionRate
 	var oid string
 	err = db.Pool.QueryRow(context.Background(),

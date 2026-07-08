@@ -122,20 +122,20 @@ class _ChatView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Қулфи PIN-и чат (Pro) — агар гузошта бошад ва кушода набошад.
-    if (ChatLockService.instance.hasPin
-        && !ChatLockService.instance.unlocked.value) {
-      return Scaffold(
-        backgroundColor: AppColors.bg,
-        body: SafeArea(child: ValueListenableBuilder<bool>(
-          valueListenable: ChatLockService.instance.unlocked,
-          builder: (_, unlocked, __) => unlocked
-              ? _buildChats(context)
-              : const ChatLockGate(),
-        )),
-      );
-    }
-    return _buildChats(context);
+    // Қулфи PIN-и чат (Pro) — VLB дар сатҳи боло, то дарахт устувор монад
+    // (Scaffold дар дохили Scaffold ва аз нав сохтани рӯйхат пешгирӣ шавад).
+    return ValueListenableBuilder<bool>(
+      valueListenable: ChatLockService.instance.unlocked,
+      builder: (ctx, unlocked, _) {
+        if (ChatLockService.instance.hasPin && !unlocked) {
+          return Scaffold(
+            backgroundColor: AppColors.bg,
+            body: const SafeArea(child: ChatLockGate()),
+          );
+        }
+        return _buildChats(ctx);
+      },
+    );
   }
 
   Widget _buildChats(BuildContext context) {

@@ -67,6 +67,7 @@ class _BuySheetState extends State<_BuySheet> {
     try {
       final r = await ApiClient.instance.post('/shop/promos/validate',
           body: {'code': code, 'sellerId': post.user.id});
+      if (!mounted) return; // варақа пӯшида шуд — setState нашавад
       final b = jsonDecode(r.body) as Map<String, dynamic>;
       if (b['valid'] == true) {
         setState(() {
@@ -81,6 +82,7 @@ class _BuySheetState extends State<_BuySheet> {
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() => _promoMsg = 'Санҷиш нашуд');
     }
     if (mounted) setState(() => _checking = false);
@@ -89,9 +91,14 @@ class _BuySheetState extends State<_BuySheet> {
   String _priceLabel(double v) =>
       '${v.toStringAsFixed(v % 1 == 0 ? 0 : 2)} ${post.currency}';
 
+  bool _ordered = false;
   Future<void> _contact(String method) async {
-    // Фармоишро сабт мекунем (комиссия дар backend).
-    ShopRepository().placeOrder(post.id);
+    // Фармоиш танҳо ЯК бор сабт мешавад (server ҳам dedupe мекунад);
+    // промокод ба backend меравад, то тахфиф дар фармоиш татбиқ шавад.
+    if (!_ordered) {
+      _ordered = true;
+      ShopRepository().placeOrder(post.id, promoCode: _promoCode);
+    }
     final name = post.productName.isNotEmpty ? post.productName : 'маҳсул';
     var msg = 'Салом! «$name» (${_priceLabel(_finalPrice)})-ро дар Raonson '
         'дидам, мехоҳам харам.';

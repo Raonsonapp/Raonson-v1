@@ -15,22 +15,29 @@ import 'upload_manager.dart';
 /// Ratio-и аслии медиаро ҳисоб мекунад (расм ё видео) — то дар база нигоҳ
 /// дошта шавад ва ҳангоми намоиш формат нигоҳ дошта шавад.
 Future<double> mediaAspectRatio(File file, bool isVideo) async {
-  try {
-    if (isVideo) {
-      final c = VideoPlayerController.file(file);
+  if (isVideo) {
+    VideoPlayerController? c;
+    try {
+      c = VideoPlayerController.file(file);
       await c.initialize().timeout(const Duration(seconds: 20));
       final r = c.value.aspectRatio;
-      await c.dispose();
       return (r > 0) ? r : 0;
-    } else {
-      final bytes = await file.readAsBytes();
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frame = await codec.getNextFrame();
-      final img = frame.image;
-      final r = img.height > 0 ? img.width / img.height : 0.0;
-      img.dispose();
-      return r;
+    } catch (_) {
+      return 0;
+    } finally {
+      // Дар ҲАР роҳ (аз он ҷумла timeout) player-и native озод мешавад,
+      // вагарна ExoPlayer-ҳо ҷамъ шуда видеопахшро мешикананд.
+      c?.dispose();
     }
+  }
+  try {
+    // Танҳо ҳедери расм хонда мешавад — бе decode-и пурраи пикселҳо.
+    final buf = await ui.ImmutableBuffer.fromFilePath(file.path);
+    final desc = await ui.ImageDescriptor.encoded(buf);
+    final r = desc.height > 0 ? desc.width / desc.height : 0.0;
+    desc.dispose();
+    buf.dispose();
+    return r;
   } catch (_) {
     return 0;
   }

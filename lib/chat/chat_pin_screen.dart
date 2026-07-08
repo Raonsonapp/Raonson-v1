@@ -159,7 +159,12 @@ class _ChatLockGateState extends State<ChatLockGate> {
             obscureText: true, autofocus: true, maxLength: 6,
             textAlign: TextAlign.center,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (v) { if (v.length >= 4) _try(); },
+            // Худкор танҳо вақте месанҷад, ки дарозӣ ба PIN-и захирашуда
+            // баробар шавад — вагарна PIN-и 5-6 рақама ҳеҷ гоҳ кушода намешуд.
+            onChanged: (v) {
+              if (v.length == ChatLockService.instance.pinLength) _try();
+            },
+            onSubmitted: (_) => _try(),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 24,
                 letterSpacing: 12),
             decoration: InputDecoration(

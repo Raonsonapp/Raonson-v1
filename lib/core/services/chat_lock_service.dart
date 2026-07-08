@@ -24,6 +24,7 @@ class ChatLockService {
 
   bool get hasPin => _pin != null && _pin!.isNotEmpty;
   bool get ready  => _loaded;
+  int  get pinLength => _pin?.length ?? 4;
 
   Future<void> setPin(String? pin) async {
     _pin = (pin == null || pin.isEmpty) ? null : pin;

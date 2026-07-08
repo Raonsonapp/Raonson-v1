@@ -72,13 +72,14 @@ class Product {
     }
   }
 
-  Future<bool> toggleFeature(String postId) async {
+  /// null = хато (то «unfeatured» бо «хато» омехта нашавад).
+  Future<bool?> toggleFeature(String postId) async {
     try {
       final r = await ApiClient.instance.post('/posts/$postId/feature');
-      if (r.statusCode >= 400) return false;
+      if (r.statusCode >= 400) return null;
       return (jsonDecode(r.body)['featured'] as bool?) ?? false;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
@@ -134,9 +135,13 @@ class ShopRepository {
     }
   }
 
-  Future<bool> placeOrder(String postId, {String note = ''}) async {
+  Future<bool> placeOrder(String postId,
+      {String note = '', String promoCode = ''}) async {
     try {
-      final r = await _api.post('/posts/$postId/order', body: {'note': note});
+      final r = await _api.post('/posts/$postId/order', body: {
+        'note': note,
+        if (promoCode.isNotEmpty) 'promoCode': promoCode,
+      });
       return r.statusCode < 400;
     } catch (_) {
       return false;

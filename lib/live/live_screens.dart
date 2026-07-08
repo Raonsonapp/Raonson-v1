@@ -225,7 +225,10 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
     } catch (_) {}
   }
 
+  bool _ending = false;
   Future<void> _end() async {
+    if (_ending) return; // муҳофиз аз double-pop (back + X ҳамзамон)
+    _ending = true;
     _poll?.cancel();
     _agora.removeListener(_onAgora);
     try { await ApiClient.instance.post('/live/$_id/end'); } catch (_) {}
@@ -248,12 +251,27 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
         backgroundColor: Colors.black,
         body: Stack(children: [
           Positioned.fill(
-            child: (!_starting && _agora.engine != null)
+            child: (!_starting && _agora.engine != null && _id.isNotEmpty)
                 ? AgoraVideoView(controller: VideoViewController(
                     rtcEngine: _agora.engine!,
                     canvas: const VideoCanvas(uid: 0)))
-                : const Center(child: CircularProgressIndicator(
-                    color: Colors.white)),
+                : (!_starting && _id.isEmpty)
+                    // Оғоз нашуд — хато + тугмаи баромад (на спиннери абадӣ).
+                    ? Center(child: Column(mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(AppIcons.videocam_rounded,
+                              color: Colors.white38, size: 48),
+                          const SizedBox(height: 12),
+                          const Text('Live сар нашуд. Дубора кӯшиш кунед.',
+                              style: TextStyle(color: Colors.white70)),
+                          const SizedBox(height: 14),
+                          TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Бозгашт',
+                                  style: TextStyle(color: Colors.white))),
+                        ]))
+                    : const Center(child: CircularProgressIndicator(
+                        color: Colors.white)),
           ),
           if (!_starting && _id.isNotEmpty)
             LiveInteractionOverlay(
@@ -319,8 +337,13 @@ class _LiveViewerState extends State<LiveViewerScreen> {
 
   void _onAgora() { if (mounted) setState(() {}); }
 
+  bool _leaving = false;
   Future<void> _leave() async {
+    if (_leaving) return; // муҳофиз аз double-pop
+    _leaving = true;
     _agora.removeListener(_onAgora);
+    // Счётчики бинанда кам мешавад (best-effort).
+    ApiClient.instance.post('/live/$_id/leave').then((_) {}, onError: (_) {});
     await _agora.leaveCall();
     if (mounted) Navigator.pop(context);
   }
@@ -361,6 +384,13 @@ class _LiveViewerState extends State<LiveViewerScreen> {
             hostUsername: (host['username'] ?? '').toString(),
             hostAvatar: (host['avatar'] ?? '').toString(),
             onClose: _leave,
+            onStreamGone: () {
+              if (!mounted || _leaving) return;
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Live тамом шуд'),
+                  duration: Duration(seconds: 2)));
+              _leave();
+            },
           ),
         ]),
       ),
