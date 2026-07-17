@@ -7,6 +7,7 @@ import '../../models/comment_model.dart';
 import '../../models/user_model.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
+import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -413,6 +414,37 @@ class _CommentItemState extends State<_CommentItem> {
   late bool _liked;
   late int  _likeCount;
 
+  // ── Тарҷумаи шарҳ (OpenAI) ───────────────────────────────────
+  String? _translated;
+  bool    _translating = false;
+
+  Future<void> _toggleTranslate() async {
+    if (_translated != null) {
+      setState(() => _translated = null);
+      return;
+    }
+    setState(() => _translating = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/translate', body: {
+        'text': widget.comment.text,
+        'targetLang': AppSettingsState.instance.lang,
+      });
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        if (mounted) setState(() => _translated = (b['translated'] ?? '').toString());
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Тарҷума дастрас нест'), duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми тарҷума'), duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _translating = false);
+  }
+
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
     return myId.isNotEmpty && myId == widget.comment.user.id.trim();
@@ -632,9 +664,17 @@ class _CommentItemState extends State<_CommentItem> {
             // Матни коммент — ЗЕРИ ном (мисли Instagram)
             Text(c.text,
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+            if (_translated != null) ...[
+              const SizedBox(height: 4),
+              Text(_translated!,
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic)),
+            ],
             const SizedBox(height: 6),
 
-            // ── Нижняя строка: время · лайков · Ответить · ⋮ ──
+            // ── Нижняя строка: время · лайков · Ответить · Тарҷума · ⋮ ──
             Row(children: [
               Text(_timeAgo(),
                   style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
@@ -653,6 +693,20 @@ class _CommentItemState extends State<_CommentItem> {
                     style: TextStyle(
                         color: AppColors.textTertiary, fontSize: 12,
                         fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 12),
+              // ── Тарҷума кардан (OpenAI) ─────────────────────
+              GestureDetector(
+                onTap: _translating ? null : _toggleTranslate,
+                child: _translating
+                    ? SizedBox(width: 12, height: 12,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 1.5, color: AppColors.textTertiary))
+                    : Text(
+                        _translated != null ? 'Пинҳон кардани тарҷума' : 'Тарҷума кардан',
+                        style: TextStyle(
+                            color: AppColors.textTertiary, fontSize: 12,
+                            fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 8),
               // ── ⋮ меню ──────────────────────────────────────

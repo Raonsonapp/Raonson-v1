@@ -206,6 +206,44 @@ class _PostEditorState extends State<_PostEditor> {
   VideoPlayerController? _videoCtrl;
   bool _videoReady = false;
   bool _showCaption= false;
+  bool _suggestingTags = false;
+
+  // ── Ҳэштеги худкор тавассути AI (OpenAI GPT) ────────────────────
+  Future<void> _suggestHashtags() async {
+    final caption = _captionCtrl.text.trim();
+    if (caption.isEmpty || _suggestingTags) return;
+    setState(() => _suggestingTags = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/hashtags',
+          body: {'caption': caption});
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        final tags = (b['hashtags'] as List? ?? [])
+            .map((e) => e.toString()).where((t) => t.isNotEmpty).toList();
+        if (tags.isNotEmpty) {
+          final toAdd = tags.where((t) => !caption.contains(t)).join(' ');
+          _captionCtrl.text =
+              toAdd.isEmpty ? caption : '$caption $toAdd';
+          _captionCtrl.selection =
+              TextSelection.collapsed(offset: _captionCtrl.text.length);
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Ҳэштег ёфт нашуд'), duration: Duration(seconds: 2)));
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('AI ҳэштег ҳозир дастрас нест'),
+            duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми пешниҳоди ҳэштег'),
+            duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _suggestingTags = false);
+  }
 
   @override
   void initState() {
@@ -612,18 +650,46 @@ class _PostEditorState extends State<_PostEditor> {
               child: Container(
                 decoration: BoxDecoration(color: Colors.black.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
-                child: TextField(
-                  controller: _captionCtrl, autofocus: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 15),
-                  maxLines: 4, maxLength: 500,
-                  decoration: const InputDecoration(
-                    hintText: 'Тавсиф нависед...',
-                    hintStyle: TextStyle(color: Colors.white38),
-                    contentPadding: EdgeInsets.all(12),
-                    border: InputBorder.none,
-                    counterStyle: TextStyle(color: Colors.white24)),
-                  onSubmitted: (_) => setState(() => _showCaption = false),
-                ))),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                    controller: _captionCtrl, autofocus: true,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    maxLines: 4, maxLength: 500,
+                    decoration: const InputDecoration(
+                      hintText: 'Тавсиф нависед...',
+                      hintStyle: TextStyle(color: Colors.white38),
+                      contentPadding: EdgeInsets.all(12),
+                      border: InputBorder.none,
+                      counterStyle: TextStyle(color: Colors.white24)),
+                    onSubmitted: (_) => setState(() => _showCaption = false),
+                  ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8, bottom: 8),
+                      child: GestureDetector(
+                        onTap: _suggestingTags ? null : _suggestHashtags,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white10,
+                            borderRadius: BorderRadius.circular(16)),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            _suggestingTags
+                                ? const SizedBox(width: 13, height: 13,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 1.5, color: Colors.white70))
+                                : const Icon(AppIcons.bolt_rounded, size: 15, color: Colors.white70),
+                            const SizedBox(width: 6),
+                            const Text('AI ҳэштег',
+                                style: TextStyle(color: Colors.white70, fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  ),
+                ]))),
 
           // ── Draw color bar ──────────────────────
           if (_tool == _Tool.draw)

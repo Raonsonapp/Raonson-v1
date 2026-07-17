@@ -10,6 +10,7 @@ import (
 	"raonson/db"
 	mw "raonson/middleware"
 	"raonson/sockets"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -47,6 +48,11 @@ func CreatePost(c *gin.Context) {
 	}
 	if b.Collaborators == nil {
 		b.Collaborators = []string{}
+	}
+	if flagged, cats := utils.ModerateText(context.Background(), b.Caption); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Тавсиф қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
 	}
 
 	tx, err := db.Pool.Begin(context.Background())
