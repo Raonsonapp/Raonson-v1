@@ -19,6 +19,7 @@ import '../../core/services/account_manager.dart';
 import '../../core/storage/token_storage.dart';
 import '../../create/upload/upload_manager.dart';
 import '../widgets/auth_kit.dart';
+import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -86,18 +87,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email = _emailCtrl.text.trim();
     final phone = _phoneCtrl.text.trim();
     final pass = _passCtrl.text;
-    if (name.isEmpty) return _err('Номи пурраро ворид кунед');
+    if (name.isEmpty) return _err(tr('auth.err.fullName'));
     if (!email.contains('@') || !email.contains('.')) {
-      return _err('Почтаи дуруст ворид кунед');
+      return _err(tr('auth.err.email'));
     }
     // Телефон ҳатмӣ — барои барқарорсозии аккаунт (рамз ба ҳамин рақам меояд)
     final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.length < 7) {
-      return _err('Рақами телефони худро ворид кунед');
+      return _err(tr('auth.err.phone'));
     }
-    if (pass.length < 8) return _err('Рамз ҳадди ақал 8 аломат');
-    if (pass != _confirmCtrl.text) return _err('Рамзҳо мувофиқат намекунанд');
-    if (!_terms) return _err('Шартҳоро қабул кунед');
+    if (pass.length < 8) return _err(tr('auth.err.passwordLength'));
+    if (pass != _confirmCtrl.text) return _err(tr('auth.err.passwordMismatch'));
+    if (!_terms) return _err(tr('auth.err.terms'));
     _goto(1);
   }
 
@@ -133,8 +134,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ── STEP 2 → create account → 3 ──
   Future<void> _submitUsername() async {
     final uname = _userCtrl.text.trim().toLowerCase();
-    if (uname.length < 3) return _err('Номи корбар ҳадди ақал 3 аломат');
-    if (_usernameAvailable == false) return _err('Ин ном банд аст');
+    if (uname.length < 3) return _err(tr('auth.err.usernameLength'));
+    if (_usernameAvailable == false) return _err(tr('auth.err.usernameTaken'));
     setState(() { _loading = true; _error = null; });
     final ok = await _createAccount(uname);
     if (!mounted) return;
@@ -154,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (res.statusCode != 200 && res.statusCode != 201) {
         Map body = {};
         try { body = jsonDecode(res.body); } catch (_) {}
-        _err(body['message']?.toString() ?? 'Сабти ном нашуд');
+        _err(body['message']?.toString() ?? tr('auth.err.registerFailed'));
         return false;
       }
       // Auto-login
@@ -290,12 +291,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Аллакай ҳисоб доред? ',
+            Text(tr('auth.alreadyHaveAccount'),
                 style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
             GestureDetector(
               onTap: () => Navigator.pop(context),
-              child: const Text('Ворид шавед',
-                  style: TextStyle(
+              child: Text(tr('auth.loginLink'),
+                  style: const TextStyle(
                       color: Color(0xFF1D9BF0),
                       fontSize: 14,
                       fontWeight: FontWeight.w700)),
@@ -310,30 +311,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const Center(child: AuthLogo(size: 76)),
         const SizedBox(height: 16),
         Center(
-            child: Text('Сабти ном кунед!',
+            child: Text(tr('auth.registerTitle'),
                 style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold))),
         const SizedBox(height: 6),
         Center(
-            child: Text('Барои идомаи кор ҳисоб эҷод намоед',
+            child: Text(tr('auth.registerSubtitle1'),
                 style: TextStyle(color: AppColors.textTertiary, fontSize: 14))),
         const SizedBox(height: 24),
         AuthField(
             controller: _nameCtrl,
-            hint: 'Номи пурра',
+            hint: tr('auth.fullNameHint'),
             icon: AppIcons.person_outline_rounded),
         const SizedBox(height: 14),
         AuthField(
             controller: _emailCtrl,
-            hint: 'Почтаи электронӣ',
+            hint: tr('auth.emailHint'),
             icon: AppIcons.email_outlined,
             keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 14),
         AuthField(
           controller: _phoneCtrl,
-          hint: 'Рақами телефон (барои барқарорсозӣ)',
+          hint: tr('auth.phoneHint'),
           icon: AppIcons.phone_outlined,
           keyboardType: TextInputType.phone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -348,13 +349,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 14),
         AuthField(
             controller: _passCtrl,
-            hint: 'Парол',
+            hint: tr('auth.passwordHint'),
             icon: AppIcons.lock_outline_rounded,
             obscure: true),
         const SizedBox(height: 14),
         AuthField(
             controller: _confirmCtrl,
-            hint: 'Тасдиқи парол',
+            hint: tr('auth.confirmPasswordHint'),
             icon: AppIcons.lock_outline_rounded,
             obscure: true),
         const SizedBox(height: 16),
@@ -374,7 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Ман бо Шартҳои истифода ва Сиёсати махфият розӣ ҳастам',
+                tr('auth.termsAgree'),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
             ),
@@ -382,7 +383,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 20),
         _errorText(),
-        AuthButton(label: 'Давом додан', onTap: _submitStep1),
+        AuthButton(label: tr('auth.continueButton'), onTap: _submitStep1),
         _loginLink(),
       ]);
 
@@ -392,14 +393,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const Center(child: AuthLogo(size: 76)),
         const SizedBox(height: 16),
         Center(
-            child: Text('Номи ҳисоб',
+            child: Text(tr('auth.usernameTitle'),
                 style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold))),
         const SizedBox(height: 6),
         Center(
-            child: Text('Номи беназири худро интихоб кунед',
+            child: Text(tr('auth.usernameSubtitle'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textTertiary, fontSize: 14))),
         const SizedBox(height: 24),
@@ -436,13 +437,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          'Ном бояд 4–30 аломат бошад. Танҳо ҳарфҳо, рақамҳо, нуқта (.) ва зерхат (_).',
+          tr('auth.usernameHelper'),
           style: TextStyle(color: AppColors.textFaint, fontSize: 12),
         ),
         const SizedBox(height: 22),
         _errorText(),
         AuthButton(
-            label: 'Давом додан', loading: _loading, onTap: _submitUsername),
+            label: tr('auth.continueButton'), loading: _loading, onTap: _submitUsername),
         _loginLink(),
       ]);
 
@@ -452,14 +453,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const Center(child: AuthLogo(size: 76)),
         const SizedBox(height: 16),
         Center(
-            child: Text('Акс интихоб кунед',
+            child: Text(tr('auth.photoTitle'),
                 style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold))),
         const SizedBox(height: 6),
         Center(
-            child: Text('Аксе, ки шуморо муаррифӣ мекунад',
+            child: Text(tr('auth.photoSubtitle'),
                 style: TextStyle(color: AppColors.textTertiary, fontSize: 14))),
         const SizedBox(height: 28),
         Center(
@@ -485,15 +486,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 28),
         AuthButton(
-            label: 'Акс интихоб кунед',
+            label: tr('auth.photoTitle'),
             showArrow: false,
             onTap: _pickAvatar),
         const SizedBox(height: 12),
-        AuthOutlineButton(label: 'Баъдтар', onTap: () => _goto(3)),
+        AuthOutlineButton(label: tr('auth.later'), onTap: () => _goto(3)),
         const SizedBox(height: 12),
         _errorText(),
         AuthButton(
-            label: 'Давом додан', loading: _loading, onTap: _submitAvatar),
+            label: tr('auth.continueButton'), loading: _loading, onTap: _submitAvatar),
       ]);
 
   // ════════════════════════════ STEP 4 ════════════════════════════
@@ -570,7 +571,7 @@ class _FindFriendsState extends State<_FindFriends> {
           const Center(child: AuthLogo(size: 66)),
           const SizedBox(height: 12),
           Center(
-              child: Text('Дӯстонро пайдо кунед',
+              child: Text(tr('auth.findFriendsTitle'),
                   style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 22,
@@ -578,13 +579,13 @@ class _FindFriendsState extends State<_FindFriends> {
           const SizedBox(height: 6),
           Center(
               child: Text(
-                  'Ба одамоне, ки шавқ доред, обуна шавед',
+                  tr('auth.findFriendsSubtitle'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
           const SizedBox(height: 16),
           AuthField(
             controller: _searchCtrl,
-            hint: 'Ҷустуҷӯ аз рӯи ном ё @username',
+            hint: tr('auth.searchHint'),
             icon: AppIcons.search_rounded,
             onChanged: (v) => _load(v.trim()),
           ),
@@ -596,7 +597,7 @@ class _FindFriendsState extends State<_FindFriends> {
                         color: AppColors.neonBlue, strokeWidth: 2))
                 : _users.isEmpty
                     ? Center(
-                        child: Text('Касе ёфт нашуд',
+                        child: Text(tr('auth.noOneFound'),
                             style: TextStyle(color: AppColors.textFaint)))
                     : ListView.separated(
                         itemCount: _users.length,
@@ -606,11 +607,11 @@ class _FindFriendsState extends State<_FindFriends> {
           ),
           const SizedBox(height: 8),
           AuthButton(
-              label: 'Ба анҷом расонидан',
+              label: tr('auth.finishButton'),
               showArrow: false,
               onTap: widget.onFinish),
           const SizedBox(height: 10),
-          AuthOutlineButton(label: 'Баъдтар', onTap: widget.onFinish),
+          AuthOutlineButton(label: tr('auth.later'), onTap: widget.onFinish),
         ],
       ),
     );
@@ -671,7 +672,7 @@ class _FindFriendsState extends State<_FindFriends> {
                 color: isFollowed ? AppColors.textPrimary.withOpacity(0.08) : null,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(isFollowed ? 'Обуна шуд' : 'Обуна шудан',
+              child: Text(isFollowed ? tr('auth.followedLabel') : tr('auth.followLabel'),
                   style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 13,

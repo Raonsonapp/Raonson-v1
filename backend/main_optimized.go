@@ -324,6 +324,7 @@ func main() {
 	{
 		ai.POST("/hashtags", handlers.SuggestHashtags)
 		ai.POST("/translate", handlers.TranslateComment)
+		ai.POST("/assistant", handlers.AiAssistant)
 	}
 
 	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)

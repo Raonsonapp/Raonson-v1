@@ -200,3 +200,42 @@ func TranslateText(ctx context.Context, text, targetLang string) (string, error)
 	}
 	return strings.TrimSpace(out.Choices[0].Message.Content), nil
 }
+
+// ChatTurn — як паёми таърихи чат (role: "user" ё "assistant").
+type ChatTurn struct {
+	Role    string
+	Content string
+}
+
+// AskAssistant — чат бисёрқадама бо system prompt (масалан, ёрдамчии
+// дохили барнома). history-и охирин 16 паём мефиристад, то токен зиёд нашавад.
+func AskAssistant(ctx context.Context, systemPrompt string, history []ChatTurn) (string, error) {
+	if !OpenAIEnabled() {
+		return "", errors.New("OPENAI_API_KEY not configured")
+	}
+	msgs := []chatMsg{{Role: "system", Content: systemPrompt}}
+	start := 0
+	if len(history) > 16 {
+		start = len(history) - 16
+	}
+	for _, h := range history[start:] {
+		role := h.Role
+		if role != "user" && role != "assistant" {
+			role = "user"
+		}
+		msgs = append(msgs, chatMsg{Role: role, Content: h.Content})
+	}
+	var out chatResp
+	err := openAIRequest(ctx, "/chat/completions", chatReq{
+		Model:       openAIModel(),
+		Messages:    msgs,
+		Temperature: 0.5,
+	}, &out)
+	if err != nil {
+		return "", err
+	}
+	if len(out.Choices) == 0 {
+		return "", errors.New("empty response from openai")
+	}
+	return strings.TrimSpace(out.Choices[0].Message.Content), nil
+}

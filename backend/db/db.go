@@ -232,6 +232,9 @@ func migrate() {
 	-- дар production comments_count вуҷуд надошт (SQLSTATE 42703),
 	-- ки боиси 500 дар ҲАМАИ endpoint-ҳои reels мешуд (feed, view, comment).
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_count INTEGER DEFAULT 0;
+	-- Тасвири аввалин кадри видео (thumbnail) — мисли Instagram дар grid-ҳо
+	-- (profile/search/explore) нишон дода мешавад, ба ҷои placeholder.
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS thumbnail_url TEXT DEFAULT '';
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,

@@ -163,6 +163,7 @@ class _ReelsViewState extends State<_ReelsView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
   final Map<int, VideoPlayerController> _preloaded = {};
+  bool _didInitialPreload = false;
 
   @override
   void initState() {
@@ -309,6 +310,16 @@ class _ReelsViewState extends State<_ReelsView> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<_ReelsVM>();
+
+    // ── Тез бор шудан: реели 2-юм ва 3-юмро ФАВРАН пеш аз swipe
+    // preload мекунем (пештар танҳо баъд аз swipe оғоз мешуд — ҳар
+    // видеои нав "хом" бор мешуд ва интизорӣ тӯл мекашид). ──
+    if (!_didInitialPreload && vm.reels.isNotEmpty) {
+      _didInitialPreload = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _preloadAhead(_currentPage, vm);
+      });
+    }
 
     if (vm.loading && vm.reels.isEmpty) {
       return const Scaffold(
