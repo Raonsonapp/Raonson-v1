@@ -245,6 +245,73 @@ class _PostEditorState extends State<_PostEditor> {
     if (mounted) setState(() => _suggestingTags = false);
   }
 
+  // ── AI Post Creator: аз мавзӯи кӯтоҳ пости тайёр месозад ────────
+  bool _generatingPost = false;
+
+  Future<void> _showAiPostCreator() async {
+    final topicCtrl = TextEditingController();
+    final topic = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(AppIcons.bolt_rounded, color: Color(0xFF00E87A), size: 20),
+          SizedBox(width: 8),
+          Text('AI Пост Созед', style: TextStyle(color: Colors.white)),
+        ]),
+        content: TextField(
+          controller: topicCtrl, autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Дар бораи чӣ пост нависам? (масалан: футбол)',
+            hintStyle: TextStyle(color: Colors.white38),
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx),
+              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx, topicCtrl.text),
+              child: const Text('Созед',
+                  style: TextStyle(color: Color(0xFF00E87A), fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+    topicCtrl.dispose();
+    final t = topic?.trim() ?? '';
+    if (t.isEmpty || _generatingPost) return;
+
+    setState(() => _generatingPost = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/post-creator', body: {'topic': t})
+          .timeout(const Duration(seconds: 30));
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        final caption = (b['caption'] ?? '').toString();
+        if (caption.isNotEmpty) {
+          setState(() {
+            _captionCtrl.text = caption;
+            _captionCtrl.selection =
+                TextSelection.collapsed(offset: _captionCtrl.text.length);
+            _showCaption = true;
+          });
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('AI Пост Созед ҳозир дастрас нест'),
+            duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми сохтани пост'),
+            duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _generatingPost = false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -743,7 +810,10 @@ class _PostEditorState extends State<_PostEditor> {
             child: SafeArea(child: Container(
               color: Colors.black54,
               padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
                 _ToolBtn(icon: AppIcons.text_fields,         label: 'Текст',
                   onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
                 _ToolBtn(icon: AppIcons.brush,               label: 'Расм',
@@ -764,7 +834,10 @@ class _PostEditorState extends State<_PostEditor> {
                 _ToolBtn(icon: AppIcons.edit_note,           label: 'Тавсиф',
                   isActive: _showCaption,
                   onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),
-              ])))),
+                _ToolBtn(icon: AppIcons.bolt_rounded,        label: 'AI Пост',
+                  isActive: _generatingPost,
+                  onTap: _generatingPost ? () {} : () { setState(() => _tool = _Tool.none); _showAiPostCreator(); }),
+              ]))))),
 
           // ── Upload overlay (загрузка кабуд+сабз — ранги бренд) ──
           if (widget.isUploading)

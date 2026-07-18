@@ -22,6 +22,7 @@ import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
+import '../../app/app_settings.dart';
 import '../../core/ui/app_icons.dart';
 
 class PostCard extends StatefulWidget {
@@ -1182,24 +1183,53 @@ class _PostCardState extends State<PostCard>
 }
 
 // ── Caption Widget — Show more/less ────────────────────────────────
-class _CaptionWidget extends StatelessWidget {
+class _CaptionWidget extends StatefulWidget {
   final String username, userId, caption;
   final List<InlineSpan> spans;
   final bool expanded;
   final VoidCallback onToggle;
-  static const int _maxLines = 3;
 
   const _CaptionWidget({
     required this.username, required this.userId, required this.caption,
     required this.spans, required this.expanded, required this.onToggle,
   });
 
+  @override
+  State<_CaptionWidget> createState() => _CaptionWidgetState();
+}
+
+class _CaptionWidgetState extends State<_CaptionWidget> {
+  static const int _maxLines = 3;
+
+  // ── Тарҷумаи тавсиф (OpenAI) ─────────────────────────────────────
+  String? _translated;
+  bool    _translating = false;
+
+  Future<void> _toggleTranslate() async {
+    if (_translated != null) {
+      setState(() => _translated = null);
+      return;
+    }
+    setState(() => _translating = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/translate', body: {
+        'text': widget.caption,
+        'targetLang': AppSettingsState.instance.lang,
+      });
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        if (mounted) setState(() => _translated = (b['translated'] ?? '').toString());
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _translating = false);
+  }
+
   bool _needsTruncation(BuildContext context) {
     final tp = TextPainter(
       text: TextSpan(children: [
-        TextSpan(text: '$username ', style: TextStyle(
+        TextSpan(text: '${widget.username} ', style: TextStyle(
             fontWeight: FontWeight.w700, color: AppColors.textPrimary, fontSize: 14)),
-        TextSpan(text: caption, style: TextStyle(
+        TextSpan(text: widget.caption, style: TextStyle(
             color: AppColors.textPrimary, fontSize: 14)),
       ]),
       maxLines: _maxLines,
@@ -1214,37 +1244,64 @@ class _CaptionWidget extends StatelessWidget {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       RichText(
-        maxLines: expanded ? null : (needsMore ? _maxLines : null),
-        overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+        maxLines: widget.expanded ? null : (needsMore ? _maxLines : null),
+        overflow: widget.expanded ? TextOverflow.visible : TextOverflow.ellipsis,
         text: TextSpan(children: [
           WidgetSpan(
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: GestureDetector(
               onTap: () => Navigator.of(context)
-                  .pushNamed('/profile', arguments: userId),
-              child: Text('$username ',
+                  .pushNamed('/profile', arguments: widget.userId),
+              child: Text('${widget.username} ',
                 style: TextStyle(fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary, fontSize: 14)),
             ),
           ),
-          ...spans,
+          ...widget.spans,
         ]),
       ),
-      if (needsMore)
+      if (_translated != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(_translated!,
+              style: TextStyle(
+                  color: AppColors.textSecondary, fontSize: 13.5,
+                  fontStyle: FontStyle.italic)),
+        ),
+      Row(children: [
+        if (needsMore)
+          GestureDetector(
+            onTap: widget.onToggle,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                widget.expanded ? 'камтар нишон деҳ' : '...бештар нишон деҳ',
+                style: TextStyle(
+                  color: AppColors.grey,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                )),
+            ),
+          ),
+        if (needsMore) const SizedBox(width: 12),
         GestureDetector(
-          onTap: onToggle,
+          onTap: _translating ? null : _toggleTranslate,
           child: Padding(
             padding: const EdgeInsets.only(top: 3),
-            child: Text(
-              expanded ? 'камтар нишон деҳ' : '...бештар нишон деҳ',
-              style: TextStyle(
-                color: AppColors.grey,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-              )),
+            child: _translating
+                ? SizedBox(width: 12, height: 12,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 1.5, color: AppColors.grey))
+                : Text(
+                    _translated != null ? 'Пинҳон кардани тарҷума' : 'Тарҷума кардан',
+                    style: TextStyle(
+                        color: AppColors.grey,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500)),
           ),
         ),
+      ]),
     ]);
   }
 }

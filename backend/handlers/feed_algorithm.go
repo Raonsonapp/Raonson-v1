@@ -72,6 +72,8 @@ func GetSmartFeed(c *gin.Context) {
 		   + LEAST(30, p.comments_count*2)
 		   + LEAST(40, COALESCE(p.interest_score,0))
 		   + LEAST(45, COALESCE(pa.aff,0) * 6)
+		   -- AI Feed: холи AI-и ҷолибияти мӯҳтаво (0-100 → то +20 балл)
+		   + LEAST(20, COALESCE(p.ai_quality_score,0) / 5)
 		   - CASE WHEN pv.post_id IS NOT NULL THEN 45 ELSE 0 END
 		  ) AS score
 		FROM posts p
