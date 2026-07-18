@@ -225,6 +225,7 @@ func main() {
 		re.POST("/:id/comments", handlers.AddReelComment)
 		re.POST("/:id/report",       handlers.ReportReel)
 		re.POST("/:id/hide-likes",   handlers.ToggleReelHideLikes)
+		re.POST("/:id/interest",     handlers.MarkReelInterested)
 		re.POST("/:id/not_interest", handlers.MarkReelNotInterested)
 		re.GET("/:id/stats",         handlers.GetReelStats)
 		re.POST("/:id/comments/:commentId/like",  handlers.LikeReelComment)
@@ -315,6 +316,14 @@ func main() {
 	{
 		se.GET("/",      cache30s, handlers.Search)
 		se.GET("/users", cache30s, handlers.SearchUsers)
+	}
+
+	// AI-хизматҳо (OpenAI): модератсия дар handler-ҳои пост/шарҳ, инҷо
+	// ҳэштег ва тарҷума. Калид дар env: OPENAI_API_KEY (ҳеҷ гоҳ дар код нест).
+	ai := r.Group("/ai", auth, rl100)
+	{
+		ai.POST("/hashtags", handlers.SuggestHashtags)
+		ai.POST("/translate", handlers.TranslateComment)
 	}
 
 	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)

@@ -228,6 +228,10 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_reels_created ON reels(created_at DESC);
 	-- Сифати паст (480p) барои интернети суст — пахши адаптивӣ.
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS video_url_low TEXT DEFAULT '';
+	-- CREATE TABLE IF NOT EXISTS болотар ҷадвали куҳнаро тағйир намедиҳад —
+	-- дар production comments_count вуҷуд надошт (SQLSTATE 42703),
+	-- ки боиси 500 дар ҲАМАИ endpoint-ҳои reels мешуд (feed, view, comment).
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_count INTEGER DEFAULT 0;
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,

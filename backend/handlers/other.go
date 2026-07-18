@@ -7,6 +7,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,6 +27,11 @@ func AddComment(c *gin.Context) {
 		return
 	}
 	b.Text = clampRunes(b.Text, 1000)
+	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
 
 	var exists, commentsOff bool
 	db.Pool.QueryRow(context.Background(),
@@ -413,6 +419,11 @@ func CreateReel(c *gin.Context) {
 		return
 	}
 	b.Caption = clampRunes(b.Caption, 2200)
+	if flagged, cats := utils.ModerateText(context.Background(), b.Caption); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Тавсиф қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
 	var rid string
 	db.Pool.QueryRow(context.Background(),
 		`INSERT INTO reels(user_id,caption,video_url,video_url_low) VALUES($1,$2,$3,$4) RETURNING id`,
@@ -570,6 +581,11 @@ func AddReelComment(c *gin.Context) {
 	var b struct{ Text string `json:"text"` }
 	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
+		return
+	}
+	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
 		return
 	}
 	var cid string

@@ -19,6 +19,7 @@ import '../../models/reel_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
+import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 import '../../gifts/gift_sheet.dart';
@@ -2039,6 +2040,31 @@ class _ReelCommentsState extends State<_ReelComments> {
   String? _replyToId;
   String? _replyToUsername;
 
+  // ── Тарҷумаи шарҳ (OpenAI) ───────────────────────────────────
+  final Map<String, String> _translations = {};
+  final Set<String> _translatingIds = {};
+
+  Future<void> _toggleTranslate(String commentId, String text) async {
+    if (_translations.containsKey(commentId)) {
+      setState(() => _translations.remove(commentId));
+      return;
+    }
+    setState(() => _translatingIds.add(commentId));
+    try {
+      final res = await ApiClient.instance.post('/ai/translate', body: {
+        'text': text,
+        'targetLang': AppSettingsState.instance.lang,
+      });
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        if (mounted) {
+          setState(() => _translations[commentId] = (b['translated'] ?? '').toString());
+        }
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _translatingIds.remove(commentId));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2181,25 +2207,68 @@ class _ReelCommentsState extends State<_ReelComments> {
                                           style: const TextStyle(
                                               color: Colors.white70,
                                               fontSize: 14)),
+                                      if (_translations[id] != null) ...[
+                                        const SizedBox(height: 3),
+                                        Text(_translations[id]!,
+                                            style: const TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 13,
+                                                fontStyle:
+                                                    FontStyle.italic)),
+                                      ],
                                       const SizedBox(height: 4),
-                                      GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _replyToId = id;
-                                              _replyToUsername =
-                                                  u['username']
-                                                      ?.toString();
-                                              _ctrl.text =
-                                                  '@${u['username']} ';
-                                            });
-                                          },
-                                          child: const Text('Ҷавоб',
-                                              style: TextStyle(
-                                                  color:
-                                                      Colors.white38,
-                                                  fontSize: 12,
-                                                  fontWeight:
-                                                      FontWeight.w500))),
+                                      Row(children: [
+                                        GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _replyToId = id;
+                                                _replyToUsername =
+                                                    u['username']
+                                                        ?.toString();
+                                                _ctrl.text =
+                                                    '@${u['username']} ';
+                                              });
+                                            },
+                                            child: const Text('Ҷавоб',
+                                                style: TextStyle(
+                                                    color:
+                                                        Colors.white38,
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight.w500))),
+                                        const SizedBox(width: 14),
+                                        GestureDetector(
+                                            onTap: _translatingIds
+                                                    .contains(id)
+                                                ? null
+                                                : () => _toggleTranslate(
+                                                    id,
+                                                    (c['text'] ?? '')
+                                                        .toString()),
+                                            child: _translatingIds
+                                                    .contains(id)
+                                                ? const SizedBox(
+                                                    width: 11,
+                                                    height: 11,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                            strokeWidth:
+                                                                1.5,
+                                                            color: Colors
+                                                                .white38))
+                                                : Text(
+                                                    _translations
+                                                            .containsKey(id)
+                                                        ? 'Пинҳон кардани тарҷума'
+                                                        : 'Тарҷума кардан',
+                                                    style: const TextStyle(
+                                                        color:
+                                                            Colors.white38,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight
+                                                                .w500))),
+                                      ]),
                                     ])),
                                 const SizedBox(width: 8),
                                 GestureDetector(

@@ -11,6 +11,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -265,6 +266,16 @@ func MarkReelNotInterested(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"not_interested": true})
 }
 
+// POST /reels/:id/interest — frontend инро ҷеғ мезад, вале backend
+// route надошт (404). Баргардонидани "not interested"-и қаблӣ, агар буда бошад.
+func MarkReelInterested(c *gin.Context) {
+	myID := mw.UID(c)
+	rid := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM reel_not_interested WHERE reel_id=$1 AND user_id=$2`, rid, myID)
+	c.JSON(http.StatusOK, gin.H{"interested": true})
+}
+
 // GET /reels/:id/stats — танҳо соҳиби reel мебинад.
 func GetReelStats(c *gin.Context) {
 	rid := c.Param("id")
@@ -362,6 +373,11 @@ func ReplyReelComment(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
+		return
+	}
+	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Матн қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
 		return
 	}
 	var newID string
