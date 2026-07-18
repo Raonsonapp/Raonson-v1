@@ -21,6 +21,7 @@ import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 import '../group/groups_list_screen.dart';
 import '../room/call_screen.dart';
+import '../ai_assistant_chat_screen.dart';
 import '../../core/ui/app_icons.dart';
 
 // ─────────────────────────────────────────────────────────────────
@@ -233,6 +234,10 @@ class _ChatView extends StatelessWidget {
               const SizedBox(height: 4),
             ],
 
+            // ── AI Ёрдамчӣ (ChatGPT) ──────────────────────────
+            if (ctrl.query.isEmpty && ctrl.tab == ChatTab.primary)
+              const _AiAssistantTile(),
+
             // ── Tab header ───────────────────────────────────
             if (ctrl.query.isEmpty)
               Padding(
@@ -382,6 +387,51 @@ class _TabBar extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  AI Ёрдамчӣ (ChatGPT) — доимо дар боли рӯйхати чат
+// ─────────────────────────────────────────────────────────────────
+class _AiAssistantTile extends StatelessWidget {
+  const _AiAssistantTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const AiAssistantChatScreen())),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: [
+          Container(
+            width: 54, height: 54,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFF00C6FF), Color(0xFF00E87A)],
+                begin: Alignment.topLeft, end: Alignment.bottomRight),
+            ),
+            child: Icon(AppIcons.bolt_rounded, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ёрдамчии AI',
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600, fontSize: 15)),
+                const SizedBox(height: 2),
+                Text('Дар бораи барнома бипурсед',
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+              ],
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }

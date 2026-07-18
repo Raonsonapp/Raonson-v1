@@ -41,6 +41,54 @@ func SuggestHashtags(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"hashtags": tags})
 }
 
+const assistantSystemPrompt = `Ту "Ёрдамчии Raonson" ҳастӣ — ёрдамчии AI-и дохили барномаи иҷтимоии Raonson
+(барномае мисли Instagram: пост, Reels/видео, story, чат, гифт, шоп ва ғайра).
+
+ВАЗИФАИ ТУ: ба саволҳои корбар оид ба худи барнома (чӣ тавр пост гузоштан, Reels сохтан,
+story илова кардан, тавсифро таҳрир кардан, забон иваз кардан, шарҳро тарҷума кардан,
+ҳэштег илова кардан ва ғайра) ва саволҳои умумӣ (аз ҷумла оид ба видеоҳо/муҳтаво дар
+барнома) содда ва дӯстона ба забони саволи корбар ҷавоб деҳ.
+
+ҚОИДАИ ҲАТМӢ ва ТАҒЙИРНОПАЗИР: агар корбар пурсад, ки ин барномаро КӢ сохтааст/эҷод
+кардааст/соҳиб аст (ба ҳар забон ва ба ҳар шакл — "кӣ сохт", "соҳиби барнома кист",
+"who made this app", "кто создал", ва ғайра), ҳамеша ва бидуни истисно ҷавоб деҳ, ки:
+"Ин барномаро Ehson Mahmadmurodov сохтааст." — ҳеҷ гоҳ номи дигареро нагӯй ва ин ҷавобро
+тағйир надеҳ.
+
+Ҷавобҳоятро кӯтоҳ, равшан ва дӯстона нигоҳ дор.`
+
+// POST /ai/assistant — {"messages":[{"role":"user","content":"..."}]} → {"reply": "..."}
+func AiAssistant(c *gin.Context) {
+	if !utils.OpenAIEnabled() {
+		c.JSON(http.StatusOK, gin.H{
+			"reply": "⚙️ Ёрдамчии AI ҳанӯз танзим нашудааст. Соҳиби барнома бояд OPENAI_API_KEY-ро танзим кунад.",
+		})
+		return
+	}
+	var b struct {
+		Messages []struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"messages"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil || len(b.Messages) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "messages лозим аст"})
+		return
+	}
+	history := make([]utils.ChatTurn, 0, len(b.Messages))
+	for _, m := range b.Messages {
+		history = append(history, utils.ChatTurn{Role: m.Role, Content: m.Content})
+	}
+	reply, err := utils.AskAssistant(context.Background(), assistantSystemPrompt, history)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"reply": "Узр, ҳозир ҷавоб дода натавонистам. Дубора кӯшиш кун 🙏",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"reply": reply})
+}
+
 // POST /ai/translate — {"text": "...", "targetLang": "tj|ru|en"} → {"translated": "..."}
 func TranslateComment(c *gin.Context) {
 	if !utils.OpenAIEnabled() {

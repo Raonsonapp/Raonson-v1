@@ -6,6 +6,7 @@ import '../../app/app_routes.dart';
 import '../widgets/auth_kit.dart';
 import 'login_controller.dart';
 import '../../app/app_theme.dart';
+import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -66,7 +67,7 @@ class _LoginViewState extends State<_LoginView> {
                 const Center(child: AuthLogo(size: 92)),
                 const SizedBox(height: 28),
                 Center(
-                  child: Text('Хуш омадед!',
+                  child: Text(tr('auth.welcome'),
                       style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 26,
@@ -74,7 +75,7 @@ class _LoginViewState extends State<_LoginView> {
                 ),
                 const SizedBox(height: 8),
                 Center(
-                  child: Text('Барои идомаи кор ба ҳисоби худ ворид шавед',
+                  child: Text(tr('auth.loginSubtitle'),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
                 ),
@@ -82,14 +83,14 @@ class _LoginViewState extends State<_LoginView> {
 
                 AuthField(
                   controller: _idCtrl,
-                  hint: 'Телефон, номи корбар ё почта',
+                  hint: tr('auth.idHint'),
                   icon: AppIcons.person_outline_rounded,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 14),
                 AuthField(
                   controller: _pwCtrl,
-                  hint: 'Рамз',
+                  hint: tr('auth.passwordHint'),
                   icon: AppIcons.lock_outline_rounded,
                   obscure: _obscure,
                   suffix: IconButton(
@@ -107,8 +108,8 @@ class _LoginViewState extends State<_LoginView> {
                   child: TextButton(
                     onPressed: () => Navigator.pushNamed(
                         context, AppRoutes.forgotPassword),
-                    child: const Text('Рамзро фаромӯш кардед?',
-                        style: TextStyle(
+                    child: Text(tr('auth.forgotPassword'),
+                        style: const TextStyle(
                             color: Color(0xFF1D9BF0), fontSize: 13)),
                   ),
                 ),
@@ -123,7 +124,7 @@ class _LoginViewState extends State<_LoginView> {
                 ],
 
                 AuthButton(
-                  label: 'Ворид шудан',
+                  label: tr('auth.loginButton'),
                   loading: state.isLoading,
                   onTap: () => _submit(ctrl),
                 ),
@@ -132,14 +133,14 @@ class _LoginViewState extends State<_LoginView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Ҳисоб надоред? ',
+                    Text(tr('auth.noAccount'),
                         style:
                             TextStyle(color: AppColors.textTertiary, fontSize: 14)),
                     GestureDetector(
                       onTap: () =>
                           Navigator.pushNamed(context, AppRoutes.register),
-                      child: const Text('Сабти ном кунед',
-                          style: TextStyle(
+                      child: Text(tr('auth.registerLink'),
+                          style: const TextStyle(
                               color: Color(0xFF1D9BF0),
                               fontSize: 14,
                               fontWeight: FontWeight.w700)),
