@@ -40,6 +40,40 @@ class _CommentsScreenState extends State<CommentsScreen> {
   // Reply mode
   CommentModel? _replyTo;
 
+  // ── AI Comment: пешниҳоди шарҳ (OpenAI) ─────────────────────────
+  bool _suggestingComment = false;
+
+  Future<void> _suggestComment() async {
+    if (_suggestingComment) return;
+    setState(() => _suggestingComment = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/comment-suggest', body: {
+        'caption': widget.post.caption,
+        'imageUrl': widget.post.mediaType == 'image' ? widget.post.mediaUrl : '',
+      }).timeout(const Duration(seconds: 20));
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        final comment = (b['comment'] ?? '').toString();
+        if (comment.isNotEmpty) {
+          _ctrl.text = comment;
+          _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
+          _focus.requestFocus();
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('AI шарҳ ҳозир дастрас нест'),
+            duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми пешниҳоди шарҳ'),
+            duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _suggestingComment = false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -363,6 +397,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     border: InputBorder.none),
                 ),
               ),
+              // AI Comment — пешниҳоди шарҳ (OpenAI)
+              _suggestingComment
+                  ? const Padding(padding: EdgeInsets.all(10),
+                      child: SizedBox(width: 18, height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.textFaint)))
+                  : IconButton(
+                      icon: Icon(AppIcons.bolt_rounded,
+                          color: AppColors.textSecondary, size: 20),
+                      tooltip: 'AI шарҳ пешниҳод кунад',
+                      onPressed: _suggestComment,
+                    ),
               // Тӯҳфа (gift) — мисли Instagram
               IconButton(
                 icon: SvgPicture.asset('assets/icons/gift.svg',

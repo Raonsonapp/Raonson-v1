@@ -137,6 +137,16 @@ wsPost := gin.H{
 // ➕ ИЛОВА
 go sockets.BroadcastNewPost(myID, wsPost)
 
+// AI Feed: best-effort, дар паснамо — ба посух монеъ намешавад.
+go func(pid, caption string) {
+	score, err := utils.ScorePostQuality(context.Background(), caption)
+	if err != nil {
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE posts SET ai_quality_score=$2 WHERE id=$1`, pid, score)
+}(postID, b.Caption)
+
 // 🔁 ИВАЗ
 c.JSON(http.StatusCreated, wsPost)
 }
