@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'story_editor.dart';
 import '../../core/api/api_client.dart';
-import '../../app/app_config.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import 'dart:convert';
+import '../../core/utils/media_compressor.dart';
+import '../upload/upload_manager.dart';
 
 class CreateStoryScreen extends StatefulWidget {
   final File? initialFile;
@@ -52,30 +50,41 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });
     try {
-      final ext  = capturedFile.path.split('.').last.toLowerCase();
-      MediaType mime;
-      if (_isVideo) { mime = MediaType('video', 'mp4'); }
-      else if (ext == 'png') { mime = MediaType('image', 'png'); }
-      else { mime = MediaType('image', 'jpeg'); }
+      // ── Фишурдани файл пеш аз бор кардан ─────────────────────
+      // Расми ноом (5-10MB) → ~0.5MB, видеои ноом (30-50MB) → ~10-15MB.
+      // Инро дар интернети суст 5-10 бор тезтар мекунад.
+      File fileToUpload = capturedFile;
+      if (_isVideo) {
+        try {
+          fileToUpload = await MediaCompressor.compressVideo(capturedFile);
+        } catch (_) {/* фишурдан наомад — оригинал */}
+      }
+      // Расм худкор дар UploadManager._maybeCompressImage фишурда мешавад
+      // (~72% сифат, ҳадди аксар 1080px).
 
-      final req = http.MultipartRequest('POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
-        ..headers['Authorization'] = 'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath('file', capturedFile.path, contentType: mime));
+      // Retry: агар upload дар як бор ноком шавад (интернети суст),
+      // 2 маротибаи дигар кӯшиш мекунем.
+      String? mediaUrl;
+      Object? lastErr;
+      for (int i = 0; i < 3; i++) {
+        try {
+          mediaUrl = await UploadManager().uploadFile(fileToUpload);
+          if (mediaUrl.isNotEmpty) break;
+        } catch (e) {
+          lastErr = e;
+          if (i < 2) await Future.delayed(Duration(seconds: 2 * (i + 1)));
+        }
+      }
+      if (mediaUrl == null || mediaUrl.isEmpty) {
+        throw Exception(lastErr?.toString() ?? 'Upload ноком шуд');
+      }
 
-      final up     = await req.send().timeout(const Duration(minutes: 3));
-      final upBody = await up.stream.bytesToString();
-      if (up.statusCode >= 400) throw Exception('Upload хато ${up.statusCode}');
-
-      final upJson   = jsonDecode(upBody) as Map<String, dynamic>;
-      final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString().trim();
-      if (mediaUrl.isEmpty) throw Exception('URL нест');
-
-      final res = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/stories/'),
-        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-        body: jsonEncode({'mediaUrl': mediaUrl, 'mediaType': _isVideo ? 'video' : 'image', 'caption': caption}),
-      ).timeout(const Duration(seconds: 30));
-
+      // POST /stories/ ба backend — то 60с барои интернети суст
+      final res = await ApiClient.instance.post('/stories/', body: {
+        'mediaUrl' : mediaUrl,
+        'mediaType': _isVideo ? 'video' : 'image',
+        'caption'  : caption,
+      });
       if (res.statusCode >= 400) throw Exception('Story хато ${res.statusCode}');
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

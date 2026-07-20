@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
+import '../../app/app_settings.dart';
 import '../../app/app_routes.dart';
 import '../widgets/auth_kit.dart';
 import 'login_controller.dart';
@@ -52,7 +53,10 @@ class _LoginViewState extends State<_LoginView> {
     final ctrl = context.watch<LoginController>();
     final state = ctrl.state;
 
-    return Scaffold(
+    // ✅ Listen to AppSettingsState so tr() re-runs when the language flips.
+    return AnimatedBuilder(
+      animation: AppSettingsState.instance,
+      builder: (context, _) => Scaffold(
       backgroundColor: AppColors.bg,
       body: AuthBackground(
         child: SafeArea(
@@ -152,6 +156,7 @@ class _LoginViewState extends State<_LoginView> {
           ),
         ),
       ),
+    ),
     );
   }
 }

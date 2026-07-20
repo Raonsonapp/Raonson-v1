@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/app_state.dart';
+import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
@@ -228,7 +229,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // ✅ Listen to AppSettingsState so tr() re-runs when the language flips.
+    return AnimatedBuilder(
+      animation: AppSettingsState.instance,
+      builder: (context, _) => Scaffold(
       backgroundColor: AppColors.bg,
       body: AuthBackground(
         child: SafeArea(
@@ -269,6 +273,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 
