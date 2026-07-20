@@ -998,7 +998,7 @@ class _PostCardState extends State<PostCard>
           GestureDetector(
             onTap: _showMenu,
             child: Padding(padding: EdgeInsets.all(8),
-              child: Icon(AppIcons.more_horiz, color: AppColors.textPrimary, size: 22))),
+              child: Icon(AppIcons.more_vert, color: AppColors.textPrimary, size: 22))),
         ]),
       ),
 
@@ -1546,6 +1546,54 @@ class _MediaCarousel extends StatefulWidget {
 class _MediaCarouselState extends State<_MediaCarousel> {
   int _current = 0;
   double? _videoRatio; // ратиои аслии видео (вақте маълум шуд)
+  double? _imageRatio; // ратиои аслии расм (вақте маълум шуд)
+  ImageStream? _imageStream;
+  ImageStreamListener? _imageListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveImageRatio();
+  }
+
+  @override
+  void didUpdateWidget(_MediaCarousel old) {
+    super.didUpdateWidget(old);
+    final oldUrl = old.media.isNotEmpty ? old.media.first['url'] : null;
+    final newUrl = widget.media.isNotEmpty ? widget.media.first['url'] : null;
+    if (oldUrl != newUrl) {
+      _imageRatio = null;
+      _resolveImageRatio();
+    }
+  }
+
+  // Мисли видео: андозаи аслии расмро мегирем, то формат канда/кӯтоҳ нашавад.
+  void _resolveImageRatio() {
+    if (widget.media.isEmpty) return;
+    final type = widget.media.first['type'] ?? 'image';
+    final url  = widget.media.first['url']  ?? '';
+    if (type != 'image' || url.isEmpty) return;
+    _imageStream?.removeListener(_imageListener!);
+    final stream = CachedNetworkImageProvider(url)
+        .resolve(const ImageConfiguration());
+    final listener = ImageStreamListener((info, _) {
+      if (!mounted) return;
+      final w = info.image.width.toDouble();
+      final h = info.image.height.toDouble();
+      if (w > 0 && h > 0 && _imageRatio == null) {
+        setState(() => _imageRatio = w / h);
+      }
+    }, onError: (_, __) {});
+    _imageStream = stream;
+    _imageListener = listener;
+    stream.addListener(listener);
+  }
+
+  @override
+  void dispose() {
+    _imageStream?.removeListener(_imageListener!);
+    super.dispose();
+  }
 
   double _getAspectRatio() {
     // ✅ Формати аслиро нигоҳ дор — мисли Instagram (4:5 … 1.91:1)
@@ -1559,7 +1607,10 @@ class _MediaCarouselState extends State<_MediaCarousel> {
     if (type == 'video' && _videoRatio != null) {
       return _videoRatio!.clamp(0.5, 1.91);
     }
-    // Default: portrait 4:5 мисли Instagram
+    if (type == 'image' && _imageRatio != null) {
+      return _imageRatio!.clamp(0.5, 1.91);
+    }
+    // Default: portrait 4:5 мисли Instagram (то андозаи аслӣ маълум шавад)
     return 4 / 5;
   }
 
