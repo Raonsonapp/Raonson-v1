@@ -399,7 +399,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               ),
               // AI Comment — пешниҳоди шарҳ (OpenAI)
               _suggestingComment
-                  ? const Padding(padding: EdgeInsets.all(10),
+                  ? Padding(padding: const EdgeInsets.all(10),
                       child: SizedBox(width: 18, height: 18,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: AppColors.textFaint)))
