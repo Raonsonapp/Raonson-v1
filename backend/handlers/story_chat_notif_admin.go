@@ -91,6 +91,9 @@ func CreateStory(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption) VALUES($1,$2,$3,$4,$5) RETURNING id`,
 		myID, b.MediaURL, b.MediaType, exp, b.Caption).Scan(&sid)
+	// Cache-и корбарро пок мекунем, то story-и нав фавран дар profile
+	// (GET /users/me/reels/posts) ва GET /stories/ намоён шавад.
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
 		"expiresAt": exp, "caption": b.Caption,
@@ -232,6 +235,7 @@ func DeleteStory(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Story not found"})
 		return
 	}
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
