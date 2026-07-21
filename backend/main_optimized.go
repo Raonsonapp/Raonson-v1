@@ -85,6 +85,11 @@ func main() {
 	// ── Кэш middleware барои public endpointҳо ──────────────────
 	cache5m  := mw.CacheMiddleware(5 * time.Minute)
 	cache30s := mw.CacheMiddleware(30 * time.Second)
+	// ── Realtime feel: user-personalized endpoints (feed, stories, post,
+	// user profile) hozir танҳо 3 сония cache мешаванд, то like/follow/
+	// story-и нав дар 1-3 сония ба ҳама намоён шаванд. Пеш аз 30с cache
+	// боиси "лайкҳо мемонанд/гум мешаванд" ва "стори реалтайм нест" шуд.
+	cache3s  := mw.CacheMiddleware(3 * time.Second)
 
 	// ── AUTH ─────────────────────────────────────────────────────
 	a := r.Group("/auth")
@@ -113,12 +118,12 @@ func main() {
 		u.POST("/:id/report",           handlers.ReportUser)
 		u.POST("/:id/restrict",         handlers.RestrictUser)
 		u.POST("/:id/unrestrict",       handlers.UnrestrictUser)
-		u.GET("/:id",                   cache30s, handlers.GetUserByID)
+		u.GET("/:id",                   cache3s, handlers.GetUserByID)
 		u.PUT("/",                       handlers.UpdateUser)
 		u.DELETE("/",                    handlers.DeleteUser)
-		u.GET("/:id/posts",             cache30s, handlers.GetUserPosts)
-		u.GET("/:id/tagged",            cache30s, handlers.GetTaggedPosts)
-		u.GET("/:id/reels",             cache30s, handlers.GetUserReels)
+		u.GET("/:id/posts",             cache3s, handlers.GetUserPosts)
+		u.GET("/:id/tagged",            cache3s, handlers.GetTaggedPosts)
+		u.GET("/:id/reels",             cache3s, handlers.GetUserReels)
 		u.GET("/:id/followers",         handlers.GetFollowers)
 		u.GET("/:id/following",         handlers.GetFollowing)
 	}
@@ -127,7 +132,7 @@ func main() {
 	p := r.Group("/profile", auth, rl100)
 	{
 		p.GET("/me",            handlers.GetMyProfile)
-		p.GET("/notes/friends", cache30s, handlers.GetFriendsNotes)
+		p.GET("/notes/friends", cache3s, handlers.GetFriendsNotes)
 		p.POST("/note",         handlers.SetNote)
 		p.PUT("/",              handlers.UpdateProfile)
 		p.PUT("/settings",      handlers.UpdateSettings)
@@ -135,20 +140,20 @@ func main() {
 		p.GET("/notifications", handlers.GetNotifPrefs)
 		p.PUT("/notifications", handlers.UpdateNotifPrefs)
 		p.DELETE("/avatar",     handlers.DeleteAvatar)
-		p.GET("/:username",     cache30s, handlers.GetProfile)
+		p.GET("/:username",     cache3s, handlers.GetProfile)
 	}
 
 	// ── POSTS ────────────────────────────────────────────────────
 	po := r.Group("/posts", auth, rl100)
 	{
 		po.POST("/",                 handlers.CreatePost)
-		po.GET("/",                  cache30s, handlers.GetFeed)
-		po.GET("/feed",              cache30s, handlers.GetFeed)
+		po.GET("/",                  cache3s, handlers.GetFeed)
+		po.GET("/feed",              cache3s, handlers.GetFeed)
 		po.GET("/smart-feed",        handlers.GetSmartFeed) // has own cache
-		po.GET("/hashtag/:tag",      cache30s, handlers.HashtagPosts)
-		po.GET("/:id",               cache30s, handlers.GetPost)
+		po.GET("/hashtag/:tag",      cache3s, handlers.HashtagPosts)
+		po.GET("/:id",               cache3s, handlers.GetPost)
 		po.GET("/:id/likes",         handlers.GetPostLikers)
-		po.GET("/:id/comments",      cache30s, handlers.GetComments)
+		po.GET("/:id/comments",      cache3s, handlers.GetComments)
 		po.POST("/:id/comments",     handlers.AddComment)
 		po.DELETE("/:id",            handlers.DeletePost)
 		po.POST("/:id/like",         handlers.TogglePostLike)
@@ -186,7 +191,7 @@ func main() {
 
 	r.POST("/posts/view/:id", auth, handlers.TrackPostView)
 
-	r.GET("/comments/:id",       auth, rl100, cache30s, handlers.GetComments)
+	r.GET("/comments/:id",       auth, rl100, cache3s, handlers.GetComments)
 	r.POST("/comments/:id",      auth, rl100, handlers.AddComment)
 	r.DELETE("/comments/:id",    auth, rl100, handlers.DeleteComment)
 	r.PUT("/comments/:id",       auth, rl100, handlers.EditComment)
@@ -213,7 +218,7 @@ func main() {
 
 	re := r.Group("/reels", auth, rl100)
 	{
-		re.GET("/",              cache30s, handlers.GetReels)
+		re.GET("/",              cache3s, handlers.GetReels)
 		re.GET("/smart",         handlers.GetSmartReels)   // Instagram algorithm
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)
@@ -221,7 +226,7 @@ func main() {
 		re.POST("/:id/watch",    handlers.TrackReelWatch)  // watch-time tracking
 		re.POST("/:id/like",     handlers.ToggleReelLike)
 		re.POST("/:id/save",     handlers.ToggleReelSave)
-		re.GET("/:id/comments",  cache30s, handlers.GetReelComments)
+		re.GET("/:id/comments",  cache3s, handlers.GetReelComments)
 		re.POST("/:id/comments", handlers.AddReelComment)
 		re.POST("/:id/report",       handlers.ReportReel)
 		re.POST("/:id/hide-likes",   handlers.ToggleReelHideLikes)
@@ -234,7 +239,7 @@ func main() {
 
 	st := r.Group("/stories", auth, rl100)
 	{
-		st.GET("/",            cache30s, handlers.GetStories)
+		st.GET("/",            cache3s, handlers.GetStories)
 		st.GET("/my",          handlers.GetMyStories)
 		st.POST("/",           handlers.CreateStory)
 		st.DELETE("/:id",      handlers.DeleteStory)
@@ -250,7 +255,7 @@ func main() {
 	hl := r.Group("/highlights", auth, rl100)
 	{
 		hl.POST("/",       handlers.CreateHighlight)
-		hl.GET("/:id",     cache30s, handlers.GetHighlights)
+		hl.GET("/:id",     cache3s, handlers.GetHighlights)
 		hl.PATCH("/:id",   handlers.UpdateHighlight)
 		hl.DELETE("/:id",  handlers.DeleteHighlight)
 	}

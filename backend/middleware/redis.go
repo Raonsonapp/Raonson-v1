@@ -82,14 +82,35 @@ func CacheDel(keys ...string) {
 
 func CacheDelete(key string) { CacheDel(key) }
 
-// CacheMiddleware — cache GET responses
+// InvalidateUserCache — ҳамаи middleware-cache-и як userро пок мекунад.
+// Пас аз ҳар write (like, follow, comment, delete post) ин ҷеғ зада мешавад,
+// то навбати ҳамон корбар ба GET-ҳо javob-и НАВРО бигирад, на cached-и қаблӣ.
+func InvalidateUserCache(userID string) {
+	if userID == "" {
+		return
+	}
+	LocalDelPrefix("cache:" + userID + ":")
+	// Redis — prefix scan гарон аст, дар инҷо skip мекунем; TTL-и кӯтоҳ
+	// (5s) кофӣ аст, ки Redis-и stale худ ба худ таъмир шавад.
+}
+
+// CacheMiddleware — cache GET responses.
+// КРИТИКӢ: калиди cache бояд userID-ро дар бар гирад, вагарна User A
+// javob-и personalized-и User B-ро мебинад (data leak + like/follow-и
+// нодуруст). Пеш аз ислоҳ калид танҳо URL буд ва cross-user data leak
+// сабаби "лайкҳо гум мешаванд", "стори реалтайм нест", "обуна суст" буд.
 func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.Method != "GET" {
 			c.Next()
 			return
 		}
-		key := "cache:" + c.Request.URL.String()
+		uid, _ := c.Get("userID")
+		userKey, _ := uid.(string)
+		if userKey == "" {
+			userKey = "anon"
+		}
+		key := "cache:" + userKey + ":" + c.Request.URL.String()
 		if cached, ok := CacheGet(key); ok {
 			c.Header("X-Cache", "HIT")
 			c.Data(http.StatusOK, "application/json", cached)
