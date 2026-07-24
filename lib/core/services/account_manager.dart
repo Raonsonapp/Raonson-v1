@@ -5,8 +5,11 @@ import 'package:flutter/foundation.dart';
 
 import '../storage/secure_storage.dart';
 import '../api/api_client.dart';
+import 'socket_service.dart';
 import 'user_session.dart';
 import '../storage/token_storage.dart';
+import '../../feed/feed_repository.dart';
+import '../../reels/reels_repository.dart';
 
 class StoredAccount {
   final String userId;
@@ -121,10 +124,20 @@ class AccountManager {
     ApiClient.instance.setAuthToken(acc.token);
     ApiClient.instance.setRefreshToken(acc.refreshToken);
 
-    UserSession.userId = acc.userId;
+    // Cache-и клиенти корбари куҳнаро тоза мекунем (in-memory static).
+    // Вагарна FeedScreen/ReelsScreen post-и корбари қаблиро нишон медиҳад.
+    FeedRepository.clearAllCaches();
+    ReelsRepository.clearAllCaches();
+
+    // Тартиб муҳим: аввал username/avatar, охирон userId — то BottomNav-и
+    // ба userIdNotifier гӯшкунанда аллакай маълумоти комил бинад.
     UserSession.username = acc.username;
-    UserSession.avatar = acc.avatar;
+    UserSession.avatar   = acc.avatar;
+    UserSession.userId   = acc.userId;
     activeUserId = acc.userId;
+    // Socket-и корбари куҳнаро мебандем ва бо токени нав пайваст мешавем.
+    // Best-effort: агар нашавад, барномаро блок намекунад.
+    SocketService.instance.reconnectAs(acc.token);
     return true;
   }
 

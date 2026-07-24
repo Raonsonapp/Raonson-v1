@@ -98,6 +98,17 @@ class SocketService {
     if (token != null && token.isNotEmpty) await connect(token);
   }
 
+  // Пас аз иваз кардани аккаунт: socket-и корбари куҳнаро мебандем ва
+  // бо токени нав аз нав пайваст мешавем, то presence/online status/
+  // зангҳо ба аккаунти нав дуруст рафтор кунанд.
+  Future<void> reconnectAs(String newToken) async {
+    if (newToken.isEmpty) return;
+    disconnect();
+    _manualClose = false;
+    _listeners.clear();
+    await connect(newToken);
+  }
+
   void emit(String event, dynamic data) {
     if (!_connected || _channel == null) return;
     try {
