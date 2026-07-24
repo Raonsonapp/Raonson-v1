@@ -15,6 +15,15 @@ class ReelsRepository {
   static const _diskCacheKey = 'reels_cache_v2';
   static const _diskCacheTTL = Duration(hours: 48);
 
+  // Пас аз иваз кардани аккаунт: cache-и корбари куҳнаро нест мекунем,
+  // то reel-ҳои корбари нав нишон дода шаванд, на киллуҳна.
+  static void clearAllCaches() {
+    _memCache = null;
+    _memCacheTime = null;
+    // disk cache-и оптимистӣ мемонад — barои offline-и корбари қаблӣ,
+    // вале аз он ҷо ки key як аст, дар навбати оянда overwrite мешавад.
+  }
+
   bool get _memCacheValid =>
       _memCache != null &&
       _memCacheTime != null &&

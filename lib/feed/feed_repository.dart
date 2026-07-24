@@ -187,6 +187,13 @@ class FeedRepository {
     _memCacheTime = null;
   }
 
+  // Barои иваз кардани аккаунт — cache-и static-ро (барои ҳамаи instance)
+  // тоза мекунем, то FeedScreen корбари нав пости куҳнаро набинад.
+  static void clearAllCaches() {
+    _memCache     = null;
+    _memCacheTime = null;
+  }
+
   Future<void> likePost(String postId) async =>
       _api.postRequest('/posts/$postId/like');
 
