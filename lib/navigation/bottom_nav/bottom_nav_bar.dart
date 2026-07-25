@@ -45,11 +45,11 @@ class BottomNavBar extends StatelessWidget {
                 svgInactive: 'assets/icons/nav_reels.svg',
                 fallback: AppIcons.smart_display_outlined,
               ),
-              _SvgNavItem(
+              // Chat/DM — иконаи paper-plane (Instagram-style DM),
+              // на chat-bubble-и куҳна.
+              _IconNavItem(
                 index: 2, currentIndex: currentIndex, onTap: onTap,
-                svgActive: 'assets/icons/nav_chat_filled.svg',
-                svgInactive: 'assets/icons/nav_chat.svg',
-                fallback: AppIcons.chat_bubble_outline_rounded,
+                icon: AppIcons.send_outlined,
               ),
               _SvgNavItem(
                 index: 3, currentIndex: currentIndex, onTap: onTap,
@@ -71,6 +71,31 @@ class BottomNavBar extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Icon Nav Item — вақте svg лозим нест, оддӣ IconData ────────────
+class _IconNavItem extends StatelessWidget {
+  final int index;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  final IconData icon;
+  const _IconNavItem({
+    required this.index, required this.currentIndex,
+    required this.onTap, required this.icon,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final sel = currentIndex == index;
+    final color = sel ? AppColors.textPrimary : const Color(0xFF555555);
+    return GestureDetector(
+      onTap: () => onTap(index),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Icon(icon, color: color, size: 26),
       ),
     );
   }

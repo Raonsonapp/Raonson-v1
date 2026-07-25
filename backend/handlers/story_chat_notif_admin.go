@@ -10,6 +10,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/sockets"
 
 	"github.com/gin-gonic/gin"
 )
@@ -94,6 +95,41 @@ func CreateStory(c *gin.Context) {
 	// Cache-и корбарро пок мекунем, то story-и нав фавран дар profile
 	// (GET /users/me/reels/posts) ва GET /stories/ намоён шавад.
 	mw.InvalidateUserCache(myID)
+
+	// Ба соҳиб ва followers-аш аз WebSocket сигнал мефиристем, то story
+	// дар лаҳза (1-3 сония) нишон дода шавад, на баъди refresh-и дастӣ.
+	// Инчунин cache-и middleware-и ҳар follower-ро пок мекунем, то
+	// GET /stories/-и онҳо фавран stori-и навро баргардонад.
+	var uname, uavatar string
+	var verified bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT username, avatar, verified FROM users WHERE id=$1`, myID,
+	).Scan(&uname, &uavatar, &verified)
+	wsStory := gin.H{
+		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
+		"expiresAt": exp, "caption": b.Caption, "viewed": false,
+		"user": gin.H{
+			"_id": myID, "id": myID, "username": uname,
+			"avatar": uavatar, "verified": verified,
+		},
+	}
+	go func() {
+		sockets.BroadcastNewStory(myID, wsStory)
+		// Cache-и followers-ро низ пок мекунем.
+		rows, err := db.Pool.Query(context.Background(),
+			`SELECT follower_id FROM follows WHERE following_id=$1`, myID)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var fid string
+			if rows.Scan(&fid) == nil {
+				mw.InvalidateUserCache(fid)
+			}
+		}
+	}()
+
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
 		"expiresAt": exp, "caption": b.Caption,

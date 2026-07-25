@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'chat_list_controller.dart';
+import '../../core/i18n/strings.dart';
 import 'note_bottom_sheet.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
@@ -152,7 +153,7 @@ class _ChatView extends StatelessWidget {
                             child: Text(
                               (UserSession.username?.isNotEmpty ?? false)
                                   ? UserSession.username!
-                                  : 'Паёмҳо',
+                                  : tr('common.messages'),
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 22,
@@ -210,7 +211,7 @@ class _ChatView extends StatelessWidget {
                   controller: searchCtrl,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Ҷустуҷӯ',
+                    hintText: tr('common.search'),
                     hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
                     prefixIcon:
                         Icon(AppIcons.search, color: AppColors.textFaint, size: 18),
@@ -281,10 +282,10 @@ class _ChatView extends StatelessWidget {
                       ? Center(
                           child: Text(
                             ctrl.query.isNotEmpty
-                                ? 'Натиҷае нест'
+                                ? tr('common.noResults')
                                 : ctrl.tab == ChatTab.requests
-                                    ? 'Дархости паём нест'
-                                    : 'Паёме нест',
+                                    ? tr('common.noResults')
+                                    : tr('common.noResults'),
                             style: TextStyle(color: AppColors.textFaint),
                           ))
                       : RefreshIndicator(
@@ -339,7 +340,7 @@ class _TabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = context.watch<ChatListController>();
     const tabs = [ChatTab.primary, ChatTab.general, ChatTab.requests];
-    const labels = ['Асосӣ', 'Яқинон', 'Дархостҳо'];
+    final labels = [tr('tab.primary'), tr('tab.general'), tr('tab.requests')];
     return Row(
       children: List.generate(tabs.length, (i) {
         final tab      = tabs[i];
@@ -420,12 +421,12 @@ class _AiAssistantTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Ёрдамчии AI',
+                Text(tr('story.aiAssistant'),
                     style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600, fontSize: 15)),
                 const SizedBox(height: 2),
-                Text('Дар бораи барнома бипурсед',
+                Text(tr('story.aiAssistantSub'),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
               ],
             ),

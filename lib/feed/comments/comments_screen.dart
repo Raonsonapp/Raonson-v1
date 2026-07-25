@@ -18,12 +18,16 @@ class CommentsScreen extends StatefulWidget {
   final PostModel post;
   final List<CommentModel> comments;
   final VoidCallback? onCommentAdded;
+  /// Кадом навъи мӯҳтаво ин comment-ҳо аз они он ҳастанд. Барои Reels —
+  /// endpoint-и /reels/:id/comments, барои пост — /posts/:id/comments.
+  final String targetType; // 'post' | 'reel'
 
   const CommentsScreen({
     super.key,
     required this.post,
     this.comments = const [],
     this.onCommentAdded,
+    this.targetType = 'post',
   });
 
   @override
@@ -88,14 +92,17 @@ class _CommentsScreenState extends State<CommentsScreen> {
     super.dispose();
   }
 
+  String get _base =>
+      widget.targetType == 'reel' ? '/reels' : '/posts';
+
   Future<void> _loadComments() async {
     setState(() => _loading = true);
     try {
-      // ✅ Ду endpoint санҷед
+      // ✅ Ду endpoint санҷед (аввал base-и мушаххас, баъд fallback-и куҳна)
       var res = await ApiClient.instance
-          .get('/posts/${widget.post.id}/comments')
+          .get('$_base/${widget.post.id}/comments')
           .timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400) {
+      if (res.statusCode >= 400 && widget.targetType != 'reel') {
         res = await ApiClient.instance
             .get('/comments/${widget.post.id}')
             .timeout(const Duration(seconds: 8));
@@ -181,12 +188,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
     _focus.unfocus();
 
     try {
-      // ✅ Ду endpoint санҷед
+      // ✅ Ду endpoint санҷед (base мушаххас, fallback танҳо барои пост)
       var res = await ApiClient.instance.post(
-        '/posts/${widget.post.id}/comments',
+        '$_base/${widget.post.id}/comments',
         body: {'text': optimistic.text, 'parentId': parentId},
       );
-      if (res.statusCode >= 400) {
+      if (res.statusCode >= 400 && widget.targetType != 'reel') {
         res = await ApiClient.instance.post(
           '/comments/${widget.post.id}',
           body: {'text': optimistic.text, 'parentId': parentId},
