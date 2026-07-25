@@ -51,6 +51,12 @@ func CreatePost(c *gin.Context) {
 		b.Collaborators = []string{}
 	}
 
+	if b.Caption != "" && !moderateText(b.Caption) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Матни пост аз тарафи AI рад шуд. Лутфан мӯҳтаворо тағйир диҳед."})
+		return
+	}
+
 	// Нашри вақтбандӣ: агар вақти оянда бошад, то он вақт пинҳон мемонад.
 	var scheduledAt *time.Time
 	if b.ScheduledAt != "" {

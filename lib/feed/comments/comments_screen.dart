@@ -511,6 +511,8 @@ class _CommentItem extends StatefulWidget {
 class _CommentItemState extends State<_CommentItem> {
   late bool _liked;
   late int  _likeCount;
+  String? _translation;
+  bool _translating = false;
 
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
@@ -522,6 +524,27 @@ class _CommentItemState extends State<_CommentItem> {
     super.initState();
     _liked     = widget.comment.liked;
     _likeCount = widget.comment.likesCount;
+  }
+
+  Future<void> _translateComment() async {
+    if (_translating) return;
+    if (_translation != null) {
+      setState(() => _translation = null);
+      return;
+    }
+    setState(() => _translating = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/translate', body: {
+        'text': widget.comment.text,
+        'to': 'ru',
+      });
+      if (res.statusCode < 400 && mounted) {
+        final body = jsonDecode(res.body);
+        final t = (body['translation'] ?? '').toString().trim();
+        setState(() => _translation = t.isNotEmpty ? t : null);
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _translating = false);
   }
 
   Future<void> _toggleLike() async {
@@ -659,10 +682,10 @@ class _CommentItemState extends State<_CommentItem> {
         ],
       ),
     );
+    final newText = ctrl.text.trim();
     ctrl.dispose();
     if (ok != true) return;
     // Backend edit (PUT)
-    final newText = ctrl.text.trim();
     if (newText.isEmpty || newText == widget.comment.text) return;
     await ApiClient.instance.put('/comments/${widget.comment.id}',
         body: {'text': newText});
@@ -731,7 +754,26 @@ class _CommentItemState extends State<_CommentItem> {
             // Матни коммент — ЗЕРИ ном (мисли Instagram)
             Text(c.text,
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-            const SizedBox(height: 6),
+            if (_translation != null) ...[
+              const SizedBox(height: 4),
+              Text(_translation!,
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14,
+                      fontStyle: FontStyle.italic)),
+            ],
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: _translateComment,
+              child: _translating
+                  ? const SizedBox(width: 14, height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 1.5,
+                          color: AppColors.neonBlue))
+                  : Text(
+                      _translation != null ? 'Пинҳон кардан' : 'Тарҷума кардан',
+                      style: const TextStyle(
+                          color: AppColors.neonBlue, fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(height: 4),
 
             // ── Нижняя строка: время · лайков · Ответить · ⋮ ──
             Row(children: [

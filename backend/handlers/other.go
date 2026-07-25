@@ -28,6 +28,12 @@ func AddComment(c *gin.Context) {
 	}
 	b.Text = clampRunes(b.Text, 1000)
 
+	if !moderateText(b.Text) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Шарҳи шумо аз тарафи AI рад шуд. Лутфан матнро тағйир диҳед."})
+		return
+	}
+
 	var exists, commentsOff bool
 	db.Pool.QueryRow(context.Background(),
 		`SELECT TRUE, COALESCE(comments_off,false) FROM posts WHERE id=$1`,
@@ -614,6 +620,11 @@ func AddReelComment(c *gin.Context) {
 	var b struct{ Text string `json:"text"` }
 	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
+		return
+	}
+	if !moderateText(b.Text) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Шарҳи шумо аз тарафи AI рад шуд. Лутфан матнро тағйир диҳед."})
 		return
 	}
 	var commentsOff bool

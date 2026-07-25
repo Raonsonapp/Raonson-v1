@@ -378,6 +378,36 @@ func ReplyReelComment(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"_id": newID, "text": b.Text, "parentId": parent})
 }
 
+// PUT /reels/:id/caption — соҳиб caption-ро иваз мекунад
+func UpdateReelCaption(c *gin.Context) {
+	rid  := c.Param("id")
+	myID := mw.UID(c)
+	var b struct {
+		Caption string `json:"caption"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "caption required"})
+		return
+	}
+	res, err := db.Pool.Exec(context.Background(),
+		`UPDATE reels SET caption=$1 WHERE id=$2 AND user_id=$3`,
+		b.Caption, rid, myID)
+	if err != nil || res.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found or not owner"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption})
+}
+
+// POST /reels/:id/interest — корбар ин reel-ро ҷолиб меҳисобад
+func MarkReelInterested(c *gin.Context) {
+	myID := mw.UID(c)
+	rid := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM reel_not_interested WHERE reel_id=$1 AND user_id=$2`, rid, myID)
+	c.JSON(http.StatusOK, gin.H{"interested": true})
+}
+
 // ═══════════════════════ STORY REPLY ═══════════════════════
 
 // POST /stories/:id/reply

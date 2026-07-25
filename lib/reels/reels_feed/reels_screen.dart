@@ -923,13 +923,14 @@ class _ReelItemState extends State<_ReelItem> {
         ],
       ),
     );
+    final trimmed = ctrl.text.trim();
     ctrl.dispose();
     if (ok != true) {
       if (!_paused) _ctrl?.play();
       return;
     }
     await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
-        body: {'caption': ctrl.text.trim()});
+        body: {'caption': trimmed});
     if (!_paused && mounted) _ctrl?.play();
   }
 
