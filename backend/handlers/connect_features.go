@@ -234,6 +234,8 @@ func GetPostLikers(c *gin.Context) {
 func DeleteAvatar(c *gin.Context) {
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(), `UPDATE users SET avatar='' WHERE id=$1`, myID)
+	mw.CacheDel("profile:me:" + myID)
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 

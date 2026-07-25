@@ -180,6 +180,7 @@ func UpdatePostCaption(c *gin.Context) {
 
 	// Cache-ро тоза кун
 	mw.CacheDel("feed:"+myID+":1", "smartfeed:"+myID+":1")
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption})
 }
 
@@ -206,6 +207,7 @@ func UpdatePostMusic(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found or not owner"})
 		return
 	}
+	mw.InvalidateUserCache(myID)
 
 	c.JSON(http.StatusOK, gin.H{"updated": true})
 }

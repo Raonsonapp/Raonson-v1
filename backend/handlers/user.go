@@ -83,6 +83,8 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
+	mw.CacheDel("profile:me:"+myID)
+	mw.InvalidateUserCache(myID)
 	u, _ := getUserByID(myID)
 	c.JSON(http.StatusOK, u)
 }
@@ -91,6 +93,7 @@ func UpdateUser(c *gin.Context) {
 func DeleteUser(c *gin.Context) {
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(), `DELETE FROM users WHERE id=$1`, myID)
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 

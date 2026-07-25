@@ -6,10 +6,14 @@ import 'package:flutter/foundation.dart';
 import '../storage/secure_storage.dart';
 import '../api/api_client.dart';
 import 'socket_service.dart';
+import 'follow_service.dart';
+import 'notification_badge_controller.dart';
 import 'user_session.dart';
 import '../storage/token_storage.dart';
 import '../../feed/feed_repository.dart';
 import '../../reels/reels_repository.dart';
+import '../../stories/story_repository.dart';
+import '../../chat/chat_repository.dart';
 
 class StoredAccount {
   final String userId;
@@ -128,6 +132,15 @@ class AccountManager {
     // Вагарна FeedScreen/ReelsScreen post-и корбари қаблиро нишон медиҳад.
     FeedRepository.clearAllCaches();
     ReelsRepository.clearAllCaches();
+    // FollowService override-и обунаҳои корбари куҳнаро дошт — reset.
+    FollowService.instance.clear();
+    // Бейҷи огоҳиҳо-и корбари куҳнаро тоза мекунем — вагарна корбари нав
+    // рақами гумшудаи корбари қаблиро мебинад.
+    NotificationBadgeController.instance.reset();
+    // Cache-и disk-и story/chat inbox-и корбари куҳнаро тоза мекунем.
+    // Best-effort (async, fire-and-forget).
+    StoryRepository.clearAllCaches();
+    ChatRepository.clearAllCaches();
 
     // Тартиб муҳим: аввал username/avatar, охирон userId — то BottomNav-и
     // ба userIdNotifier гӯшкунанда аллакай маълумоти комил бинад.
