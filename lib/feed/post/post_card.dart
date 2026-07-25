@@ -1595,23 +1595,43 @@ class _MediaCarouselState extends State<_MediaCarousel> {
     super.dispose();
   }
 
+  // Аз андозаи аслии медиа ба яке аз 3 формати расмии Instagram
+  // snap мекунад: 4:5 (амудӣ), 1:1 (мураббаъ), 1.91:1 (уфуқӣ).
+  // Инро Instagram ҳам мекунад: recording-и корбар ба formatҳои
+  // мушаххас snap мешавад, na ба ratio-и аслии тасодуфӣ.
+  static const double _iaPortrait  = 4 / 5;      // 0.80
+  static const double _iaSquare    = 1.0;
+  static const double _iaLandscape = 1.91;
+  double _snapToInstagram(double raw) {
+    if (raw <= 0) return _iaPortrait;
+    // Ба наздиктарин формат snap мекунем — фарқи ratio-ро дар log-space
+    // мешуморем, то portrait ва landscape мутаносиб муомила шаванд.
+    final r = raw.clamp(0.5, 1.91);
+    final dp = (r - _iaPortrait).abs()  / _iaPortrait;
+    final ds = (r - _iaSquare).abs();
+    final dl = (r - _iaLandscape).abs() / _iaLandscape;
+    if (dp <= ds && dp <= dl) return _iaPortrait;
+    if (ds <= dl) return _iaSquare;
+    return _iaLandscape;
+  }
+
   double _getAspectRatio() {
-    // ✅ Формати аслиро нигоҳ дор — мисли Instagram (4:5 … 1.91:1)
-    if (widget.media.isEmpty) return 1.0;
+    // ✅ Формати аслиро нигоҳ дор — мисли Instagram (4:5 / 1:1 / 1.91:1)
+    if (widget.media.isEmpty) return _iaSquare;
     final type  = widget.media.first['type']  ?? 'image';
     final ratio = widget.media.first['aspectRatio'] ?? '';
     if (ratio.isNotEmpty) {
       final r = double.tryParse(ratio);
-      if (r != null && r > 0) return r.clamp(0.5, 1.91);
+      if (r != null && r > 0) return _snapToInstagram(r);
     }
     if (type == 'video' && _videoRatio != null) {
-      return _videoRatio!.clamp(0.5, 1.91);
+      return _snapToInstagram(_videoRatio!);
     }
     if (type == 'image' && _imageRatio != null) {
-      return _imageRatio!.clamp(0.5, 1.91);
+      return _snapToInstagram(_imageRatio!);
     }
     // Default: portrait 4:5 мисли Instagram (то андозаи аслӣ маълум шавад)
-    return 4 / 5;
+    return _iaPortrait;
   }
 
   @override

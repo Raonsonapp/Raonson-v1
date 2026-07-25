@@ -25,6 +25,7 @@ import '../profile/profile_screen.dart';
 import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
 import 'search_history.dart';
+import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 
 // ════════════════════════════════════════════════════════════════════
@@ -72,7 +73,8 @@ class _SearchScreenState extends State<SearchScreen>
   List<String> _aiKeywords  = [];
 
   late final TabController _tabs;
-  static const _tabLabels = ['Барои шумо', 'Аккаунтҳо', 'Аудио', 'Тегҳо'];
+  List<String> get _tabLabels =>
+      [tr('tab.forYou'), tr('tab.accounts'), tr('tab.audio'), tr('tab.tags')];
 
   // ── lifecycle ────────────────────────────────────────────────────
   @override
@@ -761,7 +763,7 @@ class _SearchBarRaw extends StatelessWidget {
         onChanged: onChanged,
         style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'Ҷустуҷӯ',
+          hintText: tr('common.search'),
           hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
           prefixIcon: searching
               ? const Padding(
@@ -828,7 +830,7 @@ class _ExploreGrid extends StatelessWidget {
           Icon(AppIcons.explore_outlined,
               size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
           const SizedBox(height: 12),
-          Text('Мӯҳтаво ҳанӯз нест',
+          Text(tr('common.noResults'),
               style: TextStyle(
                   color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
         ]),

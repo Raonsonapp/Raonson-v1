@@ -16,12 +16,14 @@ import '../../core/services/network_quality.dart';
 import '../../widgets/embed_player.dart';
 import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
+import '../../models/post_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
+import '../../feed/comments/comments_screen.dart';
 import '../../gifts/gift_sheet.dart';
 
 // ── Ads (ТАНҲО ИН 2 ХАТИ НАВ) ───────────────────────────────────────────────
@@ -1143,6 +1145,21 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _openComments() {
     _ctrl?.pause();
+    // Барои Reels ҳамон UI-и шарҳҳои Home-ро истифода мебарем (CommentsScreen)
+    // то якхела бошад ва хатогиҳо (parse-и нодуруст) камтар шаванд.
+    // Аз ReelModel як PostModel-и сабук месозем, ки CommentsScreen интизор дорад.
+    final reel = widget.reel;
+    final asPost = PostModel(
+      id:            reel.id,
+      user:          reel.user,
+      caption:       reel.caption,
+      media: [{'url': reel.videoUrl, 'type': 'video'}],
+      likesCount:    reel.likesCount,
+      commentsCount: reel.commentsCount,
+      liked:         reel.isLiked,
+      saved:         reel.isSaved,
+      createdAt:     reel.createdAt ?? DateTime.now(),
+    );
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1151,11 +1168,7 @@ class _ReelItemState extends State<_ReelItem> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
-          child: _ReelComments(
-            reelId: widget.reel.id,
-            authorId: widget.reel.user.id,
-            authorName: widget.reel.user.username,
-          )),
+          child: CommentsScreen(post: asPost, targetType: 'reel')),
     ).then((_) {
       if (!_paused && mounted) _ctrl?.play();
     });

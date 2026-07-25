@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'story_editor.dart';
 import '../../core/api/api_client.dart';
 import '../../core/utils/media_compressor.dart';
+import '../../stories/story_repository.dart';
 import '../upload/upload_manager.dart';
 
 class CreateStoryScreen extends StatefulWidget {
@@ -86,6 +87,11 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         'caption'  : caption,
       });
       if (res.statusCode >= 400) throw Exception('Story хато ${res.statusCode}');
+      // Story-и нав нашр шуд — cache-и disk-и story-ро пок мекунем, то дар
+      // навбати оянда StoryRepository stori-и куҳнаро зикр накунад.
+      // WebSocket "story:new" аллакай ба StoryController хабар медиҳад, ки
+      // stori-и навро дар лаҳза илова кунад (мисли Instagram).
+      await StoryRepository.clearAllCaches();
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) setState(() { _isUploading = false; _error = e.toString().replaceAll('Exception: ', ''); });
