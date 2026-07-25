@@ -12,6 +12,16 @@ class StoryRepository {
   static const _cacheKey = 'stories_cache_v1';
   static const _cacheTTL = Duration(minutes: 30);
 
+  // Пас аз иваз кардани аккаунт — стори-и корбари куҳнаро аз disk cache
+  // тоза мекунем, то ки корбари нав дар лаҳзаи аввал стори-и корбари
+  // қаблиро набинад.
+  static Future<void> clearAllCaches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_cacheKey);
+    } catch (_) {}
+  }
+
   // ✅ Cache аввал → network background
   Future<List<StoryModel>> fetchStories() async {
     // Cache

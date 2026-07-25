@@ -34,8 +34,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final data = await _repo.fetchNotifications();
       if (!mounted) return;
       setState(() {
-        _notifications = data['notifications'] as List<NotificationModel>;
-        _unreadCount = data['unreadCount'] as int;
+        _notifications = (data['notifications'] as List?)
+            ?.cast<NotificationModel>() ?? const <NotificationModel>[];
+        _unreadCount = (data['unreadCount'] as int?) ?? 0;
         _loading = false;
       });
       // Бейҷи глобалиро бо шумораи воқеӣ синхрон мекунем.

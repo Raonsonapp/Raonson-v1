@@ -51,4 +51,10 @@ class FollowService {
     next[userId] = following;
     states.value = next;
   }
+
+  /// Ҳангоми иваз кардани аккаунт — override-ҳои корбари куҳнаро тоза
+  /// мекунад, то ки тугмаҳои "Обуна" ба ҷои корбари нав рафтор кунанд.
+  void clear() {
+    if (states.value.isNotEmpty) states.value = {};
+  }
 }
