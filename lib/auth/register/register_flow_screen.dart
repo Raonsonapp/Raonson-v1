@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -633,7 +634,7 @@ class _FindFriendsState extends State<_FindFriends> {
           CircleAvatar(
             radius: 22,
             backgroundColor: AppColors.card,
-            backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+            backgroundImage: avatar.isNotEmpty ? CachedNetworkImageProvider(avatar, maxWidth: 88) : null,
             child: avatar.isEmpty
                 ? Icon(AppIcons.person, color: AppColors.textFaint)
                 : null,
