@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../app/app_theme.dart';
@@ -436,8 +437,9 @@ class _SegmentScreenState extends State<_SegmentScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: widget.track.artUrl.isNotEmpty
-                    ? Image.network(widget.track.artUrl,
-                        width: 52, height: 52, fit: BoxFit.cover)
+                    ? CachedNetworkImage(imageUrl: widget.track.artUrl,
+                        width: 52, height: 52, fit: BoxFit.cover,
+                        memCacheWidth: 104)
                     : Container(width: 52, height: 52,
                         color: const Color(0xFF1C2333),
                         child: const Icon(AppIcons.music_note_rounded,
@@ -850,9 +852,9 @@ class _TrackRow extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: track.artUrl.isNotEmpty
-              ? Image.network(track.artUrl, width: 50, height: 50,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _artPlaceholder())
+              ? CachedNetworkImage(imageUrl: track.artUrl, width: 50, height: 50,
+                  fit: BoxFit.cover, memCacheWidth: 100,
+                  errorWidget: (_, __, ___) => _artPlaceholder())
               : _artPlaceholder(),
         ),
         const SizedBox(width: 12),

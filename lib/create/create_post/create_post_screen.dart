@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
@@ -916,7 +917,7 @@ class _MusicPanelState extends State<_MusicPanel> {
             return ListTile(
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
-                    child: Image.network(t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover))
+                    child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
                 : const Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),

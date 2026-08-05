@@ -51,6 +51,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   Future<void> _remove(GroupMember m) async {
     await _repo.removeMember(_gid, m.id);
+    if (!mounted) return;
     setState(() => _members.removeWhere((x) => x.id == m.id));
   }
 

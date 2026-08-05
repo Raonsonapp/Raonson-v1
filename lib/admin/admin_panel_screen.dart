@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -158,7 +159,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
     setState(() => _busy.add(id));
     try {
       final res = await ApiClient.instance.delete('/admin/users/$id');
@@ -286,7 +287,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: AppColors.card,
-        backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+        backgroundImage: avatar.isNotEmpty ? CachedNetworkImageProvider(avatar, maxWidth: 80) : null,
         child: avatar.isEmpty
             ? Icon(AppIcons.person, color: AppColors.textFaint) : null,
       ),
