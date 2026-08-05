@@ -388,10 +388,15 @@ class _SearchScreenState extends State<SearchScreen>
         Expanded(
           child: _exploreLoading
               ? _SkeletonGrid()
-              : _ExploreGrid(
-                  items:   _exploreItems,
-                  onTap:   _openExploreAt,
-                  onLongPress: _showExplorePreview,
+              : RefreshIndicator(
+                  onRefresh: _loadExplore,
+                  color: AppColors.textPrimary,
+                  backgroundColor: AppColors.bg,
+                  child: _ExploreGrid(
+                    items:   _exploreItems,
+                    onTap:   _openExploreAt,
+                    onLongPress: _showExplorePreview,
+                  ),
                 ),
         ),
       ],
@@ -607,7 +612,10 @@ class _SearchScreenState extends State<SearchScreen>
         // Tab views
         Expanded(
           child: _error != null
-              ? _ErrView(msg: _error!)
+              ? _ErrView(msg: _error!, onRetry: () {
+                  setState(() => _error = null);
+                  if (_lastQ.isNotEmpty) _doSearch(_lastQ);
+                })
               : TabBarView(
                   controller: _tabs,
                   children: [
@@ -1939,7 +1947,8 @@ class _NoResult extends StatelessWidget {
 
 class _ErrView extends StatelessWidget {
   final String msg;
-  const _ErrView({required this.msg});
+  final VoidCallback? onRetry;
+  const _ErrView({required this.msg, this.onRetry});
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
@@ -1957,6 +1966,21 @@ class _ErrView extends StatelessWidget {
             style: TextStyle(
                 color: AppColors.textFaint, fontSize: 12),
             textAlign: TextAlign.center),
+        if (onRetry != null) ...[
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(AppIcons.refresh_rounded, size: 18),
+            label: const Text('Такрор кӯшиш'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.neonBlue,
+              foregroundColor: AppColors.textPrimary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 24, vertical: 10)),
+          ),
+        ],
       ]),
     ),
   );

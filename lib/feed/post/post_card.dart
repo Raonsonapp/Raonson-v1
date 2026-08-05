@@ -173,6 +173,7 @@ class _PostCardState extends State<PostCard>
       if (_likeCount < 0) _likeCount = 0;
     });
     if (_liked) {
+      HapticFeedback.lightImpact();
       _likeCtrl.forward(from: 0);
       AnalyticsService.instance.logEvent(AnalyticsEvents.postLike,
           params: {'postId': widget.post.id});
@@ -212,6 +213,7 @@ class _PostCardState extends State<PostCard>
     final was = _saved;
     setState(() => _saved = !was);
     if (!was) {
+      HapticFeedback.selectionClick();
       AnalyticsService.instance.logEvent(AnalyticsEvents.postSave,
           params: {'postId': widget.post.id});
     }
@@ -1100,13 +1102,13 @@ class _PostCardState extends State<PostCard>
           GestureDetector(
             onDoubleTapDown: (d) => _heartOffset = d.localPosition,
             onDoubleTap: () {
+              HapticFeedback.mediumImpact();
               final rng = Random();
               setState(() {
                 _heartColor = _kHeartColors[rng.nextInt(_kHeartColors.length)];
                 _heartDx = (rng.nextDouble() - 0.5) * 80;
               });
               if (!_liked) {
-                // Ҳамон роҳи debounce-ро истифода мебарад (бе шахшавӣ)
                 _toggleLike();
               }
               setState(() => _showHeart = true);

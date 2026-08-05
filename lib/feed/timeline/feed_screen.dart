@@ -25,6 +25,7 @@ import '../../notifications/notification_badge.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
 import '../../shop/shop_screen.dart';
+import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -65,6 +66,7 @@ class _FeedShell extends StatefulWidget {
 
 class _FeedShellState extends State<_FeedShell> {
   late final ScrollController _scroll;
+  ValueNotifier<int>? _scrollToTopNotifier;
 
   @override
   void initState() {
@@ -72,6 +74,27 @@ class _FeedShellState extends State<_FeedShell> {
     _scroll = ScrollController()..addListener(_onScroll);
     NotificationService.startPolling();
     AnalyticsService.instance.logEvent(AnalyticsEvents.feedView);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scrollToTopNotifier == null) {
+      try {
+        _scrollToTopNotifier = context.read<BottomNavController>().scrollToTopNotifier;
+        _scrollToTopNotifier!.addListener(_onScrollToTop);
+      } catch (_) {}
+    }
+  }
+
+  void _onScrollToTop() {
+    final nav = context.read<BottomNavController>();
+    if (nav.currentIndex != 0) return;
+    if (_scroll.hasClients) {
+      _scroll.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut);
+    }
   }
 
   void _onScroll() {
@@ -82,6 +105,7 @@ class _FeedShellState extends State<_FeedShell> {
 
   @override
   void dispose() {
+    _scrollToTopNotifier?.removeListener(_onScrollToTop);
     NotificationService.stopPolling();
     _scroll.dispose();
     super.dispose();

@@ -290,17 +290,40 @@ class _ChatView extends StatelessWidget {
             Expanded(
               child: ctrl.isLoading
                   ? _SkeletonList()
-                  : ctrl.chats.isEmpty
+                  : ctrl.error != null && ctrl.chats.isEmpty
                       ? Center(
-                          child: Text(
-                            ctrl.query.isNotEmpty
-                                ? 'Натиҷае нест'
-                                : ctrl.tab == ChatTab.requests
-                                    ? 'Дархости паём нест'
-                                    : 'Паёме нест',
-                            style: TextStyle(color: AppColors.textFaint),
-                          ))
-                      : RefreshIndicator(
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(AppIcons.wifi_off_rounded,
+                                color: AppColors.textFaint, size: 44),
+                            const SizedBox(height: 12),
+                            Text('Пайвастшавӣ нашуд',
+                                style: TextStyle(color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600, fontSize: 15)),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () => ctrl.loadChats(),
+                              icon: const Icon(AppIcons.refresh_rounded, size: 18),
+                              label: const Text('Такрор кӯшиш'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.neonBlue,
+                                foregroundColor: AppColors.textPrimary,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 10)),
+                            ),
+                          ]))
+                      : ctrl.chats.isEmpty
+                          ? Center(
+                              child: Text(
+                                ctrl.query.isNotEmpty
+                                    ? 'Натиҷае нест'
+                                    : ctrl.tab == ChatTab.requests
+                                        ? 'Дархости паём нест'
+                                        : 'Паёме нест',
+                                style: TextStyle(color: AppColors.textFaint),
+                              ))
+                          : RefreshIndicator(
                           color: AppColors.neonBlue,
                           backgroundColor: AppColors.card,
                           onRefresh: () => ctrl.loadChats(),
