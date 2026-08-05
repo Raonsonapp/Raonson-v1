@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
@@ -1133,8 +1134,7 @@ class _ULS extends State<_UserListSheet> {
         ),
         const SizedBox(height: 6),
         Expanded(child: _loading
-            ? const Center(child: CircularProgressIndicator(
-                color: AppColors.neonBlue, strokeWidth: 2))
+            ? _UserListSkeleton()
             : list.isEmpty
                 ? Center(child: Text(_query.isNotEmpty
                         ? 'Натиҷае нест'
@@ -1146,7 +1146,7 @@ class _ULS extends State<_UserListSheet> {
                       leading: CircleAvatar(radius: 22,
                         backgroundColor: AppColors.card,
                         backgroundImage: u.avatar.isNotEmpty
-                            ? NetworkImage(u.avatar) : null,
+                            ? CachedNetworkImageProvider(u.avatar, maxWidth: 88) : null,
                         child: u.avatar.isEmpty
                             ? Icon(AppIcons.person, color: AppColors.textFaint) : null),
                       title: Row(children: [
@@ -1173,6 +1173,47 @@ class _ULS extends State<_UserListSheet> {
                       });
                   })),
       ]));
+  }
+}
+
+class _UserListSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).colorScheme.surface;
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: base.withOpacity(0.4),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        itemCount: 10,
+        itemBuilder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            Container(width: 44, height: 44,
+                decoration: const BoxDecoration(
+                    color: Colors.white, shape: BoxShape.circle)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: 120, height: 12,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(6))),
+                  const SizedBox(height: 6),
+                  Container(width: 80, height: 10,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(5))),
+                ],
+              ),
+            ),
+            Container(width: 70, height: 28,
+                decoration: BoxDecoration(color: Colors.white,
+                    borderRadius: BorderRadius.circular(6))),
+          ]),
+        ),
+      ),
+    );
   }
 }
 
