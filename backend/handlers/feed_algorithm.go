@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -190,10 +191,17 @@ func TrackPostViewBatch(c *gin.Context) {
 	if len(b.PostIDs) > 50 {
 		b.PostIDs = b.PostIDs[:50]
 	}
-	for _, pid := range b.PostIDs {
-		db.Pool.Exec(context.Background(),
-			`INSERT INTO post_views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
-			myID, pid)
+	// Single batch INSERT — 1 round-trip instead of N
+	query := "INSERT INTO post_views(user_id,post_id) VALUES "
+	args := []interface{}{myID}
+	for i, pid := range b.PostIDs {
+		if i > 0 {
+			query += ","
+		}
+		query += fmt.Sprintf("($1,$%d)", i+2)
+		args = append(args, pid)
 	}
+	query += " ON CONFLICT DO NOTHING"
+	db.Pool.Exec(context.Background(), query, args...)
 	c.JSON(http.StatusOK, gin.H{"ok": true, "count": len(b.PostIDs)})
 }
