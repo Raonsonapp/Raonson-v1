@@ -15,6 +15,7 @@ import '../../ai/ai_tools.dart';
 import '../../core/services/subscription_service.dart';
 import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -439,7 +440,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 radius: 16,
                 backgroundColor: AppColors.card,
                 backgroundImage: (UserSession.avatar?.isNotEmpty == true)
-                    ? NetworkImage(UserSession.avatar!) : null,
+                    ? CachedNetworkImageProvider(UserSession.avatar!, maxWidth: 72) : null,
                 child: (UserSession.avatar?.isEmpty != false)
                     ? Icon(AppIcons.person, size: 16, color: AppColors.textTertiary) : null,
               ),
@@ -724,7 +725,7 @@ class _CommentItemState extends State<_CommentItem> {
             radius: widget.isReply ? 14 : 18,
             backgroundColor: AppColors.card,
             backgroundImage: c.user.avatar.isNotEmpty
-                ? NetworkImage(c.user.avatar) : null,
+                ? CachedNetworkImageProvider(c.user.avatar, maxWidth: 72) : null,
             child: c.user.avatar.isEmpty
                 ? Icon(AppIcons.person, color: AppColors.textTertiary,
                     size: widget.isReply ? 14 : 18) : null,

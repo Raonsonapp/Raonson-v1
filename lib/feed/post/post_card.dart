@@ -17,6 +17,7 @@ import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/view_tracker.dart';
 import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
 import '../../shop/buy_sheet.dart';
@@ -140,17 +141,14 @@ class _PostCardState extends State<PostCard>
     _viewTimer = Timer(const Duration(seconds: 1), _trackView);
   }
 
-  // POST /posts/view/:id — танҳо як бор барои ҳар пост (бе бастаи иловагӣ).
-  Future<void> _trackView() async {
+  void _trackView() {
     if (_viewTracked) return;
     _viewTracked = true;
     final id = widget.post.id;
     if (id.isEmpty) return;
     AnalyticsService.instance
         .logEvent(AnalyticsEvents.postView, params: {'postId': id});
-    try {
-      await ApiClient.instance.post('/posts/view/$id');
-    } catch (_) {}
+    ViewTracker.instance.trackPost(id);
   }
 
   @override
@@ -1449,7 +1447,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                           leading: CircleAvatar(
                             radius: 20,
                             backgroundImage: av.isNotEmpty
-                                ? NetworkImage(av) : null,
+                                ? CachedNetworkImageProvider(av, maxWidth: 80) : null,
                             child: av.isEmpty ? Icon(
                                 AppIcons.person, color: AppColors.textFaint) : null,
                             backgroundColor: AppColors.card,

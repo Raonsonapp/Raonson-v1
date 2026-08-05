@@ -171,9 +171,29 @@ func GetSmartFeed(c *gin.Context) {
 func TrackPostView(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
-	// Synchronous — query is tiny; avoids unbounded goroutine spawn under load
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO post_views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 		myID, pid)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// POST /posts/view-batch — батчи дидашавӣ (то 50 пост якбора)
+func TrackPostViewBatch(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		PostIDs []string `json:"postIds"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil || len(b.PostIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "postIds required"})
+		return
+	}
+	if len(b.PostIDs) > 50 {
+		b.PostIDs = b.PostIDs[:50]
+	}
+	for _, pid := range b.PostIDs {
+		db.Pool.Exec(context.Background(),
+			`INSERT INTO post_views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+			myID, pid)
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "count": len(b.PostIDs)})
 }

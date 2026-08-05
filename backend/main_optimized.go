@@ -232,6 +232,7 @@ func main() {
 	}
 
 	r.POST("/posts/view/:id", auth, handlers.TrackPostView)
+	r.POST("/posts/view-batch", auth, rl100, handlers.TrackPostViewBatch)
 
 	r.GET("/comments/:id",       auth, rl100, cache30s, handlers.GetComments)
 	r.POST("/comments/:id",      auth, rl100, handlers.AddComment)

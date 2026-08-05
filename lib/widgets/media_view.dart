@@ -175,7 +175,10 @@ class _VideoViewState extends State<_VideoView> {
   bool _ready = false, _paused = false, _error = false;
 
   @override
-  void initState() { super.initState(); _init(); }
+  void initState() {
+    super.initState();
+    if (widget.isActive) _init();
+  }
 
   Future<void> _init() async {
     try {
@@ -197,6 +200,11 @@ class _VideoViewState extends State<_VideoView> {
   @override
   void didUpdateWidget(_VideoView old) {
     super.didUpdateWidget(old);
+    // Deferred init: if widget just became active and controller was never created
+    if (widget.isActive && _ctrl == null && !_error) {
+      _init();
+      return;
+    }
     if (!_ready || _ctrl == null) return;
     if (widget.isActive && !_paused) { _ctrl!.play(); } else { _ctrl!.pause(); }
   }
