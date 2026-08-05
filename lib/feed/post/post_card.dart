@@ -155,6 +155,14 @@ class _PostCardState extends State<PostCard>
   void dispose() {
     _viewTimer?.cancel();
     _likeDebounce?.cancel();
+    // Flush pending like to server before widget is destroyed —
+    // without this, leaving the screen within the 500ms debounce
+    // window silently drops the like.
+    if (_liked != _serverLiked && !_likeSyncing) {
+      ApiClient.instance
+          .post('/posts/${widget.post.id}/like')
+          .then((_) {}, onError: (_) {});
+    }
     _likeCtrl.dispose();
     _countCtrl.dispose();
     _heartCtrl.dispose();
