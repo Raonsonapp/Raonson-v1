@@ -5,6 +5,7 @@
 
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -1076,7 +1077,7 @@ class _BUSState extends State<BlockedUsersScreen> {
                       leading: CircleAvatar(
                         backgroundColor: AppColors.card,
                         backgroundImage: avatar.isNotEmpty
-                            ? NetworkImage(avatar) : null,
+                            ? CachedNetworkImageProvider(avatar, maxWidth: 80) : null,
                         child: avatar.isEmpty
                             ? Icon(AppIcons.person,
                                 color: AppColors.textFaint) : null),

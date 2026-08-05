@@ -1858,8 +1858,9 @@ class _MusicRowState extends State<_MusicRow> {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: _art.isNotEmpty
-              ? Image.network(_art, width: 50, height: 50, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _MusicPlaceholder())
+              ? CachedNetworkImage(imageUrl: _art, width: 50, height: 50,
+                  fit: BoxFit.cover, memCacheWidth: 100,
+                  errorWidget: (_, __, ___) => _MusicPlaceholder())
               : _MusicPlaceholder(),
         ),
         const SizedBox(width: 12),

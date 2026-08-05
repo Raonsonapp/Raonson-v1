@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
@@ -572,8 +573,9 @@ class _MyNoteBubble extends StatelessWidget {
                 ),
                 child: ClipOval(
                   child: avatar.isNotEmpty
-                      ? Image.network(avatar, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _ph())
+                      ? CachedNetworkImage(imageUrl: avatar, fit: BoxFit.cover,
+                          memCacheWidth: 120,
+                          errorWidget: (_, __, ___) => _ph())
                       : _ph(),
                 ),
               ),
@@ -678,8 +680,9 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
             ),
             child: ClipOval(
               child: widget.note.avatar.isNotEmpty
-                  ? Image.network(widget.note.avatar, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _ph())
+                  ? CachedNetworkImage(imageUrl: widget.note.avatar,
+                      fit: BoxFit.cover, memCacheWidth: 120,
+                      errorWidget: (_, __, ___) => _ph())
                   : _ph(),
             ),
           ),
@@ -745,9 +748,10 @@ class _SpeechBubble extends StatelessWidget {
                 if (song!.artUrl.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(3),
-                    child: Image.network(song!.artUrl,
+                    child: CachedNetworkImage(imageUrl: song!.artUrl,
                         width: 16, height: 16, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        memCacheWidth: 32,
+                        errorWidget: (_, __, ___) =>
                             const Icon(AppIcons.music_note_rounded,
                                 color: AppColors.neonBlue, size: 12)),
                   )

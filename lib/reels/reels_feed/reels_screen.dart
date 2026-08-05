@@ -1008,7 +1008,7 @@ class _ReelItemState extends State<_ReelItem> {
                             leading: CircleAvatar(
                                 backgroundImage:
                                     (u['avatar']?.isNotEmpty == true)
-                                        ? NetworkImage(u['avatar'])
+                                        ? CachedNetworkImageProvider(u['avatar'], maxWidth: 80)
                                         : null,
                                 child: (u['avatar']?.isEmpty != false)
                                     ? const Icon(AppIcons.person)
@@ -2251,7 +2251,7 @@ class _ReelCommentsState extends State<_ReelComments> {
                                     backgroundColor: AppColors.card,
                                     backgroundImage:
                                         (u['avatar'] ?? '').isNotEmpty
-                                            ? NetworkImage(u['avatar'])
+                                            ? CachedNetworkImageProvider(u['avatar'], maxWidth: 72)
                                             : null,
                                     child: (u['avatar'] ?? '').isEmpty
                                         ? const Icon(AppIcons.person,

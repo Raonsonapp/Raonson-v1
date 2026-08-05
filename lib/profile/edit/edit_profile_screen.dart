@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import '../../create/create_post/media_picker.dart';
 import '../../create/upload/upload_manager.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
@@ -232,8 +233,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: ClipOval(child: _localAvatar != null
                   ? Image.file(_localAvatar!, fit: BoxFit.cover)
                   : (_ctrl.currentAvatarUrl?.isNotEmpty == true
-                      ? Image.network(_ctrl.currentAvatarUrl!, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: 46))
+                      ? CachedNetworkImage(imageUrl: _ctrl.currentAvatarUrl!, fit: BoxFit.cover,
+                          memCacheWidth: 192,
+                          errorWidget: (_, __, ___) => Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: 46))
                       : Icon(AppIcons.person_rounded, color: AppColors.textFaint, size: 46)))),
             Container(width: 30, height: 30,
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF0095F6)),
@@ -264,7 +266,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               border: Border.all(color: AppColors.textPrimary.withOpacity(0.08)),
               image: _ctrl.coverUrl.isNotEmpty
                   ? DecorationImage(
-                      image: NetworkImage(_ctrl.coverUrl), fit: BoxFit.cover)
+                      image: CachedNetworkImageProvider(_ctrl.coverUrl, maxWidth: 600), fit: BoxFit.cover)
                   : null,
             ),
             child: _uploadingCover
@@ -488,8 +490,9 @@ class _MusicCard extends StatelessWidget {
     child: Row(children: [
       ClipRRect(borderRadius: BorderRadius.circular(8),
         child: song.artUrl.isNotEmpty
-            ? Image.network(song.artUrl, width: 48, height: 48, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: AppColors.card, child: Icon(AppIcons.music_note_rounded, color: AppColors.textFaint)))
+            ? CachedNetworkImage(imageUrl: song.artUrl, width: 48, height: 48, fit: BoxFit.cover,
+                memCacheWidth: 96,
+                errorWidget: (_, __, ___) => Container(width: 48, height: 48, color: AppColors.card, child: Icon(AppIcons.music_note_rounded, color: AppColors.textFaint)))
             : Container(width: 48, height: 48, color: AppColors.card, child: Icon(AppIcons.music_note_rounded, color: AppColors.textFaint))),
       const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

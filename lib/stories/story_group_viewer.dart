@@ -528,7 +528,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
               CircleAvatar(
                 radius: 20,
                 backgroundImage: _current.user.avatar.isNotEmpty
-                    ? NetworkImage(_current.user.avatar) : null,
+                    ? CachedNetworkImageProvider(_current.user.avatar, maxWidth: 80) : null,
                 backgroundColor: Colors.white12,
                 child: _current.user.avatar.isEmpty
                     ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
@@ -801,8 +801,10 @@ class _ActivityBtn extends StatelessWidget {
                     border: Border.all(color: Colors.black, width: 1.5),
                   ),
                   child: ClipOval(
-                    child: Image.network(avatars[i], fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                    child: CachedNetworkImage(
+                        imageUrl: avatars[i], fit: BoxFit.cover,
+                        memCacheWidth: 60,
+                        errorWidget: (_, __, ___) => Container(
                             color: const Color(0xFF333333),
                             child: const Icon(AppIcons.person,
                                 color: Colors.white54, size: 16))),
