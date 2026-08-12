@@ -625,19 +625,20 @@ func ExploreGrid(c *gin.Context) {
 	}
 
 	rRows, _ := db.Pool.Query(context.Background(), `
-		SELECT id, video_url, likes_count, views_count
+		SELECT id, video_url, COALESCE(NULLIF(thumbnail_url,''), video_url),
+		       likes_count, views_count
 		FROM reels
 		ORDER BY likes_count DESC LIMIT 20`)
 	reels := []gin.H{}
 	if rRows != nil {
 		defer rRows.Close()
 		for rRows.Next() {
-			var rid, vurl string
+			var rid, vurl, thumb string
 			var likes, views int
-			rRows.Scan(&rid, &vurl, &likes, &views)
+			rRows.Scan(&rid, &vurl, &thumb, &likes, &views)
 			reels = append(reels, gin.H{
 				"_id": rid, "videoUrl": vurl,
-				"thumbnailUrl": vurl, // use video URL as thumbnail fallback
+				"thumbnailUrl": thumb,
 				"likesCount": likes, "viewsCount": views,
 			})
 		}

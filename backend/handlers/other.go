@@ -447,9 +447,10 @@ func SearchUsers(c *gin.Context) {
 func CreateReel(c *gin.Context) {
 	myID := mw.UID(c)
 	var b struct {
-		Caption     string `json:"caption"`
-		VideoURL    string `json:"videoUrl"`
-		VideoURLLow string `json:"videoUrlLow"`
+		Caption      string `json:"caption"`
+		VideoURL     string `json:"videoUrl"`
+		VideoURLLow  string `json:"videoUrlLow"`
+		ThumbnailURL string `json:"thumbnailUrl"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.VideoURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "videoUrl is required"})
@@ -458,11 +459,13 @@ func CreateReel(c *gin.Context) {
 	b.Caption = clampRunes(b.Caption, 2200)
 	var rid string
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO reels(user_id,caption,video_url,video_url_low) VALUES($1,$2,$3,$4) RETURNING id`,
-		myID, b.Caption, b.VideoURL, b.VideoURLLow).Scan(&rid)
+		`INSERT INTO reels(user_id,caption,video_url,video_url_low,thumbnail_url)
+		 VALUES($1,$2,$3,$4,$5) RETURNING id`,
+		myID, b.Caption, b.VideoURL, b.VideoURLLow, b.ThumbnailURL).Scan(&rid)
 	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": rid, "videoUrl": b.VideoURL, "videoUrlLow": b.VideoURLLow,
+		"thumbnailUrl": b.ThumbnailURL,
 		"caption": b.Caption, "likesCount": 0, "viewsCount": 0,
 	})
 }
@@ -475,7 +478,8 @@ func GetReels(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''), r.caption, r.views_count,
+		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''),
+		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
 		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
 		       u.id, u.username, u.avatar, u.verified,
@@ -498,15 +502,16 @@ func GetReels(c *gin.Context) {
 
 	reels := []gin.H{}
 	for rows.Next() {
-		var rid, vurl, vurlLow, cap, uid, uname, uavatar string
+		var rid, vurl, vurlLow, thumb, cap, uid, uname, uavatar string
 		var views, likes, comms int
 		var verified, liked, saved, following, hideLikes, commentsOff bool
 		var createdAt interface{}
-		rows.Scan(&rid, &vurl, &vurlLow, &cap, &views, &likes, &comms, &createdAt,
+		rows.Scan(&rid, &vurl, &vurlLow, &thumb, &cap, &views, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
 			&hideLikes, &commentsOff)
 		reels = append(reels, gin.H{
-			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow, "caption": cap,
+			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
+			"thumbnailUrl": thumb, "caption": cap,
 			"viewsCount": views, "likesCount": likes, "commentsCount": comms,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
 			"hideLikes": hideLikes, "commentsDisabled": commentsOff,

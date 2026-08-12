@@ -69,6 +69,17 @@ class MediaCompressor {
     } catch (_) { return null; }
   }
 
+  static Future<File?> generateVideoThumbnail(File file) async {
+    try {
+      final thumb = await VideoCompress.getFileThumbnail(
+        file.path,
+        quality: 70,
+        position: -1,
+      );
+      return thumb;
+    } catch (_) { return null; }
+  }
+
   // ── Автоматӣ — расм ё видео тафриқ мекунад ────────────────────
   static Future<File> compress(File file) async {
     final ext = p.extension(file.path).toLowerCase();

@@ -57,6 +57,7 @@ func GetSmartReels(c *gin.Context) {
 		scored AS (
 		  SELECT
 		    r.id, r.video_url, COALESCE(r.video_url_low,'') AS video_url_low,
+		    COALESCE(r.thumbnail_url,'') AS thumbnail_url,
 		    r.caption, r.views_count,
 		    CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1
 		         THEN -1 ELSE r.likes_count END AS likes_count,
@@ -117,7 +118,8 @@ func GetSmartReels(c *gin.Context) {
 		      WHERE mu.user_id=$1 AND mu.muted_id=r.user_id
 		    )
 		)
-		SELECT id, video_url, video_url_low, caption, views_count, likes_count,
+		SELECT id, video_url, video_url_low, thumbnail_url, caption,
+		       views_count, likes_count,
 		       comments_count, created_at, uid, username, avatar,
 		       verified, liked, saved, following, hide_likes, comments_off, score
 		FROM scored
@@ -134,20 +136,21 @@ func GetSmartReels(c *gin.Context) {
 
 	reels := []gin.H{}
 	for rows.Next() {
-		var id, videoURL, videoURLLow, cap, uid, uname, uavatar string
+		var id, videoURL, videoURLLow, thumb, cap, uid, uname, uavatar string
 		var views, likes, comms int
 		var verified, liked, saved, following, hideLikes, commentsOff bool
 		var createdAt interface{}
 		var score float64
 
-		if err := rows.Scan(&id, &videoURL, &videoURLLow, &cap, &views, &likes,
+		if err := rows.Scan(&id, &videoURL, &videoURLLow, &thumb, &cap, &views, &likes,
 			&comms, &createdAt, &uid, &uname, &uavatar,
 			&verified, &liked, &saved, &following, &hideLikes, &commentsOff, &score); err != nil {
 			continue
 		}
 		reels = append(reels, gin.H{
 			"id": id, "_id": id,
-			"videoUrl": videoURL, "videoUrlLow": videoURLLow, "caption": cap,
+			"videoUrl": videoURL, "videoUrlLow": videoURLLow,
+			"thumbnailUrl": thumb, "caption": cap,
 			"viewsCount": views, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
 			"isLiked": liked, "isSaved": saved,

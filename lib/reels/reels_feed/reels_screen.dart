@@ -165,6 +165,7 @@ class _ReelsViewState extends State<_ReelsView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
   final Map<int, VideoPlayerController> _preloaded = {};
+  bool _initialPreloadDone = false;
 
   @override
   void initState() {
@@ -284,33 +285,59 @@ class _ReelsViewState extends State<_ReelsView> {
   }
 
   void _preloadAhead(int current, _ReelsVM vm) {
-    for (int j = current + 1; j <= current + 2; j++) {
+    for (int j = current + 1; j <= current + 3; j++) {
       if (j >= vm.reels.length) break;
       if (_preloaded.containsKey(j)) continue;
-      final url = NetworkQuality.pick(
-          vm.reels[j].videoUrl, vm.reels[j].videoUrlLow);
+      final reel = vm.reels[j];
+      if (EmbedUtils.isEmbed(reel.videoUrl)) continue;
+      final url = NetworkQuality.pick(reel.videoUrl, reel.videoUrlLow);
       if (url.isEmpty) continue;
       final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       _preloaded[j] = ctrl;
       ctrl.initialize().then((_) {
         ctrl.setLooping(true);
         ctrl.setVolume(0);
+        ctrl.play();
+        ctrl.pause();
       });
     }
   }
 
   void _disposeOld(int current) {
     final toRemove =
-        _preloaded.keys.where((k) => k < current - 1).toList();
+        _preloaded.keys.where((k) => (k - current).abs() > 3).toList();
     for (final k in toRemove) {
       _preloaded[k]?.dispose();
       _preloaded.remove(k);
     }
   }
 
+  void _preloadFirst(_ReelsVM vm) {
+    if (vm.reels.isEmpty) return;
+    final reel = vm.reels[0];
+    if (EmbedUtils.isEmbed(reel.videoUrl)) return;
+    if (_preloaded.containsKey(0)) return;
+    final url = NetworkQuality.pick(reel.videoUrl, reel.videoUrlLow);
+    if (url.isEmpty) return;
+    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+    _preloaded[0] = ctrl;
+    ctrl.initialize().then((_) {
+      ctrl.setLooping(true);
+      ctrl.setVolume(0);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<_ReelsVM>();
+
+    if (!_initialPreloadDone && vm.reels.isNotEmpty) {
+      _initialPreloadDone = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _preloadFirst(vm);
+        _preloadAhead(0, vm);
+      });
+    }
 
     if (vm.loading && vm.reels.isEmpty) {
       return const Scaffold(
@@ -393,6 +420,9 @@ class _ReelsViewState extends State<_ReelsView> {
         backgroundColor: Colors.black54,
         onRefresh: () async {
           _currentPage = 0;
+          _initialPreloadDone = false;
+          for (final ctrl in _preloaded.values) ctrl.dispose();
+          _preloaded.clear();
           await vm.load();
           if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
         },
@@ -590,15 +620,31 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _initVideo() {
     if (widget.reel.videoUrl.isEmpty) return;
-    if (_isEmbed) return; // embed-ро VideoPlayer бозӣ намекунад — WebView мекунад
-    if (widget.preloadCtrl != null &&
-        widget.preloadCtrl!.value.isInitialized) {
+    if (_isEmbed) return;
+    if (widget.preloadCtrl != null) {
       _ctrl = widget.preloadCtrl;
-      _ctrl!.setLooping(true);
-      _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
-      if (widget.isActive) _ctrl!.play();
-      setState(() => _initialized = true);
-      _addBufferListener();
+      if (_ctrl!.value.isInitialized) {
+        _ctrl!.setLooping(true);
+        _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
+        if (widget.isActive) {
+          _ctrl!.play();
+          _startWatchTimer();
+        }
+        setState(() => _initialized = true);
+        _addBufferListener();
+      } else {
+        _ctrl!.initialize().then((_) {
+          if (!mounted) return;
+          _ctrl!.setLooping(true);
+          _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
+          if (widget.isActive) {
+            _ctrl!.play();
+            _startWatchTimer();
+          }
+          if (mounted) setState(() => _initialized = true);
+          _addBufferListener();
+        });
+      }
       return;
     }
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(

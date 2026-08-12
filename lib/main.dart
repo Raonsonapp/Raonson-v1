@@ -34,15 +34,15 @@ Future<void> main() async {
     enableLogs: true,
   );
 
-  // ✅ 3. Cache-ро ФАВРАН бор кун — бе интернет ҳам кор мекунад
-  await UserSession.loadCachedData();
-  await AccountManager.load(); // multi-account рӯйхатро бор мекунад
-  await SubscriptionService.instance.load(); // Pro / Business ҳолат
-  await ChatLockService.instance.load();     // PIN-и чат
-  await NetworkQuality.init(); // сифати видео вобаста ба интернет (адаптивӣ)
-
-  // ✅ 3.1 Theme + language preferences — то app кушода шавад
-  await AppSettingsState.instance.init();
+  // ✅ 3. Cache-ро ПАРАЛЛЕЛ бор кун — тезтар аст
+  await Future.wait([
+    UserSession.loadCachedData(),
+    AccountManager.load(),
+    SubscriptionService.instance.load(),
+    ChatLockService.instance.load(),
+    NetworkQuality.init(),
+    AppSettingsState.instance.init(),
+  ]);
 
   // ✅ 4. Network monitoring
   NetworkService.instance.init();

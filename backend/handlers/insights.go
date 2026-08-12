@@ -88,10 +88,10 @@ func GetProfileInsights(c *gin.Context) {
 		}
 	}
 
-	// Топ-5 reel бо views (thumb = video_url — ситуни thumbnail нест).
 	topReels := []gin.H{}
 	if rrows, err := db.Pool.Query(ctx, `
-		SELECT id, COALESCE(video_url,''), COALESCE(likes_count,0), COALESCE(views_count,0)
+		SELECT id, COALESCE(NULLIF(thumbnail_url,''), video_url),
+		       COALESCE(likes_count,0), COALESCE(views_count,0)
 		FROM reels WHERE user_id=$1
 		ORDER BY views_count DESC LIMIT 5`, myID); err == nil {
 		defer rrows.Close()

@@ -76,12 +76,14 @@ func UploadToR2(c *gin.Context) {
 
 	cl := getR2Client()
 	cl64 := int64(len(data))
+	cacheControl := "public, max-age=31536000, immutable"
 	_, err = cl.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:        aws.String(r2Bucket()),
 		Key:           aws.String(key),
 		Body:          bytes.NewReader(data),
 		ContentType:   aws.String(contentType),
 		ContentLength: &cl64,
+		CacheControl:  aws.String(cacheControl),
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
