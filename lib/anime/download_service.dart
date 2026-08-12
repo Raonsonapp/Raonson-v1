@@ -6,7 +6,10 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DownloadService {
-  static final Dio _dio = Dio();
+  static final Dio _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(minutes: 10),
+  ));
 
   static Future<Directory> _dir() async {
     final base = await getApplicationDocumentsDirectory();
