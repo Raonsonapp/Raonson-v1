@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
@@ -482,7 +483,7 @@ class _PrivacyState extends State<PrivacyScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Махфият'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : ListView(children: [
               _SwTile(
                 icon:  AppIcons.lock_outline_rounded,
@@ -609,7 +610,7 @@ class _NotifState extends State<NotificationsScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Огоҳиҳо'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : ListView(children: [
               _SwTile(icon: AppIcons.favorite_rounded,
                   title: 'Лайкҳо', value: _likes,
@@ -870,7 +871,7 @@ class TwoFAState extends State<TwoFactorScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Тасдиқи дутарафа'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : ListView(children: [
               _SwTile(
                 icon:  AppIcons.verified_user_outlined,
@@ -962,7 +963,7 @@ class _SessState extends State<SessionsScreen> {
         ],
       ),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : _sessions.isEmpty
               ? const _EmptyHint('Сессияҳо нест')
               : ListView.separated(
@@ -1062,7 +1063,7 @@ class _BUSState extends State<BlockedUsersScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Блокшудагон'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : _users.isEmpty
               ? const _EmptyHint('Ягон корбари блокшуда нест')
               : ListView.separated(
@@ -1452,14 +1453,41 @@ class _ThinDiv extends StatelessWidget {
   }
 }
 
-// Spinner
-class _Spinner extends StatelessWidget {
-  const _Spinner();
+class _SettingsSkeleton extends StatelessWidget {
+  const _SettingsSkeleton();
   @override
   Widget build(BuildContext context) {
-    return const Center(
-        child: CircularProgressIndicator(
-            color: AppColors.neonBlue, strokeWidth: 2));
+    return Shimmer.fromColors(
+      baseColor: AppColors.card,
+      highlightColor: AppColors.divider,
+      child: ListView.separated(
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 6,
+        separatorBuilder: (_, __) =>
+            Divider(color: AppColors.dividerFaint, height: 0, indent: 56),
+        itemBuilder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(children: [
+            Container(width: 28, height: 28,
+                decoration: BoxDecoration(color: Colors.white,
+                    borderRadius: BorderRadius.circular(6))),
+            const SizedBox(width: 16),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(width: 140, height: 13,
+                    decoration: BoxDecoration(color: Colors.white,
+                        borderRadius: BorderRadius.circular(6))),
+                const SizedBox(height: 6),
+                Container(width: 220, height: 10,
+                    decoration: BoxDecoration(color: Colors.white,
+                        borderRadius: BorderRadius.circular(6))),
+              ],
+            )),
+          ]),
+        ),
+      ),
+    );
   }
 }
 

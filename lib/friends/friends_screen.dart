@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
@@ -209,8 +210,39 @@ class _FriendsScreenState extends State<FriendsScreen>
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: AppColors.neonBlue, strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 8,
+                itemBuilder: (_, __) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    Container(width: 48, height: 48,
+                        decoration: const BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 130, height: 13,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                        const SizedBox(height: 6),
+                        Container(width: 80, height: 11,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                      ],
+                    )),
+                    Container(width: 80, height: 30,
+                        decoration: BoxDecoration(color: Colors.white,
+                            borderRadius: BorderRadius.circular(8))),
+                  ]),
+                ),
+              ),
+            )
           : TabBarView(
               controller: _tabs,
               children: [
@@ -463,8 +495,26 @@ class _ContactsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Center(child: CircularProgressIndicator(
-          color: AppColors.neonBlue, strokeWidth: 2));
+      return Shimmer.fromColors(
+        baseColor: AppColors.card,
+        highlightColor: AppColors.divider,
+        child: ListView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 6,
+          itemBuilder: (_, __) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(children: [
+              Container(width: 48, height: 48,
+                  decoration: const BoxDecoration(
+                      color: Colors.white, shape: BoxShape.circle)),
+              const SizedBox(width: 12),
+              Expanded(child: Container(width: 120, height: 13,
+                  decoration: BoxDecoration(color: Colors.white,
+                      borderRadius: BorderRadius.circular(6)))),
+            ]),
+          ),
+        ),
+      );
     }
     if (users.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [

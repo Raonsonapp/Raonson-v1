@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_theme.dart';
 import '../../models/post_model.dart';
@@ -61,8 +62,18 @@ class _HashtagScreenState extends State<HashtagScreen> {
               fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: AppColors.neonBlue, strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(2),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2),
+                itemCount: 15,
+                itemBuilder: (_, __) => Container(color: Colors.white),
+              ),
+            )
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.error_outline, color: AppColors.textFaint, size: 48),

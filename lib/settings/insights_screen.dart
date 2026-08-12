@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
@@ -65,7 +66,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
         centerTitle: true,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? _InsightsSkeleton()
           : (_error != null)
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: TextStyle(color: AppColors.textFaint)),
@@ -237,5 +238,43 @@ class _InsightsScreenState extends State<InsightsScreen> {
         );
       }).toList()),
     ]);
+  }
+}
+
+class _InsightsSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: AppColors.card,
+      highlightColor: AppColors.divider,
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(height: 14, width: 120,
+              decoration: BoxDecoration(color: Colors.white,
+                  borderRadius: BorderRadius.circular(6))),
+          const SizedBox(height: 16),
+          for (int i = 0; i < 4; i++) ...[
+            Container(height: 72,
+                decoration: BoxDecoration(color: Colors.white,
+                    borderRadius: BorderRadius.circular(14))),
+            const SizedBox(height: 12),
+          ],
+          Container(height: 14, width: 100,
+              decoration: BoxDecoration(color: Colors.white,
+                  borderRadius: BorderRadius.circular(6))),
+          const SizedBox(height: 12),
+          Row(children: [
+            for (int i = 0; i < 3; i++) ...[
+              Expanded(child: Container(height: 90,
+                  decoration: BoxDecoration(color: Colors.white,
+                      borderRadius: BorderRadius.circular(10)))),
+              if (i < 2) const SizedBox(width: 8),
+            ],
+          ]),
+        ],
+      ),
+    );
   }
 }

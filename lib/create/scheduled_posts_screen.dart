@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
@@ -54,7 +55,36 @@ class _ScheduledPostsState extends State<ScheduledPostsScreen> {
                 fontSize: 16, fontWeight: FontWeight.bold)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 5,
+                itemBuilder: (_, __) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    Container(width: 60, height: 60,
+                        decoration: BoxDecoration(color: Colors.white,
+                            borderRadius: BorderRadius.circular(8))),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: double.infinity, height: 12,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                        const SizedBox(height: 6),
+                        Container(width: 100, height: 12,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                      ],
+                    )),
+                  ]),
+                ),
+              ),
+            )
           : _posts.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.schedule_rounded,

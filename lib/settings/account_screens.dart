@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
@@ -256,7 +257,29 @@ class _CloseFriendsState extends State<CloseFriendsScreen> {
         centerTitle: true,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 8,
+                itemBuilder: (_, __) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    Container(width: 44, height: 44,
+                        decoration: const BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Container(height: 13, width: 120,
+                        decoration: BoxDecoration(color: Colors.white,
+                            borderRadius: BorderRadius.circular(6)))),
+                    Container(width: 24, height: 24,
+                        decoration: BoxDecoration(color: Colors.white,
+                            borderRadius: BorderRadius.circular(4))),
+                  ]),
+                ),
+              ),
+            )
           : Column(children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),

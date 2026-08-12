@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/services/user_session.dart';
@@ -182,7 +183,29 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       body: Column(children: [
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+              ? Shimmer.fromColors(
+                  baseColor: AppColors.card,
+                  highlightColor: AppColors.divider,
+                  child: ListView.builder(
+                    reverse: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 8,
+                    itemBuilder: (_, i) => Align(
+                      alignment: i % 3 == 0
+                          ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
+                        width: i % 2 == 0 ? 200 : 140,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
               : _messages.isEmpty
                   ? Center(
                       child: Text('Ҳанӯз паём нест — аввалин шавед!',

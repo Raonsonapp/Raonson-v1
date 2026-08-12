@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
@@ -106,7 +107,38 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: ListView(
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 16),
+                  Center(child: Container(width: 84, height: 84,
+                      decoration: const BoxDecoration(
+                          color: Colors.white, shape: BoxShape.circle))),
+                  const SizedBox(height: 12),
+                  Center(child: Container(width: 140, height: 16,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(6)))),
+                  const SizedBox(height: 24),
+                  for (int i = 0; i < 5; i++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      child: Row(children: [
+                        Container(width: 40, height: 40,
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle)),
+                        const SizedBox(width: 12),
+                        Container(width: 120, height: 13,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                      ]),
+                    ),
+                ],
+              ),
+            )
           : ListView(children: [
               const SizedBox(height: 16),
               Center(child: Avatar(

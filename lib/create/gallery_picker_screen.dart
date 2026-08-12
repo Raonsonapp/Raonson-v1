@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'create_post/create_post_screen.dart';
 import 'create_reel/create_reel_screen.dart';
@@ -155,8 +156,18 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
 
   Widget _buildGrid() {
     if (_loading) {
-      return const Center(
-          child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2));
+      return Shimmer.fromColors(
+        baseColor: Colors.white10,
+        highlightColor: Colors.white24,
+        child: GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(2),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4, mainAxisSpacing: 2, crossAxisSpacing: 2),
+          itemCount: 20,
+          itemBuilder: (_, __) => Container(color: Colors.white),
+        ),
+      );
     }
     if (_denied) {
       return Center(

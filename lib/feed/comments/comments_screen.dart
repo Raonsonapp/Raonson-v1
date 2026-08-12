@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../models/post_model.dart';
 import '../../models/comment_model.dart';
@@ -352,9 +353,44 @@ class _CommentsScreenState extends State<CommentsScreen> {
       // ── Comments list ────────────────────────────────────────
       Expanded(
         child: _loading
-            ? const Center(child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.storyStart)))
+            ? Shimmer.fromColors(
+                baseColor: AppColors.card,
+                highlightColor: AppColors.divider,
+                child: ListView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: 7,
+                  itemBuilder: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 36, height: 36,
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle)),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(width: 100, height: 12,
+                                decoration: BoxDecoration(color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6))),
+                            const SizedBox(height: 6),
+                            Container(width: double.infinity, height: 12,
+                                decoration: BoxDecoration(color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6))),
+                            const SizedBox(height: 4),
+                            Container(width: 180, height: 12,
+                                decoration: BoxDecoration(color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6))),
+                          ],
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+              )
             : _comments.isEmpty
                 ? Center(child: Column(mainAxisSize: MainAxisSize.min,
                     children: [

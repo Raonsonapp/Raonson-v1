@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
@@ -71,7 +72,7 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
         centerTitle: true,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? _DashSkeleton()
           : (_error != null)
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: TextStyle(color: AppColors.textFaint)),
@@ -297,5 +298,39 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
           style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
       const SizedBox(height: 20),
     ]);
+  }
+}
+
+class _DashSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: AppColors.card,
+      highlightColor: AppColors.divider,
+      child: ListView(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(height: 14, width: 100,
+              decoration: BoxDecoration(color: Colors.white,
+                  borderRadius: BorderRadius.circular(6))),
+          const SizedBox(height: 16),
+          for (int i = 0; i < 3; i++) ...[
+            Container(height: 80,
+                decoration: BoxDecoration(color: Colors.white,
+                    borderRadius: BorderRadius.circular(14))),
+            const SizedBox(height: 12),
+          ],
+          const SizedBox(height: 8),
+          Container(height: 14, width: 130,
+              decoration: BoxDecoration(color: Colors.white,
+                  borderRadius: BorderRadius.circular(6))),
+          const SizedBox(height: 12),
+          Container(height: 140,
+              decoration: BoxDecoration(color: Colors.white,
+                  borderRadius: BorderRadius.circular(14))),
+        ],
+      ),
+    );
   }
 }

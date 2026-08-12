@@ -1,5 +1,6 @@
 // lib/chat/group/groups_list_screen.dart
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
 import '../../widgets/avatar.dart';
@@ -117,7 +118,36 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
         child: Icon(AppIcons.group_add_rounded, color: AppColors.textPrimary),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 6,
+                itemBuilder: (_, __) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    Container(width: 52, height: 52,
+                        decoration: const BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 140, height: 13,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                        const SizedBox(height: 6),
+                        Container(width: 80, height: 11,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                      ],
+                    )),
+                  ]),
+                ),
+              ),
+            )
           : _groups.isEmpty
               ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
