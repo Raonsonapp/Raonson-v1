@@ -880,6 +880,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       controller: _scroll,
       padding: const EdgeInsets.only(top: 8, bottom: 8),
       itemCount: _messages.length,
+      addAutomaticKeepAlives: false,
       itemBuilder: (_, i) {
         final msg = _messages[i];
         final prev = i > 0 ? _messages[i - 1] : null;

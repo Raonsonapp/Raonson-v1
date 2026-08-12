@@ -159,6 +159,7 @@ class _ProfileItem extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: avatarUrl!,
                       fit: BoxFit.cover,
+                      memCacheWidth: 80,
                       errorWidget: (_, __, ___) => _defaultIcon(),
                     )
                   : _defaultIcon(),

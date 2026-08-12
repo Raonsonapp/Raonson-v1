@@ -476,6 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: CachedNetworkImage(
                       imageUrl: user.coverUrl,
                       width: double.infinity, height: 130, fit: BoxFit.cover,
+                      memCacheWidth: 800,
                       placeholder: (_, __) => Container(
                           height: 130, color: AppColors.surface),
                       errorWidget: (_, __, ___) => const SizedBox.shrink()),

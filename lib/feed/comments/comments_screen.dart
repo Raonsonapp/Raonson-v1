@@ -405,6 +405,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       itemCount: items.length,
+                      addAutomaticKeepAlives: false,
                       itemBuilder: (_, i) {
                         final entry = items[i];
                         final c = entry.$1;

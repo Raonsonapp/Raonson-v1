@@ -64,6 +64,7 @@ class _ShareState extends State<ShareProfileSheet> {
                       ? CachedNetworkImage(
                           imageUrl: widget.user.avatar,
                           width: 48, height: 48, fit: BoxFit.cover,
+                          memCacheWidth: 96,
                           placeholder: (_, __) =>
                               Container(color: AppColors.card),
                           errorWidget: (_, __, ___) =>
@@ -110,6 +111,7 @@ class _ShareState extends State<ShareProfileSheet> {
                     imageUrl:
                         'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${Uri.encodeComponent(_url)}',
                     fit: BoxFit.contain,
+                    memCacheWidth: 360,
                     placeholder: (_, __) => const Center(
                         child: SizedBox(width: 22, height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2))),

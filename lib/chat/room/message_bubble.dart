@@ -300,6 +300,7 @@ class _ImageBubble extends StatelessWidget {
         width:    220,
         height:   260,
         fit:      BoxFit.cover,
+        memCacheWidth: 440,
         placeholder: (_, __) => Container(
           width: 220, height: 260,
           color: AppColors.card,
@@ -662,6 +663,7 @@ class _LocationBubble extends StatelessWidget {
             CachedNetworkImage(
               imageUrl: staticMap,
               fit: BoxFit.cover,
+              memCacheWidth: 480,
               placeholder: (_, __) =>
                   Container(color: const Color(0xFF15352A)),
               errorWidget: (_, __, ___) =>

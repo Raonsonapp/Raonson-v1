@@ -341,6 +341,7 @@ class _ChatView extends StatelessWidget {
                             child: ListView.builder(
                               itemCount: ctrl.chats.length +
                                   (ctrl.isLoadingMore ? 1 : 0),
+                              addAutomaticKeepAlives: false,
                               itemBuilder: (_, i) {
                                 if (i >= ctrl.chats.length) {
                                   return const Padding(

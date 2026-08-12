@@ -490,6 +490,7 @@ class _PostCardState extends State<PostCard>
               child: CachedNetworkImage(
                 imageUrl: widget.post.media.first['url'] ?? '',
                 height: 120, width: double.infinity, fit: BoxFit.cover,
+                memCacheWidth: 400,
                 errorWidget: (_, __, ___) => const SizedBox.shrink())),
           const SizedBox(height: 8),
           Align(alignment: Alignment.centerRight,
@@ -626,7 +627,8 @@ class _PostCardState extends State<PostCard>
             ClipRRect(borderRadius: BorderRadius.circular(12),
               child: CachedNetworkImage(
                 imageUrl: widget.post.media.first['url'] ?? '',
-                height: 180, width: double.infinity, fit: BoxFit.cover)),
+                height: 180, width: double.infinity, fit: BoxFit.cover,
+                memCacheWidth: 500)),
           const SizedBox(height: 20),
           Row(children: [
             _BigStat('👁', views,    'Кӯринишҳо'),
