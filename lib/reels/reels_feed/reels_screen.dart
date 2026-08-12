@@ -763,6 +763,7 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _doubleTapLike() {
+    HapticFeedback.lightImpact();
     if (!widget.reel.isLiked) widget.onLike();
     setState(() => _showHeart = true);
     Future.delayed(const Duration(milliseconds: 900), () {
@@ -1610,6 +1611,7 @@ class _ReelItemState extends State<_ReelItem> {
                   activeColor: Colors.white,
                   count: '',
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     setState(() => _saved = !_saved);
                     widget.onSave();
                   }),
@@ -1911,6 +1913,7 @@ class _LikeBtnState extends State<_LikeBtn>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         if (!widget.isLiked) _ctrl.forward(from: 0);
         widget.onTap();
       },
