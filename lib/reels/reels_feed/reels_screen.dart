@@ -594,22 +594,37 @@ class _ReelItemState extends State<_ReelItem> {
     _commentsOff = widget.reel.commentsDisabled;
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
     FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
+    _hasStory = widget.reel.user.hasStory ? true : null;
     _initVideo();
-    _loadStoryStatus();
+    if (_hasStory == null) _loadStoryStatus();
   }
 
+  static final Map<String, ({bool has, bool viewed})> _storyCache = {};
+
   Future<void> _loadStoryStatus() async {
+    final uid = widget.reel.user.id;
+    final cached = _storyCache[uid];
+    if (cached != null) {
+      if (mounted) setState(() {
+        _hasStory = cached.has;
+        _storyViewed = cached.viewed;
+      });
+      return;
+    }
     try {
       final res = await ApiClient.instance
-          .get('/stories', query: {'userId': widget.reel.user.id});
+          .get('/stories', query: {'userId': uid})
+          .timeout(const Duration(seconds: 5));
       if (res.statusCode < 400 && mounted) {
         final body = jsonDecode(res.body);
         final List list =
             body is List ? body : (body['stories'] ?? body['data'] ?? []);
+        final has = list.isNotEmpty;
+        final viewed = has && list.every((s) => s['viewed'] == true);
+        _storyCache[uid] = (has: has, viewed: viewed);
         setState(() {
-          _hasStory = list.isNotEmpty;
-          _storyViewed =
-              list.isNotEmpty && list.every((s) => s['viewed'] == true);
+          _hasStory = has;
+          _storyViewed = viewed;
         });
       }
     } catch (_) {}
