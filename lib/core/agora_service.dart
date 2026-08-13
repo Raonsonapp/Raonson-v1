@@ -2,7 +2,7 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-const String kAgoraAppId = '218a590a5be54f81aa4b95e4cb9bb267';
+const String kAgoraAppId = String.fromEnvironment('AGORA_APP_ID');
 
 class AgoraService extends ChangeNotifier {
   static final AgoraService _i = AgoraService._();

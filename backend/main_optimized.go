@@ -59,8 +59,8 @@ func main() {
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length", "X-Cache"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour, // OPTIONS preflight кэш
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// ── HEALTH ──────────────────────────────────────────────────

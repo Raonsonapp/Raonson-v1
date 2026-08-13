@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
+import 'package:flutter/foundation.dart';
+
 import 'app/app.dart';
 import 'app/app_config.dart';
 import 'app/app_settings.dart';
@@ -31,7 +33,7 @@ Future<void> main() async {
       defaultValue: 'https://mahmadmurodov-raonson.hf.space',
     ),
     appName: 'Raonson',
-    enableLogs: true,
+    enableLogs: kDebugMode,
   );
 
   // ✅ 3. Cache-ро ПАРАЛЛЕЛ бор кун — тезтар аст

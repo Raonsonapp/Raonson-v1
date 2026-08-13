@@ -45,11 +45,15 @@ func r2Bucket() string {
 
 func r2PublicURL() string {
 	if v := os.Getenv("CF_R2_PUBLIC_URL"); v != "" { return v }
-	return "https://pub-f2661a242564423dbef95596dd6176b6.r2.dev"
+	fmt.Println("⚠️  CF_R2_PUBLIC_URL not set — uploads will have no public URL")
+	return ""
 }
 
 // POST /upload
 func UploadToR2(c *gin.Context) {
+	const maxUploadSize = 50 << 20 // 50 MB
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadSize)
+
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})

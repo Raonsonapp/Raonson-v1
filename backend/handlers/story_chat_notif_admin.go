@@ -748,8 +748,72 @@ func AdminDeleteUser(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Owner account cannot be deleted"})
 		return
 	}
-	if _, err := db.Pool.Exec(context.Background(),
-		`DELETE FROM users WHERE id=$1`, id); err != nil {
+	ctx := context.Background()
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	cascadeQueries := []string{
+		`DELETE FROM reel_comments WHERE user_id=$1`,
+		`DELETE FROM reel_likes WHERE user_id=$1`,
+		`DELETE FROM reel_saves WHERE user_id=$1`,
+		`DELETE FROM reel_views WHERE user_id=$1`,
+		`DELETE FROM reel_watch WHERE user_id=$1`,
+		`DELETE FROM reel_not_interested WHERE user_id=$1`,
+		`DELETE FROM reel_reports WHERE user_id=$1`,
+		`DELETE FROM reels WHERE user_id=$1`,
+		`DELETE FROM comment_likes WHERE user_id=$1`,
+		`DELETE FROM comments WHERE user_id=$1`,
+		`DELETE FROM post_likes WHERE user_id=$1`,
+		`DELETE FROM post_saves WHERE user_id=$1`,
+		`DELETE FROM post_views WHERE user_id=$1`,
+		`DELETE FROM post_shares WHERE user_id=$1`,
+		`DELETE FROM post_interests WHERE user_id=$1`,
+		`DELETE FROM post_not_interested WHERE user_id=$1`,
+		`DELETE FROM post_reports WHERE user_id=$1`,
+		`DELETE FROM post_media WHERE post_id IN (SELECT id FROM posts WHERE user_id=$1)`,
+		`DELETE FROM posts WHERE user_id=$1`,
+		`DELETE FROM story_views WHERE user_id=$1`,
+		`DELETE FROM story_likes WHERE user_id=$1`,
+		`DELETE FROM story_replies WHERE from_user_id=$1`,
+		`DELETE FROM stories WHERE user_id=$1`,
+		`DELETE FROM highlights WHERE user_id=$1`,
+		`DELETE FROM messages WHERE sender_id=$1 OR receiver_id=$1`,
+		`DELETE FROM message_reactions WHERE user_id=$1`,
+		`DELETE FROM chat_accepts WHERE user_id=$1 OR peer_id=$1`,
+		`DELETE FROM chat_hidden WHERE user_id=$1 OR peer_id=$1`,
+		`DELETE FROM group_members WHERE user_id=$1`,
+		`DELETE FROM follows WHERE follower_id=$1 OR following_id=$1`,
+		`DELETE FROM follow_requests WHERE requester_id=$1 OR target_id=$1`,
+		`DELETE FROM close_friends WHERE user_id=$1 OR friend_id=$1`,
+		`DELETE FROM blocks WHERE blocker_id=$1 OR blocked_id=$1`,
+		`DELETE FROM muted_users WHERE user_id=$1 OR muted_id=$1`,
+		`DELETE FROM user_reports WHERE reported_id=$1 OR user_id=$1`,
+		`DELETE FROM user_restricts WHERE user_id=$1 OR restricted_id=$1`,
+		`DELETE FROM notifications WHERE user_id=$1 OR from_user_id=$1`,
+		`DELETE FROM push_tokens WHERE user_id=$1`,
+		`DELETE FROM login_sessions WHERE user_id=$1`,
+		`DELETE FROM orders WHERE buyer_id=$1 OR seller_id=$1`,
+		`DELETE FROM gifts WHERE from_user_id=$1 OR to_user_id=$1`,
+		`DELETE FROM promotions WHERE user_id=$1`,
+		`DELETE FROM product_reviews WHERE user_id=$1`,
+		`DELETE FROM events WHERE user_id=$1`,
+		`DELETE FROM live_comments WHERE user_id=$1`,
+		`DELETE FROM live_streams WHERE host_id=$1`,
+		`DELETE FROM effects WHERE creator_id=$1`,
+		`DELETE FROM effect_purchases WHERE buyer_id=$1`,
+		`DELETE FROM promo_codes WHERE seller_id=$1`,
+		`DELETE FROM users WHERE id=$1`,
+	}
+	for _, q := range cascadeQueries {
+		if _, err := tx.Exec(ctx, q, id); err != nil {
+			continue
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
 		return
 	}

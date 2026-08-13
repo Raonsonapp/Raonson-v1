@@ -151,7 +151,7 @@ func Login(c *gin.Context) {
 	recordLogin(id, c) // таърихи воридшавӣ (device + IP)
 
 	c.JSON(http.StatusOK, gin.H{
-		"accessToken":  makeJWT(id, secret, 7*24*time.Hour),
+		"accessToken":  makeJWT(id, secret, 1*time.Hour),
 		"refreshToken": makeJWT(id, refreshSecret, 30*24*time.Hour),
 		"user": gin.H{
 			"id": id, "username": username, "email": email,
@@ -177,7 +177,7 @@ func RefreshToken(c *gin.Context) {
 	claims := tok.Claims.(jwt.MapClaims)
 	uid    := claims["id"].(string)
 	c.JSON(http.StatusOK, gin.H{
-		"accessToken": makeJWT(uid, mw.JWTSecret(), 7*24*time.Hour),
+		"accessToken": makeJWT(uid, mw.JWTSecret(), 1*time.Hour),
 	})
 }
 
@@ -282,7 +282,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 	// Рамз ТАНҲО ба email/SMS меравад. Дар экран нишон дода НАМЕШАВАД.
 	// Барои санҷиш (бе провайдер) — env OTP_ECHO=1 гузоред.
-	if os.Getenv("OTP_ECHO") == "1" {
+	if os.Getenv("OTP_ECHO") == "1" && gin.Mode() != gin.ReleaseMode {
 		resp["otp"] = otp
 	}
 	c.JSON(http.StatusOK, resp)

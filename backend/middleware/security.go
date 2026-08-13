@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -195,7 +196,10 @@ func init() {
 
 func clientIP(c *gin.Context) string {
 	if fwd := c.GetHeader("X-Forwarded-For"); fwd != "" {
-		return fwd
+		if i := strings.Index(fwd, ","); i != -1 {
+			return strings.TrimSpace(fwd[:i])
+		}
+		return strings.TrimSpace(fwd)
 	}
 	return c.ClientIP()
 }
