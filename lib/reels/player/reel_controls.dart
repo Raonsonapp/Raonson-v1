@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
@@ -47,6 +48,7 @@ class _ReelControlsState extends State<ReelControls> {
   }
 
   void _toggleLike() {
+    HapticFeedback.lightImpact();
     setState(() {
       _liked = !_liked;
       _likeCount += _liked ? 1 : -1;
@@ -56,6 +58,7 @@ class _ReelControlsState extends State<ReelControls> {
   }
 
   void _toggleSave() {
+    HapticFeedback.selectionClick();
     setState(() => _saved = !_saved);
     ApiClient.instance.post('/reels/${reel.id}/save').then((_) {}, onError: (_) {});
   }

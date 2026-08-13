@@ -2249,6 +2249,7 @@ class _ReelCommentsState extends State<_ReelComments> {
   }
 
   Future<void> _likeComment(String commentId, int index) async {
+    HapticFeedback.lightImpact();
     final repo = ReelsRepository(ApiClient.instance);
     final res = await repo.likeComment(
         reelId: widget.reelId, commentId: commentId);

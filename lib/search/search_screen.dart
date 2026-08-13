@@ -6,7 +6,9 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/analytics/analytics_service.dart';
+import '../navigation/bottom_nav/bottom_nav_controller.dart';
 import '../core/analytics/analytics_events.dart';
 import 'package:http/http.dart' as http;
 
@@ -43,8 +45,10 @@ class _SearchScreenState extends State<SearchScreen>
   // Controllers
   final _ctrl  = TextEditingController();
   final _focus = FocusNode();
+  final _scroll = ScrollController();
   Timer?  _debounce;
   String  _lastQ = '';
+  ValueNotifier<int>? _scrollToTopNotifier;
 
   // State machine
   // idle   → Explore grid (search bar NOT focused, no text)
@@ -92,9 +96,33 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scrollToTopNotifier == null) {
+      try {
+        _scrollToTopNotifier =
+            context.read<BottomNavController>().scrollToTopNotifier;
+        _scrollToTopNotifier!.addListener(_onScrollToTop);
+      } catch (_) {}
+    }
+  }
+
+  void _onScrollToTop() {
+    final nav = context.read<BottomNavController>();
+    if (nav.currentIndex != 3) return;
+    if (_scroll.hasClients) {
+      _scroll.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut);
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollToTopNotifier?.removeListener(_onScrollToTop);
     _ctrl.dispose();
     _focus.dispose();
+    _scroll.dispose();
     _debounce?.cancel();
     _tabs.dispose();
     super.dispose();

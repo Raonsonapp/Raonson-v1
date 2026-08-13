@@ -586,6 +586,7 @@ class _CommentItemState extends State<_CommentItem> {
   }
 
   Future<void> _toggleLike() async {
+    HapticFeedback.lightImpact();
     final was = _liked;
     setState(() { _liked = !was; _likeCount += _liked ? 1 : -1; });
     try {
