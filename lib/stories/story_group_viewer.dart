@@ -704,6 +704,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     if (_current.mediaUrl.isEmpty) return Container(color: Colors.black);
     return CachedNetworkImage(
       imageUrl: _current.mediaUrl, fit: BoxFit.cover,
+      memCacheWidth: 1080,
       width: double.infinity, height: double.infinity,
       placeholder: (_, __) => const Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)),

@@ -145,6 +145,7 @@ func main() {
 		p.GET("/auto-reply",    handlers.GetAutoReply)
 		p.PUT("/auto-reply",    handlers.SetAutoReply)
 		p.DELETE("/avatar",     handlers.DeleteAvatar)
+		p.DELETE("/me",         handlers.DeleteUser)
 		p.GET("/:username",     cache30s, handlers.GetProfile)
 	}
 

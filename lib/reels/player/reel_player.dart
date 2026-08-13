@@ -68,6 +68,7 @@ class _ReelPlayerState extends State<ReelPlayer> {
           CachedNetworkImage(
             imageUrl: widget.reel.thumbnailUrl,
             fit: BoxFit.cover,
+            memCacheWidth: 720,
             width: double.infinity,
             height: double.infinity,
             errorWidget: (_, __, ___) => Container(color: AppColors.bg),

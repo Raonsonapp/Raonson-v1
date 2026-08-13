@@ -59,10 +59,12 @@
         <!-- ✅ YANDEX ADS - ИН 2 ХАТРО ИЛОВА КУН -->
         <activity
             android:name="com.yandex.mobile.ads.interstitial.InterstitialAdActivity"
+            android:exported="false"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
 
         <activity
             android:name="com.yandex.mobile.ads.rewarded.RewardedAdActivity"
+            android:exported="false"
             android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
 
       <!-- ← ИН ХАТРО ДАСТ НАЗАН -->

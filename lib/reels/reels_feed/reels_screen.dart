@@ -621,6 +621,9 @@ class _ReelItemState extends State<_ReelItem> {
             body is List ? body : (body['stories'] ?? body['data'] ?? []);
         final has = list.isNotEmpty;
         final viewed = has && list.every((s) => s['viewed'] == true);
+        if (_storyCache.length >= 200) {
+          _storyCache.remove(_storyCache.keys.first);
+        }
         _storyCache[uid] = (has: has, viewed: viewed);
         setState(() {
           _hasStory = has;
@@ -1474,6 +1477,7 @@ class _ReelItemState extends State<_ReelItem> {
           CachedNetworkImage(
               imageUrl: reel.thumbnailUrl,
               fit: BoxFit.cover,
+              memCacheWidth: 720,
               width: double.infinity,
               height: double.infinity,
               errorWidget: (_, __, ___) =>
