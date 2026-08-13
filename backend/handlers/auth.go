@@ -137,12 +137,12 @@ func Login(c *gin.Context) {
 		 FROM users WHERE email=$1 OR username=$1 OR phone=$1`,
 		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName, &banned)
 	if err != nil {
-		log.Printf("[Login] User not found: email=%s err=%v", b.Email, err)
+		log.Printf("[Login] User not found")
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.Password)) != nil {
-		log.Printf("[Login] Wrong password for: email=%s", b.Email)
+		log.Printf("[Login] Wrong password")
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
 		return
 	}
