@@ -126,7 +126,8 @@ class ChatRepository {
       final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId')
           .timeout(const Duration(seconds: 8));
       if (cr.statusCode >= 400) return [];
-      final chatId = (jsonDecode(cr.body) as Map)['chatId'] as String;
+      final chatId = (jsonDecode(cr.body) as Map)['chatId']?.toString();
+      if (chatId == null || chatId.isEmpty) return [];
 
       final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages')
           .timeout(const Duration(seconds: 8));
@@ -158,7 +159,7 @@ class ChatRepository {
       final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId')
           .timeout(const Duration(seconds: 8));
       if (cr.statusCode >= 400) return null;
-      return (jsonDecode(cr.body) as Map)['chatId'] as String?;
+      return (jsonDecode(cr.body) as Map)['chatId']?.toString();
     } catch (_) { return null; }
   }
 
@@ -207,7 +208,8 @@ class ChatRepository {
       final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$toUserId')
           .timeout(const Duration(seconds: 8));
       if (cr.statusCode >= 400) throw Exception('Chat error');
-      cid = (jsonDecode(cr.body) as Map)['chatId'] as String;
+      cid = (jsonDecode(cr.body) as Map)['chatId']?.toString();
+      if (cid == null || cid.isEmpty) throw Exception('Chat ID not found');
     }
 
     final res = await _api.postRequest(

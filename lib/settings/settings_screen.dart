@@ -9,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
@@ -256,6 +257,20 @@ class SettingsScreen extends StatelessWidget {
                 sub:   'Версия, муаллиф ва маълумот',
                 onTap: () => _go(ctx, const AboutScreen()),
               ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.privacy_tip_outlined,
+                title: 'Сиёсати махфият',
+                sub:   'Маълумот дар бораи ҳифзи маълумотҳо',
+                onTap: () => _launchUrl('https://raonson.app/privacy'),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.description_outlined,
+                title: 'Шартҳои истифода',
+                sub:   'Қоидаҳои истифодаи барнома',
+                onTap: () => _launchUrl('https://raonson.app/terms'),
+              ),
 
               // ── DANGER ZONE ───────────────────────────────────────
               _Hdr(''),
@@ -279,6 +294,10 @@ class SettingsScreen extends StatelessWidget {
 
   static void _go(BuildContext ctx, Widget w) =>
       Navigator.push(ctx, MaterialPageRoute(builder: (_) => w));
+
+  static void _launchUrl(String url) {
+    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
 
   static void _confirmLogout(BuildContext ctx) {
     showDialog(
@@ -1176,6 +1195,17 @@ class AboutScreen extends StatelessWidget {
               style: TextStyle(color: AppColors.textTertiary, fontSize: 13, height: 1.5),
             ),
           ),
+          const SizedBox(height: 20),
+          _AboutLinkRow(
+            icon: AppIcons.privacy_tip_outlined,
+            label: 'Сиёсати махфият',
+            url: 'https://raonson.app/privacy',
+          ),
+          _AboutLinkRow(
+            icon: AppIcons.description_outlined,
+            label: 'Шартҳои истифода',
+            url: 'https://raonson.app/terms',
+          ),
           const SizedBox(height: 28),
           Center(
             child: Text('© $_year Raonson. Ҳамаи ҳуқуқҳо ҳифз шудаанд.',
@@ -1207,6 +1237,32 @@ class _AboutRow extends StatelessWidget {
             style: TextStyle(
                 color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
       ]),
+    );
+  }
+}
+
+class _AboutLinkRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String url;
+  const _AboutLinkRow(
+      {required this.icon, required this.label, required this.url});
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(children: [
+          Icon(icon, color: AppColors.neonBlue, size: 20),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(color: AppColors.neonBlue, fontSize: 14)),
+          ),
+          Icon(AppIcons.arrow_forward_rounded, color: AppColors.textFaint, size: 16),
+        ]),
+      ),
     );
   }
 }

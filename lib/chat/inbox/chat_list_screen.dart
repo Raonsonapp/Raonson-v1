@@ -25,6 +25,7 @@ import '../room/new_chat_screen.dart';
 import '../group/groups_list_screen.dart';
 import '../room/call_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatListScreen — 10/10 Instagram DM style
@@ -40,7 +41,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final _presence = PresenceService();
   final _notes    = NoteService();
   final _searchCtrl = TextEditingController();
+  final _scroll = ScrollController();
   String _myAvatar = '';
+  ValueNotifier<int>? _scrollToTopNotifier;
 
   @override
   void initState() {
@@ -56,11 +59,33 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nav = context.read<BottomNavController>();
+    if (_scrollToTopNotifier != nav.scrollToTopNotifier) {
+      _scrollToTopNotifier?.removeListener(_onScrollToTop);
+      _scrollToTopNotifier = nav.scrollToTopNotifier;
+      _scrollToTopNotifier!.addListener(_onScrollToTop);
+    }
+  }
+
+  void _onScrollToTop() {
+    if (context.read<BottomNavController>().currentIndex != 2) return;
+    if (_scroll.hasClients) {
+      _scroll.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut);
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollToTopNotifier?.removeListener(_onScrollToTop);
     _ctrl.removeListener(_onChatsLoaded);
     _searchCtrl.removeListener(_onSearch);
     _ctrl.dispose();
     _searchCtrl.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -102,6 +127,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         myAvatar:     _myAvatar,
         onMyNoteTap:  _openMyNote,
         searchCtrl:   _searchCtrl,
+        scrollCtrl:   _scroll,
       ),
     );
   }
@@ -114,11 +140,13 @@ class _ChatView extends StatelessWidget {
   final String     myAvatar;
   final VoidCallback onMyNoteTap;
   final TextEditingController searchCtrl;
+  final ScrollController scrollCtrl;
 
   const _ChatView({
     required this.myAvatar,
     required this.onMyNoteTap,
     required this.searchCtrl,
+    required this.scrollCtrl,
   });
 
   @override
@@ -339,6 +367,7 @@ class _ChatView extends StatelessWidget {
                               return false;
                             },
                             child: ListView.builder(
+                              controller: scrollCtrl,
                               itemCount: ctrl.chats.length +
                                   (ctrl.isLoadingMore ? 1 : 0),
                               addAutomaticKeepAlives: false,

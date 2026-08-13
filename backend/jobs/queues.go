@@ -125,9 +125,7 @@ func EnqueueEmail(to, subject, body string) {
 func processEmailQueue() {
 	go func() {
 		for job := range emailCh {
-			// TODO: SendGrid/AWS SES интегратсия
 			log.Printf("[Email] to:%s subject:%s", job.To, job.Subject)
-			// sendEmail(job.To, job.Subject, job.Body)
 		}
 	}()
 }
@@ -151,7 +149,6 @@ func EnqueueMediaJob(mediaURL, mediaType, ownerID string) {
 func processMediaQueue() {
 	go func() {
 		for job := range mediaCh {
-			// TODO: FFmpeg thumbnail генерация
 			log.Printf("[Media] processing %s for %s", job.MediaType, job.OwnerID)
 		}
 	}()

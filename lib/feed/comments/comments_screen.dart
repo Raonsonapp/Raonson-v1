@@ -75,14 +75,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
         final List list = body is List
             ? body
             : (body['comments'] ?? body['data'] ?? []);
-        setState(() {
-          _comments = list
-              .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            _comments = list
+                .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          });
+        }
       }
     } catch (_) {}
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   void _insertEmoji(String e) {
@@ -186,8 +188,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   void _onDelete(String commentId) {
+    final removed = _comments.where((c) => c.id == commentId).toList();
     setState(() => _comments.removeWhere((c) => c.id == commentId));
-    ApiClient.instance.delete('/comments/$commentId');
+    ApiClient.instance.delete('/comments/$commentId').catchError((_) {
+      if (mounted) setState(() => _comments.addAll(removed));
+    });
   }
 
   void _onEdit(CommentModel comment, String newText) {

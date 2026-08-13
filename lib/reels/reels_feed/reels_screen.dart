@@ -991,8 +991,10 @@ class _ReelItemState extends State<_ReelItem> {
       if (!_paused) _ctrl?.play();
       return;
     }
-    await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
-        body: {'caption': trimmed});
+    try {
+      await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
+          body: {'caption': trimmed});
+    } catch (_) {}
     if (!_paused && mounted) _ctrl?.play();
   }
 
@@ -1187,13 +1189,24 @@ class _ReelItemState extends State<_ReelItem> {
       if (!_paused) _ctrl?.play();
       return;
     }
-    await ApiClient.instance.delete('/reels/${widget.reel.id}');
-    widget.onDelete();
+    try {
+      await ApiClient.instance.delete('/reels/${widget.reel.id}');
+      widget.onDelete();
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+        duration: Duration(seconds: 2)));
+      if (!_paused && mounted) _ctrl?.play();
+    }
   }
 
   Future<void> _markInterest(bool interested) async {
-    await ApiClient.instance.post(
-        '/reels/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
+    try {
+      await ApiClient.instance.post(
+          '/reels/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
+    } catch (_) {
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(

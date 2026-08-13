@@ -433,12 +433,18 @@ class _PostCardState extends State<PostCard>
       ),
     );
     if (ok != true) { return; }
-    final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
-    if (res.statusCode < 400) {
-      widget.onDeleted?.call();
+    try {
+      final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
+      if (res.statusCode < 400) {
+        widget.onDeleted?.call();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Пост ҳазф шуд'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Пост ҳазф шуд'),
-        backgroundColor: Colors.green,
+        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
         duration: Duration(seconds: 2)));
     }
   }
@@ -679,16 +685,23 @@ class _PostCardState extends State<PostCard>
       ),
     );
     if (reason == null || !mounted) return;
-    await ApiClient.instance.post(
-      '/posts/${widget.post.id}/report', body: {'reason': reason});
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Жалоб фиристода шуд. Раҳмат!'),
-      backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+    try {
+      await ApiClient.instance.post(
+        '/posts/${widget.post.id}/report', body: {'reason': reason});
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Жалоб фиристода шуд. Раҳмат!'),
+        backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+    } catch (_) {}
   }
 
   Future<void> _muteUser() async {
     setState(() => _hidden = true);
-    await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+    try {
+      await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+    } catch (_) {
+      if (mounted) setState(() => _hidden = false);
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Постҳои @${widget.post.user.username} пинҳон шуд'),

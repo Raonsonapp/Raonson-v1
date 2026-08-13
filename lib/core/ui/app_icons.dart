@@ -80,6 +80,7 @@ class AppIcons {
   static const IconData do_not_disturb_on_outlined = FeatherIcons.minusCircle;
   static const IconData download_done_rounded = FeatherIcons.check;
   static const IconData download_rounded = FeatherIcons.download;
+  static const IconData description_outlined = FeatherIcons.fileText;
   static const IconData drive_file_rename_outline_rounded = FeatherIcons.edit2;
   static const IconData edit_note = FeatherIcons.edit3;
   static const IconData edit_outlined = FeatherIcons.edit2;
