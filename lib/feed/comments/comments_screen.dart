@@ -731,9 +731,11 @@ class _CommentItemState extends State<_CommentItem> {
     if (ok != true) return;
     // Backend edit (PUT)
     if (newText.isEmpty || newText == widget.comment.text) return;
-    await ApiClient.instance.put('/comments/${widget.comment.id}',
-        body: {'text': newText});
-    widget.onEdit(newText);
+    try {
+      await ApiClient.instance.put('/comments/${widget.comment.id}',
+          body: {'text': newText});
+      widget.onEdit(newText);
+    } catch (_) {}
   }
 
   Widget _handle() => Container(

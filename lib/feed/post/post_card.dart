@@ -722,7 +722,11 @@ class _PostCardState extends State<PostCard>
     final endpoint = interested
         ? '/posts/${widget.post.id}/interest'
         : '/posts/${widget.post.id}/not-interested';
-    await ApiClient.instance.post(endpoint);
+    try {
+      await ApiClient.instance.post(endpoint);
+    } catch (_) {
+      return;
+    }
     if (!interested && mounted) {
       setState(() => _hidden = true);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
