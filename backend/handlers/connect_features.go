@@ -364,6 +364,7 @@ func ReplyReelComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
 	}
+	b.Text = clampRunes(b.Text, 1000)
 	var commentsOff bool
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COALESCE(comments_off,false) FROM reels WHERE id=$1`, rid).Scan(&commentsOff)

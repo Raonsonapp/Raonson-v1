@@ -965,6 +965,7 @@ class _ReelItemState extends State<_ReelItem> {
             controller: ctrl,
             autofocus: true,
             maxLines: 3,
+            maxLength: 2200,
             style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
                 hintText: 'Тавсиф...',
@@ -2457,6 +2458,9 @@ class _ReelCommentsState extends State<_ReelComments> {
                 child: TextField(
                     controller: _ctrl,
                     style: const TextStyle(color: Colors.white),
+                    maxLength: 1000,
+                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                    buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _send(),
                     decoration: InputDecoration(

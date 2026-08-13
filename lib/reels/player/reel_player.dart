@@ -22,8 +22,7 @@ class ReelPlayer extends StatefulWidget {
   State<ReelPlayer> createState() => _ReelPlayerState();
 }
 
-class _ReelPlayerState extends State<ReelPlayer>
-    with AutomaticKeepAliveClientMixin {
+class _ReelPlayerState extends State<ReelPlayer> {
   late final VideoPlayerController _videoController;
   bool _initialized = false;
 
@@ -50,11 +49,7 @@ class _ReelPlayerState extends State<ReelPlayer>
   }
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
   Widget build(BuildContext context) {
-    super.build(context);
 
     return Stack(
       fit: StackFit.expand,

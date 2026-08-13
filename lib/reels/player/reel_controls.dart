@@ -366,6 +366,9 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                 child: TextField(
                   controller: _ctrl,
                   style: const TextStyle(color: Colors.white),
+                  maxLength: 1000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   decoration: InputDecoration(
                     hintText: 'Шарҳ нависед...',
                     hintStyle: const TextStyle(color: Colors.white38),

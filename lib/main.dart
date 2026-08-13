@@ -26,6 +26,10 @@ Future<void> main() async {
     statusBarIconBrightness: Brightness.light,
   ));
 
+  // ✅ 1b. Image cache limits — бе ин, кэш бе ҳад меафзояд
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024; // 100 MB
+  PaintingBinding.instance.imageCache.maximumSize = 200;
+
   // ✅ 2. AppConfig — АВВАЛ
   AppConfig.initialize(
     baseUrl: const String.fromEnvironment(

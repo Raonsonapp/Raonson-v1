@@ -492,6 +492,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   controller: _ctrl,
                   focusNode: _focus,
                   autofocus: true,
+                  maxLength: 1000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
@@ -710,7 +713,7 @@ class _CommentItemState extends State<_CommentItem> {
         title: Text('Таҳрир кардан',
             style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
-          controller: ctrl, autofocus: true, maxLines: 4,
+          controller: ctrl, autofocus: true, maxLines: 4, maxLength: 1000,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: 'Шарҳ...',

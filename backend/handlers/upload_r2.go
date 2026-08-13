@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ func getR2Client() *s3.Client {
 	accessKey  := os.Getenv("CF_R2_ACCESS_KEY")
 	secretKey  := os.Getenv("CF_R2_SECRET_KEY")
 	if accountID == "" || accessKey == "" || secretKey == "" {
-		fmt.Println("⚠️  R2 credentials missing (CF_ACCOUNT_ID/CF_R2_ACCESS_KEY/CF_R2_SECRET_KEY) — uploads will fail")
+		log.Println("[R2] credentials missing (CF_ACCOUNT_ID/CF_R2_ACCESS_KEY/CF_R2_SECRET_KEY)")
 	}
 
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)
@@ -45,7 +46,7 @@ func r2Bucket() string {
 
 func r2PublicURL() string {
 	if v := os.Getenv("CF_R2_PUBLIC_URL"); v != "" { return v }
-	fmt.Println("⚠️  CF_R2_PUBLIC_URL not set — uploads will have no public URL")
+	log.Println("[R2] CF_R2_PUBLIC_URL not set")
 	return ""
 }
 

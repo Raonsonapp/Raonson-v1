@@ -628,6 +628,7 @@ func AddReelComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
 	}
+	b.Text = clampRunes(b.Text, 1000)
 	if !moderateText(b.Text) {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Шарҳи шумо аз тарафи AI рад шуд. Лутфан матнро тағйир диҳед."})

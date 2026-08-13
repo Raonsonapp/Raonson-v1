@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/analytics/analytics_service.dart';
 import '../navigation/bottom_nav/bottom_nav_controller.dart';
@@ -2120,6 +2121,9 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
                 child: TextField(
                   controller: _ctrl,
                   style: TextStyle(color: AppColors.textPrimary),
+                  maxLength: 1000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   decoration: InputDecoration(
                     hintText: 'Шарҳ нависед...',
                     hintStyle: TextStyle(color: AppColors.textFaint),
