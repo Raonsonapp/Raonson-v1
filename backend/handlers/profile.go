@@ -61,6 +61,10 @@ func ChangePhone(c *gin.Context) {
 		return
 	}
 	phone := strings.TrimSpace(b.Phone)
+	if phone != "" && !regexp.MustCompile(`^\+?[0-9]{7,15}$`).MatchString(phone) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Рақами телефон нодуруст аст"})
+		return
+	}
 	if _, err := db.Pool.Exec(context.Background(),
 		`UPDATE users SET phone=$1 WHERE id=$2`, phone, myID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})

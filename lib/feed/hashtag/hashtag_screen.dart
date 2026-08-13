@@ -27,7 +27,7 @@ class _HashtagScreenState extends State<HashtagScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final res = await ApiClient.instance
           .get('/posts/hashtag/${Uri.encodeComponent(widget.hashtag)}')
@@ -35,14 +35,14 @@ class _HashtagScreenState extends State<HashtagScreen> {
       if (res.statusCode >= 400) throw Exception('Хато ${res.statusCode}');
       final body = jsonDecode(res.body);
       final list = body is List ? body : (body['posts'] ?? []) as List;
-      setState(() {
+      if (mounted) setState(() {
         _posts = list
             .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
             .toList();
         _loading = false;
       });
     } catch (e) {
-      setState(() { _loading = false; _error = e.toString(); });
+      if (mounted) setState(() { _loading = false; _error = e.toString(); });
     }
   }
 

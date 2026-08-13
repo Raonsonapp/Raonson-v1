@@ -54,6 +54,13 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
+	validEmail := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !validEmail.MatchString(b.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Почтаи электронӣ нодуруст аст",
+		})
+		return
+	}
 	// Парол дар сервер ҳам санҷида мешавад (на танҳо дар клиент).
 	if len(b.Password) < 8 {
 		c.JSON(http.StatusBadRequest,

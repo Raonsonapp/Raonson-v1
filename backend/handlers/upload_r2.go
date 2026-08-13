@@ -91,8 +91,9 @@ func UploadToR2(c *gin.Context) {
 		CacheControl:  aws.String(cacheControl),
 	})
 	if err != nil {
+		log.Printf("[R2] upload failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("R2 upload failed: %v", err),
+			"error": "Upload failed",
 		})
 		return
 	}

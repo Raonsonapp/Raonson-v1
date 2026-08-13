@@ -92,7 +92,7 @@ func main() {
 	a := r.Group("/auth")
 	{
 		a.POST("/register",        rl20, handlers.Register)
-		a.GET("/check-username/:username", handlers.CheckUsername)
+		a.GET("/check-username/:username", rl20, handlers.CheckUsername)
 		a.POST("/login",           rl20, handlers.Login)
 		a.POST("/refresh",         handlers.RefreshToken)
 		a.POST("/logout",          auth, handlers.Logout)
