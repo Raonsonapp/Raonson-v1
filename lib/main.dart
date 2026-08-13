@@ -20,6 +20,13 @@ import 'core/firebase_init.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ✅ 0. Global error handling — дар production экрани сурхи Flutter нишон намедиҳад
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    if (kDebugMode) return;
+    debugPrint('[CRASH] ${details.exceptionAsString()}');
+  };
+
   // ✅ 1. Status bar style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,

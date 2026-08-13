@@ -1,4 +1,5 @@
 // lib/app/app.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +20,9 @@ class RaonsonApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!kDebugMode) {
+      ErrorWidget.builder = (_) => const SizedBox.shrink();
+    }
     return ChangeNotifierProvider(
       create: (_) => AppState()..initialize(),
       child: Builder(
