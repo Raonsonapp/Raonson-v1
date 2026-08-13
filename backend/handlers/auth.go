@@ -86,8 +86,15 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	secret        := mw.JWTSecret()
+	refreshSecret := mw.RefreshSecret()
+
+	recordLogin(id, c)
+
 	c.JSON(http.StatusCreated, gin.H{
-		"success": true,
+		"success":      true,
+		"accessToken":  makeJWT(id, secret, 1*time.Hour),
+		"refreshToken": makeJWT(id, refreshSecret, 30*24*time.Hour),
 		"user": gin.H{
 			"id": id, "username": username, "email": email,
 			"avatar": "", "fullName": b.FullName,

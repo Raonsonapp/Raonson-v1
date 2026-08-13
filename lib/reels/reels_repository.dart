@@ -199,8 +199,9 @@ class ReelsRepository {
   }
 
   Future<void> addComment({required String reelId, required String text}) async {
-    await _api.post('${ApiEndpoints.reels}/$reelId/comments',
+    final res = await _api.post('${ApiEndpoints.reels}/$reelId/comments',
         body: {'text': text});
+    if (res.statusCode >= 400) throw Exception('Comment failed');
   }
 
   Future<void> replyComment({
@@ -208,8 +209,9 @@ class ReelsRepository {
     required String commentId,
     required String text,
   }) async {
-    await _api.post('${ApiEndpoints.reels}/$reelId/comments/$commentId/reply',
+    final res = await _api.post('${ApiEndpoints.reels}/$reelId/comments/$commentId/reply',
         body: {'text': text});
+    if (res.statusCode >= 400) throw Exception('Reply failed');
   }
 
   Future<Map<String, dynamic>?> likeComment({

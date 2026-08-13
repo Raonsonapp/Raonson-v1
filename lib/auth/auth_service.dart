@@ -58,9 +58,28 @@ class AuthService {
     );
 
     final accessToken = data['accessToken'];
-    if (accessToken != null) {
-      await _tokenStorage.saveToken(accessToken);
-      ApiClient.instance.setAuthToken(accessToken);
+    if (accessToken == null) {
+      throw Exception('Access token missing');
+    }
+
+    await _tokenStorage.saveToken(accessToken);
+    ApiClient.instance.setAuthToken(accessToken);
+
+    final refreshToken = data['refreshToken']?.toString();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await TokenStorage.saveRefreshToken(refreshToken);
+      ApiClient.instance.setRefreshToken(refreshToken);
+    }
+
+    final user = data['user'] as Map<String, dynamic>?;
+    if (user != null) {
+      final uid = (user['id'] ?? user['_id'] ?? '').toString();
+      if (uid.isNotEmpty) {
+        await TokenStorage.saveUserId(uid);
+        UserSession.userId   = uid;
+        UserSession.username = (user['username'] ?? '').toString();
+        UserSession.avatar   = (user['avatar']   ?? '').toString();
+      }
     }
   }
 
