@@ -27,10 +27,13 @@ Future<void> main() async {
     debugPrint('[CRASH] ${details.exceptionAsString()}');
   };
 
-  // ✅ 1. Status bar style
+  // ✅ 1. Edge-to-edge (Android 15+ ҳатмӣ бо targetSdk 36)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.light,
   ));
 
   // ✅ 1b. Image cache limits — бе ин, кэш бе ҳад меафзояд

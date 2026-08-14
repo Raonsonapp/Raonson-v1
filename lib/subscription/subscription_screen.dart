@@ -2,9 +2,6 @@
 // Raonson Pro (29.90 сом) ва Raonson Business (99.90 сом) — саҳифаи обуна.
 // Ҳамаи хусусиятҳо аз рӯи категория нишон дода мешаванд.
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 
@@ -160,20 +157,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ? const [Color(0xFFF7971E), Color(0xFFFFD200)]
       : const [Color(0xFF7F00FF), Color(0xFFE100FF)];
 
-  // Алоқа барои пардохт — то API-и пардохт васл шавад, ба воситаи соҳиб.
-  static const String _waNumber = '992971769009';
-  static const String _tgUser   = 'Raonsonofficial';
-  static const String _igUser   = 'raonsonofficial';
-
-  Future<void> _open(String url) async {
-    try {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } catch (_) {}
-  }
-
   void _subscribe() {
-    final msg = 'Салом! Мехоҳам обунаи $_name ($_price сомонӣ/моҳ)-ро '
-        'фаъол кунам. Чӣ тавр пардохт кунам?';
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -188,49 +172,26 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   fontWeight: FontWeight.bold, fontSize: 16)),
           Text('$_price сомонӣ / моҳ',
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
-          const SizedBox(height: 6),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Icon(AppIcons.rocket_launch_outlined,
+                size: 48, color: AppColors.neonBlue),
+          ),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-                'Барои пардохт бо мо тамос гиред — баъди пардохт обунаатон '
-                'фаъол мешавад.',
+                'Пардохт тавассути Google Play ба зудӣ фаъол мешавад. '
+                'Мо дар ҳоли ҳамкорӣ бо Google Play Billing ҳастем.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+                style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           ),
-          const SizedBox(height: 10),
-          ListTile(
-            leading: const Icon(FontAwesomeIcons.whatsapp, color: Color(0xFF25D366)),
-            title: Text('WhatsApp', style: TextStyle(color: AppColors.textPrimary)),
-            subtitle: Text('+992 97 176 9009',
-                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-            onTap: () { Navigator.pop(context);
-              _open('https://wa.me/$_waNumber?text=${Uri.encodeComponent(msg)}'); },
-          ),
-          ListTile(
-            leading: const Icon(FontAwesomeIcons.telegram, color: Color(0xFF0088CC)),
-            title: Text('Telegram', style: TextStyle(color: AppColors.textPrimary)),
-            subtitle: Text('t.me/$_tgUser',
-                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-            onTap: () { Navigator.pop(context);
-              _open('https://t.me/$_tgUser'); },
-          ),
-          ListTile(
-            leading: const Icon(FontAwesomeIcons.instagram, color: Color(0xFFE1306C)),
-            title: Text('Instagram', style: TextStyle(color: AppColors.textPrimary)),
-            subtitle: Text('@$_igUser',
-                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-            onTap: () { Navigator.pop(context);
-              _open('https://www.instagram.com/$_igUser'); },
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           TextButton(
-            onPressed: () {
-              Clipboard.setData(const ClipboardData(text: '+992 97 176 9009'));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Рақам нусхабардорӣ шуд')));
-            },
-            child: Text('Нусхаи рақам',
-                style: TextStyle(color: AppColors.neonBlue)),
+            onPressed: () => Navigator.pop(context),
+            child: Text('Фаҳмидам',
+                style: TextStyle(color: AppColors.neonBlue, fontSize: 15)),
           ),
           const SizedBox(height: 12),
         ])),

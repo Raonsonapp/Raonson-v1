@@ -39,6 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passCtrl    = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _terms = false;
+  bool _ageConfirm = false;
 
   // ── Step 2 ──
   final _userCtrl = TextEditingController();
@@ -99,6 +100,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (pass.length < 8) return _err('Рамз ҳадди ақал 8 аломат');
     if (pass != _confirmCtrl.text) return _err('Рамзҳо мувофиқат намекунанд');
     if (!_terms) return _err('Шартҳоро қабул кунед');
+    if (!_ageConfirm) return _err('Синни шумо бояд 13+ бошад');
     _goto(1);
   }
 
@@ -376,6 +378,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Expanded(
               child: Text(
                 'Ман бо Шартҳои истифода ва Сиёсати махфият розӣ ҳастам',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            SizedBox(
+              width: 24, height: 24,
+              child: Checkbox(
+                value: _ageConfirm,
+                onChanged: (v) => setState(() => _ageConfirm = v ?? false),
+                activeColor: AppColors.neonBlue,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5)),
+                side: BorderSide(color: AppColors.textFaint),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Ман тасдиқ мекунам, ки синни ман 13 ва аз он болотар аст',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
             ),
