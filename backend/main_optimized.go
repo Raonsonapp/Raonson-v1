@@ -22,8 +22,25 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func validateEnv() {
+	required := []string{"DATABASE_URL"}
+	warned := []string{"JWT_SECRET", "JWT_REFRESH_SECRET"}
+	for _, k := range required {
+		if os.Getenv(k) == "" {
+			log.Fatalf("FATAL: required env var %s is not set", k)
+		}
+	}
+	for _, k := range warned {
+		if os.Getenv(k) == "" {
+			log.Printf("WARNING: %s is not set — using ephemeral random secret (tokens will not survive restart)", k)
+		}
+	}
+}
+
 func main() {
 	godotenv.Load()
+
+	validateEnv()
 
 	db.Init()
 	mw.InitRedis()

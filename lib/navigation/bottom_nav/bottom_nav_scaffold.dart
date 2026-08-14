@@ -15,7 +15,8 @@ import '../../search/search_screen.dart';
 import '../../profile/profile_screen.dart';
 import '../../widgets/account_switcher.dart';
 import '../../create/upload/upload_progress_bar.dart';
-import '../../widgets/offline_banner.dart'; // ← НАВ
+import '../../widgets/offline_banner.dart';
+import '../../core/firebase_init.dart';
 import '../../core/webrtc_service.dart';
 import '../../chat/room/incoming_call_screen.dart';
 import '../../chat/room/call_screen.dart';
@@ -49,6 +50,7 @@ class _BottomNavViewState extends State<_BottomNavView> {
     super.initState();
     _setupGlobalCalls();
     _setupNotifBadge();
+    FirebaseInit.requestNotificationPermission();
   }
 
   // Бейҷи огоҳиҳо: realtime socket + бори аввал шумора аз сервер.
