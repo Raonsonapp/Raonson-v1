@@ -110,7 +110,7 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('account.email'),
                 sub:   tr('account.emailSub'),
                 onTap: () => _go(ctx,
-                    _SimpleScreen(title: tr('account.email'))),
+                    const ChangeEmailScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.phone_outlined,
@@ -1120,7 +1120,7 @@ class _BUSState extends State<BlockedUsersScreen> {
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
-  static const String _version = '1.0.0';
+  static const String _version = '1.0.5';
   static const String _year    = '2026';
 
   @override
@@ -1296,29 +1296,6 @@ class _PlanBanner extends StatelessWidget {
               color: Colors.white70, fontSize: 11.5)),
         ]),
       ),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  SIMPLE PLACEHOLDER SCREEN
-// ════════════════════════════════════════════════════════════════════
-class _SimpleScreen extends StatelessWidget {
-  final String title;
-  const _SimpleScreen({required this.title});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: _appBar(context, title),
-      body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(AppIcons.construction_rounded,
-            size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
-        const SizedBox(height: 12),
-        Text('Дар таҳия аст',
-            style: TextStyle(
-                color: AppColors.textPrimary.withOpacity(0.35), fontSize: 14)),
-      ])),
     );
   }
 }

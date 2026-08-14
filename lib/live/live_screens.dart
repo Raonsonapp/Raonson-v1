@@ -245,8 +245,9 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async { await _end(); return false; },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) { if (!didPop) _end(); },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
@@ -354,8 +355,9 @@ class _LiveViewerState extends State<LiveViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final host = (widget.stream['host'] ?? {}) as Map;
-    return WillPopScope(
-      onWillPop: () async { await _leave(); return false; },
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) { if (!didPop) _leave(); },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [

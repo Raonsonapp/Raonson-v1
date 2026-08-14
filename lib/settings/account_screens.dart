@@ -184,6 +184,86 @@ class _ChangePhoneState extends State<ChangePhoneScreen> {
 }
 
 // ════════════════════════════════════════════════════════════════════
+//  CHANGE EMAIL
+// ════════════════════════════════════════════════════════════════════
+class ChangeEmailScreen extends StatefulWidget {
+  final String initial;
+  const ChangeEmailScreen({super.key, this.initial = ''});
+  @override
+  State<ChangeEmailScreen> createState() => _ChangeEmailState();
+}
+
+class _ChangeEmailState extends State<ChangeEmailScreen> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initial);
+  bool _saving = false;
+  String? _err;
+
+  @override
+  void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  Future<void> _submit() async {
+    final email = _ctrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _err = 'Почтаи электронӣ нодуруст');
+      return;
+    }
+    setState(() { _saving = true; _err = null; });
+    try {
+      final res = await ApiClient.instance
+          .put('/profile/email', body: {'email': email});
+      if (!mounted) return;
+      if (res.statusCode < 400) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Email сабт шуд'), backgroundColor: Colors.green));
+      } else {
+        setState(() => _err = 'Хатогӣ ${res.statusCode}');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _err = 'Шабака нашуд');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: _bar(context, 'Почтаи электронӣ', _saving, _submit),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            style: TextStyle(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'name@example.com',
+              hintStyle: TextStyle(color: AppColors.textFaint),
+              filled: true, fillColor: AppColors.surface,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text('Почтаи электронӣ барои барқарорсозии ҳисоб '
+              'ва огоҳиҳои муҳим истифода мешавад.',
+              style: TextStyle(color: AppColors.textFaint, fontSize: 12.5)),
+          if (_err != null) ...[
+            const SizedBox(height: 12),
+            Text(_err!, style: const TextStyle(color: Colors.redAccent)),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
 //  ДӮСТОНИ НАЗДИК (Close friends)
 // ════════════════════════════════════════════════════════════════════
 class CloseFriendsScreen extends StatefulWidget {

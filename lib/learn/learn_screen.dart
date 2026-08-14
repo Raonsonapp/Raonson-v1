@@ -25,7 +25,7 @@ class LearnScreen extends StatelessWidget {
         'Тартиб, ранг ва зебоӣ', AppIcons.palette_outlined,
         Color(0xFFE84393)),
     _Track('icons', 'Сохтани icon-ҳо',
-        'Icon дар сатҳи Instagram', AppIcons.brush,
+        'Icon-ҳои касбӣ ва замонавӣ', AppIcons.brush,
         Color(0xFFFF6D00)),
     _Track('website', 'Сохтани вебсайт',
         'HTML, CSS, JavaScript', AppIcons.public_rounded,

@@ -18,6 +18,7 @@ import '../../core/api/api_endpoints.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/account_manager.dart';
 import '../../core/storage/token_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../create/upload/upload_manager.dart';
 import '../widgets/auth_kit.dart';
 import '../../core/ui/app_icons.dart';
@@ -376,8 +377,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                'Ман бо Шартҳои истифода ва Сиёсати махфият розӣ ҳастам',
+              child: Text.rich(
+                TextSpan(children: [
+                  const TextSpan(text: 'Ман бо '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: () => launchUrl(Uri.parse('https://raonson.app/terms'),
+                          mode: LaunchMode.externalApplication),
+                      child: Text('Шартҳои истифода',
+                          style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.neonBlue)),
+                    ),
+                  ),
+                  const TextSpan(text: ' ва '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: () => launchUrl(Uri.parse('https://raonson.app/privacy'),
+                          mode: LaunchMode.externalApplication),
+                      child: Text('Сиёсати махфият',
+                          style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.neonBlue)),
+                    ),
+                  ),
+                  const TextSpan(text: ' розӣ ҳастам'),
+                ]),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
             ),

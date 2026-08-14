@@ -75,6 +75,18 @@ class _EmbedPlayerState extends State<EmbedPlayer> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(AppColors.bg)
       ..setNavigationDelegate(NavigationDelegate(
+        onNavigationRequest: (request) {
+          final u = request.url.toLowerCase();
+          if (u.contains('aparat.com') ||
+              u.contains('youtube.com') ||
+              u.contains('youtu.be') ||
+              u.contains('vimeo.com') ||
+              u.contains('dailymotion.com') ||
+              u.startsWith('about:blank')) {
+            return NavigationDecision.navigate;
+          }
+          return NavigationDecision.prevent;
+        },
         onPageFinished: (_) {
           if (mounted) setState(() => _loading = false);
         },

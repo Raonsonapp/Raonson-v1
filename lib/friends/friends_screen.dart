@@ -108,9 +108,35 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Future<void> _loadContactUsers() async {
     if (_loadingContacts) return;
+
+    if (!mounted) return;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Пайдо кардани дӯстон',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Raonson рақамҳои телефони контактҳои шуморо бо сервер муқоиса мекунад, '
+          'то дӯстони шуморо пайдо кунад. Рақамҳо нигоҳ дошта намешаванд.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Бекор', style: TextStyle(color: AppColors.textFaint)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Давом', style: TextStyle(color: AppColors.neonBlue)),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true) return;
+
     setState(() => _loadingContacts = true);
     try {
-      // 1. Иҷозат пурсем ва контактҳои дастгоҳро хонем
       final granted = await FlutterContacts.requestPermission(readonly: true);
       if (!granted) {
         if (mounted) {
