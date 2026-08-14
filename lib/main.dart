@@ -15,6 +15,8 @@ import 'core/services/chat_lock_service.dart';
 import 'core/services/network_service.dart';
 import 'core/services/network_quality.dart';
 import 'core/ads/ads_manager.dart';
+import 'core/services/ad_consent_service.dart';
+import 'core/services/server_wakeup_service.dart';
 import 'core/firebase_init.dart';
 
 Future<void> main() async {
@@ -58,14 +60,21 @@ Future<void> main() async {
     ChatLockService.instance.load(),
     NetworkQuality.init(),
     AppSettingsState.instance.init(),
+    AdConsentService.instance.load(),
   ]);
 
   // ✅ 4. Network monitoring
   NetworkService.instance.init();
 
-  // ✅ 6. Ads
-  MobileAds.initialize();
-  AdsManager.instance.init();
+  // ✅ 5. Backend wakeup — серверро бедор кун (HuggingFace Spaces хоб меравад)
+  ServerWakeupService.instance.wakeUp();
+  ServerWakeupService.instance.startKeepAlive();
+
+  // ✅ 6. Ads — танҳо бо розигӣ
+  if (AdConsentService.instance.consentGiven) {
+    MobileAds.initialize();
+    AdsManager.instance.init();
+  }
 
   // ✅ 6.1 Firebase + FCM push (бехатар: агар танзим набошад, crash намешавад)
   FirebaseInit.init();

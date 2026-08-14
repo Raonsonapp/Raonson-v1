@@ -9,7 +9,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
@@ -28,6 +27,7 @@ import '../learn/learn_screen.dart';
 import '../effects/effects_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
 import 'account_screens.dart';
+import 'legal_screens.dart';
 import 'insights_screen.dart';
 import 'seller_dashboard_screen.dart';
 import '../shop/auto_reply_screen.dart';
@@ -262,14 +262,14 @@ class SettingsScreen extends StatelessWidget {
                 icon:  AppIcons.privacy_tip_outlined,
                 title: 'Сиёсати махфият',
                 sub:   'Маълумот дар бораи ҳифзи маълумотҳо',
-                onTap: () => _launchUrl('https://raonson.app/privacy'),
+                onTap: () => _go(ctx, const PrivacyPolicyPage()),
               ),
               const _ThinDiv(),
               _NavTile(
                 icon:  AppIcons.description_outlined,
                 title: 'Шартҳои истифода',
                 sub:   'Қоидаҳои истифодаи барнома',
-                onTap: () => _launchUrl('https://raonson.app/terms'),
+                onTap: () => _go(ctx, const TermsOfServicePage()),
               ),
 
               // ── DANGER ZONE ───────────────────────────────────────
@@ -294,10 +294,6 @@ class SettingsScreen extends StatelessWidget {
 
   static void _go(BuildContext ctx, Widget w) =>
       Navigator.push(ctx, MaterialPageRoute(builder: (_) => w));
-
-  static void _launchUrl(String url) {
-    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-  }
 
   static void _confirmLogout(BuildContext ctx) {
     showDialog(
@@ -1196,15 +1192,17 @@ class AboutScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _AboutLinkRow(
+          _AboutLinkTile(
             icon: AppIcons.privacy_tip_outlined,
             label: 'Сиёсати махфият',
-            url: 'https://raonson.app/privacy',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyPage())),
           ),
-          _AboutLinkRow(
+          _AboutLinkTile(
             icon: AppIcons.description_outlined,
             label: 'Шартҳои истифода',
-            url: 'https://raonson.app/terms',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const TermsOfServicePage())),
           ),
           const SizedBox(height: 28),
           Center(
@@ -1241,16 +1239,16 @@ class _AboutRow extends StatelessWidget {
   }
 }
 
-class _AboutLinkRow extends StatelessWidget {
+class _AboutLinkTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String url;
-  const _AboutLinkRow(
-      {required this.icon, required this.label, required this.url});
+  final VoidCallback onTap;
+  const _AboutLinkTile(
+      {required this.icon, required this.label, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(children: [
