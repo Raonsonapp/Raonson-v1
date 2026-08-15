@@ -175,7 +175,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Icon(AppIcons.rocket_launch_outlined,
+            child: Icon(AppIcons.star_rounded,
                 size: 48, color: AppColors.neonBlue),
           ),
           const SizedBox(height: 12),

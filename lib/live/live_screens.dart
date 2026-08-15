@@ -247,7 +247,7 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, _) { if (!didPop) _end(); },
+      onPopInvoked: (didPop) { if (!didPop) _end(); },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
@@ -357,7 +357,7 @@ class _LiveViewerState extends State<LiveViewerScreen> {
     final host = (widget.stream['host'] ?? {}) as Map;
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, _) { if (!didPop) _leave(); },
+      onPopInvoked: (didPop) { if (!didPop) _leave(); },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [

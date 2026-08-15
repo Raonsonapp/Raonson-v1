@@ -296,7 +296,7 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: !_fullscreen,
-      onPopInvokedWithResult: (didPop, _) {
+      onPopInvoked: (didPop) {
         if (!didPop && _fullscreen) _toggleFullscreen();
       },
       child: Scaffold(
