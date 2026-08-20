@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../core/api/api_client.dart';
 import '../create/upload/upload_manager.dart';
+import '../create/upload/post_upload_service.dart' show mediaAspectRatio;
 
 class Product {
   final String id, productName, currency, shopAddress, caption, image;
@@ -12,6 +13,9 @@ class Product {
   final bool sellerVerified;
   final bool contactRaonson;
   final String whatsapp, phone;
+  final bool featured;
+  final int salePct;
+  final String category;
   Product({
     required this.id, required this.productName, required this.currency,
     required this.shopAddress, required this.caption, required this.image,
@@ -19,7 +23,13 @@ class Product {
     required this.inStock, required this.sellerId, required this.sellerName,
     required this.sellerAvatar, required this.sellerVerified,
     this.contactRaonson = true, this.whatsapp = '', this.phone = '',
+    this.featured = false, this.salePct = 0, this.category = '',
   });
+
+  bool   get onSale     => salePct > 0;
+  double get salePrice  => price * (1 - salePct / 100);
+  String get salePriceLabel =>
+      '${salePrice.toStringAsFixed(salePrice % 1 == 0 ? 0 : 2)} $currency';
   factory Product.fromJson(Map<String, dynamic> j) {
     final s = (j['seller'] ?? {}) as Map;
     return Product(
@@ -40,7 +50,69 @@ class Product {
       contactRaonson: j['contactRaonson'] != false,
       whatsapp: (j['shopWhatsapp'] ?? '').toString(),
       phone: (j['shopPhone'] ?? '').toString(),
+      featured: j['featured'] == true,
+      salePct: (j['salePct'] as num?)?.toInt() ?? 0,
+      category: (j['category'] ?? '').toString(),
     );
+  }
+
+  // Категорияҳои маҳсулот (собит).
+  static const List<String> categories = [
+    'Либос', 'Электроника', 'Зебоӣ', 'Хона', 'Хӯрокворӣ',
+    'Бачагона', 'Варзиш', 'Дигар',
+  ];
+
+  Future<bool> setSale(String postId, int pct, int days) async {
+    try {
+      final r = await ApiClient.instance.put('/posts/$postId/sale',
+          body: {'salePct': pct, 'saleDays': days});
+      return r.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// null = хато (то «unfeatured» бо «хато» омехта нашавад).
+  Future<bool?> toggleFeature(String postId) async {
+    try {
+      final r = await ApiClient.instance.post('/posts/$postId/feature');
+      if (r.statusCode >= 400) return null;
+      return (jsonDecode(r.body)['featured'] as bool?) ?? false;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, String>> getTranslations(String postId) async {
+    try {
+      final r = await ApiClient.instance.get('/posts/$postId/translations');
+      if (r.statusCode >= 400) return {};
+      final t = (jsonDecode(r.body)['translations'] ?? {}) as Map;
+      return t.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setTranslations(String postId, Map<String, String> t) async {
+    try {
+      await ApiClient.instance.put('/posts/$postId/translations', body: t);
+    } catch (_) {}
+  }
+
+  Future<bool> updateProduct(String postId,
+      {String? name, double? price, bool? inStock, String? category}) async {
+    try {
+      final r = await ApiClient.instance.put('/posts/$postId/product', body: {
+        if (name != null) 'productName': name,
+        if (price != null) 'price': price,
+        if (inStock != null) 'inStock': inStock,
+        if (category != null) 'category': category,
+      });
+      return r.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
   }
   String get priceLabel => '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
 }
@@ -48,9 +120,10 @@ class Product {
 class ShopRepository {
   final _api = ApiClient.instance;
 
-  Future<List<Product>> getProducts() async {
+  Future<List<Product>> getProducts({String category = ''}) async {
     try {
-      final r = await _api.get('/shop');
+      final r = await _api.get('/shop',
+          query: category.isEmpty ? null : {'category': category});
       if (r.statusCode >= 400) return [];
       final body = jsonDecode(r.body);
       final list = (body['products'] ?? []) as List;
@@ -62,9 +135,13 @@ class ShopRepository {
     }
   }
 
-  Future<bool> placeOrder(String postId, {String note = ''}) async {
+  Future<bool> placeOrder(String postId,
+      {String note = '', String promoCode = ''}) async {
     try {
-      final r = await _api.post('/posts/$postId/order', body: {'note': note});
+      final r = await _api.post('/posts/$postId/order', body: {
+        'note': note,
+        if (promoCode.isNotEmpty) 'promoCode': promoCode,
+      });
       return r.statusCode < 400;
     } catch (_) {
       return false;
@@ -88,10 +165,11 @@ class ShopRepository {
     try {
       final url = await UploadManager().uploadFile(image);
       if (url.isEmpty) return false;
+      final ar = await mediaAspectRatio(image, false);
       final r = await _api.post('/posts/', body: {
         'caption': caption,
         'media': [
-          {'url': url, 'type': 'image'}
+          {'url': url, 'type': 'image', if (ar > 0) 'aspectRatio': ar}
         ],
         'isProduct': true,
         'price': price,

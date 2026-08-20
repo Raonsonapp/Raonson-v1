@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
@@ -107,9 +108,35 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   Future<void> _loadContactUsers() async {
     if (_loadingContacts) return;
+
+    if (!mounted) return;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Пайдо кардани дӯстон',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Raonson рақамҳои телефони контактҳои шуморо бо сервер муқоиса мекунад, '
+          'то дӯстони шуморо пайдо кунад. Рақамҳо нигоҳ дошта намешаванд.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Бекор', style: TextStyle(color: AppColors.textFaint)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Давом', style: TextStyle(color: AppColors.neonBlue)),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true) return;
+
     setState(() => _loadingContacts = true);
     try {
-      // 1. Иҷозат пурсем ва контактҳои дастгоҳро хонем
       final granted = await FlutterContacts.requestPermission(readonly: true);
       if (!granted) {
         if (mounted) {
@@ -209,8 +236,39 @@ class _FriendsScreenState extends State<FriendsScreen>
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: AppColors.neonBlue, strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: ListView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 8,
+                itemBuilder: (_, __) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    Container(width: 48, height: 48,
+                        decoration: const BoxDecoration(
+                            color: Colors.white, shape: BoxShape.circle)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 130, height: 13,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                        const SizedBox(height: 6),
+                        Container(width: 80, height: 11,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                      ],
+                    )),
+                    Container(width: 80, height: 30,
+                        decoration: BoxDecoration(color: Colors.white,
+                            borderRadius: BorderRadius.circular(8))),
+                  ]),
+                ),
+              ),
+            )
           : TabBarView(
               controller: _tabs,
               children: [
@@ -463,8 +521,26 @@ class _ContactsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Center(child: CircularProgressIndicator(
-          color: AppColors.neonBlue, strokeWidth: 2));
+      return Shimmer.fromColors(
+        baseColor: AppColors.card,
+        highlightColor: AppColors.divider,
+        child: ListView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 6,
+          itemBuilder: (_, __) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(children: [
+              Container(width: 48, height: 48,
+                  decoration: const BoxDecoration(
+                      color: Colors.white, shape: BoxShape.circle)),
+              const SizedBox(width: 12),
+              Expanded(child: Container(width: 120, height: 13,
+                  decoration: BoxDecoration(color: Colors.white,
+                      borderRadius: BorderRadius.circular(6)))),
+            ]),
+          ),
+        ),
+      );
     }
     if (users.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [

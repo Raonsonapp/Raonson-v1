@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/note_service.dart';
@@ -313,8 +314,9 @@ class _BubblePreview extends StatelessWidget {
                         if (song!.artUrl.isNotEmpty)
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
-                            child: Image.network(song!.artUrl,
-                                width: 26, height: 26, fit: BoxFit.cover),
+                            child: CachedNetworkImage(imageUrl: song!.artUrl,
+                                width: 26, height: 26, fit: BoxFit.cover,
+                                memCacheWidth: 52),
                           )
                         else
                           Container(
@@ -460,7 +462,8 @@ class _AttachedMusic extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(9),
             child: song.artUrl.isNotEmpty
-                ? Image.network(song.artUrl, width: 50, height: 50, fit: BoxFit.cover)
+                ? CachedNetworkImage(imageUrl: song.artUrl, width: 50, height: 50,
+                    fit: BoxFit.cover, memCacheWidth: 100)
                 : Container(
                     width: 50, height: 50,
                     decoration: BoxDecoration(

@@ -104,6 +104,9 @@ class AppController {
         return _page(ResetPasswordScreen(
             identifier: settings.arguments as String? ?? ''));
 
+      case '/messages':
+        return _slide(const ChatListScreen());
+
       // ── Hashtag feed ──
       case '/hashtag':
         return _slide(

@@ -2,10 +2,12 @@ package main
 
 import (
 	"compress/gzip"
+	"context"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -20,8 +22,25 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func validateEnv() {
+	required := []string{"DATABASE_URL"}
+	warned := []string{"JWT_SECRET", "JWT_REFRESH_SECRET"}
+	for _, k := range required {
+		if os.Getenv(k) == "" {
+			log.Fatalf("FATAL: required env var %s is not set", k)
+		}
+	}
+	for _, k := range warned {
+		if os.Getenv(k) == "" {
+			log.Printf("WARNING: %s is not set — using ephemeral random secret (tokens will not survive restart)", k)
+		}
+	}
+}
+
 func main() {
 	godotenv.Load()
+
+	validateEnv()
 
 	db.Init()
 	mw.InitRedis()
@@ -59,8 +78,8 @@ func main() {
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length", "X-Cache"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour, // OPTIONS preflight кэш
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// ── HEALTH ──────────────────────────────────────────────────
@@ -95,12 +114,15 @@ func main() {
 	a := r.Group("/auth")
 	{
 		a.POST("/register",        rl20, handlers.Register)
-		a.GET("/check-username/:username", handlers.CheckUsername)
+		a.GET("/check-username/:username", rl20, handlers.CheckUsername)
 		a.POST("/login",           rl20, handlers.Login)
 		a.POST("/refresh",         handlers.RefreshToken)
 		a.POST("/logout",          auth, handlers.Logout)
 		a.POST("/forgot-password", rl20, handlers.ForgotPassword)
 		a.POST("/reset-password",  rl20, handlers.ResetPassword)
+		a.POST("/change-password", auth, rl20, handlers.ChangePassword)
+		a.GET("/sessions",     auth, handlers.GetSessions)        // таърихи воридшавӣ
+		a.POST("/revoke-all",  auth, handlers.RevokeAllSessions)  // тоза кардани таърих
 	}
 
 	// ── USERS ────────────────────────────────────────────────────
@@ -132,6 +154,7 @@ func main() {
 	p := r.Group("/profile", auth, rl100)
 	{
 		p.GET("/me",            handlers.GetMyProfile)
+		p.GET("/insights",      handlers.GetProfileInsights) // обзори 30-рӯза
 		p.GET("/notes/friends", cache3s, handlers.GetFriendsNotes)
 		p.POST("/note",         handlers.SetNote)
 		p.PUT("/",              handlers.UpdateProfile)
@@ -139,8 +162,22 @@ func main() {
 		p.GET("/saved",         handlers.GetSavedPosts)
 		p.GET("/notifications", handlers.GetNotifPrefs)
 		p.PUT("/notifications", handlers.UpdateNotifPrefs)
+		p.PUT("/username",      handlers.ChangeUsername)
+		p.PUT("/phone",         handlers.ChangePhone)
+		p.GET("/auto-reply",    handlers.GetAutoReply)
+		p.PUT("/auto-reply",    handlers.SetAutoReply)
 		p.DELETE("/avatar",     handlers.DeleteAvatar)
+		p.DELETE("/me",         handlers.DeleteUser)
 		p.GET("/:username",     cache3s, handlers.GetProfile)
+	}
+
+	// ── CLOSE FRIENDS (Близкие друзья) ──────────────────────────
+	cf := r.Group("/close-friends", auth, rl100)
+	{
+		cf.GET("",         handlers.GetCloseFriends)
+		cf.GET("/ids",     handlers.GetCloseFriendIDs)
+		cf.POST("/:id",    handlers.AddCloseFriend)
+		cf.DELETE("/:id",  handlers.RemoveCloseFriend)
 	}
 
 	// ── POSTS ────────────────────────────────────────────────────
@@ -150,6 +187,7 @@ func main() {
 		po.GET("/",                  cache3s, handlers.GetFeed)
 		po.GET("/feed",              cache3s, handlers.GetFeed)
 		po.GET("/smart-feed",        handlers.GetSmartFeed) // has own cache
+		po.GET("/scheduled",         handlers.GetScheduledPosts)
 		po.GET("/hashtag/:tag",      cache3s, handlers.HashtagPosts)
 		po.GET("/:id",               cache3s, handlers.GetPost)
 		po.GET("/:id/likes",         handlers.GetPostLikers)
@@ -158,6 +196,7 @@ func main() {
 		po.DELETE("/:id",            handlers.DeletePost)
 		po.POST("/:id/like",         handlers.TogglePostLike)
 		po.POST("/:id/save",         handlers.TogglePostSave)
+		po.POST("/:id/share",        handlers.SharePost) // мубодилаи беназир
 		po.POST("/:id/report",       handlers.ReportPost)
 		po.POST("/:id/hide-likes",   handlers.TogglePostHideLikes)
 		po.POST("/:id/toggle-comments", handlers.TogglePostComments)
@@ -170,14 +209,42 @@ func main() {
 		po.PUT("/:id/music",         handlers.UpdatePostMusic)
 		po.GET("/:id/stats",         handlers.GetPostStats)
 		po.POST("/:id/order",        handlers.PlaceOrder) // хариди маҳсулот
+		po.POST("/:id/feature",      handlers.ToggleProductFeature) // маҳсули беҳтарин
+		po.GET("/:id/translations",  handlers.GetProductTranslations)
+		po.PUT("/:id/translations",  handlers.SetProductTranslations)
+		po.PUT("/:id/product",       handlers.UpdateProduct) // таҳрири маҳсул
+		po.PUT("/:id/sale",          handlers.SetProductSale) // тахфифи муддатнок
+		po.POST("/:id/review",       handlers.AddReview)     // баҳои маҳсул
+		po.GET("/:id/reviews",       handlers.GetReviews)
 	}
 
 	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────
 	r.GET("/shop", auth, rl100, handlers.GetShop) // бе cache — маҳсулоти нав фавран
+	r.GET("/shop/insights", auth, rl100, handlers.GetShopInsights) // панели фурӯшанда
+	r.GET("/shop/customers", auth, rl100, handlers.GetCustomers)   // CRM: харидорон
+	r.POST("/shop/promos", auth, rl100, handlers.CreatePromo)            // промокод сохтан
+	r.GET("/shop/promos", auth, rl100, handlers.ListPromos)              // промокодҳо
+	r.DELETE("/shop/promos/:id", auth, rl100, handlers.DeletePromo)      // ҳазф
+	r.POST("/shop/promos/validate", auth, rl100, handlers.ValidatePromo) // санҷиш
+	r.POST("/shop/broadcast", auth, rl20, handlers.BroadcastToCustomers)  // паём ба муштариён
 	og := r.Group("/orders", auth, rl100)
 	{
-		og.GET("/",        handlers.GetMyOrders)
-		og.GET("/selling", handlers.GetSellingOrders)
+		og.GET("/",           handlers.GetMyOrders)
+		og.GET("/selling",    handlers.GetSellingOrders)
+		og.PUT("/:id/status", handlers.UpdateOrderStatus) // тағйири ҳолат (фурӯшанда)
+	}
+
+	// ── Live-стримҳо ───────────────────────────────────────────────
+	lg := r.Group("/live", auth, rl100)
+	{
+		lg.GET("/",             handlers.ListLive)
+		lg.POST("/start",       handlers.StartLive)
+		lg.POST("/:id/end",     handlers.EndLive)
+		lg.POST("/:id/join",    handlers.JoinLive)
+		lg.POST("/:id/leave",   handlers.LeaveLive)
+		lg.POST("/:id/comment", handlers.LiveComment)
+		lg.GET("/:id/comments", handlers.LiveComments)
+		lg.POST("/:id/like",    handlers.LiveLike)
 	}
 
 	// ── Effects marketplace ────────────────────────────────────────
@@ -190,12 +257,14 @@ func main() {
 	}
 
 	r.POST("/posts/view/:id", auth, handlers.TrackPostView)
+	r.POST("/posts/view-batch", auth, rl100, handlers.TrackPostViewBatch)
 
 	r.GET("/comments/:id",       auth, rl100, cache3s, handlers.GetComments)
 	r.POST("/comments/:id",      auth, rl100, handlers.AddComment)
 	r.DELETE("/comments/:id",    auth, rl100, handlers.DeleteComment)
 	r.PUT("/comments/:id",       auth, rl100, handlers.EditComment)
 	r.POST("/comments/:id/like", auth, rl100, handlers.ToggleCommentLike)
+	r.POST("/comments/:id/report", auth, rl20, handlers.ReportComment)
 
 	li := r.Group("/likes", auth, rl100)
 	{
@@ -230,11 +299,13 @@ func main() {
 		re.POST("/:id/comments", handlers.AddReelComment)
 		re.POST("/:id/report",       handlers.ReportReel)
 		re.POST("/:id/hide-likes",   handlers.ToggleReelHideLikes)
+		re.POST("/:id/toggle-comments", handlers.ToggleReelComments)
 		re.POST("/:id/interest",     handlers.MarkReelInterested)
 		re.POST("/:id/not_interest", handlers.MarkReelNotInterested)
 		re.GET("/:id/stats",         handlers.GetReelStats)
 		re.POST("/:id/comments/:commentId/like",  handlers.LikeReelComment)
 		re.POST("/:id/comments/:commentId/reply", handlers.ReplyReelComment)
+		re.PUT("/:id/caption",    handlers.UpdateReelCaption)
 	}
 
 	st := r.Group("/stories", auth, rl100)
@@ -249,6 +320,7 @@ func main() {
 		st.POST("/:id/archive", handlers.ToggleStoryArchive)
 		st.POST("/:id/toggle-replies", handlers.ToggleStoryReplies)
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
+		st.POST("/:id/report", handlers.ReportStory)
 	}
 
 	// ── HIGHLIGHTS (Актуальный) ──
@@ -269,6 +341,7 @@ func main() {
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)
+		ch.POST("/messages/:id/report", handlers.ReportMessage)
 		ch.POST("/requests/:peerId/accept", handlers.AcceptChatRequest)
 		ch.POST("/requests/:peerId/delete", handlers.DeleteChatRequest)
 	}
@@ -343,6 +416,10 @@ func main() {
 
 	// AI-муаллими коднависӣ (proxy ба LLM-и open-source; калид дар env).
 	r.POST("/tutor/chat", auth, rl100, handlers.TutorChat)
+	r.POST("/ai/text", auth, rl100, handlers.AIText) // AI абзорҳо (Pro)
+	r.POST("/ai/moderate",  auth, rl100, handlers.AIModerate)  // модератсия (OpenAI)
+	r.POST("/ai/hashtags",  auth, rl100, handlers.AIHashtags)  // хэштегҳои AI
+	r.POST("/ai/translate", auth, rl100, handlers.AITranslate) // тарҷума (OpenAI)
 
 	r.POST("/upload",        auth, rl20, mw.AntiAbuse("upload", 50, 3600), handlers.UploadToR2)
 	r.POST("/upload/avatar", auth, rl20, handlers.UploadToR2)
@@ -362,10 +439,33 @@ func main() {
 		ad.POST("/unvip/:id",   handlers.UnsetVip)
 		ad.DELETE("/users/:id", handlers.AdminDeleteUser)
 		ad.GET("/orders",       handlers.AdminOrders) // фармоишҳо + комиссияи умумӣ
+		ad.GET("/reports",          handlers.AdminGetReports)
+		ad.POST("/reports/resolve", handlers.AdminResolveReport)
+		ad.GET("/reports/count",    handlers.AdminReportCount)
 	}
 
+	// Child Safety Standards & Community Guidelines (public, no auth)
+	r.GET("/child-safety", handlers.GetChildSafetyPolicy)
+	r.GET("/community-guidelines", handlers.GetCommunityGuidelines)
+
 	log.Printf("🚀 Raonson Go | Port:%s | PostgreSQL+R2+Redis | GZIP ON", port)
-	r.Run(":" + port)
+
+	srv := &http.Server{Addr: ":" + port, Handler: r}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+	log.Println("Shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("shutdown: %v", err)
+	}
 }
 
 // ── GZIP middleware — JSON трафики 3-5x кам ──────────────────────

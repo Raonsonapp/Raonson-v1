@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
@@ -7,7 +8,9 @@ import '../../models/reel_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
+import '../../core/services/user_session.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/report_dialog.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -31,6 +34,10 @@ class _ReelControlsState extends State<ReelControls> {
   late int  _commentCount;
 
   ReelModel get reel => widget.reel;
+  bool get _isOwner {
+    final myId = UserSession.userId?.trim() ?? '';
+    return myId.isNotEmpty && myId == reel.user.id.trim();
+  }
 
   @override
   void initState() {
@@ -42,6 +49,7 @@ class _ReelControlsState extends State<ReelControls> {
   }
 
   void _toggleLike() {
+    HapticFeedback.lightImpact();
     setState(() {
       _liked = !_liked;
       _likeCount += _liked ? 1 : -1;
@@ -51,6 +59,7 @@ class _ReelControlsState extends State<ReelControls> {
   }
 
   void _toggleSave() {
+    HapticFeedback.selectionClick();
     setState(() => _saved = !_saved);
     ApiClient.instance.post('/reels/${reel.id}/save').then((_) {}, onError: (_) {});
   }
@@ -76,14 +85,19 @@ class _ReelControlsState extends State<ReelControls> {
             leading: const Icon(AppIcons.flag_outlined, color: Colors.white),
             title: const Text('Хабар додан',
                 style: TextStyle(color: Colors.white)),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(ctx);
+              final result = await ReportDialog.showWithDescription(context);
+              if (result == null) return;
               ApiClient.instance
-                  .post('/reels/${reel.id}/report')
+                  .post('/reels/${reel.id}/report',
+                      body: {'reason': result.reason, 'description': result.description})
                   .then((_) {}, onError: (_) {});
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Хабар фиристода шуд'),
-                  duration: Duration(seconds: 2)));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Хабар фиристода шуд'),
+                    duration: Duration(seconds: 2)));
+              }
             },
           ),
           ListTile(
@@ -131,14 +145,19 @@ class _ReelControlsState extends State<ReelControls> {
                   ? 'assets/icons/heart_filled.svg'
                   : 'assets/icons/heart.svg',
               color: _liked ? const Color(0xFFFF3040) : Colors.white,
-              label: _fmt(_likeCount),
+              label: (reel.hideLikes && !_isOwner)
+                  ? 'Лайкҳо'
+                  : _fmt(_likeCount),
               onTap: _toggleLike),
           const SizedBox(height: 18),
-          _SvgBtn(
-              asset: 'assets/icons/comment.svg',
-              label: _fmt(_commentCount),
-              onTap: _openComments),
-          const SizedBox(height: 18),
+          // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад.
+          if (!reel.commentsDisabled) ...[
+            _SvgBtn(
+                asset: 'assets/icons/comment.svg',
+                label: _fmt(_commentCount),
+                onTap: _openComments),
+            const SizedBox(height: 18),
+          ],
           _SvgBtn(asset: 'assets/icons/share.svg', onTap: _share),
           const SizedBox(height: 18),
           _SvgBtn(
@@ -353,6 +372,9 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                 child: TextField(
                   controller: _ctrl,
                   style: const TextStyle(color: Colors.white),
+                  maxLength: 1000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   decoration: InputDecoration(
                     hintText: 'Шарҳ нависед...',
                     hintStyle: const TextStyle(color: Colors.white38),

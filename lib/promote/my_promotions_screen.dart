@@ -1,6 +1,7 @@
 // lib/promote/my_promotions_screen.dart
 // «Рекламаҳои ман» — рӯйхати фармоишҳои реклама бо ҳолат ва омор.
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -110,8 +111,9 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: thumb.isNotEmpty
-                ? Image.network(thumb, width: 52, height: 52, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _ph())
+                ? CachedNetworkImage(imageUrl: thumb, width: 52, height: 52,
+                    fit: BoxFit.cover, memCacheWidth: 104,
+                    errorWidget: (_, __, ___) => _ph())
                 : _ph(),
           ),
           const SizedBox(width: 12),

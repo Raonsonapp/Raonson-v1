@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_theme.dart';
 import '../../models/post_model.dart';
@@ -26,7 +27,7 @@ class _HashtagScreenState extends State<HashtagScreen> {
   }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final res = await ApiClient.instance
           .get('/posts/hashtag/${Uri.encodeComponent(widget.hashtag)}')
@@ -34,14 +35,14 @@ class _HashtagScreenState extends State<HashtagScreen> {
       if (res.statusCode >= 400) throw Exception('Хато ${res.statusCode}');
       final body = jsonDecode(res.body);
       final list = body is List ? body : (body['posts'] ?? []) as List;
-      setState(() {
+      if (mounted) setState(() {
         _posts = list
             .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
             .toList();
         _loading = false;
       });
     } catch (e) {
-      setState(() { _loading = false; _error = e.toString(); });
+      if (mounted) setState(() { _loading = false; _error = e.toString(); });
     }
   }
 
@@ -61,8 +62,18 @@ class _HashtagScreenState extends State<HashtagScreen> {
               fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(
-              color: AppColors.neonBlue, strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(2),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2),
+                itemCount: 15,
+                itemBuilder: (_, __) => Container(color: Colors.white),
+              ),
+            )
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.error_outline, color: AppColors.textFaint, size: 48),

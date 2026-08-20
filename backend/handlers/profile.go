@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"raonson/db"
@@ -12,6 +14,65 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+// username: 3–30 char, ҳарфҳои хурд/рақам/`_`/`.`
+var usernameRe = regexp.MustCompile(`^[a-z0-9_.]{3,30}$`)
+
+// PUT /profile/username — тағйири номи корбарӣ
+func ChangeUsername(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Username string `json:"username"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
+		return
+	}
+	uname := strings.ToLower(strings.TrimSpace(b.Username))
+	if !usernameRe.MatchString(uname) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Номи корбарӣ нодуруст аст"})
+		return
+	}
+	var exists bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(username)=$1 AND id<>$2)`,
+		uname, myID).Scan(&exists)
+	if exists {
+		c.JSON(http.StatusConflict, gin.H{"message": "Ин ном банд аст"})
+		return
+	}
+	if _, err := db.Pool.Exec(context.Background(),
+		`UPDATE users SET username=$1 WHERE id=$2`, uname, myID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+	mw.CacheDel("profile:me:" + myID)
+	c.JSON(http.StatusOK, gin.H{"username": uname})
+}
+
+// PUT /profile/phone — тағйири рақами телефон
+func ChangePhone(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Phone string `json:"phone"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
+		return
+	}
+	phone := strings.TrimSpace(b.Phone)
+	if phone != "" && !regexp.MustCompile(`^\+?[0-9]{7,15}$`).MatchString(phone) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Рақами телефон нодуруст аст"})
+		return
+	}
+	if _, err := db.Pool.Exec(context.Background(),
+		`UPDATE users SET phone=$1 WHERE id=$2`, phone, myID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+	mw.CacheDel("profile:me:" + myID)
+	c.JSON(http.StatusOK, gin.H{"phone": phone})
+}
 
 // GET /profile/me — with 30s personal cache
 func GetMyProfile(c *gin.Context) {
@@ -95,6 +156,15 @@ func UpdateProfile(c *gin.Context) {
 		FullName  *string `json:"fullName"`
 		Phone     *string `json:"phone"`
 		BioSong   *json.RawMessage `json:"bioSong"`
+		CoverUrl  *string `json:"coverUrl"`
+		Links     *[]struct {
+			Title string `json:"title"`
+			URL   string `json:"url"`
+		} `json:"links"`
+		ActivityStatus *bool `json:"activityStatus"`
+		AllowComments  *bool `json:"allowComments"`
+		AllowMentions  *bool `json:"allowMentions"`
+		TwoFactor      *bool `json:"twoFactor"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
@@ -117,6 +187,18 @@ func UpdateProfile(c *gin.Context) {
 		s := string(*b.BioSong)
 		bioSongStr = &s
 	}
+	// links → re-serialize to JSON string; cap at 20 links.
+	var bioLinksStr *string
+	if b.Links != nil {
+		links := *b.Links
+		if len(links) > 20 {
+			links = links[:20]
+		}
+		if raw, err := json.Marshal(links); err == nil {
+			s := string(raw)
+			bioLinksStr = &s
+		}
+	}
 	_, err := db.Pool.Exec(context.Background(), `
 		UPDATE users SET
 		  bio        = COALESCE($1, bio),
@@ -128,11 +210,19 @@ func UpdateProfile(c *gin.Context) {
 		  full_name  = COALESCE($7, full_name),
 		  phone      = COALESCE($8, phone),
 		  bio_song   = COALESCE($10::jsonb, bio_song),
+		  cover_url  = COALESCE($12, cover_url),
+		  bio_links  = COALESCE($13, bio_links),
+		  activity_status = COALESCE($14, activity_status),
+		  allow_comments  = COALESCE($15, allow_comments),
+		  allow_mentions  = COALESCE($16, allow_mentions),
+		  two_factor      = COALESCE($17, two_factor),
 		  username_changed_at = CASE WHEN $11 THEN NOW() ELSE username_changed_at END,
 		  updated_at = NOW()
 		WHERE id=$9`,
 		b.Bio, b.Avatar, b.IsPrivate, b.Username,
-		b.Website, b.Location, b.FullName, b.Phone, myID, bioSongStr, changingUsername)
+		b.Website, b.Location, b.FullName, b.Phone, myID, bioSongStr, changingUsername,
+		b.CoverUrl, bioLinksStr,
+		b.ActivityStatus, b.AllowComments, b.AllowMentions, b.TwoFactor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return

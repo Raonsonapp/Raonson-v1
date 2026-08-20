@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,6 +19,7 @@ import '../../core/api/api_endpoints.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/account_manager.dart';
 import '../../core/storage/token_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../create/upload/upload_manager.dart';
 import '../widgets/auth_kit.dart';
 import '../../core/i18n/strings.dart';
@@ -40,6 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passCtrl    = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _terms = false;
+  bool _ageConfirm = false;
 
   // ── Step 2 ──
   final _userCtrl = TextEditingController();
@@ -100,6 +103,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (pass.length < 8) return _err(tr('auth.err.passwordLength'));
     if (pass != _confirmCtrl.text) return _err(tr('auth.err.passwordMismatch'));
     if (!_terms) return _err(tr('auth.err.terms'));
+    if (!_ageConfirm) return _err('Синни шумо бояд 13+ бошад');
     _goto(1);
   }
 
@@ -379,6 +383,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(width: 10),
             Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  const TextSpan(text: 'Ман бо '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: () => launchUrl(Uri.parse('https://raonson.app/terms'),
+                          mode: LaunchMode.externalApplication),
+                      child: Text('Шартҳои истифода',
+                          style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.neonBlue)),
+                    ),
+                  ),
+                  const TextSpan(text: ' ва '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: () => launchUrl(Uri.parse('https://raonson.app/privacy'),
+                          mode: LaunchMode.externalApplication),
+                      child: Text('Сиёсати махфият',
+                          style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
+                              decoration: TextDecoration.underline,
+                              decorationColor: AppColors.neonBlue)),
+                    ),
+                  ),
+                  const TextSpan(text: ' розӣ ҳастам'),
+                ]),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            SizedBox(
+              width: 24, height: 24,
+              child: Checkbox(
+                value: _ageConfirm,
+                onChanged: (v) => setState(() => _ageConfirm = v ?? false),
+                activeColor: AppColors.neonBlue,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5)),
+                side: BorderSide(color: AppColors.textFaint),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
               child: Text(
                 tr('auth.termsAgree'),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
@@ -639,7 +694,7 @@ class _FindFriendsState extends State<_FindFriends> {
           CircleAvatar(
             radius: 22,
             backgroundColor: AppColors.card,
-            backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+            backgroundImage: avatar.isNotEmpty ? CachedNetworkImageProvider(avatar, maxWidth: 88) : null,
             child: avatar.isEmpty
                 ? Icon(AppIcons.person, color: AppColors.textFaint)
                 : null,

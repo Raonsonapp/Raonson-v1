@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../models/post_model.dart';
 import '../../models/comment_model.dart';
@@ -12,7 +13,12 @@ import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../gifts/gift_sheet.dart';
+import '../../ai/ai_tools.dart';
+import '../../core/services/subscription_service.dart';
+import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/report_dialog.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -112,14 +118,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
         final List list = body is List
             ? body
             : (body['comments'] ?? body['data'] ?? []);
-        setState(() {
-          _comments = list
-              .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            _comments = list
+                .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          });
+        }
       }
     } catch (_) {}
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   void _insertEmoji(String e) {
@@ -223,8 +231,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   void _onDelete(String commentId) {
+    final removed = _comments.where((c) => c.id == commentId).toList();
     setState(() => _comments.removeWhere((c) => c.id == commentId));
-    ApiClient.instance.delete('/comments/$commentId');
+    ApiClient.instance.delete('/comments/$commentId').catchError((_) {
+      if (mounted) setState(() => _comments.addAll(removed));
+    });
   }
 
   void _onEdit(CommentModel comment, String newText) {
@@ -274,6 +285,79 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return out;
   }
 
+  // AI ҷамъбасти шарҳҳо (Pro).
+  Future<void> _summarize() async {
+    if (!SubscriptionService.instance.isPro) {
+      showModalBottomSheet(
+        context: context, backgroundColor: AppColors.surface,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (_) => SafeArea(child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 38),
+            const SizedBox(height: 10),
+            Text('Ҷамъбасти шарҳҳо бо AI — хусусияти Raonson Pro',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textPrimary,
+                    fontSize: 15, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 14),
+            SizedBox(width: double.infinity, child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE100FF)),
+              onPressed: () { Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => const SubscriptionScreen())); },
+              child: const Text('Raonson Pro гирифтан',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            )),
+          ]),
+        )),
+      );
+      return;
+    }
+    final text = _comments.take(40).map((c) => c.text).join('\n');
+    if (text.trim().isEmpty) return;
+    // Loader бо context-и худи диалог — то дар ҳар ҳолат дуруст пӯшида шавад
+    // ва ҳеҷ гоҳ маршрути нодуруст pop нашавад.
+    BuildContext? loaderCtx;
+    showDialog(context: context, barrierDismissible: false,
+        builder: (dctx) {
+          loaderCtx = dctx;
+          return const Center(child: CircularProgressIndicator());
+        });
+    final res = await AiService.text('summarize', text);
+    if (loaderCtx != null && loaderCtx!.mounted) {
+      Navigator.of(loaderCtx!).pop(); // танҳо худи loader пӯшида мешавад
+    }
+    if (!mounted) return;
+    final msg = res == '__NOT_CONFIGURED__'
+        ? 'AI ҳанӯз танзим нашудааст.'
+        : (res.isEmpty ? 'Ҷамъбаст нашуд, дубора кӯшиш кунед.' : res);
+    showModalBottomSheet(
+      context: context, backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 18),
+              const SizedBox(width: 6),
+              Text('Ҷамъбасти шарҳҳо',
+                  style: TextStyle(color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold, fontSize: 15)),
+            ]),
+            const SizedBox(height: 12),
+            Text(msg, style: TextStyle(color: AppColors.textSecondary,
+                fontSize: 14, height: 1.5)),
+            const SizedBox(height: 16),
+          ]),
+      )),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(children: [
@@ -283,22 +367,78 @@ class _CommentsScreenState extends State<CommentsScreen> {
         decoration: BoxDecoration(color: AppColors.textFaint,
             borderRadius: BorderRadius.circular(2))),
 
-      // Title + count
+      // Title + count + AI summary
       Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
-          style: TextStyle(color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold, fontSize: 16)),
+        padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
+        child: Row(children: [
+          Text(
+            'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
+            style: TextStyle(color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold, fontSize: 16)),
+          const Spacer(),
+          if (_comments.length >= 3)
+            GestureDetector(
+              onTap: _summarize,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: [Color(0xFF7F00FF), Color(0xFFE100FF)]),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(AppIcons.bolt_rounded, color: Colors.white, size: 14),
+                  SizedBox(width: 4),
+                  Text('Ҷамъбаст', style: TextStyle(color: Colors.white,
+                      fontSize: 12, fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            ),
+        ]),
       ),
       Divider(color: AppColors.dividerFaint, height: 1),
 
       // ── Comments list ────────────────────────────────────────
       Expanded(
         child: _loading
-            ? const Center(child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.storyStart)))
+            ? Shimmer.fromColors(
+                baseColor: AppColors.card,
+                highlightColor: AppColors.divider,
+                child: ListView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: 7,
+                  itemBuilder: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 36, height: 36,
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle)),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(width: 100, height: 12,
+                                decoration: BoxDecoration(color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6))),
+                            const SizedBox(height: 6),
+                            Container(width: double.infinity, height: 12,
+                                decoration: BoxDecoration(color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6))),
+                            const SizedBox(height: 4),
+                            Container(width: 180, height: 12,
+                                decoration: BoxDecoration(color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6))),
+                          ],
+                        )),
+                      ],
+                    ),
+                  ),
+                ),
+              )
             : _comments.isEmpty
                 ? Center(child: Column(mainAxisSize: MainAxisSize.min,
                     children: [
@@ -313,6 +453,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       itemCount: items.length,
+                      addAutomaticKeepAlives: false,
                       itemBuilder: (_, i) {
                         final entry = items[i];
                         final c = entry.$1;
@@ -320,6 +461,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         return Padding(
                           padding: EdgeInsets.only(left: isReply ? 40 : 0),
                           child: _CommentItem(
+                            key: ValueKey(c.id),
                             comment: c,
                             isReply: isReply,
                             onDelete: () => _onDelete(c.id),
@@ -383,7 +525,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 radius: 16,
                 backgroundColor: AppColors.card,
                 backgroundImage: (UserSession.avatar?.isNotEmpty == true)
-                    ? NetworkImage(UserSession.avatar!) : null,
+                    ? CachedNetworkImageProvider(UserSession.avatar!, maxWidth: 72) : null,
                 child: (UserSession.avatar?.isEmpty != false)
                     ? Icon(AppIcons.person, size: 16, color: AppColors.textTertiary) : null,
               ),
@@ -393,6 +535,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   controller: _ctrl,
                   focusNode: _focus,
                   autofocus: true,
+                  maxLength: 1000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
@@ -452,6 +597,7 @@ class _CommentItem extends StatefulWidget {
   final VoidCallback onReply;
 
   const _CommentItem({
+    super.key,
     required this.comment,
     this.isReply = false,
     required this.onDelete,
@@ -466,6 +612,8 @@ class _CommentItem extends StatefulWidget {
 class _CommentItemState extends State<_CommentItem> {
   late bool _liked;
   late int  _likeCount;
+  String? _translation;
+  bool _translating = false;
 
   // ── Тарҷумаи шарҳ (OpenAI) ───────────────────────────────────
   String? _translated;
@@ -510,7 +658,29 @@ class _CommentItemState extends State<_CommentItem> {
     _likeCount = widget.comment.likesCount;
   }
 
+  Future<void> _translateComment() async {
+    if (_translating) return;
+    if (_translation != null) {
+      setState(() => _translation = null);
+      return;
+    }
+    setState(() => _translating = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/translate', body: {
+        'text': widget.comment.text,
+        'to': 'ru',
+      });
+      if (res.statusCode < 400 && mounted) {
+        final body = jsonDecode(res.body);
+        final t = (body['translation'] ?? '').toString().trim();
+        setState(() => _translation = t.isNotEmpty ? t : null);
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _translating = false);
+  }
+
   Future<void> _toggleLike() async {
+    HapticFeedback.lightImpact();
     final was = _liked;
     setState(() { _liked = !was; _likeCount += _liked ? 1 : -1; });
     try {
@@ -575,9 +745,11 @@ class _CommentItemState extends State<_CommentItem> {
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
             onTap: () async {
               Navigator.pop(context);
+              final result = await ReportDialog.showWithDescription(context);
+              if (result == null || !mounted) return;
               await ApiClient.instance.post(
                   '/comments/${widget.comment.id}/report',
-                  body: {'reason': 'spam'});
+                  body: {'reason': result.reason, 'description': result.description});
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('Шикоят фиристода шуд ✓'),
@@ -629,7 +801,7 @@ class _CommentItemState extends State<_CommentItem> {
         title: Text('Таҳрир кардан',
             style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
-          controller: ctrl, autofocus: true, maxLines: 4,
+          controller: ctrl, autofocus: true, maxLines: 4, maxLength: 1000,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: 'Шарҳ...',
@@ -645,14 +817,16 @@ class _CommentItemState extends State<_CommentItem> {
         ],
       ),
     );
+    final newText = ctrl.text.trim();
     ctrl.dispose();
     if (ok != true) return;
     // Backend edit (PUT)
-    final newText = ctrl.text.trim();
     if (newText.isEmpty || newText == widget.comment.text) return;
-    await ApiClient.instance.put('/comments/${widget.comment.id}',
-        body: {'text': newText});
-    widget.onEdit(newText);
+    try {
+      await ApiClient.instance.put('/comments/${widget.comment.id}',
+          body: {'text': newText});
+      widget.onEdit(newText);
+    } catch (_) {}
   }
 
   Widget _handle() => Container(
@@ -687,7 +861,7 @@ class _CommentItemState extends State<_CommentItem> {
             radius: widget.isReply ? 14 : 18,
             backgroundColor: AppColors.card,
             backgroundImage: c.user.avatar.isNotEmpty
-                ? NetworkImage(c.user.avatar) : null,
+                ? CachedNetworkImageProvider(c.user.avatar, maxWidth: 72) : null,
             child: c.user.avatar.isEmpty
                 ? Icon(AppIcons.person, color: AppColors.textTertiary,
                     size: widget.isReply ? 14 : 18) : null,

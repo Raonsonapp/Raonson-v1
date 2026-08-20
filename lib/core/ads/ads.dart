@@ -5,4 +5,3 @@ export 'ads_manager.dart';
 export 'feed_ad_card.dart';
 export 'ad_banner_widget.dart';
 export 'rewarded_ad_flow.dart';
-export 'yandex_ads.dart';

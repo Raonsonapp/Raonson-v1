@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"strings"
 	"strconv"
@@ -29,7 +30,10 @@ const userSelectSQL = `
 	       COALESCE(note_song_end_ms,30000),
 	       COALESCE(website,''), COALESCE(location,''),
 	       COALESCE(full_name,''), COALESCE(phone,''),
-	       COALESCE(is_vip,false)
+	       COALESCE(is_vip,false),
+	       COALESCE(cover_url,''), COALESCE(bio_links,''),
+	       COALESCE(activity_status,true), COALESCE(allow_comments,true),
+	       COALESCE(allow_mentions,true), COALESCE(two_factor,false)
 	FROM users`
 
 func scanFullUser(row pgx.Row) (gin.H, error) {
@@ -45,6 +49,9 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		website, location               string
 		fullName, phone                 string
 		isVip                           bool
+		coverUrl, bioLinks              string
+		activityStatus, allowComments   bool
+		allowMentions, twoFactor        bool
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -54,10 +61,19 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&stTrackMs, &stStartMs, &stEndMs,
 		&website, &location, &fullName, &phone,
 		&isVip,
+		&coverUrl, &bioLinks,
+		&activityStatus, &allowComments, &allowMentions, &twoFactor,
 	)
 	if err != nil {
 		log.Printf("[scanFullUser] error: %v", err)
 		return nil, err
+	}
+	// bio_links — JSON array of {title,url}; on empty/invalid emit [].
+	links := []map[string]string{}
+	if bioLinks != "" {
+		if err := json.Unmarshal([]byte(bioLinks), &links); err != nil {
+			links = []map[string]string{}
+		}
 	}
 	// Соҳиби барнома (@raonson) ҳамеша VIP аст.
 	if strings.EqualFold(username, "raonson") {
@@ -76,6 +92,9 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"isFollowing": false,
 		"website": website, "location": location,
 		"fullName": fullName, "phone": phone,
+		"coverUrl": coverUrl, "links": links,
+		"activityStatus": activityStatus, "allowComments": allowComments,
+		"allowMentions": allowMentions, "twoFactor": twoFactor,
 		"note": note, "noteExpiresAt": noteExpiresAt,
 		"noteSong": gin.H{
 			"title": stTitle, "artist": stArtist,
@@ -136,10 +155,11 @@ func postsForUser(userID string, limit int) []gin.H {
 		       COALESCE(p.likes_count,0), COALESCE(p.comments_count,0),
 		       p.created_at,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type)
+		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position), '[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p WHERE p.user_id=$1 AND COALESCE(p.archived,false)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY p.created_at DESC LIMIT $2`, userID, limit)
 	if err != nil {
 		log.Printf("[postsForUser] error: %v", err)

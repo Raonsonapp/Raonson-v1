@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -56,13 +57,19 @@ func GetSmartFeed(c *gin.Context) {
 		  p.comments_count, p.created_at,
 		  u.id, u.username, u.avatar, u.verified,
 		  (SELECT COALESCE(json_agg(
-		           json_build_object('url',m.url,'type',m.type)
+		           json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		           ORDER BY m.position),'[]'::json)
 		   FROM post_media m WHERE m.post_id=p.id) AS media,
 		  EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1) AS liked,
 		  EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1) AS saved,
+		  COALESCE(p.hide_likes,false) AS hide_likes,
+		  COALESCE(p.comments_off,false) AS comments_off,
 		  COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
+		  COALESCE(p.is_product,false), COALESCE(p.price,0),
+		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
+		  COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
+		  COALESCE(p.shop_phone,''),
 		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW()),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
@@ -85,6 +92,7 @@ func GetSmartFeed(c *gin.Context) {
 		  u.banned = FALSE
 		  AND COALESCE(p.hidden,false) = FALSE
 		  AND COALESCE(p.archived,false) = FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  AND NOT EXISTS(SELECT 1 FROM blocks b
 		        WHERE (b.blocker_id=$1 AND b.blocked_id=p.user_id)
 		           OR (b.blocker_id=p.user_id AND b.blocked_id=$1))
@@ -114,21 +122,32 @@ func GetSmartFeed(c *gin.Context) {
 	for rows.Next() {
 		var pid, cap, uid, uname, uavatar string
 		var likes, comms int
-		var verified, liked, saved bool
+		var verified, liked, saved, hideLikes, commentsOff bool
 		var createdAt, media interface{}
 		var musicTitle, musicArtist, location string
 		var tagged []string
 		var hasStory bool
 		var score float64
+		var isProduct, contactRaonson bool
+		var price float64
+		var currency, productName, shopWhatsapp, shopPhone string
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
-			&musicTitle, &musicArtist, &location, &tagged, &hasStory, &score)
+			&hideLikes, &commentsOff,
+			&musicTitle, &musicArtist, &location, &tagged,
+			&isProduct, &price, &currency, &productName,
+			&contactRaonson, &shopWhatsapp, &shopPhone,
+			&hasStory, &score)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
 			"media": nilToEmpty(media), "liked": liked, "saved": saved,
+			"hideLikes": hideLikes, "commentsOff": commentsOff,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
 			"location": location, "taggedUsers": tagged,
+			"isProduct": isProduct, "price": price, "currency": currency,
+			"productName": productName, "contactRaonson": contactRaonson,
+			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 			"user": gin.H{
 				"_id": uid, "username": uname,
 				"avatar": uavatar, "verified": verified, "hasStory": hasStory,
@@ -155,9 +174,36 @@ func GetSmartFeed(c *gin.Context) {
 func TrackPostView(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
-	// Synchronous — query is tiny; avoids unbounded goroutine spawn under load
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO post_views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 		myID, pid)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// POST /posts/view-batch — батчи дидашавӣ (то 50 пост якбора)
+func TrackPostViewBatch(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		PostIDs []string `json:"postIds"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil || len(b.PostIDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "postIds required"})
+		return
+	}
+	if len(b.PostIDs) > 50 {
+		b.PostIDs = b.PostIDs[:50]
+	}
+	// Single batch INSERT — 1 round-trip instead of N
+	query := "INSERT INTO post_views(user_id,post_id) VALUES "
+	args := []interface{}{myID}
+	for i, pid := range b.PostIDs {
+		if i > 0 {
+			query += ","
+		}
+		query += fmt.Sprintf("($1,$%d)", i+2)
+		args = append(args, pid)
+	}
+	query += " ON CONFLICT DO NOTHING"
+	db.Pool.Exec(context.Background(), query, args...)
+	c.JSON(http.StatusOK, gin.H{"ok": true, "count": len(b.PostIDs)})
 }

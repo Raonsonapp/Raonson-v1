@@ -91,6 +91,7 @@ class _HlItem extends StatelessWidget {
                         ? CachedNetworkImage(
                             imageUrl: coverUrl, fit: BoxFit.cover,
                             width: 60, height: 60,
+                            memCacheWidth: 160,
                             errorWidget: (_, __, ___) =>
                                 Container(color: AppColors.card))
                         : Container(color: AppColors.card,

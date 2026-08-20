@@ -81,6 +81,7 @@ class ProfileRepository {
     required String username, String? bio, String? fullName,
     String? website, bool? isPrivate, String? avatar,
     Map<String, dynamic>? bioSong,
+    String? coverUrl, List<Map<String, String>>? links,
   }) async {
     final res = await _api.put('/profile/', body: {
       'username': username,
@@ -90,6 +91,8 @@ class ProfileRepository {
       if (isPrivate != null) 'isPrivate': isPrivate,
       if (avatar    != null && avatar.isNotEmpty) 'avatar': avatar,
       if (bioSong   != null) 'bioSong':   bioSong,
+      if (coverUrl  != null) 'coverUrl':  coverUrl,
+      if (links     != null) 'links':     links,
     });
     if (res.statusCode == 409) throw Exception('409: Username already taken');
     if (res.statusCode >= 400) {

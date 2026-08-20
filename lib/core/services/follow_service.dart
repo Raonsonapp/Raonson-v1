@@ -28,9 +28,13 @@ class FollowService {
     states.value = next;
   }
 
+  final Set<String> _inFlight = {};
+
   /// Follow/unfollow мекунад, ҳолатро фавран (optimistic) нав мекунад ва
   /// ба сервер мефиристад. Қимати нави обунаро бармегардонад.
   Future<bool> toggle(String userId, bool currentlyFollowing) async {
+    if (_inFlight.contains(userId)) return currentlyFollowing;
+    _inFlight.add(userId);
     final next = !currentlyFollowing;
     _set(userId, next); // optimistic
     try {
@@ -42,6 +46,8 @@ class FollowService {
     } catch (_) {
       _set(userId, currentlyFollowing); // баргардонӣ
       return currentlyFollowing;
+    } finally {
+      _inFlight.remove(userId);
     }
     return next;
   }

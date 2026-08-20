@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
@@ -17,6 +18,7 @@ import '../upload/post_upload_service.dart';
 import 'photo_filters.dart';
 import '../../effects/effects_repository.dart';
 import '../../core/ui/app_icons.dart';
+import '../../ai/ai_tools.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -130,12 +132,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   // Загрузкаи фонӣ: корбар фавран ба Home бармегардад, бор кардан дар
   // фон давом мекунад ва progress дар боли Home нишон дода мешавад.
-  void _publish(File capturedFile, String caption,
+  Future<void> _publish(File capturedFile, String caption,
       {String musicTitle = '',
       String musicArtist = '',
       String location = '',
       List<String> taggedUsers = const [],
-      List<String> collaborators = const []}) {
+      List<String> collaborators = const []}) async {
+    // Интихоб: ҳозир ё ба нақша (Pro).
+    final scheduledAt = await _askSchedule();
+    if (!mounted) return;
     AnalyticsService.instance.logEvent(AnalyticsEvents.createPost);
     PostUploadService.instance.publishPost(
       file: capturedFile,
@@ -146,8 +151,56 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       location: location,
       taggedUsers: taggedUsers,
       collaborators: collaborators,
+      scheduledAt: scheduledAt ?? '',
     );
     if (mounted) Navigator.of(context).pop(true);
+  }
+
+  // Бармегардонад: '' → ҳозир, ISO → ба нақша, ё агар корбар бекор кард — ''.
+  Future<String> _askSchedule() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
+          ListTile(
+            leading: const Icon(AppIcons.check_circle_rounded,
+                color: Color(0xFF00C853)),
+            title: const Text('Нашри фаврӣ',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            onTap: () => Navigator.pop(context, 'now'),
+          ),
+          ListTile(
+            leading: const Icon(AppIcons.schedule_rounded, color: Color(0xFFE100FF)),
+            title: const Text('Ба нақша гирифтан',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            subtitle: const Text('Дар вақти муайян нашр мешавад (Pro)',
+                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            onTap: () => Navigator.pop(context, 'schedule'),
+          ),
+          const SizedBox(height: 10),
+        ])),
+    );
+    if (choice == 'schedule') {
+      final now = DateTime.now();
+      final date = await showDatePicker(
+        context: context, initialDate: now.add(const Duration(hours: 1)),
+        firstDate: now, lastDate: now.add(const Duration(days: 60)),
+      );
+      if (date == null) return '';
+      if (!mounted) return '';
+      final time = await showTimePicker(
+        context: context, initialTime: TimeOfDay.fromDateTime(
+            now.add(const Duration(hours: 1))),
+      );
+      if (time == null) return '';
+      final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      if (dt.isAfter(now)) return dt.toUtc().toIso8601String();
+    }
+    return '';
   }
 
   @override
@@ -718,6 +771,13 @@ class _PostEditorState extends State<_PostEditor> {
                 decoration: BoxDecoration(color: Colors.black.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 8, 0),
+                      child: AiToolsButton(controller: _captionCtrl),
+                    ),
+                  ),
                   TextField(
                     controller: _captionCtrl, autofocus: true,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
@@ -994,7 +1054,7 @@ class _MusicPanelState extends State<_MusicPanel> {
             return ListTile(
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
-                    child: Image.network(t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover))
+                    child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
                 : const Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),

@@ -19,12 +19,20 @@ import (
 
 // GET /stories
 func GetStories(c *gin.Context) {
+	myID := mw.UID(c)
+	// Сторисҳои «наздикон» танҳо ба дӯстони наздики соҳиб намоён мешаванд.
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
-		       u.id,u.username,u.avatar,u.verified
+		       u.id,u.username,u.avatar,u.verified,
+		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
-		ORDER BY s.created_at DESC`)
+		  AND ( s.user_id = $1::text
+		        OR COALESCE(s.audience,'all') = 'all'
+		        OR (COALESCE(s.audience,'all') = 'close' AND EXISTS (
+		              SELECT 1 FROM close_friends cf
+		              WHERE cf.user_id = s.user_id AND cf.friend_id = $1::text)) )
+		ORDER BY s.created_at DESC`, myID)
 	c.JSON(http.StatusOK, scanStoryRows(rows))
 }
 
@@ -63,7 +71,8 @@ func GetMyStories(c *gin.Context) {
 	myID := mw.UID(c)
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
-		       u.id,u.username,u.avatar,u.verified
+		       u.id,u.username,u.avatar,u.verified,
+		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.user_id=$1 AND s.expires_at > NOW()
 		ORDER BY s.created_at DESC`, myID)
@@ -77,6 +86,7 @@ func CreateStory(c *gin.Context) {
 		MediaURL  string `json:"mediaUrl"`
 		MediaType string `json:"mediaType"`
 		Caption   string `json:"caption"`
+		Audience  string `json:"audience"` // all | close (дӯстони наздик)
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.MediaURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
@@ -87,11 +97,15 @@ func CreateStory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl must be https"})
 		return
 	}
+	if b.Audience != "close" {
+		b.Audience = "all"
+	}
 	exp := time.Now().Add(24 * time.Hour)
 	var sid string
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption) VALUES($1,$2,$3,$4,$5) RETURNING id`,
-		myID, b.MediaURL, b.MediaType, exp, b.Caption).Scan(&sid)
+		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption,audience)
+		 VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
+		myID, b.MediaURL, b.MediaType, exp, b.Caption, b.Audience).Scan(&sid)
 	// Cache-и корбарро пок мекунем, то story-и нав фавран дар profile
 	// (GET /users/me/reels/posts) ва GET /stories/ намоён шавад.
 	mw.InvalidateUserCache(myID)
@@ -132,7 +146,7 @@ func CreateStory(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
-		"expiresAt": exp, "caption": b.Caption,
+		"expiresAt": exp, "caption": b.Caption, "audience": b.Audience,
 	})
 }
 
@@ -171,6 +185,7 @@ func LikeStory(c *gin.Context) {
 		db.Pool.QueryRow(context.Background(),
 			`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
 		notify(owner, myID, "story_like", sid)
+		pushNotify(owner, myID, "story_like", sid, "сторисатонро писандид")
 	}
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }
@@ -286,13 +301,15 @@ func scanStoryRows(rows interface {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sid, murl, mtype, uid, uname, uavatar string
-		var verified bool
+		var sid, murl, mtype, uid, uname, uavatar, audience string
+		var verified, repliesOff bool
 		var exp, createdAt interface{}
-		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar, &verified)
+		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar,
+			&verified, &audience, &repliesOff)
 		stories = append(stories, gin.H{
 			"_id": sid, "mediaUrl": murl, "mediaType": mtype,
 			"expiresAt": exp, "createdAt": createdAt,
+			"audience": audience, "repliesOff": repliesOff,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
@@ -610,15 +627,18 @@ func ExploreGrid(c *gin.Context) {
 	pRows, _ := db.Pool.Query(context.Background(), `
 		SELECT p.id, p.likes_count, p.created_at,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type)
+		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       u.id, u.username, u.avatar,
-		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id)
+		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
+		       COALESCE(p.is_product,false), COALESCE(p.price,0),
+		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
 		  AND COALESCE(u.banned,false)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`)
 	posts := []gin.H{}
 	if pRows != nil {
@@ -628,18 +648,25 @@ func ExploreGrid(c *gin.Context) {
 			var likes int
 			var views int64
 			var createdAt, media interface{}
-			pRows.Scan(&pid, &likes, &createdAt, &media, &uid, &uname, &uavatar, &views)
+			var isProduct bool
+			var price float64
+			var currency, productName string
+			pRows.Scan(&pid, &likes, &createdAt, &media, &uid, &uname, &uavatar, &views,
+				&isProduct, &price, &currency, &productName)
 			posts = append(posts, gin.H{
 				"_id": pid, "likesCount": likes, "viewsCount": views,
 				"createdAt": createdAt,
 				"media": nilToEmpty(media),
+				"isProduct": isProduct, "price": price,
+				"currency": currency, "productName": productName,
 				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar},
 			})
 		}
 	}
 
 	rRows, _ := db.Pool.Query(context.Background(), `
-		SELECT id, video_url, COALESCE(thumbnail_url,''), likes_count, views_count
+		SELECT id, video_url, COALESCE(NULLIF(thumbnail_url,''), video_url),
+		       likes_count, views_count
 		FROM reels
 		ORDER BY likes_count DESC LIMIT 20`)
 	reels := []gin.H{}
@@ -761,8 +788,72 @@ func AdminDeleteUser(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Owner account cannot be deleted"})
 		return
 	}
-	if _, err := db.Pool.Exec(context.Background(),
-		`DELETE FROM users WHERE id=$1`, id); err != nil {
+	ctx := context.Background()
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	cascadeQueries := []string{
+		`DELETE FROM reel_comments WHERE user_id=$1`,
+		`DELETE FROM reel_likes WHERE user_id=$1`,
+		`DELETE FROM reel_saves WHERE user_id=$1`,
+		`DELETE FROM reel_views WHERE user_id=$1`,
+		`DELETE FROM reel_watch WHERE user_id=$1`,
+		`DELETE FROM reel_not_interested WHERE user_id=$1`,
+		`DELETE FROM reel_reports WHERE user_id=$1`,
+		`DELETE FROM reels WHERE user_id=$1`,
+		`DELETE FROM comment_likes WHERE user_id=$1`,
+		`DELETE FROM comments WHERE user_id=$1`,
+		`DELETE FROM post_likes WHERE user_id=$1`,
+		`DELETE FROM post_saves WHERE user_id=$1`,
+		`DELETE FROM post_views WHERE user_id=$1`,
+		`DELETE FROM post_shares WHERE user_id=$1`,
+		`DELETE FROM post_interests WHERE user_id=$1`,
+		`DELETE FROM post_not_interested WHERE user_id=$1`,
+		`DELETE FROM post_reports WHERE user_id=$1`,
+		`DELETE FROM post_media WHERE post_id IN (SELECT id FROM posts WHERE user_id=$1)`,
+		`DELETE FROM posts WHERE user_id=$1`,
+		`DELETE FROM story_views WHERE user_id=$1`,
+		`DELETE FROM story_likes WHERE user_id=$1`,
+		`DELETE FROM story_replies WHERE from_user_id=$1`,
+		`DELETE FROM stories WHERE user_id=$1`,
+		`DELETE FROM highlights WHERE user_id=$1`,
+		`DELETE FROM messages WHERE sender_id=$1 OR receiver_id=$1`,
+		`DELETE FROM message_reactions WHERE user_id=$1`,
+		`DELETE FROM chat_accepts WHERE user_id=$1 OR peer_id=$1`,
+		`DELETE FROM chat_hidden WHERE user_id=$1 OR peer_id=$1`,
+		`DELETE FROM group_members WHERE user_id=$1`,
+		`DELETE FROM follows WHERE follower_id=$1 OR following_id=$1`,
+		`DELETE FROM follow_requests WHERE requester_id=$1 OR target_id=$1`,
+		`DELETE FROM close_friends WHERE user_id=$1 OR friend_id=$1`,
+		`DELETE FROM blocks WHERE blocker_id=$1 OR blocked_id=$1`,
+		`DELETE FROM muted_users WHERE user_id=$1 OR muted_id=$1`,
+		`DELETE FROM user_reports WHERE reported_id=$1 OR user_id=$1`,
+		`DELETE FROM user_restricts WHERE user_id=$1 OR restricted_id=$1`,
+		`DELETE FROM notifications WHERE user_id=$1 OR from_user_id=$1`,
+		`DELETE FROM push_tokens WHERE user_id=$1`,
+		`DELETE FROM login_sessions WHERE user_id=$1`,
+		`DELETE FROM orders WHERE buyer_id=$1 OR seller_id=$1`,
+		`DELETE FROM gifts WHERE from_user_id=$1 OR to_user_id=$1`,
+		`DELETE FROM promotions WHERE user_id=$1`,
+		`DELETE FROM product_reviews WHERE user_id=$1`,
+		`DELETE FROM events WHERE user_id=$1`,
+		`DELETE FROM live_comments WHERE user_id=$1`,
+		`DELETE FROM live_streams WHERE host_id=$1`,
+		`DELETE FROM effects WHERE creator_id=$1`,
+		`DELETE FROM effect_purchases WHERE buyer_id=$1`,
+		`DELETE FROM promo_codes WHERE seller_id=$1`,
+		`DELETE FROM users WHERE id=$1`,
+	}
+	for _, q := range cascadeQueries {
+		if _, err := tx.Exec(ctx, q, id); err != nil {
+			continue
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
 		return
 	}

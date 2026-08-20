@@ -7,7 +7,7 @@ plugins {
 }
 
 // ── Release signing (Play Store) — аз android/key.properties хонда мешавад.
-// Агар key.properties набошад (масалан дар CI), ба debug-signing бармегардад.
+// Агар key.properties набошад, RELEASE BUILD ШИКАСТ МЕХӮРАД (debug fallback НЕСТ).
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -20,17 +20,17 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "com.raonson.app"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.raonson.app"
         minSdk = 23
-        targetSdk = 35   // Google Play талаб мекунад: ≥ 35
+        targetSdk = 36
 
         // versionCode худкор аз CI (APP_VERSION_CODE) — ҳамеша беназир ва
         // афзоянда, то дигар "version code already used" набошад.
-        versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 3
+        versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 100
         versionName = System.getenv("APP_VERSION_NAME") ?: "1.0.5"
     }
 
@@ -66,7 +66,7 @@ android {
             signingConfig = if (hasReleaseKeystore)
                 signingConfigs.getByName("release")
             else
-                signingConfigs.getByName("debug")
+                null
             // R8 + хурдкунии resource — ҳаҷми APK/AAB-ро ба таври ҷиддӣ кам
             // мекунад ва иҷроро тезтар мекунад.
             isMinifyEnabled = true
@@ -87,6 +87,16 @@ android {
             include("armeabi-v7a", "arm64-v8a")
             isUniversalApk = false
         }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name.contains("Release") } && !hasReleaseKeystore) {
+        throw GradleException(
+            "Release keystore not found! Create android/key.properties with " +
+            "storeFile, storePassword, keyAlias, keyPassword. " +
+            "Production release MUST NOT use debug signing."
+        )
     }
 }
 

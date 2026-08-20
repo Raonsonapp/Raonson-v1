@@ -45,6 +45,10 @@
 -keep class org.webrtc.** { *; }
 -dontwarn org.webrtc.**
 
+# Agora RTC Engine (video/audio calls)
+-keep class io.agora.** { *; }
+-dontwarn io.agora.**
+
 # Keep annotations & enums used by JSON / reflection
 -keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
 -keepclassmembers enum * { *; }

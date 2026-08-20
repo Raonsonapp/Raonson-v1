@@ -20,6 +20,7 @@ import 'chat_theme.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/report_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -569,6 +570,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } catch (_) {}
   }
 
+  Future<void> _onReportMessage(MessageModel msg) async {
+    final result = await ReportDialog.showWithDescription(context);
+    if (result == null || !mounted) return;
+    try {
+      await ApiClient.instance.post(
+        '/chat/messages/${msg.id}/report',
+        body: {'reason': result.reason, 'description': result.description});
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Шикоят фиристода шуд'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2)));
+    }
+  }
+
   void _onTyping(bool isTyping) {
     if (_chatId.isNotEmpty) {
       _socket.sendTyping(_chatId, widget.peer.id, isTyping: isTyping);
@@ -880,6 +897,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       controller: _scroll,
       padding: const EdgeInsets.only(top: 8, bottom: 8),
       itemCount: _messages.length,
+      addAutomaticKeepAlives: false,
       itemBuilder: (_, i) {
         final msg = _messages[i];
         final prev = i > 0 ? _messages[i - 1] : null;
@@ -892,11 +910,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           children: [
             if (showDate) DateSeparator(date: msg.createdAt),
             MessageBubble(
+              key:      ValueKey(msg.id),
               message:  msg,
               myBubbleColor: _theme.bubble,
               onReply:  () => setState(() => _replyTo = msg),
               onReact:  (emoji) => _onReact(msg, emoji),
               onDelete: () => _onDelete(msg),
+              onReport: () => _onReportMessage(msg),
               onCallBack: () {
                 final p = msg.text.split(':');
                 final isVid = p.length > 1 && p[1] == 'video';

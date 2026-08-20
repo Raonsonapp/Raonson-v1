@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'create_post/create_post_screen.dart';
 import 'create_reel/create_reel_screen.dart';
@@ -77,6 +78,15 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
   }
 
   Future<void> _onPick(AssetEntity a) async {
+    // Дар режими Reel танҳо видео қабул мешавад (акс compressVideo-ро вайрон мекунад).
+    if (_mode == CreateMode.reel && a.type != AssetType.video) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Барои Reel видео интихоб кунед'),
+            duration: Duration(seconds: 2)));
+      }
+      return;
+    }
     final file = await a.file;
     if (file == null) return;
     _openEditor(file, a.type == AssetType.video);
@@ -146,8 +156,18 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
 
   Widget _buildGrid() {
     if (_loading) {
-      return const Center(
-          child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2));
+      return Shimmer.fromColors(
+        baseColor: Colors.white10,
+        highlightColor: Colors.white24,
+        child: GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(2),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4, mainAxisSpacing: 2, crossAxisSpacing: 2),
+          itemCount: 20,
+          itemBuilder: (_, __) => Container(color: Colors.white),
+        ),
+      );
     }
     if (_denied) {
       return Center(

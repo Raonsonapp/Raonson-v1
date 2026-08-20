@@ -27,6 +27,12 @@ class AuthService {
     await _tokenStorage.saveToken(accessToken);
     ApiClient.instance.setAuthToken(accessToken);
 
+    final refreshToken = data['refreshToken']?.toString();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await TokenStorage.saveRefreshToken(refreshToken);
+      ApiClient.instance.setRefreshToken(refreshToken);
+    }
+
     final user = data['user'] as Map<String, dynamic>?;
     if (user != null) {
       final uid = (user['id'] ?? user['_id'] ?? '').toString();
@@ -52,9 +58,28 @@ class AuthService {
     );
 
     final accessToken = data['accessToken'];
-    if (accessToken != null) {
-      await _tokenStorage.saveToken(accessToken);
-      ApiClient.instance.setAuthToken(accessToken);
+    if (accessToken == null) {
+      throw Exception('Access token missing');
+    }
+
+    await _tokenStorage.saveToken(accessToken);
+    ApiClient.instance.setAuthToken(accessToken);
+
+    final refreshToken = data['refreshToken']?.toString();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await TokenStorage.saveRefreshToken(refreshToken);
+      ApiClient.instance.setRefreshToken(refreshToken);
+    }
+
+    final user = data['user'] as Map<String, dynamic>?;
+    if (user != null) {
+      final uid = (user['id'] ?? user['_id'] ?? '').toString();
+      if (uid.isNotEmpty) {
+        await TokenStorage.saveUserId(uid);
+        UserSession.userId   = uid;
+        UserSession.username = (user['username'] ?? '').toString();
+        UserSession.avatar   = (user['avatar']   ?? '').toString();
+      }
     }
   }
 
@@ -63,6 +88,8 @@ class AuthService {
     await _repository.logout();
     await _tokenStorage.clear();
     ApiClient.instance.setAuthToken(null);
+    ApiClient.instance.setRefreshToken(null);
+    UserSession.clear();
   }
 
   // ================= RESTORE =================
@@ -70,6 +97,10 @@ class AuthService {
     final token = await _tokenStorage.getToken();
     if (token != null) {
       ApiClient.instance.setAuthToken(token);
+      final refreshToken = await TokenStorage.getRefreshToken();
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        ApiClient.instance.setRefreshToken(refreshToken);
+      }
       final uid = await TokenStorage.getUserId();
       if (uid != null && uid.isNotEmpty) {
         UserSession.userId = uid;

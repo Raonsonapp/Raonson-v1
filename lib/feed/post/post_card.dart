@@ -9,7 +9,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/post_model.dart';
@@ -18,12 +17,18 @@ import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/view_tracker.dart';
 import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
+import '../../shop/buy_sheet.dart';
+import '../../ai/ai_tools.dart';
+import '../../widgets/media_view.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../app/app_settings.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/tajikshop_brand.dart';
+import '../../core/ui/report_dialog.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -52,6 +57,8 @@ class _PostCardState extends State<PostCard>
   late bool   _serverLiked; // ҳолати тасдиқшудаи сервер
   bool        _likeSyncing  = false;
   bool        _hidden       = false;
+  late bool   _hideLikes;        // лайкҳо пинҳонанд
+  late bool   _commentsDisabled; // шарҳҳо хомӯшанд
   late String _caption;
   bool        _captionExpanded = false; // ← Show more/less
 
@@ -98,6 +105,8 @@ class _PostCardState extends State<PostCard>
     _saved        = widget.post.isSaved;
     _likeCount    = widget.post.likesCount;
     _commentCount = widget.post.commentsCount;
+    _hideLikes        = widget.post.hideLikes;
+    _commentsDisabled = widget.post.commentsDisabled;
     _caption      = widget.post.caption;
 
     _likeCtrl = AnimationController(vsync: this,
@@ -135,23 +144,28 @@ class _PostCardState extends State<PostCard>
     _viewTimer = Timer(const Duration(seconds: 1), _trackView);
   }
 
-  // POST /posts/view/:id — танҳо як бор барои ҳар пост (бе бастаи иловагӣ).
-  Future<void> _trackView() async {
+  void _trackView() {
     if (_viewTracked) return;
     _viewTracked = true;
     final id = widget.post.id;
     if (id.isEmpty) return;
     AnalyticsService.instance
         .logEvent(AnalyticsEvents.postView, params: {'postId': id});
-    try {
-      await ApiClient.instance.post('/posts/view/$id');
-    } catch (_) {}
+    ViewTracker.instance.trackPost(id);
   }
 
   @override
   void dispose() {
     _viewTimer?.cancel();
     _likeDebounce?.cancel();
+    // Flush pending like to server before widget is destroyed —
+    // without this, leaving the screen within the 500ms debounce
+    // window silently drops the like.
+    if (_liked != _serverLiked && !_likeSyncing) {
+      ApiClient.instance
+          .post('/posts/${widget.post.id}/like')
+          .then((_) {}, onError: (_) {});
+    }
     _likeCtrl.dispose();
     _countCtrl.dispose();
     _heartCtrl.dispose();
@@ -170,6 +184,7 @@ class _PostCardState extends State<PostCard>
       if (_likeCount < 0) _likeCount = 0;
     });
     if (_liked) {
+      HapticFeedback.lightImpact();
       _likeCtrl.forward(from: 0);
       AnalyticsService.instance.logEvent(AnalyticsEvents.postLike,
           params: {'postId': widget.post.id});
@@ -209,6 +224,7 @@ class _PostCardState extends State<PostCard>
     final was = _saved;
     setState(() => _saved = !was);
     if (!was) {
+      HapticFeedback.selectionClick();
       AnalyticsService.instance.logEvent(AnalyticsEvents.postSave,
           params: {'postId': widget.post.id});
     }
@@ -222,6 +238,8 @@ class _PostCardState extends State<PostCard>
 
   // ── WHO LIKED ────────────────────────────────────────────────
   Future<void> _showWhoLiked() async {
+    // Агар лайкҳо пинҳон бошанд — танҳо соҳиб рӯйхатро мебинад.
+    if (_hideLikes && !_isOwner) return;
     if (_likeCount == 0) return;
     showModalBottomSheet(
       context: context,
@@ -240,10 +258,15 @@ class _PostCardState extends State<PostCard>
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
+      isScrollControlled: true, // ← то ҳама пунктҳо ба поён нарасида буриш нашаванд
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
+      builder: (_) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
           _handle(),
           _SvgMenuTile(assetPath: 'assets/icons/delete.svg',
               label: 'Ҳазф кардан', color: Colors.redAccent,
@@ -263,30 +286,82 @@ class _PostCardState extends State<PostCard>
           _MenuItem(icon: AppIcons.campaign_outlined, iconColor: AppColors.storyEnd,
               label: 'Тарғиб кардан (реклама)', labelColor: AppColors.storyEnd,
               onTap: () { Navigator.pop(context); _promotePost(); }),
-          _MenuItem(icon: AppIcons.favorite_border_rounded,
-              label: 'Пинҳон кардани лайкҳо',
-              onTap: () { Navigator.pop(context); _toggleAction('hide-likes', 'Танзими лайкҳо нав шуд'); }),
-          _MenuItem(icon: AppIcons.mode_comment_outlined,
-              label: 'Хомӯш/фаъол кардани шарҳҳо',
-              onTap: () { Navigator.pop(context); _toggleAction('toggle-comments', 'Танзими шарҳҳо нав шуд'); }),
+          _MenuItem(
+              icon: _hideLikes
+                  ? AppIcons.favorite_rounded
+                  : AppIcons.favorite_border_rounded,
+              label: _hideLikes
+                  ? 'Нишон додани лайкҳо'
+                  : 'Пинҳон кардани лайкҳо',
+              onTap: () { Navigator.pop(context); _toggleHideLikes(); }),
+          _MenuItem(
+              icon: _commentsDisabled
+                  ? AppIcons.mode_comment_rounded
+                  : AppIcons.mode_comment_outlined,
+              label: _commentsDisabled
+                  ? 'Фаъол кардани шарҳҳо'
+                  : 'Хомӯш кардани шарҳҳо',
+              onTap: () { Navigator.pop(context); _toggleComments(); }),
           _MenuItem(icon: AppIcons.archive_outlined,
               label: 'Бойгонӣ кардан',
               onTap: () { Navigator.pop(context); _archivePost(); }),
           const SizedBox(height: 8),
-        ])),
+        ])))),
     );
   }
 
-  Future<void> _toggleAction(String path, String msg) async {
+  // Пинҳон/нишон додани лайкҳо — ҳолати UI дарҳол нав мешавад.
+  Future<void> _toggleHideLikes() async {
+    final target = !_hideLikes;
+    setState(() => _hideLikes = target);
     try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/$path');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$msg ✓'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2)));
+      final res = await ApiClient.instance
+          .post('/posts/${widget.post.id}/hide-likes');
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        if (b['hideLikes'] is bool && mounted) {
+          setState(() => _hideLikes = b['hideLikes'] as bool);
+        }
+      } else if (mounted) {
+        setState(() => _hideLikes = !target); // баргардон
       }
-    } catch (_) {}
+    } catch (_) { if (mounted) setState(() => _hideLikes = !target); }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_hideLikes
+            ? 'Лайкҳо пинҳон шуданд ✓'
+            : 'Лайкҳо намоён шуданд ✓'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2)));
+    }
+  }
+
+  // Хомӯш/фаъол кардани шарҳҳо — ҳолати UI дарҳол нав мешавад.
+  Future<void> _toggleComments() async {
+    final target = !_commentsDisabled;
+    setState(() => _commentsDisabled = target);
+    try {
+      final res = await ApiClient.instance
+          .post('/posts/${widget.post.id}/toggle-comments');
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        // Backend-и пост калиди «commentsOff»-ро бармегардонад.
+        final v = b['commentsOff'] ?? b['commentsDisabled'];
+        if (v is bool && mounted) {
+          setState(() => _commentsDisabled = v);
+        }
+      } else if (mounted) {
+        setState(() => _commentsDisabled = !target);
+      }
+    } catch (_) { if (mounted) setState(() => _commentsDisabled = !target); }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_commentsDisabled
+            ? 'Шарҳҳо хомӯш шуданд ✓'
+            : 'Шарҳҳо фаъол шуданд ✓'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2)));
+    }
   }
 
   Future<void> _archivePost() async {
@@ -361,12 +436,18 @@ class _PostCardState extends State<PostCard>
       ),
     );
     if (ok != true) { return; }
-    final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
-    if (res.statusCode < 400) {
-      widget.onDeleted?.call();
+    try {
+      final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
+      if (res.statusCode < 400) {
+        widget.onDeleted?.call();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Пост ҳазф шуд'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Пост ҳазф шуд'),
-        backgroundColor: Colors.green,
+        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
         duration: Duration(seconds: 2)));
     }
   }
@@ -418,8 +499,12 @@ class _PostCardState extends State<PostCard>
               child: CachedNetworkImage(
                 imageUrl: widget.post.media.first['url'] ?? '',
                 height: 120, width: double.infinity, fit: BoxFit.cover,
+                memCacheWidth: 400,
                 errorWidget: (_, __, ___) => const SizedBox.shrink())),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          Align(alignment: Alignment.centerRight,
+              child: AiToolsButton(controller: ctrl)),
+          const SizedBox(height: 4),
           TextField(
             controller: ctrl, autofocus: true, maxLines: 6, maxLength: 2200,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
@@ -551,7 +636,8 @@ class _PostCardState extends State<PostCard>
             ClipRRect(borderRadius: BorderRadius.circular(12),
               child: CachedNetworkImage(
                 imageUrl: widget.post.media.first['url'] ?? '',
-                height: 180, width: double.infinity, fit: BoxFit.cover)),
+                height: 180, width: double.infinity, fit: BoxFit.cover,
+                memCacheWidth: 500)),
           const SizedBox(height: 20),
           Row(children: [
             _BigStat('👁', views,    'Кӯринишҳо'),
@@ -584,34 +670,26 @@ class _PostCardState extends State<PostCard>
 
 
   Future<void> _reportPost() async {
-    final reasons = [
-      ('spam', 'Спам'), ('violence', 'Зӯроварӣ'),
-      ('adult', 'Мӯҳтавои калонсолон'),
-      ('hate', 'Нафрат'), ('other', 'Дигар'),
-    ];
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text('Жалоб партофтан',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: Column(mainAxisSize: MainAxisSize.min,
-          children: reasons.map((r) => ListTile(
-            title: Text(r.$2, style: TextStyle(color: AppColors.textPrimary)),
-            onTap: () => Navigator.pop(context, r.$1))).toList()),
-      ),
-    );
-    if (reason == null || !mounted) return;
-    await ApiClient.instance.post(
-      '/posts/${widget.post.id}/report', body: {'reason': reason});
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Жалоб фиристода шуд. Раҳмат!'),
-      backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+    final result = await ReportDialog.showWithDescription(context);
+    if (result == null || !mounted) return;
+    try {
+      await ApiClient.instance.post(
+        '/posts/${widget.post.id}/report',
+        body: {'reason': result.reason, 'description': result.description});
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Жалоб фиристода шуд. Раҳмат!'),
+        backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+    } catch (_) {}
   }
 
   Future<void> _muteUser() async {
     setState(() => _hidden = true);
-    await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+    try {
+      await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+    } catch (_) {
+      if (mounted) setState(() => _hidden = false);
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Постҳои @${widget.post.user.username} пинҳон шуд'),
@@ -632,7 +710,11 @@ class _PostCardState extends State<PostCard>
     final endpoint = interested
         ? '/posts/${widget.post.id}/interest'
         : '/posts/${widget.post.id}/not-interested';
-    await ApiClient.instance.post(endpoint);
+    try {
+      await ApiClient.instance.post(endpoint);
+    } catch (_) {
+      return;
+    }
     if (!interested && mounted) {
       setState(() => _hidden = true);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -647,6 +729,18 @@ class _PostCardState extends State<PostCard>
         content: Text('Алгоритм навшуд ✓'), backgroundColor: Colors.green,
         duration: Duration(seconds: 2)));
     }
+  }
+
+  // Мубодила — беназир (1 корбар = 1 бор, ҳатто агар 50 бор фиристад).
+  Future<void> _recordShare() async {
+    try {
+      final res = await ApiClient.instance
+          .post('/posts/${widget.post.id}/share');
+      if (res.statusCode < 400 && mounted) {
+        final b = jsonDecode(res.body);
+        if (b['shares'] is int) setState(() => _shareCount = b['shares'] as int);
+      }
+    } catch (_) {}
   }
 
   void _showShare() {
@@ -693,7 +787,7 @@ class _PostCardState extends State<PostCard>
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(icon: FontAwesomeIcons.telegram,
               color: const Color(0xFF0088CC), label: 'Telegram',
@@ -701,14 +795,14 @@ class _PostCardState extends State<PostCard>
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(icon: FontAwesomeIcons.instagram,
               color: const Color(0xFFE1306C), label: 'Instagram',
               onTap: () {
                 Navigator.pop(sheetCtx);
                 Share.share(url);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(icon: FontAwesomeIcons.facebookF,
               color: const Color(0xFF1877F2), label: 'Facebook',
@@ -716,7 +810,7 @@ class _PostCardState extends State<PostCard>
                 Navigator.pop(sheetCtx);
                 launchUrl(Uri.parse('https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(url)}'),
                     mode: LaunchMode.externalApplication);
-                if (mounted) setState(() => _shareCount++);
+                _recordShare();
               }),
             _ShareActionBtn(svgPath: 'assets/icons/link.svg',
               color: AppColors.divider, label: 'Линк',
@@ -743,7 +837,7 @@ class _PostCardState extends State<PostCard>
               color: AppColors.divider, label: 'Бештар',
               onTap: () { Navigator.pop(sheetCtx);
                 Share.share(url).then((_) {
-                  if (mounted) setState(() => _shareCount++); }); }),
+                  _recordShare(); }); }),
           ])),
         Divider(color: AppColors.dividerFaint, height: 1),
         ListTile(
@@ -796,6 +890,13 @@ class _PostCardState extends State<PostCard>
   }
 
   void _openComments() {
+    // Шарҳҳо хомӯшанд → пайғоми маҳдудият (соҳиб метавонад боз кунад).
+    if (_commentsDisabled && !_isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Шарҳҳо барои ин пост хомӯш карда шудаанд'),
+        duration: Duration(seconds: 2)));
+      return;
+    }
     AnalyticsService.instance.logEvent(AnalyticsEvents.postComment,
         params: {'postId': widget.post.id});
     showModalBottomSheet(
@@ -909,6 +1010,14 @@ class _PostCardState extends State<PostCard>
 
   // ── Like count animated counter ───────────────────────────────
   Widget _animatedLikeCount() {
+    // Лайкҳо пинҳонанд ва бинанда соҳиб нест → рақам не, танҳо калима
+    // «Лайкҳо» (мисли Instagram — «отметки Нравится»).
+    if (_hideLikes && !_isOwner) {
+      return Text('Лайкҳо',
+          style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14, fontWeight: FontWeight.w600));
+    }
     if (_likeCount <= 0) return const SizedBox.shrink();
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
@@ -1008,19 +1117,19 @@ class _PostCardState extends State<PostCard>
           GestureDetector(
             onDoubleTapDown: (d) => _heartOffset = d.localPosition,
             onDoubleTap: () {
+              HapticFeedback.mediumImpact();
               final rng = Random();
               setState(() {
                 _heartColor = _kHeartColors[rng.nextInt(_kHeartColors.length)];
                 _heartDx = (rng.nextDouble() - 0.5) * 80;
               });
               if (!_liked) {
-                // Ҳамон роҳи debounce-ро истифода мебарад (бе шахшавӣ)
                 _toggleLike();
               }
               setState(() => _showHeart = true);
               _heartCtrl.forward(from: 0);
             },
-            child: _MediaCarousel(media: post.media, isActive: widget.isActive),
+            child: MediaCarousel(media: post.media, isActive: widget.isActive),
           ),
 
           // ── Music / mention chips (мисли Instagram) ──
@@ -1117,6 +1226,39 @@ class _PostCardState extends State<PostCard>
         ]),
       ),
 
+      // ── BUY CTA — Tajikshop ──
+      if (post.isProduct)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
+          child: GestureDetector(
+            onTap: () => showBuySheet(context, post),
+            child: Container(
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: TajikshopBrand.gradient,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.storefront_rounded,
+                      color: Colors.white, size: 19),
+                  const SizedBox(width: 8),
+                  Text(
+                    post.price > 0 ? 'Tajikshop · ${post.priceLabel}' : 'Tajikshop · Харид',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
       // ── CAPTION бо Show more / less ───────────────────────────
       if (_caption.isNotEmpty)
         Padding(
@@ -1158,7 +1300,20 @@ class _PostCardState extends State<PostCard>
             ]),
           ),
         ),
-      if (_commentCount > 0)
+      if (_commentsDisabled)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(AppIcons.mode_comment_outlined,
+                size: 13, color: AppColors.grey),
+            const SizedBox(width: 5),
+            Text('Шарҳҳо хомӯш карда шудаанд',
+                style: TextStyle(
+                    color: AppColors.grey, fontSize: 13,
+                    fontWeight: FontWeight.w500)),
+          ]),
+        )
+      else if (_commentCount > 0)
         GestureDetector(
           onTap: _openComments,
           child: Padding(
@@ -1368,7 +1523,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                           leading: CircleAvatar(
                             radius: 20,
                             backgroundImage: av.isNotEmpty
-                                ? NetworkImage(av) : null,
+                                ? CachedNetworkImageProvider(av, maxWidth: 80) : null,
                             child: av.isEmpty ? Icon(
                                 AppIcons.person, color: AppColors.textFaint) : null,
                             backgroundColor: AppColors.card,

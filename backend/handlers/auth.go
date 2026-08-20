@@ -54,6 +54,19 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
+	validEmail := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !validEmail.MatchString(b.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Почтаи электронӣ нодуруст аст",
+		})
+		return
+	}
+	// Парол дар сервер ҳам санҷида мешавад (на танҳо дар клиент).
+	if len(b.Password) < 8 {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"message": "Рамз ҳадди аққал 8 аломат бошад"})
+		return
+	}
 
 	var exists bool
 	db.Pool.QueryRow(context.Background(),
@@ -80,8 +93,15 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	secret        := mw.JWTSecret()
+	refreshSecret := mw.RefreshSecret()
+
+	recordLogin(id, c)
+
 	c.JSON(http.StatusCreated, gin.H{
-		"success": true,
+		"success":      true,
+		"accessToken":  makeJWT(id, secret, 1*time.Hour),
+		"refreshToken": makeJWT(id, refreshSecret, 30*24*time.Hour),
 		"user": gin.H{
 			"id": id, "username": username, "email": email,
 			"avatar": "", "fullName": b.FullName,
@@ -117,26 +137,35 @@ func Login(c *gin.Context) {
 
 	// Логин бо почта Ё номи корбар Ё рақами телефон
 	var id, username, email, hash, avatar, fullName string
+	var banned bool
 	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id,username,email,password,COALESCE(avatar,''),COALESCE(full_name,'')
+		`SELECT id,username,email,password,COALESCE(avatar,''),COALESCE(full_name,''),
+		        COALESCE(banned,false)
 		 FROM users WHERE email=$1 OR username=$1 OR phone=$1`,
-		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName)
+		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName, &banned)
 	if err != nil {
-		log.Printf("[Login] User not found: email=%s err=%v", b.Email, err)
+		log.Printf("[Login] User not found")
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.Password)) != nil {
-		log.Printf("[Login] Wrong password for: email=%s", b.Email)
+		log.Printf("[Login] Wrong password")
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
+		return
+	}
+	if banned {
+		c.JSON(http.StatusForbidden,
+			gin.H{"message": "Ҳисоби шумо баста шудааст"})
 		return
 	}
 
 	secret        := mw.JWTSecret()
 	refreshSecret := mw.RefreshSecret()
 
+	recordLogin(id, c) // таърихи воридшавӣ (device + IP)
+
 	c.JSON(http.StatusOK, gin.H{
-		"accessToken":  makeJWT(id, secret, 7*24*time.Hour),
+		"accessToken":  makeJWT(id, secret, 1*time.Hour),
 		"refreshToken": makeJWT(id, refreshSecret, 30*24*time.Hour),
 		"user": gin.H{
 			"id": id, "username": username, "email": email,
@@ -162,13 +191,49 @@ func RefreshToken(c *gin.Context) {
 	claims := tok.Claims.(jwt.MapClaims)
 	uid    := claims["id"].(string)
 	c.JSON(http.StatusOK, gin.H{
-		"accessToken": makeJWT(uid, mw.JWTSecret(), 7*24*time.Hour),
+		"accessToken": makeJWT(uid, mw.JWTSecret(), 1*time.Hour),
 	})
 }
 
 // POST /auth/logout
 func Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// POST /auth/change-password {oldPassword,newPassword} — корбари воридшуда.
+func ChangePassword(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		OldPassword string `json:"oldPassword"`
+		NewPassword string `json:"newPassword"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
+		return
+	}
+	if len(b.NewPassword) < 8 {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"message": "Рамзи нав ҳадди аққал 8 аломат бошад"})
+		return
+	}
+	var hash string
+	if err := db.Pool.QueryRow(context.Background(),
+		`SELECT password FROM users WHERE id=$1`, myID).Scan(&hash); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Корбар ёфт нашуд"})
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.OldPassword)) != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Рамзи кӯҳна нодуруст аст"})
+		return
+	}
+	newHash, err := bcrypt.GenerateFromPassword([]byte(b.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "хатои дохилӣ"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET password=$1 WHERE id=$2`, string(newHash), myID)
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 // POST /auth/forgot-password
@@ -231,7 +296,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 	// Рамз ТАНҲО ба email/SMS меравад. Дар экран нишон дода НАМЕШАВАД.
 	// Барои санҷиш (бе провайдер) — env OTP_ECHO=1 гузоред.
-	if os.Getenv("OTP_ECHO") == "1" {
+	if os.Getenv("OTP_ECHO") == "1" && gin.Mode() != gin.ReleaseMode {
 		resp["otp"] = otp
 	}
 	c.JSON(http.StatusOK, resp)
@@ -272,7 +337,7 @@ func ResetPassword(c *gin.Context) {
 	if ident == "" {
 		ident = strings.ToLower(strings.TrimSpace(b.Email))
 	}
-	if ident == "" || b.OTP == "" || len(b.NewPassword) < 6 {
+	if ident == "" || b.OTP == "" || len(b.NewPassword) < 8 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Майдонҳо нопурра (парол ≥6)"})
 		return
 	}

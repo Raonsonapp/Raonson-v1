@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../../models/post_model.dart';
 import '../../core/services/socket_service.dart';
 import '../feed_repository.dart';
@@ -7,7 +8,7 @@ import '../feed_exceptions.dart';
 import 'feed_state.dart';
 import '../../create/upload/post_upload_service.dart';
 
-class FeedController extends ChangeNotifier {
+class FeedController extends ChangeNotifier with WidgetsBindingObserver {
   final FeedRepository _repository;
 
   VoidCallback? onUnauthorized;
@@ -25,12 +26,19 @@ class FeedController extends ChangeNotifier {
   int get pendingCount => _pending.length;
 
   Timer? _pollTimer;
+  bool _isAppActive = true;
 
   FeedController(this._repository) {
+    WidgetsBinding.instance.addObserver(this);
     _subscribeSocket();
     _startPolling();
     // Баъди загрузкаи фонии пост — феедро нав мекунад.
     PostUploadService.instance.onPublished = () => onPostUploaded();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isAppActive = state == AppLifecycleState.resumed;
   }
 
   void _subscribeSocket() {
@@ -76,6 +84,7 @@ class FeedController extends ChangeNotifier {
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      if (!_isAppActive) return;
       if (!SocketService.instance.isConnected) {
         await _silentCheck();
       }
@@ -187,6 +196,7 @@ class FeedController extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     SocketService.instance.off('feed:new_post');
     super.dispose();

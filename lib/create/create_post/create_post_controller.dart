@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
+import '../upload/post_upload_service.dart' show mediaAspectRatio;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
@@ -139,12 +141,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final mediaUrl = (upJson['url'] ?? upJson['secure_url'] ?? '').toString().trim();
       if (mediaUrl.isEmpty) throw Exception('URL нест');
 
+      final ar = await mediaAspectRatio(capturedFile, _isVideo);
       final res = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/posts/'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode({
           'caption': caption,
-          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image', 'aspectRatio': ''}],
+          'media'  : [{'url': mediaUrl, 'type': _isVideo ? 'video' : 'image',
+              if (ar > 0) 'aspectRatio': ar}],
         }),
       ).timeout(const Duration(seconds: 30));
 
@@ -656,7 +660,7 @@ class _MusicPanelState extends State<_MusicPanel> {
             return ListTile(
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
-                    child: Image.network(t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover))
+                    child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
                 : const Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),

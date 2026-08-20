@@ -87,8 +87,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       String thumbnailUrl = '';
       try {
         setState(() {
-          _status = 'Тасвир омода мешавад...';
-          _progress = 0.8;
+          _status = 'Тасвири пешнамоиш сохта мешавад...';
+          _progress = 0.75;
         });
         final thumb = await MediaCompressor.generateVideoThumbnail(_file!);
         if (thumb != null) thumbnailUrl = await UploadManager().uploadFile(thumb);

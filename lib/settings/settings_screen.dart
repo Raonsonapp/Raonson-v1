@@ -5,8 +5,10 @@
 
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
@@ -16,6 +18,7 @@ import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../core/services/user_session.dart';
 import '../core/services/region_service.dart';
 import '../core/services/vip_service.dart';
@@ -24,7 +27,17 @@ import '../news/news_screen.dart';
 import '../learn/learn_screen.dart';
 import '../effects/effects_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
+import 'account_screens.dart';
+import 'legal_screens.dart';
+import 'insights_screen.dart';
+import 'seller_dashboard_screen.dart';
+import '../shop/auto_reply_screen.dart';
+import '../chat/chat_pin_screen.dart';
+import '../subscription/subscription_screen.dart';
+import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
+import 'child_safety_screen.dart';
+import 'community_guidelines_screen.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -52,6 +65,29 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 50),
             children: [
 
+              // ── RAONSON PRO / BUSINESS (мисли Meta Verified) ──────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                child: Row(children: [
+                  Expanded(child: _PlanBanner(
+                    title: 'Raonson Pro',
+                    subtitle: '29.90 сом/моҳ',
+                    icon: AppIcons.star_rounded,
+                    colors: const [Color(0xFF7F00FF), Color(0xFFE100FF)],
+                    onTap: () => _go(ctx, const SubscriptionScreen()),
+                  )),
+                  const SizedBox(width: 10),
+                  Expanded(child: _PlanBanner(
+                    title: 'Business',
+                    subtitle: '99.90 сом/моҳ',
+                    icon: AppIcons.business_center_rounded,
+                    colors: const [Color(0xFFF7971E), Color(0xFFFFD200)],
+                    onTap: () => _go(ctx,
+                        const SubscriptionScreen(business: true)),
+                  )),
+                ]),
+              ),
+
               // ── ACCOUNT ───────────────────────────────────────────
               _Hdr(tr('section.account')),
               _NavTile(
@@ -60,6 +96,12 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () => _go(ctx,
                     EditProfileScreen(
                         userId: UserSession.userId ?? 'me')),
+              ),
+              _NavTile(
+                icon:  AppIcons.alternate_email_rounded,
+                title: 'Номи корбарӣ',
+                sub:   '@${UserSession.username ?? ''}',
+                onTap: () => _go(ctx, const ChangeUsernameScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.lock_outline_rounded,
@@ -71,13 +113,62 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('account.email'),
                 sub:   tr('account.emailSub'),
                 onTap: () => _go(ctx,
-                    _SimpleScreen(title: tr('account.email'))),
+                    const ChangeEmailScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.phone_outlined,
                 title: tr('account.phone'),
-                onTap: () => _go(ctx,
-                    _SimpleScreen(title: tr('account.phone'))),
+                onTap: () => _go(ctx, const ChangePhoneScreen()),
+              ),
+
+              // ── ОМОР ────────────────────────────────────────────────
+              _Hdr('Статистика'),
+              _NavTile(
+                icon:  AppIcons.bar_chart_rounded,
+                title: 'Статистика (омор)',
+                sub:   'Обзори 1-моҳа: обуна, лайк, топ видео, идеяҳо',
+                onTap: () => _go(ctx, const InsightsScreen()),
+              ),
+
+              // ── TAJIKSHOP ────────────────────────────────────────
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(children: [
+                  TajikshopBrand.logo(size: 18),
+                  const Spacer(),
+                  TajikshopBrand.poweredBy(),
+                ]),
+              ),
+              _NavTile(
+                icon:  AppIcons.storefront_rounded,
+                title: 'Панели фурӯшанда',
+                sub:   'Фурӯш, даромад, махсулот, боздидҳо',
+                onTap: () => _go(ctx, const SellerDashboardScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.chat_bubble_rounded,
+                title: 'Ҷавоби худкор',
+                sub:   'Ба муштариён худкор ҷавоб диҳед',
+                onTap: () => _go(ctx, const AutoReplyScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.lock_outline_rounded,
+                title: 'PIN-и чат',
+                sub:   'Чатҳоро бо PIN муҳофизат кунед',
+                onTap: () => _go(ctx, const ChatPinScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.star_rounded,
+                title: 'Дӯстони наздик',
+                sub:   'Рӯйхати дӯстони наздик барои сторис',
+                onTap: () => _go(ctx, const CloseFriendsScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.schedule_rounded,
+                title: 'Постҳои ба нақша',
+                sub:   'Постҳои дар вақти муайян нашршаванда (Pro)',
+                onTap: () => _go(ctx, const ScheduledPostsScreen()),
               ),
 
               // ── APPEARANCE ────────────────────────────────────────
@@ -179,6 +270,45 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Дар бораи барнома',
                 sub:   'Версия, муаллиф ва маълумот',
                 onTap: () => _go(ctx, const AboutScreen()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.privacy_tip_outlined,
+                title: 'Сиёсати махфият',
+                sub:   'Маълумот дар бораи ҳифзи маълумотҳо',
+                onTap: () => _go(ctx, const PrivacyPolicyPage()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.description_outlined,
+                title: 'Шартҳои истифода',
+                sub:   'Қоидаҳои истифодаи барнома',
+                onTap: () => _go(ctx, const TermsOfServicePage()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.people_outline_rounded,
+                title: 'Community Guidelines',
+                sub:   'Қоидаҳои ҷомеа',
+                onTap: () => _go(ctx, const CommunityGuidelinesScreen()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.security_outlined,
+                title: 'Child Safety Standards',
+                sub:   'Ҳифзи кӯдакон дар платформа',
+                onTap: () => _go(ctx, const ChildSafetyScreen()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.email_outlined,
+                title: 'Дастгирӣ ва алоқа',
+                sub:   'ehsonmahmadmurodov@gmail.com',
+                onTap: () {
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                    content: Text('Ба ehsonmahmadmurodov@gmail.com нависед'),
+                    duration: Duration(seconds: 3)));
+                },
               ),
 
               // ── DANGER ZONE ───────────────────────────────────────
@@ -407,7 +537,7 @@ class _PrivacyState extends State<PrivacyScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Махфият'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : ListView(children: [
               _SwTile(
                 icon:  AppIcons.lock_outline_rounded,
@@ -432,12 +562,11 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _NavTile(
-                icon:  AppIcons.favorite_border_rounded,
+                icon:  AppIcons.star_rounded,
                 title: 'Дӯстони наздик',
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
-                        builder: (_) =>
-                            const _SimpleScreen(title: 'Дӯстони наздик'))),
+                        builder: (_) => const CloseFriendsScreen())),
               ),
               const _ThinDiv(),
               _SwTile(
@@ -535,7 +664,7 @@ class _NotifState extends State<NotificationsScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Огоҳиҳо'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : ListView(children: [
               _SwTile(icon: AppIcons.favorite_rounded,
                   title: 'Лайкҳо', value: _likes,
@@ -796,7 +925,7 @@ class TwoFAState extends State<TwoFactorScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Тасдиқи дутарафа'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : ListView(children: [
               _SwTile(
                 icon:  AppIcons.verified_user_outlined,
@@ -888,7 +1017,7 @@ class _SessState extends State<SessionsScreen> {
         ],
       ),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : _sessions.isEmpty
               ? const _EmptyHint('Сессияҳо нест')
               : ListView.separated(
@@ -988,7 +1117,7 @@ class _BUSState extends State<BlockedUsersScreen> {
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Блокшудагон'),
       body: _loading
-          ? const _Spinner()
+          ? const _SettingsSkeleton()
           : _users.isEmpty
               ? const _EmptyHint('Ягон корбари блокшуда нест')
               : ListView.separated(
@@ -1003,7 +1132,7 @@ class _BUSState extends State<BlockedUsersScreen> {
                       leading: CircleAvatar(
                         backgroundColor: AppColors.card,
                         backgroundImage: avatar.isNotEmpty
-                            ? NetworkImage(avatar) : null,
+                            ? CachedNetworkImageProvider(avatar, maxWidth: 80) : null,
                         child: avatar.isEmpty
                             ? Icon(AppIcons.person,
                                 color: AppColors.textFaint) : null),
@@ -1026,7 +1155,7 @@ class _BUSState extends State<BlockedUsersScreen> {
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
-  static const String _version = '1.0.0';
+  static const String _version = '1.0.5';
   static const String _year    = '2026';
 
   @override
@@ -1037,25 +1166,26 @@ class AboutScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 24),
         children: [
-          // Logo + name
+          // Logo — танҳо худи лого, бе чаҳорчӯба/ранги иловагӣ дар гӯшаҳо
           Center(
             child: Container(
-              width: 96, height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.neonBlue, Color(0xFF00E87A)],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.neonBlue.withOpacity(0.35),
-                    blurRadius: 24, spreadRadius: 1),
+                    color: AppColors.neonBlue.withOpacity(0.30),
+                    blurRadius: 34, spreadRadius: 2),
                 ],
               ),
-              alignment: Alignment.center,
-              child: Image.asset('assets/icon.png', height: 60,
-                  errorBuilder: (_, __, ___) => Icon(
-                      AppIcons.bolt_rounded, color: AppColors.textPrimary, size: 48)),
+              child: ClipOval(
+                child: Image.asset('assets/icon.png',
+                    width: 118, height: 118, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                        width: 118, height: 118, color: AppColors.card,
+                        alignment: Alignment.center,
+                        child: Icon(AppIcons.bolt_rounded,
+                            color: AppColors.textPrimary, size: 52))),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1080,7 +1210,7 @@ class AboutScreen extends StatelessWidget {
           const _AboutRow(
               icon: AppIcons.person_rounded,
               label: 'Муаллиф',
-              value: 'Raonson Team'),
+              value: 'Маҳмадмуродов Эҳсон'),
           const _AboutRow(
               icon: AppIcons.public_rounded,
               label: 'Кишвар',
@@ -1099,6 +1229,19 @@ class AboutScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textTertiary, fontSize: 13, height: 1.5),
             ),
+          ),
+          const SizedBox(height: 20),
+          _AboutLinkTile(
+            icon: AppIcons.privacy_tip_outlined,
+            label: 'Сиёсати махфият',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyPage())),
+          ),
+          _AboutLinkTile(
+            icon: AppIcons.description_outlined,
+            label: 'Шартҳои истифода',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const TermsOfServicePage())),
           ),
           const SizedBox(height: 28),
           Center(
@@ -1135,25 +1278,61 @@ class _AboutRow extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════
-//  SIMPLE PLACEHOLDER SCREEN
-// ════════════════════════════════════════════════════════════════════
-class _SimpleScreen extends StatelessWidget {
-  final String title;
-  const _SimpleScreen({required this.title});
+class _AboutLinkTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _AboutLinkTile(
+      {required this.icon, required this.label, required this.onTap});
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: _appBar(context, title),
-      body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(AppIcons.construction_rounded,
-            size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
-        const SizedBox(height: 12),
-        Text('Дар таҳия аст',
-            style: TextStyle(
-                color: AppColors.textPrimary.withOpacity(0.35), fontSize: 14)),
-      ])),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(children: [
+          Icon(icon, color: AppColors.neonBlue, size: 20),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(color: AppColors.neonBlue, fontSize: 14)),
+          ),
+          Icon(AppIcons.arrow_forward_rounded, color: AppColors.textFaint, size: 16),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Банери план (Pro / Business) ────────────────────────────────────
+class _PlanBanner extends StatelessWidget {
+  final String title, subtitle;
+  final IconData icon;
+  final List<Color> colors;
+  final VoidCallback onTap;
+  const _PlanBanner({required this.title, required this.subtitle,
+      required this.icon, required this.colors, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: colors,
+              begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: Colors.white, size: 24),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(color: Colors.white,
+              fontSize: 15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: const TextStyle(
+              color: Colors.white70, fontSize: 11.5)),
+        ]),
+      ),
     );
   }
 }
@@ -1344,14 +1523,41 @@ class _ThinDiv extends StatelessWidget {
   }
 }
 
-// Spinner
-class _Spinner extends StatelessWidget {
-  const _Spinner();
+class _SettingsSkeleton extends StatelessWidget {
+  const _SettingsSkeleton();
   @override
   Widget build(BuildContext context) {
-    return const Center(
-        child: CircularProgressIndicator(
-            color: AppColors.neonBlue, strokeWidth: 2));
+    return Shimmer.fromColors(
+      baseColor: AppColors.card,
+      highlightColor: AppColors.divider,
+      child: ListView.separated(
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 6,
+        separatorBuilder: (_, __) =>
+            Divider(color: AppColors.dividerFaint, height: 0, indent: 56),
+        itemBuilder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(children: [
+            Container(width: 28, height: 28,
+                decoration: BoxDecoration(color: Colors.white,
+                    borderRadius: BorderRadius.circular(6))),
+            const SizedBox(width: 16),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(width: 140, height: 13,
+                    decoration: BoxDecoration(color: Colors.white,
+                        borderRadius: BorderRadius.circular(6))),
+                const SizedBox(height: 6),
+                Container(width: 220, height: 10,
+                    decoration: BoxDecoration(color: Colors.white,
+                        borderRadius: BorderRadius.circular(6))),
+              ],
+            )),
+          ]),
+        ),
+      ),
+    );
   }
 }
 

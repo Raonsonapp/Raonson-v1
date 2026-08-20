@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"raonson/db"
@@ -65,7 +66,8 @@ func CreateGroup(c *gin.Context) {
 		 RETURNING id, invite_token`,
 		b.Name, b.Avatar, myID).Scan(&gid, &invite)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "create failed: " + err.Error()})
+		log.Printf("[Group] create failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create failed"})
 		return
 	}
 
@@ -288,7 +290,8 @@ func SendGroupMessage(c *gin.Context) {
 		 VALUES($1,$1,$2,'',$3,$4,$5) RETURNING id,created_at`,
 		gid, myID, b.Text, b.Type, b.MediaURL).Scan(&mid, &createdAt)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "send failed: " + err.Error()})
+		log.Printf("[Group] send message failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
 		return
 	}
 	var uname, uavatar string

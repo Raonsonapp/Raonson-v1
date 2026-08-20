@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
@@ -50,7 +51,7 @@ class _MusicTrack {
 class StoryEditor extends StatefulWidget {
   final File media;
   final bool isVideo, isUploading;
-  final void Function(File, String) onPublish;
+  final void Function(File, String, String) onPublish;
   final VoidCallback onCancel;
   final String? errorMessage;
 
@@ -145,14 +146,15 @@ class _StoryEditorState extends State<StoryEditor> {
     } catch (_) {}
   }
 
-  Future<void> _onPublish() async {
+  Future<void> _onPublish({String audience = 'all'}) async {
     if (widget.isVideo) {
       widget.onPublish(widget.media,
-          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '');
+          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '', audience);
     } else {
       final captured = await _captureCanvas();
+      if (!mounted) return;
       widget.onPublish(captured,
-          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '');
+          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '', audience);
     }
   }
 
@@ -456,7 +458,9 @@ class _StoryEditorState extends State<StoryEditor> {
                 const SizedBox(width: 10),
                 // «Наздикон» — close friends
                 GestureDetector(
-                  onTap: widget.isUploading ? null : _onPublish,
+                  onTap: widget.isUploading
+                      ? null
+                      : () => _onPublish(audience: 'close'),
                   child: Container(
                     height: 48, padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
@@ -610,7 +614,7 @@ class _MusicPanelState extends State<_MusicPanel> {
             return ListTile(
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
-                    child: Image.network(t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover))
+                    child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
                 : const Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),

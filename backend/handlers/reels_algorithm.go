@@ -66,6 +66,9 @@ func GetSmartReels(c *gin.Context) {
 		    EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1) AS liked,
 		    EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1) AS saved,
 		    EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1 AND fo.following_id=r.user_id) AS following,
+		    COALESCE(r.hide_likes,false) AS hide_likes,
+		    COALESCE(r.comments_off,false) AS comments_off,
+		    EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW()) AS has_story,
 		    -- Алгоритми баллгузорӣ
 		    (
 		      -- 1. Дӯстон: +50
@@ -118,9 +121,11 @@ func GetSmartReels(c *gin.Context) {
 		      WHERE mu.user_id=$1 AND mu.muted_id=r.user_id
 		    )
 		)
-		SELECT id, video_url, video_url_low, thumbnail_url, caption, views_count, likes_count,
+		SELECT id, video_url, video_url_low, thumbnail_url, caption,
+		       views_count, likes_count,
 		       comments_count, created_at, uid, username, avatar,
-		       verified, liked, saved, following, score
+		       verified, liked, saved, following, hide_likes, comments_off,
+		       has_story, score
 		FROM scored
 		ORDER BY score DESC
 		LIMIT $2 OFFSET $3
@@ -137,13 +142,14 @@ func GetSmartReels(c *gin.Context) {
 	for rows.Next() {
 		var id, videoURL, videoURLLow, thumb, cap, uid, uname, uavatar string
 		var views, likes, comms int
-		var verified, liked, saved, following bool
+		var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
 		var createdAt interface{}
 		var score float64
 
 		if err := rows.Scan(&id, &videoURL, &videoURLLow, &thumb, &cap, &views, &likes,
 			&comms, &createdAt, &uid, &uname, &uavatar,
-			&verified, &liked, &saved, &following, &score); err != nil {
+			&verified, &liked, &saved, &following, &hideLikes, &commentsOff,
+			&hasStory, &score); err != nil {
 			continue
 		}
 		reels = append(reels, gin.H{
@@ -153,10 +159,12 @@ func GetSmartReels(c *gin.Context) {
 			"viewsCount": views, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
 			"isLiked": liked, "isSaved": saved,
+			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 			"user": gin.H{
 				"id": uid, "_id": uid,
 				"username": uname, "avatar": uavatar,
 				"verified": verified, "isFollowing": following,
+				"hasStory": hasStory,
 			},
 		})
 	}

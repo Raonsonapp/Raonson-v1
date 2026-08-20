@@ -2,6 +2,7 @@
 // «Тарғиб кардан / Реклама» — мисли Promote-и Instagram (Рекламные инструменты).
 // Корбар пости худро тарғиб мекунад: ҳадаф → буҷет/давомнокӣ → тасдиқ.
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -156,9 +157,10 @@ class _PromoteScreenState extends State<PromoteScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: (widget.thumbUrl != null && widget.thumbUrl!.isNotEmpty)
-                  ? Image.network(widget.thumbUrl!,
+                  ? CachedNetworkImage(imageUrl: widget.thumbUrl!,
                       width: 56, height: 56, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _thumbPh())
+                      memCacheWidth: 112,
+                      errorWidget: (_, __, ___) => _thumbPh())
                   : _thumbPh(),
             ),
             const SizedBox(width: 12),

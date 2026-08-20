@@ -149,7 +149,8 @@ func migrate() {
 		post_id TEXT NOT NULL,
 		url TEXT NOT NULL,
 		type VARCHAR(10) DEFAULT 'image',
-		position INTEGER DEFAULT 0
+		position INTEGER DEFAULT 0,
+		aspect_ratio REAL DEFAULT 0
 	);
 	CREATE INDEX IF NOT EXISTS idx_post_media_post ON post_media(post_id, position);
 
@@ -314,6 +315,54 @@ func migrate() {
 		UNIQUE(user_id, platform)
 	);
 
+	-- ── Ҷавоби худкор (Auto-reply барои фурӯшанда) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS auto_reply TEXT DEFAULT '';
+
+	-- ── Танзимоти махфият (то toggle-ҳо воқеӣ бошанд) ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS activity_status BOOLEAN DEFAULT TRUE;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_comments  BOOLEAN DEFAULT TRUE;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_mentions  BOOLEAN DEFAULT TRUE;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor      BOOLEAN DEFAULT FALSE;
+
+	-- ── Тарҷумаи номи маҳсул (Multi-language shop) ──
+	CREATE TABLE IF NOT EXISTS product_translations (
+		post_id TEXT NOT NULL,
+		lang    TEXT NOT NULL,
+		name    TEXT DEFAULT '',
+		PRIMARY KEY(post_id, lang)
+	);
+
+	-- ── Мубодила (share) — беназир барои ҳар корбар ──
+	CREATE TABLE IF NOT EXISTS post_shares (
+		user_id TEXT NOT NULL,
+		post_id TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY(user_id, post_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_post_shares ON post_shares(post_id);
+
+	-- ── Баҳо ва шарҳи маҳсул (Reviews) ──
+	CREATE TABLE IF NOT EXISTS product_reviews (
+		post_id    TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		rating     INT DEFAULT 5,
+		text       TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY(post_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_reviews_post ON product_reviews(post_id, created_at DESC);
+
+	-- ── Таърихи воридшавӣ / дастгоҳҳо (Login history) ──
+	CREATE TABLE IF NOT EXISTS login_sessions (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id    TEXT NOT NULL,
+		device     TEXT DEFAULT '',
+		ip         TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_login_sessions_user
+		ON login_sessions(user_id, created_at DESC);
+
 	-- ── App settings persistence (theme / language) ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS theme    VARCHAR(10) DEFAULT 'dark';
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(5)  DEFAULT 'tj';
@@ -416,6 +465,22 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_orders_buyer  ON orders(buyer_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_id, created_at DESC);
+	-- ── Order status management (seller CRM) ──
+	ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+
+	-- ── Промокодҳо / купонҳо (Business) ──
+	CREATE TABLE IF NOT EXISTS promo_codes (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		seller_id    TEXT NOT NULL,
+		code         TEXT NOT NULL,
+		discount_pct INT  DEFAULT 0,
+		max_uses     INT  DEFAULT 0,
+		used_count   INT  DEFAULT 0,
+		expires_at   TIMESTAMPTZ,
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		UNIQUE(seller_id, code)
+	);
+	CREATE INDEX IF NOT EXISTS idx_promo_seller ON promo_codes(seller_id);
 
 	-- ── Effects marketplace (эффектҳои корбарон) ────────────────────
 	CREATE TABLE IF NOT EXISTS effects (
@@ -553,14 +618,48 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_gifts_from ON gifts(from_user_id, created_at DESC);
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS stars_balance INTEGER DEFAULT 0;
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS bio_song      JSONB   DEFAULT '{}'::jsonb;
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS cover_url     TEXT    DEFAULT '';
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS bio_links     TEXT    DEFAULT '';
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS archived      BOOLEAN DEFAULT FALSE;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS scheduled_at  TIMESTAMPTZ;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS featured      BOOLEAN DEFAULT FALSE;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS sale_pct      INT DEFAULT 0;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS sale_until    TIMESTAMPTZ;
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS product_category TEXT DEFAULT '';
 	-- AI Feed: холи "ҷолибияти эҳтимолӣ"-и AI (0-100), асинхронӣ пур мешавад.
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS ai_quality_score INTEGER DEFAULT 0;
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS audience    TEXT DEFAULT 'all';
+	ALTER TABLE post_media ADD COLUMN IF NOT EXISTS aspect_ratio REAL DEFAULT 0;
+
+	-- ── Live-стримҳо (Agora broadcast) ──
+	CREATE TABLE IF NOT EXISTS live_streams (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		host_id    TEXT NOT NULL,
+		channel    TEXT NOT NULL,
+		title      TEXT DEFAULT '',
+		viewers    INTEGER DEFAULT 0,
+		likes      INTEGER DEFAULT 0,
+		active     BOOLEAN DEFAULT TRUE,
+		started_at TIMESTAMPTZ DEFAULT NOW(),
+		ended_at   TIMESTAMPTZ
+	);
+	CREATE INDEX IF NOT EXISTS idx_live_active ON live_streams(active, started_at DESC);
+	ALTER TABLE live_streams ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0;
+
+	CREATE TABLE IF NOT EXISTS live_comments (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		stream_id  TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		text       TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_live_comments ON live_comments(stream_id, created_at);
 
 	-- ── Шикоят аз корбар ва маҳдудкунӣ (report / restrict) ──
 	CREATE TABLE IF NOT EXISTS user_reports (
@@ -633,6 +732,80 @@ func migrate() {
 		user_id TEXT NOT NULL,
 		PRIMARY KEY (post_id, user_id)
 	);
+
+	-- ── Дӯстони наздик (close friends, мисли Instagram «Близкие друзья») ──
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20) DEFAULT '';
+	CREATE TABLE IF NOT EXISTS close_friends (
+		user_id    TEXT NOT NULL,
+		friend_id  TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT now(),
+		PRIMARY KEY (user_id, friend_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_close_friends_user ON close_friends(user_id);
+
+	-- ── Child Safety: status + audit columns on all report tables ──
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+
+	-- ── Child Safety: comment, story, message report tables ──
+	CREATE TABLE IF NOT EXISTS comment_reports (
+		comment_id   TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		reason       TEXT DEFAULT '',
+		description  TEXT DEFAULT '',
+		status       TEXT DEFAULT 'pending',
+		reviewed_at  TIMESTAMPTZ,
+		moderator_id TEXT DEFAULT '',
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (comment_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_comment_reports_comment ON comment_reports(comment_id);
+
+	CREATE TABLE IF NOT EXISTS story_reports (
+		story_id     TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		reason       TEXT DEFAULT '',
+		description  TEXT DEFAULT '',
+		status       TEXT DEFAULT 'pending',
+		reviewed_at  TIMESTAMPTZ,
+		moderator_id TEXT DEFAULT '',
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (story_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_story_reports_story ON story_reports(story_id);
+
+	CREATE TABLE IF NOT EXISTS message_reports (
+		message_id   TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		reason       TEXT DEFAULT '',
+		description  TEXT DEFAULT '',
+		status       TEXT DEFAULT 'pending',
+		reviewed_at  TIMESTAMPTZ,
+		moderator_id TEXT DEFAULT '',
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (message_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_message_reports_msg ON message_reports(message_id);
+
+	ALTER TABLE comment_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE story_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE message_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE comment_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE story_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE message_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE comment_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE story_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE message_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
 
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE

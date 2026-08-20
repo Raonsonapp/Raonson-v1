@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ReelGestures extends StatelessWidget {
   final VoidCallback onLike;
@@ -14,7 +15,10 @@ class ReelGestures extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onDoubleTap: onLike,
+      onDoubleTap: () {
+        HapticFeedback.lightImpact();
+        onLike();
+      },
       onTap: onPauseToggle,
       child: const SizedBox.expand(),
     );

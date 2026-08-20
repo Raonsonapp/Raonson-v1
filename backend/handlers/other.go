@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 
 	"raonson/db"
 	mw "raonson/middleware"
@@ -30,6 +31,12 @@ func AddComment(c *gin.Context) {
 	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
+
+	if !moderateText(b.Text) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Шарҳи шумо аз тарафи AI рад шуд. Лутфан матнро тағйир диҳед."})
 		return
 	}
 
@@ -60,6 +67,14 @@ func AddComment(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&postOwner)
 	notify(postOwner, myID, "comment", postID)
+	preview := b.Text
+	if r := []rune(preview); len(r) > 40 {
+		preview = string(r[:40])
+	}
+	pushNotify(postOwner, myID, "comment", postID, "шарҳ гузошт: "+preview)
+
+	// @зикр дар шарҳ — ҳар корбари зикршударо огоҳ кун
+	notifyMentions(myID, "mention", postID, b.Text, "шуморо дар шарҳ зикр кард")
 
 	// Reply — соҳиби шарҳи волидро ҳам огоҳ кун (агар худаш набошад)
 	if b.ParentID != "" {
@@ -68,6 +83,7 @@ func AddComment(c *gin.Context) {
 			`SELECT user_id FROM comments WHERE id=$1`, b.ParentID).Scan(&parentOwner)
 		if parentOwner != "" && parentOwner != myID && parentOwner != postOwner {
 			notify(parentOwner, myID, "reply", postID)
+			pushNotify(parentOwner, myID, "reply", postID, "ба шарҳи шумо ҷавоб дод")
 		}
 	}
 
@@ -234,6 +250,7 @@ func FollowUser(c *gin.Context) {
 			`INSERT INTO follow_requests(requester_id,target_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 			myID, targetID)
 		notify(targetID, myID, "follow_request", myID)
+		pushNotify(targetID, myID, "follow_request", myID, "мехоҳад обуна шавад")
 		c.JSON(http.StatusOK, gin.H{"requested": true})
 		return
 	}
@@ -340,7 +357,7 @@ func Search(c *gin.Context) {
 		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type)
+		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
@@ -383,7 +400,33 @@ func Search(c *gin.Context) {
 		rRows.Close()
 	}
 
-	c.JSON(http.StatusOK, gin.H{"users": users, "posts": posts, "reels": reels})
+	// Хэштегҳо — аз caption-ҳо ҷамъ мешаванд (то tab-и «Тегҳо» холӣ намонад).
+	hq := strings.TrimPrefix(strings.TrimSpace(c.Query("q")), "#")
+	hashtags := []gin.H{}
+	if hq != "" {
+		hRows, _ := db.Pool.Query(context.Background(), `
+			SELECT tag, COUNT(*) AS cnt FROM (
+			  SELECT lower(m[1]) AS tag
+			  FROM posts p, regexp_matches(p.caption, '#(\w+)', 'g') AS m
+			  WHERE p.caption ILIKE $1
+			) t
+			WHERE tag LIKE $2
+			GROUP BY tag ORDER BY cnt DESC LIMIT 15`,
+			"%#"+hq+"%", strings.ToLower(hq)+"%")
+		if hRows != nil {
+			for hRows.Next() {
+				var tag string
+				var cnt int
+				hRows.Scan(&tag, &cnt)
+				hashtags = append(hashtags, gin.H{"tag": tag, "count": cnt})
+			}
+			hRows.Close()
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"users": users, "posts": posts, "reels": reels, "hashtags": hashtags,
+	})
 }
 
 // GET /search/users?q=...
@@ -439,7 +482,8 @@ func CreateReel(c *gin.Context) {
 	}
 	var rid string
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO reels(user_id,caption,video_url,video_url_low,thumbnail_url) VALUES($1,$2,$3,$4,$5) RETURNING id`,
+		`INSERT INTO reels(user_id,caption,video_url,video_url_low,thumbnail_url)
+		 VALUES($1,$2,$3,$4,$5) RETURNING id`,
 		myID, b.Caption, b.VideoURL, b.VideoURLLow, b.ThumbnailURL).Scan(&rid)
 	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
 	mw.InvalidateUserCache(myID)
@@ -458,16 +502,22 @@ func GetReels(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''), COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
+		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''),
+		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
-		            THEN -1 ELSE r.likes_count END, r.created_at,
+		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
-		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id)
+		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
+		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW())
 		FROM reels r JOIN users u ON u.id=r.user_id
+		WHERE ($4 = FALSE OR EXISTS (
+		    SELECT 1 FROM follows f2
+		    WHERE f2.follower_id=$1::text AND f2.following_id=r.user_id))
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
-		myID, limit, offset)
+		myID, limit, offset, c.Query("friends") == "1")
 	if err != nil {
 		log.Printf("[GetReels] query error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get reels failed"})
@@ -478,18 +528,20 @@ func GetReels(c *gin.Context) {
 	reels := []gin.H{}
 	for rows.Next() {
 		var rid, vurl, vurlLow, thumb, cap, uid, uname, uavatar string
-		var views, likes int
-		var verified, liked, saved, following bool
+		var views, likes, comms int
+		var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
 		var createdAt interface{}
-		rows.Scan(&rid, &vurl, &vurlLow, &thumb, &cap, &views, &likes, &createdAt,
-			&uid, &uname, &uavatar, &verified, &liked, &saved, &following)
+		rows.Scan(&rid, &vurl, &vurlLow, &thumb, &cap, &views, &likes, &comms, &createdAt,
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
+			&hideLikes, &commentsOff, &hasStory)
 		reels = append(reels, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 			"thumbnailUrl": thumb, "caption": cap,
-			"viewsCount": views, "likesCount": likes,
+			"viewsCount": views, "likesCount": likes, "commentsCount": comms,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
+			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
-				"verified": verified, "isFollowing": following},
+				"verified": verified, "isFollowing": following, "hasStory": hasStory},
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
@@ -529,6 +581,7 @@ func ToggleReelLike(c *gin.Context) {
 			db.Pool.QueryRow(context.Background(),
 				`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
 			notify(owner, myID, "reel_like", rid)
+			pushNotify(owner, myID, "reel_like", rid, "Reel-и шуморо писандид")
 		}
 	}
 	mw.InvalidateUserCache(myID)
@@ -602,9 +655,17 @@ func AddReelComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
 	}
+	b.Text = clampRunes(b.Text, 1000)
 	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
+	var commentsOff bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(comments_off,false) FROM reels WHERE id=$1`, rid).Scan(&commentsOff)
+	if commentsOff {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Шарҳҳо барои ин Reel хомӯш карда шудаанд"})
 		return
 	}
 	var cid string
@@ -617,6 +678,8 @@ func AddReelComment(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT user_id FROM reels WHERE id=$1`, rid).Scan(&owner)
 	notify(owner, myID, "reel_comment", rid)
+	pushNotify(owner, myID, "reel_comment", rid, "ба Reel-и шумо шарҳ гузошт")
+	notifyMentions(myID, "mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
 }

@@ -92,7 +92,79 @@ func UpdateUser(c *gin.Context) {
 // DELETE /users/
 func DeleteUser(c *gin.Context) {
 	myID := mw.UID(c)
-	db.Pool.Exec(context.Background(), `DELETE FROM users WHERE id=$1`, myID)
+	ctx := context.Background()
+
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "server error"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	queries := []string{
+		`DELETE FROM reel_comments WHERE user_id=$1`,
+		`DELETE FROM reel_likes WHERE user_id=$1`,
+		`DELETE FROM reel_saves WHERE user_id=$1`,
+		`DELETE FROM reel_views WHERE user_id=$1`,
+		`DELETE FROM reel_watch WHERE user_id=$1`,
+		`DELETE FROM reel_not_interested WHERE user_id=$1`,
+		`DELETE FROM reel_reports WHERE user_id=$1`,
+		`DELETE FROM reels WHERE user_id=$1`,
+		`DELETE FROM comment_likes WHERE user_id=$1`,
+		`DELETE FROM comments WHERE user_id=$1`,
+		`DELETE FROM post_likes WHERE user_id=$1`,
+		`DELETE FROM post_saves WHERE user_id=$1`,
+		`DELETE FROM post_views WHERE user_id=$1`,
+		`DELETE FROM post_shares WHERE user_id=$1`,
+		`DELETE FROM post_interests WHERE user_id=$1`,
+		`DELETE FROM post_not_interested WHERE user_id=$1`,
+		`DELETE FROM post_reports WHERE user_id=$1`,
+		`DELETE FROM post_media WHERE post_id IN (SELECT id FROM posts WHERE user_id=$1)`,
+		`DELETE FROM posts WHERE user_id=$1`,
+		`DELETE FROM story_views WHERE user_id=$1`,
+		`DELETE FROM story_likes WHERE user_id=$1`,
+		`DELETE FROM story_replies WHERE from_user_id=$1`,
+		`DELETE FROM stories WHERE user_id=$1`,
+		`DELETE FROM highlights WHERE user_id=$1`,
+		`DELETE FROM messages WHERE sender_id=$1 OR receiver_id=$1`,
+		`DELETE FROM message_reactions WHERE user_id=$1`,
+		`DELETE FROM chat_accepts WHERE user_id=$1 OR peer_id=$1`,
+		`DELETE FROM chat_hidden WHERE user_id=$1 OR peer_id=$1`,
+		`DELETE FROM group_members WHERE user_id=$1`,
+		`DELETE FROM follows WHERE follower_id=$1 OR following_id=$1`,
+		`DELETE FROM follow_requests WHERE requester_id=$1 OR target_id=$1`,
+		`DELETE FROM close_friends WHERE user_id=$1 OR friend_id=$1`,
+		`DELETE FROM blocks WHERE blocker_id=$1 OR blocked_id=$1`,
+		`DELETE FROM muted_users WHERE user_id=$1 OR muted_id=$1`,
+		`DELETE FROM user_reports WHERE reported_id=$1 OR user_id=$1`,
+		`DELETE FROM user_restricts WHERE user_id=$1 OR restricted_id=$1`,
+		`DELETE FROM notifications WHERE user_id=$1 OR from_user_id=$1`,
+		`DELETE FROM push_tokens WHERE user_id=$1`,
+		`DELETE FROM login_sessions WHERE user_id=$1`,
+		`DELETE FROM orders WHERE buyer_id=$1 OR seller_id=$1`,
+		`DELETE FROM gifts WHERE from_user_id=$1 OR to_user_id=$1`,
+		`DELETE FROM promotions WHERE user_id=$1`,
+		`DELETE FROM product_reviews WHERE user_id=$1`,
+		`DELETE FROM events WHERE user_id=$1`,
+		`DELETE FROM live_comments WHERE user_id=$1`,
+		`DELETE FROM live_streams WHERE host_id=$1`,
+		`DELETE FROM effects WHERE creator_id=$1`,
+		`DELETE FROM effect_purchases WHERE buyer_id=$1`,
+		`DELETE FROM promo_codes WHERE seller_id=$1`,
+		`DELETE FROM users WHERE id=$1`,
+	}
+
+	for _, q := range queries {
+		if _, err := tx.Exec(ctx, q, myID); err != nil {
+			continue
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "deletion failed"})
+		return
+	}
+
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
@@ -111,6 +183,7 @@ func GetUserPosts(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
 		WHERE p.user_id=$2 AND COALESCE(p.archived,false)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY COALESCE(p.is_pinned,false) DESC, p.created_at DESC
 		LIMIT $3 OFFSET $4`,
 		myID, id, limit, offset)
@@ -131,7 +204,8 @@ func GetUserReels(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''), COALESCE(r.thumbnail_url,''), r.caption,
+		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''),
+		       COALESCE(r.thumbnail_url,''), r.caption,
 		       COALESCE(r.views_count,0), COALESCE(r.likes_count,0),
 		       COALESCE(r.comments_count,0), r.created_at,
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),

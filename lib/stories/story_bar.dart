@@ -57,25 +57,29 @@ class StoryBar extends StatelessWidget {
 
     return SizedBox(
       height: 114,
-      child: ListView(
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        children: [
-          // Аватари корбар ValueListenable — real-time update
-          ValueListenableBuilder<String?>(
-            valueListenable: UserSession.avatarNotifier,
-            builder: (_, liveAvatar, __) => _MyStoryItem(
-              url: liveAvatar ?? myAvatar ?? '',
-              ringState: myRing,
-              onTapAvatar: () => myGrp.isNotEmpty
-                  ? (onTapGroup != null
-                      ? onTapGroup!(myGrp, 0)
-                      : onTap?.call(myGrp.first))
-                  : onAddStory?.call(),
-              onTapAdd: onAddStory ?? () {},
-            ),
-          ),
-          ...sortedOthers.map((g) => Padding(
+        itemCount: 1 + sortedOthers.length,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            // Аватари корбар ValueListenable — real-time update
+            return ValueListenableBuilder<String?>(
+              valueListenable: UserSession.avatarNotifier,
+              builder: (_, liveAvatar, __) => _MyStoryItem(
+                url: liveAvatar ?? myAvatar ?? '',
+                ringState: myRing,
+                onTapAvatar: () => myGrp.isNotEmpty
+                    ? (onTapGroup != null
+                        ? onTapGroup!(myGrp, 0)
+                        : onTap?.call(myGrp.first))
+                    : onAddStory?.call(),
+                onTapAdd: onAddStory ?? () {},
+              ),
+            );
+          }
+          final g = sortedOthers[index - 1];
+          return Padding(
             padding: const EdgeInsets.only(left: 14),
             child: _StoryItem(
               story: g.first,
@@ -83,8 +87,8 @@ class StoryBar extends StatelessWidget {
               onTap: () => onTapGroup != null
                   ? onTapGroup!(g, 0) : onTap?.call(g.first),
             ),
-          )),
-        ],
+          );
+        },
       ),
     );
   }
@@ -129,6 +133,7 @@ class _MyStoryItem extends StatelessWidget {
               child: ClipOval(
                 child: url.isNotEmpty
                     ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+                        memCacheWidth: 160,
                         errorWidget: (_, __, ___) => _ph())
                     : _ph(),
               ),
@@ -200,6 +205,7 @@ class _StoryItem extends StatelessWidget {
                 child: story.user.avatar.isNotEmpty
                     ? CachedNetworkImage(imageUrl: story.user.avatar,
                         fit: BoxFit.cover,
+                        memCacheWidth: 160,
                         errorWidget: (_, __, ___) => _ph())
                     : _ph(),
               ),

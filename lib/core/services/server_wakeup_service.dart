@@ -6,12 +6,15 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../../app/app_config.dart';
 
 class ServerWakeupService {
   ServerWakeupService._();
   static final instance = ServerWakeupService._();
 
-  static const _serverUrl = 'https://raonson-v1-go.onrender.com';
+  static final _serverUrl = AppConfig.isInitialized
+      ? AppConfig.baseUrl
+      : 'https://mahmadmurodov-raonson.hf.space';
   static const _healthPath = '/health';
   static const _pingPath = '/ping';
 

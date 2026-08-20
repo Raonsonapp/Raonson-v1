@@ -28,6 +28,7 @@ class AppIcons {
   static const IconData arrow_back_ios_new = FeatherIcons.chevronLeft;
   static const IconData arrow_back_ios_new_rounded = FeatherIcons.chevronLeft;
   static const IconData arrow_back_ios_rounded = FeatherIcons.chevronLeft;
+  static const IconData auto_awesome_rounded = FeatherIcons.zap;
   static const IconData arrow_forward_rounded = FeatherIcons.arrowRight;
   static const IconData arrow_upward_rounded = FeatherIcons.arrowUp;
   static const IconData bar_chart_rounded = FeatherIcons.barChart2;
@@ -57,6 +58,8 @@ class AppIcons {
   static const IconData check_rounded = FeatherIcons.check;
   static const IconData chevron_right_rounded = FeatherIcons.chevronRight;
   static const IconData circle = FeatherIcons.circle;
+  static const IconData business_center_rounded = FeatherIcons.briefcase;
+  static const IconData credit_card_rounded = FeatherIcons.creditCard;
   static const IconData clear_rounded = FeatherIcons.x;
   static const IconData close = FeatherIcons.x;
   static const IconData close_rounded = FeatherIcons.x;
@@ -77,6 +80,7 @@ class AppIcons {
   static const IconData do_not_disturb_on_outlined = FeatherIcons.minusCircle;
   static const IconData download_done_rounded = FeatherIcons.check;
   static const IconData download_rounded = FeatherIcons.download;
+  static const IconData description_outlined = FeatherIcons.fileText;
   static const IconData drive_file_rename_outline_rounded = FeatherIcons.edit2;
   static const IconData edit_note = FeatherIcons.edit3;
   static const IconData edit_outlined = FeatherIcons.edit2;
@@ -136,6 +140,7 @@ class AppIcons {
   static const IconData notifications_none_outlined = FeatherIcons.bell;
   static const IconData notifications_outlined = FeatherIcons.bell;
   static const IconData notifications_rounded = FeatherIcons.bell;
+  static const IconData open_in_new_rounded = FeatherIcons.externalLink;
   static const IconData open_in_full_rounded = FeatherIcons.maximize2;
   static const IconData palette_outlined = Symbols.palette_rounded;
   static const IconData pause_circle_filled_rounded = FeatherIcons.pauseCircle;
@@ -197,6 +202,7 @@ class AppIcons {
   static const IconData thumb_down_outlined = FeatherIcons.thumbsDown;
   static const IconData thumb_up_outlined = FeatherIcons.thumbsUp;
   static const IconData trending_up_rounded = FeatherIcons.trendingUp;
+  static const IconData trending_down_rounded = FeatherIcons.trendingDown;
   static const IconData undo = FeatherIcons.rotateCcw;
   static const IconData verified_outlined = Symbols.verified_rounded;
   static const IconData verified_rounded = Symbols.verified_rounded;

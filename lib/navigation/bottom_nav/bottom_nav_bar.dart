@@ -10,6 +10,7 @@ class BottomNavBar extends StatelessWidget {
   final ValueChanged<int> onTap;
   final String? avatarUrl;
   final int notifCount;
+  final VoidCallback? onProfileLongPress; // ← account switcher (мисли Instagram)
 
   const BottomNavBar({
     super.key,
@@ -17,6 +18,7 @@ class BottomNavBar extends StatelessWidget {
     required this.onTap,
     this.avatarUrl,
     this.notifCount = 0,
+    this.onProfileLongPress,
   });
 
   @override
@@ -64,6 +66,7 @@ class BottomNavBar extends StatelessWidget {
                   index: 4,
                   currentIndex: currentIndex,
                   onTap: onTap,
+                  onLongPress: onProfileLongPress,
                   avatarUrl: liveUrl ?? avatarUrl,
                   notifCount: notifCount,
                 ),
@@ -144,6 +147,7 @@ class _ProfileItem extends StatelessWidget {
   final int index;
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final VoidCallback? onLongPress;
   final String? avatarUrl;
   final int notifCount;
 
@@ -151,6 +155,7 @@ class _ProfileItem extends StatelessWidget {
     required this.index,
     required this.currentIndex,
     required this.onTap,
+    this.onLongPress,
     this.avatarUrl,
     this.notifCount = 0,
   });
@@ -160,6 +165,7 @@ class _ProfileItem extends StatelessWidget {
     final sel = currentIndex == index;
     return GestureDetector(
       onTap: () => onTap(index),
+      onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -178,6 +184,7 @@ class _ProfileItem extends StatelessWidget {
                   ? CachedNetworkImage(
                       imageUrl: avatarUrl!,
                       fit: BoxFit.cover,
+                      memCacheWidth: 80,
                       errorWidget: (_, __, ___) => _defaultIcon(),
                     )
                   : _defaultIcon(),

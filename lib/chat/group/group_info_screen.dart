@@ -1,8 +1,12 @@
 // lib/chat/group/group_info_screen.dart
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../app/app_theme.dart';
+import '../../core/api/api_client.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/services/user_session.dart';
 import '../../widgets/avatar.dart';
@@ -48,7 +52,24 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   Future<void> _remove(GroupMember m) async {
     await _repo.removeMember(_gid, m.id);
+    if (!mounted) return;
     setState(() => _members.removeWhere((x) => x.id == m.id));
+  }
+
+  // Аъзои нав илова кардан — ҷустуҷӯи корбар + POST /groups/:id/members
+  Future<void> _addMembers() async {
+    final added = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bg,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      builder: (_) => _AddMemberSheet(
+          existingIds: _members.map((m) => m.id).toSet()),
+    );
+    if (added == null || added.isEmpty) return;
+    await _repo.addMembers(_gid, added);
+    await _load();
   }
 
   Future<void> _leave() async {
@@ -86,7 +107,38 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Shimmer.fromColors(
+              baseColor: AppColors.card,
+              highlightColor: AppColors.divider,
+              child: ListView(
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 16),
+                  Center(child: Container(width: 84, height: 84,
+                      decoration: const BoxDecoration(
+                          color: Colors.white, shape: BoxShape.circle))),
+                  const SizedBox(height: 12),
+                  Center(child: Container(width: 140, height: 16,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(6)))),
+                  const SizedBox(height: 24),
+                  for (int i = 0; i < 5; i++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      child: Row(children: [
+                        Container(width: 40, height: 40,
+                            decoration: const BoxDecoration(
+                                color: Colors.white, shape: BoxShape.circle)),
+                        const SizedBox(width: 12),
+                        Container(width: 120, height: 13,
+                            decoration: BoxDecoration(color: Colors.white,
+                                borderRadius: BorderRadius.circular(6))),
+                      ]),
+                    ),
+                ],
+              ),
+            )
           : ListView(children: [
               const SizedBox(height: 16),
               Center(child: Avatar(
@@ -137,6 +189,20 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         color: AppColors.textFaint, fontSize: 12,
                         fontWeight: FontWeight.w600, letterSpacing: 1)),
               ),
+              if (_isAdmin)
+                ListTile(
+                  leading: CircleAvatar(
+                    radius: 21,
+                    backgroundColor: AppColors.neonBlue.withOpacity(0.15),
+                    child: Icon(AppIcons.person_add_rounded,
+                        color: AppColors.neonBlue, size: 22),
+                  ),
+                  title: Text('Аъзо илова кардан',
+                      style: TextStyle(
+                          color: AppColors.neonBlue,
+                          fontWeight: FontWeight.w600)),
+                  onTap: _addMembers,
+                ),
               ..._members.map((m) => ListTile(
                     leading: Avatar(imageUrl: m.avatar, size: 42, name: m.username),
                     title: Row(children: [
@@ -174,6 +240,149 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               ),
               const SizedBox(height: 30),
             ]),
+    );
+  }
+}
+
+// ── Sheet барои ҷустуҷӯ ва интихоби аъзои нав ──────────────────────
+class _AddMemberSheet extends StatefulWidget {
+  final Set<String> existingIds;
+  const _AddMemberSheet({required this.existingIds});
+  @override
+  State<_AddMemberSheet> createState() => _AddMemberSheetState();
+}
+
+class _AddMemberSheetState extends State<_AddMemberSheet> {
+  final _searchCtrl = TextEditingController();
+  Timer? _debounce;
+  List<Map<String, dynamic>> _results = [];
+  final Map<String, Map<String, dynamic>> _selected = {};
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearch(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () => _search(q.trim()));
+  }
+
+  Future<void> _search(String q) async {
+    if (q.isEmpty) {
+      setState(() => _results = []);
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final r = await ApiClient.instance.get('/search/users', query: {'q': q});
+      if (r.statusCode < 400) {
+        final body = jsonDecode(r.body);
+        final users =
+            (body is List ? body : (body['users'] ?? body['data'] ?? []))
+                as List;
+        setState(() => _results = users
+            .map((e) => (e as Map).cast<String, dynamic>())
+            .where((u) => !widget.existingIds
+                .contains((u['_id'] ?? u['id'] ?? '').toString()))
+            .toList());
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
+
+  void _toggle(Map<String, dynamic> u) {
+    final id = (u['_id'] ?? u['id'] ?? '').toString();
+    setState(() {
+      if (_selected.containsKey(id)) {
+        _selected.remove(id);
+      } else {
+        _selected[id] = u;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottom),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.72,
+        child: Column(children: [
+          const SizedBox(height: 10),
+          Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.dividerFaint,
+                  borderRadius: BorderRadius.circular(2))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 8, 4),
+            child: Row(children: [
+              Text('Аъзо илова кардан',
+                  style: TextStyle(
+                      color: AppColors.textPrimary, fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              TextButton(
+                onPressed: _selected.isEmpty
+                    ? null
+                    : () => Navigator.pop(context, _selected.keys.toList()),
+                child: Text('Илова (${_selected.length})',
+                    style: TextStyle(
+                        color: _selected.isEmpty
+                            ? AppColors.textFaint
+                            : AppColors.neonBlue,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: _onSearch,
+              autofocus: true,
+              style: TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Одам ҷустуҷӯ кунед…',
+                hintStyle: TextStyle(color: AppColors.textFaint),
+                prefixIcon: Icon(AppIcons.search, color: AppColors.textFaint),
+                filled: true, fillColor: AppColors.surface,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          if (_loading) const LinearProgressIndicator(minHeight: 2),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _results.length,
+              itemBuilder: (_, i) {
+                final u = _results[i];
+                final id = (u['_id'] ?? u['id'] ?? '').toString();
+                final sel = _selected.containsKey(id);
+                return ListTile(
+                  leading: Avatar(
+                      imageUrl: (u['avatar'] ?? '').toString(), size: 42,
+                      name: (u['username'] ?? '').toString()),
+                  title: Text((u['username'] ?? '').toString(),
+                      style: TextStyle(color: AppColors.textPrimary)),
+                  trailing: Icon(
+                    sel ? AppIcons.check_circle_rounded : AppIcons.circle,
+                    color: sel ? AppColors.neonBlue : AppColors.textFaint,
+                  ),
+                  onTap: () => _toggle(u),
+                );
+              },
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }

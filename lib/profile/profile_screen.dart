@@ -11,10 +11,12 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
+import '../core/services/subscription_service.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
@@ -34,6 +36,7 @@ import 'profile_skeleton.dart';
 import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/report_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -243,8 +246,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       _tile(AppIcons.flag_outlined, 'Шикоят кун',
           () async {
             Navigator.pop(context);
+            final result = await ReportDialog.showWithDescription(context);
+            if (result == null) return;
             try {
-              await ApiClient.instance.post('/users/${u.id}/report');
+              await ApiClient.instance.post('/users/${u.id}/report',
+                  body: {'reason': result.reason, 'description': result.description});
             } catch (_) {}
             _snack('Шикоят фиристода шуд');
           }),
@@ -372,6 +378,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     final avatarUrl = user.avatar.isNotEmpty
         ? user.avatar : (_isMe ? (UserSession.avatar ?? '') : '');
 
+    // Аккаунт закрытый ва ту обуна нести → мӯҳтаво пинҳон (мисли Instagram).
+    final locked = !_isMe && user.isPrivate && !user.isFollowing;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: RefreshIndicator(
@@ -412,6 +421,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const Icon(AppIcons.verified_rounded,
                           fill: 1, color: Color(0xFF00C853), size: 16),
                     ],
+                    // Кулф — аккаунт закрытый аст (то корбар фаҳмад).
+                    if (user.isPrivate) ...[
+                      const SizedBox(width: 5),
+                      Icon(AppIcons.lock_outline_rounded,
+                          color: AppColors.textPrimary, size: 15),
+                    ],
+                    // Нишони PRO / BUSINESS (обунаи фаъол).
+                    if (_isMe && SubscriptionService.instance.isPro) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                              colors: SubscriptionService.instance.isBusiness
+                                  ? const [Color(0xFFF7971E), Color(0xFFFFD200)]
+                                  : const [Color(0xFF7F00FF), Color(0xFFE100FF)]),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                            SubscriptionService.instance.isBusiness
+                                ? 'BUSINESS' : 'PRO',
+                            style: const TextStyle(color: Colors.white,
+                                fontSize: 9, fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5)),
+                      ),
+                    ],
                     if (_isMe) ...[
                       const SizedBox(width: 4),
                       Icon(AppIcons.keyboard_arrow_down_rounded,
@@ -434,6 +470,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                           onPressed: _otherMenu),
                 ]),
               )),
+
+              // ── COVER BANNER (Pro) ──────────────────────────────────
+              if (user.coverUrl.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(0),
+                    child: CachedNetworkImage(
+                      imageUrl: user.coverUrl,
+                      width: double.infinity, height: 130, fit: BoxFit.cover,
+                      memCacheWidth: 800,
+                      placeholder: (_, __) => Container(
+                          height: 130, color: AppColors.surface),
+                      errorWidget: (_, __, ___) => const SizedBox.shrink()),
+                  ),
+                ),
 
               // ── AVATAR + STATS ──────────────────────────────────────
               Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
@@ -482,6 +534,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                           color: AppColors.neonBlue,
                           fontSize: 13.5, fontWeight: FontWeight.w500)),
                     ]))),
+
+              // ── BIO LINKS (Pro — зиёда аз як линк) ──────────────────
+              if (user.links.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 7, 16, 0),
+                  child: Wrap(spacing: 8, runSpacing: 6,
+                    children: user.links.map((l) {
+                      final title = (l['title'] ?? '').isNotEmpty
+                          ? l['title']! : l['url']!;
+                      return GestureDetector(
+                        onTap: () => _launchWeb(l['url']!),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(AppIcons.link_rounded,
+                                color: AppColors.neonBlue, size: 13),
+                            const SizedBox(width: 5),
+                            Text(title,
+                                style: const TextStyle(color: AppColors.neonBlue,
+                                    fontSize: 12.5, fontWeight: FontWeight.w600)),
+                          ]),
+                        ),
+                      );
+                    }).toList()),
+                ),
 
               // ── HIGHLIGHTS ──────────────────────────────────────────
               const SizedBox(height: 12),
@@ -535,34 +617,38 @@ class _ProfileScreenState extends State<ProfileScreen>
                         maxLines: 2)),
                   ])),
 
-              // ── TAB BAR ─────────────────────────────────────────────
-              const SizedBox(height: 12),
-              TabBar(
-                controller: _tab,
-                tabs: [
-                  const Tab(icon: Icon(AppIcons.grid_on_rounded)),
-                  Tab(icon: AnimatedBuilder(
-                    animation: _tab,
-                    builder: (_, __) => SvgPicture.asset(
-                        'assets/icons/nav_reels.svg',
-                        width: 22, height: 22,
-                        colorFilter: ColorFilter.mode(
-                            _tab.index == 1 ? AppColors.textPrimary : AppColors.textFaint,
-                            BlendMode.srcIn)),
-                  )),
-                  const Tab(icon: Icon(AppIcons.person_pin_outlined)),
-                  if (_isMe)
-                    const Tab(icon: Icon(AppIcons.bookmark_border_rounded)),
-                ],
-                indicatorColor:       AppColors.textPrimary,
-                indicatorWeight:      2,
-                indicatorSize:        TabBarIndicatorSize.tab,
-                labelColor:           AppColors.textPrimary,
-                unselectedLabelColor: AppColors.textFaint,
-                dividerColor:         AppColors.dividerFaint,
-              ),
+              // ── TAB BAR (танҳо вақте пӯшида нест) ───────────────────
+              if (!locked) ...[
+                const SizedBox(height: 12),
+                TabBar(
+                  controller: _tab,
+                  tabs: [
+                    const Tab(icon: Icon(AppIcons.grid_on_rounded)),
+                    Tab(icon: AnimatedBuilder(
+                      animation: _tab,
+                      builder: (_, __) => SvgPicture.asset(
+                          'assets/icons/nav_reels.svg',
+                          width: 22, height: 22,
+                          colorFilter: ColorFilter.mode(
+                              _tab.index == 1 ? AppColors.textPrimary : AppColors.textFaint,
+                              BlendMode.srcIn)),
+                    )),
+                    const Tab(icon: Icon(AppIcons.person_pin_outlined)),
+                    if (_isMe)
+                      const Tab(icon: Icon(AppIcons.bookmark_border_rounded)),
+                  ],
+                  indicatorColor:       AppColors.textPrimary,
+                  indicatorWeight:      2,
+                  indicatorSize:        TabBarIndicatorSize.tab,
+                  labelColor:           AppColors.textPrimary,
+                  unselectedLabelColor: AppColors.textFaint,
+                  dividerColor:         AppColors.dividerFaint,
+                ),
+              ],
             ]))],
-        body: TabBarView(controller: _tab, children: [
+        body: locked
+            ? const _PrivateAccountView()
+            : TabBarView(controller: _tab, children: [
           _PostGrid(
               posts:       _ctrl.sortedPosts,
               isMe:        _isMe,
@@ -621,7 +707,7 @@ class _Avatar extends StatelessWidget {
     decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.card,
         border: Border.all(color: AppColors.dividerFaint, width: 1.5)),
     child: ClipOval(child: url.isNotEmpty
-        ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+        ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover, memCacheWidth: 450,
             width: size, height: size,
             placeholder: (_, __) => Container(color: AppColors.card),
             errorWidget: (_, __, ___) => _icon(size))
@@ -736,6 +822,45 @@ class _Btn extends StatelessWidget {
       ])));
 }
 
+// ─── Private account view (мисли Instagram «Это закрытый профиль») ──────
+class _PrivateAccountView extends StatelessWidget {
+  const _PrivateAccountView();
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(top: 60),
+      children: [
+        Column(children: [
+          Container(
+            width: 88, height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.textPrimary, width: 2.5),
+            ),
+            child: Icon(AppIcons.lock_outline_rounded,
+                color: AppColors.textPrimary, size: 40),
+          ),
+          const SizedBox(height: 20),
+          Text('Ин аккаунти пӯшида аст',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Барои дидани публикатсияҳо, ба ин аккаунт обуна шавед. '
+              'Дӯстон дар Raonson метавонанд бо ҳам нома нависанд ва '
+              'сторисҳои якдигарро бинанд.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textTertiary, fontSize: 14,
+                  height: 1.4)),
+          ),
+        ]),
+      ],
+    );
+  }
+}
+
 // ─── Post Grid ─────────────────────────────────────────────────────────
 class _PostGrid extends StatelessWidget {
   final List<PostModel> posts;
@@ -773,7 +898,7 @@ class _PostGrid extends StatelessWidget {
           onLongPress: isMe ? () => onLongPress(p) : null,
           child: Stack(fit: StackFit.expand, children: [
             url.isNotEmpty
-                ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover,
+                ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover, memCacheWidth: 450,
                     placeholder: (_, __) => Container(color: AppColors.card),
                     errorWidget: (_, __, ___) => Container(color: AppColors.card))
                 : Container(color: AppColors.card,
@@ -837,7 +962,7 @@ class _ReelGrid extends StatelessWidget {
               builder: (_) => SingleReelScreen(reel: r))),
           child: Stack(fit: StackFit.expand, children: [
           thumb.isNotEmpty
-              ? CachedNetworkImage(imageUrl: thumb, fit: BoxFit.cover,
+              ? CachedNetworkImage(imageUrl: thumb, fit: BoxFit.cover, memCacheWidth: 450,
                   placeholder: (_, __) => Container(color: AppColors.card),
                   errorWidget: (_, __, ___) => _reelPlaceholder())
               : _reelPlaceholder(),
@@ -891,7 +1016,7 @@ class _TGS extends State<_TaggedGrid> {
             builder: (_) => PostDetailScreen(
                 posts: posts, initialIndex: i, title: 'Зикршуда'))),
         child: CachedNetworkImage(
-            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
+            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover, memCacheWidth: 450,
             placeholder: (_, __) => Container(color: AppColors.card),
             errorWidget: (_, __, ___) => Container(color: AppColors.card))));
   }
@@ -925,7 +1050,7 @@ class _SGS extends State<_SavedGrid> {
             builder: (_) => PostDetailScreen(
                 posts: posts, initialIndex: i, title: 'Сохташуда'))),
         child: CachedNetworkImage(
-            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
+            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover, memCacheWidth: 450,
             placeholder: (_, __) => Container(color: AppColors.card),
             errorWidget: (_, __, ___) => Container(color: AppColors.card))));
   }
@@ -1005,8 +1130,7 @@ class _ULS extends State<_UserListSheet> {
         ),
         const SizedBox(height: 6),
         Expanded(child: _loading
-            ? const Center(child: CircularProgressIndicator(
-                color: AppColors.neonBlue, strokeWidth: 2))
+            ? _UserListSkeleton()
             : list.isEmpty
                 ? Center(child: Text(_query.isNotEmpty
                         ? 'Натиҷае нест'
@@ -1018,7 +1142,7 @@ class _ULS extends State<_UserListSheet> {
                       leading: CircleAvatar(radius: 22,
                         backgroundColor: AppColors.card,
                         backgroundImage: u.avatar.isNotEmpty
-                            ? NetworkImage(u.avatar) : null,
+                            ? CachedNetworkImageProvider(u.avatar, maxWidth: 88) : null,
                         child: u.avatar.isEmpty
                             ? Icon(AppIcons.person, color: AppColors.textFaint) : null),
                       title: Row(children: [
@@ -1045,6 +1169,47 @@ class _ULS extends State<_UserListSheet> {
                       });
                   })),
       ]));
+  }
+}
+
+class _UserListSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).colorScheme.surface;
+    return Shimmer.fromColors(
+      baseColor: base,
+      highlightColor: base.withOpacity(0.4),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        itemCount: 10,
+        itemBuilder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            Container(width: 44, height: 44,
+                decoration: const BoxDecoration(
+                    color: Colors.white, shape: BoxShape.circle)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(width: 120, height: 12,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(6))),
+                  const SizedBox(height: 6),
+                  Container(width: 80, height: 10,
+                      decoration: BoxDecoration(color: Colors.white,
+                          borderRadius: BorderRadius.circular(5))),
+                ],
+              ),
+            ),
+            Container(width: 70, height: 28,
+                decoration: BoxDecoration(color: Colors.white,
+                    borderRadius: BorderRadius.circular(6))),
+          ]),
+        ),
+      ),
+    );
   }
 }
 

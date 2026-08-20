@@ -6,7 +6,10 @@ import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../core/analytics/analytics_service.dart';
+import '../navigation/bottom_nav/bottom_nav_controller.dart';
 import '../core/analytics/analytics_events.dart';
 import 'package:http/http.dart' as http;
 
@@ -27,6 +30,8 @@ import '../widgets/verified_badge.dart';
 import 'search_history.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
+import '../shop/buy_sheet.dart';
+import '../live/live_rail.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  MAIN SCREEN
@@ -42,8 +47,10 @@ class _SearchScreenState extends State<SearchScreen>
   // Controllers
   final _ctrl  = TextEditingController();
   final _focus = FocusNode();
+  final _scroll = ScrollController();
   Timer?  _debounce;
   String  _lastQ = '';
+  ValueNotifier<int>? _scrollToTopNotifier;
 
   // State machine
   // idle   → Explore grid (search bar NOT focused, no text)
@@ -96,9 +103,33 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_scrollToTopNotifier == null) {
+      try {
+        _scrollToTopNotifier =
+            context.read<BottomNavController>().scrollToTopNotifier;
+        _scrollToTopNotifier!.addListener(_onScrollToTop);
+      } catch (_) {}
+    }
+  }
+
+  void _onScrollToTop() {
+    final nav = context.read<BottomNavController>();
+    if (nav.currentIndex != 3) return;
+    if (_scroll.hasClients) {
+      _scroll.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut);
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollToTopNotifier?.removeListener(_onScrollToTop);
     _ctrl.dispose();
     _focus.dispose();
+    _scroll.dispose();
     _debounce?.cancel();
     _tabs.dispose();
     super.dispose();
@@ -129,6 +160,7 @@ class _SearchScreenState extends State<SearchScreen>
               url:     post.mediaUrl,
               type:    post.mediaType == 'video' ? _ItemType.video : _ItemType.image,
               isMulti: post.media.length > 1,
+              isProduct: post.isProduct,
               views:   post.likesCount, // use likes as proxy; backend adds views later
               postData: post,
             ));
@@ -420,13 +452,19 @@ class _SearchScreenState extends State<SearchScreen>
           onChanged:  _onChanged,
           onCancel:   _cancelSearch,
         ),
+        const LiveRail(), // «Live ҳозир» — дар search (на home)
         Expanded(
           child: _exploreLoading
               ? _SkeletonGrid()
-              : _ExploreGrid(
-                  items:   _exploreItems,
-                  onTap:   _openExploreAt,
-                  onLongPress: _showExplorePreview,
+              : RefreshIndicator(
+                  onRefresh: _loadExplore,
+                  color: AppColors.textPrimary,
+                  backgroundColor: AppColors.bg,
+                  child: _ExploreGrid(
+                    items:   _exploreItems,
+                    onTap:   _openExploreAt,
+                    onLongPress: _showExplorePreview,
+                  ),
                 ),
         ),
       ],
@@ -669,7 +707,10 @@ class _SearchScreenState extends State<SearchScreen>
         // Tab views
         Expanded(
           child: _error != null
-              ? _ErrView(msg: _error!)
+              ? _ErrView(msg: _error!, onRetry: () {
+                  setState(() => _error = null);
+                  if (_lastQ.isNotEmpty) _doSearch(_lastQ);
+                })
               : TabBarView(
                   controller: _tabs,
                   children: [
@@ -801,6 +842,7 @@ class _ExploreItem {
   final String     url;
   final _ItemType  type;
   final bool       isMulti;
+  final bool       isProduct;
   final int        views;
   final PostModel? postData;
   final Map<String, dynamic>? reelData;
@@ -810,6 +852,7 @@ class _ExploreItem {
     required this.url,
     required this.type,
     this.isMulti  = false,
+    this.isProduct = false,
     this.views    = 0,
     this.postData,
     this.reelData,
@@ -880,6 +923,7 @@ class _ExploreCell extends StatelessWidget {
         CachedNetworkImage(
           imageUrl: item.url,
           fit: BoxFit.cover,
+          memCacheWidth: 450,
           placeholder: (_, __) =>
               Container(color: AppColors.surface),
           errorWidget: (_, __, ___) =>
@@ -900,6 +944,14 @@ class _ExploreCell extends StatelessWidget {
             top: 6, right: 6,
             child: Icon(AppIcons.collections_rounded,
                 color: AppColors.textPrimary, size: 16,
+                shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
+          ),
+        // Shop icon (top-left) — пости магоза аст
+        if (item.isProduct)
+          Positioned(
+            top: 6, left: 6,
+            child: Icon(AppIcons.storefront_rounded,
+                color: AppColors.textPrimary, size: 15,
                 shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
           ),
         // Views counter (bottom-left) — shown if > 0
@@ -984,6 +1036,7 @@ class _ExplorePreviewDialog extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl: item.url,
                   fit: BoxFit.cover,
+          memCacheWidth: 450,
                   placeholder: (_, __) =>
                       Container(color: AppColors.surface),
                   errorWidget: (_, __, ___) =>
@@ -1083,7 +1136,8 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
           controller:  _page,
           scrollDirection: Axis.vertical,
           itemCount:   widget.items.length,
-          itemBuilder: (_, i) => _FeedCard(item: widget.items[i]),
+          itemBuilder: (_, i) =>
+              _FeedCard(key: ValueKey(widget.items[i].id), item: widget.items[i]),
         ),
         // Back button
         Positioned(
@@ -1113,7 +1167,7 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
 // Single card in the explore feed (image OR playing video/reel)
 class _FeedCard extends StatefulWidget {
   final _ExploreItem item;
-  const _FeedCard({required this.item});
+  const _FeedCard({super.key, required this.item});
   @override
   State<_FeedCard> createState() => _FeedCardState();
 }
@@ -1269,6 +1323,23 @@ class _FeedCardState extends State<_FeedCard> {
               svg: 'assets/icons/comment.svg',
               label: _commentCount > 0 ? _fmt(_commentCount) : null,
               onTap: _openComments),
+          // Харид — танҳо барои пости магоза (мисли Instagram search + харид).
+          if (widget.item.isProduct && widget.item.postData != null) ...[
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: () => showBuySheet(context, widget.item.postData!),
+              behavior: HitTestBehavior.opaque,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(AppIcons.storefront_rounded,
+                    color: AppColors.textPrimary, size: 26),
+                const SizedBox(height: 3),
+                Text('Харид',
+                    style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 11,
+                        fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ],
           const SizedBox(height: 18),
           _ActionBtn(
               svg: 'assets/icons/share.svg',
@@ -1559,7 +1630,8 @@ class _ForYouTab extends StatelessWidget {
           SliverToBoxAdapter(
             child: Column(
               children: music.take(3)
-                  .map((m) => _MusicRow(m: m))
+                  .map((m) => _MusicRow(
+                      key: ValueKey(m['trackId'] ?? m['previewUrl']), m: m))
                   .toList(),
             ),
           ),
@@ -1632,8 +1704,10 @@ class _UsersTab extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 32),
       itemCount: users.length,
-      itemBuilder: (_, i) =>
-          _UserRow(user: users[i], onTap: () => onTap(users[i].id)),
+      itemBuilder: (_, i) => _UserRow(
+          key: ValueKey(users[i].id),
+          user: users[i],
+          onTap: () => onTap(users[i].id)),
     );
   }
 }
@@ -1651,7 +1725,9 @@ class _MusicTab extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 32),
       itemCount: music.length,
-      itemBuilder: (_, i) => _MusicRow(m: music[i]),
+      itemBuilder: (_, i) => _MusicRow(
+          key: ValueKey(music[i]['trackId'] ?? music[i]['previewUrl'] ?? i),
+          m: music[i]),
     );
   }
 }
@@ -1713,7 +1789,7 @@ class _HashtagTab extends StatelessWidget {
 class _UserRow extends StatefulWidget {
   final UserModel user;
   final VoidCallback onTap;
-  const _UserRow({required this.user, required this.onTap});
+  const _UserRow({super.key, required this.user, required this.onTap});
   @override
   State<_UserRow> createState() => _UserRowState();
 }
@@ -1824,7 +1900,7 @@ String? _playingUrl;
 
 class _MusicRow extends StatefulWidget {
   final dynamic m;
-  const _MusicRow({required this.m});
+  const _MusicRow({super.key, required this.m});
   @override
   State<_MusicRow> createState() => _MusicRowState();
 }
@@ -1877,8 +1953,9 @@ class _MusicRowState extends State<_MusicRow> {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: _art.isNotEmpty
-              ? Image.network(_art, width: 50, height: 50, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _MusicPlaceholder())
+              ? CachedNetworkImage(imageUrl: _art, width: 50, height: 50,
+                  fit: BoxFit.cover, memCacheWidth: 100,
+                  errorWidget: (_, __, ___) => _MusicPlaceholder())
               : _MusicPlaceholder(),
         ),
         const SizedBox(width: 12),
@@ -1966,7 +2043,8 @@ class _NoResult extends StatelessWidget {
 
 class _ErrView extends StatelessWidget {
   final String msg;
-  const _ErrView({required this.msg});
+  final VoidCallback? onRetry;
+  const _ErrView({required this.msg, this.onRetry});
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
@@ -1984,6 +2062,21 @@ class _ErrView extends StatelessWidget {
             style: TextStyle(
                 color: AppColors.textFaint, fontSize: 12),
             textAlign: TextAlign.center),
+        if (onRetry != null) ...[
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(AppIcons.refresh_rounded, size: 18),
+            label: const Text('Такрор кӯшиш'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.neonBlue,
+              foregroundColor: AppColors.textPrimary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 24, vertical: 10)),
+          ),
+        ],
       ]),
     ),
   );
@@ -2094,6 +2187,9 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
                 child: TextField(
                   controller: _ctrl,
                   style: TextStyle(color: AppColors.textPrimary),
+                  maxLength: 1000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   decoration: InputDecoration(
                     hintText: 'Шарҳ нависед...',
                     hintStyle: TextStyle(color: AppColors.textFaint),

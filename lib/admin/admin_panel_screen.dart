@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
@@ -158,7 +159,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
     setState(() => _busy.add(id));
     try {
       final res = await ApiClient.instance.delete('/admin/users/$id');
@@ -226,6 +227,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            tooltip: 'Шикоятҳо',
+            icon: Icon(AppIcons.flag_outlined,
+                color: Colors.redAccent),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AdminReportsScreen())),
+          ),
+          IconButton(
             tooltip: 'Тест email',
             icon: Icon(AppIcons.mark_email_read_outlined,
                 color: AppColors.textPrimary),
@@ -286,7 +294,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: AppColors.card,
-        backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+        backgroundImage: avatar.isNotEmpty ? CachedNetworkImageProvider(avatar, maxWidth: 80) : null,
         child: avatar.isEmpty
             ? Icon(AppIcons.person, color: AppColors.textFaint) : null,
       ),
@@ -349,5 +357,228 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   ),
                 ]),
     );
+  }
+}
+
+class AdminReportsScreen extends StatefulWidget {
+  const AdminReportsScreen({super.key});
+  @override
+  State<AdminReportsScreen> createState() => _AdminReportsState();
+}
+
+class _AdminReportsState extends State<AdminReportsScreen> {
+  List<Map<String, dynamic>> _reports = [];
+  bool _loading = true;
+  String _filter = 'pending';
+  int _csCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final r = await ApiClient.instance.get(
+        '/admin/reports?status=$_filter&type=all')
+        .timeout(const Duration(seconds: 15));
+      if (r.statusCode < 400) {
+        final data = jsonDecode(r.body) as Map<String, dynamic>;
+        _reports = ((data['reports'] as List?) ?? [])
+            .cast<Map<String, dynamic>>();
+        _csCount = (data['childSafetyPending'] as num?)?.toInt() ?? 0;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _resolve(Map<String, dynamic> r, String action) async {
+    try {
+      await ApiClient.instance.post('/admin/reports/resolve', body: {
+        'type': r['type'], 'targetId': r['targetId'], 'action': action,
+      });
+      _load();
+      if (mounted) {
+        final msg = {
+          'resolve': 'Ҳал шуд', 'remove': 'Нест карда шуд', 'ban': 'Бон шуд',
+          'under_review': 'Ба баррасӣ гузашт', 'dismiss': 'Рад карда шуд',
+        }[action] ?? 'Амал шуд';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(msg), backgroundColor: Colors.green));
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(AppIcons.arrow_back_ios_new_rounded,
+              color: AppColors.textPrimary, size: 20),
+          onPressed: () => Navigator.pop(context)),
+        title: Text('Шикоятҳо',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 16,
+                fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: Column(children: [
+        if (_csCount > 0)
+          Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+            ),
+            child: Row(children: [
+              Icon(AppIcons.security_outlined, color: Colors.redAccent, size: 22),
+              const SizedBox(width: 10),
+              Expanded(child: Text(
+                '$_csCount шикояти бехатарии кӯдакон дар интизор',
+                style: TextStyle(color: Colors.redAccent,
+                    fontWeight: FontWeight.w600, fontSize: 13))),
+            ]),
+          ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(children: [
+            _chip('pending', 'Интизорӣ'),
+            const SizedBox(width: 8),
+            _chip('under_review', 'Баррасӣ'),
+            const SizedBox(width: 8),
+            _chip('resolved', 'Ҳалшуда'),
+            const SizedBox(width: 8),
+            _chip('action_taken', 'Амал'),
+            const SizedBox(width: 8),
+            _chip('dismissed', 'Радшуда'),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator(
+                  color: AppColors.neonBlue, strokeWidth: 2))
+              : _reports.isEmpty
+                  ? Center(child: Text('Шикоят нест',
+                      style: TextStyle(color: AppColors.textFaint)))
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: _reports.length,
+                        itemBuilder: (_, i) => _reportTile(_reports[i]),
+                      ),
+                    ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _chip(String value, String label) {
+    final sel = _filter == value;
+    return GestureDetector(
+      onTap: () { _filter = value; _load(); },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: sel ? AppColors.neonBlue : AppColors.card,
+          borderRadius: BorderRadius.circular(20)),
+        child: Text(label, style: TextStyle(
+            color: sel ? Colors.white : AppColors.textSecondary, fontSize: 13)),
+      ),
+    );
+  }
+
+  Widget _reportTile(Map<String, dynamic> r) {
+    final type = (r['type'] ?? '').toString();
+    final reason = (r['reason'] ?? '').toString();
+    final reporter = (r['reporter'] ?? '').toString();
+    final isCS = reason == 'child_safety';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isCS ? Colors.red.withOpacity(0.08) : AppColors.card,
+        borderRadius: BorderRadius.circular(12),
+        border: isCS ? Border.all(color: Colors.redAccent.withOpacity(0.3)) : null,
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+                color: AppColors.neonBlue.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(6)),
+            child: Text(type.toUpperCase(),
+                style: TextStyle(color: AppColors.neonBlue,
+                    fontSize: 10, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 8),
+          if (isCS) ...[
+            Icon(AppIcons.security_outlined, color: Colors.redAccent, size: 14),
+            const SizedBox(width: 4),
+          ],
+          Expanded(child: Text(
+              _reasonLabel(reason),
+              style: TextStyle(
+                color: isCS ? Colors.redAccent : AppColors.textPrimary,
+                fontWeight: FontWeight.w600, fontSize: 13))),
+        ]),
+        const SizedBox(height: 6),
+        Text('Аз: @$reporter',
+            style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+        if ((r['description'] ?? '').toString().isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text((r['description'] ?? '').toString(),
+              maxLines: 3, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12,
+                  fontStyle: FontStyle.italic)),
+        ],
+        if (_filter == 'pending' || _filter == 'under_review') ...[
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            if (_filter == 'pending')
+              _actionBtn('Баррасӣ', AppColors.neonBlue, () => _resolve(r, 'under_review')),
+            _actionBtn('Ҳал', Colors.green, () => _resolve(r, 'resolve')),
+            _actionBtn('Нест', Colors.orange, () => _resolve(r, 'remove')),
+            _actionBtn('Бон', Colors.redAccent, () => _resolve(r, 'ban')),
+            _actionBtn('Рад', AppColors.textFaint, () => _resolve(r, 'dismiss')),
+          ]),
+        ],
+      ]),
+    );
+  }
+
+  Widget _actionBtn(String label, Color c, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+            color: c.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+        child: Text(label,
+            style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12)),
+      ),
+    );
+  }
+
+  String _reasonLabel(String r) {
+    switch (r) {
+      case 'child_safety': return 'Бехатарии кӯдакон';
+      case 'spam': return 'Спам';
+      case 'violence': return 'Зӯроварӣ';
+      case 'adult': return 'Калонсолон';
+      case 'hate': return 'Нафрат';
+      case 'harassment': return 'Озурдан';
+      default: return r.isEmpty ? 'Дигар' : r;
+    }
   }
 }

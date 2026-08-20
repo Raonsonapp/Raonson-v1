@@ -17,7 +17,8 @@ func ReportPost(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
 	var b struct {
-		Reason string `json:"reason"`
+		Reason      string `json:"reason"`
+		Description string `json:"description"`
 	}
 	c.ShouldBindJSON(&b)
 	if b.Reason == "" {
@@ -25,9 +26,9 @@ func ReportPost(c *gin.Context) {
 	}
 
 	db.Pool.Exec(context.Background(),
-		`INSERT INTO post_reports(post_id, user_id, reason, created_at)
-		 VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
-		pid, myID, b.Reason, time.Now())
+		`INSERT INTO post_reports(post_id, user_id, reason, description, created_at)
+		 VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+		pid, myID, b.Reason, b.Description, time.Now())
 
 	// Агар > 10 жалоб → автоматӣ пинҳон кун
 	var count int
@@ -39,6 +40,19 @@ func ReportPost(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"reported": true})
+}
+
+// POST /posts/:id/share → мубодила (беназир: 1 корбар = 1 бор) → shares
+func SharePost(c *gin.Context) {
+	myID := mw.UID(c)
+	postID := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO post_shares(user_id, post_id) VALUES($1,$2)
+		 ON CONFLICT (user_id, post_id) DO NOTHING`, myID, postID)
+	var shares int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM post_shares WHERE post_id=$1`, postID).Scan(&shares)
+	c.JSON(http.StatusOK, gin.H{"shares": shares})
 }
 
 // ── POST /posts/:id/hide-likes ── (toggle) танҳо соҳиб ──
@@ -100,6 +114,21 @@ func ToggleReelHideLikes(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"hideLikes": hide})
+}
+
+// ── POST /reels/:id/toggle-comments ── (toggle) танҳо соҳиб ──
+func ToggleReelComments(c *gin.Context) {
+	rid := c.Param("id")
+	myID := mw.UID(c)
+	var off bool
+	err := db.Pool.QueryRow(context.Background(),
+		`UPDATE reels SET comments_off = NOT COALESCE(comments_off,false)
+		 WHERE id=$1 AND user_id=$2::text RETURNING comments_off`, rid, myID).Scan(&off)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"commentsOff": off})
 }
 
 // ── POST /posts/:id/interest ──────────────────────────────────────
@@ -181,6 +210,9 @@ func UpdatePostCaption(c *gin.Context) {
 	// Cache-ро тоза кун
 	mw.CacheDel("feed:"+myID+":1", "smartfeed:"+myID+":1")
 	mw.InvalidateUserCache(myID)
+
+	// @зикр дар тавсифи навшуда — ҳар корбари зикршударо огоҳ кун
+	notifyMentions(myID, "mention", pid, b.Caption, "шуморо дар публикатсия зикр кард")
 	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption})
 }
 
@@ -246,14 +278,17 @@ func GetPostStats(c *gin.Context) {
 		   ON f.follower_id = pv.user_id AND f.following_id = $2
 		 WHERE pv.post_id = $1`, pid, myID).Scan(&fromFollowers, &fromOthers)
 
-	// shares — ҳоло ҷадвали post_shares нест → 0.
+	var shares int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM post_shares WHERE post_id=$1`, pid).Scan(&shares)
+
 	c.JSON(http.StatusOK, gin.H{
 		"likes":         likes,
 		"comments":      comments,
 		"views":         views,
 		"saves":         saves,
 		"reports":       reports,
-		"shares":        0,
+		"shares":        shares,
 		"fromFollowers": fromFollowers,
 		"fromOthers":    fromOthers,
 	})

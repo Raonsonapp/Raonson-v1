@@ -338,6 +338,7 @@ class _HighlightViewerState extends State<HighlightViewer>
     if (_cur.url.isEmpty) return Container(color: AppColors.bg);
     return CachedNetworkImage(
       imageUrl: _cur.url, fit: BoxFit.contain,
+      memCacheWidth: 1080,
       width: double.infinity, height: double.infinity,
       placeholder: (_, __) => Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint)),

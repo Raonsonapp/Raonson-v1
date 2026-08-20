@@ -9,6 +9,8 @@ class StoryModel {
   final bool isLiked;
   final int likesCount;
   final int viewsCount;
+  final bool repliesOff;
+  final String audience;
   final DateTime expiresAt;
 
   const StoryModel({
@@ -20,6 +22,8 @@ class StoryModel {
     this.isLiked = false,
     this.likesCount = 0,
     this.viewsCount = 0,
+    this.repliesOff = false,
+    this.audience = 'all',
     required this.expiresAt,
   });
 
@@ -43,6 +47,8 @@ class StoryModel {
       isLiked: json['isLiked'] ?? false,
       likesCount: likes is List ? likes.length : (json['likesCount'] ?? 0),
       viewsCount: views is List ? views.length : (json['viewsCount'] ?? 0),
+      repliesOff: json['repliesOff'] == true,
+      audience: (json['audience'] ?? 'all').toString(),
       expiresAt: DateTime.tryParse(json['expiresAt'] ?? '') ?? DateTime.now().add(const Duration(hours: 24)),
     );
   }

@@ -141,15 +141,16 @@ func ReportUser(c *gin.Context) {
 		return
 	}
 	var b struct {
-		Reason string `json:"reason"`
+		Reason      string `json:"reason"`
+		Description string `json:"description"`
 	}
 	c.ShouldBindJSON(&b)
 	if b.Reason == "" {
 		b.Reason = "spam"
 	}
 	db.Pool.Exec(context.Background(),
-		`INSERT INTO user_reports(reported_id, user_id, reason)
-		 VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, target, myID, b.Reason)
+		`INSERT INTO user_reports(reported_id, user_id, reason, description)
+		 VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, target, myID, b.Reason, b.Description)
 	c.JSON(http.StatusOK, gin.H{"reported": true})
 }
 
@@ -246,15 +247,16 @@ func ReportReel(c *gin.Context) {
 	myID := mw.UID(c)
 	rid := c.Param("id")
 	var b struct {
-		Reason string `json:"reason"`
+		Reason      string `json:"reason"`
+		Description string `json:"description"`
 	}
 	c.ShouldBindJSON(&b)
 	if b.Reason == "" {
 		b.Reason = "spam"
 	}
 	db.Pool.Exec(context.Background(),
-		`INSERT INTO reel_reports(reel_id, user_id, reason)
-		 VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, rid, myID, b.Reason)
+		`INSERT INTO reel_reports(reel_id, user_id, reason, description)
+		 VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, rid, myID, b.Reason, b.Description)
 	c.JSON(http.StatusOK, gin.H{"reported": true})
 }
 
@@ -377,9 +379,17 @@ func ReplyReelComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
 	}
+	b.Text = clampRunes(b.Text, 1000)
 	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Матн қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
+	var commentsOff bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(comments_off,false) FROM reels WHERE id=$1`, rid).Scan(&commentsOff)
+	if commentsOff {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Шарҳҳо барои ин Reel хомӯш карда шудаанд"})
 		return
 	}
 	var newID string
@@ -387,6 +397,27 @@ func ReplyReelComment(c *gin.Context) {
 		`INSERT INTO reel_comments(reel_id, user_id, text, parent_id)
 		 VALUES($1,$2,$3,$4) RETURNING id`, rid, myID, b.Text, parent).Scan(&newID)
 	c.JSON(http.StatusCreated, gin.H{"_id": newID, "text": b.Text, "parentId": parent})
+}
+
+// PUT /reels/:id/caption — соҳиб caption-ро иваз мекунад
+func UpdateReelCaption(c *gin.Context) {
+	rid  := c.Param("id")
+	myID := mw.UID(c)
+	var b struct {
+		Caption string `json:"caption"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "caption required"})
+		return
+	}
+	res, err := db.Pool.Exec(context.Background(),
+		`UPDATE reels SET caption=$1 WHERE id=$2 AND user_id=$3`,
+		b.Caption, rid, myID)
+	if err != nil || res.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found or not owner"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption})
 }
 
 // ═══════════════════════ STORY REPLY ═══════════════════════
@@ -418,6 +449,20 @@ func ReplyStory(c *gin.Context) {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO notifications(user_id, from_user_id, type, target_id)
 			 VALUES($1,$2,'story_reply',$3)`, ownerID, myID, sid)
+		// Мисли Instagram: ҷавоби сторис ба DM-и соҳиб меравад (realtime).
+		chatID := sortedChatID(myID, ownerID)
+		var msgID string
+		if e := db.Pool.QueryRow(context.Background(), `
+			INSERT INTO messages
+			  (chat_id, sender_id, receiver_id, text, type, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,'text',NOW(),NOW()) RETURNING id`,
+			chatID, myID, ownerID,
+			"💬 Ҷавоб ба сторис: "+b.Text).Scan(&msgID); e == nil {
+			if msg, fe := fetchMessageByID(msgID, ownerID); fe == nil {
+				emitChat("chat:new", msg, ownerID)
+			}
+		}
+		pushNotify(ownerID, myID, "story_reply", sid, "ба сторисатон ҷавоб дод")
 	}
 	c.JSON(http.StatusCreated, gin.H{"sent": true})
 }

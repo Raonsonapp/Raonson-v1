@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -99,12 +99,8 @@ func sendFCM(key, token, title, body string, data map[string]string) {
 		return
 	}
 	defer resp.Body.Close()
-	respBody, _ := io.ReadAll(resp.Body)
-	fmt.Printf("[FCM] token:%s... status:%d resp:%s\n",
-		token[:10], resp.StatusCode, string(respBody[:min(50, len(respBody))]))
-}
-
-func min(a, b int) int {
-	if a < b { return a }
-	return b
+	io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode >= 400 {
+		log.Printf("[FCM] push failed status:%d", resp.StatusCode)
+	}
 }

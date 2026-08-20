@@ -201,6 +201,7 @@ class _AnimeCell extends StatelessWidget {
         // Постер
         item.poster.isNotEmpty
             ? CachedNetworkImage(imageUrl: item.poster, fit: BoxFit.cover,
+                memCacheWidth: 400,
                 placeholder: (_, __) => Container(color: const Color(0xFF1C1C1C)),
                 errorWidget: (_, __, ___) => Container(color: const Color(0xFF1C1C1C),
                     child: const Icon(AppIcons.broken_image_outlined,

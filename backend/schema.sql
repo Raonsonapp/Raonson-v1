@@ -401,7 +401,9 @@
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS archived      BOOLEAN DEFAULT FALSE;
-	ALTER TABLE reels ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS hide_likes     BOOLEAN DEFAULT FALSE;
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_off   BOOLEAN DEFAULT FALSE;
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS thumbnail_url  TEXT DEFAULT '';
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
 
@@ -455,6 +457,70 @@
 		PRIMARY KEY (user_id, reel_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
+
+	-- ── Child Safety: status + audit columns on all report tables ──
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+
+	-- ── Child Safety: comment, story, message report tables ──
+	CREATE TABLE IF NOT EXISTS comment_reports (
+		comment_id   TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		reason       TEXT DEFAULT '',
+		description  TEXT DEFAULT '',
+		status       TEXT DEFAULT 'pending',
+		reviewed_at  TIMESTAMPTZ,
+		moderator_id TEXT DEFAULT '',
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (comment_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_comment_reports_comment ON comment_reports(comment_id);
+
+	CREATE TABLE IF NOT EXISTS story_reports (
+		story_id     TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		reason       TEXT DEFAULT '',
+		description  TEXT DEFAULT '',
+		status       TEXT DEFAULT 'pending',
+		reviewed_at  TIMESTAMPTZ,
+		moderator_id TEXT DEFAULT '',
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (story_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_story_reports_story ON story_reports(story_id);
+
+	CREATE TABLE IF NOT EXISTS message_reports (
+		message_id   TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		reason       TEXT DEFAULT '',
+		description  TEXT DEFAULT '',
+		status       TEXT DEFAULT 'pending',
+		reviewed_at  TIMESTAMPTZ,
+		moderator_id TEXT DEFAULT '',
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (message_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_message_reports_msg ON message_reports(message_id);
+
+	ALTER TABLE comment_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE story_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE message_reports ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+	ALTER TABLE comment_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE story_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE message_reports ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+	ALTER TABLE comment_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE story_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
+	ALTER TABLE message_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
 
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE

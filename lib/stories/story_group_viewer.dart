@@ -19,6 +19,7 @@ import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/report_dialog.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -285,8 +286,19 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             onTap: () { Navigator.pop(context); _resume(); _saveMedia(); }),
         _menuRow('Мубодила кардан',
             onTap: () { Navigator.pop(context); _shareStory(); }),
-        _menuRow('Танзимоти сторис',
-            onTap: () { Navigator.pop(context); _resume(); }),
+        _menuRow('Танзимоти сторис', onTap: () async {
+            Navigator.pop(context);
+            try {
+              final res = await ApiClient.instance
+                  .post('/stories/${_current.id}/toggle-replies');
+              if (res.statusCode >= 400) throw Exception();
+              final b = jsonDecode(res.body) as Map<String, dynamic>;
+              _toast(b['repliesOff'] == true
+                  ? 'Ҷавобҳо хомӯш ✓'
+                  : 'Ҷавобҳо фаъол ✓');
+            } catch (_) { _toast('Хато'); }
+            if (mounted) _resume();
+          }),
         _menuRow('Шарҳҳоро хомӯш кардан', onTap: () async {
             Navigator.pop(context);
             try {
@@ -341,6 +353,19 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _shareStory() {
     Share.share('Raonson Story: ${_current.mediaUrl}');
+    _resume();
+  }
+
+  Future<void> _reportStory() async {
+    _pause();
+    final result = await ReportDialog.showWithDescription(context);
+    if (result == null) { _resume(); return; }
+    try {
+      await ApiClient.instance.post(
+        '/stories/${_current.id}/report',
+        body: {'reason': result.reason, 'description': result.description});
+    } catch (_) {}
+    if (mounted) _toast('Шикоят фиристода шуд');
     _resume();
   }
 
@@ -467,7 +492,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           if (v < -250) {
             if (_isOwner) {
               _showViewersSheet();
-            } else {
+            } else if (!_current.repliesOff) {
               _pause();
               setState(() => _showReply = true);
             }
@@ -517,7 +542,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
               CircleAvatar(
                 radius: 20,
                 backgroundImage: _current.user.avatar.isNotEmpty
-                    ? NetworkImage(_current.user.avatar) : null,
+                    ? CachedNetworkImageProvider(_current.user.avatar, maxWidth: 80) : null,
                 backgroundColor: Colors.white12,
                 child: _current.user.avatar.isEmpty
                     ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
@@ -534,6 +559,18 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                     const SizedBox(width: 4),
                     const Icon(AppIcons.verified_rounded,
                         fill: 1, color: Colors.white, size: 14),
+                  ],
+                  if (_current.audience == 'close') ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF00C853),
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Text('Наздикон',
+                          style: TextStyle(color: Colors.white, fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ),
                   ],
                 ]),
                 Text(_timeAgo(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
@@ -598,37 +635,42 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           _ActionBtn(icon: AppIcons.add_box_outlined, label: 'Актуалӣ',
               onTap: _addToHighlight),
           const SizedBox(width: 4),
-          _ActionBtn(icon: AppIcons.alternate_email_rounded, label: 'Зикр',
-              onTap: _shareStory),
-          const SizedBox(width: 4),
           _ActionBtn(icon: AppIcons.more_horiz_rounded, label: 'Бештар',
               onTap: _showOwnerMenu),
         ],
       );
     }
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      SizedBox(height: 44, child: ListView(scrollDirection: Axis.horizontal,
-        children: _emojis.map((e) => GestureDetector(
-          onTap: () => _sendEmoji(e),
-          child: Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: Colors.white12,
-                borderRadius: BorderRadius.circular(20)),
-            child: Text(e, style: const TextStyle(fontSize: 22))),
-        )).toList())),
-      const SizedBox(height: 10),
+      if (!_current.repliesOff) ...[
+        SizedBox(height: 44, child: ListView(scrollDirection: Axis.horizontal,
+          children: _emojis.map((e) => GestureDetector(
+            onTap: () => _sendEmoji(e),
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(color: Colors.white12,
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text(e, style: const TextStyle(fontSize: 22))),
+          )).toList())),
+        const SizedBox(height: 10),
+      ],
       Row(children: [
-        Expanded(child: GestureDetector(
-          onTap: () { _pause(); setState(() => _showReply = true); },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.white38, width: 1.5),
-              borderRadius: BorderRadius.circular(24)),
-            child: Text('${_current.user.username}-га ҷавоб...',
-                style: const TextStyle(color: Colors.white70, fontSize: 14))),
-        )),
+        Expanded(child: _current.repliesOff
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              alignment: Alignment.centerLeft,
+              child: const Text('Ҷавобҳо хомӯшанд',
+                  style: TextStyle(color: Colors.white54, fontSize: 13)))
+          : GestureDetector(
+              onTap: () { _pause(); setState(() => _showReply = true); },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white38, width: 1.5),
+                  borderRadius: BorderRadius.circular(24)),
+                child: Text('${_current.user.username}-га ҷавоб...',
+                    style: const TextStyle(color: Colors.white70, fontSize: 14))),
+            )),
         const SizedBox(width: 12),
         GestureDetector(
           onTap: _toggleLike,
@@ -642,6 +684,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         GestureDetector(
           onTap: _shareStory,
           child: const Icon(AppIcons.send_outlined, color: Colors.white, size: 26)),
+        const SizedBox(width: 14),
+        GestureDetector(
+          onTap: _reportStory,
+          child: const Icon(AppIcons.flag_outlined, color: Colors.white54, size: 24)),
       ]),
     ]);
   }
@@ -676,6 +722,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     if (_current.mediaUrl.isEmpty) return Container(color: Colors.black);
     return CachedNetworkImage(
       imageUrl: _current.mediaUrl, fit: BoxFit.cover,
+      memCacheWidth: 1080,
       width: double.infinity, height: double.infinity,
       placeholder: (_, __) => const Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)),
@@ -773,8 +820,10 @@ class _ActivityBtn extends StatelessWidget {
                     border: Border.all(color: Colors.black, width: 1.5),
                   ),
                   child: ClipOval(
-                    child: Image.network(avatars[i], fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                    child: CachedNetworkImage(
+                        imageUrl: avatars[i], fit: BoxFit.cover,
+                        memCacheWidth: 60,
+                        errorWidget: (_, __, ___) => Container(
                             color: const Color(0xFF333333),
                             child: const Icon(AppIcons.person,
                                 color: Colors.white54, size: 16))),

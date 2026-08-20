@@ -18,6 +18,8 @@ class UserModel {
   final int     mutualCount;
   final List<String> mutualNames;
   final bool    hasStory; // story-и фаъол дорад?
+  final String  coverUrl;               // баннери профил (Pro)
+  final List<Map<String, String>> links; // линкҳои био (Pro): {title,url}
 
   const UserModel({
     required this.id,
@@ -37,6 +39,8 @@ class UserModel {
     this.mutualCount       = 0,
     this.mutualNames       = const [],
     this.hasStory          = false,
+    this.coverUrl          = '',
+    this.links             = const [],
   });
 
   String get avatarUrl => avatar;
@@ -71,7 +75,25 @@ class UserModel {
     mutualNames:      (j['mutualNames'] as List? ?? [])
         .map((e) => e.toString()).toList(),
     hasStory:         j['hasStory'] == true,
+    coverUrl:         j['coverUrl']?.toString() ?? '',
+    links:            _parseLinks(j['links']),
   );
+
+  static List<Map<String, String>> _parseLinks(dynamic raw) {
+    if (raw is! List) return const [];
+    final out = <Map<String, String>>[];
+    for (final e in raw) {
+      if (e is Map) {
+        final url = (e['url'] ?? '').toString();
+        if (url.isEmpty) continue;
+        out.add({
+          'title': (e['title'] ?? '').toString(),
+          'url': url,
+        });
+      }
+    }
+    return out;
+  }
 
   factory UserModel.fromMinJson(Map<String, dynamic> j) => UserModel(
     id:            (j['_id'] ?? j['id'] ?? '').toString(),
@@ -90,7 +112,7 @@ class UserModel {
     int? postsCount, int? followersCount, int? followingCount,
     String? bio, bool? isFollowing, bool? isBlocked,
     bool? followRequestSent, int? mutualCount, List<String>? mutualNames,
-    bool? hasStory,
+    bool? hasStory, String? coverUrl, List<Map<String, String>>? links,
   }) => UserModel(
     id: id, username: username,
     avatar:          avatar          ?? this.avatar,
@@ -108,6 +130,8 @@ class UserModel {
     mutualCount:     mutualCount     ?? this.mutualCount,
     mutualNames:     mutualNames     ?? this.mutualNames,
     hasStory:        hasStory        ?? this.hasStory,
+    coverUrl:        coverUrl        ?? this.coverUrl,
+    links:           links           ?? this.links,
   );
 
   static int _int(dynamic v) => (v as num?)?.toInt() ?? 0;

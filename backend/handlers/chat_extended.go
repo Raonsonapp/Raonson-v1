@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -169,7 +170,8 @@ func SendMessageExt(c *gin.Context) {
 		RETURNING id
 	`, chatID, myID, body.ReceiverID, body.Text, msgType, nullString(body.MediaURL), replyToPtr).Scan(&msgID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "db error: " + err.Error()})
+		log.Printf("[Chat] send message failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
 		return
 	}
 
@@ -183,6 +185,9 @@ func SendMessageExt(c *gin.Context) {
 	// Push to the receiver in real time (sender already has it via this
 	// response / optimistic insert). Бе ин таъхири чанддақиқагӣ мешуд.
 	emitChat("chat:new", msg, body.ReceiverID)
+
+	// Ҷавоби худкор — агар ин аввалин паём ба корбари дорои auto-reply бошад.
+	maybeAutoReply(chatID, myID, body.ReceiverID)
 
 	c.JSON(http.StatusCreated, msg)
 }

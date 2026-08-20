@@ -2,7 +2,7 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-const String kAgoraAppId = '218a590a5be54f81aa4b95e4cb9bb267';
+const String kAgoraAppId = String.fromEnvironment('AGORA_APP_ID');
 
 class AgoraService extends ChangeNotifier {
   static final AgoraService _i = AgoraService._();
@@ -37,6 +37,11 @@ class AgoraService extends ChangeNotifier {
   }) async {
     await _requestPermissions(isVideo);
 
+    // Агар engine-и қаблӣ монда бошад — озод кун (то leak-и native нашавад).
+    if (_engine != null) {
+      try { await _engine!.release(); } catch (_) {}
+      _engine = null;
+    }
     _engine = createAgoraRtcEngine();
     await _engine!.initialize(const RtcEngineContext(appId: kAgoraAppId));
 
@@ -83,6 +88,61 @@ class AgoraService extends ChangeNotifier {
         publishCameraTrack:       isVideo,
         autoSubscribeAudio:       true,
         autoSubscribeVideo:       isVideo,
+      ),
+    );
+  }
+
+  // ─── LIVE (broadcast: host стрим мекунад, дигарон тамошо) ───
+  Future<void> joinLive({
+    required String channelName,
+    required bool   asHost,
+  }) async {
+    if (asHost) await _requestPermissions(true); // host: камера+микрофон
+
+    if (_engine != null) {
+      try { await _engine!.release(); } catch (_) {}
+      _engine = null;
+    }
+    _engine = createAgoraRtcEngine();
+    await _engine!.initialize(const RtcEngineContext(appId: kAgoraAppId));
+
+    _engine!.registerEventHandler(RtcEngineEventHandler(
+      onJoinChannelSuccess: (connection, elapsed) {
+        _localJoined = true;
+        notifyListeners();
+      },
+      onUserJoined: (connection, remoteUid, elapsed) {
+        _remoteUid    = remoteUid;
+        _remoteJoined = true;
+        notifyListeners();
+      },
+      onUserOffline: (connection, remoteUid, reason) {
+        if (_remoteUid == remoteUid) {
+          _remoteUid    = null;
+          _remoteJoined = false;
+          notifyListeners();
+        }
+      },
+      onError: (err, msg) => debugPrint('[AgoraLive] Error $err: $msg'),
+    ));
+
+    await _engine!.enableVideo();
+    if (asHost) await _engine!.startPreview();
+
+    _channelId = channelName;
+    await _engine!.joinChannel(
+      token:     '',
+      channelId: channelName,
+      uid:       0,
+      options: ChannelMediaOptions(
+        channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
+        clientRoleType: asHost
+            ? ClientRoleType.clientRoleBroadcaster
+            : ClientRoleType.clientRoleAudience,
+        publishMicrophoneTrack: asHost,
+        publishCameraTrack:     asHost,
+        autoSubscribeAudio:     true,
+        autoSubscribeVideo:     true,
       ),
     );
   }

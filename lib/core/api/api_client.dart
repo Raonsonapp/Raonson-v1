@@ -94,8 +94,11 @@ class ApiClient {
     throw const SocketException('No internet');
   }
 
-  // Access token-ро бо refresh token нав мекунад. true агар муваффақ.
+  Completer<bool>? _refreshCompleter;
+
   Future<bool> _tryRefresh() async {
+    if (_refreshCompleter != null) return _refreshCompleter!.future;
+    _refreshCompleter = Completer<bool>();
     try {
       final res = await _client.post(
         _uri('/auth/refresh'),
@@ -113,10 +116,16 @@ class ApiClient {
             _refreshToken = newRefresh;
             await TokenStorage.saveRefreshToken(newRefresh);
           }
+          _refreshCompleter!.complete(true);
           return true;
         }
       }
-    } catch (_) {}
+      _refreshCompleter!.complete(false);
+    } catch (_) {
+      _refreshCompleter!.complete(false);
+    } finally {
+      _refreshCompleter = null;
+    }
     return false;
   }
 

@@ -49,10 +49,11 @@ class FirebaseInit {
     } catch (_) {}
   }
 
+  static bool _permissionRequested = false;
+
   static Future<void> _initFCM() async {
     try {
       final fm = FirebaseMessaging.instance;
-      await fm.requestPermission();
       FirebaseMessaging.onBackgroundMessage(_fcmBgHandler);
 
       // Token-ро ба backend мефиристем (push_tokens table).
@@ -88,5 +89,19 @@ class FirebaseInit {
     } catch (_) {
       // Push танзим нашуд — барнома бе он кор мекунад.
     }
+  }
+
+  static Future<void> requestNotificationPermission() async {
+    if (_permissionRequested) return;
+    _permissionRequested = true;
+    try {
+      final fm = FirebaseMessaging.instance;
+      await fm.requestPermission();
+      final token = await fm.getToken();
+      if (token != null && token.isNotEmpty) {
+        ApiClient.instance.post('/notifications/push-token',
+            body: {'token': token, 'platform': 'fcm'});
+      }
+    } catch (_) {}
   }
 }

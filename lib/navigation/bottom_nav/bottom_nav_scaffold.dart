@@ -13,8 +13,13 @@ import '../../reels/reels_feed/reels_screen.dart';
 import '../../chat/inbox/chat_list_screen.dart';
 import '../../search/search_screen.dart';
 import '../../profile/profile_screen.dart';
+import '../../widgets/account_switcher.dart';
 import '../../create/upload/upload_progress_bar.dart';
-import '../../widgets/offline_banner.dart'; // ← НАВ
+import '../../widgets/offline_banner.dart';
+import '../../core/firebase_init.dart';
+import '../../core/services/ad_consent_service.dart';
+import '../../core/ads/ads_manager.dart';
+import 'package:yandex_mobileads/mobile_ads.dart';
 import '../../core/webrtc_service.dart';
 import '../../chat/room/incoming_call_screen.dart';
 import '../../chat/room/call_screen.dart';
@@ -54,6 +59,54 @@ class _BottomNavViewState extends State<_BottomNavView> {
     UserSession.userIdNotifier.addListener(_onUserChanged);
     _setupGlobalCalls();
     _setupNotifBadge();
+    FirebaseInit.requestNotificationPermission();
+    _showAdConsentIfNeeded();
+  }
+
+  Future<void> _showAdConsentIfNeeded() async {
+    if (AdConsentService.instance.consentGiven) return;
+    await Future.delayed(const Duration(seconds: 1));
+    if (!mounted) return;
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Таблиғот ва маълумот',
+            style: TextStyle(color: Colors.white, fontSize: 17,
+                fontWeight: FontWeight.w600)),
+        content: const Text(
+          'Raonson таблиғоти шахсигардонидашуда нишон медиҳад. '
+          'Мо маълумоти дастгоҳро (ID, фаъолият) барои нишон додани '
+          'таблиғоти мувофиқ истифода мебарем.\n\n'
+          'Шумо метавонед маълумоти бештарро дар Сиёсати махфият хонед.',
+          style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Рад кардан',
+                style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3797F0),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Қабул кардан',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (accepted == true) {
+      await AdConsentService.instance.grantConsent();
+      MobileAds.initialize();
+      AdsManager.instance.init();
+    }
   }
 
   // Вақте корбар аккаунти дигарро интихоб кард — Feed/Reels/Profile/Chat/
@@ -162,7 +215,15 @@ class _BottomNavViewState extends State<_BottomNavView> {
             animation: NotificationBadgeController.instance,
             builder: (_, __) => BottomNavBar(
               currentIndex: nav.currentIndex,
-              onTap: nav.setIndex,
+              onTap: (i) {
+                // Дубора зеркунии tab-и профил → account switcher (мисли Instagram).
+                if (i == 4 && nav.currentIndex == 4) {
+                  showAccountSwitcher(context);
+                } else {
+                  nav.setIndex(i);
+                }
+              },
+              onProfileLongPress: () => showAccountSwitcher(context),
               avatarUrl: liveAvatar,
               notifCount: NotificationBadgeController.instance.count,
             ),

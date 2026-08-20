@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
@@ -14,6 +15,8 @@ import '../../models/message_model.dart';
 import '../../models/note_model.dart';
 import '../../widgets/avatar.dart';
 import '../../app/app_theme.dart';
+import '../../core/services/chat_lock_service.dart';
+import '../chat_pin_screen.dart';
 import '../../core/presence_service.dart';
 import '../../core/note_service.dart';
 import '../../core/services/user_session.dart';
@@ -24,6 +27,7 @@ import '../group/groups_list_screen.dart';
 import '../room/call_screen.dart';
 import '../ai_assistant_chat_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatListScreen — 10/10 Instagram DM style
@@ -39,7 +43,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final _presence = PresenceService();
   final _notes    = NoteService();
   final _searchCtrl = TextEditingController();
+  final _scroll = ScrollController();
   String _myAvatar = '';
+  ValueNotifier<int>? _scrollToTopNotifier;
 
   @override
   void initState() {
@@ -55,11 +61,33 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nav = context.read<BottomNavController>();
+    if (_scrollToTopNotifier != nav.scrollToTopNotifier) {
+      _scrollToTopNotifier?.removeListener(_onScrollToTop);
+      _scrollToTopNotifier = nav.scrollToTopNotifier;
+      _scrollToTopNotifier!.addListener(_onScrollToTop);
+    }
+  }
+
+  void _onScrollToTop() {
+    if (context.read<BottomNavController>().currentIndex != 2) return;
+    if (_scroll.hasClients) {
+      _scroll.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut);
+    }
+  }
+
+  @override
   void dispose() {
+    _scrollToTopNotifier?.removeListener(_onScrollToTop);
     _ctrl.removeListener(_onChatsLoaded);
     _searchCtrl.removeListener(_onSearch);
     _ctrl.dispose();
     _searchCtrl.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -101,6 +129,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         myAvatar:     _myAvatar,
         onMyNoteTap:  _openMyNote,
         searchCtrl:   _searchCtrl,
+        scrollCtrl:   _scroll,
       ),
     );
   }
@@ -113,18 +142,36 @@ class _ChatView extends StatelessWidget {
   final String     myAvatar;
   final VoidCallback onMyNoteTap;
   final TextEditingController searchCtrl;
+  final ScrollController scrollCtrl;
 
   const _ChatView({
     required this.myAvatar,
     required this.onMyNoteTap,
     required this.searchCtrl,
+    required this.scrollCtrl,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Қулфи PIN-и чат (Pro) — VLB дар сатҳи боло, то дарахт устувор монад
+    // (Scaffold дар дохили Scaffold ва аз нав сохтани рӯйхат пешгирӣ шавад).
+    return ValueListenableBuilder<bool>(
+      valueListenable: ChatLockService.instance.unlocked,
+      builder: (ctx, unlocked, _) {
+        if (ChatLockService.instance.hasPin && !unlocked) {
+          return Scaffold(
+            backgroundColor: AppColors.bg,
+            body: const SafeArea(child: ChatLockGate()),
+          );
+        }
+        return _buildChats(ctx);
+      },
+    );
+  }
+
+  Widget _buildChats(BuildContext context) {
     final ctrl  = context.watch<ChatListController>();
     final notes = context.watch<NoteService>();
-
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -278,17 +325,40 @@ class _ChatView extends StatelessWidget {
             Expanded(
               child: ctrl.isLoading
                   ? _SkeletonList()
-                  : ctrl.chats.isEmpty
+                  : ctrl.error != null && ctrl.chats.isEmpty
                       ? Center(
-                          child: Text(
-                            ctrl.query.isNotEmpty
-                                ? tr('common.noResults')
-                                : ctrl.tab == ChatTab.requests
-                                    ? tr('common.noResults')
-                                    : tr('common.noResults'),
-                            style: TextStyle(color: AppColors.textFaint),
-                          ))
-                      : RefreshIndicator(
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(AppIcons.wifi_off_rounded,
+                                color: AppColors.textFaint, size: 44),
+                            const SizedBox(height: 12),
+                            Text('Пайвастшавӣ нашуд',
+                                style: TextStyle(color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600, fontSize: 15)),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () => ctrl.loadChats(),
+                              icon: const Icon(AppIcons.refresh_rounded, size: 18),
+                              label: const Text('Такрор кӯшиш'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.neonBlue,
+                                foregroundColor: AppColors.textPrimary,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 10)),
+                            ),
+                          ]))
+                      : ctrl.chats.isEmpty
+                          ? Center(
+                              child: Text(
+                                ctrl.query.isNotEmpty
+                                    ? 'Натиҷае нест'
+                                    : ctrl.tab == ChatTab.requests
+                                        ? 'Дархости паём нест'
+                                        : 'Паёме нест',
+                                style: TextStyle(color: AppColors.textFaint),
+                              ))
+                          : RefreshIndicator(
                           color: AppColors.neonBlue,
                           backgroundColor: AppColors.card,
                           onRefresh: () => ctrl.loadChats(),
@@ -303,8 +373,10 @@ class _ChatView extends StatelessWidget {
                               return false;
                             },
                             child: ListView.builder(
+                              controller: scrollCtrl,
                               itemCount: ctrl.chats.length +
                                   (ctrl.isLoadingMore ? 1 : 0),
+                              addAutomaticKeepAlives: false,
                               itemBuilder: (_, i) {
                                 if (i >= ctrl.chats.length) {
                                   return const Padding(
@@ -535,7 +607,8 @@ class _NotesRow extends StatelessWidget {
             hasNote: hasNote,
             onTap:   onMyTap,
           ),
-          ...friends.map((n) => _FriendNoteBubble(note: n)),
+          ...friends.map((n) =>
+              _FriendNoteBubble(key: ValueKey(n.userId), note: n)),
         ],
       ),
     );
@@ -581,8 +654,9 @@ class _MyNoteBubble extends StatelessWidget {
                 ),
                 child: ClipOval(
                   child: avatar.isNotEmpty
-                      ? Image.network(avatar, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _ph())
+                      ? CachedNetworkImage(imageUrl: avatar, fit: BoxFit.cover,
+                          memCacheWidth: 120,
+                          errorWidget: (_, __, ___) => _ph())
                       : _ph(),
                 ),
               ),
@@ -619,7 +693,7 @@ class _MyNoteBubble extends StatelessWidget {
 
 class _FriendNoteBubble extends StatefulWidget {
   final NoteModel note;
-  const _FriendNoteBubble({required this.note});
+  const _FriendNoteBubble({super.key, required this.note});
   @override
   State<_FriendNoteBubble> createState() => _FriendNoteBubbleState();
 }
@@ -687,8 +761,9 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
             ),
             child: ClipOval(
               child: widget.note.avatar.isNotEmpty
-                  ? Image.network(widget.note.avatar, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _ph())
+                  ? CachedNetworkImage(imageUrl: widget.note.avatar,
+                      fit: BoxFit.cover, memCacheWidth: 120,
+                      errorWidget: (_, __, ___) => _ph())
                   : _ph(),
             ),
           ),
@@ -754,9 +829,10 @@ class _SpeechBubble extends StatelessWidget {
                 if (song!.artUrl.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(3),
-                    child: Image.network(song!.artUrl,
+                    child: CachedNetworkImage(imageUrl: song!.artUrl,
                         width: 16, height: 16, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        memCacheWidth: 32,
+                        errorWidget: (_, __, ___) =>
                             const Icon(AppIcons.music_note_rounded,
                                 color: AppColors.neonBlue, size: 12)),
                   )

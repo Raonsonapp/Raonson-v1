@@ -46,7 +46,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     if (mounted) setState(() { _file = File(xf.path); _isVideo = isVideo; _error = null; });
   }
 
-  Future<void> _publish(File capturedFile, String caption) async {
+  Future<void> _publish(File capturedFile, String caption, String audience) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });

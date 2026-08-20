@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ func getR2Client() *s3.Client {
 	accessKey  := os.Getenv("CF_R2_ACCESS_KEY")
 	secretKey  := os.Getenv("CF_R2_SECRET_KEY")
 	if accountID == "" || accessKey == "" || secretKey == "" {
-		fmt.Println("⚠️  R2 credentials missing (CF_ACCOUNT_ID/CF_R2_ACCESS_KEY/CF_R2_SECRET_KEY) — uploads will fail")
+		log.Println("[R2] credentials missing (CF_ACCOUNT_ID/CF_R2_ACCESS_KEY/CF_R2_SECRET_KEY)")
 	}
 
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", accountID)
@@ -45,11 +46,15 @@ func r2Bucket() string {
 
 func r2PublicURL() string {
 	if v := os.Getenv("CF_R2_PUBLIC_URL"); v != "" { return v }
-	return "https://pub-f2661a242564423dbef95596dd6176b6.r2.dev"
+	log.Println("[R2] CF_R2_PUBLIC_URL not set")
+	return ""
 }
 
 // POST /upload
 func UploadToR2(c *gin.Context) {
+	const maxUploadSize = 50 << 20 // 50 MB
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadSize)
+
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
@@ -76,16 +81,19 @@ func UploadToR2(c *gin.Context) {
 
 	cl := getR2Client()
 	cl64 := int64(len(data))
+	cacheControl := "public, max-age=31536000, immutable"
 	_, err = cl.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:        aws.String(r2Bucket()),
 		Key:           aws.String(key),
 		Body:          bytes.NewReader(data),
 		ContentType:   aws.String(contentType),
 		ContentLength: &cl64,
+		CacheControl:  aws.String(cacheControl),
 	})
 	if err != nil {
+		log.Printf("[R2] upload failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("R2 upload failed: %v", err),
+			"error": "Upload failed",
 		})
 		return
 	}

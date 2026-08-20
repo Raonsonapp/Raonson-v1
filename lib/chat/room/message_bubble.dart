@@ -22,6 +22,7 @@ class MessageBubble extends StatefulWidget {
   final void Function(double dx)?        onSwipeUpdate;
   final VoidCallback?                    onSwipeEnd;
   final VoidCallback?                    onCallBack; // боззанг (занги аздастрафта)
+  final VoidCallback?                    onReport;
   final String?                          senderName; // номи фиристанда (гурӯҳ)
   final Color?                           myBubbleColor; // мавзӯи чат
 
@@ -34,6 +35,7 @@ class MessageBubble extends StatefulWidget {
     this.onSwipeUpdate,
     this.onSwipeEnd,
     this.onCallBack,
+    this.onReport,
     this.senderName,
     this.myBubbleColor,
   });
@@ -101,6 +103,7 @@ class _MessageBubbleState extends State<MessageBubble>
         onReact:  widget.onReact,
         onReply:  widget.onReply,
         onDelete: widget.onDelete,
+        onReport: widget.onReport,
       ),
     );
   }
@@ -300,6 +303,7 @@ class _ImageBubble extends StatelessWidget {
         width:    220,
         height:   260,
         fit:      BoxFit.cover,
+        memCacheWidth: 440,
         placeholder: (_, __) => Container(
           width: 220, height: 260,
           color: AppColors.card,
@@ -662,6 +666,7 @@ class _LocationBubble extends StatelessWidget {
             CachedNetworkImage(
               imageUrl: staticMap,
               fit: BoxFit.cover,
+              memCacheWidth: 480,
               placeholder: (_, __) =>
                   Container(color: const Color(0xFF15352A)),
               errorWidget: (_, __, ___) =>
@@ -928,12 +933,14 @@ class _MessageContextMenu extends StatelessWidget {
   final void Function(String)?    onReact;
   final VoidCallback?             onReply;
   final VoidCallback?             onDelete;
+  final VoidCallback?             onReport;
 
   const _MessageContextMenu({
     required this.message,
     this.onReact,
     this.onReply,
     this.onDelete,
+    this.onReport,
   });
 
   static const _emojis = ['❤️', '😂', '😮', '😢', '😡', '👍'];
@@ -996,6 +1003,13 @@ class _MessageContextMenu extends StatelessWidget {
               label: 'Нест кардан',
               color: Colors.red,
               onTap: () { Navigator.pop(context); onDelete?.call(); },
+            ),
+          if (!message.isMine)
+            _MenuItem(
+              icon:  AppIcons.flag_outlined,
+              label: 'Шикоят кардан',
+              color: Colors.redAccent,
+              onTap: () { Navigator.pop(context); onReport?.call(); },
             ),
 
           const SizedBox(height: 8),

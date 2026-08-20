@@ -62,7 +62,8 @@ class _ReelsVM extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      reels = await _repo.fetchReels(page: 1, smart: true);
+      reels = await _repo.fetchReels(
+          page: 1, smart: !_friendsFilter, friends: _friendsFilter);
       _page = 1;
     } catch (e) {
       error = e.toString();
@@ -75,7 +76,8 @@ class _ReelsVM extends ChangeNotifier {
     if (loadingMore) return;
     loadingMore = true;
     try {
-      final more = await _repo.fetchReels(page: _page + 1, smart: true);
+      final more = await _repo.fetchReels(
+          page: _page + 1, smart: !_friendsFilter, friends: _friendsFilter);
       if (more.isNotEmpty) {
         reels = [...reels, ...more];
         _page++;
@@ -134,6 +136,7 @@ class _ReelsVM extends ChangeNotifier {
   void toggleFilter() {
     _friendsFilter = !_friendsFilter;
     notifyListeners();
+    load(); // филтр иваз шуд → лента аз нав бор мешавад
   }
 
   void trackWatch({
@@ -165,7 +168,7 @@ class _ReelsViewState extends State<_ReelsView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
   final Map<int, VideoPlayerController> _preloaded = {};
-  bool _didInitialPreload = false;
+  bool _initialPreloadDone = false;
 
   @override
   void initState() {
@@ -285,28 +288,46 @@ class _ReelsViewState extends State<_ReelsView> {
   }
 
   void _preloadAhead(int current, _ReelsVM vm) {
-    for (int j = current + 1; j <= current + 2; j++) {
+    for (int j = current + 1; j <= current + 3; j++) {
       if (j >= vm.reels.length) break;
       if (_preloaded.containsKey(j)) continue;
-      final url = NetworkQuality.pick(
-          vm.reels[j].videoUrl, vm.reels[j].videoUrlLow);
+      final reel = vm.reels[j];
+      if (EmbedUtils.isEmbed(reel.videoUrl)) continue;
+      final url = NetworkQuality.pick(reel.videoUrl, reel.videoUrlLow);
       if (url.isEmpty) continue;
       final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       _preloaded[j] = ctrl;
       ctrl.initialize().then((_) {
         ctrl.setLooping(true);
         ctrl.setVolume(0);
+        ctrl.play();
+        ctrl.pause();
       });
     }
   }
 
   void _disposeOld(int current) {
     final toRemove =
-        _preloaded.keys.where((k) => k < current - 1).toList();
+        _preloaded.keys.where((k) => (k - current).abs() > 3).toList();
     for (final k in toRemove) {
       _preloaded[k]?.dispose();
       _preloaded.remove(k);
     }
+  }
+
+  void _preloadFirst(_ReelsVM vm) {
+    if (vm.reels.isEmpty) return;
+    final reel = vm.reels[0];
+    if (EmbedUtils.isEmbed(reel.videoUrl)) return;
+    if (_preloaded.containsKey(0)) return;
+    final url = NetworkQuality.pick(reel.videoUrl, reel.videoUrlLow);
+    if (url.isEmpty) return;
+    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+    _preloaded[0] = ctrl;
+    ctrl.initialize().then((_) {
+      ctrl.setLooping(true);
+      ctrl.setVolume(0);
+    });
   }
 
   @override
@@ -316,9 +337,10 @@ class _ReelsViewState extends State<_ReelsView> {
     // ── Тез бор шудан: реели 2-юм ва 3-юмро ФАВРАН пеш аз swipe
     // preload мекунем (пештар танҳо баъд аз swipe оғоз мешуд — ҳар
     // видеои нав "хом" бор мешуд ва интизорӣ тӯл мекашид). ──
-    if (!_didInitialPreload && vm.reels.isNotEmpty) {
-      _didInitialPreload = true;
+    if (!_initialPreloadDone && vm.reels.isNotEmpty) {
+      _initialPreloadDone = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        _preloadFirst(vm);
         if (mounted) _preloadAhead(_currentPage, vm);
       });
     }
@@ -404,6 +426,9 @@ class _ReelsViewState extends State<_ReelsView> {
         backgroundColor: Colors.black54,
         onRefresh: () async {
           _currentPage = 0;
+          _initialPreloadDone = false;
+          for (final ctrl in _preloaded.values) ctrl.dispose();
+          _preloaded.clear();
           await vm.load();
           if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
         },
@@ -413,6 +438,7 @@ class _ReelsViewState extends State<_ReelsView> {
         itemCount: vm.reels.length,
         onPageChanged: (i) => _onPageChanged(i, vm),
         itemBuilder: (_, i) => _ReelItem(
+          key: ValueKey(vm.reels[i].id),
           reel: vm.reels[i],
           isActive: i == _currentPage && widget.isActive,
           isMuted: vm.isMuted,
@@ -521,6 +547,7 @@ class _ReelItem extends StatefulWidget {
   final Future<bool> Function() onDownload; // ← НАВ
 
   const _ReelItem({
+    super.key,
     required this.reel,
     required this.isActive,
     required this.isMuted,
@@ -551,6 +578,8 @@ class _ReelItemState extends State<_ReelItem> {
   bool _captionExpanded = false;
   bool _isBuffering = false;
   bool _downloading = false; // ← НАВ
+  late bool _hideLikes;      // ҳолати маҳаллӣ (то дарҳол нав шавад)
+  late bool _commentsOff;    // ҳолати маҳаллӣ
 
   DateTime? _watchStart;
   int _totalWatchMs = 0;
@@ -567,24 +596,44 @@ class _ReelItemState extends State<_ReelItem> {
   void initState() {
     super.initState();
     _saved = widget.reel.isSaved;
+    _hideLikes   = widget.reel.hideLikes;
+    _commentsOff = widget.reel.commentsDisabled;
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
     FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
+    _hasStory = widget.reel.user.hasStory ? true : null;
     _initVideo();
-    _loadStoryStatus();
+    if (_hasStory == null) _loadStoryStatus();
   }
 
+  static final Map<String, ({bool has, bool viewed})> _storyCache = {};
+
   Future<void> _loadStoryStatus() async {
+    final uid = widget.reel.user.id;
+    final cached = _storyCache[uid];
+    if (cached != null) {
+      if (mounted) setState(() {
+        _hasStory = cached.has;
+        _storyViewed = cached.viewed;
+      });
+      return;
+    }
     try {
       final res = await ApiClient.instance
-          .get('/stories', query: {'userId': widget.reel.user.id});
+          .get('/stories', query: {'userId': uid})
+          .timeout(const Duration(seconds: 5));
       if (res.statusCode < 400 && mounted) {
         final body = jsonDecode(res.body);
         final List list =
             body is List ? body : (body['stories'] ?? body['data'] ?? []);
+        final has = list.isNotEmpty;
+        final viewed = has && list.every((s) => s['viewed'] == true);
+        if (_storyCache.length >= 200) {
+          _storyCache.remove(_storyCache.keys.first);
+        }
+        _storyCache[uid] = (has: has, viewed: viewed);
         setState(() {
-          _hasStory = list.isNotEmpty;
-          _storyViewed =
-              list.isNotEmpty && list.every((s) => s['viewed'] == true);
+          _hasStory = has;
+          _storyViewed = viewed;
         });
       }
     } catch (_) {}
@@ -595,15 +644,31 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _initVideo() {
     if (widget.reel.videoUrl.isEmpty) return;
-    if (_isEmbed) return; // embed-ро VideoPlayer бозӣ намекунад — WebView мекунад
-    if (widget.preloadCtrl != null &&
-        widget.preloadCtrl!.value.isInitialized) {
+    if (_isEmbed) return;
+    if (widget.preloadCtrl != null) {
       _ctrl = widget.preloadCtrl;
-      _ctrl!.setLooping(true);
-      _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
-      if (widget.isActive) _ctrl!.play();
-      setState(() => _initialized = true);
-      _addBufferListener();
+      if (_ctrl!.value.isInitialized) {
+        _ctrl!.setLooping(true);
+        _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
+        if (widget.isActive) {
+          _ctrl!.play();
+          _startWatchTimer();
+        }
+        setState(() => _initialized = true);
+        _addBufferListener();
+      } else {
+        _ctrl!.initialize().then((_) {
+          if (!mounted) return;
+          _ctrl!.setLooping(true);
+          _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
+          if (widget.isActive) {
+            _ctrl!.play();
+            _startWatchTimer();
+          }
+          if (mounted) setState(() => _initialized = true);
+          _addBufferListener();
+        });
+      }
       return;
     }
     _ctrl = VideoPlayerController.networkUrl(Uri.parse(
@@ -707,6 +772,7 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _doubleTapLike() {
+    HapticFeedback.lightImpact();
     if (!widget.reel.isLiked) widget.onLike();
     setState(() => _showHeart = true);
     Future.delayed(const Duration(milliseconds: 900), () {
@@ -757,18 +823,62 @@ class _ReelItemState extends State<_ReelItem> {
           Navigator.pop(context);
           _addMention();
         }),
-        _menuItem(AppIcons.visibility_off_outlined, 'Пинҳон кардани лайкҳо',
+        _menuItem(
+            _hideLikes ? AppIcons.visibility_rounded : AppIcons.visibility_off_outlined,
+            _hideLikes ? 'Нишон додани лайкҳо' : 'Пинҳон кардани лайкҳо',
             () async {
           Navigator.pop(context);
+          final target = !_hideLikes;
+          setState(() => _hideLikes = target);
           try {
-            await ApiClient.instance.post('/reels/${widget.reel.id}/hide-likes');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Танзими лайкҳо нав шуд ✓'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2)));
+            final res = await ApiClient.instance
+                .post('/reels/${widget.reel.id}/hide-likes');
+            if (res.statusCode < 400) {
+              final b = jsonDecode(res.body);
+              if (b['hideLikes'] is bool && mounted) {
+                setState(() => _hideLikes = b['hideLikes'] as bool);
+              }
+            } else if (mounted) {
+              setState(() => _hideLikes = !target);
             }
-          } catch (_) {}
+          } catch (_) { if (mounted) setState(() => _hideLikes = !target); }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(_hideLikes
+                    ? 'Лайкҳо пинҳон шуданд ✓'
+                    : 'Лайкҳо намоён шуданд ✓'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2)));
+          }
+          if (!_paused) _ctrl?.play();
+        }),
+        _menuItem(
+            _commentsOff ? AppIcons.mode_comment_rounded : AppIcons.mode_comment_outlined,
+            _commentsOff ? 'Фаъол кардани шарҳҳо' : 'Хомӯш кардани шарҳҳо',
+            () async {
+          Navigator.pop(context);
+          final target = !_commentsOff;
+          setState(() => _commentsOff = target);
+          try {
+            final res = await ApiClient.instance
+                .post('/reels/${widget.reel.id}/toggle-comments');
+            if (res.statusCode < 400) {
+              final b = jsonDecode(res.body);
+              if (b['commentsOff'] is bool && mounted) {
+                setState(() => _commentsOff = b['commentsOff'] as bool);
+              }
+            } else if (mounted) {
+              setState(() => _commentsOff = !target);
+            }
+          } catch (_) { if (mounted) setState(() => _commentsOff = !target); }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(_commentsOff
+                    ? 'Шарҳҳо хомӯш шуданд ✓'
+                    : 'Шарҳҳо фаъол шуданд ✓'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2)));
+          }
           if (!_paused) _ctrl?.play();
         }),
         _menuItem(AppIcons.delete_outline_rounded, 'Нест кардан', () {
@@ -864,6 +974,7 @@ class _ReelItemState extends State<_ReelItem> {
             controller: ctrl,
             autofocus: true,
             maxLines: 3,
+            maxLength: 2200,
             style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
                 hintText: 'Тавсиф...',
@@ -884,13 +995,16 @@ class _ReelItemState extends State<_ReelItem> {
         ],
       ),
     );
+    final trimmed = ctrl.text.trim();
     ctrl.dispose();
     if (ok != true) {
       if (!_paused) _ctrl?.play();
       return;
     }
-    await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
-        body: {'caption': ctrl.text.trim()});
+    try {
+      await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
+          body: {'caption': trimmed});
+    } catch (_) {}
     if (!_paused && mounted) _ctrl?.play();
   }
 
@@ -968,7 +1082,7 @@ class _ReelItemState extends State<_ReelItem> {
                             leading: CircleAvatar(
                                 backgroundImage:
                                     (u['avatar']?.isNotEmpty == true)
-                                        ? NetworkImage(u['avatar'])
+                                        ? CachedNetworkImageProvider(u['avatar'], maxWidth: 80)
                                         : null,
                                 child: (u['avatar']?.isEmpty != false)
                                     ? const Icon(AppIcons.person)
@@ -1085,13 +1199,24 @@ class _ReelItemState extends State<_ReelItem> {
       if (!_paused) _ctrl?.play();
       return;
     }
-    await ApiClient.instance.delete('/reels/${widget.reel.id}');
-    widget.onDelete();
+    try {
+      await ApiClient.instance.delete('/reels/${widget.reel.id}');
+      widget.onDelete();
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+        duration: Duration(seconds: 2)));
+      if (!_paused && mounted) _ctrl?.play();
+    }
   }
 
   Future<void> _markInterest(bool interested) async {
-    await ApiClient.instance.post(
-        '/reels/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
+    try {
+      await ApiClient.instance.post(
+          '/reels/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
+    } catch (_) {
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
@@ -1144,6 +1269,13 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _openComments() {
+    // Шарҳҳо хомӯшанд ва бинанда соҳиб нест → пайғоми маҳдудият.
+    if (_commentsOff && !_isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Шарҳҳо барои ин Reel хомӯш карда шудаанд'),
+          duration: Duration(seconds: 2)));
+      return;
+    }
     _ctrl?.pause();
     // Барои Reels ҳамон UI-и шарҳҳои Home-ро истифода мебарем (CommentsScreen)
     // то якхела бошад ва хатогиҳо (parse-и нодуруст) камтар шаванд.
@@ -1362,6 +1494,7 @@ class _ReelItemState extends State<_ReelItem> {
           CachedNetworkImage(
               imageUrl: reel.thumbnailUrl,
               fit: BoxFit.cover,
+              memCacheWidth: 720,
               width: double.infinity,
               height: double.infinity,
               errorWidget: (_, __, ___) =>
@@ -1487,14 +1620,20 @@ class _ReelItemState extends State<_ReelItem> {
                 Column(mainAxisSize: MainAxisSize.min, children: [
               _LikeBtn(
                   isLiked: reel.isLiked,
-                  count: _fmt(reel.likesCount),
+                  // Лайкҳо пинҳонанд ва бинанда соҳиб нест → калима, на рақам.
+                  count: (_hideLikes && !_isOwner)
+                      ? 'Лайкҳо'
+                      : _fmt(reel.likesCount),
                   onTap: widget.onLike),
               const SizedBox(height: 22),
-              _ReelStableBtn(
-                  svgPath: 'assets/icons/comment.svg',
-                  count: _fmt(reel.commentsCount),
-                  onTap: _openComments),
-              const SizedBox(height: 22),
+              // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад (мисли Instagram).
+              if (!_commentsOff) ...[
+                _ReelStableBtn(
+                    svgPath: 'assets/icons/comment.svg',
+                    count: _fmt(reel.commentsCount),
+                    onTap: _openComments),
+                const SizedBox(height: 22),
+              ],
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',
                   count: '',
@@ -1507,6 +1646,7 @@ class _ReelItemState extends State<_ReelItem> {
                   activeColor: Colors.white,
                   count: '',
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     setState(() => _saved = !_saved);
                     widget.onSave();
                   }),
@@ -1516,7 +1656,7 @@ class _ReelItemState extends State<_ReelItem> {
                   child: const SizedBox(
                       width: 30,
                       height: 30,
-                      child: Icon(AppIcons.more_horiz_rounded,
+                      child: Icon(AppIcons.more_vert_rounded,
                           color: Colors.white,
                           size: 28,
                           shadows: [
@@ -1808,6 +1948,7 @@ class _LikeBtnState extends State<_LikeBtn>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        HapticFeedback.lightImpact();
         if (!widget.isLiked) _ctrl.forward(from: 0);
         widget.onTap();
       },
@@ -1973,11 +2114,38 @@ class _SpinningDisc extends StatefulWidget {
 
 class _SpinningDiscState extends State<_SpinningDisc>
     with SingleTickerProviderStateMixin {
+  late final AnimationController _spinCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _spinCtrl = AnimationController(
+        vsync: this, duration: const Duration(seconds: 3));
+    if (widget.isPlaying) _spinCtrl.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_SpinningDisc old) {
+    super.didUpdateWidget(old);
+    if (widget.isPlaying && !old.isPlaying) {
+      _spinCtrl.repeat();
+    } else if (!widget.isPlaying && old.isPlaying) {
+      _spinCtrl.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spinCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final r = widget.size * 0.22;
-    return Container(
+    return RotationTransition(
+      turns: _spinCtrl,
+      child: Container(
         width: widget.size,
         height: widget.size,
         decoration: BoxDecoration(
@@ -1994,7 +2162,7 @@ class _SpinningDiscState extends State<_SpinningDisc>
                         AppIcons.music_note_rounded,
                         color: Colors.white54, size: 18))
                 : const Icon(AppIcons.music_note_rounded,
-                    color: Colors.white54, size: 18)));
+                    color: Colors.white54, size: 18))));
   }
 }
 
@@ -2141,6 +2309,7 @@ class _ReelCommentsState extends State<_ReelComments> {
   }
 
   Future<void> _likeComment(String commentId, int index) async {
+    HapticFeedback.lightImpact();
     final repo = ReelsRepository(ApiClient.instance);
     final res = await repo.likeComment(
         reelId: widget.reelId, commentId: commentId);
@@ -2207,7 +2376,7 @@ class _ReelCommentsState extends State<_ReelComments> {
                                     backgroundColor: AppColors.card,
                                     backgroundImage:
                                         (u['avatar'] ?? '').isNotEmpty
-                                            ? NetworkImage(u['avatar'])
+                                            ? CachedNetworkImageProvider(u['avatar'], maxWidth: 72)
                                             : null,
                                     child: (u['avatar'] ?? '').isEmpty
                                         ? const Icon(AppIcons.person,
@@ -2378,6 +2547,9 @@ class _ReelCommentsState extends State<_ReelComments> {
                 child: TextField(
                     controller: _ctrl,
                     style: const TextStyle(color: Colors.white),
+                    maxLength: 1000,
+                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                    buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _send(),
                     decoration: InputDecoration(

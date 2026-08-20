@@ -3,24 +3,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
+import 'package:flutter/foundation.dart';
+
 import 'app/app.dart';
 import 'app/app_config.dart';
 import 'app/app_settings.dart';
 import 'core/services/user_session.dart';
 import 'core/services/account_manager.dart';
+import 'core/services/subscription_service.dart';
+import 'core/services/chat_lock_service.dart';
 import 'core/services/network_service.dart';
 import 'core/services/network_quality.dart';
 import 'core/ads/ads_manager.dart';
+import 'core/services/ad_consent_service.dart';
+import 'core/services/server_wakeup_service.dart';
 import 'core/firebase_init.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ 1. Status bar style
+  // ✅ 0. Global error handling — дар production экрани сурхи Flutter нишон намедиҳад
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    if (kDebugMode) return;
+    debugPrint('[CRASH] ${details.exceptionAsString()}');
+  };
+
+  // ✅ 1. Edge-to-edge (Android 15+ ҳатмӣ бо targetSdk 36)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.light,
   ));
+
+  // ✅ 1b. Image cache limits — бе ин, кэш бе ҳад меафзояд
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024; // 100 MB
+  PaintingBinding.instance.imageCache.maximumSize = 200;
 
   // ✅ 2. AppConfig — АВВАЛ
   AppConfig.initialize(
@@ -29,23 +49,32 @@ Future<void> main() async {
       defaultValue: 'https://mahmadmurodov-raonson.hf.space',
     ),
     appName: 'Raonson',
-    enableLogs: true,
+    enableLogs: kDebugMode,
   );
 
-  // ✅ 3. Cache-ро ФАВРАН бор кун — бе интернет ҳам кор мекунад
-  await UserSession.loadCachedData();
-  await AccountManager.load(); // multi-account рӯйхатро бор мекунад
-  await NetworkQuality.init(); // сифати видео вобаста ба интернет (адаптивӣ)
-
-  // ✅ 3.1 Theme + language preferences — то app кушода шавад
-  await AppSettingsState.instance.init();
+  // ✅ 3. Cache-ро ПАРАЛЛЕЛ бор кун — тезтар аст
+  await Future.wait([
+    UserSession.loadCachedData(),
+    AccountManager.load(),
+    SubscriptionService.instance.load(),
+    ChatLockService.instance.load(),
+    NetworkQuality.init(),
+    AppSettingsState.instance.init(),
+    AdConsentService.instance.load(),
+  ]);
 
   // ✅ 4. Network monitoring
   NetworkService.instance.init();
 
-  // ✅ 6. Ads
-  MobileAds.initialize();
-  AdsManager.instance.init();
+  // ✅ 5. Backend wakeup — серверро бедор кун (HuggingFace Spaces хоб меравад)
+  ServerWakeupService.instance.wakeUp();
+  ServerWakeupService.instance.startKeepAlive();
+
+  // ✅ 6. Ads — танҳо бо розигӣ
+  if (AdConsentService.instance.consentGiven) {
+    MobileAds.initialize();
+    AdsManager.instance.init();
+  }
 
   // ✅ 6.1 Firebase + FCM push (бехатар: агар танзим набошад, crash намешавад)
   FirebaseInit.init();
