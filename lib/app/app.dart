@@ -43,11 +43,14 @@ class RaonsonApp extends StatelessWidget {
                 darkTheme:  AppTheme.dark(),
                 themeMode:  settings.theme,
                 // ✅ Splash — blank spinner ўрнига чиройли loading
+                // Не-const: то ки ҳангоми иваз кардани забон/theme дар
+                // AppSettingsState ин screen-ҳо аз нав build шаванд ва
+                // tr() матни забони навро баргардонад.
                 home: !state.isInitialized
                     ? const AppSplash()
                     : (state.isAuthenticated
-                        ? const BottomNavScaffold()
-                        : const LoginScreen()),
+                        ? BottomNavScaffold()
+                        : LoginScreen()),
                 onGenerateRoute: controller.onGenerateRoute,
                 navigatorObservers: [_analyticsObserver],
               );

@@ -82,7 +82,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         if (low != null) videoUrlLow = await UploadManager().uploadFile(low);
       } catch (_) {}
 
-      // ── 1c. Thumbnail — барои пешнамоиши тез ──
+      // ── 1c. Thumbnail (кадри аввал) — барои grid-ҳо мисли Instagram ──
+      // best-effort: агар нашавад, grid placeholder нишон медиҳад.
       String thumbnailUrl = '';
       try {
         setState(() {
@@ -90,9 +91,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
           _progress = 0.75;
         });
         final thumb = await MediaCompressor.generateVideoThumbnail(_file!);
-        if (thumb != null) {
-          thumbnailUrl = await UploadManager().uploadFile(thumb);
-        }
+        if (thumb != null) thumbnailUrl = await UploadManager().uploadFile(thumb);
       } catch (_) {}
 
       // ── 2. POST /reels (БЕ slash!) ────────────────────────────

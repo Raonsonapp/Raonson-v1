@@ -937,18 +937,9 @@ class _ReelGrid extends StatelessWidget {
     if (v >= 1000)    return '${(v/1000).toStringAsFixed(1)}K';
     return '$v';
   }
-  Widget _reelPlaceholder() => Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.divider, Color(0xFF1A1A1C)],
-            begin: Alignment.topLeft, end: Alignment.bottomRight)),
-        child: Center(
-          child: SvgPicture.asset('assets/icons/nav_reels.svg',
-              width: 30, height: 30,
-              colorFilter: ColorFilter.mode(
-                  AppColors.textFaint, BlendMode.srcIn)),
-        ),
-      );
+  // Placeholder-и оддӣ (бе icon дар мобайн) — мисли Instagram, вақте
+  // ки thumbnail ҳанӯз нест. Icon-и reels танҳо дар кунҷи боло мемонад.
+  Widget _reelPlaceholder() => Container(color: AppColors.card);
   @override
   Widget build(BuildContext context) {
     if (reels.isEmpty) {

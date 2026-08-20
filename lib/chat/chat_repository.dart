@@ -15,6 +15,15 @@ class ChatRepository {
   static const _inboxKey   = 'chat_inbox_cache';
   static const _cacheTTL   = Duration(hours: 12);
 
+  // Пас аз иваз кардани аккаунт: чатҳои корбари куҳнаро аз disk cache
+  // тоза мекунем, то ки inbox-и корбари нав пок бошад.
+  static Future<void> clearAllCaches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_inboxKey);
+    } catch (_) {}
+  }
+
   Future<String> _myId() async => await TokenStorage.getUserId() ?? '';
 
   // ── INBOX бо cache ──────────────────────────────────────────

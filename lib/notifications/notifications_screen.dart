@@ -15,6 +15,7 @@ import '../app/app_theme.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/services/notification_badge_controller.dart';
+import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -43,8 +44,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final data = await _repo.fetchNotifications();
       if (!mounted) return;
       setState(() {
-        _notifications = data['notifications'] as List<NotificationModel>;
-        _unreadCount = data['unreadCount'] as int;
+        _notifications = (data['notifications'] as List?)
+            ?.cast<NotificationModel>() ?? const <NotificationModel>[];
+        _unreadCount = (data['unreadCount'] as int?) ?? 0;
         _loading = false;
       });
       NotificationBadgeController.instance.setCount(_unreadCount);
@@ -170,15 +172,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         centerTitle: false, // сарлавҳа ба чап — мисли Instagram
-        title: Text('Огоҳиномаҳо',
+        title: Text(tr('common.notifications'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 22)),
         actions: [
           if (_unreadCount > 0)
             TextButton(
               onPressed: _markAllRead,
-              child: const Text('Ҳамаро хондам',
-                  style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
+              child: Text(tr('common.markAllRead'),
+                  style: const TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
             ),
         ],
       ),
@@ -224,10 +226,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           NotificationItem(notification: n, onTap: () => _onTap(n))));
     }
 
-    section('Имрӯз', today);
-    section('Дирӯз', yesterday);
-    section('7 рӯзи охир', week);
-    section('Қаблтар', earlier);
+    section(tr('common.today'), today);
+    section(tr('common.yesterday'), yesterday);
+    section(tr('common.earlier'), week);
+    section(tr('common.earlier'), earlier);
 
     return RefreshIndicator(
       onRefresh: _load,
@@ -289,7 +291,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               color: AppColors.textTertiary, size: 40),
         ),
         const SizedBox(height: 16),
-        Text('Огоҳиномае нест',
+        Text(tr('common.noNotifications'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(height: 8),

@@ -44,13 +44,19 @@ class _BottomNavView extends StatefulWidget {
 }
 
 class _BottomNavViewState extends State<_BottomNavView> {
-  Key _feedKey  = UniqueKey();
-  Key _reelsKey = UniqueKey();
+  Key _feedKey    = UniqueKey();
+  Key _reelsKey   = UniqueKey();
+  Key _profileKey = UniqueKey();
+  Key _chatKey    = UniqueKey();
+  Key _searchKey  = UniqueKey();
   final _signal = WebRTCService();
+  String? _lastUserId;
 
   @override
   void initState() {
     super.initState();
+    _lastUserId = UserSession.userId;
+    UserSession.userIdNotifier.addListener(_onUserChanged);
     _setupGlobalCalls();
     _setupNotifBadge();
     FirebaseInit.requestNotificationPermission();
@@ -103,6 +109,23 @@ class _BottomNavViewState extends State<_BottomNavView> {
     }
   }
 
+  // Вақте корбар аккаунти дигарро интихоб кард — Feed/Reels/Profile/Chat/
+  // Search ҳама Key-и нав мегиранд, то Element-и куҳна нест шавад ва
+  // ҳар табҳо аз нав initState → loadX-ро иҷро кунанд бо токени нав.
+  void _onUserChanged() {
+    final uid = UserSession.userId;
+    if (uid == _lastUserId) return;
+    _lastUserId = uid;
+    if (!mounted) return;
+    setState(() {
+      _feedKey    = UniqueKey();
+      _reelsKey   = UniqueKey();
+      _profileKey = UniqueKey();
+      _chatKey    = UniqueKey();
+      _searchKey  = UniqueKey();
+    });
+  }
+
   // Бейҷи огоҳиҳо: realtime socket + бори аввал шумора аз сервер.
   Future<void> _setupNotifBadge() async {
     NotificationBadgeController.instance.wireSocket();
@@ -134,6 +157,7 @@ class _BottomNavViewState extends State<_BottomNavView> {
 
   @override
   void dispose() {
+    UserSession.userIdNotifier.removeListener(_onUserChanged);
     _signal.onIncomingCall = null;
     super.dispose();
   }
@@ -174,10 +198,10 @@ class _BottomNavViewState extends State<_BottomNavView> {
                 isActive: nav.currentIndex == 1,
               ),
             ),
-            _Tab(active: nav.currentIndex == 2, child: const ChatListScreen()),
-            _Tab(active: nav.currentIndex == 3, child: const SearchScreen()),
+            _Tab(active: nav.currentIndex == 2, child: ChatListScreen(key: _chatKey)),
+            _Tab(active: nav.currentIndex == 3, child: SearchScreen(key: _searchKey)),
             _Tab(active: nav.currentIndex == 4,
-                child: const ProfileScreen(userId: 'me')),
+                child: ProfileScreen(key: _profileKey, userId: 'me')),
             // Загрузкаи фонии пост — progress дар боли Home (мисли Instagram)
             const Positioned(
               top: 0, left: 0, right: 0,

@@ -229,6 +229,13 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_reels_created ON reels(created_at DESC);
 	-- Сифати паст (480p) барои интернети суст — пахши адаптивӣ.
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS video_url_low TEXT DEFAULT '';
+	-- CREATE TABLE IF NOT EXISTS болотар ҷадвали куҳнаро тағйир намедиҳад —
+	-- дар production comments_count вуҷуд надошт (SQLSTATE 42703),
+	-- ки боиси 500 дар ҲАМАИ endpoint-ҳои reels мешуд (feed, view, comment).
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_count INTEGER DEFAULT 0;
+	-- Тасвири аввалин кадри видео (thumbnail) — мисли Instagram дар grid-ҳо
+	-- (profile/search/explore) нишон дода мешавад, ба ҷои placeholder.
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS thumbnail_url TEXT DEFAULT '';
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,
@@ -621,6 +628,8 @@ func migrate() {
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS sale_pct      INT DEFAULT 0;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS sale_until    TIMESTAMPTZ;
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS product_category TEXT DEFAULT '';
+	-- AI Feed: холи "ҷолибияти эҳтимолӣ"-и AI (0-100), асинхронӣ пур мешавад.
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS ai_quality_score INTEGER DEFAULT 0;
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;

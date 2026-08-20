@@ -10,6 +10,7 @@ import (
 	"raonson/db"
 	mw "raonson/middleware"
 	"raonson/sockets"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -49,6 +50,11 @@ func CreatePost(c *gin.Context) {
 	}
 	if b.Collaborators == nil {
 		b.Collaborators = []string{}
+	}
+	if flagged, cats := utils.ModerateText(context.Background(), b.Caption); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Тавсиф қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
 	}
 
 	if b.Caption != "" && !moderateText(b.Caption) {
@@ -113,6 +119,9 @@ func CreatePost(c *gin.Context) {
 
 	// Invalidate feed cache for this user
 	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2", "smartfeed:"+myID+":1", "smartfeed:"+myID+":2")
+	// ва cache-и middleware-и корбар (то пости нав фавран дар profile/feed
+	// худи ӯ намоён шавад).
+	mw.InvalidateUserCache(myID)
 
 	// @зикр дар тавсиф — ҳар корбари зикршударо огоҳ кун
 	notifyMentions(myID, "mention", postID, b.Caption, "шуморо дар публикатсия зикр кард")
@@ -150,6 +159,16 @@ wsPost := gin.H{
 
 // ➕ ИЛОВА
 go sockets.BroadcastNewPost(myID, wsPost)
+
+// AI Feed: best-effort, дар паснамо — ба посух монеъ намешавад.
+go func(pid, caption string) {
+	score, err := utils.ScorePostQuality(context.Background(), caption)
+	if err != nil {
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE posts SET ai_quality_score=$2 WHERE id=$1`, pid, score)
+}(postID, b.Caption)
 
 // 🔁 ИВАЗ
 c.JSON(http.StatusCreated, wsPost)
@@ -331,6 +350,9 @@ func DeletePost(c *gin.Context) {
 	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET posts_count=GREATEST(posts_count-1,0) WHERE id=$1`, myID)
+	// Cache-и корбарро пок мекунем, то пости ҳазфшуда фавран аз ҳама
+	// экранҳо (profile, feed, explore) нест шавад.
+	mw.InvalidateUserCache(myID)
 	mw.CacheDel("explore:grid") // фавран аз search/explore нопадид шавад
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
@@ -371,6 +393,9 @@ func TogglePostLike(c *gin.Context) {
 	var cnt int
 	db.Pool.QueryRow(context.Background(),
 		`SELECT likes_count FROM posts WHERE id=$1`, pid).Scan(&cnt)
+	// Cache-и middleware-и корбарро пок мекунем, то дафъаи оянда
+	// GET /posts/:id ҳисоби НАВРО баргардонад, na cached-и қаблӣ.
+	mw.InvalidateUserCache(myID)
 	// Push notification to post owner
 	if !liked {
 		go func() {
@@ -405,5 +430,6 @@ func TogglePostSave(c *gin.Context) {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO post_saves(post_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, pid, myID)
 	}
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"saved": !saved})
 }

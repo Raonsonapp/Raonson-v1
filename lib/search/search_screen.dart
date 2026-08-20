@@ -28,6 +28,7 @@ import '../profile/profile_screen.dart';
 import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
 import 'search_history.dart';
+import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import '../shop/buy_sheet.dart';
 import '../live/live_rail.dart';
@@ -74,8 +75,13 @@ class _SearchScreenState extends State<SearchScreen>
   List<dynamic>   _hashtags  = [];
   String?         _error;
 
+  // AI Search (забони табиӣ)
+  bool         _aiSearching = false;
+  List<String> _aiKeywords  = [];
+
   late final TabController _tabs;
-  static const _tabLabels = ['Барои шумо', 'Аккаунтҳо', 'Аудио', 'Тегҳо'];
+  List<String> get _tabLabels =>
+      [tr('tab.forYou'), tr('tab.accounts'), tr('tab.audio'), tr('tab.tags')];
 
   // ── lifecycle ────────────────────────────────────────────────────
   @override
@@ -200,7 +206,7 @@ class _SearchScreenState extends State<SearchScreen>
     if (q.isEmpty) {
       setState(() {
         _mode = _focus.hasFocus ? _Mode.recent : _Mode.idle;
-        _users=[]; _posts=[]; _reels=[]; _music=[]; _hashtags=[]; _error=null;
+        _users=[]; _posts=[]; _reels=[]; _music=[]; _hashtags=[]; _error=null; _aiKeywords=[];
       });
       _lastQ = '';
       return;
@@ -240,6 +246,39 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
+  // AI Search — дархости забони табиӣ (масалан "видеоҳои имрӯз дар бораи футбол").
+  Future<void> _doAiSearch() async {
+    final q = _ctrl.text.trim();
+    if (q.isEmpty || _aiSearching) return;
+    setState(() { _aiSearching = true; _error = null; });
+    try {
+      final res = await ApiClient.instance.post('/ai/search', body: {'query': q})
+          .timeout(const Duration(seconds: 25));
+      if (res.statusCode < 400 && mounted) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        setState(() {
+          _posts = (body['posts'] as List? ?? [])
+              .map((e) => PostModel.fromJson(e as Map<String, dynamic>)).toList();
+          _reels = body['reels'] as List? ?? [];
+          _aiKeywords = (body['keywords'] as List? ?? [])
+              .map((e) => e.toString()).where((k) => k.isNotEmpty).toList();
+        });
+        _tabs.index = 0;
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('AI ҷустуҷӯ ҳозир дастрас нест'),
+            duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми AI ҷустуҷӯ'),
+            duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _aiSearching = false);
+  }
+
   Future<void> _searchMusic(String q) async {
     try {
       final uri = Uri.parse(
@@ -263,7 +302,7 @@ class _SearchScreenState extends State<SearchScreen>
     _lastQ = '';
     setState(() {
       _mode = _Mode.idle;
-      _users=[]; _posts=[]; _reels=[]; _music=[]; _hashtags=[]; _error=null;
+      _users=[]; _posts=[]; _reels=[]; _music=[]; _hashtags=[]; _error=null; _aiKeywords=[];
     });
   }
 
@@ -612,7 +651,21 @@ class _SearchScreenState extends State<SearchScreen>
                 onChanged: _onChanged,
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 6),
+            // AI Search — дархости забони табиӣ
+            GestureDetector(
+              onTap: _aiSearching ? null : _doAiSearch,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: _aiSearching
+                    ? const SizedBox(width: 18, height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.neonBlue))
+                    : Icon(AppIcons.bolt_rounded,
+                        color: AppColors.neonBlue, size: 22),
+              ),
+            ),
+            const SizedBox(width: 6),
             GestureDetector(
               onTap: _cancelSearch,
               child: const Text('Бекор',
@@ -621,6 +674,19 @@ class _SearchScreenState extends State<SearchScreen>
             ),
           ]),
         ),
+        if (_aiKeywords.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            child: Row(children: [
+              Icon(AppIcons.bolt_rounded, color: AppColors.neonBlue, size: 13),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text('AI: ${_aiKeywords.join(", ")}',
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 12),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ]),
+          ),
         // Tabs
         TabBar(
           controller: _tabs,
@@ -738,7 +804,7 @@ class _SearchBarRaw extends StatelessWidget {
         onChanged: onChanged,
         style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'Ҷустуҷӯ',
+          hintText: tr('common.search'),
           hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
           prefixIcon: searching
               ? const Padding(
@@ -807,7 +873,7 @@ class _ExploreGrid extends StatelessWidget {
           Icon(AppIcons.explore_outlined,
               size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
           const SizedBox(height: 12),
-          Text('Мӯҳтаво ҳанӯз нест',
+          Text(tr('common.noResults'),
               style: TextStyle(
                   color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
         ]),

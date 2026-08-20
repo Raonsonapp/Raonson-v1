@@ -3,6 +3,7 @@ import '../app/app_theme.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/story_model.dart';
 import '../core/services/user_session.dart';
+import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 
 List<List<StoryModel>> groupStoriesByUser(List<StoryModel> stories) {
@@ -157,8 +158,8 @@ class _MyStoryItem extends StatelessWidget {
         const SizedBox(height: 5),
         SizedBox(
           width: _outer,
-          child: const Text('Сториси шумо',
-            style: TextStyle(color: Colors.white, fontSize: 11),
+          child: Text(tr('story.your'),
+            style: const TextStyle(color: Colors.white, fontSize: 11),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center)),
       ]),

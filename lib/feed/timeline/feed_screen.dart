@@ -23,6 +23,7 @@ import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
 import '../../widgets/avatar.dart';
+import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
 import '../../shop/shop_screen.dart';
@@ -285,8 +286,8 @@ class _FeedBody extends StatelessWidget {
               const Spacer(),
               GestureDetector(
                 onTap: () => feedCtrl.refresh(),
-                child: const Text('Такрор',
-                  style: TextStyle(color: AppColors.neonBlue,
+                child: Text(tr('common.retry'),
+                  style: const TextStyle(color: AppColors.neonBlue,
                       fontSize: 12, fontWeight: FontWeight.w600))),
             ]))
         : const SizedBox.shrink();
@@ -309,7 +310,7 @@ class _FeedBody extends StatelessWidget {
                   Icon(AppIcons.photo_camera_outlined,
                       size: 64, color: AppColors.dividerFaint),
                   const SizedBox(height: 16),
-                  Text('Ҳоло постҳо нест',
+                  Text(tr('feed.emptyTitle'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 16)),
                   const SizedBox(height: 12),
                   ElevatedButton(
@@ -328,7 +329,7 @@ class _FeedBody extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20)),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12)),
-                    child: const Text('Пост гузор')),
+                    child: Text(tr('feed.emptyAction'))),
                 ]),
               ),
             ),
@@ -355,17 +356,17 @@ class _FeedBody extends StatelessWidget {
                   Icon(AppIcons.cloud_off_outlined,
                       size: 64, color: AppColors.dividerFaint),
                   const SizedBox(height: 16),
-                  Text('Пайвастшавӣ мумкин нест',
+                  Text(tr('common.noConnection'),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 16)),
                   const SizedBox(height: 8),
-                  Text('Интернетро санҷед ва такрор кӯшиш кунед',
+                  Text(tr('common.checkInternet'),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 13),
                     textAlign: TextAlign.center),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: () => feedCtrl.loadInitialFeed(),
                     icon: const Icon(AppIcons.refresh_rounded),
-                    label: const Text('Такрор кӯшиш'),
+                    label: Text(tr('common.retryLong')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.neonBlue,
                       foregroundColor: AppColors.textPrimary,
@@ -536,7 +537,7 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
         const SizedBox(height: 28),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('Барои шумо тавсия',
+          child: Text(tr('feed.forYouReco'),
               style: TextStyle(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -600,7 +601,7 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: Text(u.following ? 'Пайравӣ ✓' : 'Пайравӣ',
+                        child: Text(u.following ? '${tr('common.followed')} ✓' : tr('common.follow'),
                             style: const TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w600)),
                       ),

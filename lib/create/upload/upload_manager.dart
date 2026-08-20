@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -5,6 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../core/api/api_client.dart';
+import '../../core/utils/media_compressor.dart';
 import '../../app/app_config.dart';
 
 // ─────────────────────────────────────────────────────────────────
@@ -57,29 +59,77 @@ class UploadManager {
     return file;
   }
 
+  // ── Видеоро пеш аз бор кардан фишурда мекунад — ба сифати миёна ~720p.
+  // (45MB → ~15MB) — дар интернети суст 3-5 бор тезтар.
+  // Агар call-site аллакай фишурда бошад (файл дар tempDir мебошад ё
+  // хурд аст) — дубора фишурда намекунем.
+  Future<File> _maybeCompressVideo(File file) async {
+    if (!_isVideo(file)) return file;
+    try {
+      final size = await file.length();
+      // Файли то 8MB — арзиши фишурдан надорад (шояд аллакай фишурда).
+      if (size < 8 * 1024 * 1024) return file;
+      // Файле, ки дар tempDir аст, эҳтимол аллакай compress шудааст.
+      final tmp = await getTemporaryDirectory();
+      if (file.path.startsWith(tmp.path)) return file;
+      return await MediaCompressor.compressVideo(file);
+    } catch (_) {}
+    return file;
+  }
+
   // ── Upload file to R2 ─────────────────────────────────────────
+  // Retry: 3 маротиба (2с/4с фосила) — интернети суст талаб мекунад.
   Future<String> _uploadFile(File rawFile) async {
     final token = _token;
     if (token.isEmpty) throw Exception('Токен нест');
 
-    final file = await _maybeCompressImage(rawFile);
-    final req = http.MultipartRequest(
-        'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(await http.MultipartFile.fromPath(
-          'file', file.path, contentType: _mime(file)));
+    // 1. Пеш аз upload — файлро фишурда мекунем (расм ва видео)
+    File file = await _maybeCompressImage(rawFile);
+    file = await _maybeCompressVideo(file);
 
-    final up  = await req.send().timeout(const Duration(minutes: 3));
-    final str = await up.stream.bytesToString();
+    Object? lastErr;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final req = http.MultipartRequest(
+            'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
+          ..headers['Authorization'] = 'Bearer $token'
+          ..files.add(await http.MultipartFile.fromPath(
+              'file', file.path, contentType: _mime(file)));
 
-    if (up.statusCode >= 400) {
-      throw Exception('Upload ${up.statusCode}: $str');
+        // Timeout — то 5 дақиқа, барои файлҳои калон дар интернети суст.
+        final up  = await req.send().timeout(const Duration(minutes: 5));
+        final str = await up.stream.bytesToString();
+
+        if (up.statusCode >= 500) {
+          // Хатои сервер — арзиши retry дорад.
+          throw Exception('Upload ${up.statusCode}: $str');
+        }
+        if (up.statusCode >= 400) {
+          // Хатои клиент (auth, bad request) — retry намекунем.
+          throw Exception('Upload ${up.statusCode}: $str');
+        }
+
+        final j   = jsonDecode(str) as Map<String, dynamic>;
+        final url = (j['url'] ?? j['secure_url'] ?? '').toString().trim();
+        if (url.isEmpty) throw Exception('URL нест: $str');
+        return url;
+      } on SocketException catch (e) {
+        lastErr = e;
+      } on TimeoutException catch (e) {
+        lastErr = e;
+      } on HttpException catch (e) {
+        lastErr = e;
+      } catch (e) {
+        // 4xx-и клиент — retry намекунем, фавран мепартоем.
+        final msg = e.toString();
+        if (msg.contains('40') && !msg.contains('408')) rethrow;
+        lastErr = e;
+      }
+      if (attempt < 2) {
+        await Future.delayed(Duration(seconds: 2 * (attempt + 1)));
+      }
     }
-
-    final j   = jsonDecode(str) as Map<String, dynamic>;
-    final url = (j['url'] ?? j['secure_url'] ?? '').toString().trim();
-    if (url.isEmpty) throw Exception('URL нест: $str');
-    return url;
+    throw Exception(lastErr?.toString() ?? 'Upload ноком шуд');
   }
 
   Future<String> uploadAvatar(File f) => _uploadFile(f);

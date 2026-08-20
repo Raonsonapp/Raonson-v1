@@ -16,11 +16,14 @@ import '../../core/services/network_quality.dart';
 import '../../widgets/embed_player.dart';
 import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
+import '../../models/post_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
+import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
+import '../../feed/comments/comments_screen.dart';
 import '../../gifts/gift_sheet.dart';
 
 // ── Ads (ТАНҲО ИН 2 ХАТИ НАВ) ───────────────────────────────────────────────
@@ -331,11 +334,14 @@ class _ReelsViewState extends State<_ReelsView> {
   Widget build(BuildContext context) {
     final vm = context.watch<_ReelsVM>();
 
+    // ── Тез бор шудан: реели 2-юм ва 3-юмро ФАВРАН пеш аз swipe
+    // preload мекунем (пештар танҳо баъд аз swipe оғоз мешуд — ҳар
+    // видеои нав "хом" бор мешуд ва интизорӣ тӯл мекашид). ──
     if (!_initialPreloadDone && vm.reels.isNotEmpty) {
       _initialPreloadDone = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _preloadFirst(vm);
-        _preloadAhead(0, vm);
+        if (mounted) _preloadAhead(_currentPage, vm);
       });
     }
 
@@ -1271,6 +1277,21 @@ class _ReelItemState extends State<_ReelItem> {
       return;
     }
     _ctrl?.pause();
+    // Барои Reels ҳамон UI-и шарҳҳои Home-ро истифода мебарем (CommentsScreen)
+    // то якхела бошад ва хатогиҳо (parse-и нодуруст) камтар шаванд.
+    // Аз ReelModel як PostModel-и сабук месозем, ки CommentsScreen интизор дорад.
+    final reel = widget.reel;
+    final asPost = PostModel(
+      id:            reel.id,
+      user:          reel.user,
+      caption:       reel.caption,
+      media: [{'url': reel.videoUrl, 'type': 'video'}],
+      likesCount:    reel.likesCount,
+      commentsCount: reel.commentsCount,
+      liked:         reel.isLiked,
+      saved:         reel.isSaved,
+      createdAt:     reel.createdAt ?? DateTime.now(),
+    );
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1279,11 +1300,7 @@ class _ReelItemState extends State<_ReelItem> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
-          child: _ReelComments(
-            reelId: widget.reel.id,
-            authorId: widget.reel.user.id,
-            authorName: widget.reel.user.username,
-          )),
+          child: CommentsScreen(post: asPost, targetType: 'reel')),
     ).then((_) {
       if (!_paused && mounted) _ctrl?.play();
     });
@@ -2215,6 +2232,31 @@ class _ReelCommentsState extends State<_ReelComments> {
   String? _replyToId;
   String? _replyToUsername;
 
+  // ── Тарҷумаи шарҳ (OpenAI) ───────────────────────────────────
+  final Map<String, String> _translations = {};
+  final Set<String> _translatingIds = {};
+
+  Future<void> _toggleTranslate(String commentId, String text) async {
+    if (_translations.containsKey(commentId)) {
+      setState(() => _translations.remove(commentId));
+      return;
+    }
+    setState(() => _translatingIds.add(commentId));
+    try {
+      final res = await ApiClient.instance.post('/ai/translate', body: {
+        'text': text,
+        'targetLang': AppSettingsState.instance.lang,
+      });
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        if (mounted) {
+          setState(() => _translations[commentId] = (b['translated'] ?? '').toString());
+        }
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _translatingIds.remove(commentId));
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2358,25 +2400,68 @@ class _ReelCommentsState extends State<_ReelComments> {
                                           style: const TextStyle(
                                               color: Colors.white70,
                                               fontSize: 14)),
+                                      if (_translations[id] != null) ...[
+                                        const SizedBox(height: 3),
+                                        Text(_translations[id]!,
+                                            style: const TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 13,
+                                                fontStyle:
+                                                    FontStyle.italic)),
+                                      ],
                                       const SizedBox(height: 4),
-                                      GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _replyToId = id;
-                                              _replyToUsername =
-                                                  u['username']
-                                                      ?.toString();
-                                              _ctrl.text =
-                                                  '@${u['username']} ';
-                                            });
-                                          },
-                                          child: const Text('Ҷавоб',
-                                              style: TextStyle(
-                                                  color:
-                                                      Colors.white38,
-                                                  fontSize: 12,
-                                                  fontWeight:
-                                                      FontWeight.w500))),
+                                      Row(children: [
+                                        GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _replyToId = id;
+                                                _replyToUsername =
+                                                    u['username']
+                                                        ?.toString();
+                                                _ctrl.text =
+                                                    '@${u['username']} ';
+                                              });
+                                            },
+                                            child: const Text('Ҷавоб',
+                                                style: TextStyle(
+                                                    color:
+                                                        Colors.white38,
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight.w500))),
+                                        const SizedBox(width: 14),
+                                        GestureDetector(
+                                            onTap: _translatingIds
+                                                    .contains(id)
+                                                ? null
+                                                : () => _toggleTranslate(
+                                                    id,
+                                                    (c['text'] ?? '')
+                                                        .toString()),
+                                            child: _translatingIds
+                                                    .contains(id)
+                                                ? const SizedBox(
+                                                    width: 11,
+                                                    height: 11,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                            strokeWidth:
+                                                                1.5,
+                                                            color: Colors
+                                                                .white38))
+                                                : Text(
+                                                    _translations
+                                                            .containsKey(id)
+                                                        ? 'Пинҳон кардани тарҷума'
+                                                        : 'Тарҷума кардан',
+                                                    style: const TextStyle(
+                                                        color:
+                                                            Colors.white38,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight
+                                                                .w500))),
+                                      ]),
                                     ])),
                                 const SizedBox(width: 8),
                                 GestureDetector(

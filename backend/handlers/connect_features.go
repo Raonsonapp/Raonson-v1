@@ -11,6 +11,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -234,6 +235,8 @@ func GetPostLikers(c *gin.Context) {
 func DeleteAvatar(c *gin.Context) {
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(), `UPDATE users SET avatar='' WHERE id=$1`, myID)
+	mw.CacheDel("profile:me:" + myID)
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -265,6 +268,16 @@ func MarkReelNotInterested(c *gin.Context) {
 		`INSERT INTO reel_not_interested(reel_id, user_id)
 		 VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
 	c.JSON(http.StatusOK, gin.H{"not_interested": true})
+}
+
+// POST /reels/:id/interest — frontend инро ҷеғ мезад, вале backend
+// route надошт (404). Баргардонидани "not interested"-и қаблӣ, агар буда бошад.
+func MarkReelInterested(c *gin.Context) {
+	myID := mw.UID(c)
+	rid := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM reel_not_interested WHERE reel_id=$1 AND user_id=$2`, rid, myID)
+	c.JSON(http.StatusOK, gin.H{"interested": true})
 }
 
 // GET /reels/:id/stats — танҳо соҳиби reel мебинад.
@@ -367,6 +380,11 @@ func ReplyReelComment(c *gin.Context) {
 		return
 	}
 	b.Text = clampRunes(b.Text, 1000)
+	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Матн қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
 	var commentsOff bool
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COALESCE(comments_off,false) FROM reels WHERE id=$1`, rid).Scan(&commentsOff)
@@ -400,15 +418,6 @@ func UpdateReelCaption(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption})
-}
-
-// POST /reels/:id/interest — корбар ин reel-ро ҷолиб меҳисобад
-func MarkReelInterested(c *gin.Context) {
-	myID := mw.UID(c)
-	rid := c.Param("id")
-	db.Pool.Exec(context.Background(),
-		`DELETE FROM reel_not_interested WHERE reel_id=$1 AND user_id=$2`, rid, myID)
-	c.JSON(http.StatusOK, gin.H{"interested": true})
 }
 
 // ═══════════════════════ STORY REPLY ═══════════════════════

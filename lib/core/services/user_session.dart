@@ -4,18 +4,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 class UserSession {
   UserSession._();
 
-  static String? userId;
-  static String? username;
-
   static const _keyAvatar   = 'cached_avatar_url';
   static const _keyUserId   = 'cached_user_id';
   static const _keyUsername = 'cached_username';
 
-  // ValueNotifier — Stories ва Bottom Tab автоматӣ update мешаванд
+  // ── ValueNotifiers — экранҳо ба тағйирот гӯш мекунанд, ки ҳангоми
+  // иваз кардани аккаунт tab-ҳо (Feed, Reels, Profile) фавран нав шаванд.
   static final ValueNotifier<String?> avatarNotifier =
+      ValueNotifier<String?>(null);
+  static final ValueNotifier<String?> userIdNotifier =
+      ValueNotifier<String?>(null);
+  static final ValueNotifier<String?> usernameNotifier =
       ValueNotifier<String?>(null);
 
   static String? get avatar => avatarNotifier.value;
+
+  static String? get userId => userIdNotifier.value;
+  static set userId(String? v) {
+    userIdNotifier.value = v;
+    _persist(_keyUserId, v);
+  }
+
+  static String? get username => usernameNotifier.value;
+  static set username(String? v) {
+    usernameNotifier.value = v;
+    _persist(_keyUsername, v);
+  }
 
   // Вақте аватар иваз мешавад — ҳам дар хотира ҳам дар кэш захира мешавад
   static set avatar(String? v) {
@@ -34,13 +48,13 @@ class UserSession {
       }
 
       final cachedId = prefs.getString(_keyUserId);
-      if (cachedId != null && cachedId.isNotEmpty && userId == null) {
-        userId = cachedId;
+      if (cachedId != null && cachedId.isNotEmpty && userIdNotifier.value == null) {
+        userIdNotifier.value = cachedId;
       }
 
       final cachedUsername = prefs.getString(_keyUsername);
-      if (cachedUsername != null && cachedUsername.isNotEmpty && username == null) {
-        username = cachedUsername;
+      if (cachedUsername != null && cachedUsername.isNotEmpty && usernameNotifier.value == null) {
+        usernameNotifier.value = cachedUsername;
       }
     } catch (_) {}
   }
@@ -51,9 +65,9 @@ class UserSession {
     required String uname,
     required String avatarUrl,
   }) async {
-    userId   = id;
-    username = uname;
-    avatarNotifier.value = avatarUrl;
+    userIdNotifier.value   = id;
+    usernameNotifier.value = uname;
+    avatarNotifier.value   = avatarUrl;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyUserId,   id);
@@ -66,9 +80,9 @@ class UserSession {
 
   // ── Вақти logout — тозо кун ──────────────────────────────────
   static Future<void> clear() async {
-    userId   = null;
-    username = null;
-    avatarNotifier.value = null;
+    userIdNotifier.value   = null;
+    usernameNotifier.value = null;
+    avatarNotifier.value   = null;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyAvatar);

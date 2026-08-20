@@ -209,6 +209,7 @@ func UpdatePostCaption(c *gin.Context) {
 
 	// Cache-ро тоза кун
 	mw.CacheDel("feed:"+myID+":1", "smartfeed:"+myID+":1")
+	mw.InvalidateUserCache(myID)
 
 	// @зикр дар тавсифи навшуда — ҳар корбари зикршударо огоҳ кун
 	notifyMentions(myID, "mention", pid, b.Caption, "шуморо дар публикатсия зикр кард")
@@ -238,6 +239,7 @@ func UpdatePostMusic(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found or not owner"})
 		return
 	}
+	mw.InvalidateUserCache(myID)
 
 	c.JSON(http.StatusOK, gin.H{"updated": true})
 }

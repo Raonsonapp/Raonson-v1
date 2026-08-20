@@ -8,6 +8,7 @@ import '../../models/comment_model.dart';
 import '../../models/user_model.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
+import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -23,12 +24,16 @@ class CommentsScreen extends StatefulWidget {
   final PostModel post;
   final List<CommentModel> comments;
   final VoidCallback? onCommentAdded;
+  /// Кадом навъи мӯҳтаво ин comment-ҳо аз они он ҳастанд. Барои Reels —
+  /// endpoint-и /reels/:id/comments, барои пост — /posts/:id/comments.
+  final String targetType; // 'post' | 'reel'
 
   const CommentsScreen({
     super.key,
     required this.post,
     this.comments = const [],
     this.onCommentAdded,
+    this.targetType = 'post',
   });
 
   @override
@@ -45,6 +50,40 @@ class _CommentsScreenState extends State<CommentsScreen> {
   // Reply mode
   CommentModel? _replyTo;
 
+  // ── AI Comment: пешниҳоди шарҳ (OpenAI) ─────────────────────────
+  bool _suggestingComment = false;
+
+  Future<void> _suggestComment() async {
+    if (_suggestingComment) return;
+    setState(() => _suggestingComment = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/comment-suggest', body: {
+        'caption': widget.post.caption,
+        'imageUrl': widget.post.mediaType == 'image' ? widget.post.mediaUrl : '',
+      }).timeout(const Duration(seconds: 20));
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        final comment = (b['comment'] ?? '').toString();
+        if (comment.isNotEmpty) {
+          _ctrl.text = comment;
+          _ctrl.selection = TextSelection.collapsed(offset: _ctrl.text.length);
+          _focus.requestFocus();
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('AI шарҳ ҳозир дастрас нест'),
+            duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми пешниҳоди шарҳ'),
+            duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _suggestingComment = false);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,14 +98,17 @@ class _CommentsScreenState extends State<CommentsScreen> {
     super.dispose();
   }
 
+  String get _base =>
+      widget.targetType == 'reel' ? '/reels' : '/posts';
+
   Future<void> _loadComments() async {
     setState(() => _loading = true);
     try {
-      // ✅ Ду endpoint санҷед
+      // ✅ Ду endpoint санҷед (аввал base-и мушаххас, баъд fallback-и куҳна)
       var res = await ApiClient.instance
-          .get('/posts/${widget.post.id}/comments')
+          .get('$_base/${widget.post.id}/comments')
           .timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400) {
+      if (res.statusCode >= 400 && widget.targetType != 'reel') {
         res = await ApiClient.instance
             .get('/comments/${widget.post.id}')
             .timeout(const Duration(seconds: 8));
@@ -154,12 +196,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
     _focus.unfocus();
 
     try {
-      // ✅ Ду endpoint санҷед
+      // ✅ Ду endpoint санҷед (base мушаххас, fallback танҳо барои пост)
       var res = await ApiClient.instance.post(
-        '/posts/${widget.post.id}/comments',
+        '$_base/${widget.post.id}/comments',
         body: {'text': optimistic.text, 'parentId': parentId},
       );
-      if (res.statusCode >= 400) {
+      if (res.statusCode >= 400 && widget.targetType != 'reel') {
         res = await ApiClient.instance.post(
           '/comments/${widget.post.id}',
           body: {'text': optimistic.text, 'parentId': parentId},
@@ -507,6 +549,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     border: InputBorder.none),
                 ),
               ),
+              // AI Comment — пешниҳоди шарҳ (OpenAI)
+              _suggestingComment
+                  ? Padding(padding: const EdgeInsets.all(10),
+                      child: SizedBox(width: 18, height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.textFaint)))
+                  : IconButton(
+                      icon: Icon(AppIcons.bolt_rounded,
+                          color: AppColors.textSecondary, size: 20),
+                      tooltip: 'AI шарҳ пешниҳод кунад',
+                      onPressed: _suggestComment,
+                    ),
               // Тӯҳфа (gift) — мисли Instagram
               IconButton(
                 icon: SvgPicture.asset('assets/icons/gift.svg',
@@ -560,6 +614,37 @@ class _CommentItemState extends State<_CommentItem> {
   late int  _likeCount;
   String? _translation;
   bool _translating = false;
+
+  // ── Тарҷумаи шарҳ (OpenAI) ───────────────────────────────────
+  String? _translated;
+  bool    _translating = false;
+
+  Future<void> _toggleTranslate() async {
+    if (_translated != null) {
+      setState(() => _translated = null);
+      return;
+    }
+    setState(() => _translating = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/translate', body: {
+        'text': widget.comment.text,
+        'targetLang': AppSettingsState.instance.lang,
+      });
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        if (mounted) setState(() => _translated = (b['translated'] ?? '').toString());
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Тарҷума дастрас нест'), duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми тарҷума'), duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _translating = false);
+  }
 
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
@@ -806,28 +891,17 @@ class _CommentItemState extends State<_CommentItem> {
             // Матни коммент — ЗЕРИ ном (мисли Instagram)
             Text(c.text,
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-            if (_translation != null) ...[
+            if (_translated != null) ...[
               const SizedBox(height: 4),
-              Text(_translation!,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14,
+              Text(_translated!,
+                  style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
                       fontStyle: FontStyle.italic)),
             ],
-            const SizedBox(height: 4),
-            GestureDetector(
-              onTap: _translateComment,
-              child: _translating
-                  ? const SizedBox(width: 14, height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 1.5,
-                          color: AppColors.neonBlue))
-                  : Text(
-                      _translation != null ? 'Пинҳон кардан' : 'Тарҷума кардан',
-                      style: const TextStyle(
-                          color: AppColors.neonBlue, fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-            ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
 
-            // ── Нижняя строка: время · лайков · Ответить · ⋮ ──
+            // ── Нижняя строка: время · лайков · Ответить · Тарҷума · ⋮ ──
             Row(children: [
               Text(_timeAgo(),
                   style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
@@ -846,6 +920,20 @@ class _CommentItemState extends State<_CommentItem> {
                     style: TextStyle(
                         color: AppColors.textTertiary, fontSize: 12,
                         fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 12),
+              // ── Тарҷума кардан (OpenAI) ─────────────────────
+              GestureDetector(
+                onTap: _translating ? null : _toggleTranslate,
+                child: _translating
+                    ? SizedBox(width: 12, height: 12,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 1.5, color: AppColors.textTertiary))
+                    : Text(
+                        _translated != null ? 'Пинҳон кардани тарҷума' : 'Тарҷума кардан',
+                        style: TextStyle(
+                            color: AppColors.textTertiary, fontSize: 12,
+                            fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 8),
               // ── ⋮ меню ──────────────────────────────────────

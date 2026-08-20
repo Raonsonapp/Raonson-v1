@@ -229,6 +229,7 @@ func UpdateProfile(c *gin.Context) {
 	}
 	// Кэшро нест кун
 	mw.CacheDel("profile:me:"+myID)
+	mw.InvalidateUserCache(myID)
 
 	// Return updated profile
 	row := db.Pool.QueryRow(context.Background(),

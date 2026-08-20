@@ -128,6 +128,7 @@ func PinPost(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`UPDATE posts SET is_pinned=$1 WHERE id=$2 AND user_id=$3::text`,
 		b.Pin, pid, myID)
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"isPinned": b.Pin})
 }
 
@@ -202,6 +203,7 @@ func CreateHighlight(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create failed"})
 		return
 	}
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{
 		"_id": id, "title": b.Title, "coverUrl": b.CoverURL,
 		"storyIds": b.StoryIDs, "items": b.Items,
@@ -236,6 +238,7 @@ func UpdateHighlight(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"updated": true})
 }
 
@@ -245,5 +248,6 @@ func DeleteHighlight(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM highlights WHERE id=$1 AND user_id=$2::text`,
 		c.Param("id"), myID)
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }

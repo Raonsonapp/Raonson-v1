@@ -69,13 +69,12 @@ class MediaCompressor {
     } catch (_) { return null; }
   }
 
+  // ── Тасвир аз кадри аввали видео (thumbnail) — мисли Instagram ──
+  // Бармегардонад null агар нашавад (grid placeholder нишон медиҳад).
   static Future<File?> generateVideoThumbnail(File file) async {
     try {
       final thumb = await VideoCompress.getFileThumbnail(
-        file.path,
-        quality: 70,
-        position: -1,
-      );
+        file.path, quality: 60, position: -1);
       return thumb;
     } catch (_) { return null; }
   }

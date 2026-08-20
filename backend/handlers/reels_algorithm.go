@@ -74,7 +74,9 @@ func GetSmartReels(c *gin.Context) {
 		      -- 1. Дӯстон: +50
 		      CASE WHEN f.following_id IS NOT NULL THEN 50 ELSE 0 END
 		      -- 2. Engagement rate: likes/(views+1)*40
-		      + LEAST(40, (r.likes_count::float / NULLIF(r.views_count,0) * 40))
+		      -- COALESCE лозим: агар views_count=0 бошад, NULLIF NULL медиҳад ва
+		      -- бе он тамоми score ба NULL табдил меёфт (reel-ҳои нав аз рейтинг мебаромаданд).
+		      + COALESCE(LEAST(40, (r.likes_count::float / NULLIF(r.views_count,0) * 40)), 0)
 		      -- 3. Рекентность: нав = баланд (max 30 балл, 24с кам мешавад)
 		      + GREATEST(0, 30 - EXTRACT(EPOCH FROM (NOW()-r.created_at))/3600)
 		      -- 4. Comments bonus

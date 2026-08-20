@@ -8,6 +8,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,6 +28,11 @@ func AddComment(c *gin.Context) {
 		return
 	}
 	b.Text = clampRunes(b.Text, 1000)
+	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
 
 	if !moderateText(b.Text) {
 		c.JSON(http.StatusForbidden, gin.H{
@@ -87,6 +93,9 @@ func AddComment(c *gin.Context) {
 		`SELECT username,avatar,verified FROM users WHERE id=$1`, myID,
 	).Scan(&uname, &uavatar, &verified)
 
+	// Cache-и корбарро пок мекунем, то шарҳи нав дар GET /posts/:id/comments
+	// ва count-и шарҳҳо дар feed фавран нав шаванд.
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": cid, "post": postID, "text": b.Text, "parentId": b.ParentID,
 		"liked": false, "likesCount": 0, "createdAt": createdAt,
@@ -146,6 +155,7 @@ func DeleteComment(c *gin.Context) {
 	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE posts SET comments_count=GREATEST(comments_count-1,0) WHERE id=$1`, postID)
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -168,6 +178,7 @@ func ToggleCommentLike(c *gin.Context) {
 		db.Pool.Exec(context.Background(),
 			`UPDATE comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
 	}
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }
 // PUT /comments/:id — таҳрири comment
@@ -252,6 +263,11 @@ func FollowUser(c *gin.Context) {
 		`UPDATE users SET following_count=following_count+1 WHERE id=$1`, myID)
 	notify(targetID, myID, "follow", myID)
 
+	// Cache-и middleware-и ду корбарро пок мекунем, то ҳисоби followers/
+	// following ва тугмаи "Обуна шудан" фавран нав шаванд (na 3-30 сония баъд).
+	mw.InvalidateUserCache(myID)
+	mw.InvalidateUserCache(targetID)
+
 	// Push notification to target
 	go func() {
 		var username string
@@ -275,6 +291,8 @@ func UnfollowUser(c *gin.Context) {
 		`UPDATE users SET followers_count=GREATEST(followers_count-1,0) WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET following_count=GREATEST(following_count-1,0) WHERE id=$1`, myID)
+	mw.InvalidateUserCache(myID)
+	mw.InvalidateUserCache(targetID)
 	c.JSON(http.StatusOK, gin.H{"following": false})
 }
 
@@ -457,12 +475,18 @@ func CreateReel(c *gin.Context) {
 		return
 	}
 	b.Caption = clampRunes(b.Caption, 2200)
+	if flagged, cats := utils.ModerateText(context.Background(), b.Caption); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Тавсиф қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return
+	}
 	var rid string
 	db.Pool.QueryRow(context.Background(),
 		`INSERT INTO reels(user_id,caption,video_url,video_url_low,thumbnail_url)
 		 VALUES($1,$2,$3,$4,$5) RETURNING id`,
 		myID, b.Caption, b.VideoURL, b.VideoURLLow, b.ThumbnailURL).Scan(&rid)
 	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": rid, "videoUrl": b.VideoURL, "videoUrlLow": b.VideoURLLow,
 		"thumbnailUrl": b.ThumbnailURL,
@@ -560,6 +584,7 @@ func ToggleReelLike(c *gin.Context) {
 			pushNotify(owner, myID, "reel_like", rid, "Reel-и шуморо писандид")
 		}
 	}
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }
 
@@ -578,6 +603,7 @@ func ToggleReelSave(c *gin.Context) {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO reel_saves(reel_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
 	}
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"saved": !saved})
 }
 
@@ -592,6 +618,7 @@ func DeleteReel(c *gin.Context) {
 		return
 	}
 	mw.CacheDel("explore:grid") // то аз search фавран нопадид шавад
+	mw.InvalidateUserCache(myID) // fizardan pok kunam profile/user reels list
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
@@ -629,9 +656,9 @@ func AddReelComment(c *gin.Context) {
 		return
 	}
 	b.Text = clampRunes(b.Text, 1000)
-	if !moderateText(b.Text) {
+	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
 		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Шарҳи шумо аз тарафи AI рад шуд. Лутфан матнро тағйир диҳед."})
+			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
 		return
 	}
 	var commentsOff bool
@@ -653,5 +680,6 @@ func AddReelComment(c *gin.Context) {
 	notify(owner, myID, "reel_comment", rid)
 	pushNotify(owner, myID, "reel_comment", rid, "ба Reel-и шумо шарҳ гузошт")
 	notifyMentions(myID, "mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
+	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
 }

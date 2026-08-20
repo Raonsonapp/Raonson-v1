@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import '../../create/create_post/media_picker.dart';
 import '../../create/upload/upload_manager.dart';
@@ -39,6 +40,65 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool    _usernameTaken    = false;
   String? _usernameError;
   String  _originalUsername = '';
+
+  // AI Profile Assistant — bio generator
+  bool _generatingBio = false;
+
+  Future<void> _generateBio() async {
+    final inputCtrl = TextEditingController();
+    final input = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          Icon(AppIcons.bolt_rounded, color: AppColors.storyStart, size: 20),
+          const SizedBox(width: 8),
+          Text('AI Bio', style: TextStyle(color: AppColors.textPrimary)),
+        ]),
+        content: TextField(
+          controller: inputCtrl, autofocus: true,
+          style: TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Касбу кор ё шавқи худро нависед (масалан: фотограф)',
+            hintStyle: TextStyle(color: AppColors.textFaint),
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx),
+              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, inputCtrl.text),
+              child: Text('Созед', style: TextStyle(color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+    inputCtrl.dispose();
+    final v = input?.trim() ?? '';
+    if (v.isEmpty || _generatingBio) return;
+
+    setState(() => _generatingBio = true);
+    try {
+      final res = await ApiClient.instance.post('/ai/profile-bio', body: {'input': v})
+          .timeout(const Duration(seconds: 20));
+      if (res.statusCode < 400) {
+        final b = jsonDecode(res.body);
+        final bio = (b['bio'] ?? '').toString();
+        if (bio.isNotEmpty) {
+          _ctrl.bioController.text = bio;
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('AI bio ҳозир дастрас нест'), duration: Duration(seconds: 2)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Хато ҳангоми сохтани bio'), duration: Duration(seconds: 2)));
+      }
+    }
+    if (mounted) setState(() => _generatingBio = false);
+  }
 
   @override
   void initState() {
@@ -308,7 +368,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const SizedBox(height: 20),
 
         // Bio
-        _label('Биография'),
+        Row(children: [
+          Expanded(child: _label('Биография')),
+          GestureDetector(
+            onTap: _generatingBio ? null : _generateBio,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.textPrimary.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(14)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                _generatingBio
+                    ? SizedBox(width: 12, height: 12,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 1.5, color: AppColors.textSecondary))
+                    : Icon(AppIcons.bolt_rounded, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 5),
+                Text('AI bio',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ),
+        ]),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),

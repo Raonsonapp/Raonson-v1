@@ -72,6 +72,21 @@ func LocalDel(keys ...string) {
 	cacheMu.Unlock()
 }
 
+// LocalDelPrefix — delete all keys with given prefix (barои
+// invalidate кардани ҳамаи middleware-cache-и як user пас аз write).
+func LocalDelPrefix(prefix string) int {
+	cacheMu.Lock()
+	defer cacheMu.Unlock()
+	n := 0
+	for k := range localCache {
+		if len(k) >= len(prefix) && k[:len(prefix)] == prefix {
+			delete(localCache, k)
+			n++
+		}
+	}
+	return n
+}
+
 // LocalSize — cache size in entries
 func LocalSize() int {
 	cacheMu.RLock()

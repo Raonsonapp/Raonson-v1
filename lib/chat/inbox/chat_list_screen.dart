@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'chat_list_controller.dart';
+import '../../core/i18n/strings.dart';
 import 'note_bottom_sheet.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
@@ -24,6 +25,7 @@ import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 import '../group/groups_list_screen.dart';
 import '../room/call_screen.dart';
+import '../ai_assistant_chat_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 
@@ -198,7 +200,7 @@ class _ChatView extends StatelessWidget {
                             child: Text(
                               (UserSession.username?.isNotEmpty ?? false)
                                   ? UserSession.username!
-                                  : 'Паёмҳо',
+                                  : tr('common.messages'),
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 22,
@@ -256,7 +258,7 @@ class _ChatView extends StatelessWidget {
                   controller: searchCtrl,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Ҷустуҷӯ',
+                    hintText: tr('common.search'),
                     hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
                     prefixIcon:
                         Icon(AppIcons.search, color: AppColors.textFaint, size: 18),
@@ -279,6 +281,10 @@ class _ChatView extends StatelessWidget {
               ),
               const SizedBox(height: 4),
             ],
+
+            // ── AI Ёрдамчӣ (ChatGPT) ──────────────────────────
+            if (ctrl.query.isEmpty && ctrl.tab == ChatTab.primary)
+              const _AiAssistantTile(),
 
             // ── Tab header ───────────────────────────────────
             if (ctrl.query.isEmpty)
@@ -406,7 +412,7 @@ class _TabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = context.watch<ChatListController>();
     const tabs = [ChatTab.primary, ChatTab.general, ChatTab.requests];
-    const labels = ['Асосӣ', 'Яқинон', 'Дархостҳо'];
+    final labels = [tr('tab.primary'), tr('tab.general'), tr('tab.requests')];
     return Row(
       children: List.generate(tabs.length, (i) {
         final tab      = tabs[i];
@@ -454,6 +460,51 @@ class _TabBar extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  AI Ёрдамчӣ (ChatGPT) — доимо дар боли рӯйхати чат
+// ─────────────────────────────────────────────────────────────────
+class _AiAssistantTile extends StatelessWidget {
+  const _AiAssistantTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const AiAssistantChatScreen())),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: [
+          Container(
+            width: 54, height: 54,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFF00C6FF), Color(0xFF00E87A)],
+                begin: Alignment.topLeft, end: Alignment.bottomRight),
+            ),
+            child: Icon(AppIcons.bolt_rounded, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tr('story.aiAssistant'),
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600, fontSize: 15)),
+                const SizedBox(height: 2),
+                Text(tr('story.aiAssistantSub'),
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
+              ],
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }
