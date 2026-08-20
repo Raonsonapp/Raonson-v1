@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../widgets/avatar.dart';
 import '../models/user_model.dart';
 import '../core/services/user_session.dart';
@@ -69,9 +70,7 @@ class _ShopScreenState extends State<ShopScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Магоза',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 18,
-                fontWeight: FontWeight.bold)),
+        title: TajikshopBrand.logo(size: 24),
         actions: [
           IconButton(
             icon: Icon(AppIcons.history_rounded, color: AppColors.textPrimary),

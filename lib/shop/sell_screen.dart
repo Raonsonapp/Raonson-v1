@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import 'shop_repository.dart';
 
 class SellScreen extends StatefulWidget {
@@ -115,8 +116,11 @@ class _SellScreenState extends State<SellScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Маҳсулот эълон кун',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          TajikshopBrand.logoCompact(size: 15),
+          Text(' — Эълон',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+        ]),
         actions: [
           TextButton(
             onPressed: _publishing ? null : _publish,

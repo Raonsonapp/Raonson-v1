@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../shop/order_management_screen.dart';
 import '../shop/crm_screen.dart';
@@ -66,9 +67,7 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
             icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
-        title: Text('Магозаи ман',
-            style: TextStyle(color: AppColors.textPrimary,
-                fontSize: 16, fontWeight: FontWeight.bold)),
+        title: TajikshopBrand.logo(size: 22),
         centerTitle: true,
       ),
       body: _loading

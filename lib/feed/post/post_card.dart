@@ -26,6 +26,7 @@ import '../../widgets/media_view.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/tajikshop_brand.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -1238,7 +1239,7 @@ class _PostCardState extends State<PostCard>
         ]),
       ),
 
-      // ── BUY CTA — пости магоза мисли реклама (мисли Instagram «В магазин») ──
+      // ── BUY CTA — Tajikshop ──
       if (post.isProduct)
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
@@ -1247,19 +1248,22 @@ class _PostCardState extends State<PostCard>
             child: Container(
               height: 46,
               decoration: BoxDecoration(
-                color: AppColors.neonBlue,
+                gradient: const LinearGradient(
+                    colors: TajikshopBrand.gradient,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(AppIcons.storefront_rounded,
-                      color: AppColors.textPrimary, size: 19),
+                  const Icon(Icons.storefront_rounded,
+                      color: Colors.white, size: 19),
                   const SizedBox(width: 8),
                   Text(
-                    post.price > 0 ? 'Харид · ${post.priceLabel}' : 'Харид',
-                    style: TextStyle(
-                        color: AppColors.textPrimary,
+                    post.price > 0 ? 'Tajikshop · ${post.priceLabel}' : 'Tajikshop · Харид',
+                    style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ],

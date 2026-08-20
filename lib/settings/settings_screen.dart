@@ -18,6 +18,7 @@ import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../core/services/user_session.dart';
 import '../core/services/region_service.dart';
 import '../core/services/vip_service.dart';
@@ -118,18 +119,29 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () => _go(ctx, const ChangePhoneScreen()),
               ),
 
-              // ── ОМОР / МАГОЗА ─────────────────────────────────────
-              _Hdr('Омор ва магоза'),
+              // ── ОМОР ────────────────────────────────────────────────
+              _Hdr('Статистика'),
               _NavTile(
                 icon:  AppIcons.bar_chart_rounded,
                 title: 'Статистика (омор)',
                 sub:   'Обзори 1-моҳа: обуна, лайк, топ видео, идеяҳо',
                 onTap: () => _go(ctx, const InsightsScreen()),
               ),
+
+              // ── TAJIKSHOP ────────────────────────────────────────
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(children: [
+                  TajikshopBrand.logo(size: 18),
+                  const Spacer(),
+                  TajikshopBrand.poweredBy(),
+                ]),
+              ),
               _NavTile(
                 icon:  AppIcons.storefront_rounded,
-                title: 'Магозаи ман',
-                sub:   'Фурӯш, даромад, махсули беҳтарин, боздидҳо',
+                title: 'Панели фурӯшанда',
+                sub:   'Фурӯш, даромад, махсулот, боздидҳо',
                 onTap: () => _go(ctx, const SellerDashboardScreen()),
               ),
               _NavTile(

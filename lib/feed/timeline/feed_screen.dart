@@ -24,6 +24,7 @@ import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/tajikshop_brand.dart';
 import '../../shop/shop_screen.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 
@@ -139,14 +140,20 @@ class _FeedShellState extends State<_FeedShell> {
                   }
                 },
               ),
-              // Магоза — тарафи чапи Raonson (мисли дархост)
-              IconButton(
-                icon: Icon(AppIcons.storefront_rounded,
-                    color: AppColors.textPrimary, size: 21),
-                tooltip: 'Магоза',
-                onPressed: () => Navigator.push(ctx,
+              GestureDetector(
+                onTap: () => Navigator.push(ctx,
                     MaterialPageRoute(builder: (_) => const ShopScreen())),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: TajikshopBrand.primary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: TajikshopBrand.logoCompact(size: 13,
+                      color: TajikshopBrand.primary),
+                ),
               ),
+              const SizedBox(width: 4),
             ]),
             title: Text('Raonson', style: TextStyle(
               fontSize: 30, fontWeight: FontWeight.w400, color: AppColors.textPrimary,
