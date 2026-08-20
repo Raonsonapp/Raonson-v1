@@ -16,6 +16,7 @@ import '../../ai/ai_tools.dart';
 import '../../core/services/subscription_service.dart';
 import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/report_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class CommentsScreen extends StatefulWidget {
@@ -659,9 +660,11 @@ class _CommentItemState extends State<_CommentItem> {
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
             onTap: () async {
               Navigator.pop(context);
+              final reason = await ReportDialog.show(context);
+              if (reason == null || !mounted) return;
               await ApiClient.instance.post(
                   '/comments/${widget.comment.id}/report',
-                  body: {'reason': 'spam'});
+                  body: {'reason': reason});
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('Шикоят фиристода шуд ✓'),

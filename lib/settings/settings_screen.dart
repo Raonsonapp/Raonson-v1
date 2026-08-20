@@ -36,6 +36,7 @@ import '../chat/chat_pin_screen.dart';
 import '../subscription/subscription_screen.dart';
 import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
+import 'child_safety_screen.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -282,6 +283,24 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Шартҳои истифода',
                 sub:   'Қоидаҳои истифодаи барнома',
                 onTap: () => _go(ctx, const TermsOfServicePage()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.security_outlined,
+                title: 'Child Safety Standards',
+                sub:   'Ҳифзи кӯдакон дар платформа',
+                onTap: () => _go(ctx, const ChildSafetyScreen()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.email_outlined,
+                title: 'Дастгирӣ ва алоқа',
+                sub:   'ehsonmahmadmurodov@gmail.com',
+                onTap: () {
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                    content: Text('Ба ehsonmahmadmurodov@gmail.com нависед'),
+                    duration: Duration(seconds: 3)));
+                },
               ),
 
               // ── DANGER ZONE ───────────────────────────────────────

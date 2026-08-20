@@ -259,6 +259,7 @@ func main() {
 	r.DELETE("/comments/:id",    auth, rl100, handlers.DeleteComment)
 	r.PUT("/comments/:id",       auth, rl100, handlers.EditComment)
 	r.POST("/comments/:id/like", auth, rl100, handlers.ToggleCommentLike)
+	r.POST("/comments/:id/report", auth, rl100, handlers.ReportComment)
 
 	li := r.Group("/likes", auth, rl100)
 	{
@@ -314,6 +315,7 @@ func main() {
 		st.POST("/:id/archive", handlers.ToggleStoryArchive)
 		st.POST("/:id/toggle-replies", handlers.ToggleStoryReplies)
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
+		st.POST("/:id/report", handlers.ReportStory)
 	}
 
 	// ── HIGHLIGHTS (Актуальный) ──
@@ -334,6 +336,7 @@ func main() {
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)
+		ch.POST("/messages/:id/report", handlers.ReportMessage)
 		ch.POST("/requests/:peerId/accept", handlers.AcceptChatRequest)
 		ch.POST("/requests/:peerId/delete", handlers.DeleteChatRequest)
 	}
@@ -418,7 +421,13 @@ func main() {
 		ad.POST("/unvip/:id",   handlers.UnsetVip)
 		ad.DELETE("/users/:id", handlers.AdminDeleteUser)
 		ad.GET("/orders",       handlers.AdminOrders) // фармоишҳо + комиссияи умумӣ
+		ad.GET("/reports",          handlers.AdminGetReports)
+		ad.POST("/reports/resolve", handlers.AdminResolveReport)
+		ad.GET("/reports/count",    handlers.AdminReportCount)
 	}
+
+	// Child Safety Standards (public, no auth)
+	r.GET("/child-safety", handlers.GetChildSafetyPolicy)
 
 	log.Printf("🚀 Raonson Go | Port:%s | PostgreSQL+R2+Redis | GZIP ON", port)
 

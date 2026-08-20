@@ -36,6 +36,7 @@ import 'profile_skeleton.dart';
 import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/report_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -245,8 +246,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       _tile(AppIcons.flag_outlined, 'Шикоят кун',
           () async {
             Navigator.pop(context);
+            final reason = await ReportDialog.show(context);
+            if (reason == null) return;
             try {
-              await ApiClient.instance.post('/users/${u.id}/report');
+              await ApiClient.instance.post('/users/${u.id}/report',
+                  body: {'reason': reason});
             } catch (_) {}
             _snack('Шикоят фиристода шуд');
           }),

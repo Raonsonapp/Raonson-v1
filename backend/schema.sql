@@ -458,6 +458,42 @@
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
 
+	-- ── Child Safety: status column on all report tables ──
+	ALTER TABLE post_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE reel_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+	ALTER TABLE user_reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+
+	-- ── Child Safety: comment, story, message report tables ──
+	CREATE TABLE IF NOT EXISTS comment_reports (
+		comment_id TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		reason     TEXT DEFAULT '',
+		status     TEXT DEFAULT 'pending',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (comment_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_comment_reports_comment ON comment_reports(comment_id);
+
+	CREATE TABLE IF NOT EXISTS story_reports (
+		story_id   TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		reason     TEXT DEFAULT '',
+		status     TEXT DEFAULT 'pending',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (story_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_story_reports_story ON story_reports(story_id);
+
+	CREATE TABLE IF NOT EXISTS message_reports (
+		message_id TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		reason     TEXT DEFAULT '',
+		status     TEXT DEFAULT 'pending',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (message_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_message_reports_msg ON message_reports(message_id);
+
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';

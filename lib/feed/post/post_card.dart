@@ -27,6 +27,7 @@ import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
+import '../../core/ui/report_dialog.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -668,23 +669,7 @@ class _PostCardState extends State<PostCard>
 
 
   Future<void> _reportPost() async {
-    final reasons = [
-      ('spam', 'Спам'), ('violence', 'Зӯроварӣ'),
-      ('adult', 'Мӯҳтавои калонсолон'),
-      ('hate', 'Нафрат'), ('other', 'Дигар'),
-    ];
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text('Жалоб партофтан',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: Column(mainAxisSize: MainAxisSize.min,
-          children: reasons.map((r) => ListTile(
-            title: Text(r.$2, style: TextStyle(color: AppColors.textPrimary)),
-            onTap: () => Navigator.pop(context, r.$1))).toList()),
-      ),
-    );
+    final reason = await ReportDialog.show(context);
     if (reason == null || !mounted) return;
     try {
       await ApiClient.instance.post(

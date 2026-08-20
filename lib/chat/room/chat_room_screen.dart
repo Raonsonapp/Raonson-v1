@@ -20,6 +20,7 @@ import 'chat_theme.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/report_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -569,6 +570,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } catch (_) {}
   }
 
+  Future<void> _onReportMessage(MessageModel msg) async {
+    final reason = await ReportDialog.show(context);
+    if (reason == null || !mounted) return;
+    try {
+      await ApiClient.instance.post(
+        '/chat/messages/${msg.id}/report', body: {'reason': reason});
+    } catch (_) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Шикоят фиристода шуд'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2)));
+    }
+  }
+
   void _onTyping(bool isTyping) {
     if (_chatId.isNotEmpty) {
       _socket.sendTyping(_chatId, widget.peer.id, isTyping: isTyping);
@@ -899,6 +915,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               onReply:  () => setState(() => _replyTo = msg),
               onReact:  (emoji) => _onReact(msg, emoji),
               onDelete: () => _onDelete(msg),
+              onReport: () => _onReportMessage(msg),
               onCallBack: () {
                 final p = msg.text.split(':');
                 final isVid = p.length > 1 && p[1] == 'video';

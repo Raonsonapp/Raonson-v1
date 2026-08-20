@@ -19,6 +19,7 @@ import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/report_dialog.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -355,6 +356,18 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     _resume();
   }
 
+  Future<void> _reportStory() async {
+    _pause();
+    final reason = await ReportDialog.show(context);
+    if (reason == null) { _resume(); return; }
+    try {
+      await ApiClient.instance.post(
+        '/stories/${_current.id}/report', body: {'reason': reason});
+    } catch (_) {}
+    if (mounted) _toast('Шикоят фиристода шуд');
+    _resume();
+  }
+
   void _saveMedia() {
     final u = _current.mediaUrl;
     if (u.isNotEmpty) {
@@ -670,6 +683,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         GestureDetector(
           onTap: _shareStory,
           child: const Icon(AppIcons.send_outlined, color: Colors.white, size: 26)),
+        const SizedBox(width: 14),
+        GestureDetector(
+          onTap: _reportStory,
+          child: const Icon(AppIcons.flag_outlined, color: Colors.white54, size: 24)),
       ]),
     ]);
   }

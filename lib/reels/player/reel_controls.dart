@@ -10,6 +10,7 @@ import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/ui/report_dialog.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -84,14 +85,18 @@ class _ReelControlsState extends State<ReelControls> {
             leading: const Icon(AppIcons.flag_outlined, color: Colors.white),
             title: const Text('Хабар додан',
                 style: TextStyle(color: Colors.white)),
-            onTap: () {
+            onTap: () async {
               Navigator.pop(ctx);
+              final reason = await ReportDialog.show(context);
+              if (reason == null) return;
               ApiClient.instance
-                  .post('/reels/${reel.id}/report')
+                  .post('/reels/${reel.id}/report', body: {'reason': reason})
                   .then((_) {}, onError: (_) {});
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Хабар фиристода шуд'),
-                  duration: Duration(seconds: 2)));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Хабар фиристода шуд'),
+                    duration: Duration(seconds: 2)));
+              }
             },
           ),
           ListTile(
