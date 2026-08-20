@@ -669,11 +669,12 @@ class _PostCardState extends State<PostCard>
 
 
   Future<void> _reportPost() async {
-    final reason = await ReportDialog.show(context);
-    if (reason == null || !mounted) return;
+    final result = await ReportDialog.showWithDescription(context);
+    if (result == null || !mounted) return;
     try {
       await ApiClient.instance.post(
-        '/posts/${widget.post.id}/report', body: {'reason': reason});
+        '/posts/${widget.post.id}/report',
+        body: {'reason': result.reason, 'description': result.description});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Жалоб фиристода шуд. Раҳмат!'),
         backgroundColor: Colors.green, duration: Duration(seconds: 2)));

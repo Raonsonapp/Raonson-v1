@@ -17,7 +17,8 @@ func ReportPost(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
 	var b struct {
-		Reason string `json:"reason"`
+		Reason      string `json:"reason"`
+		Description string `json:"description"`
 	}
 	c.ShouldBindJSON(&b)
 	if b.Reason == "" {
@@ -25,9 +26,9 @@ func ReportPost(c *gin.Context) {
 	}
 
 	db.Pool.Exec(context.Background(),
-		`INSERT INTO post_reports(post_id, user_id, reason, created_at)
-		 VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
-		pid, myID, b.Reason, time.Now())
+		`INSERT INTO post_reports(post_id, user_id, reason, description, created_at)
+		 VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+		pid, myID, b.Reason, b.Description, time.Now())
 
 	// Агар > 10 жалоб → автоматӣ пинҳон кун
 	var count int

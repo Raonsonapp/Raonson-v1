@@ -87,10 +87,11 @@ class _ReelControlsState extends State<ReelControls> {
                 style: TextStyle(color: Colors.white)),
             onTap: () async {
               Navigator.pop(ctx);
-              final reason = await ReportDialog.show(context);
-              if (reason == null) return;
+              final result = await ReportDialog.showWithDescription(context);
+              if (result == null) return;
               ApiClient.instance
-                  .post('/reels/${reel.id}/report', body: {'reason': reason})
+                  .post('/reels/${reel.id}/report',
+                      body: {'reason': result.reason, 'description': result.description})
                   .then((_) {}, onError: (_) {});
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

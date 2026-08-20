@@ -37,6 +37,7 @@ import '../subscription/subscription_screen.dart';
 import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
 import 'child_safety_screen.dart';
+import 'community_guidelines_screen.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -283,6 +284,13 @@ class SettingsScreen extends StatelessWidget {
                 title: 'Шартҳои истифода',
                 sub:   'Қоидаҳои истифодаи барнома',
                 onTap: () => _go(ctx, const TermsOfServicePage()),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.people_outline_rounded,
+                title: 'Community Guidelines',
+                sub:   'Қоидаҳои ҷомеа',
+                onTap: () => _go(ctx, const CommunityGuidelinesScreen()),
               ),
               const _ThinDiv(),
               _NavTile(

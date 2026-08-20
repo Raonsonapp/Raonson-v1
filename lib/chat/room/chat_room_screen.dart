@@ -571,11 +571,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   Future<void> _onReportMessage(MessageModel msg) async {
-    final reason = await ReportDialog.show(context);
-    if (reason == null || !mounted) return;
+    final result = await ReportDialog.showWithDescription(context);
+    if (result == null || !mounted) return;
     try {
       await ApiClient.instance.post(
-        '/chat/messages/${msg.id}/report', body: {'reason': reason});
+        '/chat/messages/${msg.id}/report',
+        body: {'reason': result.reason, 'description': result.description});
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

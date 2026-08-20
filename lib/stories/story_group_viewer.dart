@@ -358,11 +358,12 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   Future<void> _reportStory() async {
     _pause();
-    final reason = await ReportDialog.show(context);
-    if (reason == null) { _resume(); return; }
+    final result = await ReportDialog.showWithDescription(context);
+    if (result == null) { _resume(); return; }
     try {
       await ApiClient.instance.post(
-        '/stories/${_current.id}/report', body: {'reason': reason});
+        '/stories/${_current.id}/report',
+        body: {'reason': result.reason, 'description': result.description});
     } catch (_) {}
     if (mounted) _toast('Шикоят фиристода шуд');
     _resume();

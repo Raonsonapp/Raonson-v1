@@ -401,10 +401,12 @@ class _AdminReportsState extends State<AdminReportsScreen> {
       });
       _load();
       if (mounted) {
+        final msg = {
+          'resolve': 'Ҳал шуд', 'remove': 'Нест карда шуд', 'ban': 'Бон шуд',
+          'under_review': 'Ба баррасӣ гузашт', 'dismiss': 'Рад карда шуд',
+        }[action] ?? 'Амал шуд';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(action == 'resolve' ? 'Ҳал шуд' :
-              action == 'remove' ? 'Нест карда шуд' : 'Бон шуд'),
-          backgroundColor: Colors.green));
+          content: Text(msg), backgroundColor: Colors.green));
       }
     } catch (_) {}
   }
@@ -444,14 +446,19 @@ class _AdminReportsState extends State<AdminReportsScreen> {
                     fontWeight: FontWeight.w600, fontSize: 13))),
             ]),
           ),
-        Padding(
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(children: [
             _chip('pending', 'Интизорӣ'),
             const SizedBox(width: 8),
+            _chip('under_review', 'Баррасӣ'),
+            const SizedBox(width: 8),
             _chip('resolved', 'Ҳалшуда'),
             const SizedBox(width: 8),
-            _chip('actioned', 'Амал'),
+            _chip('action_taken', 'Амал'),
+            const SizedBox(width: 8),
+            _chip('dismissed', 'Радшуда'),
           ]),
         ),
         const SizedBox(height: 8),
@@ -528,14 +535,22 @@ class _AdminReportsState extends State<AdminReportsScreen> {
         const SizedBox(height: 6),
         Text('Аз: @$reporter',
             style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-        if (_filter == 'pending') ...[
+        if ((r['description'] ?? '').toString().isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text((r['description'] ?? '').toString(),
+              maxLines: 3, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12,
+                  fontStyle: FontStyle.italic)),
+        ],
+        if (_filter == 'pending' || _filter == 'under_review') ...[
           const SizedBox(height: 10),
-          Row(children: [
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            if (_filter == 'pending')
+              _actionBtn('Баррасӣ', AppColors.neonBlue, () => _resolve(r, 'under_review')),
             _actionBtn('Ҳал', Colors.green, () => _resolve(r, 'resolve')),
-            const SizedBox(width: 8),
             _actionBtn('Нест', Colors.orange, () => _resolve(r, 'remove')),
-            const SizedBox(width: 8),
             _actionBtn('Бон', Colors.redAccent, () => _resolve(r, 'ban')),
+            _actionBtn('Рад', AppColors.textFaint, () => _resolve(r, 'dismiss')),
           ]),
         ],
       ]),

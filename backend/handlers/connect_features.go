@@ -140,15 +140,16 @@ func ReportUser(c *gin.Context) {
 		return
 	}
 	var b struct {
-		Reason string `json:"reason"`
+		Reason      string `json:"reason"`
+		Description string `json:"description"`
 	}
 	c.ShouldBindJSON(&b)
 	if b.Reason == "" {
 		b.Reason = "spam"
 	}
 	db.Pool.Exec(context.Background(),
-		`INSERT INTO user_reports(reported_id, user_id, reason)
-		 VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, target, myID, b.Reason)
+		`INSERT INTO user_reports(reported_id, user_id, reason, description)
+		 VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, target, myID, b.Reason, b.Description)
 	c.JSON(http.StatusOK, gin.H{"reported": true})
 }
 
@@ -243,15 +244,16 @@ func ReportReel(c *gin.Context) {
 	myID := mw.UID(c)
 	rid := c.Param("id")
 	var b struct {
-		Reason string `json:"reason"`
+		Reason      string `json:"reason"`
+		Description string `json:"description"`
 	}
 	c.ShouldBindJSON(&b)
 	if b.Reason == "" {
 		b.Reason = "spam"
 	}
 	db.Pool.Exec(context.Background(),
-		`INSERT INTO reel_reports(reel_id, user_id, reason)
-		 VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, rid, myID, b.Reason)
+		`INSERT INTO reel_reports(reel_id, user_id, reason, description)
+		 VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, rid, myID, b.Reason, b.Description)
 	c.JSON(http.StatusOK, gin.H{"reported": true})
 }
 

@@ -246,11 +246,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       _tile(AppIcons.flag_outlined, 'Шикоят кун',
           () async {
             Navigator.pop(context);
-            final reason = await ReportDialog.show(context);
-            if (reason == null) return;
+            final result = await ReportDialog.showWithDescription(context);
+            if (result == null) return;
             try {
               await ApiClient.instance.post('/users/${u.id}/report',
-                  body: {'reason': reason});
+                  body: {'reason': result.reason, 'description': result.description});
             } catch (_) {}
             _snack('Шикоят фиристода шуд');
           }),

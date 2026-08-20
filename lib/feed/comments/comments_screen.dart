@@ -660,11 +660,11 @@ class _CommentItemState extends State<_CommentItem> {
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
             onTap: () async {
               Navigator.pop(context);
-              final reason = await ReportDialog.show(context);
-              if (reason == null || !mounted) return;
+              final result = await ReportDialog.showWithDescription(context);
+              if (result == null || !mounted) return;
               await ApiClient.instance.post(
                   '/comments/${widget.comment.id}/report',
-                  body: {'reason': reason});
+                  body: {'reason': result.reason, 'description': result.description});
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('Шикоят фиристода шуд ✓'),

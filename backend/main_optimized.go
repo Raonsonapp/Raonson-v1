@@ -259,7 +259,7 @@ func main() {
 	r.DELETE("/comments/:id",    auth, rl100, handlers.DeleteComment)
 	r.PUT("/comments/:id",       auth, rl100, handlers.EditComment)
 	r.POST("/comments/:id/like", auth, rl100, handlers.ToggleCommentLike)
-	r.POST("/comments/:id/report", auth, rl100, handlers.ReportComment)
+	r.POST("/comments/:id/report", auth, rl20, handlers.ReportComment)
 
 	li := r.Group("/likes", auth, rl100)
 	{
@@ -426,8 +426,9 @@ func main() {
 		ad.GET("/reports/count",    handlers.AdminReportCount)
 	}
 
-	// Child Safety Standards (public, no auth)
+	// Child Safety Standards & Community Guidelines (public, no auth)
 	r.GET("/child-safety", handlers.GetChildSafetyPolicy)
+	r.GET("/community-guidelines", handlers.GetCommunityGuidelines)
 
 	log.Printf("🚀 Raonson Go | Port:%s | PostgreSQL+R2+Redis | GZIP ON", port)
 
