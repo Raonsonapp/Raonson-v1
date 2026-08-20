@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import 'shop_repository.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -48,8 +49,11 @@ class _OrdersScreenState extends State<OrdersScreen>
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Фармоишҳо',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          TajikshopBrand.logoCompact(size: 14),
+          Text(' — Фармоишҳо',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+        ]),
         bottom: TabBar(
           controller: _tab,
           labelColor: AppColors.textPrimary,

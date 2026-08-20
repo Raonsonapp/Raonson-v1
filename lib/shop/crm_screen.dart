@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
 
@@ -86,9 +87,12 @@ class _CrmScreenState extends State<CrmScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Муштариён (CRM)',
-            style: TextStyle(color: AppColors.textPrimary,
-                fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          TajikshopBrand.logoCompact(size: 14),
+          Text(' — CRM',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 15, fontWeight: FontWeight.bold)),
+        ]),
         actions: [
           IconButton(
             tooltip: 'Паём ба ҳама',

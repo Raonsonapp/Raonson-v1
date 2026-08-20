@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
 import 'receipt_screen.dart';
@@ -97,9 +98,12 @@ class _OrderManagementState extends State<OrderManagementScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Фармоишҳо',
-            style: TextStyle(color: AppColors.textPrimary,
-                fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          TajikshopBrand.logoCompact(size: 14),
+          Text(' — Фармоишҳо',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 15, fontWeight: FontWeight.bold)),
+        ]),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(46),
           child: SizedBox(height: 46, child: ListView(

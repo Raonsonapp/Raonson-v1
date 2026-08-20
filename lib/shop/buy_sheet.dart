@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../models/post_model.dart';
 import '../models/user_model.dart';
@@ -136,6 +137,8 @@ class _BuySheetState extends State<_BuySheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const SizedBox(height: 14),
+        TajikshopBrand.logoCompact(size: 13),
+        const SizedBox(height: 8),
         if (post.productName.isNotEmpty)
           Text(post.productName,
               maxLines: 1, overflow: TextOverflow.ellipsis,

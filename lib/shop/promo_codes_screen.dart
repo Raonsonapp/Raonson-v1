@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 
 class PromoCodesScreen extends StatefulWidget {
@@ -101,9 +102,12 @@ class _PromoCodesState extends State<PromoCodesScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Промокодҳо',
-            style: TextStyle(color: AppColors.textPrimary,
-                fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          TajikshopBrand.logoCompact(size: 14),
+          Text(' — Промокодҳо',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 15, fontWeight: FontWeight.bold)),
+        ]),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.neonBlue,
