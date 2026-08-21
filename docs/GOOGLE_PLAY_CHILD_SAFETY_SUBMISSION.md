@@ -27,7 +27,7 @@ This page is served as HTML (not JSON) and is accessible without authentication.
 
 - **Name**: Ehson Mahmadmurodov
 - **Email**: ehsonmahmadmurodov@gmail.com
-- **Response time**: Within 24 hours for child safety reports
+- Child safety reports are prioritized for prompt review
 
 ### 4. In-App Reporting Mechanism
 

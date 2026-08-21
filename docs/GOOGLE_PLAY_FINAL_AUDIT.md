@@ -58,7 +58,7 @@ Legend:
 - [x] ehsonmahmadmurodov@gmail.com in /child-safety HTML page
 - [x] Same email in in-app ChildSafetyScreen
 - [x] Same email in Settings > Support tile
-- [x] 24-hour response time stated
+- [x] Prompt review commitment stated (no fixed-hour guarantee)
 
 ### Phase 9: Abuse Protection
 - [x] ON CONFLICT DO NOTHING prevents duplicate reports in all handlers

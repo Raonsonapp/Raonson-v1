@@ -541,7 +541,7 @@ a:hover{text-decoration:underline}
 
 <h3>Report Processing</h3>
 <ul>
-<li>All child safety reports are <strong>prioritized</strong> and reviewed within 24 hours</li>
+<li>All child safety reports are <strong>prioritized</strong> for prompt review</li>
 <li>Reports include a reason category and optional description for context</li>
 <li>Moderation workflow: Pending → Under Review → Action Taken / Dismissed</li>
 <li>Full audit trail with moderator ID and review timestamps</li>
@@ -569,7 +569,7 @@ a:hover{text-decoration:underline}
 <p><strong>Child Safety Contact</strong></p>
 <p>Email: <a href="mailto:ehsonmahmadmurodov@gmail.com">ehsonmahmadmurodov@gmail.com</a></p>
 <p>Organization: Raonson App</p>
-<p>Response time: Within 24 hours for child safety reports</p>
+<p>Child safety reports are prioritized for prompt review.</p>
 <p>App package: com.raonson.app</p>
 </div>
 

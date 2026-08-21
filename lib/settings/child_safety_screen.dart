@@ -58,7 +58,7 @@ class ChildSafetyScreen extends StatelessWidget {
           _section('Contact',
             'Child Safety Point of Contact:\n'
             'ehsonmahmadmurodov@gmail.com\n\n'
-            'All child safety reports are prioritized and reviewed within 24 hours.'),
+            'All child safety reports are prioritized for prompt review.'),
           const SizedBox(height: 16),
           Text('Last updated: August 2026',
               style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
