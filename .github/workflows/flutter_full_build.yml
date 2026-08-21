@@ -69,21 +69,39 @@ jobs:
           fi
 
       # =============================
+      # 7.5 SETUP RELEASE SIGNING
+      # =============================
+      - name: Setup release signing
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release-keystore.jks
+          printf 'storeFile=release-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/key.properties
+
+      # =============================
       # 8. BUILD APK (RELEASE)
       # =============================
       - name: Build APK (release)
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: flutter build apk --release
 
       # =============================
       # 8.1 BUILD AAB (RELEASE)
       # =============================
       - name: Build AAB (release)
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: flutter build appbundle --release
 
       # =============================
       # 9. UPLOAD APK ARTIFACT
       # =============================
       - name: Upload APK
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: raonson-release-apk
@@ -93,6 +111,7 @@ jobs:
       # 9.1 UPLOAD AAB ARTIFACT
       # =============================
       - name: Upload AAB
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: raonson-release-aab
