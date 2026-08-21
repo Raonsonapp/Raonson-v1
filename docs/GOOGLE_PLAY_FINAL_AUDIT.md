@@ -90,9 +90,9 @@ Legend:
 - [x] go test ./... — handlers tests pass (2 test files)
 - [x] Dead code removed (lib/moderation/ 3 files + lib/feed/post/post_menu.dart)
 - [x] No NCMEC claims remain without qualification
-- [ ] flutter analyze — NOT RUN (Flutter SDK not available in this environment)
-- [ ] flutter test — NOT RUN
-- [ ] flutter build appbundle --release — NOT RUN
+- [x] flutter analyze — PASS (0 errors, 0 warnings; 51 info-level hints remain — non-blocking)
+- [x] flutter test — PASS (4/4 tests: socket_service_test.dart, analytics_service_test.dart)
+- [ ] flutter build appbundle --release — NOT RUN (Android SDK not available in this environment; egress proxy blocks dl.google.com)
 
 ### Items NOT Implemented (out of scope or require external setup)
 - [ ] Automated NCMEC CyberTipline API integration (requires ESP registration with NCMEC)
@@ -102,7 +102,8 @@ Legend:
 
 ### Summary
 All code-level items are implemented and verified by source inspection. Go backend compiles and tests pass.
-Three items require manual verification after deployment:
+Flutter analyze passes clean (0 errors). Flutter tests pass (4/4).
+Two items require manual verification after deployment:
 1. Verify /child-safety returns HTTP 200 at the live URL
-2. Verify /community-guidelines returns HTTP 200 at the live URL  
-3. Run flutter analyze + flutter build appbundle on a machine with Flutter SDK
+2. Verify /community-guidelines returns HTTP 200 at the live URL
+3. Run flutter build appbundle --release on a machine with Android SDK

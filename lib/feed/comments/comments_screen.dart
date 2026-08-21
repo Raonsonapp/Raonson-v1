@@ -612,8 +612,6 @@ class _CommentItem extends StatefulWidget {
 class _CommentItemState extends State<_CommentItem> {
   late bool _liked;
   late int  _likeCount;
-  String? _translation;
-  bool _translating = false;
 
   // ── Тарҷумаи шарҳ (OpenAI) ───────────────────────────────────
   String? _translated;
@@ -656,27 +654,6 @@ class _CommentItemState extends State<_CommentItem> {
     super.initState();
     _liked     = widget.comment.liked;
     _likeCount = widget.comment.likesCount;
-  }
-
-  Future<void> _translateComment() async {
-    if (_translating) return;
-    if (_translation != null) {
-      setState(() => _translation = null);
-      return;
-    }
-    setState(() => _translating = true);
-    try {
-      final res = await ApiClient.instance.post('/ai/translate', body: {
-        'text': widget.comment.text,
-        'to': 'ru',
-      });
-      if (res.statusCode < 400 && mounted) {
-        final body = jsonDecode(res.body);
-        final t = (body['translation'] ?? '').toString().trim();
-        setState(() => _translation = t.isNotEmpty ? t : null);
-      }
-    } catch (_) {}
-    if (mounted) setState(() => _translating = false);
   }
 
   Future<void> _toggleLike() async {
