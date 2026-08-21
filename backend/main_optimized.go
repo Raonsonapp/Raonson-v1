@@ -418,8 +418,6 @@ func main() {
 	r.POST("/tutor/chat", auth, rl100, handlers.TutorChat)
 	r.POST("/ai/text", auth, rl100, handlers.AIText) // AI абзорҳо (Pro)
 	r.POST("/ai/moderate",  auth, rl100, handlers.AIModerate)  // модератсия (OpenAI)
-	r.POST("/ai/hashtags",  auth, rl100, handlers.AIHashtags)  // хэштегҳои AI
-	r.POST("/ai/translate", auth, rl100, handlers.AITranslate) // тарҷума (OpenAI)
 
 	r.POST("/upload",        auth, rl20, mw.AntiAbuse("upload", 50, 3600), handlers.UploadToR2)
 	r.POST("/upload/avatar", auth, rl20, handlers.UploadToR2)
