@@ -426,7 +426,7 @@ a:hover{text-decoration:underline}
 <p>Raonson has a <strong>zero-tolerance policy</strong> for child sexual abuse and exploitation (CSAE/CSAM).</p>
 <ul>
 <li>Any content that endangers children is immediately removed</li>
-<li>Offending accounts are permanently banned and reported to authorities including NCMEC</li>
+<li>Offending accounts are permanently banned; we cooperate with law enforcement upon valid legal request</li>
 <li>Minimum age requirement: 13 years old</li>
 <li>Users under 13 are not permitted and their accounts will be terminated</li>
 </ul>
@@ -465,7 +465,7 @@ a:hover{text-decoration:underline}
 <li>Temporary account suspension for repeated violations</li>
 <li>Content removal for serious violations</li>
 <li>Permanent account ban for CSAE/CSAM or severe violations</li>
-<li>Reporting to law enforcement for criminal activity</li>
+<li>Cooperation with law enforcement upon valid legal request</li>
 </ul>
 
 <h2>10. Contact</h2>
@@ -516,7 +516,7 @@ a:hover{text-decoration:underline}
 <ul>
 <li>Immediate content removal</li>
 <li>Permanent account suspension</li>
-<li>Reporting to relevant authorities including the National Center for Missing &amp; Exploited Children (NCMEC)</li>
+<li>Cooperation with law enforcement upon valid legal request</li>
 </ul>
 
 <h2>2. Prohibited Content</h2>
@@ -552,10 +552,8 @@ a:hover{text-decoration:underline}
 <ul>
 <li>Immediate removal of the violating content</li>
 <li>Permanent suspension of the offending account</li>
-<li>Reporting to law enforcement and NCMEC</li>
-<li>Full cooperation with authorities for investigations</li>
-<li>Preservation of evidence for law enforcement purposes</li>
-<li>Review of all content associated with the offending account</li>
+<li>Cooperation with law enforcement upon valid legal request</li>
+<li>Report records (reporter, reason, timestamp, moderator action) are retained for audit</li>
 </ul>
 
 <h2>5. Age Requirements</h2>

@@ -39,7 +39,7 @@ Describe how users can report child safety violations:
 
 Describe your content moderation workflow:
 
-> Reports follow a structured workflow: Pending → Under Review → Action Taken / Dismissed / Resolved. Each moderation action records the moderator ID and timestamp for audit trail. Child safety reports are highlighted in the admin panel and appear first. Enforcement actions include content removal, account suspension, and reporting to NCMEC.
+> Reports follow a structured workflow: Pending → Under Review → Action Taken / Dismissed / Resolved. Each moderation action records the moderator ID and timestamp for audit trail. Child safety reports are highlighted in the admin panel and appear first. Enforcement actions include content removal and account suspension. We cooperate with law enforcement upon valid legal request.
 
 ### 6. Age Restriction
 
@@ -49,7 +49,7 @@ Describe your content moderation workflow:
 
 ### 7. CSAM/CSAE Handling
 
-> Raonson maintains zero tolerance for CSAM/CSAE. Upon detection or confirmed report: content is immediately removed, the account is permanently banned, evidence is preserved, and a report is filed with NCMEC and relevant law enforcement authorities.
+> Raonson maintains zero tolerance for CSAM/CSAE. Upon detection or confirmed report: content is immediately removed and the account is permanently banned. Report records (reporter, reason, description, timestamp, moderator action) are retained in the database for audit. We cooperate with law enforcement upon valid legal request.
 
 ## Verification Checklist
 

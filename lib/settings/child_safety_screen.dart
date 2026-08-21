@@ -29,8 +29,8 @@ class ChildSafetyScreen extends StatelessWidget {
             'Raonson has zero tolerance for Child Sexual Abuse and Exploitation '
             '(CSAE) content. Any content that sexually exploits or endangers '
             'children is strictly prohibited and will result in immediate content '
-            'removal, account suspension, and reporting to relevant authorities '
-            'including the National Center for Missing & Exploited Children (NCMEC).'),
+            'removal, account suspension, and cooperation with law enforcement '
+            'upon valid legal request.'),
           _section('Prohibited Content', null, bullets: [
             'Child Sexual Abuse Material (CSAM) of any kind',
             'Content that sexualizes minors',
@@ -48,9 +48,8 @@ class ChildSafetyScreen extends StatelessWidget {
           _section('Enforcement Actions', null, bullets: [
             'Immediate content removal upon confirmed violation',
             'Permanent account suspension for offenders',
-            'Reporting to law enforcement and NCMEC',
-            'Cooperation with authorities for investigations',
-            'Preservation of evidence for law enforcement',
+            'Cooperation with law enforcement upon valid legal request',
+            'Report records (reporter, reason, timestamp, moderator action) retained for audit',
           ]),
           _section('Age Requirements',
             'Raonson is not intended for children under 13 years of age. '
