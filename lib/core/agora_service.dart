@@ -2,7 +2,8 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-const String kAgoraAppId = String.fromEnvironment('AGORA_APP_ID');
+const String kAgoraAppId = String.fromEnvironment('AGORA_APP_ID',
+    defaultValue: '');
 
 class AgoraService extends ChangeNotifier {
   static final AgoraService _i = AgoraService._();
@@ -35,9 +36,12 @@ class AgoraService extends ChangeNotifier {
     required String channelName,
     required bool   isVideo,
   }) async {
+    if (kAgoraAppId.isEmpty) {
+      debugPrint('[Agora] ERROR: AGORA_APP_ID is not set. Build with --dart-define=AGORA_APP_ID=your_id');
+      return;
+    }
     await _requestPermissions(isVideo);
 
-    // Агар engine-и қаблӣ монда бошад — озод кун (то leak-и native нашавад).
     if (_engine != null) {
       try { await _engine!.release(); } catch (_) {}
       _engine = null;

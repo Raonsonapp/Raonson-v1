@@ -47,10 +47,8 @@ class AppController {
         return _page(const ChatListScreen());
       case AppRoutes.search:
         return _page(const SearchScreen());
-      case AppRoutes.profile:
-        return _page(const ProfileScreen(userId: 'me'));
-
       case '/user-profile':
+      case AppRoutes.profile:
       case '/profile':
         final uid    = settings.arguments;
         final userId = (uid is String && uid.isNotEmpty) ? uid : 'me';

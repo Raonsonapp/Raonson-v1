@@ -394,27 +394,34 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       return;
     }
 
-    try {
-      final msg = await _repo.sendMessage(
-        toUserId:  widget.peer.id,
-        text:      text,
-        replyToId: replyTo?.id,
-        chatId:    _chatId,
-      );
-      if (!mounted) return;
-      setState(() {
-        final idx = _messages.indexWhere((m) => m.id == optimistic.id);
-        if (idx >= 0) _messages[idx] = msg;
+    if (_socket.isConnected && _chatId.isNotEmpty && replyTo == null) {
+      _socket.emit('chat:send', {
+        'chatId': _chatId,
+        'text': text,
+        'receiver': widget.peer.id,
       });
-    } catch (_) {
-      // Mark as failed
-      if (mounted) {
+    } else {
+      try {
+        final msg = await _repo.sendMessage(
+          toUserId:  widget.peer.id,
+          text:      text,
+          replyToId: replyTo?.id,
+          chatId:    _chatId,
+        );
+        if (!mounted) return;
         setState(() {
           final idx = _messages.indexWhere((m) => m.id == optimistic.id);
-          if (idx >= 0) {
-            _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
-          }
+          if (idx >= 0) _messages[idx] = msg;
         });
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            final idx = _messages.indexWhere((m) => m.id == optimistic.id);
+            if (idx >= 0) {
+              _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
+            }
+          });
+        }
       }
     }
   }

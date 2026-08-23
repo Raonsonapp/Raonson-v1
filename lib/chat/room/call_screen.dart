@@ -111,6 +111,15 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _joinAgora() async {
+    if (kAgoraAppId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Зангҳо ҳозир дастрас нест'),
+            backgroundColor: Colors.red, duration: Duration(seconds: 3)));
+        Navigator.pop(context);
+      }
+      return;
+    }
     final myId    = await TokenStorage.getUserId() ?? '';
     final channel = AgoraService.channelName(myId, widget.peer.id);
     await _agora.joinCall(channelName: channel, isVideo: widget.callType == CallType.video);
