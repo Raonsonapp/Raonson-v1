@@ -69,6 +69,16 @@ jobs:
           fi
 
       # =============================
+      # 7.4 CREATE .env (dart-define secrets)
+      # =============================
+      - name: Create .env for dart-define
+        env:
+          AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+        run: |
+          printf 'AGORA_APP_ID=%s\nBASE_URL=https://mahmadmurodov-raonson.hf.space\n' \
+            "$AGORA_APP_ID" > .env
+
+      # =============================
       # 7.5 SETUP RELEASE SIGNING
       # =============================
       - name: Setup release signing
@@ -88,14 +98,14 @@ jobs:
       # =============================
       - name: Build APK (release)
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define-from-file=.env
 
       # =============================
       # 8.1 BUILD AAB (RELEASE)
       # =============================
       - name: Build AAB (release)
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define-from-file=.env
 
       # =============================
       # 9. UPLOAD APK ARTIFACT
