@@ -6,6 +6,8 @@ class ApiEndpoints {
   static const String logout = '/auth/logout';
   static const String forgotPassword = '/auth/forgot-password';
   static const String resetPassword = '/auth/reset-password';
+  static const String sendPhoneOtp = '/auth/send-phone-otp';
+  static const String verifyPhoneOtp = '/auth/verify-phone-otp';
 
   // USERS / PROFILE
   static String userProfile(String userId) => '/users/$userId';

@@ -24,6 +24,7 @@ import '../../create/upload/upload_manager.dart';
 import '../widgets/auth_kit.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
+import '../auth_repository.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -85,6 +86,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Баъд аз сохтани ҳисоб (қадами 3-4) бозгашт ба қадами қаблӣ нест.
   }
 
+  bool _phoneVerified = false;
+  final _authRepo = AuthRepository();
+
   // ── STEP 1 → 2 ──
   void _submitStep1() {
     final name = _nameCtrl.text.trim();
@@ -95,7 +99,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!email.contains('@') || !email.contains('.')) {
       return _err(tr('auth.err.email'));
     }
-    // Телефон ҳатмӣ — барои барқарорсозии аккаунт (рамз ба ҳамин рақам меояд)
     final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.length < 7) {
       return _err(tr('auth.err.phone'));
@@ -104,7 +107,105 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (pass != _confirmCtrl.text) return _err(tr('auth.err.passwordMismatch'));
     if (!_terms) return _err(tr('auth.err.terms'));
     if (!_ageConfirm) return _err('Синни шумо бояд 13+ бошад');
-    _goto(1);
+
+    if (!_phoneVerified) {
+      _sendPhoneOtp(phone);
+    } else {
+      _goto(1);
+    }
+  }
+
+  Future<void> _sendPhoneOtp(String phone) async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      await _authRepo.sendPhoneOtp(phone);
+      if (!mounted) return;
+      setState(() => _loading = false);
+      final verified = await _showOtpDialog(phone);
+      if (verified == true) {
+        _phoneVerified = true;
+        _goto(1);
+      }
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _error = 'Рамз фиристода нашуд'; });
+    }
+  }
+
+  Future<bool?> _showOtpDialog(String phone) {
+    final otpCtrl = TextEditingController();
+    bool verifying = false;
+    String? dlgError;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setDlg) {
+        return AlertDialog(
+          backgroundColor: AppColors.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Тасдиқи телефон',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('Рамзи 6-рақама ба $phone тавассути Telegram фиристода шуд.',
+                style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: otpCtrl, autofocus: true,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center, maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                counterText: '', hintText: '• • • • • •',
+                hintStyle: TextStyle(color: AppColors.textFaint),
+                filled: true, fillColor: AppColors.bg,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+            if (dlgError != null) ...[
+              const SizedBox(height: 8),
+              Text(dlgError!, style: const TextStyle(color: Color(0xFFFF3B30), fontSize: 12)),
+            ],
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(tr('common.cancel'),
+                  style: TextStyle(color: AppColors.textTertiary)),
+            ),
+            TextButton(
+              onPressed: verifying ? null : () async {
+                final otp = otpCtrl.text.trim();
+                if (otp.length < 6) {
+                  setDlg(() => dlgError = 'Рамзи 6-рақамаро ворид кунед');
+                  return;
+                }
+                setDlg(() { verifying = true; dlgError = null; });
+                try {
+                  final ok = await _authRepo.verifyPhoneOtp(phone, otp);
+                  if (ok) {
+                    Navigator.pop(ctx, true);
+                  } else {
+                    setDlg(() { verifying = false; dlgError = 'Рамз нодуруст'; });
+                  }
+                } catch (_) {
+                  setDlg(() { verifying = false; dlgError = 'Хато'; });
+                }
+              },
+              child: verifying
+                  ? SizedBox(width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2,
+                          color: AppColors.neonBlue))
+                  : Text(tr('common.confirm'),
+                      style: TextStyle(color: AppColors.neonBlue,
+                          fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      }),
+    );
   }
 
   // ── Username availability (debounced) ──

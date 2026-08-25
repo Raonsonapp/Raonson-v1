@@ -81,4 +81,24 @@ class AuthRepository {
     );
     return res.statusCode < 400;
   }
+
+  /// OTP-ро ба телефон тавассути Telegram мефиристад.
+  Future<Map<String, dynamic>> sendPhoneOtp(String phone) async {
+    final res = await _api.post(
+      ApiEndpoints.sendPhoneOtp,
+      body: {'phone': phone},
+    );
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// OTP-ро тасдиқ мекунад.
+  Future<bool> verifyPhoneOtp(String phone, String otp) async {
+    final res = await _api.post(
+      ApiEndpoints.verifyPhoneOtp,
+      body: {'phone': phone, 'otp': otp},
+    );
+    if (res.statusCode >= 400) return false;
+    final j = jsonDecode(res.body) as Map<String, dynamic>;
+    return j['verified'] == true;
+  }
 }

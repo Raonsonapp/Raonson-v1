@@ -121,6 +121,8 @@ func main() {
 		a.POST("/forgot-password", rl20, handlers.ForgotPassword)
 		a.POST("/reset-password",  rl20, handlers.ResetPassword)
 		a.POST("/change-password", auth, rl20, handlers.ChangePassword)
+		a.POST("/send-phone-otp",   rl20, handlers.SendPhoneOTP)      // Telegram OTP
+		a.POST("/verify-phone-otp", rl20, handlers.VerifyPhoneOTP)    // тасдиқи телефон
 		a.GET("/sessions",     auth, handlers.GetSessions)        // таърихи воридшавӣ
 		a.POST("/revoke-all",  auth, handlers.RevokeAllSessions)  // тоза кардани таърих
 	}
