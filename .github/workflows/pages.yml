@@ -27,6 +27,7 @@ jobs:
           mkdir -p _site/assets
           cp index.html _site/index.html
           cp assets/icon.png _site/assets/icon.png
+          cp app-ads.txt _site/app-ads.txt
           touch _site/.nojekyll
           chmod -R +rX _site
 
