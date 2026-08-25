@@ -229,7 +229,7 @@ class _ChatView extends StatelessWidget {
                 IconButton(
                   icon: Icon(AppIcons.group_rounded,
                       color: AppColors.textPrimary, size: 24),
-                  tooltip: 'Гурӯҳҳо',
+                  tooltip: tr('chat.groups'),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const GroupsListScreen()),

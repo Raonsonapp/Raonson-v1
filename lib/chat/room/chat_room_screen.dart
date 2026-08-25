@@ -655,9 +655,6 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             : null,
         child: Column(
         children: [
-          // Typing indicator
-          if (_isPeerTyping) _TypingIndicator(name: widget.peer.username),
-
           // Messages list
           Expanded(
             child: _loading
@@ -900,16 +897,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   Widget _messageList() {
+    final count = _messages.length + (_isPeerTyping ? 1 : 0);
     return ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.only(top: 8, bottom: 8),
-      itemCount: _messages.length,
+      itemCount: count,
       addAutomaticKeepAlives: false,
       itemBuilder: (_, i) {
+        if (i == _messages.length) {
+          return _TypingIndicator(name: widget.peer.username);
+        }
         final msg = _messages[i];
         final prev = i > 0 ? _messages[i - 1] : null;
 
-        // Date separator
         final showDate = prev == null ||
             !_sameDay(prev.createdAt, msg.createdAt);
 

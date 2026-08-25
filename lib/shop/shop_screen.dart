@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
+import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/tajikshop_brand.dart';
 import '../widgets/avatar.dart';
@@ -74,7 +75,7 @@ class _ShopScreenState extends State<ShopScreen> {
         actions: [
           IconButton(
             icon: Icon(AppIcons.history_rounded, color: AppColors.textPrimary),
-            tooltip: 'Фармоишҳо',
+            tooltip: tr('shop.orders'),
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const OrdersScreen())),
           ),
@@ -85,7 +86,7 @@ class _ShopScreenState extends State<ShopScreen> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             children: [
-              _catChip('', 'Ҳама'),
+              _catChip('', tr('shop.all')),
               ...Product.categories.map((c) => _catChip(c, c)),
             ],
           )),
@@ -99,7 +100,7 @@ class _ShopScreenState extends State<ShopScreen> {
           _load();
         },
         icon: Icon(AppIcons.add_rounded, color: AppColors.textPrimary),
-        label: Text('Фуруш',
+        label: Text(tr('shop.sell'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold)),
       ),
@@ -111,9 +112,9 @@ class _ShopScreenState extends State<ShopScreen> {
                   Icon(AppIcons.card_giftcard_rounded,
                       color: AppColors.textFaint, size: 56),
                   const SizedBox(height: 12),
-                  Text('Ҳанӯз маҳсулот нест',
+                  Text(tr('shop.noProducts'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
-                  Text('Аввалин маҳсулотро эълон кунед 👇',
+                  Text(tr('shop.addFirstProduct'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
                 ]))
               : RefreshIndicator(
@@ -164,8 +165,8 @@ class _ShopScreenState extends State<ShopScreen> {
                   decoration: BoxDecoration(
                       color: const Color(0xFFFFD700),
                       borderRadius: BorderRadius.circular(5)),
-                  child: const Text('⭐ Беҳтарин',
-                      style: TextStyle(color: Colors.black, fontSize: 9,
+                  child: Text('⭐ ${tr('shop.featured')}',
+                      style: const TextStyle(color: Colors.black, fontSize: 9,
                           fontWeight: FontWeight.w800)),
                 )),
             if (p.onSale)
@@ -190,8 +191,8 @@ class _ShopScreenState extends State<ShopScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(color: Colors.red,
                         borderRadius: BorderRadius.circular(6)),
-                    child: const Text('Тамом шуд',
-                        style: TextStyle(color: Colors.white, fontSize: 12,
+                    child: Text(tr('shop.outOfStock'),
+                        style: const TextStyle(color: Colors.white, fontSize: 12,
                             fontWeight: FontWeight.w800)),
                   ),
                 ),
@@ -286,8 +287,8 @@ class _ProductSheetState extends State<_ProductSheet> {
     if (methods.isEmpty && product.sellerId.isNotEmpty) methods.add('raonson');
 
     if (methods.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Фурӯшанда роҳи алоқа нагузоштааст')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('shop.noContactMethod'))));
       return;
     }
     if (methods.length == 1) {
@@ -306,7 +307,7 @@ class _ProductSheetState extends State<_ProductSheet> {
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 12),
-          Text('Чӣ тавр бо фурӯшанда алоқа мекунед?',
+          Text(tr('shop.howToContact'),
               style: TextStyle(
                   color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
@@ -314,7 +315,7 @@ class _ProductSheetState extends State<_ProductSheet> {
             ListTile(
               leading: Icon(AppIcons.chat_bubble_rounded,
                   color: AppColors.neonBlue),
-              title: const Text('Чати Raonson'),
+              title: Text(tr('shop.raonsonChat')),
               textColor: AppColors.textPrimary,
               onTap: () { Navigator.pop(context); _openContact(context, 'raonson'); },
             ),
@@ -329,7 +330,7 @@ class _ProductSheetState extends State<_ProductSheet> {
           if (methods.contains('phone'))
             ListTile(
               leading: Icon(AppIcons.call_rounded, color: AppColors.neonBlue),
-              title: const Text('Занг задан'),
+              title: Text(tr('shop.callSeller')),
               textColor: AppColors.textPrimary,
               onTap: () { Navigator.pop(context); _openContact(context, 'phone'); },
             ),
@@ -347,8 +348,8 @@ class _ProductSheetState extends State<_ProductSheet> {
       repo.placeOrder(product.id);
     }
     final effPrice = product.onSale ? product.salePriceLabel : product.priceLabel;
-    final msg = 'Салом! Маҳсули «${product.productName}» '
-        '($effPrice)-ро дар Raonson дидам, мехоҳам харам.';
+    final msg = '${tr('shop.orderMsg1')}${product.productName}${tr('shop.orderMsg2')}'
+        '($effPrice)${tr('shop.orderMsg3')}';
     if (method == 'raonson') {
       final seller = UserModel(
         id: product.sellerId, username: product.sellerName,
@@ -381,20 +382,20 @@ class _ProductSheetState extends State<_ProductSheet> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Flash Sale (тахфиф)',
+        title: Text(tr('shop.flashSaleTitle'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _tf(pct, 'Тахфиф % (1–90)'),
-          _tf(days, 'Чанд рӯз (0 = бе муҳлат)'),
+          _tf(pct, tr('shop.discountPercent')),
+          _tf(days, tr('shop.discountDays')),
           const SizedBox(height: 4),
-          Text('Барои хомӯш кардан — 0 гузоред.',
+          Text(tr('shop.discountHint'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('common.cancel'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text('Сабт', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('shop.submit'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -405,11 +406,11 @@ class _ProductSheetState extends State<_ProductSheet> {
       if (context.mounted) {
         if (saved) {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Тахфиф нав шуд ✓'), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('shop.discountUpdated')), backgroundColor: Colors.green));
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Тахфиф сабт нашуд — дубора кӯшиш кунед')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('shop.discountFailed'))));
         }
       }
     }
@@ -427,14 +428,14 @@ class _ProductSheetState extends State<_ProductSheet> {
       context: context,
       builder: (_) => StatefulBuilder(builder: (_, setD) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Таҳрири маҳсул',
+        title: Text(tr('shop.editProduct'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _tf(name, 'Ном'),
-          _tf(price, 'Нарх'),
+          _tf(name, tr('shop.name')),
+          _tf(price, tr('shop.price')),
           const SizedBox(height: 6),
           Align(alignment: Alignment.centerLeft,
-              child: Text('Категория',
+              child: Text(tr('shop.category'),
                   style: TextStyle(color: AppColors.textFaint, fontSize: 12))),
           Wrap(spacing: 6, runSpacing: 6,
             children: Product.categories.map((c) {
@@ -456,16 +457,16 @@ class _ProductSheetState extends State<_ProductSheet> {
             contentPadding: EdgeInsets.zero,
             value: inStock,
             activeColor: const Color(0xFF00C853),
-            title: Text('Дар анбор ҳаст',
+            title: Text(tr('shop.inStock'),
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
             onChanged: (v) => setD(() => inStock = v),
           ),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('common.cancel'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text('Сабт', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('shop.submit'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       )),
     );
@@ -478,11 +479,11 @@ class _ProductSheetState extends State<_ProductSheet> {
       if (context.mounted) {
         if (saved) {
           Navigator.pop(context); // варақа пӯшида → грид нав мешавад
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Маҳсул нав шуд ✓'), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('shop.productUpdated')), backgroundColor: Colors.green));
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Сабт нашуд — дубора кӯшиш кунед')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('shop.saveFailed'))));
         }
       }
     }
@@ -499,18 +500,18 @@ class _ProductSheetState extends State<_ProductSheet> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Тарҷумаи ном',
+        title: Text(tr('shop.translateName'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _tf(tj, 'Тоҷикӣ'),
-          _tf(ru, 'Русӣ'),
+          _tf(tj, tr('shop.langTj')),
+          _tf(ru, tr('shop.langRu')),
           _tf(en, 'English'),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('common.cancel'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text('Сабт', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('shop.submit'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -519,8 +520,8 @@ class _ProductSheetState extends State<_ProductSheet> {
         'tj': tj.text.trim(), 'ru': ru.text.trim(), 'en': en.text.trim(),
       });
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Тарҷумаҳо сабт шуданд ✓'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('shop.translationsSaved')),
             backgroundColor: Colors.green));
       }
     }
@@ -570,10 +571,10 @@ class _ProductSheetState extends State<_ProductSheet> {
                   future: _trFuture,
                   builder: (_, snap) {
                     final lang = AppSettingsState.instance.lang;
-                    final tr = snap.data?[lang];
-                    final name = (tr != null && tr.isNotEmpty)
-                        ? tr
-                        : (p.productName.isEmpty ? 'Маҳсулот' : p.productName);
+                    final trVal = snap.data?[lang];
+                    final name = (trVal != null && trVal.isNotEmpty)
+                        ? trVal
+                        : (p.productName.isEmpty ? tr('shop.product') : p.productName);
                     return Text(name, style: TextStyle(
                         color: AppColors.textPrimary, fontSize: 18,
                         fontWeight: FontWeight.bold));
@@ -636,14 +637,14 @@ class _ProductSheetState extends State<_ProductSheet> {
                         if (on == null) {
                           // Хато — статуси кӯҳна мемонад, дурӯғи «муваффақ» нест.
                           ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Иваз нашуд — дубора кӯшиш кунед')));
+                              SnackBar(content: Text(tr('shop.toggleFailed'))));
                           return;
                         }
                         setState(() => _featured = on);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                           content: Text(on
-                              ? 'Маҳсул «беҳтарин» шуд ⭐'
-                              : 'Аз «беҳтарин» гирифта шуд'),
+                              ? tr('shop.markedFeatured')
+                              : tr('shop.unmarkedFeatured')),
                           backgroundColor: Colors.green));
                       },
                       icon: Icon(AppIcons.star_rounded,
@@ -652,8 +653,8 @@ class _ProductSheetState extends State<_ProductSheet> {
                           size: 18),
                       label: Text(
                           _featured
-                              ? 'Аз «беҳтарин» гирифтан'
-                              : 'Беҳтарин кардан (боло)',
+                              ? tr('shop.removeFeatured')
+                              : tr('shop.makeFeatured'),
                           style: TextStyle(color: AppColors.textPrimary)),
                     ),
                   ),
@@ -663,7 +664,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                       onPressed: () => _editProduct(context),
                       icon: Icon(AppIcons.edit_outlined,
                           color: AppColors.textFaint, size: 16),
-                      label: Text('Таҳрир',
+                      label: Text(tr('shop.edit'),
                           style: TextStyle(color: AppColors.textPrimary)),
                     )),
                     const SizedBox(width: 8),
@@ -671,7 +672,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                       onPressed: () => _editTranslations(context),
                       icon: Icon(AppIcons.language_rounded,
                           color: AppColors.textFaint, size: 16),
-                      label: Text('Тарҷума',
+                      label: Text(tr('shop.translate'),
                           style: TextStyle(color: AppColors.textPrimary)),
                     )),
                   ]),
@@ -683,8 +684,8 @@ class _ProductSheetState extends State<_ProductSheet> {
                       icon: const Icon(AppIcons.tag_rounded,
                           color: Color(0xFFFF3040), size: 16),
                       label: Text(p.onSale
-                              ? 'Тахфиф: -${p.salePct}% (тағйир)'
-                              : 'Flash Sale (тахфиф)',
+                              ? '${tr('shop.discount')}: -${p.salePct}% (${tr('shop.change')})'
+                              : tr('shop.flashSaleTitle'),
                           style: TextStyle(color: AppColors.textPrimary)),
                     ),
                   ),
@@ -699,7 +700,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                       Expanded(
                         child: Text(
                             p.shopAddress.isEmpty
-                                ? 'Ба магоза (харита)'
+                                ? tr('shop.toShopMap')
                                 : p.shopAddress,
                             style: TextStyle(color: AppColors.neonBlue)),
                       ),
@@ -719,7 +720,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                       Icon(AppIcons.star_rounded,
                           color: const Color(0xFFFFD700), size: 18),
                       const SizedBox(width: 8),
-                      Text('Баҳоҳо ва шарҳҳо',
+                      Text(tr('shop.reviewsAndRatings'),
                           style: TextStyle(color: AppColors.textPrimary,
                               fontWeight: FontWeight.w600)),
                       const Spacer(),
@@ -740,7 +741,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: p.inStock ? () => _buy(context) : null,
-                    child: Text(p.inStock ? 'Харидан' : 'Тамом шуд',
+                    child: Text(p.inStock ? tr('shop.buy') : tr('shop.outOfStock'),
                         style: TextStyle(
                             color: AppColors.textPrimary, fontSize: 16,
                             fontWeight: FontWeight.bold)),

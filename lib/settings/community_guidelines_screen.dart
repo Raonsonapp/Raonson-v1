@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class CommunityGuidelinesScreen extends StatelessWidget {
   const CommunityGuidelinesScreen({super.key});
@@ -17,7 +18,7 @@ class CommunityGuidelinesScreen extends StatelessWidget {
               color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Community Guidelines',
+        title: Text(tr('guidelines.title'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
       ),
       body: ListView(
@@ -25,58 +26,44 @@ class CommunityGuidelinesScreen extends StatelessWidget {
         children: [
           _header(),
           const SizedBox(height: 20),
-          _section('1. Эҳтиром ва Хушмуомилагӣ',
-            'Ҳамаи корбарон бояд бо эҳтиром муносибат кунанд. '
-            'Нафрат, таҳқир, тамасхур ва дигар рафтори бадмуомила '
-            'манъ аст.'),
-          _section('2. Бехатарии кӯдакон', null, bullets: [
-            'Raonson сиёсати нулл-толеранс ба истисмори кӯдакон (CSAE/CSAM) дорад',
-            'Ҳар мӯҳтавое, ки кӯдаконро ба хатар мегузорад, фавран нест карда мешавад',
-            'Ҳисобҳои вайронкунанда дарҳол маҳдуд карда мешаванд',
-            'Синни ҳадди ақал барои истифода: 13 сол',
+          _section(tr('guidelines.section1Title'),
+            tr('guidelines.section1Text')),
+          _section(tr('guidelines.section2Title'), null, bullets: [
+            tr('guidelines.section2Bullet1'),
+            tr('guidelines.section2Bullet2'),
+            tr('guidelines.section2Bullet3'),
+            tr('guidelines.section2Bullet4'),
           ]),
-          _section('3. Мӯҳтавои манъшуда', null, bullets: [
-            'Порнография ва мӯҳтавои ошкоро ҷинсӣ',
-            'Зӯроварӣ, ваҳшоният ва тарғиби ҷангу терроризм',
-            'Мӯҳтавои нафратангез алайҳи нажод, дин, миллат ё ҷинс',
-            'Маводи CSAM/CSAE (бехатарии кӯдакон)',
-            'Маълумоти шахсии дигарон бе розигӣ',
-            'Спам, фиребгарӣ ва мӯҳтавои гумроҳкунанда',
-            'Тарғиби маводи мухаддир ё фаъолияти ғайриқонунӣ',
+          _section(tr('guidelines.section3Title'), null, bullets: [
+            tr('guidelines.section3Bullet1'),
+            tr('guidelines.section3Bullet2'),
+            tr('guidelines.section3Bullet3'),
+            tr('guidelines.section3Bullet4'),
+            tr('guidelines.section3Bullet5'),
+            tr('guidelines.section3Bullet6'),
+            tr('guidelines.section3Bullet7'),
           ]),
-          _section('4. Моликият ва ҳуқуқи муаллиф',
-            'Танҳо мӯҳтавоеро нашр кунед, ки ҳуқуқи он ба шумо тааллуқ '
-            'дорад ё иҷозаи истифодаро доред. Вайронкунии ҳуқуқи муаллиф '
-            'боиси нест кардани мӯҳтаво ва маҳдудкунии ҳисоб мешавад.'),
-          _section('5. Спам ва худтаблиғ',
-            'Фиристодани паёмҳои такрорӣ, линкҳои нолозим ё мӯҳтавои '
-            'автоматӣ манъ аст. Худтаблиғ бояд мӯътадил ва дар '
-            'доираи қоидаҳо бошад.'),
-          _section('6. Маҳрамият ва маълумоти шахсӣ',
-            'Маълумоти шахсии дигар шахсонро бе розигии онҳо '
-            'нашр накунед. Ин шомили суратҳо, рақами телефон, '
-            'суроға ва маълумоти молиявӣ мешавад.'),
-          _section('7. Тиҷорат ва Tajikshop',
-            'Фурӯшандагон бояд маҳсулоти ҳақиқиро нишон диҳанд. '
-            'Фиреб дар нарх, сифат ё тавсиф боиси маҳдудкунии '
-            'ҳисоб мешавад. Комиссияи 5% ба ҳар фурӯш татбиқ мешавад.'),
-          _section('8. Шикоят кардан',
-            'Агар мӯҳтавои вайронкунанда бинед, лутфан тавассути '
-            'тугмаи шикоят (🚩) хабар диҳед. Барои бехатарии кӯдакон '
-            'категорияи "Бехатарии кӯдакон"-ро интихоб кунед — '
-            'ин шикоятҳо дар навбати аввал баррасӣ мешаванд.'),
-          _section('9. Ҷаримаҳо', null, bullets: [
-            'Огоҳӣ барои вайронкунии аввал',
-            'Маҳдудкунии муваққатии ҳисоб барои вайронкунии такрорӣ',
-            'Нест кардани мӯҳтаво барои вайронкуниҳои ҷиддӣ',
-            'Маҳдудкунии доимии ҳисоб барои CSAE/CSAM ё вайронкуниҳои вазнин',
-            'Ҳамкорӣ бо мақомоти ҳуқуқӣ дар асоси дархости расмӣ',
+          _section(tr('guidelines.section4Title'),
+            tr('guidelines.section4Text')),
+          _section(tr('guidelines.section5Title'),
+            tr('guidelines.section5Text')),
+          _section(tr('guidelines.section6Title'),
+            tr('guidelines.section6Text')),
+          _section(tr('guidelines.section7Title'),
+            tr('guidelines.section7Text')),
+          _section(tr('guidelines.section8Title'),
+            tr('guidelines.section8Text')),
+          _section(tr('guidelines.section9Title'), null, bullets: [
+            tr('guidelines.section9Bullet1'),
+            tr('guidelines.section9Bullet2'),
+            tr('guidelines.section9Bullet3'),
+            tr('guidelines.section9Bullet4'),
+            tr('guidelines.section9Bullet5'),
           ]),
-          _section('10. Тамос',
-            'Барои саволҳо ё хабардиҳӣ:\n'
-            'ehsonmahmadmurodov@gmail.com'),
+          _section(tr('guidelines.section10Title'),
+            tr('guidelines.section10Text')),
           const SizedBox(height: 16),
-          Text('Санаи навсозӣ: Август 2026',
+          Text(tr('guidelines.lastUpdated'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           const SizedBox(height: 30),
         ],
@@ -98,11 +85,11 @@ class CommunityGuidelinesScreen extends StatelessWidget {
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Community Guidelines',
+            Text(tr('guidelines.title'),
                 style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 4),
-            Text('Қоидаҳо барои ҷомеаи бехатар ва дӯстона.',
+            Text(tr('guidelines.subtitle'),
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           ],
         )),

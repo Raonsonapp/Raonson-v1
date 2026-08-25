@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
+import '../core/i18n/strings.dart';
 
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
@@ -11,7 +12,7 @@ class PrivacyPolicyPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
-        title: Text('Сиёсати махфият',
+        title: Text(tr('legal.privacyTitle'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17,
                 fontWeight: FontWeight.w600)),
         iconTheme: IconThemeData(color: AppColors.textPrimary),
@@ -19,54 +20,29 @@ class PrivacyPolicyPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          _h('Сиёсати махфияти Raonson'),
-          _p('Санаи навсозӣ: 1 август 2026'),
+          _h(tr('legal.privacyHeading')),
+          _p(tr('legal.lastUpdated')),
           const SizedBox(height: 16),
-          _h('1. Маълумоти ҷамъоварӣшаванда'),
-          _p('Raonson маълумоти зеринро ҷамъ мекунад:\n'
-              '• Маълумоти шахсӣ: ном, номи корбарӣ, email, рақами телефон\n'
-              '• Мӯҳтаво: акс, видео, паёмҳо, шарҳҳо, ҳикояҳо\n'
-              '• Маълумоти дастгоҳ: ID-и дастгоҳ, модел, системаи оператсионӣ\n'
-              '• Ҷойгиршавӣ: танҳо ҳангоми мубодила дар чат (бо иҷозат)\n'
-              '• Контактҳо: танҳо рақамҳо барои ёфтани дӯстон (бо иҷозат, нигоҳ дошта намешаванд)'),
+          _h(tr('legal.privacy.section1Title')),
+          _p(tr('legal.privacy.section1Text')),
           const SizedBox(height: 12),
-          _h('2. Истифодаи маълумот'),
-          _p('Мо маълумотро барои мақсадҳои зерин истифода мебарем:\n'
-              '• Кор кардани ҳисоб ва хизматрасонӣ\n'
-              '• Нишон додани мӯҳтавои мувофиқ\n'
-              '• Таблиғоти шахсигардонидашуда (Yandex Ads SDK)\n'
-              '• Огоҳиҳои push (Firebase Cloud Messaging)\n'
-              '• Беҳтар кардани барнома ва ислоҳи хатогиҳо'),
+          _h(tr('legal.privacy.section2Title')),
+          _p(tr('legal.privacy.section2Text')),
           const SizedBox(height: 12),
-          _h('3. SDK-ҳои тарафи сеюм'),
-          _p('Raonson SDK-ҳои зеринро истифода мебарад:\n'
-              '• Firebase (аутентификатсия, нигоҳдории файл, push-огоҳиҳо)\n'
-              '• Yandex Mobile Ads (таблиғот)\n'
-              '• Agora RTC (зангҳои видеоӣ ва овозӣ)\n\n'
-              'Ҳар як SDK сиёсати махфияти худро дорад.'),
+          _h(tr('legal.privacy.section3Title')),
+          _p(tr('legal.privacy.section3Text')),
           const SizedBox(height: 12),
-          _h('4. Нигоҳдории маълумот'),
-          _p('Маълумоти шумо дар серверҳои бехатар нигоҳ дошта мешавад. '
-              'Шумо метавонед ҳар вақт ҳисоби худро нест кунед, '
-              'ки тамоми маълумоти шуморо аз серверҳо пок мекунад.'),
+          _h(tr('legal.privacy.section4Title')),
+          _p(tr('legal.privacy.section4Text')),
           const SizedBox(height: 12),
-          _h('5. Ҳуқуқи корбар'),
-          _p('Шумо ҳуқуқ доред:\n'
-              '• Маълумоти худро бинед ва тағйир диҳед\n'
-              '• Ҳисоби худро нест кунед\n'
-              '• Аз огоҳиҳо даст кашед\n'
-              '• Розигии таблиғотро бекор кунед'),
+          _h(tr('legal.privacy.section5Title')),
+          _p(tr('legal.privacy.section5Text')),
           const SizedBox(height: 12),
-          _h('6. Кӯдакон ва бехатарӣ'),
-          _p('Raonson барои кӯдакони зери 13 сол пешбинӣ нашудааст. '
-              'Мо дониста маълумоти кӯдакони зери 13-ро ҷамъ намекунем.\n\n'
-              'Мо сиёсати қатъии зидди истисмори ҷинсии кӯдакон (CSAE) '
-              'ва маводи суиистифодаи ҷинсии кӯдакон (CSAM) дорем. '
-              'Ҳар гуна мӯҳтавои вайронкунанда фавран нест карда мешавад '
-              'ва ба мақомоти қонунгузорӣ хабар дода мешавад.'),
+          _h(tr('legal.privacy.section6Title')),
+          _p(tr('legal.privacy.section6Text')),
           const SizedBox(height: 12),
-          _h('7. Тамос'),
-          _p('Барои саволҳо дар бораи махфият:\nEmail: ehsonmahmadmurodov@gmail.com'),
+          _h(tr('legal.privacy.section7Title')),
+          _p(tr('legal.privacy.section7Text')),
           const SizedBox(height: 40),
         ],
       ),
@@ -84,7 +60,7 @@ class TermsOfServicePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
-        title: Text('Шартҳои истифода',
+        title: Text(tr('legal.termsTitle'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17,
                 fontWeight: FontWeight.w600)),
         iconTheme: IconThemeData(color: AppColors.textPrimary),
@@ -92,51 +68,32 @@ class TermsOfServicePage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          _h('Шартҳои истифодаи Raonson'),
-          _p('Санаи навсозӣ: 1 август 2026'),
+          _h(tr('legal.termsHeading')),
+          _p(tr('legal.lastUpdated')),
           const SizedBox(height: 16),
-          _h('1. Қабули шартҳо'),
-          _p('Бо истифодаи Raonson шумо бо ин шартҳо розӣ мешавед. '
-              'Агар розӣ набошед, лутфан барномаро истифода набаред.'),
+          _h(tr('legal.terms.section1Title')),
+          _p(tr('legal.terms.section1Text')),
           const SizedBox(height: 12),
-          _h('2. Ҳисоб'),
-          _p('• Синни шумо бояд 13 ва аз он болотар бошад\n'
-              '• Шумо масъули нигоҳдории рамзи ҳисоби худ ҳастед\n'
-              '• Як шахс то 3 ҳисоб дошта метавонад'),
+          _h(tr('legal.terms.section2Title')),
+          _p(tr('legal.terms.section2Text')),
           const SizedBox(height: 12),
-          _h('3. Мӯҳтаво'),
-          _p('Шумо масъули мӯҳтавое ҳастед, ки нашр мекунед. '
-              'Мӯҳтавои зерин манъ аст:\n'
-              '• Порнография ва мӯҳтавои ҷинсӣ\n'
-              '• Мӯҳтавои истисмори ҷинсии кӯдакон (CSAM/CSAE)\n'
-              '• Ҳама гуна мӯҳтаво, ки кӯдаконро ба хатар мегузорад\n'
-              '• Хушунат ва таҳдид\n'
-              '• Нафрат ва табъиз\n'
-              '• Спам ва фиребгарӣ\n'
-              '• Вайрон кардани ҳуқуқи муаллиф'),
+          _h(tr('legal.terms.section3Title')),
+          _p(tr('legal.terms.section3Text')),
           const SizedBox(height: 12),
-          _h('4. Бехатарии кӯдакон'),
-          _p('Raonson сиёсати қатъии зидди истисмори кӯдаконро дорад. '
-              'Мӯҳтавое, ки кӯдаконро ба хатар мегузорад ё ба таври ҷинсӣ истисмор мекунад, '
-              'фавран нест карда мешавад ва ҳисоби вайронкунанда баста мешавад. '
-              'Бо мақомоти қонунгузорӣ дар асоси дархости расмӣ ҳамкорӣ мекунем.\n\n'
-              'Синни ҳадди ақали истифода: 13 сол.'),
+          _h(tr('legal.terms.section4Title')),
+          _p(tr('legal.terms.section4Text')),
           const SizedBox(height: 12),
-          _h('5. Шикоят'),
-          _p('Шумо метавонед мӯҳтаво ва корбаронро шикоят кунед. '
-              'Шикоятҳои бехатарии кӯдакон дар навбати аввал баррасӣ мешаванд. '
-              'Мо шикоятҳоро баррасӣ мекунем ва мӯҳтавои вайронкунандаро нест мекунем.'),
+          _h(tr('legal.terms.section5Title')),
+          _p(tr('legal.terms.section5Text')),
           const SizedBox(height: 12),
-          _h('6. Нест кардани ҳисоб'),
-          _p('Шумо метавонед ҳар вақт ҳисоби худро нест кунед. '
-              'Пас аз нест кардан, тамоми маълумот пок мешавад ва қобили барқарорсозӣ нест.'),
+          _h(tr('legal.terms.section6Title')),
+          _p(tr('legal.terms.section6Text')),
           const SizedBox(height: 12),
-          _h('7. Тағйироти шартҳо'),
-          _p('Мо метавонем ин шартҳоро тағйир диҳем. '
-              'Дар ин сурат, мо шуморо тавассути огоҳӣ хабардор мекунем.'),
+          _h(tr('legal.terms.section7Title')),
+          _p(tr('legal.terms.section7Text')),
           const SizedBox(height: 12),
-          _h('8. Тамос'),
-          _p('Барои саволҳо: ehsonmahmadmurodov@gmail.com'),
+          _h(tr('legal.terms.section8Title')),
+          _p(tr('legal.terms.section8Text')),
           const SizedBox(height: 40),
         ],
       ),

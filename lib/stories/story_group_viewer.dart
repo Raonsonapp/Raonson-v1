@@ -20,6 +20,7 @@ import '../core/services/user_session.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
+import '../core/i18n/strings.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -272,21 +273,21 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
         // Менюи матнӣ бе icon — айнан мисли Instagram
-        _menuRow('Нест кун', red: true,
+        _menuRow(tr('story.delete'), red: true,
             onTap: () { Navigator.pop(context); _deleteStory(); }),
-        _menuRow('Бойгонӣ', onTap: () async {
+        _menuRow(tr('story.archive'), onTap: () async {
             Navigator.pop(context);
             try {
               await ApiClient.instance.post('/stories/${_current.id}/archive');
-              _toast('Ба бойгонӣ кӯчид ✓');
-            } catch (_) { _toast('Хато'); }
+              _toast(tr('story.archivedSuccess'));
+            } catch (_) { _toast(tr('common.error')); }
             _resume();
           }),
-        _menuRow(_isVideo ? 'Видеоро ҳифз кун' : 'Расмро ҳифз кун',
+        _menuRow(_isVideo ? tr('story.saveVideo') : tr('story.saveImage'),
             onTap: () { Navigator.pop(context); _resume(); _saveMedia(); }),
-        _menuRow('Мубодила кардан',
+        _menuRow(tr('story.shareAction'),
             onTap: () { Navigator.pop(context); _shareStory(); }),
-        _menuRow('Танзимоти сторис', onTap: () async {
+        _menuRow(tr('story.settings'), onTap: () async {
             Navigator.pop(context);
             try {
               final res = await ApiClient.instance
@@ -294,17 +295,17 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
               if (res.statusCode >= 400) throw Exception();
               final b = jsonDecode(res.body) as Map<String, dynamic>;
               _toast(b['repliesOff'] == true
-                  ? 'Ҷавобҳо хомӯш ✓'
-                  : 'Ҷавобҳо фаъол ✓');
-            } catch (_) { _toast('Хато'); }
+                  ? tr('story.repliesOff')
+                  : tr('story.repliesOn'));
+            } catch (_) { _toast(tr('common.error')); }
             if (mounted) _resume();
           }),
-        _menuRow('Шарҳҳоро хомӯш кардан', onTap: () async {
+        _menuRow(tr('story.disableComments'), onTap: () async {
             Navigator.pop(context);
             try {
               await ApiClient.instance.post('/stories/${_current.id}/toggle-replies');
-              _toast('Танзими ҷавобҳо нав шуд ✓');
-            } catch (_) { _toast('Хато'); }
+              _toast(tr('story.repliesUpdated'));
+            } catch (_) { _toast(tr('common.error')); }
             _resume();
           }),
         const SizedBox(height: 8),

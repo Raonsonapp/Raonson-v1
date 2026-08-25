@@ -30,6 +30,7 @@ import '../../app/app_settings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
 import '../../core/ui/report_dialog.dart';
+import '../../core/i18n/strings.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -270,41 +271,41 @@ class _PostCardState extends State<PostCard>
             child: Column(mainAxisSize: MainAxisSize.min, children: [
           _handle(),
           _SvgMenuTile(assetPath: 'assets/icons/delete.svg',
-              label: 'Ҳазф кардан', color: Colors.redAccent,
+              label: tr('post.delete'), color: Colors.redAccent,
               onTap: () { Navigator.pop(context); _deletePost(); }),
           _SvgMenuTile(assetPath: 'assets/icons/edit.svg',
-              label: 'Таҳрир кардан',
+              label: tr('post.edit'),
               onTap: () { Navigator.pop(context); _editCaption(); }),
           _SvgMenuTile(assetPath: 'assets/icons/mention.svg',
-              label: 'Упоминать кардан',
+              label: tr('post.mentionAction'),
               onTap: () { Navigator.pop(context); _mentionFriends(); }),
           _SvgMenuTile(assetPath: 'assets/icons/music.svg',
-              label: 'Тағир додани мусиқа',
+              label: tr('post.changeMusic'),
               onTap: () { Navigator.pop(context); _editMusic(); }),
           _SvgMenuTile(assetPath: 'assets/icons/stats.svg',
-              label: 'Статистика',
+              label: tr('post.statistics'),
               onTap: () { Navigator.pop(context); _showStats(); }),
           _MenuItem(icon: AppIcons.campaign_outlined, iconColor: AppColors.storyEnd,
-              label: 'Тарғиб кардан (реклама)', labelColor: AppColors.storyEnd,
+              label: tr('post.promote'), labelColor: AppColors.storyEnd,
               onTap: () { Navigator.pop(context); _promotePost(); }),
           _MenuItem(
               icon: _hideLikes
                   ? AppIcons.favorite_rounded
                   : AppIcons.favorite_border_rounded,
               label: _hideLikes
-                  ? 'Нишон додани лайкҳо'
-                  : 'Пинҳон кардани лайкҳо',
+                  ? tr('post.showLikes')
+                  : tr('post.hideLikes'),
               onTap: () { Navigator.pop(context); _toggleHideLikes(); }),
           _MenuItem(
               icon: _commentsDisabled
                   ? AppIcons.mode_comment_rounded
                   : AppIcons.mode_comment_outlined,
               label: _commentsDisabled
-                  ? 'Фаъол кардани шарҳҳо'
-                  : 'Хомӯш кардани шарҳҳо',
+                  ? tr('post.enableComments')
+                  : tr('post.disableComments'),
               onTap: () { Navigator.pop(context); _toggleComments(); }),
           _MenuItem(icon: AppIcons.archive_outlined,
-              label: 'Бойгонӣ кардан',
+              label: tr('post.archive'),
               onTap: () { Navigator.pop(context); _archivePost(); }),
           const SizedBox(height: 8),
         ])))),
@@ -330,8 +331,8 @@ class _PostCardState extends State<PostCard>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_hideLikes
-            ? 'Лайкҳо пинҳон шуданд ✓'
-            : 'Лайкҳо намоён шуданд ✓'),
+            ? tr('post.likesHidden')
+            : tr('post.likesShown')),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2)));
     }
@@ -358,8 +359,8 @@ class _PostCardState extends State<PostCard>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_commentsDisabled
-            ? 'Шарҳҳо хомӯш шуданд ✓'
-            : 'Шарҳҳо фаъол шуданд ✓'),
+            ? tr('post.commentsDisabledDone')
+            : tr('post.commentsEnabledDone')),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2)));
     }

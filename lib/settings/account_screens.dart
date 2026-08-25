@@ -8,6 +8,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
+import '../core/i18n/strings.dart';
 import '../models/user_model.dart';
 import '../profile/profile_repository.dart';
 import '../widgets/avatar.dart';
@@ -33,13 +34,13 @@ class _ChangeUsernameState extends State<ChangeUsernameScreen> {
 
   Future<void> _submit() async {
     final u = _ctrl.text.trim().toLowerCase();
-    if (u.isEmpty) { setState(() => _err = 'Номро нависед'); return; }
+    if (u.isEmpty) { setState(() => _err = tr('account.err.emptyName')); return; }
     if (u == (UserSession.username ?? '').toLowerCase()) {
       Navigator.pop(context); return;
     }
     if (!RegExp(r'^[a-z0-9._]{3,30}$').hasMatch(u)) {
       setState(() => _err =
-          'Танҳо ҳарфҳои хурд, рақам, _ ва . (3–30 аломат)');
+          tr('account.err.usernameFormat'));
       return;
     }
     setState(() { _saving = true; _err = null; });
@@ -51,14 +52,14 @@ class _ChangeUsernameState extends State<ChangeUsernameScreen> {
         final b = jsonDecode(res.body) as Map<String, dynamic>? ?? {};
         UserSession.username = (b['username'] ?? u).toString();
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Ном иваз шуд ✓'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('account.usernameChanged')), backgroundColor: Colors.green));
       } else {
         final b = jsonDecode(res.body) as Map<String, dynamic>? ?? {};
-        setState(() => _err = b['message']?.toString() ?? 'Хатогӣ');
+        setState(() => _err = b['message']?.toString() ?? tr('common.error'));
       }
     } catch (e) {
-      if (mounted) setState(() => _err = 'Шабака нашуд');
+      if (mounted) setState(() => _err = tr('account.err.network'));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -68,7 +69,7 @@ class _ChangeUsernameState extends State<ChangeUsernameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _bar(context, 'Номи корбарӣ', _saving, _submit),
+      appBar: _bar(context, tr('account.username'), _saving, _submit),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -91,8 +92,7 @@ class _ChangeUsernameState extends State<ChangeUsernameScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text('Номи корбариро метавонед иваз кунед. Онро дӯстонатон '
-              'барои ёфтани шумо истифода мебаранд.',
+          Text(tr('account.usernameHint'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12.5)),
           if (_err != null) ...[
             const SizedBox(height: 12),
@@ -132,13 +132,13 @@ class _ChangePhoneState extends State<ChangePhoneScreen> {
       if (!mounted) return;
       if (res.statusCode < 400) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Номер сабт шуд ✓'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('account.phoneSaved')), backgroundColor: Colors.green));
       } else {
-        setState(() => _err = 'Хатогӣ ${res.statusCode}');
+        setState(() => _err = '${tr('common.error')} ${res.statusCode}');
       }
     } catch (_) {
-      if (mounted) setState(() => _err = 'Шабака нашуд');
+      if (mounted) setState(() => _err = tr('account.err.network'));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -148,7 +148,7 @@ class _ChangePhoneState extends State<ChangePhoneScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _bar(context, 'Рақами телефон', _saving, _submit),
+      appBar: _bar(context, tr('account.phone'), _saving, _submit),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -170,8 +170,7 @@ class _ChangePhoneState extends State<ChangePhoneScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text('Рақами телефони шумо махфӣ мемонад ва барои барқарорсозии '
-              'ҳисоб истифода мешавад.',
+          Text(tr('account.phoneHint'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12.5)),
           if (_err != null) ...[
             const SizedBox(height: 12),
@@ -205,7 +204,7 @@ class _ChangeEmailState extends State<ChangeEmailScreen> {
   Future<void> _submit() async {
     final email = _ctrl.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      setState(() => _err = 'Почтаи электронӣ нодуруст');
+      setState(() => _err = tr('account.err.invalidEmail'));
       return;
     }
     setState(() { _saving = true; _err = null; });
@@ -215,13 +214,13 @@ class _ChangeEmailState extends State<ChangeEmailScreen> {
       if (!mounted) return;
       if (res.statusCode < 400) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Email сабт шуд'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('account.emailSaved')), backgroundColor: Colors.green));
       } else {
-        setState(() => _err = 'Хатогӣ ${res.statusCode}');
+        setState(() => _err = '${tr('common.error')} ${res.statusCode}');
       }
     } catch (_) {
-      if (mounted) setState(() => _err = 'Шабака нашуд');
+      if (mounted) setState(() => _err = tr('account.err.network'));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -231,7 +230,7 @@ class _ChangeEmailState extends State<ChangeEmailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _bar(context, 'Почтаи электронӣ', _saving, _submit),
+      appBar: _bar(context, tr('account.email'), _saving, _submit),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -250,8 +249,7 @@ class _ChangeEmailState extends State<ChangeEmailScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text('Почтаи электронӣ барои барқарорсозии ҳисоб '
-              'ва огоҳиҳои муҳим истифода мешавад.',
+          Text(tr('account.emailHint'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12.5)),
           if (_err != null) ...[
             const SizedBox(height: 12),
@@ -331,7 +329,7 @@ class _CloseFriendsState extends State<CloseFriendsScreen> {
             icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
-        title: Text('Дӯстони наздик',
+        title: Text(tr('account.closeFriends'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -368,8 +366,7 @@ class _CloseFriendsState extends State<CloseFriendsScreen> {
                       color: const Color(0xFF00C853), size: 18),
                   const SizedBox(width: 8),
                   Expanded(child: Text(
-                      'Танҳо дӯстони наздик сторисҳои «наздик»-и шуморо '
-                      'мебинанд. Онҳо огоҳ намешаванд.',
+                      tr('account.closeFriendsHint'),
                       style: TextStyle(
                           color: AppColors.textFaint, fontSize: 12.5))),
                 ]),
@@ -377,7 +374,7 @@ class _CloseFriendsState extends State<CloseFriendsScreen> {
               Divider(color: AppColors.dividerFaint, height: 20),
               Expanded(
                 child: _following.isEmpty
-                    ? Center(child: Text('Ҳанӯз касеро пайравӣ намекунед',
+                    ? Center(child: Text(tr('account.noFollowing'),
                         style: TextStyle(color: AppColors.textFaint)))
                     : ListView.builder(
                         itemCount: _following.length,
@@ -439,7 +436,7 @@ PreferredSizeWidget _bar(BuildContext context, String title, bool saving,
       else
         TextButton(
           onPressed: onSave,
-          child: Text('Сабт',
+          child: Text(tr('account.saveButton'),
               style: TextStyle(color: AppColors.neonBlue,
                   fontWeight: FontWeight.bold, fontSize: 15)),
         ),

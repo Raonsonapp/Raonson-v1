@@ -47,11 +47,11 @@ class BottomNavBar extends StatelessWidget {
                 svgInactive: 'assets/icons/nav_reels.svg',
                 fallback: AppIcons.smart_display_outlined,
               ),
-              // Chat/DM — иконаи paper-plane (Instagram-style DM),
-              // на chat-bubble-и куҳна.
-              _IconNavItem(
+              _SvgNavItem(
                 index: 2, currentIndex: currentIndex, onTap: onTap,
-                icon: AppIcons.send_outlined,
+                svgActive: 'assets/icons/nav_chat_filled.svg',
+                svgInactive: 'assets/icons/nav_chat.svg',
+                fallback: AppIcons.chat_bubble_outline_rounded,
               ),
               _SvgNavItem(
                 index: 3, currentIndex: currentIndex, onTap: onTap,
