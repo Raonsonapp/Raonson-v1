@@ -71,7 +71,7 @@ class SettingsScreen extends StatelessWidget {
                 child: Row(children: [
                   Expanded(child: _PlanBanner(
                     title: 'Raonson Pro',
-                    subtitle: '29.90 сом/моҳ',
+                    subtitle: tr('plan.proPrice'),
                     icon: AppIcons.star_rounded,
                     colors: const [Color(0xFF7F00FF), Color(0xFFE100FF)],
                     onTap: () => _go(ctx, const SubscriptionScreen()),
@@ -79,7 +79,7 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(child: _PlanBanner(
                     title: 'Business',
-                    subtitle: '99.90 сом/моҳ',
+                    subtitle: tr('plan.businessPrice'),
                     icon: AppIcons.business_center_rounded,
                     colors: const [Color(0xFFF7971E), Color(0xFFFFD200)],
                     onTap: () => _go(ctx,
@@ -99,7 +99,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               _NavTile(
                 icon:  AppIcons.alternate_email_rounded,
-                title: 'Номи корбарӣ',
+                title: tr('account.username'),
                 sub:   '@${UserSession.username ?? ''}',
                 onTap: () => _go(ctx, const ChangeUsernameScreen()),
               ),
@@ -122,11 +122,11 @@ class SettingsScreen extends StatelessWidget {
               ),
 
               // ── ОМОР ────────────────────────────────────────────────
-              _Hdr('Статистика'),
+              _Hdr(tr('section.stats')),
               _NavTile(
                 icon:  AppIcons.bar_chart_rounded,
-                title: 'Статистика (омор)',
-                sub:   'Обзори 1-моҳа: обуна, лайк, топ видео, идеяҳо',
+                title: tr('stats.title'),
+                sub:   tr('stats.sub'),
                 onTap: () => _go(ctx, const InsightsScreen()),
               ),
 
@@ -142,8 +142,8 @@ class SettingsScreen extends StatelessWidget {
               ),
               _NavTile(
                 icon:  AppIcons.storefront_rounded,
-                title: 'Панели фурӯшанда',
-                sub:   'Фурӯш, даромад, махсулот, боздидҳо',
+                title: tr('shop.sellerPanel'),
+                sub:   tr('shop.sellerPanelSub'),
                 onTap: () => _go(ctx, const SellerDashboardScreen()),
               ),
               _NavTile(

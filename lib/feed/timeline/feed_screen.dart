@@ -22,6 +22,7 @@ import '../../core/services/user_session.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
+import '../../core/services/notification_badge_controller.dart';
 import '../../widgets/avatar.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
@@ -177,6 +178,7 @@ class _FeedShellState extends State<_FeedShell> {
                         colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
                     onPressed: () {
                       NotificationService.markRead();
+                      NotificationBadgeController.instance.reset();
                       Navigator.pushNamed(ctx, AppRoutes.notifications);
                     },
                   ),
@@ -281,7 +283,7 @@ class _FeedBody extends StatelessWidget {
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(AppIcons.wifi_off, color: AppColors.textFaint, size: 14),
               const SizedBox(width: 6),
-              Text('Оффлайн — кэш нишон дода мешавад',
+              Text(tr('feed.offlineBanner'),
                 style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
               const Spacer(),
               GestureDetector(
@@ -455,7 +457,7 @@ class _NewPostsBanner extends StatelessWidget {
           children: [
             Icon(AppIcons.arrow_upward_rounded, color: AppColors.textPrimary, size: 16),
             const SizedBox(width: 6),
-            Text(count == 1 ? '1 пости нав' : '$count та пости нав',
+            Text(count == 1 ? '1 ${tr('feed.newPostSingle')}' : '$count ${tr('feed.newPostPlural')}',
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
           ]),

@@ -19,6 +19,7 @@ import 'photo_filters.dart';
 import '../../effects/effects_repository.dart';
 import '../../core/ui/app_icons.dart';
 import '../../ai/ai_tools.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS

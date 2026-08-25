@@ -17,6 +17,7 @@ import '../core/analytics/analytics_events.dart';
 import '../core/services/notification_badge_controller.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
+import 'notification_badge.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -35,6 +36,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationBadgeController.instance.reset();
+    NotificationService.markRead();
     _load();
   }
 
@@ -49,7 +52,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _unreadCount = (data['unreadCount'] as int?) ?? 0;
         _loading = false;
       });
-      NotificationBadgeController.instance.setCount(_unreadCount);
+      _repo.markAllAsRead();
+      NotificationBadgeController.instance.reset();
+      NotificationService.markRead();
     } catch (_) {
       if (!mounted) return;
       setState(() { _loading = false; _hasError = true; });
@@ -130,7 +135,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(
           builder: (_) => PostDetailScreen(
-              posts: [post], initialIndex: 0, title: 'Пост')));
+              posts: [post], initialIndex: 0, title: tr('post.title'))));
     } catch (_) {}
   }
 
@@ -254,18 +259,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Icon(AppIcons.wifi_off_rounded,
             color: AppColors.textFaint, size: 48),
         const SizedBox(height: 16),
-        Text('Пайвастшавӣ нашуд',
+        Text(tr('common.noConnection'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
-        Text('Интернетро санҷед ва такрор кӯшиш кунед',
+        Text(tr('common.checkInternet'),
             style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
             textAlign: TextAlign.center),
         const SizedBox(height: 20),
         ElevatedButton.icon(
           onPressed: _load,
           icon: const Icon(AppIcons.refresh_rounded, size: 18),
-          label: const Text('Такрор кӯшиш'),
+          label: Text(tr('common.retryLong')),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF0095F6),
             foregroundColor: Colors.white,
@@ -295,7 +300,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(height: 8),
-        Text('Вақте кас лайк ё комментария монд,\nинҷо нишон дода мешавад',
+        Text(tr('notif.emptyHint'),
             style: TextStyle(color: AppColors.textTertiary, fontSize: 14),
             textAlign: TextAlign.center),
       ]),

@@ -19,6 +19,7 @@ import '../../models/reel_model.dart';
 import '../../models/post_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
+import '../../core/i18n/strings.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
@@ -205,7 +206,7 @@ class _ReelsViewState extends State<_ReelsView> {
           const SizedBox(height: 10),
           ListTile(
             leading: const Icon(AppIcons.video_library_outlined, color: Colors.white),
-            title: const Text('Аз галерея', style: TextStyle(color: Colors.white)),
+            title: Text(tr('reels.fromGallery'), style: const TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(
@@ -214,10 +215,9 @@ class _ReelsViewState extends State<_ReelsView> {
             }),
           ListTile(
             leading: const Icon(AppIcons.link_rounded, color: Colors.white),
-            title: const Text('Аз силка (Aparat/YouTube)',
-                style: TextStyle(color: Colors.white)),
-            subtitle: const Text('Силкаи видеоро гузоред',
-                style: TextStyle(color: Colors.white38, fontSize: 12)),
+            title: Text(tr('reels.fromLink'), style: const TextStyle(color: Colors.white)),
+            subtitle: Text(tr('reels.pasteVideoLink'),
+                style: const TextStyle(color: Colors.white38, fontSize: 12)),
             onTap: () { Navigator.pop(context); _createFromLink(vm); }),
           const SizedBox(height: 8),
         ]),
@@ -232,7 +232,7 @@ class _ReelsViewState extends State<_ReelsView> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Reel аз силка', style: TextStyle(color: Colors.white)),
+        title: Text(tr('reels.reelFromLink'), style: const TextStyle(color: Colors.white)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: linkCtrl, autofocus: true,
             style: const TextStyle(color: Colors.white),
@@ -242,15 +242,15 @@ class _ReelsViewState extends State<_ReelsView> {
           const SizedBox(height: 10),
           TextField(controller: capCtrl,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'Тавсиф (ихтиёрӣ)',
-              hintStyle: TextStyle(color: Colors.white30))),
+            decoration: InputDecoration(
+              hintText: tr('reels.descriptionOptional'),
+              hintStyle: const TextStyle(color: Colors.white30))),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text(tr('common.cancel'), style: const TextStyle(color: Colors.white54))),
           TextButton(onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Нашр', style: TextStyle(color: AppColors.neonBlue))),
+            child: Text(tr('reels.publish'), style: const TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -259,8 +259,8 @@ class _ReelsViewState extends State<_ReelsView> {
     linkCtrl.dispose(); capCtrl.dispose();
     if (ok != true || link.isEmpty) return;
     if (!EmbedUtils.isEmbed(link)) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Танҳо силкаи Aparat/YouTube қабул мешавад')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('reels.onlyAparatYoutube'))));
       return;
     }
     try {
@@ -269,12 +269,12 @@ class _ReelsViewState extends State<_ReelsView> {
       });
       if (mounted) {
         vm.load();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Reel илова шуд ✓'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('reels.reelAdded')), backgroundColor: Colors.green));
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Хато ҳангоми нашр')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('reels.publishError'))));
     }
   }
 
@@ -369,8 +369,8 @@ class _ReelsViewState extends State<_ReelsView> {
                 child: const Icon(AppIcons.video_collection_outlined,
                     color: Colors.white, size: 38)),
             const SizedBox(height: 20),
-            const Text('Рилсҳо нест',
-                style: TextStyle(
+            Text(tr('reels.noReels'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
@@ -383,8 +383,8 @@ class _ReelsViewState extends State<_ReelsView> {
                           color: Colors.redAccent, fontSize: 13),
                       textAlign: TextAlign.center))
             else
-              const Text('Аввалин Рилс-ро шумо гузоред!',
-                  style: TextStyle(color: Colors.white38, fontSize: 15)),
+              Text(tr('reels.beFirstToPost'),
+                  style: const TextStyle(color: Colors.white38, fontSize: 15)),
             const SizedBox(height: 28),
             GestureDetector(
                 onTap: () => Navigator.push(
@@ -404,16 +404,16 @@ class _ReelsViewState extends State<_ReelsView> {
                           Color(0xFFF77737)
                         ]),
                         borderRadius: BorderRadius.circular(24)),
-                    child: const Text('+ Рилс гузоред',
-                        style: TextStyle(
+                    child: Text('+ ${tr('reels.addReel')}',
+                        style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 15)))),
             const SizedBox(height: 12),
             TextButton(
                 onPressed: vm.load,
-                child: const Text('Боз кӯшиш кунед',
-                    style: TextStyle(color: Colors.white38))),
+                child: Text(tr('reels.tryAgain'),
+                    style: const TextStyle(color: Colors.white38))),
           ])));
     }
 
@@ -454,7 +454,7 @@ class _ReelsViewState extends State<_ReelsView> {
             vm.markNotInterested(vm.reels[i].id);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content:
-                    const Text('Рилс пинҳон шуд. Алгоритм навшуд.'),
+                    Text(tr('reels.reelHiddenAlgoUpdated')),
                 backgroundColor: Colors.grey[800],
                 duration: const Duration(seconds: 2)));
           },
@@ -808,24 +808,24 @@ class _ReelItemState extends State<_ReelItem> {
       builder: (_) => SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
-        _menuItem(AppIcons.edit_outlined, 'Таҳрир кардан',
+        _menuItem(AppIcons.edit_outlined, tr('reels.edit'),
             () {
           Navigator.pop(context);
           _editCaption();
         }),
-        _menuItem(AppIcons.bar_chart_rounded, 'Омор (Статистика)',
+        _menuItem(AppIcons.bar_chart_rounded, tr('reels.statistics'),
             () {
           Navigator.pop(context);
           _showStats();
         }),
-        _menuItem(AppIcons.alternate_email, 'Илова кардани зикр',
+        _menuItem(AppIcons.alternate_email, tr('reels.addMention'),
             () {
           Navigator.pop(context);
           _addMention();
         }),
         _menuItem(
             _hideLikes ? AppIcons.visibility_rounded : AppIcons.visibility_off_outlined,
-            _hideLikes ? 'Нишон додани лайкҳо' : 'Пинҳон кардани лайкҳо',
+            _hideLikes ? tr('reels.showLikes') : tr('reels.hideLikes'),
             () async {
           Navigator.pop(context);
           final target = !_hideLikes;
@@ -845,8 +845,8 @@ class _ReelItemState extends State<_ReelItem> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(_hideLikes
-                    ? 'Лайкҳо пинҳон шуданд ✓'
-                    : 'Лайкҳо намоён шуданд ✓'),
+                    ? tr('reels.likesHidden')
+                    : tr('reels.likesShown')),
                 backgroundColor: Colors.green,
                 duration: const Duration(seconds: 2)));
           }
@@ -854,7 +854,7 @@ class _ReelItemState extends State<_ReelItem> {
         }),
         _menuItem(
             _commentsOff ? AppIcons.mode_comment_rounded : AppIcons.mode_comment_outlined,
-            _commentsOff ? 'Фаъол кардани шарҳҳо' : 'Хомӯш кардани шарҳҳо',
+            _commentsOff ? tr('reels.enableComments') : tr('reels.disableComments'),
             () async {
           Navigator.pop(context);
           final target = !_commentsOff;
@@ -874,14 +874,14 @@ class _ReelItemState extends State<_ReelItem> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(_commentsOff
-                    ? 'Шарҳҳо хомӯш шуданд ✓'
-                    : 'Шарҳҳо фаъол шуданд ✓'),
+                    ? tr('reels.commentsDisabledMsg')
+                    : tr('reels.commentsEnabledMsg')),
                 backgroundColor: Colors.green,
                 duration: const Duration(seconds: 2)));
           }
           if (!_paused) _ctrl?.play();
         }),
-        _menuItem(AppIcons.delete_outline_rounded, 'Нест кардан', () {
+        _menuItem(AppIcons.delete_outline_rounded, tr('reels.delete'), () {
           Navigator.pop(context);
           _deleteReel();
         }, color: Colors.redAccent),
@@ -903,37 +903,37 @@ class _ReelItemState extends State<_ReelItem> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
         _menuItem(_saved ? AppIcons.bookmark : AppIcons.bookmark_border_rounded,
-            _saved ? 'Захира шуд' : 'Захира кардан', () {
+            _saved ? tr('reels.saved') : tr('reels.saveAction'), () {
           Navigator.pop(context);
           setState(() => _saved = !_saved);
           widget.onSave();
         }),
-        _menuItem(AppIcons.thumb_up_outlined, 'Ҷолиб аст', () {
+        _menuItem(AppIcons.thumb_up_outlined, tr('reels.interesting'), () {
           Navigator.pop(context);
           _markInterest(true);
         }),
-        _menuItem(AppIcons.thumb_down_outlined, 'Ҷолиб нест', () {
+        _menuItem(AppIcons.thumb_down_outlined, tr('reels.notInteresting'), () {
           Navigator.pop(context);
           widget.onNotInterested();
         }),
-        _menuItem(AppIcons.info_outline_rounded, 'Чаро ин рилсро мебинед', () {
+        _menuItem(AppIcons.info_outline_rounded, tr('reels.whyThisReel'), () {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ин рилс аз рӯи завқ ва фаъолияти шумо нишон дода шуд'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('reels.shownByInterest')),
               duration: Duration(seconds: 3)));
         }),
-        _menuItem(AppIcons.flag_outlined, 'Шикоят кардан', () {
+        _menuItem(AppIcons.flag_outlined, tr('reels.reportContent'), () {
           Navigator.pop(context);
           _report();
         }, color: Colors.redAccent),
-        _menuItem(AppIcons.person_outline_rounded, 'Дидани профил', () {
+        _menuItem(AppIcons.person_outline_rounded, tr('reels.viewProfile'), () {
           Navigator.pop(context);
           _openProfile();
         }),
         // ── АД: Download menu item ───────────────────────────
         _menuItem(
           _downloading ? AppIcons.hourglass_bottom_rounded : AppIcons.download_rounded,
-          'Зеркашии видео',
+          tr('reels.downloadVideo'),
           _downloading ? () {} : () {
             Navigator.pop(context);
             _handleDownload();
@@ -968,30 +968,30 @@ class _ReelItemState extends State<_ReelItem> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Таҳрир кардан',
-            style: TextStyle(color: Colors.white)),
+        title: Text(tr('reels.edit'),
+            style: const TextStyle(color: Colors.white)),
         content: TextField(
             controller: ctrl,
             autofocus: true,
             maxLines: 3,
             maxLength: 2200,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-                hintText: 'Тавсиф...',
-                hintStyle: TextStyle(color: Colors.white38),
+            decoration: InputDecoration(
+                hintText: tr('reels.descriptionHint'),
+                hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
-                fillColor: Color(0xFF111111),
-                border: OutlineInputBorder(
+                fillColor: const Color(0xFF111111),
+                border: const OutlineInputBorder(
                     borderSide: BorderSide.none))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор',
-                  style: TextStyle(color: Colors.white54))),
+              child: Text(tr('common.cancel'),
+                  style: const TextStyle(color: Colors.white54))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Захира',
-                  style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('common.save'),
+                  style: const TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -1023,8 +1023,8 @@ class _ReelItemState extends State<_ReelItem> {
           height: MediaQuery.of(context).size.height * 0.7,
           child: Column(children: [
             _handle(),
-            const Text('Зикр кардан',
-                style: TextStyle(
+            Text(tr('reels.mention'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16)),
@@ -1035,13 +1035,13 @@ class _ReelItemState extends State<_ReelItem> {
                 controller: ctrl,
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                    hintText: 'Ном ё username...',
-                    hintStyle: TextStyle(color: Colors.white38),
+                decoration: InputDecoration(
+                    hintText: tr('reels.nameOrUsername'),
+                    hintStyle: const TextStyle(color: Colors.white38),
                     prefixIcon:
-                        Icon(AppIcons.search, color: Colors.white38),
+                        const Icon(AppIcons.search, color: Colors.white38),
                     filled: true,
-                    fillColor: Color(0xFF1A1A1A),
+                    fillColor: const Color(0xFF1A1A1A),
                     border: OutlineInputBorder(
                         borderRadius:
                             BorderRadius.all(Radius.circular(12)),
