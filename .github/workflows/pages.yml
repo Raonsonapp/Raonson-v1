@@ -3,16 +3,10 @@ name: Deploy Raonson Website
 on:
   push:
     branches: [main]
-    paths:
-      - 'index.html'
-      - 'assets/icon.png'
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -23,24 +17,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Prepare website
         run: |
-          mkdir -p _site
-          cp index.html _site/index.html
           mkdir -p _site/assets
+          cp index.html _site/index.html
           cp assets/icon.png _site/assets/icon.png
           touch _site/.nojekyll
           chmod -R +rX _site
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 
   deploy:
     needs: build
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     environment:
       name: github-pages
