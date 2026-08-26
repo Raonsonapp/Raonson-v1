@@ -281,6 +281,24 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
               hostAvatar: UserSession.avatar ?? '',
               onClose: _end,
             ),
+          // Шумориши бинандаҳо — ҳар 5 сония аз сервер нав мешавад.
+          if (!_starting && _id.isNotEmpty)
+            Positioned(left: 12, top: 64,
+              child: SafeArea(child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(20)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(AppIcons.visibility_outlined,
+                      color: Colors.white, size: 15),
+                  const SizedBox(width: 5),
+                  Text('$_viewers',
+                      style: const TextStyle(color: Colors.white,
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                ]),
+              )),
+            ),
           // Идораи host — flip камера ва mic (тарафи рост, боло).
           Positioned(right: 12, top: 64,
             child: SafeArea(child: Column(children: [

@@ -77,7 +77,7 @@ class _LoginViewState extends State<_LoginView> {
                   Align(
                     alignment: Alignment.topLeft,
                     child: IconButton(
-                      icon: Icon(AppIcons.arrow_back_rounded,
+                      icon: Icon(AppIcons.arrow_back,
                           color: AppColors.textPrimary),
                       onPressed: () => Navigator.of(context).pop(),
                     ),

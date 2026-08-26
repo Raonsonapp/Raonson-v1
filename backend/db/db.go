@@ -257,6 +257,8 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_comments ON reel_comments(reel_id, created_at);
+	ALTER TABLE reel_comments ADD COLUMN IF NOT EXISTS likes_count INTEGER DEFAULT 0;
+	ALTER TABLE reel_comments ADD COLUMN IF NOT EXISTS parent_id TEXT;
 
 	CREATE TABLE IF NOT EXISTS reel_views (
 		user_id TEXT NOT NULL,
