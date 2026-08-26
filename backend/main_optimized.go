@@ -475,15 +475,22 @@ func gzipMiddleware() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		// Танҳо JSON ва text фишурда мешавад
-		c.Next()
-		ct := c.Writer.Header().Get("Content-Type")
-		if !strings.Contains(ct, "json") && !strings.Contains(ct, "text") {
+		// WebSocket upgrade-ро печонида намешавад — hijack-и пайвастро
+		// вайрон мекунад.
+		if c.Request.Header.Get("Upgrade") != "" {
+			c.Next()
 			return
 		}
-		// Note: барои production gzip wrapper пеш аз write лозим
-		// Ин middleware response headers мегузорад
-		c.Header("Content-Encoding", "")
+		// Writer БОЯД пеш аз c.Next() печонида шавад — вагарна ҷавоб
+		// аллакай фишурданашуда навишта мешавад (хатои қаблӣ: middleware
+		// баъд аз навиштан танҳо header мегузошт ва ҳеҷ чиз фишурда намешуд).
+		c.Header("Content-Encoding", "gzip")
+		c.Header("Vary", "Accept-Encoding")
+		c.Writer.Header().Del("Content-Length") // андоза пас аз фишурдан дигар аст
+		gz, gw := newGzipWriter(c)
+		c.Writer = gw
+		defer gz.Close()
+		c.Next()
 	}
 }
 

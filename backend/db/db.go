@@ -284,6 +284,13 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id, read);
+	-- Рӯйхати чатҳо: "WHERE sender_id=$1 OR receiver_id=$1". sender_id
+	-- ҳеҷ index надошт, бинобар ин кушодани рӯйхати чатҳо тамоми ҷадвали
+	-- messages-ро скан мекард. Бо ин ду index Postgres BitmapOr мекунад.
+	CREATE INDEX IF NOT EXISTS idx_messages_sender_recent
+	  ON messages(sender_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_messages_receiver_recent
+	  ON messages(receiver_id, created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS notifications (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
