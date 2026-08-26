@@ -205,6 +205,7 @@ func main() {
 		po.POST("/:id/archive",      handlers.TogglePostArchive)
 		po.POST("/:id/interest",     handlers.MarkInterest)
 		po.POST("/:id/not_interest", handlers.MarkNotInterest)
+		po.DELETE("/:id/tag",        handlers.RemoveMyTag) // қайди худро бардор
 		po.POST("/:id/not-interested", handlers.PostNotInterested)
 		po.POST("/:id/pin",          handlers.PinPost)
 		po.PUT("/:id/caption",       handlers.UpdatePostCaption)

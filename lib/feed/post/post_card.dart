@@ -397,6 +397,32 @@ class _PostCardState extends State<PostCard>
     ));
   }
 
+  /// Оё дар caption-и ин пост маро қайд кардаанд?
+  bool get _taggedMe {
+    final me = (UserSession.username ?? '').trim().toLowerCase();
+    if (me.isEmpty) return false;
+    return widget.post.caption.toLowerCase().contains('@$me');
+  }
+
+  Future<void> _removeMyTag() async {
+    try {
+      final res = await ApiClient.instance
+          .delete('/posts/${widget.post.id}/tag');
+      if (!mounted) return;
+      if (res.statusCode < 400) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Қайди шумо бардошта шуд')));
+      } else {
+        throw Exception();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('common.error'))));
+      }
+    }
+  }
+
   void _showOtherMenu() {
     showModalBottomSheet(
       context: context,
@@ -406,6 +432,13 @@ class _PostCardState extends State<PostCard>
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
+          // Агар дар ин пост қайд шуда бошӣ — қайди худро бардор
+          // (мисли Instagram: ҳар кас қайд карда метавонад, вале ту
+          //  метавонӣ онро аз профили худ бигирӣ).
+          if (_taggedMe)
+            _MenuItem(icon: AppIcons.person_off_rounded,
+                label: 'Қайди худро бардор',
+                onTap: () { Navigator.pop(context); _removeMyTag(); }),
           _MenuItem(icon: Icons.volume_off_outlined,
               label: 'Постҳои @${widget.post.user.username}-ро бандош',
               onTap: () { Navigator.pop(context); _muteUser(); }),

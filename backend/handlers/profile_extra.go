@@ -109,7 +109,9 @@ func GetTaggedPosts(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
 		WHERE p.caption ILIKE '%@' || $2 || '%'
-		ORDER BY p.created_at DESC LIMIT 60`, myID, uname)
+		  AND NOT EXISTS (SELECT 1 FROM post_tag_removals tr
+		                  WHERE tr.post_id = p.id AND tr.user_id = $3::text)
+		ORDER BY p.created_at DESC LIMIT 60`, myID, uname, target)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
 		return
@@ -250,4 +252,22 @@ func DeleteHighlight(c *gin.Context) {
 		c.Param("id"), myID)
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+
+// DELETE /posts/:id/tag — корбар қайди худро аз пост мегирад.
+// Instagram низ ҳамин тавр: ҳар кас метавонад қайд кунад, вале
+// қайдшуда метавонад онро аз профили худ бардорад.
+func RemoveMyTag(c *gin.Context) {
+	pid  := c.Param("id")
+	myID := mw.UID(c)
+	if pid == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "post id required"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO post_tag_removals(post_id,user_id) VALUES($1,$2)
+		 ON CONFLICT DO NOTHING`, pid, myID)
+	mw.InvalidateUserCache(myID)
+	c.JSON(http.StatusOK, gin.H{"removed": true})
 }

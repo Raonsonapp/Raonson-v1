@@ -288,6 +288,15 @@ func migrate() {
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_thumb TEXT;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_user  TEXT;
 
+	-- Tag-и худро аз пост гирифтан (мисли Instagram) — пост дар ҷадвали
+	-- "Дар он қайд шудаед"-и корбар дигар намебарояд.
+	CREATE TABLE IF NOT EXISTS post_tag_removals (
+		post_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (post_id, user_id)
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id, read);
 	-- Рӯйхати чатҳо: "WHERE sender_id=$1 OR receiver_id=$1". sender_id
