@@ -203,6 +203,15 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     setState(() => _paused = true);
   }
 
+  /// Ба профили муаллифи сторис мегузарад (зеркунии аватар ё username).
+  void _openAuthorProfile() {
+    final uid = _current.user.id.trim();
+    if (uid.isEmpty) return;
+    _pause();
+    Navigator.of(context).pop();
+    Navigator.of(context).pushNamed('/profile', arguments: uid);
+  }
+
   void _resume() {
     if (!_paused) return;
     final remaining = _progressCtrl.duration! * (1 - _progressCtrl.value);
@@ -540,16 +549,22 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           Positioned(
             top: top + 18, left: 12, right: 12,
             child: Row(children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: _current.user.avatar.isNotEmpty
-                    ? CachedNetworkImageProvider(_current.user.avatar, maxWidth: 80) : null,
-                backgroundColor: Colors.white12,
-                child: _current.user.avatar.isEmpty
-                    ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
+              GestureDetector(
+                onTap: _openAuthorProfile,
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundImage: _current.user.avatar.isNotEmpty
+                      ? CachedNetworkImageProvider(_current.user.avatar, maxWidth: 80) : null,
+                  backgroundColor: Colors.white12,
+                  child: _current.user.avatar.isEmpty
+                      ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
+                ),
               ),
               const SizedBox(width: 10),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: GestureDetector(
+                onTap: _openAuthorProfile,
+                behavior: HitTestBehavior.opaque,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(mainAxisSize: MainAxisSize.min, children: [
                   Flexible(child: Text(_current.user.username,
                       overflow: TextOverflow.ellipsis,
@@ -575,7 +590,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                   ],
                 ]),
                 Text(_timeAgo(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              ])),
+              ]))),
               if (_isOwner)
                 GestureDetector(
                   onTap: _showOwnerMenu,

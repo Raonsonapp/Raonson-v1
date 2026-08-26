@@ -586,6 +586,7 @@ class _ReelItemState extends State<_ReelItem> {
 
   bool? _hasStory;
   bool _storyViewed = false;
+  late int _commentsCount; // ҳолати маҳаллӣ — дарҳол нав мешавад
 
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
@@ -598,6 +599,7 @@ class _ReelItemState extends State<_ReelItem> {
     _saved = widget.reel.isSaved;
     _hideLikes   = widget.reel.hideLikes;
     _commentsOff = widget.reel.commentsDisabled;
+    _commentsCount = widget.reel.commentsCount;
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
     FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
     _hasStory = widget.reel.user.hasStory ? true : null;
@@ -736,6 +738,12 @@ class _ReelItemState extends State<_ReelItem> {
   @override
   void didUpdateWidget(_ReelItem old) {
     super.didUpdateWidget(old);
+    // Реели дигар ба ҳамин slot омад — ҳолати маҳаллиро нав мекунем.
+    if (widget.reel.id != old.reel.id) {
+      _commentsCount = widget.reel.commentsCount;
+      _hideLikes     = widget.reel.hideLikes;
+      _commentsOff   = widget.reel.commentsDisabled;
+    }
     if (widget.isMuted != old.isMuted && _ctrl != null) {
       _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
     }
@@ -1287,7 +1295,7 @@ class _ReelItemState extends State<_ReelItem> {
       caption:       reel.caption,
       media: [{'url': reel.videoUrl, 'type': 'video'}],
       likesCount:    reel.likesCount,
-      commentsCount: reel.commentsCount,
+      commentsCount: _commentsCount,
       liked:         reel.isLiked,
       saved:         reel.isSaved,
       createdAt:     reel.createdAt ?? DateTime.now(),
@@ -1300,7 +1308,13 @@ class _ReelItemState extends State<_ReelItem> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
-          child: CommentsScreen(post: asPost, targetType: 'reel')),
+          child: CommentsScreen(
+              post: asPost,
+              targetType: 'reel',
+              // Ҳар шарҳи нав — шумориш дарҳол дар рӯи Reel нав мешавад.
+              onCommentAdded: () {
+                if (mounted) setState(() => _commentsCount++);
+              })),
     ).then((_) {
       if (!_paused && mounted) _ctrl?.play();
     });
@@ -1630,7 +1644,7 @@ class _ReelItemState extends State<_ReelItem> {
               if (!_commentsOff) ...[
                 _ReelStableBtn(
                     svgPath: 'assets/icons/comment.svg',
-                    count: _fmt(reel.commentsCount),
+                    count: _fmt(_commentsCount),
                     onTap: _openComments),
                 const SizedBox(height: 22),
               ],

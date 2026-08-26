@@ -20,6 +20,10 @@ import (
 // GET /stories
 func GetStories(c *gin.Context) {
 	myID := mw.UID(c)
+	// ?userId=X — танҳо сторисҳои ҳамон корбар (барои санҷиши ҳалқаи сторис).
+	targetID := strings.TrimSpace(c.Query("userId"))
+
+	// Сторисҳо танҳо аз корбароне, ки ман пайравӣ мекунам (+ худам).
 	// Сторисҳои «наздикон» танҳо ба дӯстони наздики соҳиб намоён мешаванд.
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
@@ -27,12 +31,17 @@ func GetStories(c *gin.Context) {
 		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
+		  AND ($2::text = '' OR s.user_id = $2::text)
+		  AND ( s.user_id = $1::text
+		        OR EXISTS (SELECT 1 FROM follows f
+		                   WHERE f.follower_id = $1::text
+		                     AND f.following_id = s.user_id) )
 		  AND ( s.user_id = $1::text
 		        OR COALESCE(s.audience,'all') = 'all'
 		        OR (COALESCE(s.audience,'all') = 'close' AND EXISTS (
 		              SELECT 1 FROM close_friends cf
 		              WHERE cf.user_id = s.user_id AND cf.friend_id = $1::text)) )
-		ORDER BY s.created_at DESC`, myID)
+		ORDER BY s.created_at DESC`, myID, targetID)
 	c.JSON(http.StatusOK, scanStoryRows(rows))
 }
 

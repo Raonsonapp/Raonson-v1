@@ -45,7 +45,13 @@ class _LoginViewState extends State<_LoginView> {
     ctrl.updatePassword(_pwCtrl.text);
     final ok = await ctrl.login();
     if (!mounted) return;
-    if (ok) context.read<AppState>().login();
+    if (ok) {
+      context.read<AppState>().login();
+      // Агар ин экран аз дохили барнома кушода шуда бошад (илова кардани
+      // аккаунт), онро мебандем — вагарна корбар дар экрани login мемонад.
+      final nav = Navigator.of(context);
+      if (nav.canPop()) nav.popUntil((r) => r.isFirst);
+    }
   }
 
   @override
@@ -65,6 +71,17 @@ class _LoginViewState extends State<_LoginView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Тугмаи «ба ақиб» — танҳо вақте экрани login аз дохили
+                // барнома кушода шудааст (илова кардани аккаунт).
+                if (Navigator.of(context).canPop())
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: IconButton(
+                      icon: Icon(AppIcons.arrow_back_rounded,
+                          color: AppColors.textPrimary),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
                 const Align(
                     alignment: Alignment.topCenter, child: LangChip()),
                 const SizedBox(height: 28),
