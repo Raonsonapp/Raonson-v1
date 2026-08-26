@@ -222,12 +222,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     try {
       // 1. Кэшро фавран нишон медиҳем (тез).
       final msgs = await _repo.getMessagesWithUserEx(widget.peer.id);
-      if (mounted) setState(() {
-        _messages = msgs;
-        _loading = false;
-        _msgPage = 1;
-        _hasMoreOlder = msgs.length >= _msgPageSize;
-      });
+      if (mounted) {
+        setState(() {
+          _messages = msgs;
+          _loading = false;
+          _msgPage = 1;
+          _hasMoreOlder = msgs.length >= _msgPageSize;
+        });
+      }
       _scrollBottom();
     } catch (_) {
       if (mounted) setState(() => _loading = false);

@@ -285,11 +285,13 @@ class _PostEditorState extends State<_PostEditor> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
-              if (ctrl.text.trim().isNotEmpty) setState(() => _texts.add(_TextItem(
-                text: ctrl.text.trim(),
-                position: Offset(MediaQuery.of(context).size.width / 2 - 60,
-                  MediaQuery.of(context).size.height / 2 - 20),
-                color: _textColor, fontSize: _fontSize)));
+              if (ctrl.text.trim().isNotEmpty) {
+                setState(() => _texts.add(_TextItem(
+                  text: ctrl.text.trim(),
+                  position: Offset(MediaQuery.of(context).size.width / 2 - 60,
+                    MediaQuery.of(context).size.height / 2 - 20),
+                  color: _textColor, fontSize: _fontSize)));
+              }
               Navigator.pop(context);
             },
             child: const Text('Илова', style: TextStyle(color: Colors.black))),
@@ -314,10 +316,12 @@ class _PostEditorState extends State<_PostEditor> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
               final u = ctrl.text.trim();
-              if (u.isNotEmpty && u != '@') setState(() => _mentions.add(_MentionItem(
-                username: u,
-                position: Offset(MediaQuery.of(context).size.width / 2 - 60,
-                  MediaQuery.of(context).size.height / 2))));
+              if (u.isNotEmpty && u != '@') {
+                setState(() => _mentions.add(_MentionItem(
+                  username: u,
+                  position: Offset(MediaQuery.of(context).size.width / 2 - 60,
+                    MediaQuery.of(context).size.height / 2))));
+              }
               Navigator.pop(context);
             },
             child: const Text('Илова', style: TextStyle(color: Colors.black))),

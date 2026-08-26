@@ -82,8 +82,10 @@ class _PromoCodesState extends State<PromoCodesScreen> {
       final pct = int.tryParse(pctCtrl.text.trim()) ?? 0;
       final uses = int.tryParse(usesCtrl.text.trim()) ?? 0;
       if (code.isEmpty || pct < 1 || pct > 90) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Код ва тахфиф (1–90%)-ро дуруст ворид кунед')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Код ва тахфиф (1–90%)-ро дуруст ворид кунед')));
+        }
       } else {
         try {
           final r = await ApiClient.instance.post('/shop/promos',

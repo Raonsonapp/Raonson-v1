@@ -257,8 +257,10 @@ class _ReelsViewState extends State<_ReelsView> {
     linkCtrl.dispose(); capCtrl.dispose();
     if (ok != true || link.isEmpty) return;
     if (!EmbedUtils.isEmbed(link)) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(tr('reels.onlyAparatYoutube'))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('reels.onlyAparatYoutube'))));
+      }
       return;
     }
     try {
@@ -271,8 +273,10 @@ class _ReelsViewState extends State<_ReelsView> {
           content: Text(tr('reels.reelAdded')), backgroundColor: Colors.green));
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(tr('reels.publishError'))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('reels.publishError'))));
+      }
     }
   }
 
@@ -425,7 +429,9 @@ class _ReelsViewState extends State<_ReelsView> {
         onRefresh: () async {
           _currentPage = 0;
           _initialPreloadDone = false;
-          for (final ctrl in _preloaded.values) ctrl.dispose();
+          for (final ctrl in _preloaded.values) {
+            ctrl.dispose();
+          }
           _preloaded.clear();
           await vm.load();
           if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
@@ -611,10 +617,12 @@ class _ReelItemState extends State<_ReelItem> {
     final uid = widget.reel.user.id;
     final cached = _storyCache[uid];
     if (cached != null) {
-      if (mounted) setState(() {
-        _hasStory = cached.has;
-        _storyViewed = cached.viewed;
-      });
+      if (mounted) {
+        setState(() {
+          _hasStory = cached.has;
+          _storyViewed = cached.viewed;
+        });
+      }
       return;
     }
     try {
@@ -1209,9 +1217,11 @@ class _ReelItemState extends State<_ReelItem> {
       await ApiClient.instance.delete('/reels/${widget.reel.id}');
       widget.onDelete();
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
-        duration: Duration(seconds: 2)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+          duration: Duration(seconds: 2)));
+      }
       if (!_paused && mounted) _ctrl?.play();
     }
   }

@@ -10,7 +10,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:video_player/video_player.dart';
 
 import '../../models/post_model.dart';
 import '../../models/story_model.dart';
@@ -442,15 +441,19 @@ class _PostCardState extends State<PostCard>
       final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
       if (res.statusCode < 400) {
         widget.onDeleted?.call();
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Пост ҳазф шуд'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2)));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Пост ҳазф шуд'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2)));
+        }
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
-        duration: Duration(seconds: 2)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+          duration: Duration(seconds: 2)));
+      }
     }
   }
 
@@ -678,9 +681,11 @@ class _PostCardState extends State<PostCard>
       await ApiClient.instance.post(
         '/posts/${widget.post.id}/report',
         body: {'reason': result.reason, 'description': result.description});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Жалоб фиристода шуд. Раҳмат!'),
-        backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Жалоб фиристода шуд. Раҳмат!'),
+          backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+      }
     } catch (_) {}
   }
 
@@ -1535,8 +1540,10 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                                   fontWeight: FontWeight.w600)),
                           onTap: () {
                             Navigator.pop(context);
-                            if (id.isNotEmpty) Navigator.pushNamed(
-                                context, '/profile', arguments: id);
+                            if (id.isNotEmpty) {
+                              Navigator.pushNamed(
+                                  context, '/profile', arguments: id);
+                            }
                           },
                         );
                       }),
@@ -1692,252 +1699,10 @@ class _SectionTitle extends StatelessWidget {
 
 
 // ── Media Carousel ───────────────────────────────────────────────────
-class _MediaCarousel extends StatefulWidget {
-  final List<Map<String, String>> media;
-  final bool isActive;
-  const _MediaCarousel({required this.media, this.isActive = true});
-  @override
-  State<_MediaCarousel> createState() => _MediaCarouselState();
-}
 
-class _MediaCarouselState extends State<_MediaCarousel> {
-  int _current = 0;
-  double? _videoRatio; // ратиои аслии видео (вақте маълум шуд)
-  double? _imageRatio; // ратиои аслии расм (вақте маълум шуд)
-  ImageStream? _imageStream;
-  ImageStreamListener? _imageListener;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolveImageRatio();
-  }
-
-  @override
-  void didUpdateWidget(_MediaCarousel old) {
-    super.didUpdateWidget(old);
-    final oldUrl = old.media.isNotEmpty ? old.media.first['url'] : null;
-    final newUrl = widget.media.isNotEmpty ? widget.media.first['url'] : null;
-    if (oldUrl != newUrl) {
-      _imageRatio = null;
-      _resolveImageRatio();
-    }
-  }
-
-  // Мисли видео: андозаи аслии расмро мегирем, то формат канда/кӯтоҳ нашавад.
-  void _resolveImageRatio() {
-    if (widget.media.isEmpty) return;
-    final type = widget.media.first['type'] ?? 'image';
-    final url  = widget.media.first['url']  ?? '';
-    if (type != 'image' || url.isEmpty) return;
-    _imageStream?.removeListener(_imageListener!);
-    final stream = CachedNetworkImageProvider(url)
-        .resolve(const ImageConfiguration());
-    final listener = ImageStreamListener((info, _) {
-      if (!mounted) return;
-      final w = info.image.width.toDouble();
-      final h = info.image.height.toDouble();
-      if (w > 0 && h > 0 && _imageRatio == null) {
-        setState(() => _imageRatio = w / h);
-      }
-    }, onError: (_, __) {});
-    _imageStream = stream;
-    _imageListener = listener;
-    stream.addListener(listener);
-  }
-
-  @override
-  void dispose() {
-    _imageStream?.removeListener(_imageListener!);
-    super.dispose();
-  }
-
-  // Аз андозаи аслии медиа ба яке аз 3 формати расмии Instagram
-  // snap мекунад: 4:5 (амудӣ), 1:1 (мураббаъ), 1.91:1 (уфуқӣ).
-  // Инро Instagram ҳам мекунад: recording-и корбар ба formatҳои
-  // мушаххас snap мешавад, na ба ratio-и аслии тасодуфӣ.
-  static const double _iaPortrait  = 4 / 5;      // 0.80
-  static const double _iaSquare    = 1.0;
-  static const double _iaLandscape = 1.91;
-  double _snapToInstagram(double raw) {
-    if (raw <= 0) return _iaPortrait;
-    // Ба наздиктарин формат snap мекунем — фарқи ratio-ро дар log-space
-    // мешуморем, то portrait ва landscape мутаносиб муомила шаванд.
-    final r = raw.clamp(0.5, 1.91);
-    final dp = (r - _iaPortrait).abs()  / _iaPortrait;
-    final ds = (r - _iaSquare).abs();
-    final dl = (r - _iaLandscape).abs() / _iaLandscape;
-    if (dp <= ds && dp <= dl) return _iaPortrait;
-    if (ds <= dl) return _iaSquare;
-    return _iaLandscape;
-  }
-
-  double _getAspectRatio() {
-    // ✅ Формати аслиро нигоҳ дор — мисли Instagram (4:5 / 1:1 / 1.91:1)
-    if (widget.media.isEmpty) return _iaSquare;
-    final type  = widget.media.first['type']  ?? 'image';
-    final ratio = widget.media.first['aspectRatio'] ?? '';
-    if (ratio.isNotEmpty) {
-      final r = double.tryParse(ratio);
-      if (r != null && r > 0) return _snapToInstagram(r);
-    }
-    if (type == 'video' && _videoRatio != null) {
-      return _snapToInstagram(_videoRatio!);
-    }
-    if (type == 'image' && _imageRatio != null) {
-      return _snapToInstagram(_imageRatio!);
-    }
-    // Default: portrait 4:5 мисли Instagram (то андозаи аслӣ маълум шавад)
-    return _iaPortrait;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final aspectRatio = _getAspectRatio();
-    return Stack(alignment: Alignment.bottomCenter, children: [
-      // Фони сиёҳ дар паси расм — ягон навори бежеви аз letterbox намонад
-      Positioned.fill(child: ColoredBox(color: AppColors.bg)),
-      AspectRatio(
-        aspectRatio: aspectRatio,
-        child: PageView.builder(
-          onPageChanged: (i) => setState(() => _current = i),
-          itemCount: widget.media.length,
-          itemBuilder: (_, i) {
-            final url  = widget.media[i]['url']  ?? '';
-            final type = widget.media[i]['type'] ?? 'image';
-            if (url.isEmpty) return Container(color: AppColors.surface);
-            if (type == 'video') return _VideoItem(
-              url: url, isActive: widget.isActive, aspectRatio: aspectRatio,
-              onRatio: (r) {
-                if (mounted && _videoRatio == null) {
-                  setState(() => _videoRatio = r);
-                }
-              });
-            return CachedNetworkImage(
-              imageUrl: url, fit: BoxFit.cover,
-              width: double.infinity, height: double.infinity,
-              placeholder: (_, __) => Container(color: AppColors.surface,
-                child: Center(child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.textFaint))),
-              errorWidget: (_, __, ___) => Container(
-                color: AppColors.surface,
-                child: Center(child: Icon(AppIcons.broken_image_outlined,
-                    color: AppColors.textFaint, size: 48))));
-          }),
-      ),
-      if (widget.media.length > 1)
-        Positioned(
-          bottom: 10,
-          child: Row(mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(widget.media.length, (i) =>
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: _current == i ? 18 : 6, height: 6,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: _current == i ? AppColors.textPrimary : AppColors.textFaint)))),
-        ),
-    ]);
-  }
-}
 
 // ── Video Item ───────────────────────────────────────────────────────
-class _VideoItem extends StatefulWidget {
-  final String url;
-  final bool isActive;
-  final double aspectRatio;
-  final void Function(double)? onRatio;
-  const _VideoItem({required this.url, this.isActive = true,
-      this.aspectRatio = 16/9, this.onRatio});
-  @override
-  State<_VideoItem> createState() => _VideoItemState();
-}
 
-class _VideoItemState extends State<_VideoItem> {
-  VideoPlayerController? _ctrl;
-  bool _ready = false, _buffering = false, _paused = false, _error = false;
-
-  @override void initState() { super.initState(); _init(); }
-
-  Future<void> _init() async {
-    try {
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url),
-          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
-      _ctrl = ctrl;
-      await ctrl.initialize().timeout(const Duration(seconds: 30));
-      if (!mounted) return;
-      ctrl.setLooping(true);
-      ctrl.setVolume(0); // Mute дар feed мисли Instagram
-      ctrl.addListener(_onUpdate);
-      if (ctrl.value.isInitialized && ctrl.value.aspectRatio > 0) {
-        widget.onRatio?.call(ctrl.value.aspectRatio);
-      }
-      setState(() => _ready = true);
-      if (widget.isActive) ctrl.play();
-    } catch (_) { if (mounted) setState(() => _error = true); }
-  }
-
-  void _onUpdate() {
-    if (!mounted || _ctrl == null) return;
-    final b = _ctrl!.value.isBuffering;
-    if (b != _buffering) setState(() => _buffering = b);
-  }
-
-  @override
-  void didUpdateWidget(_VideoItem old) {
-    super.didUpdateWidget(old);
-    if (!_ready || _ctrl == null) return;
-    if (widget.isActive && !_paused) { _ctrl!.play(); } else { _ctrl!.pause(); }
-  }
-
-  @override void dispose() {
-    _ctrl?.removeListener(_onUpdate);
-    _ctrl?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_error) return Container(color: Colors.black12,
-        child: Center(child: Column(mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(AppIcons.play_circle_outline, color: AppColors.textFaint, size: 48),
-            SizedBox(height: 8),
-            Text('Видео бор намешавад',
-                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-          ])));
-    if (!_ready) {
-      return Container(color: AppColors.bg,
-        child: Center(child: CircularProgressIndicator(
-            strokeWidth: 2, color: AppColors.textFaint)));
-    }
-    final videoRatio = _ctrl!.value.isInitialized
-        ? _ctrl!.value.aspectRatio : widget.aspectRatio;
-    return GestureDetector(
-      onTap: () { setState(() => _paused = !_paused);
-        _paused ? _ctrl!.pause() : _ctrl!.play(); },
-      child: Container(color: AppColors.bg,
-        child: Center(child: AspectRatio(aspectRatio: videoRatio,
-          child: Stack(fit: StackFit.expand, children: [
-            VideoPlayer(_ctrl!),
-            if (_buffering) Center(child: CircularProgressIndicator(
-                strokeWidth: 2, color: AppColors.textFaint)),
-            if (_paused && !_buffering)
-              Center(child: Icon(AppIcons.play_circle_outline_rounded,
-                  color: AppColors.textSecondary, size: 56)),
-            // Mute badge
-            Positioned(bottom: 8, right: 8,
-              child: Container(
-                decoration: const BoxDecoration(
-                    color: Colors.black54, shape: BoxShape.circle),
-                padding: const EdgeInsets.all(5),
-                child: Icon(AppIcons.volume_off_rounded,
-                    color: AppColors.textPrimary, size: 14))),
-          ])))),
-    );
-  }
-}
 
 // Сатри «ба чат фиристодан» — мисли Instagram (рӯйхати чатҳо + фиристодан).
 class _ShareChatsRow extends StatefulWidget {
