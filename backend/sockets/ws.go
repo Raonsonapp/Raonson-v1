@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -226,7 +227,20 @@ func dispatch(cl *client, raw []byte) {
 			Receiver string `json:"receiver"`
 		}
 		json.Unmarshal(msg.Data, &p)
-		if p.ChatID == "" || p.Text == "" || p.Receiver == "" {
+		if p.ChatID == "" || p.Text == "" {
+			return
+		}
+		// Гирандаро аз chatID мегирем (он "idA_idB"-и мураттабшуда аст),
+		// то client натавонад паёмро ба каси дигар нависад.
+		if a, b, ok := strings.Cut(p.ChatID, "_"); ok {
+			switch cl.userID {
+			case a:
+				p.Receiver = b
+			case b:
+				p.Receiver = a
+			}
+		}
+		if p.Receiver == "" {
 			return
 		}
 		if len([]rune(p.Text)) > 1000 {

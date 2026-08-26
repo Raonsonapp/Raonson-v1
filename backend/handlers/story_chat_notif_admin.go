@@ -514,15 +514,37 @@ func SendMessage(c *gin.Context) {
 	var b struct {
 		Text       string `json:"text"`
 		ReceiverID string `json:"receiverId"`
+		// Баъзе экранҳо "receiver" мефиристанд (мисли socket). Ҳарду қабул.
+		Receiver string `json:"receiver"`
 	}
 	c.ShouldBindJSON(&b)
 	b.Text = clampRunes(b.Text, 1000)
+
+	// Гирандаро аз худи chatID мегирем — он аз ду ID-и мураттабшуда сохта
+	// шудааст. Ба client бовар намекунем: калиди нодуруст паёмро бе гиранда
+	// мегузошт ва майдони client метавонад ҳар киро нишон диҳад.
+	receiver := b.ReceiverID
+	if receiver == "" {
+		receiver = b.Receiver
+	}
+	if a, bb, ok := strings.Cut(chatID, "_"); ok {
+		switch myID {
+		case a:
+			receiver = bb
+		case bb:
+			receiver = a
+		}
+	}
+	if receiver == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Гирандаи паём муайян нашуд"})
+		return
+	}
 
 	var msgID string
 	var createdAt interface{}
 	err := db.Pool.QueryRow(context.Background(),
 		`INSERT INTO messages(chat_id,sender_id,receiver_id,text) VALUES($1,$2,$3,$4) RETURNING id,created_at`,
-		chatID, myID, b.ReceiverID, b.Text).Scan(&msgID, &createdAt)
+		chatID, myID, receiver, b.Text).Scan(&msgID, &createdAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
 		return
