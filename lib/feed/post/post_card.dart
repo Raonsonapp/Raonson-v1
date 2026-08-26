@@ -1526,9 +1526,9 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                             radius: 20,
                             backgroundImage: av.isNotEmpty
                                 ? CachedNetworkImageProvider(av, maxWidth: 80) : null,
+                            backgroundColor: AppColors.card,
                             child: av.isEmpty ? Icon(
                                 AppIcons.person, color: AppColors.textFaint) : null,
-                            backgroundColor: AppColors.card,
                           ),
                           title: Text('@$un',
                               style: TextStyle(color: AppColors.textPrimary,
@@ -1580,7 +1580,7 @@ class _StableBtn extends StatelessWidget {
   final double size;
   final int count;
   final String Function(int) fmt;
-  _StableBtn({
+  const _StableBtn({
     required this.onTap, required this.svgPath, this.activeSvgPath,
     this.isActive = false, this.activeColor,
     this.inactiveColor, required this.size,

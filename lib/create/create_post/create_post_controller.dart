@@ -14,7 +14,6 @@ import 'package:video_player/video_player.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
-import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS

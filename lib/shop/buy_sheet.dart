@@ -159,7 +159,7 @@ class _BuySheetState extends State<_BuySheet> {
         ]),
         const SizedBox(height: 4),
         // Cashback — 5% ҳамчун ситора баргардонида мешавад.
-        Text('💰 Cashback: ${_cashback} ⭐',
+        Text('💰 Cashback: $_cashback ⭐',
             style: TextStyle(color: const Color(0xFFFFD700), fontSize: 12,
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),

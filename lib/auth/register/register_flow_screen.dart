@@ -57,7 +57,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ── Shared ──
   bool   _loading = false;
   String? _error;
-  bool   _accountCreated = false;
 
   @override
   void dispose() {
@@ -131,11 +130,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<bool?> _showOtpDialog(String phone) {
+  Future<bool?> _showOtpDialog(String phone) async {
     final otpCtrl = TextEditingController();
     bool verifying = false;
     String? dlgError;
-    return showDialog<bool>(
+    try {
+      return await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setDlg) {
@@ -205,7 +205,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         );
       }),
-    );
+      );
+    } finally {
+      otpCtrl.dispose();
+    }
   }
 
   // ── Username availability (debounced) ──
@@ -246,7 +249,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final ok = await _createAccount(uname);
     if (!mounted) return;
     setState(() => _loading = false);
-    if (ok) { _accountCreated = true; _goto(2); }
+    if (ok) _goto(2);
   }
 
   Future<bool> _createAccount(String uname) async {
