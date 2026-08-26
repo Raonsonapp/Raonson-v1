@@ -812,9 +812,49 @@ func migrate() {
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';
+
+	-- Барои backfill-и якдафъаина (поёнтар).
+	CREATE TABLE IF NOT EXISTS schema_backfills (
+		name TEXT PRIMARY KEY,
+		applied_at TIMESTAMPTZ DEFAULT NOW()
+	);
 	`
 	if _, err := Pool.Exec(ctx, sql); err != nil {
 		log.Fatalf("❌ Migration failed: %v", err)
 	}
+	backfillCounters(ctx)
 	log.Println("✅ DB schema ready")
+}
+
+// backfillCounters — шуморишҳоеро, ки бо сабаби хатоҳои кӯҳна аз ҳақиқат
+// дур шудаанд, як бор аз ҷадвалҳои манбаъ аз нав ҳисоб мекунад.
+// Block кардан followers_count-ро кам намекард ва unfollow-и такрорӣ онро
+// дучанд кам мекард, бинобар ин рақамҳои мавҷуда бояд ислоҳ шаванд.
+func backfillCounters(ctx context.Context) {
+	const name = "recount_follow_and_comment_counters_v1"
+	var exists bool
+	if err := Pool.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM schema_backfills WHERE name=$1)`, name).Scan(&exists);
+		err != nil || exists {
+		return
+	}
+	stmts := []string{
+		`UPDATE users u SET followers_count =
+		   (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id)`,
+		`UPDATE users u SET following_count =
+		   (SELECT COUNT(*) FROM follows f WHERE f.follower_id = u.id)`,
+		`UPDATE posts p SET comments_count =
+		   (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)`,
+		`UPDATE reels r SET comments_count =
+		   (SELECT COUNT(*) FROM reel_comments rc WHERE rc.reel_id = r.id)`,
+	}
+	for _, s := range stmts {
+		if _, err := Pool.Exec(ctx, s); err != nil {
+			log.Printf("⚠️  backfill step failed (%v) — дафъаи оянда такрор мешавад", err)
+			return
+		}
+	}
+	Pool.Exec(ctx, `INSERT INTO schema_backfills(name) VALUES($1)
+	                ON CONFLICT DO NOTHING`, name)
+	log.Println("✅ Counters recounted from source tables")
 }

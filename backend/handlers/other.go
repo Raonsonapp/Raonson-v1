@@ -181,20 +181,26 @@ func ToggleCommentLike(c *gin.Context) {
 		cid, myID).Scan(&liked)
 	// Шарҳ метавонад аз они пост (comments) ё Reel (reel_comments) бошад —
 	// ҳарду ҷадвалро нав мекунем, танҳо якеаш сатр дорад.
+	// Шумориш танҳо вақте тағйир меёбад, ки сатр воқеан илова/ҳазф шуд —
+	// вагарна такрори дархост шуморишро вайрон мекунад.
 	if liked {
-		db.Pool.Exec(context.Background(),
+		ct, _ := db.Pool.Exec(context.Background(),
 			`DELETE FROM comment_likes WHERE comment_id=$1::text AND user_id=$2::text`, cid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
-		db.Pool.Exec(context.Background(),
-			`UPDATE reel_comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
+			db.Pool.Exec(context.Background(),
+				`UPDATE reel_comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
+		}
 	} else {
-		db.Pool.Exec(context.Background(),
+		ct, _ := db.Pool.Exec(context.Background(),
 			`INSERT INTO comment_likes(comment_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, cid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
-		db.Pool.Exec(context.Background(),
-			`UPDATE reel_comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
+			db.Pool.Exec(context.Background(),
+				`UPDATE reel_comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
+		}
 	}
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
@@ -278,9 +284,17 @@ func FollowUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"requested": true})
 		return
 	}
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
-		myID, targetID)
+	// RETURNING — шумориш танҳо вақте зиёд мешавад, ки сатр воқеан
+	// сохта шуда бошад. Бе ин ду дархости ҳамзамон ду бор зиёд мекунад.
+	var inserted int
+	if db.Pool.QueryRow(context.Background(),
+		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2)
+		 ON CONFLICT DO NOTHING RETURNING 1`,
+		myID, targetID).Scan(&inserted) != nil {
+		// Сатр аллакай буд — робита ҳаст, вале шуморишро тағйир намедиҳем.
+		c.JSON(http.StatusOK, gin.H{"following": true})
+		return
+	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
@@ -309,8 +323,15 @@ func FollowUser(c *gin.Context) {
 func UnfollowUser(c *gin.Context) {
 	targetID := c.Param("id")
 	myID     := mw.UID(c)
-	db.Pool.Exec(context.Background(),
-		`DELETE FROM follows WHERE follower_id=$1::text AND following_id=$2::text`, myID, targetID)
+	// RETURNING — шумориш танҳо вақте кам мешавад, ки сатр воқеан нест
+	// шуда бошад. Бе ин такрори дархост шуморишро поин мебарад.
+	var deleted int
+	if db.Pool.QueryRow(context.Background(),
+		`DELETE FROM follows WHERE follower_id=$1::text AND following_id=$2::text
+		 RETURNING 1`, myID, targetID).Scan(&deleted) != nil {
+		c.JSON(http.StatusOK, gin.H{"following": false})
+		return
+	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET followers_count=GREATEST(followers_count-1,0) WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
@@ -326,12 +347,18 @@ func AcceptRequest(c *gin.Context) {
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`, rid, myID)
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
-	db.Pool.Exec(context.Background(),
-		`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, myID)
-	db.Pool.Exec(context.Background(),
-		`UPDATE users SET following_count=following_count+1 WHERE id=$1`, rid)
+	// Танҳо вақте зиёд мекунем, ки робита воқеан нав сохта шуда бошад.
+	var inserted int
+	if db.Pool.QueryRow(context.Background(),
+		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2)
+		 ON CONFLICT DO NOTHING RETURNING 1`, rid, myID).Scan(&inserted) == nil {
+		db.Pool.Exec(context.Background(),
+			`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, myID)
+		db.Pool.Exec(context.Background(),
+			`UPDATE users SET following_count=following_count+1 WHERE id=$1`, rid)
+	}
+	mw.InvalidateUserCache(myID)
+	mw.InvalidateUserCache(rid)
 	c.JSON(http.StatusOK, gin.H{"accepted": true})
 }
 
