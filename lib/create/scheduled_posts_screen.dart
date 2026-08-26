@@ -118,6 +118,7 @@ class _ScheduledPostsState extends State<ScheduledPostsScreen> {
                             child: thumb.isNotEmpty
                                 ? CachedNetworkImage(imageUrl: thumb,
                                     width: 56, height: 56, fit: BoxFit.cover,
+                                    memCacheWidth: 168,
                                     errorWidget: (_, __, ___) => Container(
                                         width: 56, height: 56, color: AppColors.surface))
                                 : Container(width: 56, height: 56,

@@ -181,6 +181,7 @@ class _OrderManagementState extends State<OrderManagementScreen> {
             child: thumb.isNotEmpty
                 ? CachedNetworkImage(imageUrl: thumb,
                     width: 50, height: 50, fit: BoxFit.cover,
+                    memCacheWidth: 150,
                     errorWidget: (_, __, ___) =>
                         Container(width: 50, height: 50, color: AppColors.surface))
                 : Container(width: 50, height: 50, color: AppColors.surface,

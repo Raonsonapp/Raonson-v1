@@ -270,6 +270,7 @@ class _NewsScreenState extends State<NewsScreen> {
               child: CachedNetworkImage(
                 imageUrl: n.image,
                 width: 92, height: 92, fit: BoxFit.cover,
+                memCacheWidth: 276,
                 placeholder: (_, __) => Container(
                     width: 92, height: 92, color: AppColors.surface),
                 errorWidget: (_, __, ___) => Container(

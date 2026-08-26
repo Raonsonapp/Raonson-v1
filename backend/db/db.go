@@ -161,6 +161,10 @@ func migrate() {
 		PRIMARY KEY (user_id, post_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+	-- Feed: "300 лайки охирини ин корбар" — бе ин Postgres ҳамаи
+	-- лайкҳои корбарро мегирад ва баъд sort мекунад.
+	CREATE INDEX IF NOT EXISTS idx_post_likes_user_recent
+	  ON post_likes(user_id, created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS post_saves (
 		user_id TEXT NOT NULL,
@@ -713,6 +717,9 @@ func migrate() {
 		PRIMARY KEY (user_id, reel_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
+	-- Reels feed: сатҳи итмом танҳо аз тамошои 30 рӯзи охир ҳисоб мешавад.
+	CREATE INDEX IF NOT EXISTS idx_reel_watch_recent
+	  ON reel_watch(created_at, reel_id);
 
 	-- ── Perf indexes (block/view dedup lookups) ──
 	CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);

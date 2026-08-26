@@ -300,11 +300,14 @@ class _ReelsViewState extends State<_ReelsView> {
       final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       _preloaded[j] = ctrl;
       ctrl.initialize().then((_) {
+        // Swipe-и тез метавонад ин controller-ро пеш аз тайёр шуданаш
+        // dispose кунад — он гоҳ ҳар даъват хато мепартояд.
+        if (!mounted || !identical(_preloaded[j], ctrl)) return;
         ctrl.setLooping(true);
         ctrl.setVolume(0);
         ctrl.play();
         ctrl.pause();
-      });
+      }).catchError((_) {});
     }
   }
 
@@ -327,9 +330,10 @@ class _ReelsViewState extends State<_ReelsView> {
     final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
     _preloaded[0] = ctrl;
     ctrl.initialize().then((_) {
+      if (!mounted || !identical(_preloaded[0], ctrl)) return;
       ctrl.setLooping(true);
       ctrl.setVolume(0);
-    });
+    }).catchError((_) {});
   }
 
   @override
@@ -2026,6 +2030,7 @@ class _AvatarWithStoryRing extends StatelessWidget {
               width: 42,
               height: 42,
               fit: BoxFit.cover,
+              memCacheWidth: 126,
               placeholder: (_, __) => Container(
                   width: 42, height: 42, color: AppColors.card),
               errorWidget: (_, __, ___) => Container(

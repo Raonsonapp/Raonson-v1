@@ -134,7 +134,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: Center(child: Hero(
           tag: 'av_${widget.userId}',
           child: ClipOval(child: CachedNetworkImage(
-              imageUrl: url, width: 280, height: 280, fit: BoxFit.cover))))));
+              imageUrl: url, width: 280, height: 280, fit: BoxFit.cover,
+              memCacheWidth: 560))))));
   }
 
   // ── Highlight tap → viewer ───────────────────────────────────────
