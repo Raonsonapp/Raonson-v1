@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -121,6 +122,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   int    _idx     = 0;
   bool   _paused  = false;
   bool   _liked   = false;
+  DateTime? _lastCenterTap; // барои double-tap → лайк
 
   // Пешнамоиши бинандагон (барои тугмаи «Амалҳо»-и поён)
   List<String> _viewerAvatars = [];
@@ -427,6 +429,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   void _toggleLike() {
+    HapticFeedback.lightImpact();
     setState(() => _liked = !_liked);
     ApiClient.instance.post('/stories/${_current.id}/like').then((_) {}).catchError((e) => e);
     if (_liked) {
@@ -526,9 +529,29 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           if (_showReply) return;
           final x = d.globalPosition.dx;
           final w = MediaQuery.of(context).size.width;
+          // Double-tap → лайк (мисли Instagram). Онро дастӣ ҳисоб мекунем,
+          // на бо onDoubleTap: вагарна ҳар зеркунӣ ~300мс интизор мешуд
+          // ва гузаштани сторис суст мешуд.
+          final now = DateTime.now();
+          final isCenter = x >= w * 0.33 && x <= w * 0.67;
+          if (isCenter && _lastCenterTap != null &&
+              now.difference(_lastCenterTap!).inMilliseconds < 300) {
+            _lastCenterTap = null;
+            if (_paused) _resume();      // pause-и зеркунии аввалро бекор кун
+            if (!_liked) {
+              _toggleLike();
+            } else {
+              HapticFeedback.lightImpact();
+              _showHeartAnim();
+            }
+            return;
+          }
           if (x < w * 0.33) { _prevStory(); }
           else if (x > w * 0.67) { _nextStory(); }
-          else { _paused ? _resume() : _pause(); }
+          else {
+            _lastCenterTap = now;
+            _paused ? _resume() : _pause();
+          }
         },
         // Instagram-монанд: боло кашидан → статистика/ҷавоб, поён → пӯшидан
         onVerticalDragEnd: (d) {
@@ -722,14 +745,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                     style: const TextStyle(color: Colors.white70, fontSize: 14))),
             )),
         const SizedBox(width: 12),
-        GestureDetector(
-          onTap: _toggleLike,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Icon(
-              _liked ? AppIcons.favorite : AppIcons.favorite_border,
-              key: ValueKey(_liked),
-              color: _liked ? Colors.red : Colors.white, size: 28))),
+        _StoryLikeButton(liked: _liked, onTap: _toggleLike),
         const SizedBox(width: 14),
         GestureDetector(
           onTap: _shareStory,
@@ -1236,4 +1252,85 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
   Widget _divider() => Container(
       width: 1, height: 34, color: Colors.white12,
       margin: const EdgeInsets.symmetric(horizontal: 4));
+}
+
+
+// ── Тугмаи дили сторис ────────────────────────────────────────────
+// Пештар танҳо AnimatedSwitcher-и хира буд. Ҳоло зарбаи фаврӣ +
+// ҳалқаи мавҷӣ — ҳамон ҳисси Instagram.
+class _StoryLikeButton extends StatefulWidget {
+  final bool liked;
+  final VoidCallback onTap;
+  const _StoryLikeButton({required this.liked, required this.onTap});
+
+  @override
+  State<_StoryLikeButton> createState() => _StoryLikeButtonState();
+}
+
+class _StoryLikeButtonState extends State<_StoryLikeButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 360));
+
+  late final Animation<double> _scale = TweenSequence([
+    TweenSequenceItem(
+      tween: Tween(begin: 1.0, end: 1.35)
+          .chain(CurveTween(curve: Curves.easeOutCubic)), weight: 26),
+    TweenSequenceItem(
+      tween: Tween(begin: 1.35, end: 0.88)
+          .chain(CurveTween(curve: Curves.easeInOut)), weight: 22),
+    TweenSequenceItem(
+      tween: Tween(begin: 0.88, end: 1.0)
+          .chain(CurveTween(curve: Curves.elasticOut)), weight: 52),
+  ]).animate(_c);
+
+  // Ҳалқае, ки аз дил берун мешавад ва нопадид мегардад.
+  late final Animation<double> _ring =
+      CurvedAnimation(parent: _c, curve: Curves.easeOut);
+
+  @override
+  void didUpdateWidget(_StoryLikeButton old) {
+    super.didUpdateWidget(old);
+    if (widget.liked && !old.liked) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 40, height: 40,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (_, __) => Stack(alignment: Alignment.center, children: [
+            if (widget.liked && _c.isAnimating)
+              Opacity(
+                opacity: (1 - _ring.value).clamp(0.0, 1.0),
+                child: Container(
+                  width: 26 + 18 * _ring.value,
+                  height: 26 + 18 * _ring.value,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: Colors.red.withOpacity(0.55), width: 2),
+                  ),
+                ),
+              ),
+            Transform.scale(
+              scale: widget.liked ? _scale.value : 1.0,
+              child: Icon(
+                widget.liked ? AppIcons.favorite : AppIcons.favorite_border,
+                color: widget.liked ? Colors.red : Colors.white,
+                size: 28,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 }

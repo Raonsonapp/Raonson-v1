@@ -111,12 +111,21 @@ class _PostCardState extends State<PostCard>
     _commentsDisabled = widget.post.commentsDisabled;
     _caption      = widget.post.caption;
 
+    // Зарбаи фаврӣ, баъд каме "фурӯ" ва нишастани фаврӣ — ҳисси
+    // тугмаи дили Instagram. Пештар танҳо як scale-и ҳамвор буд.
     _likeCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 200));
+        duration: const Duration(milliseconds: 320));
     _likeScale = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _likeCtrl, curve: Curves.easeInOut));
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.32)
+            .chain(CurveTween(curve: Curves.easeOutCubic)), weight: 28),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.32, end: 0.90)
+            .chain(CurveTween(curve: Curves.easeInOut)), weight: 22),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.90, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)), weight: 50),
+    ]).animate(_likeCtrl);
 
     _countCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 250));
