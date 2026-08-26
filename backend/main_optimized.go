@@ -291,6 +291,7 @@ func main() {
 	{
 		re.GET("/",              cache3s, handlers.GetReels)
 		re.GET("/smart",         handlers.GetSmartReels)   // Instagram algorithm
+		re.GET("/:id",           cache3s, handlers.GetReelByID)
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)
 		re.POST("/:id/view",     handlers.TrackReelView)   // view dedup tracking

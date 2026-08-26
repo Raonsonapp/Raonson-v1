@@ -282,6 +282,12 @@ func migrate() {
 		read BOOLEAN DEFAULT FALSE,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
+	-- Мубодилаи пост/рилс/сторис дар чат — корти пешнамоиш (мисли Instagram)
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_id    TEXT;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_kind  TEXT;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_thumb TEXT;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_user  TEXT;
+
 	CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id, read);
 	-- Рӯйхати чатҳо: "WHERE sender_id=$1 OR receiver_id=$1". sender_id

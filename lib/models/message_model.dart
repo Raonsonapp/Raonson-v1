@@ -11,6 +11,38 @@ class MessageReaction {
   const MessageReaction({required this.emoji, required this.userId});
 }
 
+// ── Мубодилаи пост/рилс/сторис дар чат ────────────────────────────
+class SharedRef {
+  final String id;        // id-и пост/рилс/сторис
+  final String kind;      // 'post' | 'reel' | 'story'
+  final String thumb;     // расми пешнамоиш
+  final String username;  // муаллифи мӯҳтаво
+
+  const SharedRef({
+    required this.id, required this.kind,
+    this.thumb = '', this.username = '',
+  });
+
+  static SharedRef? fromJson(Map<String, dynamic> j) {
+    final id   = (j['shareId'] ?? '').toString();
+    final kind = (j['shareKind'] ?? '').toString();
+    if (id.isEmpty || kind.isEmpty) return null;
+    return SharedRef(
+      id: id, kind: kind,
+      thumb:    (j['shareThumb'] ?? '').toString(),
+      username: (j['shareUser'] ?? '').toString(),
+    );
+  }
+
+  String get label {
+    switch (kind) {
+      case 'reel':  return 'Рилс';
+      case 'story': return 'Сторис';
+      default:      return 'Пост';
+    }
+  }
+}
+
 // ── Model ─────────────────────────────────────────────────────────
 class MessageModel {
   final String  id;
@@ -32,6 +64,8 @@ class MessageModel {
   final List<MessageReaction>   reactions;
   final bool                    isRequest; // DM аз касе, ки пайгирӣ намекунӣ
   final int                     unreadCount;
+  // Мубодилаи пост/рилс/сторис — дар чат ҳамчун корти пешнамоиш мебарояд.
+  final SharedRef?              share;
 
   const MessageModel({
     required this.id,
@@ -48,6 +82,7 @@ class MessageModel {
     this.mediaType,
     this.replyToId,
     this.replyTo,
+    this.share,
     this.reactions    = const [],
     this.isRequest    = false,
     this.unreadCount  = 0,
@@ -70,6 +105,7 @@ class MessageModel {
     String?               replyToId,
     MessageModel?         replyTo,
     List<MessageReaction>? reactions,
+    SharedRef?            share,
     bool?                 isRequest,
     int?                  unreadCount,
   }) => MessageModel(
@@ -88,6 +124,7 @@ class MessageModel {
     replyToId:    replyToId     ?? this.replyToId,
     replyTo:      replyTo       ?? this.replyTo,
     reactions:    reactions     ?? this.reactions,
+    share:        share         ?? this.share,
     isRequest:    isRequest     ?? this.isRequest,
     unreadCount:  unreadCount   ?? this.unreadCount,
   );
@@ -99,6 +136,7 @@ class MessageModel {
     if (type == MessageType.audio) return '🎤 Паёми овозӣ';
     if (type == MessageType.call)  return '📞 Занг';
     if (type == MessageType.location) return '📍 Ҷойгиршавӣ';
+    if (share != null) return '📎 ${share!.label}';
     return text;
   }
 
@@ -139,7 +177,8 @@ class MessageModel {
       mediaType: json['mediaType']?.toString(),
       replyToId: json['replyToId']?.toString(),
       type:      _parseType(json['type']?.toString()),
-      status:    MessageStatus.sent,
+      status:    _parseStatus(json),
+      share:     SharedRef.fromJson(json),
       isRequest: json['isRequest'] == true,
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
     );
@@ -185,9 +224,18 @@ class MessageModel {
       mediaType: json['mediaType']?.toString(),
       replyToId: json['replyToId']?.toString(),
       type:      _parseType(json['type']?.toString()),
-      status:    MessageStatus.sent,
+      status:    _parseStatus(json),
+      share:     SharedRef.fromJson(json),
       reactions: reactions,
     );
+  }
+
+  /// Сервер `read: true/false` мефиристад. Бе ин, ҳар паём баъд аз
+  /// боркунӣ дубора «sent» мешуд ва ду тик ҳеҷ гоҳ намемонд.
+  static MessageStatus _parseStatus(Map<String, dynamic> json) {
+    if (json['read'] == true) return MessageStatus.read;
+    if (json['delivered'] == true) return MessageStatus.delivered;
+    return MessageStatus.sent;
   }
 
   static MessageType _parseType(String? t) {

@@ -290,8 +290,16 @@ func dispatch(cl *client, raw []byte) {
 		json.Unmarshal(msg.Data, &p)
 		// Танҳо паёмҳое, ки ба худи ҳамин корбар фиристода шудаанд, хонда
 		// эълон карда мешаванд — то касе паёми каси дигарро "read" накунад.
-		db.Pool.Exec(context.Background(),
-			`UPDATE messages SET read=TRUE WHERE id=$1 AND receiver_id=$2`, p.MessageID, cl.userID)
+		// RETURNING — то фиристандаро донем ва ба ӯ хабар диҳем, вагарна
+		// ду тик танҳо баъд аз refresh пайдо мешуд.
+		var senderID, chatID string
+		if db.Pool.QueryRow(context.Background(),
+			`UPDATE messages SET read=TRUE WHERE id=$1 AND receiver_id=$2
+			 RETURNING sender_id, chat_id`,
+			p.MessageID, cl.userID).Scan(&senderID, &chatID) == nil && senderID != "" {
+			emit(senderID, "chat:read", map[string]interface{}{
+				"chatId": chatID, "messageId": p.MessageID, "readBy": cl.userID})
+		}
 
 	// ── WebRTC / Calls ────────────────────────────────────────
 	case "user:register":

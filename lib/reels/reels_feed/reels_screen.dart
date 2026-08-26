@@ -20,6 +20,7 @@ import '../../models/post_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/i18n/strings.dart';
+import '../../chat/share/share_to_chat_row.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
@@ -1353,6 +1354,15 @@ class _ReelItemState extends State<_ReelItem> {
                 fontWeight: FontWeight.bold,
                 fontSize: 16)),
         const SizedBox(height: 8),
+        // Ба чат фиристодан — корти пешнамоиш, мисли Instagram.
+        ShareToChatRow(
+          kind: 'reel',
+          contentId: widget.reel.id,
+          shareUrl: url,
+          thumbUrl: widget.reel.thumbnailUrl,
+          authorUsername: widget.reel.user.username,
+        ),
+        Divider(color: Colors.white12, height: 1),
         ListTile(
             leading: const CircleAvatar(
                 backgroundColor: AppColors.neonBlue,

@@ -21,6 +21,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
+import '../chat/share/share_to_chat_row.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -362,8 +363,41 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   void _shareStory() {
-    Share.share('Raonson Story: ${_current.mediaUrl}');
-    _resume();
+    _pause();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Text(tr('common.share'),
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          // Ба чат фиристодан — корти пешнамоиш, мисли Instagram.
+          ShareToChatRow(
+            kind: 'story',
+            contentId: _current.id,
+            shareUrl: _current.mediaUrl,
+            thumbUrl: _current.mediaUrl,
+            authorUsername: _current.user.username,
+          ),
+          Divider(color: AppColors.dividerFaint, height: 1),
+          ListTile(
+            leading: Icon(AppIcons.share_rounded, color: AppColors.textPrimary),
+            title: Text('Барномаҳои дигар',
+                style: TextStyle(color: AppColors.textPrimary)),
+            onTap: () {
+              Navigator.pop(sheetCtx);
+              Share.share('Raonson Story: ${_current.mediaUrl}');
+            },
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    ).whenComplete(() { if (mounted) _resume(); });
   }
 
   Future<void> _reportStory() async {

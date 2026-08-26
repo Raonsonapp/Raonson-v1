@@ -752,3 +752,58 @@ func AddReelComment(c *gin.Context) {
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
 }
+
+// GET /reels/:id — як реели мушаххас.
+// Бе ин, зеркунии огоҳинома ё корти мубодилашуда танҳо барои реелҳои
+// худи корбар кор мекард (client маҷбур буд /users/me/reels-ро скан кунад).
+func GetReelByID(c *gin.Context) {
+	rid  := c.Param("id")
+	myID := mw.UID(c)
+
+	var vurl, vurlLow, thumb, capt, uid, uname, uavatar string
+	var views, likes, comms int
+	var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
+	var createdAt interface{}
+
+	err := db.Pool.QueryRow(context.Background(), `
+		SELECT r.video_url, COALESCE(r.video_url_low,''),
+		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
+		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $2::text
+		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
+		       u.id, u.username, u.avatar, u.verified,
+		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$2::text),
+		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$2::text),
+		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$2::text AND f.following_id=r.user_id),
+		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW())
+		FROM reels r JOIN users u ON u.id=r.user_id
+		WHERE r.id=$1`, rid, myID).
+		Scan(&vurl, &vurlLow, &thumb, &capt, &views, &likes, &comms, &createdAt,
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
+			&hideLikes, &commentsOff, &hasStory)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
+		return
+	}
+
+	// Реели корбари блоккарда нишон дода намешавад.
+	var blocked bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM blocks
+		  WHERE (blocker_id=$1 AND blocked_id=$2) OR (blocker_id=$2 AND blocked_id=$1))`,
+		myID, uid).Scan(&blocked)
+	if blocked {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
+		"thumbnailUrl": thumb, "caption": capt,
+		"viewsCount": views, "likesCount": likes, "commentsCount": comms,
+		"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
+		"hideLikes": hideLikes, "commentsDisabled": commentsOff,
+		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
+			"verified": verified, "isFollowing": following, "hasStory": hasStory},
+	})
+}

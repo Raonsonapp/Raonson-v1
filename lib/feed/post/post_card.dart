@@ -23,6 +23,7 @@ import '../../promote/promote_screen.dart';
 import '../../shop/buy_sheet.dart';
 import '../../ai/ai_tools.dart';
 import '../../widgets/media_view.dart';
+import '../../chat/share/share_to_chat_row.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../app/app_settings.dart';
@@ -777,7 +778,14 @@ class _PostCardState extends State<PostCard>
             ]))),
 
         // Ба чатҳо фиристодан — мисли Instagram
-        _ShareChatsRow(postUrl: url),
+        ShareToChatRow(
+          kind: 'post',
+          contentId: widget.post.id,
+          shareUrl: url,
+          thumbUrl: widget.post.media.isNotEmpty
+              ? (widget.post.media.first['url'] ?? '').toString() : '',
+          authorUsername: widget.post.user.username,
+        ),
 
         // Иконкаҳои худамон (assets/icons) + логоҳои social media — мисли Instagram
         SingleChildScrollView(
@@ -1705,109 +1713,7 @@ class _SectionTitle extends StatelessWidget {
 
 
 // Сатри «ба чат фиристодан» — мисли Instagram (рӯйхати чатҳо + фиристодан).
-class _ShareChatsRow extends StatefulWidget {
-  final String postUrl;
-  const _ShareChatsRow({required this.postUrl});
-  @override
-  State<_ShareChatsRow> createState() => _ShareChatsRowState();
-}
 
-class _ShareChatsRowState extends State<_ShareChatsRow> {
-  List<Map<String, dynamic>> _chats = [];
-  final Set<String> _sent = {};
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final res = await ApiClient.instance.get('/chat');
-      if (!mounted) return;
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final list = body is List ? body : (body['chats'] ?? body['data'] ?? []);
-        final seen = <String>{};
-        final out = <Map<String, dynamic>>[];
-        for (final c in (list as List)) {
-          final peer = (c['peer'] ?? {}) as Map<String, dynamic>;
-          final id = (peer['_id'] ?? peer['id'] ?? '').toString();
-          if (id.isEmpty || seen.contains(id)) continue;
-          seen.add(id);
-          out.add(peer);
-        }
-        setState(() { _chats = out; _loading = false; });
-      } else {
-        setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _send(String peerId) async {
-    setState(() => _sent.add(peerId));
-    try {
-      final cr = await ApiClient.instance.get('/chat/with/$peerId');
-      final chatId = (jsonDecode(cr.body) as Map)['chatId']?.toString() ?? '';
-      if (chatId.isNotEmpty) {
-        await ApiClient.instance.post('/chat/$chatId/messages',
-            body: {'text': widget.postUrl, 'receiver': peerId});
-      }
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return SizedBox(
-        height: 96,
-        child: Center(
-            child: CircularProgressIndicator(
-                color: AppColors.textFaint, strokeWidth: 2)),
-      );
-    }
-    if (_chats.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: _chats.length,
-        itemBuilder: (_, i) {
-          final p = _chats[i];
-          final id = (p['_id'] ?? p['id'] ?? '').toString();
-          final uname = (p['username'] ?? '').toString();
-          final avatar = (p['avatar'] ?? '').toString();
-          final sent = _sent.contains(id);
-          return GestureDetector(
-            onTap: sent ? null : () => _send(id),
-            child: SizedBox(
-              width: 72,
-              child: Column(children: [
-                const SizedBox(height: 8),
-                Avatar(imageUrl: avatar, size: 54, name: uname),
-                const SizedBox(height: 4),
-                Text(uname,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: sent ? AppColors.neonBlue : AppColors.textSecondary,
-                        fontSize: 11)),
-                if (sent)
-                  const Text('Фиристода шуд',
-                      style: TextStyle(color: AppColors.neonBlue, fontSize: 9)),
-              ]),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 
 // Instagram-монанд chip-и музика/зикр болои расм.
 class _MediaChip extends StatelessWidget {

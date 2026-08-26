@@ -472,12 +472,15 @@ func GetMessages(c *gin.Context) {
 	// гоҳ пинҳон нашаванд (вагарна паёми навфиристода "гум" мешуд).
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
-		       is_deleted,read,created_at,username,avatar,verified
+		       is_deleted,read,created_at,username,avatar,verified,
+		       share_id,share_kind,share_thumb,share_user
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
 		         COALESCE(m.is_deleted,false) is_deleted,m.read,m.created_at,
-		         u.username,u.avatar,u.verified
+		         u.username,u.avatar,u.verified,
+		         COALESCE(m.share_id,'') share_id, COALESCE(m.share_kind,'') share_kind,
+		         COALESCE(m.share_thumb,'') share_thumb, COALESCE(m.share_user,'') share_user
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
@@ -495,12 +498,16 @@ func GetMessages(c *gin.Context) {
 		var createdAt interface{}
 		var uname, uavatar string
 		var verified bool
+		var shareID, shareKind, shareThumb, shareUser string
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
-			&read, &createdAt, &uname, &uavatar, &verified)
+			&read, &createdAt, &uname, &uavatar, &verified,
+			&shareID, &shareKind, &shareThumb, &shareUser)
 		messages = append(messages, gin.H{
 			"_id": mid, "chatId": cid, "text": text, "mediaUrl": murl,
 			"type": mtype, "replyToId": replyTo, "isDeleted": isDeleted,
 			"read": read, "createdAt": createdAt,
+			"shareId": shareID, "shareKind": shareKind,
+			"shareThumb": shareThumb, "shareUser": shareUser,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
@@ -569,6 +576,18 @@ func MarkChatRead(c *gin.Context) {
 	myID   := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`UPDATE messages SET read=TRUE WHERE chat_id=$1::text AND receiver_id=$2::text`, chatID, myID)
+	// Ба ҳамсӯҳбат хабар медиҳем, то ду тик фавран пайдо шавад
+	// (пештар танҳо баъд аз refresh дида мешуд).
+	if a, b, ok := strings.Cut(chatID, "_"); ok {
+		peer := a
+		if myID == a {
+			peer = b
+		}
+		if peer != "" && peer != myID {
+			sockets.EmitToUser(peer, "chat:read",
+				map[string]interface{}{"chatId": chatID, "readBy": myID})
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
