@@ -213,6 +213,27 @@ func migrate() {
 		PRIMARY KEY (user_id, story_id)
 	);
 
+	-- ── Стикери пурсиш дар сторис (мисли Instagram) ──────────────
+	CREATE TABLE IF NOT EXISTS story_polls (
+		story_id  TEXT PRIMARY KEY,
+		question  TEXT NOT NULL,
+		option_a  TEXT NOT NULL,
+		option_b  TEXT NOT NULL,
+		pos_x     REAL DEFAULT 0.5,   -- ҷойгиршавӣ дар сторис (0..1)
+		pos_y     REAL DEFAULT 0.5,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+
+	CREATE TABLE IF NOT EXISTS story_poll_votes (
+		story_id TEXT NOT NULL,
+		user_id  TEXT NOT NULL,
+		choice   SMALLINT NOT NULL,   -- 0 = A, 1 = B
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (story_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_story_poll_votes_story
+	  ON story_poll_votes(story_id);
+
 	CREATE TABLE IF NOT EXISTS story_likes (
 		user_id TEXT NOT NULL,
 		story_id TEXT NOT NULL,

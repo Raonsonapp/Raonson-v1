@@ -324,6 +324,7 @@ func main() {
 		st.POST("/:id/archive", handlers.ToggleStoryArchive)
 		st.POST("/:id/toggle-replies", handlers.ToggleStoryReplies)
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
+		st.POST("/:id/poll/vote", handlers.VoteStoryPoll) // овоз ба пурсиш
 		st.POST("/:id/report", handlers.ReportStory)
 	}
 

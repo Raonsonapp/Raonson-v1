@@ -123,6 +123,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   bool   _paused  = false;
   bool   _liked   = false;
   DateTime? _lastCenterTap; // барои double-tap → лайк
+  StoryPoll? _poll;         // ҳолати маҳаллӣ — овоз фавран дида шавад
 
   // Пешнамоиши бинандагон (барои тугмаи «Амалҳо»-и поён)
   List<String> _viewerAvatars = [];
@@ -171,6 +172,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     _videoCtrl = null;
     _videoReady = false;
     _liked = _current.isLiked;
+    _poll  = _current.poll;
 
     if (_isVideo) {
       _initVideo();
@@ -439,6 +441,29 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     }
   }
 
+  Future<void> _votePoll(int choice) async {
+    final p = _poll;
+    if (p == null || p.didVote) return;
+    HapticFeedback.selectionClick();
+    // Optimistic — натиҷа фавран нишон дода мешавад.
+    setState(() => _poll = p.copyWith(
+        myVote: choice,
+        votesA: p.votesA + (choice == 0 ? 1 : 0),
+        votesB: p.votesB + (choice == 1 ? 1 : 0)));
+    try {
+      final res = await ApiClient.instance
+          .post('/stories/${_current.id}/poll/vote', body: {'choice': choice});
+      if (res.statusCode >= 400) throw Exception();
+      final b = jsonDecode(res.body) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() => _poll = _poll!.copyWith(
+          votesA: (b['votesA'] as num?)?.toInt() ?? _poll!.votesA,
+          votesB: (b['votesB'] as num?)?.toInt() ?? _poll!.votesB));
+    } catch (_) {
+      if (mounted) setState(() => _poll = p); // баргардон
+    }
+  }
+
   void _showHeartAnim() {
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
@@ -601,6 +626,21 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
               ));
             })),
           ),
+
+          // ── Стикери пурсиш ─────────────────────────────────────
+          if (_poll != null)
+            Builder(builder: (ctx) {
+              final sz = MediaQuery.of(ctx).size;
+              return Positioned(
+                left: (_poll!.x * sz.width - 140).clamp(12.0, sz.width - 292),
+                top:  (_poll!.y * sz.height - 60).clamp(90.0, sz.height - 220),
+                child: _PollSticker(
+                  poll: _poll!,
+                  isOwner: _isOwner,
+                  onVote: _votePoll,
+                ),
+              );
+            }),
 
           // ── Header ─────────────────────────────────────────────
           Positioned(
@@ -1330,6 +1370,99 @@ class _StoryLikeButtonState extends State<_StoryLikeButton>
             ),
           ]),
         ),
+      ),
+    );
+  }
+}
+
+
+// ── Стикери пурсиш дар сторис ─────────────────────────────────────
+// Пеш аз овоз ду тугма; баъд аз овоз фоиз ва навори пуршаванда —
+// ҳамон рафтори Instagram. Соҳиб танҳо натиҷаро мебинад.
+class _PollSticker extends StatelessWidget {
+  final StoryPoll poll;
+  final bool isOwner;
+  final Future<void> Function(int) onVote;
+  const _PollSticker({
+    required this.poll, required this.isOwner, required this.onVote});
+
+  @override
+  Widget build(BuildContext context) {
+    final showResults = poll.didVote || isOwner;
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.94),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(
+            color: Colors.black.withOpacity(0.22),
+            blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(poll.question,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: Colors.black, fontSize: 15, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _option(0, poll.optionA, poll.pctA, showResults)),
+          const SizedBox(width: 8),
+          Expanded(child: _option(1, poll.optionB, poll.pctB, showResults)),
+        ]),
+        if (showResults) ...[
+          const SizedBox(height: 8),
+          Text(poll.total == 1 ? '1 овоз' : '${poll.total} овоз',
+              style: const TextStyle(color: Colors.black54, fontSize: 11)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _option(int idx, String label, double pct, bool showResults) {
+    final chosen = poll.myVote == idx;
+    return GestureDetector(
+      onTap: (poll.didVote || isOwner) ? null : () => onVote(idx),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(children: [
+          Container(height: 44, color: const Color(0xFFEDEDED)),
+          if (showResults)
+            AnimatedFractionallySizedBox(
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              widthFactor: pct.clamp(0.0, 1.0),
+              child: Container(
+                height: 44,
+                color: chosen
+                    ? const Color(0xFF00C853)
+                    : const Color(0xFFBDBDBD),
+              ),
+            ),
+          SizedBox(
+            height: 44,
+            child: Center(
+              child: Row(mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min, children: [
+                Flexible(
+                  child: Text(label,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.black.withOpacity(0.85),
+                          fontSize: 13,
+                          fontWeight: chosen ? FontWeight.w800 : FontWeight.w600)),
+                ),
+                if (showResults) ...[
+                  const SizedBox(width: 6),
+                  Text('${(pct * 100).round()}%',
+                      style: const TextStyle(
+                          color: Colors.black54, fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ]),
+            ),
+          ),
+        ]),
       ),
     );
   }
