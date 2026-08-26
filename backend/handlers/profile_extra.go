@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"strings"
 	"encoding/json"
 	"net/http"
 
@@ -81,10 +82,18 @@ func GetSavedPosts(c *gin.Context) {
 		limit = 60
 	}
 	offset := (page - 1) * limit
+	// ?collection=<id> — танҳо постҳои ҳамон папка (мисли Instagram).
+	coll := strings.TrimSpace(c.Query("collection"))
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
 		JOIN post_saves s ON s.post_id=p.id AND s.user_id=$1::text
-		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`, myID, limit, offset)
+		WHERE $4::text = '' OR EXISTS (
+		  SELECT 1 FROM saved_collection_items i
+		   JOIN saved_collections sc ON sc.id = i.collection_id
+		  WHERE i.collection_id = $4::text AND i.post_id = p.id
+		    AND sc.user_id = $1::text)
+		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`,
+		myID, limit, offset, coll)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}, "page": page, "limit": limit})
 		return
@@ -270,4 +279,119 @@ func RemoveMyTag(c *gin.Context) {
 		 ON CONFLICT DO NOTHING`, pid, myID)
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"removed": true})
+}
+
+// ── ПАПКАҲОИ ЗАХИРАШУДА (Collections) ────────────────────────────
+
+// GET /collections — рӯйхати папкаҳо бо шумора ва расми муқова.
+func GetCollections(c *gin.Context) {
+	myID := mw.UID(c)
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT sc.id, sc.name,
+		       (SELECT COUNT(*) FROM saved_collection_items i
+		         WHERE i.collection_id = sc.id),
+		       COALESCE((SELECT m.url FROM saved_collection_items i2
+		         JOIN post_media m ON m.post_id = i2.post_id
+		        WHERE i2.collection_id = sc.id
+		        ORDER BY i2.added_at DESC, m.position ASC LIMIT 1), '')
+		FROM saved_collections sc
+		WHERE sc.user_id = $1::text
+		ORDER BY sc.created_at DESC`, myID)
+	out := []gin.H{}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id, name, cover string
+			var count int
+			if rows.Scan(&id, &name, &count, &cover) == nil {
+				out = append(out, gin.H{
+					"_id": id, "name": name, "count": count, "cover": cover})
+			}
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"collections": out})
+}
+
+// POST /collections — папкаи нав.
+func CreateCollection(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct{ Name string `json:"name"` }
+	name := ""
+	if c.ShouldBindJSON(&b) == nil {
+		name = clampRunes(strings.TrimSpace(b.Name), 40)
+	}
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Номи папка лозим аст"})
+		return
+	}
+	var id string
+	err := db.Pool.QueryRow(context.Background(),
+		`INSERT INTO saved_collections(user_id,name) VALUES($1,$2) RETURNING id`,
+		myID, name).Scan(&id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Сохта нашуд"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"_id": id, "name": name, "count": 0, "cover": ""})
+}
+
+// DELETE /collections/:id — папкаро нест мекунад (постҳо захира мемонанд).
+func DeleteCollection(c *gin.Context) {
+	myID := mw.UID(c)
+	cid  := c.Param("id")
+	ct, _ := db.Pool.Exec(context.Background(),
+		`DELETE FROM saved_collections WHERE id=$1 AND user_id=$2::text`, cid, myID)
+	if ct.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Папка ёфт нашуд"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM saved_collection_items WHERE collection_id=$1`, cid)
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
+}
+
+// POST /collections/:id/posts — пост ба папка (ва захира мешавад).
+// DELETE ҳамон роҳ — аз папка мебарорад.
+func AddPostToCollection(c *gin.Context) {
+	myID := mw.UID(c)
+	cid  := c.Param("id")
+	var b struct{ PostID string `json:"postId"` }
+	if c.ShouldBindJSON(&b) != nil || b.PostID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "postId лозим аст"})
+		return
+	}
+	if !ownsCollection(cid, myID) {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Папкаи шумо нест"})
+		return
+	}
+	// Пост ба папка меафтад — пас ҳатман захирашуда бошад.
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO post_saves(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+		myID, b.PostID)
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO saved_collection_items(collection_id,post_id) VALUES($1,$2)
+		 ON CONFLICT DO NOTHING`, cid, b.PostID)
+	c.JSON(http.StatusOK, gin.H{"added": true})
+}
+
+func RemovePostFromCollection(c *gin.Context) {
+	myID := mw.UID(c)
+	cid  := c.Param("id")
+	pid  := c.Param("postId")
+	if !ownsCollection(cid, myID) {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Папкаи шумо нест"})
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM saved_collection_items WHERE collection_id=$1 AND post_id=$2`,
+		cid, pid)
+	c.JSON(http.StatusOK, gin.H{"removed": true})
+}
+
+func ownsCollection(collectionID, userID string) bool {
+	var ok bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM saved_collections
+		  WHERE id=$1 AND user_id=$2::text)`, collectionID, userID).Scan(&ok)
+	return ok
 }

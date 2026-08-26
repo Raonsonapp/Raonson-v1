@@ -24,6 +24,7 @@ import '../../shop/buy_sheet.dart';
 import '../../ai/ai_tools.dart';
 import '../../widgets/media_view.dart';
 import '../../chat/share/share_to_chat_row.dart';
+import '../../profile/saved_collections_screen.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../app/app_settings.dart';
@@ -229,6 +230,57 @@ class _PostCardState extends State<PostCard>
       _likeDebounce?.cancel();
       _likeDebounce = Timer(const Duration(milliseconds: 300), _syncLike);
     }
+  }
+
+  /// Дарозфишор ба тугмаи захира — интихоби папка (мисли Instagram).
+  Future<void> _pickCollection() async {
+    HapticFeedback.mediumImpact();
+    final items = await CollectionsApi.list();
+    if (!mounted) return;
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ҳанӯз папка нест — дар «Захирашуда» созед')));
+      return;
+    }
+    final chosen = await showModalBottomSheet<SavedCollection>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Text('Ба кадом папка?',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold, fontSize: 15)),
+          const SizedBox(height: 6),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: items.length,
+              itemBuilder: (_, i) => ListTile(
+                leading: Icon(AppIcons.bookmark_border_rounded,
+                    color: AppColors.textSecondary),
+                title: Text(items[i].name,
+                    style: TextStyle(color: AppColors.textPrimary)),
+                subtitle: Text('${items[i].count}',
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+                onTap: () => Navigator.pop(ctx, items[i]),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    final ok = await CollectionsApi.addPost(chosen.id, widget.post.id);
+    if (!mounted) return;
+    if (ok) setState(() => _saved = true);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Ба «${chosen.name}» илова шуд'
+            : tr('common.error'))));
   }
 
   Future<void> _toggleSave() async {
@@ -1276,6 +1328,7 @@ class _PostCardState extends State<PostCard>
 
           _StableBtn(
             onTap: _toggleSave,
+            onLongPress: _pickCollection,
             svgPath: 'assets/icons/save.svg',
             activeSvgPath: 'assets/icons/save_filled.svg',
             isActive: _saved, activeColor: AppColors.textPrimary,
@@ -1637,17 +1690,19 @@ class _StableBtn extends StatelessWidget {
   final double size;
   final int count;
   final String Function(int) fmt;
+  final VoidCallback? onLongPress;
   const _StableBtn({
     required this.onTap, required this.svgPath, this.activeSvgPath,
     this.isActive = false, this.activeColor,
     this.inactiveColor, required this.size,
-    required this.count, required this.fmt});
+    required this.count, required this.fmt, this.onLongPress});
   @override
   Widget build(BuildContext context) {
     final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
     final color = (isActive ? activeColor : inactiveColor) ?? AppColors.textPrimary;
     return GestureDetector(
-      onTap: onTap, behavior: HitTestBehavior.opaque,
+      onTap: onTap, onLongPress: onLongPress,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(mainAxisSize: MainAxisSize.min, children: [

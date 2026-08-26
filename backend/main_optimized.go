@@ -174,6 +174,16 @@ func main() {
 	}
 
 	// ── CLOSE FRIENDS (Близкие друзья) ──────────────────────────
+	// ── SAVED COLLECTIONS (папкаҳои захирашуда) ─────────────────
+	col := r.Group("/collections", auth, rl100)
+	{
+		col.GET("",                    handlers.GetCollections)
+		col.POST("",                   handlers.CreateCollection)
+		col.DELETE("/:id",             handlers.DeleteCollection)
+		col.POST("/:id/posts",         handlers.AddPostToCollection)
+		col.DELETE("/:id/posts/:postId", handlers.RemovePostFromCollection)
+	}
+
 	cf := r.Group("/close-friends", auth, rl100)
 	{
 		cf.GET("",         handlers.GetCloseFriends)

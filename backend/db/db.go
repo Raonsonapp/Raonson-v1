@@ -172,6 +172,23 @@ func migrate() {
 		PRIMARY KEY (user_id, post_id)
 	);
 
+	-- ── Папкаҳои захирашуда (Collections, мисли Instagram) ───────
+	CREATE TABLE IF NOT EXISTS saved_collections (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id TEXT NOT NULL,
+		name TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_saved_collections_user
+	  ON saved_collections(user_id, created_at DESC);
+
+	CREATE TABLE IF NOT EXISTS saved_collection_items (
+		collection_id TEXT NOT NULL,
+		post_id TEXT NOT NULL,
+		added_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (collection_id, post_id)
+	);
+
 	CREATE TABLE IF NOT EXISTS post_views (
 		user_id TEXT NOT NULL,
 		post_id TEXT NOT NULL,
