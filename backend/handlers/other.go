@@ -562,7 +562,7 @@ func GetReels(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW())
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text)))
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE ($4 = FALSE OR EXISTS (
 		    SELECT 1 FROM follows f2
@@ -775,7 +775,7 @@ func GetReelByID(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$2::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$2::text AND f.following_id=r.user_id),
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW())
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$2::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$2::text AND hf.following_id=s.user_id)) AND (s.user_id=$2::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$2::text)))
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE r.id=$1`, rid, myID).
 		Scan(&vurl, &vurlLow, &thumb, &capt, &views, &likes, &comms, &createdAt,

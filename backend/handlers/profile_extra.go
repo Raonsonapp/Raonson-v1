@@ -63,7 +63,7 @@ const feedPostCols = `
 	       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 	       COALESCE(p.collaborators,'{}'),
-	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW())
+	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text)))
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)

@@ -79,7 +79,7 @@ func GetSmartReels(c *gin.Context) {
 		    EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1 AND fo.following_id=r.user_id) AS following,
 		    COALESCE(r.hide_likes,false) AS hide_likes,
 		    COALESCE(r.comments_off,false) AS comments_off,
-		    EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW()) AS has_story,
+		    EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1 AND hf.following_id=s.user_id)) AND (s.user_id=$1 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1))) AS has_story,
 		    -- Алгоритми баллгузорӣ
 		    (
 		      -- 1. Дӯстон: +50

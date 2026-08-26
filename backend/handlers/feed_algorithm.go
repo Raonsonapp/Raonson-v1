@@ -82,7 +82,7 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		  COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
 		  COALESCE(p.shop_phone,''),
-		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW()),
+		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1 AND hf.following_id=s.user_id)) AND (s.user_id=$1 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1))),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
 		  (CASE WHEN f.following_id IS NOT NULL THEN 100 ELSE 0 END
