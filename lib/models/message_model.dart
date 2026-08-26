@@ -66,6 +66,9 @@ class MessageModel {
   final int                     unreadCount;
   // Мубодилаи пост/рилс/сторис — дар чат ҳамчун корти пешнамоиш мебарояд.
   final SharedRef?              share;
+  /// Расм танҳо як бор дида мешавад (мисли Instagram).
+  final bool                    viewOnce;
+  final bool                    viewedOnce;
 
   const MessageModel({
     required this.id,
@@ -83,6 +86,8 @@ class MessageModel {
     this.replyToId,
     this.replyTo,
     this.share,
+    this.viewOnce   = false,
+    this.viewedOnce = false,
     this.reactions    = const [],
     this.isRequest    = false,
     this.unreadCount  = 0,
@@ -106,6 +111,8 @@ class MessageModel {
     MessageModel?         replyTo,
     List<MessageReaction>? reactions,
     SharedRef?            share,
+    bool?                 viewOnce,
+    bool?                 viewedOnce,
     bool?                 isRequest,
     int?                  unreadCount,
   }) => MessageModel(
@@ -125,6 +132,8 @@ class MessageModel {
     replyTo:      replyTo       ?? this.replyTo,
     reactions:    reactions     ?? this.reactions,
     share:        share         ?? this.share,
+    viewOnce:     viewOnce      ?? this.viewOnce,
+    viewedOnce:   viewedOnce    ?? this.viewedOnce,
     isRequest:    isRequest     ?? this.isRequest,
     unreadCount:  unreadCount   ?? this.unreadCount,
   );
@@ -179,6 +188,8 @@ class MessageModel {
       type:      _parseType(json['type']?.toString()),
       status:    _parseStatus(json),
       share:     SharedRef.fromJson(json),
+      viewOnce:   json['viewOnce'] == true,
+      viewedOnce: json['viewedOnce'] == true,
       isRequest: json['isRequest'] == true,
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
     );
@@ -226,6 +237,8 @@ class MessageModel {
       type:      _parseType(json['type']?.toString()),
       status:    _parseStatus(json),
       share:     SharedRef.fromJson(json),
+      viewOnce:   json['viewOnce'] == true,
+      viewedOnce: json['viewedOnce'] == true,
       reactions: reactions,
     );
   }

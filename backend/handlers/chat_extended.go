@@ -131,6 +131,8 @@ type SendMessageExtRequest struct {
 	ShareKind  string `json:"shareKind"` // "post"|"reel"|"story"
 	ShareThumb string `json:"shareThumb"`
 	ShareUser  string `json:"shareUser"`
+	// Расм танҳо як бор дида мешавад.
+	ViewOnce   bool `json:"viewOnce"`
 }
 
 func SendMessageExt(c *gin.Context) {
@@ -194,12 +196,15 @@ func SendMessageExt(c *gin.Context) {
 	err := db.Pool.QueryRow(context.Background(), `
 		INSERT INTO messages
 		  (chat_id, sender_id, receiver_id, text, type, media_url, reply_to_id,
-		   share_id, share_kind, share_thumb, share_user, created_at, updated_at)
+		   share_id, share_kind, share_thumb, share_user, view_once,
+		   created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,
-		        NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),NOW(),NOW())
+		        NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),$12,
+		        NOW(),NOW())
 		RETURNING id
 	`, chatID, myID, receiver, body.Text, msgType, nullString(body.MediaURL), replyToPtr,
-		body.ShareID, body.ShareKind, body.ShareThumb, body.ShareUser).Scan(&msgID)
+		body.ShareID, body.ShareKind, body.ShareThumb, body.ShareUser,
+		body.ViewOnce).Scan(&msgID)
 	if err != nil {
 		log.Printf("[Chat] send message failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
@@ -215,10 +220,10 @@ func SendMessageExt(c *gin.Context) {
 
 	// Push to the receiver in real time (sender already has it via this
 	// response / optimistic insert). Бе ин таъхири чанддақиқагӣ мешуд.
-	emitChat("chat:new", msg, body.ReceiverID)
+	emitChat("chat:new", msg, receiver)
 
 	// Ҷавоби худкор — агар ин аввалин паём ба корбари дорои auto-reply бошад.
-	maybeAutoReply(chatID, myID, body.ReceiverID)
+	maybeAutoReply(chatID, myID, receiver)
 
 	c.JSON(http.StatusCreated, msg)
 }
@@ -280,4 +285,26 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 		msg["replyToId"] = *replyToID
 	}
 	return msg, nil
+}
+
+// POST /chat/messages/:id/opened — расми «як бор дида мешавад» кушода шуд.
+// Танҳо гиранда метавонад онро сарф кунад; баъд аз ин URL ба ҳеҷ кас
+// баргардонда намешавад.
+func MarkViewOnceOpened(c *gin.Context) {
+	msgID := c.Param("id")
+	myID  := mw.UID(c)
+	ct, err := db.Pool.Exec(context.Background(), `
+		UPDATE messages SET viewed_once=TRUE, read=TRUE, updated_at=NOW()
+		WHERE id=$1 AND receiver_id=$2::text
+		  AND COALESCE(view_once,false)=TRUE
+		  AND COALESCE(viewed_once,false)=FALSE`, msgID, myID)
+	if err != nil || ct.RowsAffected() == 0 {
+		c.JSON(http.StatusOK, gin.H{"consumed": false})
+		return
+	}
+	// Ба фиристанда хабар медиҳем, то дар экранаш «кушода шуд» шавад.
+	sender, _ := participantsOf(msgID)
+	emitChat("chat:viewOnceOpened",
+		map[string]interface{}{"messageId": msgID}, sender)
+	c.JSON(http.StatusOK, gin.H{"consumed": true})
 }

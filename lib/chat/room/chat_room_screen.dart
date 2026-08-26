@@ -488,7 +488,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   // ─── Send media (акс/видео) ─────────────────────────────────
-  void _onSendMedia(File file) => _uploadAndSend(file, _typeByExt(file.path));
+  void _onSendMedia(File file, {bool viewOnce = false}) =>
+      _uploadAndSend(file, _typeByExt(file.path), viewOnce: viewOnce);
 
   // ─── Send voice (паёми овозӣ) ───────────────────────────────
   void _onSendVoice(File file) => _uploadAndSend(file, 'audio');
@@ -500,7 +501,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     return 'image';
   }
 
-  Future<void> _uploadAndSend(File file, String type) async {
+  Future<void> _uploadAndSend(File file, String type,
+      {bool viewOnce = false}) async {
     // Optimistic "uploading" bubble
     final optimistic = MessageModel(
       id:           'opt_${DateTime.now().millisecondsSinceEpoch}',
@@ -530,6 +532,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         chatId:    _chatId,
         mediaUrl:  url,
         mediaType: type,
+        viewOnce:  viewOnce,
       );
       if (!mounted) return;
       setState(() {

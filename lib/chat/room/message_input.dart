@@ -13,7 +13,7 @@ import '../../core/ui/app_icons.dart';
 // ─────────────────────────────────────────────────────────────────
 class MessageInput extends StatefulWidget {
   final void Function(String text)  onSend;
-  final void Function(File file)?   onSendMedia;
+  final void Function(File file, {bool viewOnce})? onSendMedia;
   final void Function(File file)?   onSendVoice;
   final VoidCallback?               onSendLocation;
   final void Function(bool isTyping)? onTyping;
@@ -171,6 +171,14 @@ class _MessageInputState extends State<MessageInput>
                     label: 'Камера',
                     onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.camera); }),
                 _AttachTile(
+                    icon: AppIcons.visibility_outlined,
+                    color: const Color(0xFF7B5CFF),
+                    label: 'Як бор',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.gallery, viewOnce: true);
+                    }),
+                _AttachTile(
                     icon: AppIcons.videocam_rounded,
                     color: const Color(0xFF00C853),
                     label: 'Видео',
@@ -188,11 +196,13 @@ class _MessageInputState extends State<MessageInput>
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<void> _pickImage(ImageSource source, {bool viewOnce = false}) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
         source: source, maxWidth: 1440, maxHeight: 1440, imageQuality: 80);
-    if (picked != null) widget.onSendMedia?.call(File(picked.path));
+    if (picked != null) {
+      widget.onSendMedia?.call(File(picked.path), viewOnce: viewOnce);
+    }
   }
 
   Future<void> _pickVideo() async {

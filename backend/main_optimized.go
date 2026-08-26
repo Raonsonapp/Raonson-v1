@@ -356,6 +356,7 @@ func main() {
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)
+		ch.POST("/messages/:id/opened", handlers.MarkViewOnceOpened)
 		ch.POST("/messages/:id/report", handlers.ReportMessage)
 		ch.POST("/requests/:peerId/accept", handlers.AcceptChatRequest)
 		ch.POST("/requests/:peerId/delete", handlers.DeleteChatRequest)

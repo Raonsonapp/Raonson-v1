@@ -252,6 +252,12 @@ class _BubbleBody extends StatelessWidget {
       return _UploadingBubble(isMine: isMine);
     }
 
+    // «Як бор дида мешавад» — расм пӯшида мемонад; баъд аз кушодан
+    // сервер URL-ро дигар намедиҳад ва ин ҳолат ба ҷои он мемонад.
+    if (m.viewOnce) {
+      return _ViewOnceBubble(message: m, isMine: isMine);
+    }
+
     if (m.type == MessageType.image && m.mediaUrl != null) {
       return _ImageBubble(url: m.mediaUrl!, isMine: isMine);
     }
@@ -1189,6 +1195,90 @@ class DateSeparator extends StatelessWidget {
         ),
         Expanded(child: Container(height: 0.5, color: AppColors.dividerFaint)),
       ]),
+    );
+  }
+}
+
+
+// ── Расми «як бор дида мешавад» ──────────────────────────────────
+class _ViewOnceBubble extends StatefulWidget {
+  final MessageModel message;
+  final bool isMine;
+  const _ViewOnceBubble({required this.message, required this.isMine});
+
+  @override
+  State<_ViewOnceBubble> createState() => _ViewOnceBubbleState();
+}
+
+class _ViewOnceBubbleState extends State<_ViewOnceBubble> {
+  late bool _consumed = widget.message.viewedOnce;
+
+  bool get _canOpen =>
+      !_consumed && !widget.isMine && (widget.message.mediaUrl ?? '').isNotEmpty;
+
+  Future<void> _open() async {
+    final url = widget.message.mediaUrl!;
+    final nav = Navigator.of(context);
+    // Аввал сарф мекунем — то ҳатто ҳангоми пӯшидани фаврӣ дубора нашавад.
+    setState(() => _consumed = true);
+    try {
+      await ApiClient.instance
+          .post('/chat/messages/${widget.message.id}/opened');
+    } catch (_) {}
+    await nav.push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black, elevation: 0,
+          title: const Text('Як бор дида мешавад',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          leading: IconButton(
+            icon: const Icon(AppIcons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(_)),
+        ),
+        body: Center(
+          child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain),
+        ),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _consumed
+        ? (widget.isMine ? 'Кушода шуд' : 'Кушода шуд')
+        : (widget.isMine ? 'Расм фиристода шуд' : 'Расмро бинед');
+    return GestureDetector(
+      onTap: _canOpen ? _open : null,
+      child: Container(
+        width: 210,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: _consumed ? AppColors.dividerFaint : AppColors.neonBlue),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(
+            _consumed
+                ? AppIcons.visibility_off_outlined
+                : AppIcons.visibility_outlined,
+            size: 18,
+            color: _consumed ? AppColors.textFaint : AppColors.neonBlue,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(label,
+                style: TextStyle(
+                    color: _consumed
+                        ? AppColors.textFaint
+                        : AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: _consumed ? FontWeight.normal : FontWeight.w600)),
+          ),
+        ]),
+      ),
     );
   }
 }

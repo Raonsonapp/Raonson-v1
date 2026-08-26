@@ -320,6 +320,11 @@ func migrate() {
 		read BOOLEAN DEFAULT FALSE,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
+	-- Расми «як бор дида мешавад» (мисли Instagram) — баъд аз кушодан
+	-- media аз ҷавоб гирифта мешавад ва дигар боз намешавад.
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS view_once   BOOLEAN DEFAULT FALSE;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS viewed_once BOOLEAN DEFAULT FALSE;
+
 	-- Мубодилаи пост/рилс/сторис дар чат — корти пешнамоиш (мисли Instagram)
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_id    TEXT;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_kind  TEXT;

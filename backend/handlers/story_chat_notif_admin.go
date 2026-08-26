@@ -495,14 +495,17 @@ func GetMessages(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
 		       is_deleted,read,created_at,username,avatar,verified,
-		       share_id,share_kind,share_thumb,share_user
+		       share_id,share_kind,share_thumb,share_user,
+		       view_once,viewed_once
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
 		         COALESCE(m.is_deleted,false) is_deleted,m.read,m.created_at,
 		         u.username,u.avatar,u.verified,
 		         COALESCE(m.share_id,'') share_id, COALESCE(m.share_kind,'') share_kind,
-		         COALESCE(m.share_thumb,'') share_thumb, COALESCE(m.share_user,'') share_user
+		         COALESCE(m.share_thumb,'') share_thumb, COALESCE(m.share_user,'') share_user,
+		         COALESCE(m.view_once,false) view_once,
+		         COALESCE(m.viewed_once,false) viewed_once
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
@@ -521,15 +524,23 @@ func GetMessages(c *gin.Context) {
 		var uname, uavatar string
 		var verified bool
 		var shareID, shareKind, shareThumb, shareUser string
+		var viewOnce, viewedOnce bool
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
 			&read, &createdAt, &uname, &uavatar, &verified,
-			&shareID, &shareKind, &shareThumb, &shareUser)
+			&shareID, &shareKind, &shareThumb, &shareUser,
+			&viewOnce, &viewedOnce)
+		// «Як бор дида мешавад»: баъд аз кушодан URL дигар фиристода
+		// намешавад — на ба гиранда, на ба фиристанда.
+		if viewOnce && viewedOnce {
+			murl = ""
+		}
 		messages = append(messages, gin.H{
 			"_id": mid, "chatId": cid, "text": text, "mediaUrl": murl,
 			"type": mtype, "replyToId": replyTo, "isDeleted": isDeleted,
 			"read": read, "createdAt": createdAt,
 			"shareId": shareID, "shareKind": shareKind,
 			"shareThumb": shareThumb, "shareUser": shareUser,
+			"viewOnce": viewOnce, "viewedOnce": viewedOnce,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}

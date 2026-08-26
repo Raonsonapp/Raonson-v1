@@ -210,6 +210,7 @@ class ChatRepository {
     String? chatId,
     String? mediaUrl,
     String? mediaType, // "image" | "video" | "audio" | "file"
+    bool viewOnce = false,
   }) async {
     final myId = await _myId();
     var cid = chatId;
@@ -229,6 +230,7 @@ class ChatRepository {
         if (replyToId != null) 'replyToId': replyToId,
         if (mediaUrl != null && mediaUrl.isNotEmpty) 'mediaUrl': mediaUrl,
         if (mediaType != null && mediaType.isNotEmpty) 'type': mediaType,
+        if (viewOnce) 'viewOnce': true,
       },
     ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 400) throw Exception('Send error');
