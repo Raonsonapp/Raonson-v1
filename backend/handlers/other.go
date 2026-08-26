@@ -149,12 +149,24 @@ func DeleteComment(c *gin.Context) {
 	err := db.Pool.QueryRow(context.Background(),
 		`DELETE FROM comments WHERE id=$1 AND user_id=$2::text RETURNING post_id`, cid, myID,
 	).Scan(&postID)
+	if err == nil {
+		db.Pool.Exec(context.Background(),
+			`UPDATE posts SET comments_count=GREATEST(comments_count-1,0) WHERE id=$1`, postID)
+		mw.InvalidateUserCache(myID)
+		c.JSON(http.StatusOK, gin.H{"success": true})
+		return
+	}
+	// Дар ҷадвали пост нест — шояд шарҳи Reel бошад (ҷадвали ҷудогона).
+	var reelID string
+	err = db.Pool.QueryRow(context.Background(),
+		`DELETE FROM reel_comments WHERE id=$1 AND user_id=$2::text RETURNING reel_id`, cid, myID,
+	).Scan(&reelID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Comment not found"})
 		return
 	}
 	db.Pool.Exec(context.Background(),
-		`UPDATE posts SET comments_count=GREATEST(comments_count-1,0) WHERE id=$1`, postID)
+		`UPDATE reels SET comments_count=GREATEST(comments_count-1,0) WHERE id=$1`, reelID)
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
@@ -167,16 +179,28 @@ func ToggleCommentLike(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT EXISTS(SELECT 1 FROM comment_likes WHERE comment_id=$1::text AND user_id=$2::text)`,
 		cid, myID).Scan(&liked)
+	// Шарҳ метавонад аз они пост (comments) ё Reel (reel_comments) бошад —
+	// ҳарду ҷадвалро нав мекунем, танҳо якеаш сатр дорад.
+	// Шумориш танҳо вақте тағйир меёбад, ки сатр воқеан илова/ҳазф шуд —
+	// вагарна такрори дархост шуморишро вайрон мекунад.
 	if liked {
-		db.Pool.Exec(context.Background(),
+		ct, _ := db.Pool.Exec(context.Background(),
 			`DELETE FROM comment_likes WHERE comment_id=$1::text AND user_id=$2::text`, cid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
+			db.Pool.Exec(context.Background(),
+				`UPDATE reel_comments SET likes_count=GREATEST(likes_count-1,0) WHERE id=$1`, cid)
+		}
 	} else {
-		db.Pool.Exec(context.Background(),
+		ct, _ := db.Pool.Exec(context.Background(),
 			`INSERT INTO comment_likes(comment_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, cid, myID)
-		db.Pool.Exec(context.Background(),
-			`UPDATE comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
+		if ct.RowsAffected() > 0 {
+			db.Pool.Exec(context.Background(),
+				`UPDATE comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
+			db.Pool.Exec(context.Background(),
+				`UPDATE reel_comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
+		}
 	}
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
@@ -208,10 +232,16 @@ func EditComment(c *gin.Context) {
 	}
 
 	if res.RowsAffected() == 0 {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "Comment not found or not owner",
-		})
-		return
+		// Дар ҷадвали пост нест — шояд шарҳи Reel бошад.
+		res, err = db.Pool.Exec(context.Background(),
+			`UPDATE reel_comments SET text=$1 WHERE id=$2 AND user_id=$3`,
+			b.Text, cid, myID)
+		if err != nil || res.RowsAffected() == 0 {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "Comment not found or not owner",
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -254,9 +284,17 @@ func FollowUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"requested": true})
 		return
 	}
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
-		myID, targetID)
+	// RETURNING — шумориш танҳо вақте зиёд мешавад, ки сатр воқеан
+	// сохта шуда бошад. Бе ин ду дархости ҳамзамон ду бор зиёд мекунад.
+	var inserted int
+	if db.Pool.QueryRow(context.Background(),
+		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2)
+		 ON CONFLICT DO NOTHING RETURNING 1`,
+		myID, targetID).Scan(&inserted) != nil {
+		// Сатр аллакай буд — робита ҳаст, вале шуморишро тағйир намедиҳем.
+		c.JSON(http.StatusOK, gin.H{"following": true})
+		return
+	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
@@ -285,8 +323,15 @@ func FollowUser(c *gin.Context) {
 func UnfollowUser(c *gin.Context) {
 	targetID := c.Param("id")
 	myID     := mw.UID(c)
-	db.Pool.Exec(context.Background(),
-		`DELETE FROM follows WHERE follower_id=$1::text AND following_id=$2::text`, myID, targetID)
+	// RETURNING — шумориш танҳо вақте кам мешавад, ки сатр воқеан нест
+	// шуда бошад. Бе ин такрори дархост шуморишро поин мебарад.
+	var deleted int
+	if db.Pool.QueryRow(context.Background(),
+		`DELETE FROM follows WHERE follower_id=$1::text AND following_id=$2::text
+		 RETURNING 1`, myID, targetID).Scan(&deleted) != nil {
+		c.JSON(http.StatusOK, gin.H{"following": false})
+		return
+	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET followers_count=GREATEST(followers_count-1,0) WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
@@ -302,12 +347,18 @@ func AcceptRequest(c *gin.Context) {
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`, rid, myID)
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
-	db.Pool.Exec(context.Background(),
-		`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, myID)
-	db.Pool.Exec(context.Background(),
-		`UPDATE users SET following_count=following_count+1 WHERE id=$1`, rid)
+	// Танҳо вақте зиёд мекунем, ки робита воқеан нав сохта шуда бошад.
+	var inserted int
+	if db.Pool.QueryRow(context.Background(),
+		`INSERT INTO follows(follower_id,following_id) VALUES($1,$2)
+		 ON CONFLICT DO NOTHING RETURNING 1`, rid, myID).Scan(&inserted) == nil {
+		db.Pool.Exec(context.Background(),
+			`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, myID)
+		db.Pool.Exec(context.Background(),
+			`UPDATE users SET following_count=following_count+1 WHERE id=$1`, rid)
+	}
+	mw.InvalidateUserCache(myID)
+	mw.InvalidateUserCache(rid)
 	c.JSON(http.StatusOK, gin.H{"accepted": true})
 }
 
@@ -511,7 +562,7 @@ func GetReels(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW())
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text)))
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE ($4 = FALSE OR EXISTS (
 		    SELECT 1 FROM follows f2
@@ -624,21 +675,35 @@ func DeleteReel(c *gin.Context) {
 
 // GET /reels/:id/comments
 func GetReelComments(c *gin.Context) {
-	rid := c.Param("id")
+	rid    := c.Param("id")
+	myID   := mw.UID(c)
+	page   := toInt(c.Query("page"), 1)
+	limit  := toInt(c.Query("limit"), 20)
+	offset := (page - 1) * limit
+
+	// Ҳамон шакли ҷавоб мисли шарҳҳои пост — likes, replies ва pagination.
 	rows, _ := db.Pool.Query(context.Background(), `
-		SELECT rc.id,rc.text,rc.created_at,u.id,u.username,u.avatar,u.verified
+		SELECT rc.id, rc.text, COALESCE(rc.likes_count,0), rc.created_at,
+		       COALESCE(rc.parent_id,''),
+		       u.id, u.username, u.avatar, u.verified,
+		       EXISTS(SELECT 1 FROM comment_likes cl
+		              WHERE cl.comment_id=rc.id AND cl.user_id=$2)
 		FROM reel_comments rc JOIN users u ON u.id=rc.user_id
-		WHERE rc.reel_id=$1 ORDER BY rc.created_at ASC`, rid)
+		WHERE rc.reel_id=$1 ORDER BY rc.created_at DESC LIMIT $3 OFFSET $4`,
+		rid, myID, limit, offset)
 	comments := []gin.H{}
 	if rows != nil {
 		defer rows.Close()
 		for rows.Next() {
-			var cid, text, uid, uname, uavatar string
-			var verified bool
+			var cid, text, parentID, uid, uname, uavatar string
+			var likes int
+			var verified, liked bool
 			var createdAt interface{}
-			rows.Scan(&cid, &text, &createdAt, &uid, &uname, &uavatar, &verified)
+			rows.Scan(&cid, &text, &likes, &createdAt, &parentID,
+				&uid, &uname, &uavatar, &verified, &liked)
 			comments = append(comments, gin.H{
-				"_id": cid, "text": text, "createdAt": createdAt,
+				"_id": cid, "text": text, "liked": liked, "likesCount": likes,
+				"createdAt": createdAt, "parentId": parentID,
 				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 			})
 		}
@@ -650,7 +715,10 @@ func GetReelComments(c *gin.Context) {
 func AddReelComment(c *gin.Context) {
 	rid  := c.Param("id")
 	myID := mw.UID(c)
-	var b struct{ Text string `json:"text"` }
+	var b struct {
+		Text     string `json:"text"`
+		ParentID string `json:"parentId"`
+	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
@@ -670,8 +738,9 @@ func AddReelComment(c *gin.Context) {
 	}
 	var cid string
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO reel_comments(reel_id,user_id,text) VALUES($1,$2,$3) RETURNING id`,
-		rid, myID, b.Text).Scan(&cid)
+		`INSERT INTO reel_comments(reel_id,user_id,text,parent_id)
+		 VALUES($1,$2,$3,NULLIF($4,'')) RETURNING id`,
+		rid, myID, b.Text, b.ParentID).Scan(&cid)
 	db.Pool.Exec(context.Background(),
 		`UPDATE reels SET comments_count=comments_count+1 WHERE id=$1`, rid)
 	var owner string
@@ -682,4 +751,59 @@ func AddReelComment(c *gin.Context) {
 	notifyMentions(myID, "mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
+}
+
+// GET /reels/:id — як реели мушаххас.
+// Бе ин, зеркунии огоҳинома ё корти мубодилашуда танҳо барои реелҳои
+// худи корбар кор мекард (client маҷбур буд /users/me/reels-ро скан кунад).
+func GetReelByID(c *gin.Context) {
+	rid  := c.Param("id")
+	myID := mw.UID(c)
+
+	var vurl, vurlLow, thumb, capt, uid, uname, uavatar string
+	var views, likes, comms int
+	var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
+	var createdAt interface{}
+
+	err := db.Pool.QueryRow(context.Background(), `
+		SELECT r.video_url, COALESCE(r.video_url_low,''),
+		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
+		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $2::text
+		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
+		       u.id, u.username, u.avatar, u.verified,
+		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$2::text),
+		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$2::text),
+		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$2::text AND f.following_id=r.user_id),
+		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$2::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$2::text AND hf.following_id=s.user_id)) AND (s.user_id=$2::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$2::text)))
+		FROM reels r JOIN users u ON u.id=r.user_id
+		WHERE r.id=$1`, rid, myID).
+		Scan(&vurl, &vurlLow, &thumb, &capt, &views, &likes, &comms, &createdAt,
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
+			&hideLikes, &commentsOff, &hasStory)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
+		return
+	}
+
+	// Реели корбари блоккарда нишон дода намешавад.
+	var blocked bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM blocks
+		  WHERE (blocker_id=$1 AND blocked_id=$2) OR (blocker_id=$2 AND blocked_id=$1))`,
+		myID, uid).Scan(&blocked)
+	if blocked {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
+		"thumbnailUrl": thumb, "caption": capt,
+		"viewsCount": views, "likesCount": likes, "commentsCount": comms,
+		"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
+		"hideLikes": hideLikes, "commentsDisabled": commentsOff,
+		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
+			"verified": verified, "isFollowing": following, "hasStory": hasStory},
+	})
 }

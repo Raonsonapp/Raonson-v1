@@ -230,12 +230,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
     if (mounted) setState(() => _sending = false);
   }
 
-  void _onDelete(String commentId) {
+  Future<void> _onDelete(String commentId) async {
     final removed = _comments.where((c) => c.id == commentId).toList();
     setState(() => _comments.removeWhere((c) => c.id == commentId));
-    ApiClient.instance.delete('/comments/$commentId').catchError((_) {
+    try {
+      final res = await ApiClient.instance.delete('/comments/$commentId');
+      if (res.statusCode >= 400) throw Exception('delete failed');
+    } catch (_) {
+      // Барқарор мекунем — сервер нест накард.
       if (mounted) setState(() => _comments.addAll(removed));
-    });
+    }
   }
 
   void _onEdit(CommentModel comment, String newText) {

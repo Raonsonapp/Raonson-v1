@@ -2,7 +2,6 @@ import '../ui/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 import '../../app/app_theme.dart';
-import '../ui/app_icons.dart';
 
 class FeedAdCard extends StatefulWidget {
   const FeedAdCard({super.key});

@@ -471,6 +471,7 @@ Widget _avatar(String url, double size) {
     child: url.isNotEmpty
         ? CachedNetworkImage(
             imageUrl: url, width: size, height: size, fit: BoxFit.cover,
+            memCacheWidth: (size * 3).round(),
             errorWidget: (_, __, ___) => _ph(size))
         : _ph(size),
   );

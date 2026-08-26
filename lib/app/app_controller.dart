@@ -1,7 +1,6 @@
 // lib/app/app_controller.dart
 import 'package:flutter/material.dart';
 
-import '../create/create_reel/create_reel_screen.dart';
 import 'app_state.dart';
 import 'app_routes.dart';
 import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
@@ -9,11 +8,9 @@ import '../reels/reels_feed/reels_screen.dart';
 import '../chat/inbox/chat_list_screen.dart';
 import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
-import '../create/create_post/create_post_screen.dart';
 import '../create/gallery_picker_screen.dart';
 import '../stories/story_group_viewer.dart';
 import '../models/story_model.dart';
-import '../create/create_story/create_story_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../auth/login/login_screen.dart';
 import '../auth/register/register_flow_screen.dart';
@@ -48,8 +45,7 @@ class AppController {
       case AppRoutes.search:
         return _page(const SearchScreen());
       case '/user-profile':
-      case AppRoutes.profile:
-      case '/profile':
+      case AppRoutes.profile: // '/profile'
         final uid    = settings.arguments;
         final userId = (uid is String && uid.isNotEmpty) ? uid : 'me';
         return _page(ProfileScreen(userId: userId));
@@ -64,8 +60,7 @@ class AppController {
         return _page(const NotificationsScreen());
 
       // ✅ Friends — мисли Facebook
-      case AppRoutes.friends:
-      case '/friends':
+      case AppRoutes.friends: // '/friends'
         return _slide(const FriendsScreen());
 
       case '/story-viewer':

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -21,6 +22,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
+import '../chat/share/share_to_chat_row.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -120,6 +122,8 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   int    _idx     = 0;
   bool   _paused  = false;
   bool   _liked   = false;
+  DateTime? _lastCenterTap; // барои double-tap → лайк
+  StoryPoll? _poll;         // ҳолати маҳаллӣ — овоз фавран дида шавад
 
   // Пешнамоиши бинандагон (барои тугмаи «Амалҳо»-и поён)
   List<String> _viewerAvatars = [];
@@ -168,6 +172,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     _videoCtrl = null;
     _videoReady = false;
     _liked = _current.isLiked;
+    _poll  = _current.poll;
 
     if (_isVideo) {
       _initVideo();
@@ -201,6 +206,15 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     _timer?.cancel();
     _videoCtrl?.pause();
     setState(() => _paused = true);
+  }
+
+  /// Ба профили муаллифи сторис мегузарад (зеркунии аватар ё username).
+  void _openAuthorProfile() {
+    final uid = _current.user.id.trim();
+    if (uid.isEmpty) return;
+    _pause();
+    Navigator.of(context).pop();
+    Navigator.of(context).pushNamed('/profile', arguments: uid);
   }
 
   void _resume() {
@@ -353,8 +367,41 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   void _shareStory() {
-    Share.share('Raonson Story: ${_current.mediaUrl}');
-    _resume();
+    _pause();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Text(tr('common.share'),
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          // Ба чат фиристодан — корти пешнамоиш, мисли Instagram.
+          ShareToChatRow(
+            kind: 'story',
+            contentId: _current.id,
+            shareUrl: _current.mediaUrl,
+            thumbUrl: _current.mediaUrl,
+            authorUsername: _current.user.username,
+          ),
+          Divider(color: AppColors.dividerFaint, height: 1),
+          ListTile(
+            leading: Icon(AppIcons.share_rounded, color: AppColors.textPrimary),
+            title: Text('Барномаҳои дигар',
+                style: TextStyle(color: AppColors.textPrimary)),
+            onTap: () {
+              Navigator.pop(sheetCtx);
+              Share.share('Raonson Story: ${_current.mediaUrl}');
+            },
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    ).whenComplete(() { if (mounted) _resume(); });
   }
 
   Future<void> _reportStory() async {
@@ -384,12 +431,36 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   void _toggleLike() {
+    HapticFeedback.lightImpact();
     setState(() => _liked = !_liked);
     ApiClient.instance.post('/stories/${_current.id}/like').then((_) {}).catchError((e) => e);
     if (_liked) {
       AnalyticsService.instance.logEvent(AnalyticsEvents.storyLike,
           params: {'storyId': _current.id});
       _showHeartAnim();
+    }
+  }
+
+  Future<void> _votePoll(int choice) async {
+    final p = _poll;
+    if (p == null || p.didVote) return;
+    HapticFeedback.selectionClick();
+    // Optimistic — натиҷа фавран нишон дода мешавад.
+    setState(() => _poll = p.copyWith(
+        myVote: choice,
+        votesA: p.votesA + (choice == 0 ? 1 : 0),
+        votesB: p.votesB + (choice == 1 ? 1 : 0)));
+    try {
+      final res = await ApiClient.instance
+          .post('/stories/${_current.id}/poll/vote', body: {'choice': choice});
+      if (res.statusCode >= 400) throw Exception();
+      final b = jsonDecode(res.body) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() => _poll = _poll!.copyWith(
+          votesA: (b['votesA'] as num?)?.toInt() ?? _poll!.votesA,
+          votesB: (b['votesB'] as num?)?.toInt() ?? _poll!.votesB));
+    } catch (_) {
+      if (mounted) setState(() => _poll = p); // баргардон
     }
   }
 
@@ -483,9 +554,29 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           if (_showReply) return;
           final x = d.globalPosition.dx;
           final w = MediaQuery.of(context).size.width;
+          // Double-tap → лайк (мисли Instagram). Онро дастӣ ҳисоб мекунем,
+          // на бо onDoubleTap: вагарна ҳар зеркунӣ ~300мс интизор мешуд
+          // ва гузаштани сторис суст мешуд.
+          final now = DateTime.now();
+          final isCenter = x >= w * 0.33 && x <= w * 0.67;
+          if (isCenter && _lastCenterTap != null &&
+              now.difference(_lastCenterTap!).inMilliseconds < 300) {
+            _lastCenterTap = null;
+            if (_paused) _resume();      // pause-и зеркунии аввалро бекор кун
+            if (!_liked) {
+              _toggleLike();
+            } else {
+              HapticFeedback.lightImpact();
+              _showHeartAnim();
+            }
+            return;
+          }
           if (x < w * 0.33) { _prevStory(); }
           else if (x > w * 0.67) { _nextStory(); }
-          else { _paused ? _resume() : _pause(); }
+          else {
+            _lastCenterTap = now;
+            _paused ? _resume() : _pause();
+          }
         },
         // Instagram-монанд: боло кашидан → статистика/ҷавоб, поён → пӯшидан
         onVerticalDragEnd: (d) {
@@ -536,20 +627,41 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             })),
           ),
 
+          // ── Стикери пурсиш ─────────────────────────────────────
+          if (_poll != null)
+            Builder(builder: (ctx) {
+              final sz = MediaQuery.of(ctx).size;
+              return Positioned(
+                left: (_poll!.x * sz.width - 140).clamp(12.0, sz.width - 292),
+                top:  (_poll!.y * sz.height - 60).clamp(90.0, sz.height - 220),
+                child: _PollSticker(
+                  poll: _poll!,
+                  isOwner: _isOwner,
+                  onVote: _votePoll,
+                ),
+              );
+            }),
+
           // ── Header ─────────────────────────────────────────────
           Positioned(
             top: top + 18, left: 12, right: 12,
             child: Row(children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: _current.user.avatar.isNotEmpty
-                    ? CachedNetworkImageProvider(_current.user.avatar, maxWidth: 80) : null,
-                backgroundColor: Colors.white12,
-                child: _current.user.avatar.isEmpty
-                    ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
+              GestureDetector(
+                onTap: _openAuthorProfile,
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundImage: _current.user.avatar.isNotEmpty
+                      ? CachedNetworkImageProvider(_current.user.avatar, maxWidth: 80) : null,
+                  backgroundColor: Colors.white12,
+                  child: _current.user.avatar.isEmpty
+                      ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
+                ),
               ),
               const SizedBox(width: 10),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: GestureDetector(
+                onTap: _openAuthorProfile,
+                behavior: HitTestBehavior.opaque,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(mainAxisSize: MainAxisSize.min, children: [
                   Flexible(child: Text(_current.user.username,
                       overflow: TextOverflow.ellipsis,
@@ -575,7 +687,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                   ],
                 ]),
                 Text(_timeAgo(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              ])),
+              ]))),
               if (_isOwner)
                 GestureDetector(
                   onTap: _showOwnerMenu,
@@ -673,14 +785,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                     style: const TextStyle(color: Colors.white70, fontSize: 14))),
             )),
         const SizedBox(width: 12),
-        GestureDetector(
-          onTap: _toggleLike,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Icon(
-              _liked ? AppIcons.favorite : AppIcons.favorite_border,
-              key: ValueKey(_liked),
-              color: _liked ? Colors.red : Colors.white, size: 28))),
+        _StoryLikeButton(liked: _liked, onTap: _toggleLike),
         const SizedBox(width: 14),
         GestureDetector(
           onTap: _shareStory,
@@ -1187,4 +1292,178 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
   Widget _divider() => Container(
       width: 1, height: 34, color: Colors.white12,
       margin: const EdgeInsets.symmetric(horizontal: 4));
+}
+
+
+// ── Тугмаи дили сторис ────────────────────────────────────────────
+// Пештар танҳо AnimatedSwitcher-и хира буд. Ҳоло зарбаи фаврӣ +
+// ҳалқаи мавҷӣ — ҳамон ҳисси Instagram.
+class _StoryLikeButton extends StatefulWidget {
+  final bool liked;
+  final VoidCallback onTap;
+  const _StoryLikeButton({required this.liked, required this.onTap});
+
+  @override
+  State<_StoryLikeButton> createState() => _StoryLikeButtonState();
+}
+
+class _StoryLikeButtonState extends State<_StoryLikeButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 360));
+
+  late final Animation<double> _scale = TweenSequence([
+    TweenSequenceItem(
+      tween: Tween(begin: 1.0, end: 1.35)
+          .chain(CurveTween(curve: Curves.easeOutCubic)), weight: 26),
+    TweenSequenceItem(
+      tween: Tween(begin: 1.35, end: 0.88)
+          .chain(CurveTween(curve: Curves.easeInOut)), weight: 22),
+    TweenSequenceItem(
+      tween: Tween(begin: 0.88, end: 1.0)
+          .chain(CurveTween(curve: Curves.elasticOut)), weight: 52),
+  ]).animate(_c);
+
+  // Ҳалқае, ки аз дил берун мешавад ва нопадид мегардад.
+  late final Animation<double> _ring =
+      CurvedAnimation(parent: _c, curve: Curves.easeOut);
+
+  @override
+  void didUpdateWidget(_StoryLikeButton old) {
+    super.didUpdateWidget(old);
+    if (widget.liked && !old.liked) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 40, height: 40,
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (_, __) => Stack(alignment: Alignment.center, children: [
+            if (widget.liked && _c.isAnimating)
+              Opacity(
+                opacity: (1 - _ring.value).clamp(0.0, 1.0),
+                child: Container(
+                  width: 26 + 18 * _ring.value,
+                  height: 26 + 18 * _ring.value,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: Colors.red.withOpacity(0.55), width: 2),
+                  ),
+                ),
+              ),
+            Transform.scale(
+              scale: widget.liked ? _scale.value : 1.0,
+              child: Icon(
+                widget.liked ? AppIcons.favorite : AppIcons.favorite_border,
+                color: widget.liked ? Colors.red : Colors.white,
+                size: 28,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+
+// ── Стикери пурсиш дар сторис ─────────────────────────────────────
+// Пеш аз овоз ду тугма; баъд аз овоз фоиз ва навори пуршаванда —
+// ҳамон рафтори Instagram. Соҳиб танҳо натиҷаро мебинад.
+class _PollSticker extends StatelessWidget {
+  final StoryPoll poll;
+  final bool isOwner;
+  final Future<void> Function(int) onVote;
+  const _PollSticker({
+    required this.poll, required this.isOwner, required this.onVote});
+
+  @override
+  Widget build(BuildContext context) {
+    final showResults = poll.didVote || isOwner;
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.94),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(
+            color: Colors.black.withOpacity(0.22),
+            blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(poll.question,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: Colors.black, fontSize: 15, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _option(0, poll.optionA, poll.pctA, showResults)),
+          const SizedBox(width: 8),
+          Expanded(child: _option(1, poll.optionB, poll.pctB, showResults)),
+        ]),
+        if (showResults) ...[
+          const SizedBox(height: 8),
+          Text(poll.total == 1 ? '1 овоз' : '${poll.total} овоз',
+              style: const TextStyle(color: Colors.black54, fontSize: 11)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _option(int idx, String label, double pct, bool showResults) {
+    final chosen = poll.myVote == idx;
+    return GestureDetector(
+      onTap: (poll.didVote || isOwner) ? null : () => onVote(idx),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(children: [
+          Container(height: 44, color: const Color(0xFFEDEDED)),
+          if (showResults)
+            AnimatedFractionallySizedBox(
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              widthFactor: pct.clamp(0.0, 1.0),
+              child: Container(
+                height: 44,
+                color: chosen
+                    ? const Color(0xFF00C853)
+                    : const Color(0xFFBDBDBD),
+              ),
+            ),
+          SizedBox(
+            height: 44,
+            child: Center(
+              child: Row(mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min, children: [
+                Flexible(
+                  child: Text(label,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.black.withOpacity(0.85),
+                          fontSize: 13,
+                          fontWeight: chosen ? FontWeight.w800 : FontWeight.w600)),
+                ),
+                if (showResults) ...[
+                  const SizedBox(width: 6),
+                  Text('${(pct * 100).round()}%',
+                      style: const TextStyle(
+                          color: Colors.black54, fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                ],
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
 }

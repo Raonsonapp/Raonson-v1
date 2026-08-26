@@ -10,7 +10,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:video_player/video_player.dart';
 
 import '../../models/post_model.dart';
 import '../../models/story_model.dart';
@@ -24,6 +23,8 @@ import '../../promote/promote_screen.dart';
 import '../../shop/buy_sheet.dart';
 import '../../ai/ai_tools.dart';
 import '../../widgets/media_view.dart';
+import '../../chat/share/share_to_chat_row.dart';
+import '../../profile/saved_collections_screen.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
 import '../../app/app_settings.dart';
@@ -111,12 +112,21 @@ class _PostCardState extends State<PostCard>
     _commentsDisabled = widget.post.commentsDisabled;
     _caption      = widget.post.caption;
 
+    // Зарбаи фаврӣ, баъд каме "фурӯ" ва нишастани фаврӣ — ҳисси
+    // тугмаи дили Instagram. Пештар танҳо як scale-и ҳамвор буд.
     _likeCtrl = AnimationController(vsync: this,
-        duration: const Duration(milliseconds: 200));
+        duration: const Duration(milliseconds: 320));
     _likeScale = TweenSequence([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
-      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
-    ]).animate(CurvedAnimation(parent: _likeCtrl, curve: Curves.easeInOut));
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.32)
+            .chain(CurveTween(curve: Curves.easeOutCubic)), weight: 28),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.32, end: 0.90)
+            .chain(CurveTween(curve: Curves.easeInOut)), weight: 22),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.90, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)), weight: 50),
+    ]).animate(_likeCtrl);
 
     _countCtrl = AnimationController(vsync: this,
         duration: const Duration(milliseconds: 250));
@@ -220,6 +230,57 @@ class _PostCardState extends State<PostCard>
       _likeDebounce?.cancel();
       _likeDebounce = Timer(const Duration(milliseconds: 300), _syncLike);
     }
+  }
+
+  /// Дарозфишор ба тугмаи захира — интихоби папка (мисли Instagram).
+  Future<void> _pickCollection() async {
+    HapticFeedback.mediumImpact();
+    final items = await CollectionsApi.list();
+    if (!mounted) return;
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ҳанӯз папка нест — дар «Захирашуда» созед')));
+      return;
+    }
+    final chosen = await showModalBottomSheet<SavedCollection>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 12),
+          Text('Ба кадом папка?',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold, fontSize: 15)),
+          const SizedBox(height: 6),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: items.length,
+              itemBuilder: (_, i) => ListTile(
+                leading: Icon(AppIcons.bookmark_border_rounded,
+                    color: AppColors.textSecondary),
+                title: Text(items[i].name,
+                    style: TextStyle(color: AppColors.textPrimary)),
+                subtitle: Text('${items[i].count}',
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+                onTap: () => Navigator.pop(ctx, items[i]),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    final ok = await CollectionsApi.addPost(chosen.id, widget.post.id);
+    if (!mounted) return;
+    if (ok) setState(() => _saved = true);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Ба «${chosen.name}» илова шуд'
+            : tr('common.error'))));
   }
 
   Future<void> _toggleSave() async {
@@ -388,6 +449,32 @@ class _PostCardState extends State<PostCard>
     ));
   }
 
+  /// Оё дар caption-и ин пост маро қайд кардаанд?
+  bool get _taggedMe {
+    final me = (UserSession.username ?? '').trim().toLowerCase();
+    if (me.isEmpty) return false;
+    return widget.post.caption.toLowerCase().contains('@$me');
+  }
+
+  Future<void> _removeMyTag() async {
+    try {
+      final res = await ApiClient.instance
+          .delete('/posts/${widget.post.id}/tag');
+      if (!mounted) return;
+      if (res.statusCode < 400) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Қайди шумо бардошта шуд')));
+      } else {
+        throw Exception();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('common.error'))));
+      }
+    }
+  }
+
   void _showOtherMenu() {
     showModalBottomSheet(
       context: context,
@@ -397,6 +484,13 @@ class _PostCardState extends State<PostCard>
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
+          // Агар дар ин пост қайд шуда бошӣ — қайди худро бардор
+          // (мисли Instagram: ҳар кас қайд карда метавонад, вале ту
+          //  метавонӣ онро аз профили худ бигирӣ).
+          if (_taggedMe)
+            _MenuItem(icon: AppIcons.person_off_rounded,
+                label: 'Қайди худро бардор',
+                onTap: () { Navigator.pop(context); _removeMyTag(); }),
           _MenuItem(icon: Icons.volume_off_outlined,
               label: 'Постҳои @${widget.post.user.username}-ро бандош',
               onTap: () { Navigator.pop(context); _muteUser(); }),
@@ -442,15 +536,19 @@ class _PostCardState extends State<PostCard>
       final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
       if (res.statusCode < 400) {
         widget.onDeleted?.call();
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Пост ҳазф шуд'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2)));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Пост ҳазф шуд'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2)));
+        }
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
-        duration: Duration(seconds: 2)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+          duration: Duration(seconds: 2)));
+      }
     }
   }
 
@@ -678,9 +776,11 @@ class _PostCardState extends State<PostCard>
       await ApiClient.instance.post(
         '/posts/${widget.post.id}/report',
         body: {'reason': result.reason, 'description': result.description});
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Жалоб фиристода шуд. Раҳмат!'),
-        backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Жалоб фиристода шуд. Раҳмат!'),
+          backgroundColor: Colors.green, duration: Duration(seconds: 2)));
+      }
     } catch (_) {}
   }
 
@@ -772,7 +872,14 @@ class _PostCardState extends State<PostCard>
             ]))),
 
         // Ба чатҳо фиристодан — мисли Instagram
-        _ShareChatsRow(postUrl: url),
+        ShareToChatRow(
+          kind: 'post',
+          contentId: widget.post.id,
+          shareUrl: url,
+          thumbUrl: widget.post.media.isNotEmpty
+              ? (widget.post.media.first['url'] ?? '').toString() : '',
+          authorUsername: widget.post.user.username,
+        ),
 
         // Иконкаҳои худамон (assets/icons) + логоҳои social media — мисли Instagram
         SingleChildScrollView(
@@ -1221,6 +1328,7 @@ class _PostCardState extends State<PostCard>
 
           _StableBtn(
             onTap: _toggleSave,
+            onLongPress: _pickCollection,
             svgPath: 'assets/icons/save.svg',
             activeSvgPath: 'assets/icons/save_filled.svg',
             isActive: _saved, activeColor: AppColors.textPrimary,
@@ -1526,17 +1634,19 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
                             radius: 20,
                             backgroundImage: av.isNotEmpty
                                 ? CachedNetworkImageProvider(av, maxWidth: 80) : null,
+                            backgroundColor: AppColors.card,
                             child: av.isEmpty ? Icon(
                                 AppIcons.person, color: AppColors.textFaint) : null,
-                            backgroundColor: AppColors.card,
                           ),
                           title: Text('@$un',
                               style: TextStyle(color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w600)),
                           onTap: () {
                             Navigator.pop(context);
-                            if (id.isNotEmpty) Navigator.pushNamed(
-                                context, '/profile', arguments: id);
+                            if (id.isNotEmpty) {
+                              Navigator.pushNamed(
+                                  context, '/profile', arguments: id);
+                            }
                           },
                         );
                       }),
@@ -1580,17 +1690,19 @@ class _StableBtn extends StatelessWidget {
   final double size;
   final int count;
   final String Function(int) fmt;
-  _StableBtn({
+  final VoidCallback? onLongPress;
+  const _StableBtn({
     required this.onTap, required this.svgPath, this.activeSvgPath,
     this.isActive = false, this.activeColor,
     this.inactiveColor, required this.size,
-    required this.count, required this.fmt});
+    required this.count, required this.fmt, this.onLongPress});
   @override
   Widget build(BuildContext context) {
     final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
     final color = (isActive ? activeColor : inactiveColor) ?? AppColors.textPrimary;
     return GestureDetector(
-      onTap: onTap, behavior: HitTestBehavior.opaque,
+      onTap: onTap, onLongPress: onLongPress,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1692,357 +1804,13 @@ class _SectionTitle extends StatelessWidget {
 
 
 // ── Media Carousel ───────────────────────────────────────────────────
-class _MediaCarousel extends StatefulWidget {
-  final List<Map<String, String>> media;
-  final bool isActive;
-  const _MediaCarousel({required this.media, this.isActive = true});
-  @override
-  State<_MediaCarousel> createState() => _MediaCarouselState();
-}
 
-class _MediaCarouselState extends State<_MediaCarousel> {
-  int _current = 0;
-  double? _videoRatio; // ратиои аслии видео (вақте маълум шуд)
-  double? _imageRatio; // ратиои аслии расм (вақте маълум шуд)
-  ImageStream? _imageStream;
-  ImageStreamListener? _imageListener;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolveImageRatio();
-  }
-
-  @override
-  void didUpdateWidget(_MediaCarousel old) {
-    super.didUpdateWidget(old);
-    final oldUrl = old.media.isNotEmpty ? old.media.first['url'] : null;
-    final newUrl = widget.media.isNotEmpty ? widget.media.first['url'] : null;
-    if (oldUrl != newUrl) {
-      _imageRatio = null;
-      _resolveImageRatio();
-    }
-  }
-
-  // Мисли видео: андозаи аслии расмро мегирем, то формат канда/кӯтоҳ нашавад.
-  void _resolveImageRatio() {
-    if (widget.media.isEmpty) return;
-    final type = widget.media.first['type'] ?? 'image';
-    final url  = widget.media.first['url']  ?? '';
-    if (type != 'image' || url.isEmpty) return;
-    _imageStream?.removeListener(_imageListener!);
-    final stream = CachedNetworkImageProvider(url)
-        .resolve(const ImageConfiguration());
-    final listener = ImageStreamListener((info, _) {
-      if (!mounted) return;
-      final w = info.image.width.toDouble();
-      final h = info.image.height.toDouble();
-      if (w > 0 && h > 0 && _imageRatio == null) {
-        setState(() => _imageRatio = w / h);
-      }
-    }, onError: (_, __) {});
-    _imageStream = stream;
-    _imageListener = listener;
-    stream.addListener(listener);
-  }
-
-  @override
-  void dispose() {
-    _imageStream?.removeListener(_imageListener!);
-    super.dispose();
-  }
-
-  // Аз андозаи аслии медиа ба яке аз 3 формати расмии Instagram
-  // snap мекунад: 4:5 (амудӣ), 1:1 (мураббаъ), 1.91:1 (уфуқӣ).
-  // Инро Instagram ҳам мекунад: recording-и корбар ба formatҳои
-  // мушаххас snap мешавад, na ба ratio-и аслии тасодуфӣ.
-  static const double _iaPortrait  = 4 / 5;      // 0.80
-  static const double _iaSquare    = 1.0;
-  static const double _iaLandscape = 1.91;
-  double _snapToInstagram(double raw) {
-    if (raw <= 0) return _iaPortrait;
-    // Ба наздиктарин формат snap мекунем — фарқи ratio-ро дар log-space
-    // мешуморем, то portrait ва landscape мутаносиб муомила шаванд.
-    final r = raw.clamp(0.5, 1.91);
-    final dp = (r - _iaPortrait).abs()  / _iaPortrait;
-    final ds = (r - _iaSquare).abs();
-    final dl = (r - _iaLandscape).abs() / _iaLandscape;
-    if (dp <= ds && dp <= dl) return _iaPortrait;
-    if (ds <= dl) return _iaSquare;
-    return _iaLandscape;
-  }
-
-  double _getAspectRatio() {
-    // ✅ Формати аслиро нигоҳ дор — мисли Instagram (4:5 / 1:1 / 1.91:1)
-    if (widget.media.isEmpty) return _iaSquare;
-    final type  = widget.media.first['type']  ?? 'image';
-    final ratio = widget.media.first['aspectRatio'] ?? '';
-    if (ratio.isNotEmpty) {
-      final r = double.tryParse(ratio);
-      if (r != null && r > 0) return _snapToInstagram(r);
-    }
-    if (type == 'video' && _videoRatio != null) {
-      return _snapToInstagram(_videoRatio!);
-    }
-    if (type == 'image' && _imageRatio != null) {
-      return _snapToInstagram(_imageRatio!);
-    }
-    // Default: portrait 4:5 мисли Instagram (то андозаи аслӣ маълум шавад)
-    return _iaPortrait;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final aspectRatio = _getAspectRatio();
-    return Stack(alignment: Alignment.bottomCenter, children: [
-      // Фони сиёҳ дар паси расм — ягон навори бежеви аз letterbox намонад
-      Positioned.fill(child: ColoredBox(color: AppColors.bg)),
-      AspectRatio(
-        aspectRatio: aspectRatio,
-        child: PageView.builder(
-          onPageChanged: (i) => setState(() => _current = i),
-          itemCount: widget.media.length,
-          itemBuilder: (_, i) {
-            final url  = widget.media[i]['url']  ?? '';
-            final type = widget.media[i]['type'] ?? 'image';
-            if (url.isEmpty) return Container(color: AppColors.surface);
-            if (type == 'video') return _VideoItem(
-              url: url, isActive: widget.isActive, aspectRatio: aspectRatio,
-              onRatio: (r) {
-                if (mounted && _videoRatio == null) {
-                  setState(() => _videoRatio = r);
-                }
-              });
-            return CachedNetworkImage(
-              imageUrl: url, fit: BoxFit.cover,
-              width: double.infinity, height: double.infinity,
-              placeholder: (_, __) => Container(color: AppColors.surface,
-                child: Center(child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.textFaint))),
-              errorWidget: (_, __, ___) => Container(
-                color: AppColors.surface,
-                child: Center(child: Icon(AppIcons.broken_image_outlined,
-                    color: AppColors.textFaint, size: 48))));
-          }),
-      ),
-      if (widget.media.length > 1)
-        Positioned(
-          bottom: 10,
-          child: Row(mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(widget.media.length, (i) =>
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                width: _current == i ? 18 : 6, height: 6,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: _current == i ? AppColors.textPrimary : AppColors.textFaint)))),
-        ),
-    ]);
-  }
-}
 
 // ── Video Item ───────────────────────────────────────────────────────
-class _VideoItem extends StatefulWidget {
-  final String url;
-  final bool isActive;
-  final double aspectRatio;
-  final void Function(double)? onRatio;
-  const _VideoItem({required this.url, this.isActive = true,
-      this.aspectRatio = 16/9, this.onRatio});
-  @override
-  State<_VideoItem> createState() => _VideoItemState();
-}
 
-class _VideoItemState extends State<_VideoItem> {
-  VideoPlayerController? _ctrl;
-  bool _ready = false, _buffering = false, _paused = false, _error = false;
-
-  @override void initState() { super.initState(); _init(); }
-
-  Future<void> _init() async {
-    try {
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.url),
-          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
-      _ctrl = ctrl;
-      await ctrl.initialize().timeout(const Duration(seconds: 30));
-      if (!mounted) return;
-      ctrl.setLooping(true);
-      ctrl.setVolume(0); // Mute дар feed мисли Instagram
-      ctrl.addListener(_onUpdate);
-      if (ctrl.value.isInitialized && ctrl.value.aspectRatio > 0) {
-        widget.onRatio?.call(ctrl.value.aspectRatio);
-      }
-      setState(() => _ready = true);
-      if (widget.isActive) ctrl.play();
-    } catch (_) { if (mounted) setState(() => _error = true); }
-  }
-
-  void _onUpdate() {
-    if (!mounted || _ctrl == null) return;
-    final b = _ctrl!.value.isBuffering;
-    if (b != _buffering) setState(() => _buffering = b);
-  }
-
-  @override
-  void didUpdateWidget(_VideoItem old) {
-    super.didUpdateWidget(old);
-    if (!_ready || _ctrl == null) return;
-    if (widget.isActive && !_paused) { _ctrl!.play(); } else { _ctrl!.pause(); }
-  }
-
-  @override void dispose() {
-    _ctrl?.removeListener(_onUpdate);
-    _ctrl?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_error) return Container(color: Colors.black12,
-        child: Center(child: Column(mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(AppIcons.play_circle_outline, color: AppColors.textFaint, size: 48),
-            SizedBox(height: 8),
-            Text('Видео бор намешавад',
-                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-          ])));
-    if (!_ready) {
-      return Container(color: AppColors.bg,
-        child: Center(child: CircularProgressIndicator(
-            strokeWidth: 2, color: AppColors.textFaint)));
-    }
-    final videoRatio = _ctrl!.value.isInitialized
-        ? _ctrl!.value.aspectRatio : widget.aspectRatio;
-    return GestureDetector(
-      onTap: () { setState(() => _paused = !_paused);
-        _paused ? _ctrl!.pause() : _ctrl!.play(); },
-      child: Container(color: AppColors.bg,
-        child: Center(child: AspectRatio(aspectRatio: videoRatio,
-          child: Stack(fit: StackFit.expand, children: [
-            VideoPlayer(_ctrl!),
-            if (_buffering) Center(child: CircularProgressIndicator(
-                strokeWidth: 2, color: AppColors.textFaint)),
-            if (_paused && !_buffering)
-              Center(child: Icon(AppIcons.play_circle_outline_rounded,
-                  color: AppColors.textSecondary, size: 56)),
-            // Mute badge
-            Positioned(bottom: 8, right: 8,
-              child: Container(
-                decoration: const BoxDecoration(
-                    color: Colors.black54, shape: BoxShape.circle),
-                padding: const EdgeInsets.all(5),
-                child: Icon(AppIcons.volume_off_rounded,
-                    color: AppColors.textPrimary, size: 14))),
-          ])))),
-    );
-  }
-}
 
 // Сатри «ба чат фиристодан» — мисли Instagram (рӯйхати чатҳо + фиристодан).
-class _ShareChatsRow extends StatefulWidget {
-  final String postUrl;
-  const _ShareChatsRow({required this.postUrl});
-  @override
-  State<_ShareChatsRow> createState() => _ShareChatsRowState();
-}
 
-class _ShareChatsRowState extends State<_ShareChatsRow> {
-  List<Map<String, dynamic>> _chats = [];
-  final Set<String> _sent = {};
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final res = await ApiClient.instance.get('/chat');
-      if (!mounted) return;
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        final list = body is List ? body : (body['chats'] ?? body['data'] ?? []);
-        final seen = <String>{};
-        final out = <Map<String, dynamic>>[];
-        for (final c in (list as List)) {
-          final peer = (c['peer'] ?? {}) as Map<String, dynamic>;
-          final id = (peer['_id'] ?? peer['id'] ?? '').toString();
-          if (id.isEmpty || seen.contains(id)) continue;
-          seen.add(id);
-          out.add(peer);
-        }
-        setState(() { _chats = out; _loading = false; });
-      } else {
-        setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _send(String peerId) async {
-    setState(() => _sent.add(peerId));
-    try {
-      final cr = await ApiClient.instance.get('/chat/with/$peerId');
-      final chatId = (jsonDecode(cr.body) as Map)['chatId']?.toString() ?? '';
-      if (chatId.isNotEmpty) {
-        await ApiClient.instance.post('/chat/$chatId/messages',
-            body: {'text': widget.postUrl, 'receiver': peerId});
-      }
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return SizedBox(
-        height: 96,
-        child: Center(
-            child: CircularProgressIndicator(
-                color: AppColors.textFaint, strokeWidth: 2)),
-      );
-    }
-    if (_chats.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: _chats.length,
-        itemBuilder: (_, i) {
-          final p = _chats[i];
-          final id = (p['_id'] ?? p['id'] ?? '').toString();
-          final uname = (p['username'] ?? '').toString();
-          final avatar = (p['avatar'] ?? '').toString();
-          final sent = _sent.contains(id);
-          return GestureDetector(
-            onTap: sent ? null : () => _send(id),
-            child: SizedBox(
-              width: 72,
-              child: Column(children: [
-                const SizedBox(height: 8),
-                Avatar(imageUrl: avatar, size: 54, name: uname),
-                const SizedBox(height: 4),
-                Text(uname,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: sent ? AppColors.neonBlue : AppColors.textSecondary,
-                        fontSize: 11)),
-                if (sent)
-                  const Text('Фиристода шуд',
-                      style: TextStyle(color: AppColors.neonBlue, fontSize: 9)),
-              ]),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 
 // Instagram-монанд chip-и музика/зикр болои расм.
 class _MediaChip extends StatelessWidget {

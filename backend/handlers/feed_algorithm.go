@@ -38,19 +38,31 @@ func GetSmartFeed(c *gin.Context) {
 	// Priority 2: Popular posts (likes > 5, last 7 days)
 	// Exclude: already seen (post_views table)
 	rows, err := db.Pool.Query(context.Background(), `
-		WITH paff AS (
+		WITH recent_likes AS (
+		  -- Маҳдуд: завқ аз фаъолияти НАВ меояд. Бе ин ҳар дархости
+		  -- feed тамоми таърихи лайкҳои корбарро (ҳазорҳо сатр) скан
+		  -- мекард — гаронтарин қисми query.
+		  SELECT post_id FROM post_likes WHERE user_id=$1
+		  ORDER BY created_at DESC LIMIT 300
+		),
+		recent_saves AS (
+		  SELECT post_id FROM post_saves WHERE user_id=$1 LIMIT 200
+		),
+		paff AS (
 		  -- Завқи корбар: эҷодкороне, ки постҳояшонро лайк/сейв кардааст.
 		  SELECT creator_id, SUM(w)::int AS aff FROM (
 		    SELECT p2.user_id AS creator_id, 3 AS w
-		      FROM post_likes pl2 JOIN posts p2 ON p2.id=pl2.post_id
-		      WHERE pl2.user_id=$1
+		      FROM recent_likes rl JOIN posts p2 ON p2.id=rl.post_id
 		    UNION ALL
 		    SELECT p3.user_id, 5
-		      FROM post_saves ps3 JOIN posts p3 ON p3.id=ps3.post_id
-		      WHERE ps3.user_id=$1
+		      FROM recent_saves rs JOIN posts p3 ON p3.id=rs.post_id
 		  ) t GROUP BY creator_id
 		)
-		SELECT DISTINCT
+		-- DISTINCT нест: ҳамаи JOIN-ҳо аз рӯи калиди ягонаанд (users.id,
+		-- follows PK, post_views PK, paff GROUP BY), бинобар ин такрор
+		-- имконнопазир аст. DISTINCT танҳо Postgres-ро маҷбур мекард ҳар
+		-- сатрро бо блоки JSON-и media hash кунад — кори беҳуда.
+		SELECT
 		  p.id, p.caption,
 		  CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $1
 		       THEN -1 ELSE p.likes_count END AS likes_count,
@@ -70,7 +82,7 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		  COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
 		  COALESCE(p.shop_phone,''),
-		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW()),
+		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1 AND hf.following_id=s.user_id)) AND (s.user_id=$1 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1))),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
 		  (CASE WHEN f.following_id IS NOT NULL THEN 100 ELSE 0 END

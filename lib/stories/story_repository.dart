@@ -9,7 +9,7 @@ class StoryRepository {
   final ApiClient _api;
   StoryRepository(this._api);
 
-  static const _cacheKey = 'stories_cache_v1';
+  static const _cacheKey = 'stories_cache_v2'; // v2 — кэши кӯҳнаи филтрнашуда партофта шавад
   static const _cacheTTL = Duration(minutes: 30);
 
   // Пас аз иваз кардани аккаунт — стори-и корбари куҳнаро аз disk cache

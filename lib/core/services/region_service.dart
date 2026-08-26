@@ -2,7 +2,6 @@
 // Бахши «Аниме» танҳо дар Тоҷикистон фаъол мешавад. Аз рӯи IP (на забони
 // телефон) муайян мекунем. Натиҷа дар SharedPreferences кэш мешавад, то
 // ҳангоми кушодани навбатӣ фавран нишон дода шавад (милт-милт накунад).
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';

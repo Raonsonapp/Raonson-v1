@@ -101,7 +101,10 @@ class _FeedShellState extends State<_FeedShell> {
   }
 
   void _onScroll() {
-    if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 300) {
+    // Пости феҳрист ~700px аст — бо остонаи 300px корбар аллакай ба охири
+    // рӯйхат мерасид ва спиннерро медид. ~3 пост пеш бор мекунем, то
+    // саҳифаи нав то расидан тайёр бошад.
+    if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 2100) {
       context.read<FeedController>().loadMore();
     }
   }
@@ -391,6 +394,10 @@ class _FeedBody extends StatelessWidget {
       onRefresh: () => feedCtrl.refresh(),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
+        // Пости феҳрист ~700px аст, вале cacheExtent-и пешфарз 250px —
+        // яъне корти навбатӣ вақте сохта мешавад, ки қариб дар экран аст
+        // ва расмаш дер бор мешавад. Ду корт пешакӣ месозем.
+        cacheExtent: 1400,
         slivers: [
           SliverToBoxAdapter(child: offlineBanner),
           SliverToBoxAdapter(child: storyBar),

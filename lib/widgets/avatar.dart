@@ -10,6 +10,9 @@ class Avatar extends StatelessWidget {
   final bool glowBorder; // neon blue glow for stories
   final VoidCallback? onTap;
   final String name; // барои ҳарфи аввал (агар акс набошад)
+  /// Нуқтаи сабзи «онлайн» — мисли Instagram. Ҳар экран метавонад
+  /// онро аз PresenceService гирад ва ҳамин ҷо диҳад.
+  final bool online;
 
   const Avatar({
     super.key,
@@ -19,6 +22,7 @@ class Avatar extends StatelessWidget {
     this.glowBorder = false,
     this.onTap,
     this.name = '',
+    this.online = false,
   });
 
   @override
@@ -62,6 +66,24 @@ class Avatar extends StatelessWidget {
         ),
       ),
     );
+
+    if (online) {
+      final dot = (size * 0.30).clamp(9.0, 16.0);
+      avatar = Stack(clipBehavior: Clip.none, children: [
+        avatar,
+        Positioned(
+          right: 0, bottom: 0,
+          child: Container(
+            width: dot, height: dot,
+            decoration: BoxDecoration(
+              color: const Color(0xFF00E676),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.bg, width: dot * 0.18),
+            ),
+          ),
+        ),
+      ]);
+    }
 
     return onTap == null
         ? avatar

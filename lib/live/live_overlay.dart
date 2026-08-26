@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';

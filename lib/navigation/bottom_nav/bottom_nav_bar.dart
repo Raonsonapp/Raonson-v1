@@ -80,29 +80,6 @@ class BottomNavBar extends StatelessWidget {
 }
 
 // ── Icon Nav Item — вақте svg лозим нест, оддӣ IconData ────────────
-class _IconNavItem extends StatelessWidget {
-  final int index;
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-  final IconData icon;
-  const _IconNavItem({
-    required this.index, required this.currentIndex,
-    required this.onTap, required this.icon,
-  });
-  @override
-  Widget build(BuildContext context) {
-    final sel = currentIndex == index;
-    final color = sel ? AppColors.textPrimary : const Color(0xFF555555);
-    return GestureDetector(
-      onTap: () => onTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Icon(icon, color: color, size: 26),
-      ),
-    );
-  }
-}
 
 // ── SVG Nav Item ────────────────────────────────────────────────────
 class _SvgNavItem extends StatelessWidget {

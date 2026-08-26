@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/ui/app_icons.dart';
+import '../../app/app_theme.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -51,7 +53,7 @@ class _MusicTrack {
 class StoryEditor extends StatefulWidget {
   final File media;
   final bool isVideo, isUploading;
-  final void Function(File, String, String) onPublish;
+  final void Function(File, String, String, [Map<String, dynamic>?]) onPublish;
   final VoidCallback onCancel;
   final String? errorMessage;
 
@@ -146,15 +148,91 @@ class _StoryEditorState extends State<StoryEditor> {
     } catch (_) {}
   }
 
+  // Стикери пурсиш (агар корбар илова карда бошад).
+  Map<String, dynamic>? _poll;
+
+  Future<void> _addPoll() async {
+    final qCtrl = TextEditingController();
+    final aCtrl = TextEditingController(text: 'Ҳа');
+    final bCtrl = TextEditingController(text: 'Не');
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Пурсиш',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: qCtrl, autofocus: true, maxLength: 80,
+              style: TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                counterText: '', hintText: 'Саволатонро нависед…',
+                hintStyle: TextStyle(color: AppColors.textFaint)),
+            ),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: TextField(
+                controller: aCtrl, maxLength: 24,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(counterText: ''))),
+              const SizedBox(width: 10),
+              Expanded(child: TextField(
+                controller: bCtrl, maxLength: 24,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(counterText: ''))),
+            ]),
+          ]),
+          actions: [
+            if (_poll != null)
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Бардор',
+                    style: TextStyle(color: Color(0xFFFF3B30)))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(tr('common.cancel'),
+                  style: TextStyle(color: AppColors.textTertiary))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(tr('common.done'),
+                  style: TextStyle(
+                      color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (ok == false) {
+        setState(() => _poll = null);
+        return;
+      }
+      if (ok == true && qCtrl.text.trim().isNotEmpty) {
+        setState(() => _poll = {
+          'question': qCtrl.text.trim(),
+          'optionA' : aCtrl.text.trim().isEmpty ? 'Ҳа' : aCtrl.text.trim(),
+          'optionB' : bCtrl.text.trim().isEmpty ? 'Не' : bCtrl.text.trim(),
+          'x': 0.5, 'y': 0.55,
+        });
+      }
+    } finally {
+      qCtrl.dispose(); aCtrl.dispose(); bCtrl.dispose();
+    }
+  }
+
   Future<void> _onPublish({String audience = 'all'}) async {
     if (widget.isVideo) {
       widget.onPublish(widget.media,
-          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '', audience);
+          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '',
+          audience, _poll);
     } else {
       final captured = await _captureCanvas();
       if (!mounted) return;
       widget.onPublish(captured,
-          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '', audience);
+          _selectedTrack != null ? '🎵 ${_selectedTrack!.title}' : '',
+          audience, _poll);
     }
   }
 
@@ -416,6 +494,10 @@ class _StoryEditorState extends State<StoryEditor> {
               const SizedBox(height: 2),
               _SideBtn(svgPath: 'assets/icons/sticker.svg', label: 'Стикерҳо',
                 onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
+              const SizedBox(height: 2),
+              _SideBtn(icon: AppIcons.bar_chart_rounded,
+                label: _poll == null ? 'Пурсиш' : 'Пурсиш ✓',
+                onTap: () { setState(() => _tool = _Tool.none); _addPoll(); }),
               const SizedBox(height: 2),
               _SideBtn(svgPath: 'assets/icons/music.svg', label: 'Мусиқӣ',
                 onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),

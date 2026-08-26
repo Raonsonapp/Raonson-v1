@@ -35,24 +35,35 @@ func GetSmartReels(c *gin.Context) {
 	}
 
 	rows, err := db.Pool.Query(context.Background(), `
-		WITH aff AS (
+		WITH my_likes AS (
+		  -- Маҳдуд: завқ аз фаъолияти нав меояд. Бе ин ҳар дархост
+		  -- тамоми таърихи лайкҳои корбарро скан мекард.
+		  SELECT reel_id FROM reel_likes WHERE user_id=$1 LIMIT 300
+		),
+		my_saves AS (
+		  SELECT reel_id FROM reel_saves WHERE user_id=$1 LIMIT 200
+		),
+		aff AS (
 		  -- Завқи корбар: эҷодкороне, ки реалҳояшонро лайк/сейв кардааст.
 		  -- like=3 балл, save=5 балл (save сигнали қавитар).
 		  SELECT creator_id, SUM(w)::int AS aff FROM (
 		    SELECT r2.user_id AS creator_id, 3 AS w
-		      FROM reel_likes rl2 JOIN reels r2 ON r2.id=rl2.reel_id
-		      WHERE rl2.user_id=$1
+		      FROM my_likes ml JOIN reels r2 ON r2.id=ml.reel_id
 		    UNION ALL
 		    SELECT r3.user_id, 5
-		      FROM reel_saves rs3 JOIN reels r3 ON r3.id=rs3.reel_id
-		      WHERE rs3.user_id=$1
+		      FROM my_saves ms JOIN reels r3 ON r3.id=ms.reel_id
 		  ) t GROUP BY creator_id
 		),
 		cr AS (
 		  -- Сатҳи итмоми тамошо барои ҳар reel (0..1).
+		  -- Танҳо 30 рӯзи охир: query-и берунӣ ҳам ҳамин давраро мегирад,
+		  -- вале бе ин филтр ин CTE ТАМОМИ ҷадвали reel_watch-ро (ҳар
+		  -- тамошои ҳар корбар, ҳамеша) дар ҳар дархост агрегат мекард.
 		  SELECT reel_id,
 		         AVG(CASE WHEN completed THEN 1.0 ELSE 0.0 END) AS completion_rate
-		    FROM reel_watch GROUP BY reel_id
+		    FROM reel_watch
+		   WHERE created_at > NOW() - INTERVAL '30 days'
+		   GROUP BY reel_id
 		),
 		scored AS (
 		  SELECT
@@ -68,7 +79,7 @@ func GetSmartReels(c *gin.Context) {
 		    EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1 AND fo.following_id=r.user_id) AS following,
 		    COALESCE(r.hide_likes,false) AS hide_likes,
 		    COALESCE(r.comments_off,false) AS comments_off,
-		    EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW()) AS has_story,
+		    EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1 AND hf.following_id=s.user_id)) AND (s.user_id=$1 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1))) AS has_story,
 		    -- Алгоритми баллгузорӣ
 		    (
 		      -- 1. Дӯстон: +50

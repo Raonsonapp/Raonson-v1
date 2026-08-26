@@ -29,10 +29,34 @@ func BlockUser(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO blocks(blocker_id, blocked_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 		myID, target)
-	// best-effort: мутақобилан unfollow
-	db.Pool.Exec(context.Background(),
+	// best-effort: мутақобилан unfollow. RETURNING лозим аст — то донем
+	// кадом робита вуҷуд дошт ва шумории дурустро кам кунем. Бе ин
+	// followers_count/following_count абадӣ нодуруст мемонад.
+	rows, err := db.Pool.Query(context.Background(),
 		`DELETE FROM follows WHERE (follower_id=$1 AND following_id=$2)
-		    OR (follower_id=$2 AND following_id=$1)`, myID, target)
+		    OR (follower_id=$2 AND following_id=$1)
+		 RETURNING follower_id, following_id`, myID, target)
+	if err == nil {
+		type pair struct{ follower, following string }
+		var removed []pair
+		for rows.Next() {
+			var p pair
+			if rows.Scan(&p.follower, &p.following) == nil {
+				removed = append(removed, p)
+			}
+		}
+		rows.Close()
+		for _, p := range removed {
+			db.Pool.Exec(context.Background(),
+				`UPDATE users SET following_count=GREATEST(following_count-1,0) WHERE id=$1`,
+				p.follower)
+			db.Pool.Exec(context.Background(),
+				`UPDATE users SET followers_count=GREATEST(followers_count-1,0) WHERE id=$1`,
+				p.following)
+		}
+	}
+	mw.InvalidateUserCache(myID)
+	mw.InvalidateUserCache(target)
 	c.JSON(http.StatusOK, gin.H{"blocked": true})
 }
 

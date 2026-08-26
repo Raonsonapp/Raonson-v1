@@ -283,6 +283,10 @@ func ForgotPassword(c *gin.Context) {
 		if phone == "" { sendErr = fmt.Errorf("no phone") } else {
 			sendErr = utils.SendWhatsAppOTP(phone, otp); dest = utils.MaskPhone(phone)
 		}
+	case "telegram":
+		if phone == "" { sendErr = fmt.Errorf("no phone") } else {
+			sendErr = utils.SendTelegramOTP(phone, otp); dest = utils.MaskPhone(phone)
+		}
 	default: // email
 		if email == "" { sendErr = fmt.Errorf("no email") } else {
 			sendErr = utils.SendEmailOTP(email, otp); dest = utils.MaskEmail(email)
@@ -365,6 +369,64 @@ func ResetPassword(c *gin.Context) {
 		`UPDATE users SET password=$1, updated_at=NOW() WHERE id=$2`, string(hash), id)
 	mw.CacheDel("otp:reset:" + id)
 	c.JSON(http.StatusOK, gin.H{"message": "Парол бо муваффақият иваз шуд"})
+}
+
+// POST /auth/send-phone-otp — рамзро ба телефон тавассути Telegram мефиристад.
+// Барои тасдиқи телефон ҳангоми сабти ном ва барои барқарорсозии парол.
+func SendPhoneOTP(c *gin.Context) {
+	var b struct {
+		Phone string `json:"phone" binding:"required"`
+	}
+	if c.ShouldBindJSON(&b) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Рақами телефон лозим аст"})
+		return
+	}
+	phone := strings.TrimSpace(b.Phone)
+	if len(phone) < 7 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Рақами телефон нодуруст аст"})
+		return
+	}
+
+	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
+	mw.CacheSet("otp:phone:"+phone, []byte(otp), 5*time.Minute)
+
+	sendErr := utils.SendTelegramOTP(phone, otp)
+
+	resp := gin.H{"message": "Рамз фиристода шуд", "to": utils.MaskPhone(phone)}
+	if sendErr != nil {
+		log.Printf("[SendPhoneOTP] telegram send failed: %v", sendErr)
+		resp["message"] = "Рамз фиристода нашуд. Telegram дар телефонатон бошад."
+		resp["error"] = true
+	}
+	if os.Getenv("OTP_ECHO") == "1" && gin.Mode() != gin.ReleaseMode {
+		resp["otp"] = otp
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// POST /auth/verify-phone-otp — рамзро тасдиқ мекунад.
+func VerifyPhoneOTP(c *gin.Context) {
+	var b struct {
+		Phone string `json:"phone" binding:"required"`
+		OTP   string `json:"otp"   binding:"required"`
+	}
+	if c.ShouldBindJSON(&b) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Телефон ва рамз лозим аст"})
+		return
+	}
+	phone := strings.TrimSpace(b.Phone)
+	stored, ok := mw.CacheGet("otp:phone:" + phone)
+	if !ok || string(stored) != strings.TrimSpace(b.OTP) {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
+		return
+	}
+	mw.CacheDel("otp:phone:" + phone)
+	// Агар корбар login карда бошад — телефони ӯро verified мекунем
+	if uid := mw.UID(c); uid != "" {
+		db.Pool.Exec(context.Background(),
+			`UPDATE users SET phone=$1, updated_at=NOW() WHERE id=$2`, phone, uid)
+	}
+	c.JSON(http.StatusOK, gin.H{"verified": true})
 }
 
 var _ = os.Getenv

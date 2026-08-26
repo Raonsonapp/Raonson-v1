@@ -81,7 +81,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return 'image';
   }
 
-  Future<void> _sendMedia(File file) async {
+  Future<void> _sendMedia(File file, {bool viewOnce = false}) async {
     final type = _typeByExt(file.path);
     final url = await _chatRepo.uploadMedia(file);
     if (url == null || url.isEmpty) return;

@@ -559,7 +559,7 @@ class _ProductSheetState extends State<_ProductSheet> {
               borderRadius: BorderRadius.circular(14),
               child: CachedNetworkImage(
                   imageUrl: p.image, height: 240, width: double.infinity,
-                  fit: BoxFit.cover),
+                  fit: BoxFit.cover, memCacheWidth: 1080),
             ),
           Padding(
             padding: const EdgeInsets.all(16),

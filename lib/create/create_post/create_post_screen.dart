@@ -7,19 +7,16 @@ import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import 'package:flutter/rendering.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/api/api_client.dart';
-import '../../app/app_config.dart';
 import '../upload/post_upload_service.dart';
 import 'photo_filters.dart';
 import '../../effects/effects_repository.dart';
 import '../../core/ui/app_icons.dart';
 import '../../ai/ai_tools.dart';
-import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -63,7 +60,10 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   File?  _file;
   bool   _isVideo    = false;
-  bool   _isUploading= false;
+  // Бор кардан дар фон мешавад ва экран фавран пӯшида мешавад, бинобар ин
+  // ин экран ҳолати «бор шуда истодааст»-ро нишон намедиҳад.
+  final bool _isUploading = false;
+  bool   _publishing = false; // муҳофиз аз ду бор зеркунӣ
   String?_error;
 
   @override
@@ -139,9 +139,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       String location = '',
       List<String> taggedUsers = const [],
       List<String> collaborators = const []}) async {
+    if (_publishing) return; // ду бор зеркунӣ → ду пости якхела
+    _publishing = true;
     // Интихоб: ҳозир ё ба нақша (Pro).
     final scheduledAt = await _askSchedule();
-    if (!mounted) return;
+    if (!mounted) { _publishing = false; return; }
     AnalyticsService.instance.logEvent(AnalyticsEvents.createPost);
     PostUploadService.instance.publishPost(
       file: capturedFile,
@@ -152,7 +154,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       location: location,
       taggedUsers: taggedUsers,
       collaborators: collaborators,
-      scheduledAt: scheduledAt ?? '',
+      scheduledAt: scheduledAt,
     );
     if (mounted) Navigator.of(context).pop(true);
   }

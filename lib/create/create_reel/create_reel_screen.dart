@@ -46,6 +46,13 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
     if (mounted) setState(() { _file = File(xf.path); _error = null; });
   }
 
+  /// Ҳолати пешрафтро нав мекунад. Bor kardan дароз аст — агар корбар
+  /// экранро пӯшад, setState-и муҳофизатнашуда crash медиҳад.
+  void _setProgress(String status, double progress) {
+    if (!mounted) return;
+    setState(() { _status = status; _progress = progress; });
+  }
+
   Future<void> _publish() async {
     if (_file == null || _busy) return;
     AnalyticsService.instance.logEvent(AnalyticsEvents.createReel);
@@ -66,7 +73,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
     try {
       // ── 1. Compress (сифати баланд ~720p) + upload ────────────
       final high = await MediaCompressor.compressVideo(_file!);
-      setState(() { _status = 'Видео бор мешавад...'; _progress = 0.35; });
+      _setProgress('Видео бор мешавад...', 0.35);
       final videoUrl = await UploadManager().uploadFile(high);
       if (videoUrl.isEmpty) throw Exception('Сервер URL нафиристод');
 
@@ -74,10 +81,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       // best-effort: агар нашавад, танҳо сифати баланд мемонад.
       String videoUrlLow = '';
       try {
-        setState(() {
-          _status = 'Барои интернети суст омода мешавад...';
-          _progress = 0.65;
-        });
+        _setProgress('Барои интернети суст омода мешавад...', 0.65);
         final low = await MediaCompressor.compressVideoLow(_file!);
         if (low != null) videoUrlLow = await UploadManager().uploadFile(low);
       } catch (_) {}
@@ -86,16 +90,13 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       // best-effort: агар нашавад, grid placeholder нишон медиҳад.
       String thumbnailUrl = '';
       try {
-        setState(() {
-          _status = 'Тасвири пешнамоиш сохта мешавад...';
-          _progress = 0.75;
-        });
+        _setProgress('Тасвири пешнамоиш сохта мешавад...', 0.75);
         final thumb = await MediaCompressor.generateVideoThumbnail(_file!);
         if (thumb != null) thumbnailUrl = await UploadManager().uploadFile(thumb);
       } catch (_) {}
 
       // ── 2. POST /reels (БЕ slash!) ────────────────────────────
-      setState(() { _status = 'Reel сохта мешавад...'; _progress = 0.9; });
+      _setProgress('Reel сохта мешавад...', 0.9);
 
       final res = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/reels/'),  // ← slash ЛОЗИМ
@@ -111,7 +112,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         }),
       ).timeout(const Duration(seconds: 30));
 
-      setState(() => _progress = 1.0);
+      if (mounted) setState(() => _progress = 1.0);
 
       if (res.statusCode >= 400) {
         Map<String, dynamic> err = {};

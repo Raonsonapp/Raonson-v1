@@ -20,6 +20,10 @@ import (
 // GET /stories
 func GetStories(c *gin.Context) {
 	myID := mw.UID(c)
+	// ?userId=X — танҳо сторисҳои ҳамон корбар (барои санҷиши ҳалқаи сторис).
+	targetID := strings.TrimSpace(c.Query("userId"))
+
+	// Сторисҳо танҳо аз корбароне, ки ман пайравӣ мекунам (+ худам).
 	// Сторисҳои «наздикон» танҳо ба дӯстони наздики соҳиб намоён мешаванд.
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
@@ -27,13 +31,18 @@ func GetStories(c *gin.Context) {
 		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
+		  AND ($2::text = '' OR s.user_id = $2::text)
+		  AND ( s.user_id = $1::text
+		        OR EXISTS (SELECT 1 FROM follows f
+		                   WHERE f.follower_id = $1::text
+		                     AND f.following_id = s.user_id) )
 		  AND ( s.user_id = $1::text
 		        OR COALESCE(s.audience,'all') = 'all'
 		        OR (COALESCE(s.audience,'all') = 'close' AND EXISTS (
 		              SELECT 1 FROM close_friends cf
 		              WHERE cf.user_id = s.user_id AND cf.friend_id = $1::text)) )
-		ORDER BY s.created_at DESC`, myID)
-	c.JSON(http.StatusOK, scanStoryRows(rows))
+		ORDER BY s.created_at DESC`, myID, targetID)
+	c.JSON(http.StatusOK, scanStoryRows(rows, myID))
 }
 
 // POST /stories/:id/archive — toggle архив (соҳиб)
@@ -76,7 +85,7 @@ func GetMyStories(c *gin.Context) {
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.user_id=$1 AND s.expires_at > NOW()
 		ORDER BY s.created_at DESC`, myID)
-	c.JSON(http.StatusOK, scanStoryRows(rows))
+	c.JSON(http.StatusOK, scanStoryRows(rows, myID))
 }
 
 // POST /stories
@@ -87,6 +96,14 @@ func CreateStory(c *gin.Context) {
 		MediaType string `json:"mediaType"`
 		Caption   string `json:"caption"`
 		Audience  string `json:"audience"` // all | close (дӯстони наздик)
+		// Стикери пурсиш (ихтиёрӣ) — мисли Instagram.
+		Poll *struct {
+			Question string  `json:"question"`
+			OptionA  string  `json:"optionA"`
+			OptionB  string  `json:"optionB"`
+			X        float64 `json:"x"`
+			Y        float64 `json:"y"`
+		} `json:"poll"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.MediaURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
@@ -106,6 +123,18 @@ func CreateStory(c *gin.Context) {
 		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption,audience)
 		 VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
 		myID, b.MediaURL, b.MediaType, exp, b.Caption, b.Audience).Scan(&sid)
+
+	if b.Poll != nil && strings.TrimSpace(b.Poll.Question) != "" {
+		qa := strings.TrimSpace(b.Poll.OptionA)
+		qb := strings.TrimSpace(b.Poll.OptionB)
+		if qa == "" { qa = "Ҳа" }
+		if qb == "" { qb = "Не" }
+		db.Pool.Exec(context.Background(),
+			`INSERT INTO story_polls(story_id,question,option_a,option_b,pos_x,pos_y)
+			 VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT (story_id) DO NOTHING`,
+			sid, clampRunes(strings.TrimSpace(b.Poll.Question), 80),
+			clampRunes(qa, 24), clampRunes(qb, 24), b.Poll.X, b.Poll.Y)
+	}
 	// Cache-и корбарро пок мекунем, то story-и нав фавран дар profile
 	// (GET /users/me/reels/posts) ва GET /stories/ намоён шавад.
 	mw.InvalidateUserCache(myID)
@@ -294,7 +323,7 @@ func scanStoryRows(rows interface {
 	Next() bool
 	Scan(...any) error
 	Close()
-}) []gin.H {
+}, viewerID string) []gin.H {
 	stories := []gin.H{}
 	if rows == nil {
 		return stories
@@ -306,12 +335,14 @@ func scanStoryRows(rows interface {
 		var exp, createdAt interface{}
 		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar,
 			&verified, &audience, &repliesOff)
-		stories = append(stories, gin.H{
+		item := gin.H{
 			"_id": sid, "mediaUrl": murl, "mediaType": mtype,
 			"expiresAt": exp, "createdAt": createdAt,
 			"audience": audience, "repliesOff": repliesOff,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
-		})
+		}
+		attachPoll(sid, viewerID, item)
+		stories = append(stories, item)
 	}
 	return stories
 }
@@ -463,12 +494,18 @@ func GetMessages(c *gin.Context) {
 	// гоҳ пинҳон нашаванд (вагарна паёми навфиристода "гум" мешуд).
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
-		       is_deleted,read,created_at,username,avatar,verified
+		       is_deleted,read,created_at,username,avatar,verified,
+		       share_id,share_kind,share_thumb,share_user,
+		       view_once,viewed_once
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
 		         COALESCE(m.is_deleted,false) is_deleted,m.read,m.created_at,
-		         u.username,u.avatar,u.verified
+		         u.username,u.avatar,u.verified,
+		         COALESCE(m.share_id,'') share_id, COALESCE(m.share_kind,'') share_kind,
+		         COALESCE(m.share_thumb,'') share_thumb, COALESCE(m.share_user,'') share_user,
+		         COALESCE(m.view_once,false) view_once,
+		         COALESCE(m.viewed_once,false) viewed_once
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
@@ -486,12 +523,24 @@ func GetMessages(c *gin.Context) {
 		var createdAt interface{}
 		var uname, uavatar string
 		var verified bool
+		var shareID, shareKind, shareThumb, shareUser string
+		var viewOnce, viewedOnce bool
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
-			&read, &createdAt, &uname, &uavatar, &verified)
+			&read, &createdAt, &uname, &uavatar, &verified,
+			&shareID, &shareKind, &shareThumb, &shareUser,
+			&viewOnce, &viewedOnce)
+		// «Як бор дида мешавад»: баъд аз кушодан URL дигар фиристода
+		// намешавад — на ба гиранда, на ба фиристанда.
+		if viewOnce && viewedOnce {
+			murl = ""
+		}
 		messages = append(messages, gin.H{
 			"_id": mid, "chatId": cid, "text": text, "mediaUrl": murl,
 			"type": mtype, "replyToId": replyTo, "isDeleted": isDeleted,
 			"read": read, "createdAt": createdAt,
+			"shareId": shareID, "shareKind": shareKind,
+			"shareThumb": shareThumb, "shareUser": shareUser,
+			"viewOnce": viewOnce, "viewedOnce": viewedOnce,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
@@ -505,15 +554,37 @@ func SendMessage(c *gin.Context) {
 	var b struct {
 		Text       string `json:"text"`
 		ReceiverID string `json:"receiverId"`
+		// Баъзе экранҳо "receiver" мефиристанд (мисли socket). Ҳарду қабул.
+		Receiver string `json:"receiver"`
 	}
 	c.ShouldBindJSON(&b)
 	b.Text = clampRunes(b.Text, 1000)
+
+	// Гирандаро аз худи chatID мегирем — он аз ду ID-и мураттабшуда сохта
+	// шудааст. Ба client бовар намекунем: калиди нодуруст паёмро бе гиранда
+	// мегузошт ва майдони client метавонад ҳар киро нишон диҳад.
+	receiver := b.ReceiverID
+	if receiver == "" {
+		receiver = b.Receiver
+	}
+	if a, bb, ok := strings.Cut(chatID, "_"); ok {
+		switch myID {
+		case a:
+			receiver = bb
+		case bb:
+			receiver = a
+		}
+	}
+	if receiver == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Гирандаи паём муайян нашуд"})
+		return
+	}
 
 	var msgID string
 	var createdAt interface{}
 	err := db.Pool.QueryRow(context.Background(),
 		`INSERT INTO messages(chat_id,sender_id,receiver_id,text) VALUES($1,$2,$3,$4) RETURNING id,created_at`,
-		chatID, myID, b.ReceiverID, b.Text).Scan(&msgID, &createdAt)
+		chatID, myID, receiver, b.Text).Scan(&msgID, &createdAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
 		return
@@ -538,6 +609,18 @@ func MarkChatRead(c *gin.Context) {
 	myID   := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`UPDATE messages SET read=TRUE WHERE chat_id=$1::text AND receiver_id=$2::text`, chatID, myID)
+	// Ба ҳамсӯҳбат хабар медиҳем, то ду тик фавран пайдо шавад
+	// (пештар танҳо баъд аз refresh дида мешуд).
+	if a, b, ok := strings.Cut(chatID, "_"); ok {
+		peer := a
+		if myID == a {
+			peer = b
+		}
+		if peer != "" && peer != myID {
+			sockets.EmitToUser(peer, "chat:read",
+				map[string]interface{}{"chatId": chatID, "readBy": myID})
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -898,3 +981,78 @@ func AdminListUsers(c *gin.Context) {
 
 var _ = sort.Strings
 var _ = time.Now
+
+// ── СТИКЕРИ ПУРСИШ ДАР СТОРИС ────────────────────────────────────
+
+// POST /stories/:id/poll/vote — овоз додан (choice: 0 = A, 1 = B).
+func VoteStoryPoll(c *gin.Context) {
+	sid  := c.Param("id")
+	myID := mw.UID(c)
+	var b struct {
+		Choice *int `json:"choice"`
+	}
+	if c.ShouldBindJSON(&b) != nil || b.Choice == nil ||
+		(*b.Choice != 0 && *b.Choice != 1) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "choice бояд 0 ё 1 бошад"})
+		return
+	}
+
+	// Соҳиби сторис дар пурсиши худ овоз намедиҳад (мисли Instagram).
+	var owner string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
+	if owner == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Сторис ёфт нашуд"})
+		return
+	}
+	if owner == myID {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Дар пурсиши худ овоз дода намешавад"})
+		return
+	}
+
+	// Овоз як бор — тағйир додан мумкин.
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO story_poll_votes(story_id,user_id,choice) VALUES($1,$2,$3)
+		 ON CONFLICT (story_id,user_id) DO UPDATE SET choice=EXCLUDED.choice`,
+		sid, myID, *b.Choice)
+
+	a, bb := storyPollCounts(sid)
+	notify(owner, myID, "story_poll", sid)
+	c.JSON(http.StatusOK, gin.H{"votesA": a, "votesB": bb, "myVote": *b.Choice})
+}
+
+// storyPollCounts — шумораи овозҳо барои ҳар вариант.
+func storyPollCounts(storyID string) (int, int) {
+	var a, b int
+	db.Pool.QueryRow(context.Background(), `
+		SELECT COUNT(*) FILTER (WHERE choice=0),
+		       COUNT(*) FILTER (WHERE choice=1)
+		FROM story_poll_votes WHERE story_id=$1`, storyID).Scan(&a, &b)
+	return a, b
+}
+
+// attachPoll — маълумоти пурсишро ба ҷавоби сторис илова мекунад.
+// Агар сторис пурсиш надошта бошад, ҳеҷ чиз илова намешавад.
+func attachPoll(storyID, viewerID string, out gin.H) {
+	var q, oa, ob string
+	var x, y float64
+	err := db.Pool.QueryRow(context.Background(),
+		`SELECT question, option_a, option_b, COALESCE(pos_x,0.5), COALESCE(pos_y,0.5)
+		 FROM story_polls WHERE story_id=$1`, storyID).Scan(&q, &oa, &ob, &x, &y)
+	if err != nil {
+		return
+	}
+	a, b := storyPollCounts(storyID)
+	myVote := -1
+	var mv int
+	if db.Pool.QueryRow(context.Background(),
+		`SELECT choice FROM story_poll_votes WHERE story_id=$1 AND user_id=$2`,
+		storyID, viewerID).Scan(&mv) == nil {
+		myVote = mv
+	}
+	out["poll"] = gin.H{
+		"question": q, "optionA": oa, "optionB": ob,
+		"x": x, "y": y,
+		"votesA": a, "votesB": b, "myVote": myVote,
+	}
+}

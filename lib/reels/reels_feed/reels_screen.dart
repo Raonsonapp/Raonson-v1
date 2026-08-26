@@ -20,12 +20,11 @@ import '../../models/post_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/i18n/strings.dart';
+import '../../chat/share/share_to_chat_row.dart';
 import '../../core/analytics/analytics_events.dart';
-import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 import '../../feed/comments/comments_screen.dart';
-import '../../gifts/gift_sheet.dart';
 
 // ── Ads (ТАНҲО ИН 2 ХАТИ НАВ) ───────────────────────────────────────────────
 import '../../core/ads/ads_manager.dart';
@@ -259,8 +258,10 @@ class _ReelsViewState extends State<_ReelsView> {
     linkCtrl.dispose(); capCtrl.dispose();
     if (ok != true || link.isEmpty) return;
     if (!EmbedUtils.isEmbed(link)) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(tr('reels.onlyAparatYoutube'))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('reels.onlyAparatYoutube'))));
+      }
       return;
     }
     try {
@@ -273,8 +274,10 @@ class _ReelsViewState extends State<_ReelsView> {
           content: Text(tr('reels.reelAdded')), backgroundColor: Colors.green));
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(tr('reels.publishError'))));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('reels.publishError'))));
+      }
     }
   }
 
@@ -298,11 +301,14 @@ class _ReelsViewState extends State<_ReelsView> {
       final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       _preloaded[j] = ctrl;
       ctrl.initialize().then((_) {
+        // Swipe-и тез метавонад ин controller-ро пеш аз тайёр шуданаш
+        // dispose кунад — он гоҳ ҳар даъват хато мепартояд.
+        if (!mounted || !identical(_preloaded[j], ctrl)) return;
         ctrl.setLooping(true);
         ctrl.setVolume(0);
         ctrl.play();
         ctrl.pause();
-      });
+      }).catchError((_) {});
     }
   }
 
@@ -325,9 +331,10 @@ class _ReelsViewState extends State<_ReelsView> {
     final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
     _preloaded[0] = ctrl;
     ctrl.initialize().then((_) {
+      if (!mounted || !identical(_preloaded[0], ctrl)) return;
       ctrl.setLooping(true);
       ctrl.setVolume(0);
-    });
+    }).catchError((_) {});
   }
 
   @override
@@ -427,7 +434,9 @@ class _ReelsViewState extends State<_ReelsView> {
         onRefresh: () async {
           _currentPage = 0;
           _initialPreloadDone = false;
-          for (final ctrl in _preloaded.values) ctrl.dispose();
+          for (final ctrl in _preloaded.values) {
+            ctrl.dispose();
+          }
           _preloaded.clear();
           await vm.load();
           if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
@@ -586,6 +595,7 @@ class _ReelItemState extends State<_ReelItem> {
 
   bool? _hasStory;
   bool _storyViewed = false;
+  late int _commentsCount; // ҳолати маҳаллӣ — дарҳол нав мешавад
 
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
@@ -598,6 +608,7 @@ class _ReelItemState extends State<_ReelItem> {
     _saved = widget.reel.isSaved;
     _hideLikes   = widget.reel.hideLikes;
     _commentsOff = widget.reel.commentsDisabled;
+    _commentsCount = widget.reel.commentsCount;
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
     FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
     _hasStory = widget.reel.user.hasStory ? true : null;
@@ -611,10 +622,12 @@ class _ReelItemState extends State<_ReelItem> {
     final uid = widget.reel.user.id;
     final cached = _storyCache[uid];
     if (cached != null) {
-      if (mounted) setState(() {
-        _hasStory = cached.has;
-        _storyViewed = cached.viewed;
-      });
+      if (mounted) {
+        setState(() {
+          _hasStory = cached.has;
+          _storyViewed = cached.viewed;
+        });
+      }
       return;
     }
     try {
@@ -736,6 +749,12 @@ class _ReelItemState extends State<_ReelItem> {
   @override
   void didUpdateWidget(_ReelItem old) {
     super.didUpdateWidget(old);
+    // Реели дигар ба ҳамин slot омад — ҳолати маҳаллиро нав мекунем.
+    if (widget.reel.id != old.reel.id) {
+      _commentsCount = widget.reel.commentsCount;
+      _hideLikes     = widget.reel.hideLikes;
+      _commentsOff   = widget.reel.commentsDisabled;
+    }
     if (widget.isMuted != old.isMuted && _ctrl != null) {
       _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
     }
@@ -1203,9 +1222,11 @@ class _ReelItemState extends State<_ReelItem> {
       await ApiClient.instance.delete('/reels/${widget.reel.id}');
       widget.onDelete();
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Хатогӣ. Дубора кӯшиш кунед'),
-        duration: Duration(seconds: 2)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+          duration: Duration(seconds: 2)));
+      }
       if (!_paused && mounted) _ctrl?.play();
     }
   }
@@ -1287,7 +1308,7 @@ class _ReelItemState extends State<_ReelItem> {
       caption:       reel.caption,
       media: [{'url': reel.videoUrl, 'type': 'video'}],
       likesCount:    reel.likesCount,
-      commentsCount: reel.commentsCount,
+      commentsCount: _commentsCount,
       liked:         reel.isLiked,
       saved:         reel.isSaved,
       createdAt:     reel.createdAt ?? DateTime.now(),
@@ -1300,7 +1321,13 @@ class _ReelItemState extends State<_ReelItem> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SizedBox(
           height: MediaQuery.of(context).size.height * 0.85,
-          child: CommentsScreen(post: asPost, targetType: 'reel')),
+          child: CommentsScreen(
+              post: asPost,
+              targetType: 'reel',
+              // Ҳар шарҳи нав — шумориш дарҳол дар рӯи Reel нав мешавад.
+              onCommentAdded: () {
+                if (mounted) setState(() => _commentsCount++);
+              })),
     ).then((_) {
       if (!_paused && mounted) _ctrl?.play();
     });
@@ -1327,6 +1354,15 @@ class _ReelItemState extends State<_ReelItem> {
                 fontWeight: FontWeight.bold,
                 fontSize: 16)),
         const SizedBox(height: 8),
+        // Ба чат фиристодан — корти пешнамоиш, мисли Instagram.
+        ShareToChatRow(
+          kind: 'reel',
+          contentId: widget.reel.id,
+          shareUrl: url,
+          thumbUrl: widget.reel.thumbnailUrl,
+          authorUsername: widget.reel.user.username,
+        ),
+        Divider(color: Colors.white12, height: 1),
         ListTile(
             leading: const CircleAvatar(
                 backgroundColor: AppColors.neonBlue,
@@ -1630,7 +1666,7 @@ class _ReelItemState extends State<_ReelItem> {
               if (!_commentsOff) ...[
                 _ReelStableBtn(
                     svgPath: 'assets/icons/comment.svg',
-                    count: _fmt(reel.commentsCount),
+                    count: _fmt(_commentsCount),
                     onTap: _openComments),
                 const SizedBox(height: 22),
               ],
@@ -2004,6 +2040,7 @@ class _AvatarWithStoryRing extends StatelessWidget {
               width: 42,
               height: 42,
               fit: BoxFit.cover,
+              memCacheWidth: 126,
               placeholder: (_, __) => Container(
                   width: 42, height: 42, color: AppColors.card),
               errorWidget: (_, __, ___) => Container(
@@ -2212,389 +2249,4 @@ class _HeartBurstState extends State<_HeartBurst>
                   ]))));
 }
 
-class _ReelComments extends StatefulWidget {
-  final String reelId;
-  final String authorId;
-  final String authorName;
-  const _ReelComments({
-    required this.reelId,
-    this.authorId = '',
-    this.authorName = '',
-  });
-  @override
-  State<_ReelComments> createState() => _ReelCommentsState();
-}
 
-class _ReelCommentsState extends State<_ReelComments> {
-  final _ctrl = TextEditingController();
-  List<Map<String, dynamic>> _comments = [];
-  bool _loading = true, _sending = false;
-  String? _replyToId;
-  String? _replyToUsername;
-
-  // ── Тарҷумаи шарҳ (OpenAI) ───────────────────────────────────
-  final Map<String, String> _translations = {};
-  final Set<String> _translatingIds = {};
-
-  Future<void> _toggleTranslate(String commentId, String text) async {
-    if (_translations.containsKey(commentId)) {
-      setState(() => _translations.remove(commentId));
-      return;
-    }
-    setState(() => _translatingIds.add(commentId));
-    try {
-      final res = await ApiClient.instance.post('/ai/translate', body: {
-        'text': text,
-        'targetLang': AppSettingsState.instance.lang,
-      });
-      if (res.statusCode < 400) {
-        final b = jsonDecode(res.body);
-        if (mounted) {
-          setState(() => _translations[commentId] = (b['translated'] ?? '').toString());
-        }
-      }
-    } catch (_) {}
-    if (mounted) setState(() => _translatingIds.remove(commentId));
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    try {
-      final repo = ReelsRepository(ApiClient.instance);
-      final list = await repo.fetchComments(widget.reelId);
-      if (mounted) {
-        setState(() {
-          _comments = list;
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) { setState(() => _loading = false); }
-    }
-  }
-
-  Future<void> _send() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty || _sending) return;
-    setState(() => _sending = true);
-    final repo = ReelsRepository(ApiClient.instance);
-    try {
-      if (_replyToId != null) {
-        await repo.replyComment(
-            reelId: widget.reelId,
-            commentId: _replyToId!,
-            text: text);
-      } else {
-        await repo.addComment(reelId: widget.reelId, text: text);
-      }
-      _ctrl.clear();
-      setState(() {
-        _replyToId = null;
-        _replyToUsername = null;
-      });
-      _load();
-    } catch (_) {}
-    if (mounted) setState(() => _sending = false);
-  }
-
-  Future<void> _likeComment(String commentId, int index) async {
-    HapticFeedback.lightImpact();
-    final repo = ReelsRepository(ApiClient.instance);
-    final res = await repo.likeComment(
-        reelId: widget.reelId, commentId: commentId);
-    if (res != null && mounted) {
-      setState(() {
-        _comments[index] = {
-          ..._comments[index],
-          'liked': res['liked'] ?? false,
-          'likesCount': res['likesCount'] ?? 0,
-        };
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Container(
-          margin: const EdgeInsets.symmetric(vertical: 10),
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2))),
-      Text('Шарҳҳо (${_comments.length})',
-          style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16)),
-      const SizedBox(height: 4),
-      const Divider(color: Colors.white10),
-      Expanded(
-        child: _loading
-            ? const Center(
-                child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation(AppColors.storyStart)))
-            : _comments.isEmpty
-                ? const Center(
-                    child: Text('Аввалин бошед!',
-                        style: TextStyle(
-                            color: Colors.white38, fontSize: 15)))
-                : ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _comments.length,
-                    itemBuilder: (_, i) {
-                      final c = _comments[i];
-                      final u = c['user'] as Map? ?? {};
-                      final liked = c['liked'] ?? false;
-                      final likesCount = c['likesCount'] ?? 0;
-                      final id =
-                          (c['_id'] ?? c['id'] ?? '').toString();
-                      return Padding(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 10),
-                          child: Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: AppColors.card,
-                                    backgroundImage:
-                                        (u['avatar'] ?? '').isNotEmpty
-                                            ? CachedNetworkImageProvider(u['avatar'], maxWidth: 72)
-                                            : null,
-                                    child: (u['avatar'] ?? '').isEmpty
-                                        ? const Icon(AppIcons.person,
-                                            color: Colors.white54,
-                                            size: 18)
-                                        : null),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                      Text(u['username'] ?? '',
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight:
-                                                  FontWeight.bold,
-                                              fontSize: 13)),
-                                      const SizedBox(height: 3),
-                                      Text(c['text'] ?? '',
-                                          style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 14)),
-                                      if (_translations[id] != null) ...[
-                                        const SizedBox(height: 3),
-                                        Text(_translations[id]!,
-                                            style: const TextStyle(
-                                                color: Colors.white54,
-                                                fontSize: 13,
-                                                fontStyle:
-                                                    FontStyle.italic)),
-                                      ],
-                                      const SizedBox(height: 4),
-                                      Row(children: [
-                                        GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                _replyToId = id;
-                                                _replyToUsername =
-                                                    u['username']
-                                                        ?.toString();
-                                                _ctrl.text =
-                                                    '@${u['username']} ';
-                                              });
-                                            },
-                                            child: const Text('Ҷавоб',
-                                                style: TextStyle(
-                                                    color:
-                                                        Colors.white38,
-                                                    fontSize: 12,
-                                                    fontWeight:
-                                                        FontWeight.w500))),
-                                        const SizedBox(width: 14),
-                                        GestureDetector(
-                                            onTap: _translatingIds
-                                                    .contains(id)
-                                                ? null
-                                                : () => _toggleTranslate(
-                                                    id,
-                                                    (c['text'] ?? '')
-                                                        .toString()),
-                                            child: _translatingIds
-                                                    .contains(id)
-                                                ? const SizedBox(
-                                                    width: 11,
-                                                    height: 11,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                            strokeWidth:
-                                                                1.5,
-                                                            color: Colors
-                                                                .white38))
-                                                : Text(
-                                                    _translations
-                                                            .containsKey(id)
-                                                        ? 'Пинҳон кардани тарҷума'
-                                                        : 'Тарҷума кардан',
-                                                    style: const TextStyle(
-                                                        color:
-                                                            Colors.white38,
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight
-                                                                .w500))),
-                                      ]),
-                                    ])),
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                    onTap: () =>
-                                        _likeComment(id, i),
-                                    child: Column(
-                                        mainAxisSize:
-                                            MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                              liked
-                                                  ? AppIcons.favorite
-                                                  : Icons
-                                                      .favorite_border_rounded,
-                                              color: liked
-                                                  ? Colors.red
-                                                  : Colors.white38,
-                                              size: 18),
-                                          if (likesCount > 0) ...[
-                                            const SizedBox(height: 2),
-                                            Text('$likesCount',
-                                                style: const TextStyle(
-                                                    color:
-                                                        Colors.white38,
-                                                    fontSize: 11))
-                                          ],
-                                        ])),
-                              ]));
-                    }),
-      ),
-      if (_replyToUsername != null)
-        Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 6),
-            color: Colors.white10,
-            child: Row(children: [
-              Text('Ҷавоб ба @$_replyToUsername',
-                  style: const TextStyle(
-                      color: Colors.white54, fontSize: 12)),
-              const Spacer(),
-              GestureDetector(
-                  onTap: () => setState(() {
-                        _replyToId = null;
-                        _replyToUsername = null;
-                        _ctrl.clear();
-                      }),
-                  child: const Icon(AppIcons.close,
-                      color: Colors.white38, size: 16)),
-            ])),
-      // Emoji quick-reaction row (мисли Instagram)
-      SizedBox(
-        height: 40,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          children: ['❤️','🙌','🔥','👏','😢','😍','😮','😂']
-              .map((e) => GestureDetector(
-                    onTap: () {
-                      final t = _ctrl.text;
-                      _ctrl.text = t + e;
-                      _ctrl.selection = TextSelection.collapsed(
-                          offset: _ctrl.text.length);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 7),
-                      child: Center(child: Text(e,
-                          style: const TextStyle(fontSize: 24))),
-                    ),
-                  ))
-              .toList(),
-        ),
-      ),
-      SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-              left: 16,
-              right: 12,
-              bottom: 8,
-              top: 4 +
-                  MediaQuery.of(context).viewInsets.bottom / 2),
-          child: Row(children: [
-            Expanded(
-                child: TextField(
-                    controller: _ctrl,
-                    style: const TextStyle(color: Colors.white),
-                    maxLength: 1000,
-                    maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                    buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                    decoration: InputDecoration(
-                        hintText: _replyToUsername != null
-                            ? 'Ҷавоб ба @$_replyToUsername...'
-                            : 'Шарҳ нависед...',
-                        hintStyle:
-                            const TextStyle(color: Colors.white38),
-                        filled: true,
-                        fillColor: Colors.white10,
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10)))),
-            // Тӯҳфа (gift)
-            IconButton(
-                icon: SvgPicture.asset('assets/icons/gift.svg',
-                    width: 26, height: 26,
-                    colorFilter: const ColorFilter.mode(
-                        Colors.white70, BlendMode.srcIn)),
-                onPressed: widget.authorId.isEmpty
-                    ? null
-                    : () => showGiftSheet(
-                          context,
-                          toUserId: widget.authorId,
-                          authorName: widget.authorName,
-                          targetType: 'reel',
-                          targetId: widget.reelId,
-                        )),
-            GestureDetector(
-                onTap: _send,
-                child: _sending
-                    ? const SizedBox(
-                        width: 26,
-                        height: 26,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(
-                                AppColors.neonBlue)))
-                    : const Icon(AppIcons.send_rounded,
-                        color: AppColors.neonBlue, size: 28)),
-          ]),
-        ),
-      ),
-    ]);
-  }
-}

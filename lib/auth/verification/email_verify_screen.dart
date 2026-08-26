@@ -14,6 +14,12 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
   bool _isLoading = false;
   String? _error;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
   Future<void> _sendVerification() async {
     if (_emailController.text.isEmpty) return;
 

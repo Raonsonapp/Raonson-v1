@@ -6,7 +6,13 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:convert';
+import '../../core/api/api_client.dart';
 import '../../models/message_model.dart';
+import '../../models/post_model.dart';
+import '../../models/reel_model.dart';
+import '../../feed/post/post_detail_screen.dart';
+import '../../reels/single_reel_screen.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
@@ -231,6 +237,12 @@ class _BubbleBody extends StatelessWidget {
       );
     }
 
+    // Мубодилаи пост/рилс/сторис — корти пешнамоиш (мисли Instagram),
+    // на танҳо линки хом.
+    if (m.share != null) {
+      return _SharedRefBubble(share: m.share!, isMine: isMine);
+    }
+
     // Медиа дар ҳолати боркунӣ (optimistic — ҳанӯз URL нест)
     final isMedia = m.type == MessageType.image ||
         m.type == MessageType.video ||
@@ -238,6 +250,12 @@ class _BubbleBody extends StatelessWidget {
         m.type == MessageType.file;
     if (isMedia && (m.mediaUrl == null || m.mediaUrl!.isEmpty)) {
       return _UploadingBubble(isMine: isMine);
+    }
+
+    // «Як бор дида мешавад» — расм пӯшида мемонад; баъд аз кушодан
+    // сервер URL-ро дигар намедиҳад ва ин ҳолат ба ҷои он мемонад.
+    if (m.viewOnce) {
+      return _ViewOnceBubble(message: m, isMine: isMine);
     }
 
     if (m.type == MessageType.image && m.mediaUrl != null) {
@@ -280,6 +298,100 @@ class _BubbleBody extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────
 //  Image bubble
 // ─────────────────────────────────────────────────────────────────
+// ── Корти мубодилашудаи пост/рилс/сторис ─────────────────────────
+// Instagram линки хом нишон намедиҳад — корти пешнамоишро мебарорад,
+// ки зеркуни ба худи мӯҳтаво мебарад.
+class _SharedRefBubble extends StatelessWidget {
+  final SharedRef share;
+  final bool isMine;
+  const _SharedRefBubble({required this.share, required this.isMine});
+
+  Future<void> _open(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      if (share.kind == 'reel') {
+        final res = await ApiClient.instance.get('/reels/${share.id}');
+        if (res.statusCode >= 400) throw Exception();
+        final reel = ReelModel.fromJson(
+            jsonDecode(res.body) as Map<String, dynamic>);
+        navigator.push(MaterialPageRoute(
+            builder: (_) => SingleReelScreen(reel: reel)));
+        return;
+      }
+      if (share.kind == 'story') {
+        // Сторис 24 соат зиндагӣ мекунад — ба ҷои он профили муаллифро
+        // мекушоем, ки ҳалқаи сторисаш он ҷо ҳаст.
+        if (share.username.isNotEmpty) {
+          navigator.pushNamed('/profile-by-username',
+              arguments: share.username);
+        }
+        return;
+      }
+      final res = await ApiClient.instance.get('/posts/${share.id}');
+      if (res.statusCode >= 400) throw Exception();
+      final post = PostModel.fromJson(
+          jsonDecode(res.body) as Map<String, dynamic>);
+      navigator.push(MaterialPageRoute(
+          builder: (_) => PostDetailScreen(
+              posts: [post], initialIndex: 0, title: share.label)));
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Мӯҳтаво дастрас нест')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _open(context),
+      child: Container(
+        width: 220,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.dividerFaint),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          AspectRatio(
+            aspectRatio: share.kind == 'post' ? 1 : 9 / 16,
+            child: share.thumb.isNotEmpty
+                ? Stack(fit: StackFit.expand, children: [
+                    CachedNetworkImage(
+                      imageUrl: share.thumb, fit: BoxFit.cover,
+                      memCacheWidth: 660,
+                      placeholder: (_, __) => Container(color: AppColors.card),
+                      errorWidget: (_, __, ___) => Container(color: AppColors.card),
+                    ),
+                    if (share.kind != 'post')
+                      const Center(child: Icon(AppIcons.play_arrow_rounded,
+                          color: Colors.white, size: 40)),
+                  ])
+                : Container(color: AppColors.card,
+                    child: Icon(AppIcons.image_outlined,
+                        color: AppColors.textFaint, size: 32)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(share.label,
+                  style: TextStyle(color: AppColors.textPrimary,
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+              if (share.username.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text('@${share.username}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+              ],
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
 class _ImageBubble extends StatelessWidget {
   final String url;
   final bool   isMine;
@@ -1024,7 +1136,7 @@ class _MenuItem extends StatelessWidget {
   final String    label;
   final VoidCallback onTap;
   final Color?    color;
-  _MenuItem({
+  const _MenuItem({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -1083,6 +1195,90 @@ class DateSeparator extends StatelessWidget {
         ),
         Expanded(child: Container(height: 0.5, color: AppColors.dividerFaint)),
       ]),
+    );
+  }
+}
+
+
+// ── Расми «як бор дида мешавад» ──────────────────────────────────
+class _ViewOnceBubble extends StatefulWidget {
+  final MessageModel message;
+  final bool isMine;
+  const _ViewOnceBubble({required this.message, required this.isMine});
+
+  @override
+  State<_ViewOnceBubble> createState() => _ViewOnceBubbleState();
+}
+
+class _ViewOnceBubbleState extends State<_ViewOnceBubble> {
+  late bool _consumed = widget.message.viewedOnce;
+
+  bool get _canOpen =>
+      !_consumed && !widget.isMine && (widget.message.mediaUrl ?? '').isNotEmpty;
+
+  Future<void> _open() async {
+    final url = widget.message.mediaUrl!;
+    final nav = Navigator.of(context);
+    // Аввал сарф мекунем — то ҳатто ҳангоми пӯшидани фаврӣ дубора нашавад.
+    setState(() => _consumed = true);
+    try {
+      await ApiClient.instance
+          .post('/chat/messages/${widget.message.id}/opened');
+    } catch (_) {}
+    await nav.push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black, elevation: 0,
+          title: const Text('Як бор дида мешавад',
+              style: TextStyle(color: Colors.white, fontSize: 15)),
+          leading: IconButton(
+            icon: const Icon(AppIcons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(_)),
+        ),
+        body: Center(
+          child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain),
+        ),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _consumed
+        ? (widget.isMine ? 'Кушода шуд' : 'Кушода шуд')
+        : (widget.isMine ? 'Расм фиристода шуд' : 'Расмро бинед');
+    return GestureDetector(
+      onTap: _canOpen ? _open : null,
+      child: Container(
+        width: 210,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: _consumed ? AppColors.dividerFaint : AppColors.neonBlue),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(
+            _consumed
+                ? AppIcons.visibility_off_outlined
+                : AppIcons.visibility_outlined,
+            size: 18,
+            color: _consumed ? AppColors.textFaint : AppColors.neonBlue,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(label,
+                style: TextStyle(
+                    color: _consumed
+                        ? AppColors.textFaint
+                        : AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: _consumed ? FontWeight.normal : FontWeight.w600)),
+          ),
+        ]),
+      ),
     );
   }
 }

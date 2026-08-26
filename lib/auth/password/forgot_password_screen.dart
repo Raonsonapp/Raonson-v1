@@ -15,16 +15,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _repo = AuthRepository();
   bool _loading = false;
   String? _error;
+  String _channel = 'telegram';
 
   @override
   void dispose() { _idCtrl.dispose(); super.dispose(); }
 
   Future<void> _send() async {
     final id = _idCtrl.text.trim();
-    if (id.isEmpty) { setState(() => _error = 'Почтаи электрониро ворид кунед'); return; }
+    if (id.isEmpty) { setState(() => _error = 'Почта ё рақами телефонро ворид кунед'); return; }
     setState(() { _loading = true; _error = null; });
     try {
-      final otp = await _repo.forgotPassword(id, channel: 'email');
+      final otp = await _repo.forgotPassword(id, channel: _channel);
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(
         builder: (_) => ResetPasswordScreen(identifier: id, prefillOtp: otp),
@@ -67,17 +68,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   fontSize: 19, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           Text(
-            'Почтаи электронии худро ворид кунед ва мо барои '
+            'Почта ё рақами телефонро ворид кунед ва мо барои '
             'барқарорсозии парол рамзи 6-рақама мефиристем.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textTertiary, fontSize: 13.5, height: 1.4),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+          Row(children: [
+            _channelChip('telegram', 'Telegram', AppIcons.send_rounded),
+            const SizedBox(width: 8),
+            _channelChip('email', 'Email', AppIcons.email_outlined),
+          ]),
+          const SizedBox(height: 18),
           TextField(
             controller: _idCtrl,
             style: TextStyle(color: AppColors.textPrimary),
-            keyboardType: TextInputType.emailAddress,
-            decoration: _dec('Почтаи электронӣ'),
+            keyboardType: _channel == 'telegram'
+                ? TextInputType.phone : TextInputType.emailAddress,
+            decoration: _dec(_channel == 'telegram'
+                ? 'Рақами телефон ё username'
+                : 'Почтаи электронӣ'),
           ),
           if (_error != null) ...[
             const SizedBox(height: 14),
@@ -103,6 +113,36 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _channelChip(String value, String label, IconData icon) {
+    final active = _channel == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _channel = value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? AppColors.neonBlue.withOpacity(0.15) : AppColors.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: active ? AppColors.neonBlue : AppColors.divider,
+              width: active ? 1.5 : 1,
+            ),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon, size: 18,
+                color: active ? AppColors.neonBlue : AppColors.textTertiary),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(
+              color: active ? AppColors.neonBlue : AppColors.textTertiary,
+              fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+              fontSize: 13,
+            )),
+          ]),
+        ),
       ),
     );
   }

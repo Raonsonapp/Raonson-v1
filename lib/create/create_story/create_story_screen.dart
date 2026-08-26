@@ -46,7 +46,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     if (mounted) setState(() { _file = File(xf.path); _isVideo = isVideo; _error = null; });
   }
 
-  Future<void> _publish(File capturedFile, String caption, String audience) async {
+  Future<void> _publish(File capturedFile, String caption, String audience,
+      [Map<String, dynamic>? poll]) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });
@@ -85,6 +86,9 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         'mediaUrl' : mediaUrl,
         'mediaType': _isVideo ? 'video' : 'image',
         'caption'  : caption,
+        // Пештар фиристода намешуд — «дӯстони наздик» ба ҳама мерафт.
+        'audience' : audience,
+        if (poll != null) 'poll': poll,
       });
       if (res.statusCode >= 400) throw Exception('Story хато ${res.statusCode}');
       // Story-и нав нашр шуд — cache-и disk-и story-ро пок мекунем, то дар

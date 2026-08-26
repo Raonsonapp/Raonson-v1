@@ -72,8 +72,9 @@ void showAccountSwitcher(BuildContext context) {
                         color: Color(0xFF1D9BF0), fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(sheetCtx);
-                  Navigator.of(context)
-                      .pushNamedAndRemoveUntil('/login', (r) => false);
+                  // pushNamed (на pushNamedAndRemoveUntil) — то тугмаи «ба ақиб»
+                  // корбарро ба барнома баргардонад, агар фикрашро иваз кунад.
+                  Navigator.of(context).pushNamed('/login');
                 },
               )
             else

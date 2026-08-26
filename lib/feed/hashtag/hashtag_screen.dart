@@ -35,12 +35,14 @@ class _HashtagScreenState extends State<HashtagScreen> {
       if (res.statusCode >= 400) throw Exception('Хато ${res.statusCode}');
       final body = jsonDecode(res.body);
       final list = body is List ? body : (body['posts'] ?? []) as List;
-      if (mounted) setState(() {
-        _posts = list
-            .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
-            .toList();
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _posts = list
+              .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+          _loading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() { _loading = false; _error = e.toString(); });
     }

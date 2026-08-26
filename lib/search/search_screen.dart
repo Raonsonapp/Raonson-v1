@@ -1471,7 +1471,7 @@ class _ActionBtn extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? color;
   final String? label;
-  _ActionBtn(
+  const _ActionBtn(
       {required this.svg, this.onTap, this.color, this.label});
 
   @override

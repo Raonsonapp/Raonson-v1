@@ -161,11 +161,32 @@ func migrate() {
 		PRIMARY KEY (user_id, post_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+	-- Feed: "300 лайки охирини ин корбар" — бе ин Postgres ҳамаи
+	-- лайкҳои корбарро мегирад ва баъд sort мекунад.
+	CREATE INDEX IF NOT EXISTS idx_post_likes_user_recent
+	  ON post_likes(user_id, created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS post_saves (
 		user_id TEXT NOT NULL,
 		post_id TEXT NOT NULL,
 		PRIMARY KEY (user_id, post_id)
+	);
+
+	-- ── Папкаҳои захирашуда (Collections, мисли Instagram) ───────
+	CREATE TABLE IF NOT EXISTS saved_collections (
+		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id TEXT NOT NULL,
+		name TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_saved_collections_user
+	  ON saved_collections(user_id, created_at DESC);
+
+	CREATE TABLE IF NOT EXISTS saved_collection_items (
+		collection_id TEXT NOT NULL,
+		post_id TEXT NOT NULL,
+		added_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (collection_id, post_id)
 	);
 
 	CREATE TABLE IF NOT EXISTS post_views (
@@ -208,6 +229,27 @@ func migrate() {
 		story_id TEXT NOT NULL,
 		PRIMARY KEY (user_id, story_id)
 	);
+
+	-- ── Стикери пурсиш дар сторис (мисли Instagram) ──────────────
+	CREATE TABLE IF NOT EXISTS story_polls (
+		story_id  TEXT PRIMARY KEY,
+		question  TEXT NOT NULL,
+		option_a  TEXT NOT NULL,
+		option_b  TEXT NOT NULL,
+		pos_x     REAL DEFAULT 0.5,   -- ҷойгиршавӣ дар сторис (0..1)
+		pos_y     REAL DEFAULT 0.5,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+
+	CREATE TABLE IF NOT EXISTS story_poll_votes (
+		story_id TEXT NOT NULL,
+		user_id  TEXT NOT NULL,
+		choice   SMALLINT NOT NULL,   -- 0 = A, 1 = B
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (story_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_story_poll_votes_story
+	  ON story_poll_votes(story_id);
 
 	CREATE TABLE IF NOT EXISTS story_likes (
 		user_id TEXT NOT NULL,
@@ -257,6 +299,8 @@ func migrate() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_comments ON reel_comments(reel_id, created_at);
+	ALTER TABLE reel_comments ADD COLUMN IF NOT EXISTS likes_count INTEGER DEFAULT 0;
+	ALTER TABLE reel_comments ADD COLUMN IF NOT EXISTS parent_id TEXT;
 
 	CREATE TABLE IF NOT EXISTS reel_views (
 		user_id TEXT NOT NULL,
@@ -276,8 +320,35 @@ func migrate() {
 		read BOOLEAN DEFAULT FALSE,
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);
+	-- Расми «як бор дида мешавад» (мисли Instagram) — баъд аз кушодан
+	-- media аз ҷавоб гирифта мешавад ва дигар боз намешавад.
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS view_once   BOOLEAN DEFAULT FALSE;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS viewed_once BOOLEAN DEFAULT FALSE;
+
+	-- Мубодилаи пост/рилс/сторис дар чат — корти пешнамоиш (мисли Instagram)
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_id    TEXT;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_kind  TEXT;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_thumb TEXT;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS share_user  TEXT;
+
+	-- Tag-и худро аз пост гирифтан (мисли Instagram) — пост дар ҷадвали
+	-- "Дар он қайд шудаед"-и корбар дигар намебарояд.
+	CREATE TABLE IF NOT EXISTS post_tag_removals (
+		post_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (post_id, user_id)
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id, read);
+	-- Рӯйхати чатҳо: "WHERE sender_id=$1 OR receiver_id=$1". sender_id
+	-- ҳеҷ index надошт, бинобар ин кушодани рӯйхати чатҳо тамоми ҷадвали
+	-- messages-ро скан мекард. Бо ин ду index Postgres BitmapOr мекунад.
+	CREATE INDEX IF NOT EXISTS idx_messages_sender_recent
+	  ON messages(sender_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_messages_receiver_recent
+	  ON messages(receiver_id, created_at DESC);
 
 	CREATE TABLE IF NOT EXISTS notifications (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -711,6 +782,9 @@ func migrate() {
 		PRIMARY KEY (user_id, reel_id)
 	);
 	CREATE INDEX IF NOT EXISTS idx_reel_watch_reel ON reel_watch(reel_id);
+	-- Reels feed: сатҳи итмом танҳо аз тамошои 30 рӯзи охир ҳисоб мешавад.
+	CREATE INDEX IF NOT EXISTS idx_reel_watch_recent
+	  ON reel_watch(created_at, reel_id);
 
 	-- ── Perf indexes (block/view dedup lookups) ──
 	CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);
@@ -810,9 +884,49 @@ func migrate() {
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';
+
+	-- Барои backfill-и якдафъаина (поёнтар).
+	CREATE TABLE IF NOT EXISTS schema_backfills (
+		name TEXT PRIMARY KEY,
+		applied_at TIMESTAMPTZ DEFAULT NOW()
+	);
 	`
 	if _, err := Pool.Exec(ctx, sql); err != nil {
 		log.Fatalf("❌ Migration failed: %v", err)
 	}
+	backfillCounters(ctx)
 	log.Println("✅ DB schema ready")
+}
+
+// backfillCounters — шуморишҳоеро, ки бо сабаби хатоҳои кӯҳна аз ҳақиқат
+// дур шудаанд, як бор аз ҷадвалҳои манбаъ аз нав ҳисоб мекунад.
+// Block кардан followers_count-ро кам намекард ва unfollow-и такрорӣ онро
+// дучанд кам мекард, бинобар ин рақамҳои мавҷуда бояд ислоҳ шаванд.
+func backfillCounters(ctx context.Context) {
+	const name = "recount_follow_and_comment_counters_v1"
+	var exists bool
+	if err := Pool.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM schema_backfills WHERE name=$1)`, name).Scan(&exists);
+		err != nil || exists {
+		return
+	}
+	stmts := []string{
+		`UPDATE users u SET followers_count =
+		   (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id)`,
+		`UPDATE users u SET following_count =
+		   (SELECT COUNT(*) FROM follows f WHERE f.follower_id = u.id)`,
+		`UPDATE posts p SET comments_count =
+		   (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)`,
+		`UPDATE reels r SET comments_count =
+		   (SELECT COUNT(*) FROM reel_comments rc WHERE rc.reel_id = r.id)`,
+	}
+	for _, s := range stmts {
+		if _, err := Pool.Exec(ctx, s); err != nil {
+			log.Printf("⚠️  backfill step failed (%v) — дафъаи оянда такрор мешавад", err)
+			return
+		}
+	}
+	Pool.Exec(ctx, `INSERT INTO schema_backfills(name) VALUES($1)
+	                ON CONFLICT DO NOTHING`, name)
+	log.Println("✅ Counters recounted from source tables")
 }

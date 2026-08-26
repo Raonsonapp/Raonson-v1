@@ -221,6 +221,86 @@ func twilioSend(from, to, otp string) error {
 	return nil
 }
 
+// SendTelegramOTP — рамзро тавассути Telegram Gateway API мефиристад (ройгон).
+// env: TELEGRAM_GATEWAY_TOKEN (аз gateway.telegram.org)
+// Агар сервер мустақим ба Telegram пайваст нашавад (TLS timeout) —
+// тавассути Google Apps Script proxy мефиристад:
+// env: TELEGRAM_GATEWAY_PROXY_URL, TELEGRAM_GATEWAY_PROXY_SECRET
+func SendTelegramOTP(phone, otp string) error {
+	token := os.Getenv("TELEGRAM_GATEWAY_TOKEN")
+	if token == "" {
+		return fmt.Errorf("TELEGRAM_GATEWAY_TOKEN not configured")
+	}
+
+	// Аввал мустақим кӯшиш мекунем
+	err := telegramGatewaySend(token, phone, otp)
+	if err == nil {
+		return nil
+	}
+
+	// Агар хато дод — тавассути proxy кӯшиш мекунем
+	proxyURL := os.Getenv("TELEGRAM_GATEWAY_PROXY_URL")
+	proxySecret := os.Getenv("TELEGRAM_GATEWAY_PROXY_SECRET")
+	if proxyURL != "" && proxySecret != "" {
+		return telegramProxySend(proxyURL, proxySecret, phone, otp)
+	}
+	return fmt.Errorf("telegram direct failed: %w", err)
+}
+
+func telegramGatewaySend(token, phone, otp string) error {
+	payload := map[string]interface{}{
+		"phone_number": phone,
+		"code":         otp,
+		"ttl":          300,
+	}
+	jb, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST",
+		"https://gatewayapi.telegram.org/sendVerificationMessage",
+		bytes.NewReader(jb))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("telegram gateway: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("telegram gateway %d: %s", resp.StatusCode, string(b))
+	}
+	return nil
+}
+
+func telegramProxySend(proxyURL, secret, phone, otp string) error {
+	payload := map[string]interface{}{
+		"phone_number":  phone,
+		"code":          otp,
+		"ttl":           300,
+		"relay_secret":  secret,
+	}
+	jb, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST", proxyURL, bytes.NewReader(jb))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 20 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("telegram proxy: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("telegram proxy %d: %s", resp.StatusCode, string(b))
+	}
+	return nil
+}
+
 // MaskEmail — "ehson@gmail.com" → "ehs***@gmail.com"
 func MaskEmail(email string) string {
 	at := strings.Index(email, "@")

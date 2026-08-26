@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
+import 'saved_collections_screen.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
@@ -134,7 +135,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: Center(child: Hero(
           tag: 'av_${widget.userId}',
           child: ClipOval(child: CachedNetworkImage(
-              imageUrl: url, width: 280, height: 280, fit: BoxFit.cover))))));
+              imageUrl: url, width: 280, height: 280, fit: BoxFit.cover,
+              memCacheWidth: 560))))));
   }
 
   // ── Highlight tap → viewer ───────────────────────────────────────
@@ -1035,24 +1037,37 @@ class _SGS extends State<_SavedGrid> {
   @override
   Widget build(BuildContext context) {
     final posts = widget.ctrl.savedPosts;
+    // Сатри папкаҳо ҳамеша мебарояд — то корбар папкаи нав созад,
+    // ҳатто вақте ҳанӯз пости захирашуда нест.
     if (posts.isEmpty) {
-      return const _Empty(icon: AppIcons.bookmark_border_rounded,
-          label: 'Сохташудаҳо нест');
+      return ListView(children: const [
+        CollectionsRow(),
+        SizedBox(height: 40),
+        _Empty(icon: AppIcons.bookmark_border_rounded,
+            label: 'Сохташудаҳо нест'),
+      ]);
     }
-    return GridView.builder(
-      padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
-          childAspectRatio: 1.0),
-      itemCount: posts.length,
-      itemBuilder: (ctx, i) => GestureDetector(
-        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-            builder: (_) => PostDetailScreen(
-                posts: posts, initialIndex: i, title: 'Сохташуда'))),
-        child: CachedNetworkImage(
-            imageUrl: posts[i].mediaUrl, fit: BoxFit.cover, memCacheWidth: 450,
-            placeholder: (_, __) => Container(color: AppColors.card),
-            errorWidget: (_, __, ___) => Container(color: AppColors.card))));
+    return Column(children: [
+      const CollectionsRow(),
+      Expanded(
+        child: GridView.builder(
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
+              childAspectRatio: 1.0),
+          itemCount: posts.length,
+          itemBuilder: (ctx, i) => GestureDetector(
+            onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                builder: (_) => PostDetailScreen(
+                    posts: posts, initialIndex: i, title: 'Сохташуда'))),
+            child: CachedNetworkImage(
+                imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
+                memCacheWidth: 450,
+                placeholder: (_, __) => Container(color: AppColors.card),
+                errorWidget: (_, __, ___) => Container(color: AppColors.card))),
+        ),
+      ),
+    ]);
   }
 }
 

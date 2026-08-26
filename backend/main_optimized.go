@@ -121,6 +121,8 @@ func main() {
 		a.POST("/forgot-password", rl20, handlers.ForgotPassword)
 		a.POST("/reset-password",  rl20, handlers.ResetPassword)
 		a.POST("/change-password", auth, rl20, handlers.ChangePassword)
+		a.POST("/send-phone-otp",   rl20, handlers.SendPhoneOTP)      // Telegram OTP
+		a.POST("/verify-phone-otp", rl20, handlers.VerifyPhoneOTP)    // тасдиқи телефон
 		a.GET("/sessions",     auth, handlers.GetSessions)        // таърихи воридшавӣ
 		a.POST("/revoke-all",  auth, handlers.RevokeAllSessions)  // тоза кардани таърих
 	}
@@ -172,6 +174,16 @@ func main() {
 	}
 
 	// ── CLOSE FRIENDS (Близкие друзья) ──────────────────────────
+	// ── SAVED COLLECTIONS (папкаҳои захирашуда) ─────────────────
+	col := r.Group("/collections", auth, rl100)
+	{
+		col.GET("",                    handlers.GetCollections)
+		col.POST("",                   handlers.CreateCollection)
+		col.DELETE("/:id",             handlers.DeleteCollection)
+		col.POST("/:id/posts",         handlers.AddPostToCollection)
+		col.DELETE("/:id/posts/:postId", handlers.RemovePostFromCollection)
+	}
+
 	cf := r.Group("/close-friends", auth, rl100)
 	{
 		cf.GET("",         handlers.GetCloseFriends)
@@ -203,6 +215,7 @@ func main() {
 		po.POST("/:id/archive",      handlers.TogglePostArchive)
 		po.POST("/:id/interest",     handlers.MarkInterest)
 		po.POST("/:id/not_interest", handlers.MarkNotInterest)
+		po.DELETE("/:id/tag",        handlers.RemoveMyTag) // қайди худро бардор
 		po.POST("/:id/not-interested", handlers.PostNotInterested)
 		po.POST("/:id/pin",          handlers.PinPost)
 		po.PUT("/:id/caption",       handlers.UpdatePostCaption)
@@ -289,6 +302,7 @@ func main() {
 	{
 		re.GET("/",              cache3s, handlers.GetReels)
 		re.GET("/smart",         handlers.GetSmartReels)   // Instagram algorithm
+		re.GET("/:id",           cache3s, handlers.GetReelByID)
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)
 		re.POST("/:id/view",     handlers.TrackReelView)   // view dedup tracking
@@ -320,6 +334,7 @@ func main() {
 		st.POST("/:id/archive", handlers.ToggleStoryArchive)
 		st.POST("/:id/toggle-replies", handlers.ToggleStoryReplies)
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
+		st.POST("/:id/poll/vote", handlers.VoteStoryPoll) // овоз ба пурсиш
 		st.POST("/:id/report", handlers.ReportStory)
 	}
 
@@ -341,6 +356,7 @@ func main() {
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)
+		ch.POST("/messages/:id/opened", handlers.MarkViewOnceOpened)
 		ch.POST("/messages/:id/report", handlers.ReportMessage)
 		ch.POST("/requests/:peerId/accept", handlers.AcceptChatRequest)
 		ch.POST("/requests/:peerId/delete", handlers.DeleteChatRequest)
@@ -473,15 +489,22 @@ func gzipMiddleware() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		// Танҳо JSON ва text фишурда мешавад
-		c.Next()
-		ct := c.Writer.Header().Get("Content-Type")
-		if !strings.Contains(ct, "json") && !strings.Contains(ct, "text") {
+		// WebSocket upgrade-ро печонида намешавад — hijack-и пайвастро
+		// вайрон мекунад.
+		if c.Request.Header.Get("Upgrade") != "" {
+			c.Next()
 			return
 		}
-		// Note: барои production gzip wrapper пеш аз write лозим
-		// Ин middleware response headers мегузорад
-		c.Header("Content-Encoding", "")
+		// Writer БОЯД пеш аз c.Next() печонида шавад — вагарна ҷавоб
+		// аллакай фишурданашуда навишта мешавад (хатои қаблӣ: middleware
+		// баъд аз навиштан танҳо header мегузошт ва ҳеҷ чиз фишурда намешуд).
+		c.Header("Content-Encoding", "gzip")
+		c.Header("Vary", "Accept-Encoding")
+		c.Writer.Header().Del("Content-Length") // андоза пас аз фишурдан дигар аст
+		gz, gw := newGzipWriter(c)
+		c.Writer = gw
+		defer gz.Close()
+		c.Next()
 	}
 }
 
