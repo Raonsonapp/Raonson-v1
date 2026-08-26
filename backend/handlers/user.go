@@ -36,6 +36,10 @@ func usernameChangeAllowed(userID string, newUsername *string) (changing bool, a
 func GetUserByID(c *gin.Context) {
 	id   := c.Param("id")
 	myID := mw.UID(c)
+	// Профили худӣ бо ":id = me" кушода мешавад — бе ин 404 мешуд.
+	if id == "me" {
+		id = myID
+	}
 
 	u, err := getUserByID(id)
 	if err != nil {
@@ -249,6 +253,9 @@ func GetUserReels(c *gin.Context) {
 func GetFollowers(c *gin.Context) {
 	id := c.Param("id")
 	myID := mw.UID(c)
+	if id == "me" {
+		id = myID
+	}
 	limit, offset := followPage(c)
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id,u.username,u.avatar,u.verified,u.bio,
@@ -269,6 +276,9 @@ func GetFollowers(c *gin.Context) {
 func GetFollowing(c *gin.Context) {
 	id := c.Param("id")
 	myID := mw.UID(c)
+	if id == "me" {
+		id = myID
+	}
 	limit, offset := followPage(c)
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id,u.username,u.avatar,u.verified,u.bio,

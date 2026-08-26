@@ -365,3 +365,42 @@ func clearExpiredNote(uid string, u gin.H) {
 		}
 	}
 }
+
+// PUT /profile/email — иваз кардани почтаи электронӣ.
+// Барнома ин endpoint-ро мезад, вале он вуҷуд надошт — иваз кардани
+// почта хомӯшона кор намекард (404 дар catch фурӯ бурда мешуд).
+func ChangeEmail(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct {
+		Email string `json:"email"`
+	}
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(b.Email))
+	if email == "" ||
+		!regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]{2,}$`).MatchString(email) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Почтаи электронӣ нодуруст аст"})
+		return
+	}
+	// Почта дар ҷадвал ягона аст — тафтиш мекунем, то хатои DB
+	// ба корбар ҳамчун «Update failed» нарасад.
+	var taken bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(email)=$1 AND id<>$2::text)`,
+		email, myID).Scan(&taken)
+	if taken {
+		c.JSON(http.StatusConflict,
+			gin.H{"message": "Ин почта аллакай истифода мешавад"})
+		return
+	}
+	if _, err := db.Pool.Exec(context.Background(),
+		`UPDATE users SET email=$1, updated_at=NOW() WHERE id=$2`, email, myID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
+		return
+	}
+	mw.CacheDel("profile:me:" + myID)
+	mw.InvalidateUserCache(myID)
+	c.JSON(http.StatusOK, gin.H{"email": email})
+}
