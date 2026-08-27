@@ -429,7 +429,8 @@ class _PostCardState extends State<PostCard>
 
   Future<void> _archivePost() async {
     try {
-      await ApiClient.instance.post('/posts/${widget.post.id}/archive');
+      final okRes = await ApiClient.instance.post('/posts/${widget.post.id}/archive');
+      if (okRes.statusCode >= 400) throw Exception();
       widget.onDeleted?.call(); // аз феед/профил мепарад
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -773,9 +774,10 @@ class _PostCardState extends State<PostCard>
     final result = await ReportDialog.showWithDescription(context);
     if (result == null || !mounted) return;
     try {
-      await ApiClient.instance.post(
+      final okRes = await ApiClient.instance.post(
         '/posts/${widget.post.id}/report',
         body: {'reason': result.reason, 'description': result.description});
+      if (okRes.statusCode >= 400) throw Exception();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Жалоб фиристода шуд. Раҳмат!'),
@@ -787,7 +789,8 @@ class _PostCardState extends State<PostCard>
   Future<void> _muteUser() async {
     setState(() => _hidden = true);
     try {
-      await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+      final okRes = await ApiClient.instance.post('/users/${widget.post.user.id}/mute');
+      if (okRes.statusCode >= 400) throw Exception();
     } catch (_) {
       if (mounted) setState(() => _hidden = false);
       return;
@@ -813,7 +816,8 @@ class _PostCardState extends State<PostCard>
         ? '/posts/${widget.post.id}/interest'
         : '/posts/${widget.post.id}/not-interested';
     try {
-      await ApiClient.instance.post(endpoint);
+      final okRes = await ApiClient.instance.post(endpoint);
+      if (okRes.statusCode >= 400) throw Exception();
     } catch (_) {
       return;
     }

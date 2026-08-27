@@ -396,9 +396,10 @@ class _AdminReportsState extends State<AdminReportsScreen> {
 
   Future<void> _resolve(Map<String, dynamic> r, String action) async {
     try {
-      await ApiClient.instance.post('/admin/reports/resolve', body: {
+      final okRes = await ApiClient.instance.post('/admin/reports/resolve', body: {
         'type': r['type'], 'targetId': r['targetId'], 'action': action,
       });
+      if (okRes.statusCode >= 400) throw Exception();
       _load();
       if (mounted) {
         final msg = {

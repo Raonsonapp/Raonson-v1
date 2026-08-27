@@ -265,9 +265,10 @@ class _ReelsViewState extends State<_ReelsView> {
       return;
     }
     try {
-      await ApiClient.instance.post('/reels/', body: {
+      final res = await ApiClient.instance.post('/reels/', body: {
         'videoUrl': link, 'caption': cap,
       });
+      if (res.statusCode >= 400) throw Exception();
       if (mounted) {
         vm.load();
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1117,9 +1118,10 @@ class _ReelItemState extends State<_ReelItem> {
                               final newCaption =
                                   base.isEmpty ? '@$uname' : '$base @$uname';
                               try {
-                                await ApiClient.instance.put(
+                                final okRes = await ApiClient.instance.put(
                                     '/reels/${widget.reel.id}/caption',
                                     body: {'caption': newCaption});
+                                if (okRes.statusCode >= 400) throw Exception();
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -1219,7 +1221,8 @@ class _ReelItemState extends State<_ReelItem> {
       return;
     }
     try {
-      await ApiClient.instance.delete('/reels/${widget.reel.id}');
+      final res = await ApiClient.instance.delete('/reels/${widget.reel.id}');
+      if (res.statusCode >= 400) throw Exception();
       widget.onDelete();
     } catch (_) {
       if (mounted) {
@@ -1233,8 +1236,9 @@ class _ReelItemState extends State<_ReelItem> {
 
   Future<void> _markInterest(bool interested) async {
     try {
-      await ApiClient.instance.post(
+      final okRes = await ApiClient.instance.post(
           '/reels/${widget.reel.id}/${interested ? 'interest' : 'not_interest'}');
+      if (okRes.statusCode >= 400) throw Exception();
     } catch (_) {
       return;
     }
@@ -1386,11 +1390,12 @@ class _ReelItemState extends State<_ReelItem> {
             onTap: () async {
               Navigator.pop(context);
               try {
-                await ApiClient.instance.post('/stories/', body: {
+                final okRes = await ApiClient.instance.post('/stories/', body: {
                   'mediaUrl': widget.reel.videoUrl,
                   'mediaType': 'video',
                   'caption': widget.reel.caption,
                 });
+                if (okRes.statusCode >= 400) throw Exception();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('Ба история илова шуд ✓'),

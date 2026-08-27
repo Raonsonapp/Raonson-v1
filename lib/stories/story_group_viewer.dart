@@ -292,7 +292,8 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         _menuRow(tr('story.archive'), onTap: () async {
             Navigator.pop(context);
             try {
-              await ApiClient.instance.post('/stories/${_current.id}/archive');
+              final okRes = await ApiClient.instance.post('/stories/${_current.id}/archive');
+              if (okRes.statusCode >= 400) throw Exception();
               _toast(tr('story.archivedSuccess'));
             } catch (_) { _toast(tr('common.error')); }
             _resume();
@@ -317,7 +318,8 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         _menuRow(tr('story.disableComments'), onTap: () async {
             Navigator.pop(context);
             try {
-              await ApiClient.instance.post('/stories/${_current.id}/toggle-replies');
+              final okRes = await ApiClient.instance.post('/stories/${_current.id}/toggle-replies');
+              if (okRes.statusCode >= 400) throw Exception();
               _toast(tr('story.repliesUpdated'));
             } catch (_) { _toast(tr('common.error')); }
             _resume();
@@ -362,7 +364,14 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
       ),
     );
     if (ok != true) { _resume(); return; }
-    await ApiClient.instance.delete('/stories/${_current.id}');
+    // Натиҷаро месанҷем — вагарна ҳатто ҳангоми рад «нест шуд» менамуд.
+    try {
+      final res = await ApiClient.instance.delete('/stories/${_current.id}');
+      if (res.statusCode >= 400) throw Exception();
+    } catch (_) {
+      if (mounted) { _toast(tr('common.error')); _resume(); }
+      return;
+    }
     if (mounted) widget.onNext();
   }
 
@@ -409,9 +418,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     final result = await ReportDialog.showWithDescription(context);
     if (result == null) { _resume(); return; }
     try {
-      await ApiClient.instance.post(
+      final okRes = await ApiClient.instance.post(
         '/stories/${_current.id}/report',
         body: {'reason': result.reason, 'description': result.description});
+      if (okRes.statusCode >= 400) throw Exception();
     } catch (_) {}
     if (mounted) _toast('Шикоят фиристода шуд');
     _resume();
@@ -502,7 +512,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     ctrl.dispose();
     if (name == null || name.isEmpty) { _resume(); return; }
     try {
-      await ApiClient.instance.post('/highlights/', body: {
+      final res = await ApiClient.instance.post('/highlights/', body: {
         'title': name,
         'coverUrl': _current.mediaUrl,
         'storyIds': [_current.id],
@@ -510,6 +520,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           {'url': _current.mediaUrl, 'type': _current.mediaType, 'storyId': _current.id}
         ],
       });
+      if (res.statusCode >= 400) throw Exception();
       _toast('Ба «$name» илова шуд ✓');
     } catch (_) { _toast('Хато'); }
     _resume();

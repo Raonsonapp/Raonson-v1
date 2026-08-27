@@ -728,9 +728,10 @@ class _CommentItemState extends State<_CommentItem> {
               Navigator.pop(context);
               final result = await ReportDialog.showWithDescription(context);
               if (result == null || !mounted) return;
-              await ApiClient.instance.post(
+              final okRes = await ApiClient.instance.post(
                   '/comments/${widget.comment.id}/report',
                   body: {'reason': result.reason, 'description': result.description});
+              if (okRes.statusCode >= 400) throw Exception();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('Шикоят фиристода шуд ✓'),

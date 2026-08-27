@@ -586,9 +586,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final result = await ReportDialog.showWithDescription(context);
     if (result == null || !mounted) return;
     try {
-      await ApiClient.instance.post(
+      final okRes = await ApiClient.instance.post(
         '/chat/messages/${msg.id}/report',
         body: {'reason': result.reason, 'description': result.description});
+      if (okRes.statusCode >= 400) throw Exception();
     } catch (_) {}
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

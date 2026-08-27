@@ -35,8 +35,9 @@ class _AutoReplyState extends State<AutoReplyScreen> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await ApiClient.instance.put('/profile/auto-reply',
+      final okRes = await ApiClient.instance.put('/profile/auto-reply',
           body: {'text': _ctrl.text.trim()});
+      if (okRes.statusCode >= 400) throw Exception();
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
