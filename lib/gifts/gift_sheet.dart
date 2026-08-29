@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 /// Шийтаи тӯҳфаро мекушояд.
 Future<void> showGiftSheet(
@@ -71,13 +72,13 @@ class _GiftSheetState extends State<_GiftSheet> {
       } else {
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Фиристодан ноком шуд')));
+            SnackBar(content: Text(tr('ui.803ad32c3a'))));
       }
     } catch (_) {
       if (mounted) {
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Хатои шабака')));
+            SnackBar(content: Text(tr('ui.70c0ecf304'))));
       }
     }
   }
@@ -110,7 +111,7 @@ class _GiftSheetState extends State<_GiftSheet> {
                   ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
         ),
         const SizedBox(height: 18),
-        Text('Муаллифони дӯстдоштаро дастгирӣ кунед',
+        Text(tr('ui.38370f9305'),
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 20, fontWeight: FontWeight.w800, height: 1.2)),
@@ -124,7 +125,7 @@ class _GiftSheetState extends State<_GiftSheet> {
         const SizedBox(height: 20),
         SizedBox(width: double.infinity,
           child: _GradientBtn(
-            label: 'Фиристодани тӯҳфаи аввал',
+            label: tr('ui.7d6decff8a'),
             onTap: () => setState(() => _picking = true),
           ),
         ),
@@ -193,7 +194,7 @@ class _GiftSheetState extends State<_GiftSheet> {
                     const SizedBox(height: 6),
                     Text('$s', style: TextStyle(color: AppColors.textPrimary,
                         fontSize: 16, fontWeight: FontWeight.w700)),
-                    Text('ситора', style: TextStyle(
+                    Text(tr('ui.2a3e1f259f'), style: TextStyle(
                         color: AppColors.textFaint, fontSize: 11)),
                   ],
                 ),

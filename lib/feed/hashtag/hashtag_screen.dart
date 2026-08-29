@@ -6,6 +6,7 @@ import '../../app/app_theme.dart';
 import '../../models/post_model.dart';
 import '../post/post_card.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class HashtagScreen extends StatefulWidget {
   final String hashtag; // бе # аломат
@@ -86,7 +87,7 @@ class _HashtagScreenState extends State<HashtagScreen> {
                     onPressed: _load,
                     style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.neonBlue),
-                    child: const Text('Такрор'),
+                    child: Text(tr('ui.fa5607ad24')),
                   ),
                 ]))
               : _posts.isEmpty
@@ -97,7 +98,7 @@ class _HashtagScreenState extends State<HashtagScreen> {
                         style: TextStyle(color: AppColors.textFaint,
                             fontSize: 16, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      Text('Постҳо ёфт нашуданд',
+                      Text(tr('ui.7f3e23b624'),
                         style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
                     ]))
                   : RefreshIndicator(

@@ -18,6 +18,7 @@ import 'edit_profile_controller.dart';
 import '../../core/services/subscription_service.dart';
 import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String userId;
@@ -61,16 +62,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           controller: inputCtrl, autofocus: true,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Касбу кор ё шавқи худро нависед (масалан: фотограф)',
+            hintText: tr('ui.983ec94655'),
             hintStyle: TextStyle(color: AppColors.textFaint),
           ),
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(ctx, inputCtrl.text),
-              child: Text('Созед', style: TextStyle(color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
+              child: Text(tr('ui.41cc0f2ade'), style: TextStyle(color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
         ],
       ),
     );
@@ -89,13 +90,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _ctrl.bioController.text = bio;
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('AI bio ҳозир дастрас нест'), duration: Duration(seconds: 2)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.752ba62380')), duration: Duration(seconds: 2)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хато ҳангоми сохтани bio'), duration: Duration(seconds: 2)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.6af8ff3254')), duration: Duration(seconds: 2)));
       }
     }
     if (mounted) setState(() => _generatingBio = false);
@@ -166,8 +167,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _requirePro() {
     if (SubscriptionService.instance.isPro) return true;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Ин хусусияти Raonson Pro аст'),
-      action: SnackBarAction(label: 'Pro гирифтан',
+      content: Text(tr('ui.868ba187c7')),
+      action: SnackBarAction(label: tr('ui.538572f3c1'),
           onPressed: () => Navigator.push(context, MaterialPageRoute(
               builder: (_) => const SubscriptionScreen()))),
     ));
@@ -184,8 +185,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) setState(() { _ctrl.coverUrl = url; _uploadingCover = false; });
     } catch (_) {
       if (mounted) { setState(() => _uploadingCover = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Баннер бор нашуд'))); }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.c2c6024f4c')))); }
     }
   }
 
@@ -198,12 +199,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Линки нав',
+        title: Text(tr('ui.c8fdd7d368'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: titleCtrl,
             style: TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(hintText: 'Ном (ихтиёрӣ)',
+            decoration: InputDecoration(hintText: tr('ui.0fa68476d0'),
                 hintStyle: TextStyle(color: AppColors.textFaint))),
           TextField(controller: urlCtrl, keyboardType: TextInputType.url,
             style: TextStyle(color: AppColors.textPrimary),
@@ -212,9 +213,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text('Илова', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('ui.d4a317a798'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -240,7 +241,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         content: Text(_usernameError ?? 'Username нодуруст'), backgroundColor: Colors.red.shade800)); return;
     }
     if (_checkingUsername) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Лутфан интизор шавед...'), backgroundColor: Colors.orange)); return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('ui.c375747034')), backgroundColor: Colors.orange)); return;
     }
     final ok = await _ctrl.save(bioSong: _bioSong, avatarUrl: _uploadedAvatarUrl);
     if (!mounted) { return; }
@@ -274,12 +275,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor: AppColors.bg, elevation: 0,
         leading: IconButton(icon: Icon(AppIcons.close_rounded, color: AppColors.textPrimary),
             onPressed: () => Navigator.pop(context)),
-        title: Text('Таҳрири профил', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(tr('ui.62e96b608a'), style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [_ctrl.isSaving
             ? Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 20, height: 20,
                 child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary)))
-            : TextButton(onPressed: _save, child: Text('Сабт', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)))],
+            : TextButton(onPressed: _save, child: Text(tr('ui.cb206b6c88'), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 15)))],
       ),
       body: _ctrl.isLoading
           ? Center(child: CircularProgressIndicator(color: AppColors.storyStart, strokeWidth: 2))
@@ -305,12 +306,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   : Icon(AppIcons.camera_alt_rounded, color: AppColors.textPrimary, size: 16)),
           ]))),
         const SizedBox(height: 6),
-        const Text('Аксро тағир бидеҳ', style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
+        Text(tr('ui.3bc61528ac'), style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
         const SizedBox(height: 24),
 
         // Cover banner (Pro)
         Row(children: [
-          Text('Баннери профил', style: TextStyle(
+          Text(tr('ui.365a019539'), style: TextStyle(
               color: AppColors.textPrimary.withOpacity(0.5),
               fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(width: 6),
@@ -338,7 +339,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         Icon(AppIcons.image_outlined,
                             color: AppColors.textFaint, size: 26),
                         const SizedBox(height: 4),
-                        Text('Баннер илова кунед',
+                        Text(tr('ui.53d89b5d38'),
                             style: TextStyle(color: AppColors.textFaint,
                                 fontSize: 12)),
                       ]))
@@ -399,7 +400,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: TextField(controller: _ctrl.bioController, maxLines: 4, maxLength: 150,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Худро муаррифӣ кун...', hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
+              hintText: tr('ui.bcecf21c6c'), hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
               prefixIcon: Padding(padding: EdgeInsets.only(bottom: 60), child: Icon(AppIcons.info_outline_rounded, color: AppColors.textFaint, size: 18)),
               border: InputBorder.none, contentPadding: const EdgeInsets.fromLTRB(12,12,12,0),
               counterStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.2), fontSize: 11)))),
@@ -414,7 +415,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
         // Bio links (Pro)
         Row(children: [
-          Text('Линкҳо', style: TextStyle(
+          Text(tr('ui.7e447a9347'), style: TextStyle(
               color: AppColors.textPrimary.withOpacity(0.5),
               fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(width: 6),
@@ -463,7 +464,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               const Icon(AppIcons.add_circle, color: AppColors.neonBlue, size: 18),
               const SizedBox(width: 6),
-              Text('Илова кардани линк',
+              Text(tr('ui.f27b424326'),
                   style: TextStyle(color: AppColors.neonBlue,
                       fontWeight: FontWeight.w600)),
             ]),
@@ -479,7 +480,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Row(children: [
             Icon(AppIcons.lock_outline_rounded, color: AppColors.textSecondary, size: 20),
             const SizedBox(width: 12),
-            Expanded(child: Text('Профили хусусӣ', style: TextStyle(color: AppColors.textPrimary, fontSize: 14))),
+            Expanded(child: Text(tr('ui.6e40f6471d'), style: TextStyle(color: AppColors.textPrimary, fontSize: 14))),
             Switch(value: _ctrl.isPrivate, onChanged: _ctrl.togglePrivate, activeColor: AppColors.storyStart)])),
         const SizedBox(height: 40),
       ])),
@@ -557,7 +558,7 @@ class _AddMusicTile extends StatelessWidget {
           color: AppColors.textPrimary.withOpacity(0.1), border: Border.all(color: AppColors.textPrimary.withOpacity(0.3))),
           child: Icon(AppIcons.music_note_rounded, color: AppColors.textPrimary, size: 17)),
         const SizedBox(width: 12),
-        Text('Мусиқӣ илова кун', style: TextStyle(color: AppColors.textPrimary.withOpacity(0.5), fontSize: 14)),
+        Text(tr('ui.8e74a45ff3'), style: TextStyle(color: AppColors.textPrimary.withOpacity(0.5), fontSize: 14)),
         Spacer(), Icon(AppIcons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2))])));
 }
 

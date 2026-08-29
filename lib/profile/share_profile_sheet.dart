@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../app/app_theme.dart';
 import '../models/user_model.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class ShareProfileSheet extends StatefulWidget {
   final UserModel user;
@@ -38,7 +39,7 @@ class _ShareState extends State<ShareProfileSheet> {
           decoration: BoxDecoration(color: AppColors.textFaint,
               borderRadius: BorderRadius.circular(2)))),
 
-        Text('Профилро мубодила кун',
+        Text(tr('ui.8b9893b4f1'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 17, fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),
@@ -141,10 +142,10 @@ class _ShareState extends State<ShareProfileSheet> {
 
           // Theme switch
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            _TBtn(label: 'Торик',  sel: _dark,
+            _TBtn(label: tr('ui.9de2868fb1'),  sel: _dark,
                 onTap: () => setState(() => _dark = true)),
             const SizedBox(width: 12),
-            _TBtn(label: 'Равшан', sel: !_dark,
+            _TBtn(label: tr('ui.6e1a0a7d3d'), sel: !_dark,
                 onTap: () => setState(() => _dark = false)),
           ]),
           const SizedBox(height: 24),
@@ -152,25 +153,25 @@ class _ShareState extends State<ShareProfileSheet> {
           // Actions
           Padding(padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(children: [
-              _ARow(icon: AppIcons.copy_rounded, label: 'Линкро нусха кун',
+              _ARow(icon: AppIcons.copy_rounded, label: tr('ui.e940f097b5'),
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: _url));
                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Линк нусхабардорӣ шуд'),
+                        SnackBar(
+                            content: Text(tr('ui.0e9393ee76')),
                             duration: Duration(seconds: 2)));
                   }),
               Divider(color: AppColors.dividerFaint, height: 0),
-              _ARow(icon: AppIcons.share_rounded, label: 'Мубодила',
+              _ARow(icon: AppIcons.share_rounded, label: tr('ui.f7fbebcbcf'),
                   onTap: () => Share.share(_url,
                       subject: widget.user.username)),
               Divider(color: AppColors.dividerFaint, height: 0),
               _ARow(icon: AppIcons.person_add_rounded,
-                  label: 'Дӯстонро даъват кун',
+                  label: tr('ui.b31a0c6c1c'),
                   onTap: () => Share.share(
                       'Ба ман дар Raonson ҳамроҳ шав 👋\n$_url')),
             ])),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
         ]))),
       ])),
     );

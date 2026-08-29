@@ -7,6 +7,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -114,7 +115,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Пайдо кардани дӯстон',
+        title: Text(tr('ui.debaed5e5d'),
             style: TextStyle(color: AppColors.textPrimary)),
         content: Text(
           'Raonson рақамҳои телефони контактҳои шуморо бо сервер муқоиса мекунад, '
@@ -124,11 +125,11 @@ class _FriendsScreenState extends State<FriendsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Бекор', style: TextStyle(color: AppColors.textFaint)),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textFaint)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Давом', style: TextStyle(color: AppColors.neonBlue)),
+            child: Text(tr('ui.56236958eb'), style: TextStyle(color: AppColors.neonBlue)),
           ),
         ],
       ),
@@ -141,8 +142,8 @@ class _FriendsScreenState extends State<FriendsScreen>
       if (!granted) {
         if (mounted) {
           setState(() => _loadingContacts = false);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Барои ёфтани дӯстон иҷозати контактҳо лозим аст')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('ui.6680e84b30'))));
         }
         return;
       }
@@ -163,7 +164,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       // 2. Рақамҳоро ба сервер фиристем → корбарони мувофиқро бармегардонад
       final res = await ApiClient.instance
           .post('/users/find-by-contacts', body: {'phones': phones.toList()})
-          .timeout(const Duration(seconds: 12));
+          .timeout(Duration(seconds: 12));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
         final List list = body is List ? body : (body['users'] ?? []);
@@ -212,7 +213,7 @@ class _FriendsScreenState extends State<FriendsScreen>
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
-        title: Text('Дӯстон',
+        title: Text(tr('ui.a938aa2335'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 18, fontWeight: FontWeight.w700)),
         leading: IconButton(
@@ -437,7 +438,7 @@ class _SuggestionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.neonBlue,
                   borderRadius: BorderRadius.circular(8)),
-                child: Text('Пайравӣ',
+                child: Text(tr('ui.bc99e8eb3c'),
                     style: TextStyle(color: AppColors.textPrimary,
                         fontSize: 13, fontWeight: FontWeight.w600)),
               ),
@@ -449,14 +450,14 @@ class _SuggestionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 border: Border.all(color: AppColors.textFaint),
                 borderRadius: BorderRadius.circular(8)),
-              child: Text('Пайравӣ мекунад',
+              child: Text(tr('ui.5fa4264246'),
                   style: TextStyle(color: AppColors.textTertiary,
                       fontSize: 12)),
             ),
           const SizedBox(height: 6),
           GestureDetector(
             onTap: onRemove,
-            child: Text('Хориҷ кун',
+            child: Text(tr('ui.a4340a9898'),
                 style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           ),
         ]),
@@ -547,11 +548,11 @@ class _ContactsTab extends StatelessWidget {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(AppIcons.contacts_outlined, color: AppColors.textFaint, size: 64),
         const SizedBox(height: 16),
-        Text('Дӯстони шумо аз контактҳо',
+        Text(tr('ui.fd1bb8fbcb'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16,
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        Text('Мо контактҳои шуморо меёбем',
+        Text(tr('ui.fa3526a029'),
             style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
         const SizedBox(height: 24),
         ElevatedButton.icon(
@@ -564,7 +565,7 @@ class _ContactsTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12))),
           onPressed: onLoad,
           icon: const Icon(AppIcons.contacts_rounded, size: 18),
-          label: const Text('Ёфтани дӯстон аз контактҳо')),
+          label: Text(tr('ui.979437ddef'))),
       ]));
     }
     return ListView.builder(

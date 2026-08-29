@@ -24,6 +24,7 @@ import '../../core/webrtc_service.dart';
 import '../../chat/room/incoming_call_screen.dart';
 import '../../chat/room/call_screen.dart';
 import '../../models/user_model.dart';
+import '../../core/i18n/strings.dart';
 
 class BottomNavScaffold extends StatelessWidget {
   const BottomNavScaffold({super.key});
@@ -73,7 +74,7 @@ class _BottomNavViewState extends State<_BottomNavView> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Таблиғот ва маълумот',
+        title: Text(tr('ui.62ac88b7d3'),
             style: TextStyle(color: Colors.white, fontSize: 17,
                 fontWeight: FontWeight.w600)),
         content: const Text(
@@ -86,7 +87,7 @@ class _BottomNavViewState extends State<_BottomNavView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Рад кардан',
+            child: Text(tr('ui.1045f7b687'),
                 style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
@@ -96,7 +97,7 @@ class _BottomNavViewState extends State<_BottomNavView> {
                   borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Қабул кардан',
+            child: Text(tr('ui.bdd466a485'),
                 style: TextStyle(color: Colors.white)),
           ),
         ],

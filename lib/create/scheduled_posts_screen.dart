@@ -7,6 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
+import '../core/i18n/strings.dart';
 
 class ScheduledPostsScreen extends StatefulWidget {
   const ScheduledPostsScreen({super.key});
@@ -50,7 +51,7 @@ class _ScheduledPostsState extends State<ScheduledPostsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Постҳои ба нақша',
+        title: Text(tr('ui.9d39abf489'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
       ),
@@ -90,10 +91,10 @@ class _ScheduledPostsState extends State<ScheduledPostsScreen> {
                   Icon(AppIcons.schedule_rounded,
                       color: AppColors.textFaint, size: 44),
                   const SizedBox(height: 10),
-                  Text('Пости ба нақша гирифташуда нест',
+                  Text(tr('ui.83f42b7543'),
                       style: TextStyle(color: AppColors.textFaint)),
                   const SizedBox(height: 4),
-                  Text('Ҳангоми нашр «Ба нақша гирифтан»-ро интихоб кунед',
+                  Text(tr('ui.8ec1fa7dcd'),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
                 ]))

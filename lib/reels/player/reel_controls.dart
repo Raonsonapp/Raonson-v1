@@ -11,6 +11,7 @@ import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
+import '../../core/i18n/strings.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -83,7 +84,7 @@ class _ReelControlsState extends State<ReelControls> {
                   borderRadius: BorderRadius.circular(2))),
           ListTile(
             leading: const Icon(AppIcons.flag_outlined, color: Colors.white),
-            title: const Text('Хабар додан',
+            title: Text(tr('ui.79cab6251d'),
                 style: TextStyle(color: Colors.white)),
             onTap: () async {
               Navigator.pop(ctx);
@@ -94,15 +95,15 @@ class _ReelControlsState extends State<ReelControls> {
                       body: {'reason': result.reason, 'description': result.description})
                   .then((_) {}, onError: (_) {});
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Хабар фиристода шуд'),
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr('ui.507bb6dd66')),
                     duration: Duration(seconds: 2)));
               }
             },
           ),
           ListTile(
-            leading: const Icon(AppIcons.link_rounded, color: Colors.white),
-            title: const Text('Нусхаи линк',
+            leading: Icon(AppIcons.link_rounded, color: Colors.white),
+            title: Text(tr('ui.16d42947af'),
                 style: TextStyle(color: Colors.white)),
             onTap: () { Navigator.pop(ctx); _share(); },
           ),
@@ -332,7 +333,7 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(color: Colors.white24,
                   borderRadius: BorderRadius.circular(2))),
-          const Text('Шарҳҳо',
+          Text(tr('ui.8be35deea4'),
               style: TextStyle(color: Colors.white,
                   fontWeight: FontWeight.w600, fontSize: 15)),
           const Divider(color: Colors.white12),
@@ -342,8 +343,8 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                     child: CircularProgressIndicator(
                         color: Colors.white30, strokeWidth: 2))
                 : _comments.isEmpty
-                    ? const Center(
-                        child: Text('Ҳанӯз шарҳ нест',
+                    ? Center(
+                        child: Text(tr('ui.656a3f32d0'),
                             style: TextStyle(color: Colors.white38)))
                     : ListView.builder(
                         itemCount: _comments.length,
@@ -356,7 +357,7 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                                 name: (u['username'] ?? '').toString(),
                                 size: 34),
                             title: Text((u['username'] ?? '').toString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13)),
@@ -376,7 +377,7 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                   maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   decoration: InputDecoration(
-                    hintText: 'Шарҳ нависед...',
+                    hintText: tr('ui.945641e96c'),
                     hintStyle: const TextStyle(color: Colors.white38),
                     filled: true,
                     fillColor: Colors.white12,

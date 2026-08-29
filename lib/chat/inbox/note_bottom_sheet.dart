@@ -7,6 +7,7 @@ import '../../core/note_service.dart';
 import '../../models/note_model.dart';
 import 'music_picker_sheet.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  NoteBottomSheet — як экран, мисли Instagram Notes
@@ -102,7 +103,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
     final text = _txt.text.trim();
     if (text.isEmpty && (_song == null || _song!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Матн ё мусиқӣ иловакунед')));
+          SnackBar(content: Text(tr('ui.503c45a4d9'))));
       return;
     }
     await _player.stop();
@@ -136,7 +137,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
     return Container(
       padding: EdgeInsets.only(bottom: bottom),
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.90),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Color(0xFF0D1117),
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
@@ -162,7 +163,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Ёддошт',
+              Text(tr('ui.3f307b6833'),
                   style: TextStyle(
                       color: AppColors.textPrimary.withOpacity(0.45), fontSize: 12,
                       fontWeight: FontWeight.w500)),
@@ -179,7 +180,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
                   maxLines: 3,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
                   decoration: InputDecoration(
-                    hintText: 'Чӣ дар зеҳнатон аст?',
+                    hintText: tr('ui.13031cf377'),
                     hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.22)),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
@@ -226,7 +227,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
                           borderRadius: BorderRadius.circular(14)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Ҳазф'),
+                    child: Text(tr('ui.1cd58d88f1')),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -246,7 +247,7 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
                       ? SizedBox(width: 20, height: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: AppColors.textPrimary))
-                      : const Text('Нашр кун',
+                      : Text(tr('ui.2e25f8a101'),
                           style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
@@ -369,7 +370,7 @@ class _BubblePreview extends StatelessWidget {
                 ),
                 border: Border.all(color: AppColors.textPrimary.withOpacity(0.08)),
               ),
-              child: Text('Ёддошт иловакун...',
+              child: Text(tr('ui.ab742c4ac9'),
                   style: TextStyle(
                       color: AppColors.textPrimary.withOpacity(0.18), fontSize: 13),
                   textAlign: TextAlign.center),
@@ -418,7 +419,7 @@ class _AddMusicBtn extends StatelessWidget {
           child: Icon(AppIcons.music_note_rounded, color: AppColors.neonBlue, size: 17),
         ),
         const SizedBox(width: 12),
-        Text('Мусиқӣ илова кун',
+        Text(tr('ui.8e74a45ff3'),
             style: TextStyle(color: AppColors.textPrimary.withOpacity(0.55), fontSize: 14)),
         const Spacer(),
         Icon(AppIcons.chevron_right_rounded, color: AppColors.textPrimary.withOpacity(0.2)),
@@ -510,7 +511,7 @@ class _AttachedMusic extends StatelessWidget {
               color: AppColors.textPrimary.withOpacity(0.07),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('Иваз', style: TextStyle(color: AppColors.textTertiary, fontSize: 11)),
+            child: Text(tr('ui.7b552c8a15'), style: TextStyle(color: AppColors.textTertiary, fontSize: 11)),
           ),
         ),
         const SizedBox(height: 8),

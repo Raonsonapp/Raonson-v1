@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class TutorChatScreen extends StatefulWidget {
   final String track, trackName;
@@ -95,7 +96,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Устоз AI',
+            Text(tr('ui.89cfc5d1b3'),
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15,
                     fontWeight: FontWeight.w600)),
             Text(widget.trackName,
@@ -126,7 +127,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
         child: Row(children: [
           Icon(AppIcons.bolt_rounded, color: AppColors.neonBlue, size: 18),
           const SizedBox(width: 8),
-          Text('Устоз менависад…',
+          Text(tr('ui.3b2e899b3f'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
         ]),
       );
@@ -205,8 +206,8 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
           GestureDetector(
             onTap: () {
               Clipboard.setData(ClipboardData(text: code.trim()));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Код нусхабардорӣ шуд'),
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr('ui.edfa71f0d9')),
                   duration: Duration(seconds: 1)));
             },
             child: Icon(AppIcons.copy_rounded,
@@ -221,7 +222,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+        padding: EdgeInsets.fromLTRB(12, 6, 8, 6),
         decoration: BoxDecoration(
             border: Border(top: BorderSide(color: AppColors.dividerFaint))),
         child: Row(children: [
@@ -233,7 +234,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
               textInputAction: TextInputAction.send,
               onSubmitted: (t) => _send(t),
               decoration: InputDecoration(
-                hintText: 'Ба Устоз навис…',
+                hintText: tr('ui.3e41b4b77d'),
                 hintStyle: TextStyle(color: AppColors.textFaint),
                 filled: true, fillColor: AppColors.surface,
                 contentPadding:

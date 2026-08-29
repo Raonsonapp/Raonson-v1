@@ -352,14 +352,14 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
-        title: const Text('Нест кардан?', style: TextStyle(color: Colors.white)),
-        content: const Text('Сторис тамоман нест мешавад.',
+        title: Text(tr('ui.e6326ea2d4'), style: TextStyle(color: Colors.white)),
+        content: Text(tr('ui.67f5c82a9f'),
             style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Нест кун', style: TextStyle(color: Colors.redAccent))),
+              child: Text(tr('ui.b03ce66658'), style: TextStyle(color: Colors.redAccent))),
         ],
       ),
     );
@@ -400,7 +400,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           Divider(color: AppColors.dividerFaint, height: 1),
           ListTile(
             leading: Icon(AppIcons.share_rounded, color: AppColors.textPrimary),
-            title: Text('Барномаҳои дигар',
+            title: Text(tr('ui.eb9d23a0ac'),
                 style: TextStyle(color: AppColors.textPrimary)),
             onTap: () {
               Navigator.pop(sheetCtx);
@@ -489,23 +489,23 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Актуальни нав', style: TextStyle(color: Colors.white)),
+        title: Text(tr('ui.f34e8f52dd'), style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           maxLength: 16,
           style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Ном (масалан, Сафар)',
+          decoration: InputDecoration(
+            hintText: tr('ui.6e3af58aa6'),
             hintStyle: TextStyle(color: Colors.white38),
             counterStyle: TextStyle(color: Colors.white24),
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           TextButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-              child: const Text('Илова', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('ui.d4a317a798'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -665,7 +665,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                       ? CachedNetworkImageProvider(_current.user.avatar, maxWidth: 80) : null,
                   backgroundColor: Colors.white12,
                   child: _current.user.avatar.isEmpty
-                      ? const Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
+                      ? Icon(AppIcons.person, color: Colors.white54, size: 20) : null,
                 ),
               ),
               const SizedBox(width: 10),
@@ -691,7 +691,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                       decoration: BoxDecoration(
                           color: const Color(0xFF00C853),
                           borderRadius: BorderRadius.circular(10)),
-                      child: const Text('Наздикон',
+                      child: Text(tr('ui.0d78bd9660'),
                           style: TextStyle(color: Colors.white, fontSize: 10,
                               fontWeight: FontWeight.w700)),
                     ),
@@ -753,13 +753,13 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             onTap: _showViewersSheet,
           ),
           const Spacer(),
-          _ActionBtn(svgPath: 'assets/icons/share.svg', label: 'Мубодила',
+          _ActionBtn(svgPath: 'assets/icons/share.svg', label: tr('ui.f7fbebcbcf'),
               onTap: _shareStory),
           const SizedBox(width: 4),
-          _ActionBtn(icon: AppIcons.add_box_outlined, label: 'Актуалӣ',
+          _ActionBtn(icon: AppIcons.add_box_outlined, label: tr('ui.1cd8f93093'),
               onTap: _addToHighlight),
           const SizedBox(width: 4),
-          _ActionBtn(icon: AppIcons.more_horiz_rounded, label: 'Бештар',
+          _ActionBtn(icon: AppIcons.more_horiz_rounded, label: tr('ui.9d3992d048'),
               onTap: _showOwnerMenu),
         ],
       );
@@ -783,7 +783,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               alignment: Alignment.centerLeft,
-              child: const Text('Ҷавобҳо хомӯшанд',
+              child: Text(tr('ui.ac337fa439'),
                   style: TextStyle(color: Colors.white54, fontSize: 13)))
           : GestureDetector(
               onTap: () { _pause(); setState(() => _showReply = true); },
@@ -1192,11 +1192,11 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
         const Divider(color: Colors.white12, height: 1),
 
         if (!_loading && _viewers.isNotEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 14, 16, 6),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Кӣ сторисро дид',
+              child: Text(tr('ui.d87c02f077'),
                   style: TextStyle(color: Colors.white,
                       fontSize: 17, fontWeight: FontWeight.w700)),
             ),
@@ -1205,16 +1205,16 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
         // ── Seen-by list (мисли Instagram) ──
         Expanded(
           child: _loading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(
                       color: Colors.white30, strokeWidth: 2))
               : _viewers.isEmpty
-                  ? const Center(
-                      child: Text('Ҳанӯз касе надидааст',
+                  ? Center(
+                      child: Text(tr('ui.3a0ea033eb'),
                           style: TextStyle(color: Colors.white38)))
                   : ListView.builder(
                       controller: scrollCtrl,
-                      padding: const EdgeInsets.only(top: 2, bottom: 16),
+                      padding: EdgeInsets.only(top: 2, bottom: 16),
                       itemCount: _viewers.length,
                       itemBuilder: (_, i) {
                         final v = _viewers[i];

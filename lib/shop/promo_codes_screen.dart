@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
+import '../core/i18n/strings.dart';
 
 class PromoCodesScreen extends StatefulWidget {
   const PromoCodesScreen({super.key});
@@ -49,7 +50,7 @@ class _PromoCodesState extends State<PromoCodesScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Промокоди нав',
+        title: Text(tr('ui.e0bd8f93b1'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: codeCtrl,
@@ -58,22 +59,22 @@ class _PromoCodesState extends State<PromoCodesScreen> {
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
             ],
             style: TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(hintText: 'КОД (мисол: SALE20)',
+            decoration: InputDecoration(hintText: tr('ui.8eeea13c36'),
                 hintStyle: TextStyle(color: AppColors.textFaint))),
           TextField(controller: pctCtrl, keyboardType: TextInputType.number,
             style: TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(hintText: 'Тахфиф % (1–90)',
+            decoration: InputDecoration(hintText: tr('ui.ae7a2967aa'),
                 hintStyle: TextStyle(color: AppColors.textFaint))),
           TextField(controller: usesCtrl, keyboardType: TextInputType.number,
             style: TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(hintText: 'Лимити истифода (0 = бемаҳдуд)',
+            decoration: InputDecoration(hintText: tr('ui.a4d337049f'),
                 hintStyle: TextStyle(color: AppColors.textFaint))),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text('Сохтан', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('ui.b979a5a4c1'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -83,8 +84,8 @@ class _PromoCodesState extends State<PromoCodesScreen> {
       final uses = int.tryParse(usesCtrl.text.trim()) ?? 0;
       if (code.isEmpty || pct < 1 || pct > 90) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Код ва тахфиф (1–90%)-ро дуруст ворид кунед')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('ui.2f1de871c9'))));
         }
       } else {
         try {
@@ -106,7 +107,7 @@ class _PromoCodesState extends State<PromoCodesScreen> {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         title: Row(mainAxisSize: MainAxisSize.min, children: [
           TajikshopBrand.logoCompact(size: 14),
-          Text(' — Промокодҳо',
+          Text(tr('ui.829e2aa4d1'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 15, fontWeight: FontWeight.bold)),
         ]),
@@ -117,14 +118,14 @@ class _PromoCodesState extends State<PromoCodesScreen> {
         child: Icon(AppIcons.add_circle, color: Colors.white),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Center(child: CircularProgressIndicator(strokeWidth: 2))
           : _promos.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.tag_rounded, color: AppColors.textFaint, size: 44),
                   const SizedBox(height: 10),
-                  Text('Ҳанӯз промокод нест',
+                  Text(tr('ui.f8a22c05ad'),
                       style: TextStyle(color: AppColors.textFaint)),
-                  Text('Тугмаи + барои сохтан 👇',
+                  Text(tr('ui.a40deda82c'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
                 ]))
               : ListView.builder(

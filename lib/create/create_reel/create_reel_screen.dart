@@ -11,6 +11,7 @@ import '../upload/upload_manager.dart';
 import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class CreateReelScreen extends StatefulWidget {
   final File? initialFile;
@@ -144,7 +145,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         leading: IconButton(
           icon: const Icon(AppIcons.close, color: Colors.white),
           onPressed: _busy ? null : () => Navigator.pop(context)),
-        title: const Text('Reel гузоред',
+        title: Text(tr('ui.13b9c2f7ed'),
             style: TextStyle(color: Colors.white,
                 fontWeight: FontWeight.bold)),
         actions: [
@@ -154,7 +155,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
-                : Text('Нашр кун',
+                : Text(tr('ui.2e25f8a101'),
                     style: TextStyle(
                       color: _file == null
                           ? Colors.white30 : AppColors.storyStart,
@@ -199,7 +200,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                           color: Colors.white, size: 36),
                     ),
                     const SizedBox(height: 12),
-                    const Text('Видео интихоб шуд',
+                    Text(tr('ui.9aeb59bcde'),
                         style: TextStyle(color: Colors.white,
                             fontSize: 15, fontWeight: FontWeight.w500)),
                     const SizedBox(height: 6),
@@ -224,7 +225,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                           color: Colors.white10,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text('Иваз кардан',
+                        child: Text(tr('ui.599e762e04'),
                             style: TextStyle(
                                 color: Colors.white70, fontSize: 13)),
                       ),
@@ -241,7 +242,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
               maxLines: 3,
               maxLength: 500,
               decoration: InputDecoration(
-                hintText: 'Тавсиф нависед...',
+                hintText: tr('ui.5927e29104'),
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
                 fillColor: const Color(0xFF111111),

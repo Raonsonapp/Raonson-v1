@@ -14,6 +14,7 @@ import '../widgets/embed_player.dart';
 import 'aparat_api.dart';
 import 'download_service.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class AnimePlayerScreen extends StatefulWidget {
   final String hash;
@@ -230,7 +231,7 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 12),
-          const Text('Сифати видео', style: TextStyle(color: Colors.white,
+          Text(tr('ui.16f026e559'), style: TextStyle(color: Colors.white,
               fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           ..._streams.reversed.map((s) {
@@ -248,7 +249,7 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
                                 : (selected ? AppColors.neonBlue : Colors.white70)),
               title: Text(label, style: const TextStyle(color: Colors.white)),
               trailing: free
-                  ? const Text('Ройгон', style: TextStyle(color: Colors.white38, fontSize: 12))
+                  ? Text(tr('ui.f66dba20ed'), style: TextStyle(color: Colors.white38, fontSize: 12))
                   : Text(locked ? 'VIP 🔒' : 'VIP',
                       style: TextStyle(color: locked ? Colors.amber : Colors.white38, fontSize: 12)),
               onTap: () {
@@ -268,7 +269,7 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Сифати баланд — VIP',
+        title: Text(tr('ui.c0610778de'),
             style: TextStyle(color: Colors.white)),
         content: const Text(
             '720p ва 1080p барои аъзоёни VIP дастрас аст. '
@@ -276,7 +277,7 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
             style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Хуб', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('ui.375ec3fb24'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -320,7 +321,7 @@ class _AnimePlayerScreenState extends State<AnimePlayerScreen> {
                   : IconButton(
                       onPressed: _download,
                       icon: const Icon(AppIcons.download_rounded, color: Colors.white),
-                      tooltip: 'Зеркашӣ'),
+                      tooltip: tr('ui.64b22cb779')),
             ],
           ],
         ),

@@ -3,6 +3,7 @@ import '../../app/app_theme.dart';
 import '../auth_repository.dart';
 import 'reset_password_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -43,7 +44,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.bg, elevation: 0,
-        title: const Text('Кӯмак барои воридшавӣ',
+        title: Text(tr('ui.1f46a104bd'),
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ),
       body: ListView(
@@ -62,7 +63,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Text('Паролатонро фаромӯш кардед?',
+          Text(tr('ui.7c518ea3fb'),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 19, fontWeight: FontWeight.w700)),
@@ -108,7 +109,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               child: _loading
                   ? SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary))
-                  : const Text('Фиристодани рамз',
+                  : Text(tr('ui.4704a0eb36'),
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),

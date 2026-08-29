@@ -16,6 +16,7 @@ import '../../reels/single_reel_screen.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/avatar.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  MessageBubble — 10/10 Instagram style
@@ -231,7 +232,7 @@ class _BubbleBody extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(AppIcons.do_not_disturb_alt_rounded, color: AppColors.textFaint, size: 14),
           SizedBox(width: 6),
-          Text('Паём нест карда шуд',
+          Text(tr('ui.46f661ba77'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 13, fontStyle: FontStyle.italic)),
         ]),
       );
@@ -337,7 +338,7 @@ class _SharedRefBubble extends StatelessWidget {
               posts: [post], initialIndex: 0, title: share.label)));
     } catch (_) {
       messenger.showSnackBar(
-          const SnackBar(content: Text('Мӯҳтаво дастрас нест')));
+          SnackBar(content: Text(tr('ui.870bce111b'))));
     }
   }
 
@@ -365,7 +366,7 @@ class _SharedRefBubble extends StatelessWidget {
                       errorWidget: (_, __, ___) => Container(color: AppColors.card),
                     ),
                     if (share.kind != 'post')
-                      const Center(child: Icon(AppIcons.play_arrow_rounded,
+                      Center(child: Icon(AppIcons.play_arrow_rounded,
                           color: Colors.white, size: 40)),
                   ])
                 : Container(color: AppColors.card,
@@ -736,7 +737,7 @@ class _CallBubble extends StatelessWidget {
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text('Боззанг',
+                child: Text(tr('ui.35bd1e1cf1'),
                     style: TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600, fontSize: 13)),
@@ -799,10 +800,10 @@ class _LocationBubble extends StatelessWidget {
                     colors: [Colors.transparent, Colors.black87],
                   ),
                 ),
-                child: Row(children: const [
+                child: Row(children: [
                   Icon(AppIcons.location_on, color: Colors.white, size: 15),
                   SizedBox(width: 6),
-                  Text('Ҷойгиршавӣ',
+                  Text(tr('ui.552d7f2fe4'),
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 13, fontWeight: FontWeight.w600)),
@@ -1098,12 +1099,12 @@ class _MessageContextMenu extends StatelessWidget {
           // Actions
           _MenuItem(
             icon:  AppIcons.reply_rounded,
-            label: 'Ҷавоб дидан',
+            label: tr('ui.1c77a4d139'),
             onTap: () { Navigator.pop(context); onReply?.call(); },
           ),
           _MenuItem(
             icon:  AppIcons.copy_rounded,
-            label: 'Нусха',
+            label: tr('ui.2486e978c6'),
             onTap: () {
               Clipboard.setData(ClipboardData(text: message.text));
               Navigator.pop(context);
@@ -1112,14 +1113,14 @@ class _MessageContextMenu extends StatelessWidget {
           if (message.isMine && !message.isDeleted)
             _MenuItem(
               icon:  AppIcons.delete_outline_rounded,
-              label: 'Нест кардан',
+              label: tr('ui.bffaabdbc0'),
               color: Colors.red,
               onTap: () { Navigator.pop(context); onDelete?.call(); },
             ),
           if (!message.isMine)
             _MenuItem(
               icon:  AppIcons.flag_outlined,
-              label: 'Шикоят кардан',
+              label: tr('ui.0f9765f1b4'),
               color: Colors.redAccent,
               onTap: () { Navigator.pop(context); onReport?.call(); },
             ),
@@ -1230,7 +1231,7 @@ class _ViewOnceBubbleState extends State<_ViewOnceBubble> {
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black, elevation: 0,
-          title: const Text('Як бор дида мешавад',
+          title: Text(tr('ui.65b107bef6'),
               style: TextStyle(color: Colors.white, fontSize: 15)),
           leading: IconButton(
             icon: const Icon(AppIcons.close, color: Colors.white),

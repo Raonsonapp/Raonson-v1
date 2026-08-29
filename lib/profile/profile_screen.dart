@@ -38,6 +38,7 @@ import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
+import '../core/i18n/strings.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -205,7 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        title: Text('Актуальни нав',
+        title: Text(tr('ui.f34e8f52dd'),
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: ctrl,
@@ -213,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           maxLength: 20,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Ном...',
+            hintText: tr('ui.3679b2134b'),
             hintStyle: TextStyle(color: AppColors.textFaint),
             counterStyle: TextStyle(color: AppColors.textFaint),
             enabledBorder: UnderlineInputBorder(
@@ -225,11 +226,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(context, ctrl.text),
-              child: const Text('Эҷод',
+              child: Text(tr('ui.b9b1bc06dc'),
                   style: TextStyle(
                       color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
         ],
@@ -285,7 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           style: TextStyle(color: AppColors.textSecondary)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context),
-            child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
         TextButton(onPressed: () { Navigator.pop(context); _ctrl.toggleBlock(); },
             child: Text(cur ? 'Бардор' : 'Блок кун',
                 style: const TextStyle(color: Colors.redAccent,
@@ -307,15 +308,15 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _confirmDelete(PostModel p) {
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: AppColors.card,
-      title: Text('Нест кардан?',
+      title: Text(tr('ui.e6326ea2d4'),
           style: TextStyle(color: AppColors.textPrimary)),
-      content: Text('Ин пост тамоман нест мешавад.',
+      content: Text(tr('ui.9b7daa1e53'),
           style: TextStyle(color: AppColors.textSecondary)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context),
-            child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
         TextButton(onPressed: () { Navigator.pop(context); _ctrl.deletePost(p); },
-            child: const Text('Нест кун',
+            child: Text(tr('ui.b03ce66658'),
                 style: TextStyle(color: Colors.redAccent,
                     fontWeight: FontWeight.bold))),
       ]));
@@ -365,14 +366,14 @@ class _ProfileScreenState extends State<ProfileScreen>
         body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(AppIcons.person_off_rounded, size: 56, color: AppColors.textFaint),
           const SizedBox(height: 12),
-          Text('Корбар ёфт нашуд',
+          Text(tr('ui.4b2790adcd'),
               style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
           if (_ctrl.error != null)
             Padding(padding: const EdgeInsets.all(12),
                 child: Text(_ctrl.error!,
                     style: const TextStyle(color: Colors.redAccent, fontSize: 12))),
           TextButton(onPressed: _ctrl.loadProfile,
-              child: const Text('Дубора',
+              child: Text(tr('ui.040311f9a0'),
                   style: TextStyle(color: AppColors.neonBlue))),
         ])));
     }
@@ -500,10 +501,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                     Expanded(child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _Stat(n: user.postsCount,     label: 'Постҳо'),
-                        _Stat(n: user.followersCount, label: 'Пайравон',
+                        _Stat(n: user.postsCount,     label: tr('ui.21b18a3da2')),
+                        _Stat(n: user.followersCount, label: tr('ui.0af7a81b0d'),
                             onTap: () => _userList('Пайравон', user.id, true)),
-                        _Stat(n: user.followingCount, label: 'Пайравӣ',
+                        _Stat(n: user.followingCount, label: tr('ui.bc99e8eb3c'),
                             onTap: () => _userList('Пайравӣ', user.id, false)),
                       ])),
                   ])),
@@ -746,10 +747,10 @@ class _OwnBtns extends StatelessWidget {
       required this.verified, this.onVerify});
   @override
   Widget build(BuildContext context) => Row(children: [
-    Expanded(child: _Btn(label: 'Таҳрири профил',
+    Expanded(child: _Btn(label: tr('ui.62e96b608a'),
         icon: AppIcons.edit_rounded, onTap: onEdit)),
     const SizedBox(width: 8),
-    Expanded(child: _Btn(label: 'Мубодила',
+    Expanded(child: _Btn(label: tr('ui.f7fbebcbcf'),
         icon: AppIcons.share_rounded, onTap: onShare)),
     const SizedBox(width: 8),
     GestureDetector(onTap: verified ? null : onVerify,
@@ -800,7 +801,7 @@ class _OtherBtns extends StatelessWidget {
         child: Container(height: 34,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(10),
             color: AppColors.surface, border: Border.all(color: AppColors.dividerFaint)),
-          child: Center(child: Text('Паём', style: TextStyle(
+          child: Center(child: Text(tr('ui.10b76dbc9f'), style: TextStyle(
               color: AppColors.textPrimary, fontWeight: FontWeight.bold,
               fontSize: 13.5)))))),
     ]);
@@ -843,7 +844,7 @@ class _PrivateAccountView extends StatelessWidget {
                 color: AppColors.textPrimary, size: 40),
           ),
           const SizedBox(height: 20),
-          Text('Ин аккаунти пӯшида аст',
+          Text(tr('ui.ba490340e0'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
@@ -880,11 +881,11 @@ class _PostGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (posts.isEmpty) {
-      return const _Empty(icon: AppIcons.grid_off_rounded, label: 'Ҳанӯз пост нест');
+      return _Empty(icon: AppIcons.grid_off_rounded, label: tr('ui.c977f697f6'));
     }
     return GridView.builder(
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
           childAspectRatio: 1.0),
       itemCount: posts.length,
@@ -894,7 +895,7 @@ class _PostGrid extends StatelessWidget {
         return GestureDetector(
           onTap: () => Navigator.push(ctx, MaterialPageRoute(
               builder: (_) => PostDetailScreen(
-                  posts: posts, initialIndex: i, title: 'Постҳо',
+                  posts: posts, initialIndex: i, title: tr('ui.21b18a3da2'),
                   fallbackUser: owner,
                   onPostDeleted: (post) => onRemoved?.call(post.id)))),
           onLongPress: isMe ? () => onLongPress(p) : null,
@@ -945,12 +946,12 @@ class _ReelGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (reels.isEmpty) {
-      return const _Empty(icon: AppIcons.videocam_off_rounded,
-          label: 'Ҳанӯз рил нест');
+      return _Empty(icon: AppIcons.videocam_off_rounded,
+          label: tr('ui.651a835892'));
     }
     return GridView.builder(
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
           childAspectRatio: 0.65),
       itemCount: reels.length,
@@ -1004,19 +1005,19 @@ class _TGS extends State<_TaggedGrid> {
   Widget build(BuildContext context) {
     final posts = widget.ctrl.taggedPosts;
     if (posts.isEmpty) {
-      return const _Empty(icon: AppIcons.person_pin_outlined,
-          label: 'Ҳанӯз зикр нашудааст');
+      return _Empty(icon: AppIcons.person_pin_outlined,
+          label: tr('ui.bcfcadcea6'));
     }
     return GridView.builder(
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
           childAspectRatio: 1.0),
       itemCount: posts.length,
       itemBuilder: (ctx, i) => GestureDetector(
         onTap: () => Navigator.push(ctx, MaterialPageRoute(
             builder: (_) => PostDetailScreen(
-                posts: posts, initialIndex: i, title: 'Зикршуда'))),
+                posts: posts, initialIndex: i, title: tr('ui.eff2002784')))),
         child: CachedNetworkImage(
             imageUrl: posts[i].mediaUrl, fit: BoxFit.cover, memCacheWidth: 450,
             placeholder: (_, __) => Container(color: AppColors.card),
@@ -1040,11 +1041,11 @@ class _SGS extends State<_SavedGrid> {
     // Сатри папкаҳо ҳамеша мебарояд — то корбар папкаи нав созад,
     // ҳатто вақте ҳанӯз пости захирашуда нест.
     if (posts.isEmpty) {
-      return ListView(children: const [
+      return ListView(children: [
         CollectionsRow(),
         SizedBox(height: 40),
         _Empty(icon: AppIcons.bookmark_border_rounded,
-            label: 'Сохташудаҳо нест'),
+            label: tr('ui.eff9bc2ca2')),
       ]);
     }
     return Column(children: [
@@ -1059,7 +1060,7 @@ class _SGS extends State<_SavedGrid> {
           itemBuilder: (ctx, i) => GestureDetector(
             onTap: () => Navigator.push(ctx, MaterialPageRoute(
                 builder: (_) => PostDetailScreen(
-                    posts: posts, initialIndex: i, title: 'Сохташуда'))),
+                    posts: posts, initialIndex: i, title: tr('ui.2694a771bc')))),
             child: CachedNetworkImage(
                 imageUrl: posts[i].mediaUrl, fit: BoxFit.cover,
                 memCacheWidth: 450,
@@ -1134,7 +1135,7 @@ class _ULS extends State<_UserListSheet> {
               controller: _searchCtrl,
               style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'Ҷустуҷӯ',
+                hintText: tr('ui.34015b1656'),
                 hintStyle: TextStyle(color: AppColors.textFaint, fontSize: 14),
                 prefixIcon: Icon(AppIcons.search, color: AppColors.textFaint, size: 19),
                 border: InputBorder.none,
@@ -1288,8 +1289,7 @@ class _VerifySheet extends StatelessWidget {
         Text('Raonson Verified', style: TextStyle(color: AppColors.textPrimary,
             fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        Text('Профили тасдиқшуда корбаронро нишон медиҳад, '
-            'ки шумо аслӣ ҳастед.',
+        Text(tr('ui.0389b45bf0'),
             style: TextStyle(color: AppColors.textPrimary.withOpacity(0.55),
                 fontSize: 13.5),
             textAlign: TextAlign.center),
@@ -1301,12 +1301,12 @@ class _VerifySheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14))),
-          child: Text('Тасдиқ дархост кун',
+          child: Text(tr('ui.a849ffe965'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold, fontSize: 15)))),
         const SizedBox(height: 10),
         TextButton(onPressed: () => Navigator.pop(context),
-            child: Text('Бекор',
+            child: Text(tr('ui.47ba09d086'),
                 style: TextStyle(color: AppColors.textFaint))),
       ])));
 }

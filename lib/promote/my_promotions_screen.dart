@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class MyPromotionsScreen extends StatefulWidget {
   const MyPromotionsScreen({super.key});
@@ -46,10 +47,10 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
 
   ({String label, Color color}) _status(String s) {
     switch (s) {
-      case 'active':   return (label: 'Фаъол', color: AppColors.storyEnd);
-      case 'finished': return (label: 'Анҷомёфта', color: AppColors.textFaint);
-      case 'rejected': return (label: 'Рад шуд', color: Colors.redAccent);
-      default:         return (label: 'Дар баррасӣ', color: Colors.orangeAccent);
+      case 'active':   return (label: tr('ui.c0f3d3d6f3'), color: AppColors.storyEnd);
+      case 'finished': return (label: tr('ui.ea849e43d2'), color: AppColors.textFaint);
+      case 'rejected': return (label: tr('ui.c428be389c'), color: Colors.redAccent);
+      default:         return (label: tr('ui.acb9082e78'), color: Colors.orangeAccent);
     }
   }
 
@@ -60,7 +61,7 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
-        title: const Text('Рекламаҳои ман',
+        title: Text(tr('ui.66611b7212'),
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: _loading

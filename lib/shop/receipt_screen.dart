@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import 'order_management_screen.dart' show kOrderStatuses;
+import '../core/i18n/strings.dart';
 
 class ReceiptScreen extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -53,7 +54,7 @@ class ReceiptScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Чек',
+        title: Text(tr('ui.29effce436'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
@@ -61,8 +62,8 @@ class ReceiptScreen extends StatelessWidget {
             icon: Icon(AppIcons.copy_rounded, color: AppColors.textPrimary),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: _asText()));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Чек нусхабардорӣ шуд')));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr('ui.cdd092966b'))));
             },
           ),
           IconButton(
@@ -72,13 +73,13 @@ class ReceiptScreen extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         children: [
           Center(child: Column(children: [
             Text('RAONSON', style: TextStyle(
                 color: AppColors.textPrimary, fontSize: 22,
                 fontWeight: FontWeight.w900, letterSpacing: 2)),
-            Text('Чеки фармоиш',
+            Text(tr('ui.69afb85aa5'),
                 style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           ])),
           const SizedBox(height: 20),
@@ -127,7 +128,7 @@ class ReceiptScreen extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: 16),
-          Center(child: Text('Ташаккур барои фурӯш дар Raonson 💚',
+          Center(child: Text(tr('ui.a987f80582'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12))),
         ],
       ),

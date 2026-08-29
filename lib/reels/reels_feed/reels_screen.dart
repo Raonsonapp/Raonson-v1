@@ -1150,7 +1150,7 @@ class _ReelItemState extends State<_ReelItem> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Омор',
+        title: Text(tr('ui.9e40b43049'),
             style: TextStyle(
                 color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1173,7 +1173,7 @@ class _ReelItemState extends State<_ReelItem> {
                 Navigator.pop(context);
                 if (!_paused) _ctrl?.play();
               },
-              child: const Text('Пӯшидан',
+              child: Text(tr('ui.5ab5a0e8cd'),
                   style: TextStyle(color: AppColors.neonBlue)))
         ],
       ),
@@ -1200,18 +1200,18 @@ class _ReelItemState extends State<_ReelItem> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Нест кардан?',
+        title: Text(tr('ui.e6326ea2d4'),
             style: TextStyle(color: Colors.white)),
-        content: const Text('Рилс тамоман нест мешавад.',
+        content: Text(tr('ui.0faedcb675'),
             style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: Colors.white54))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Нест кун',
+              child: Text(tr('ui.b03ce66658'),
                   style: TextStyle(color: Colors.redAccent))),
         ],
       ),
@@ -1226,8 +1226,8 @@ class _ReelItemState extends State<_ReelItem> {
       widget.onDelete();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.52b12aaebc')),
           duration: Duration(seconds: 2)));
       }
       if (!_paused && mounted) _ctrl?.play();
@@ -1248,7 +1248,7 @@ class _ReelItemState extends State<_ReelItem> {
             interested ? 'Алгоритм навшуд ✓' : 'Рилс пинҳон шуд'),
         backgroundColor:
             interested ? Colors.green : Colors.grey[800],
-        duration: const Duration(seconds: 2)));
+        duration: Duration(seconds: 2)));
     if (!_paused) _ctrl?.play();
   }
 
@@ -1264,7 +1264,7 @@ class _ReelItemState extends State<_ReelItem> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Шикоят кардан',
+        title: Text(tr('ui.0f9765f1b4'),
             style: TextStyle(color: Colors.white)),
         content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1285,8 +1285,8 @@ class _ReelItemState extends State<_ReelItem> {
     await ApiClient.instance
         .post('/reels/${widget.reel.id}/report', body: {'reason': reason});
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Шикоят фиристода шуд. Раҳмат!'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.0741b6783e')),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2)));
     }
@@ -1296,8 +1296,8 @@ class _ReelItemState extends State<_ReelItem> {
   void _openComments() {
     // Шарҳҳо хомӯшанд ва бинанда соҳиб нест → пайғоми маҳдудият.
     if (_commentsOff && !_isOwner) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Шарҳҳо барои ин Reel хомӯш карда шудаанд'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.48474336fd')),
           duration: Duration(seconds: 2)));
       return;
     }
@@ -1352,7 +1352,7 @@ class _ReelItemState extends State<_ReelItem> {
       builder: (_) =>
           SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
-        const Text('Мубодила',
+        Text(tr('ui.f7fbebcbcf'),
             style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -1372,9 +1372,9 @@ class _ReelItemState extends State<_ReelItem> {
                 backgroundColor: AppColors.neonBlue,
                 child: Icon(AppIcons.send_outlined,
                     color: Colors.white, size: 18)),
-            title: const Text('Дар паём фиристодан',
+            title: Text(tr('ui.44e270dd56'),
                 style: TextStyle(color: Colors.white)),
-            subtitle: const Text('Ба дӯстон бифиристед',
+            subtitle: Text(tr('ui.0566a3e56e'),
                 style: TextStyle(color: Colors.white38, fontSize: 12)),
             onTap: () {
               Navigator.pop(context);
@@ -1385,7 +1385,7 @@ class _ReelItemState extends State<_ReelItem> {
                 backgroundColor: Color(0xFF833AB4),
                 child: Icon(AppIcons.add_circle_outline,
                     color: Colors.white, size: 18)),
-            title: const Text('Ба история илова кун',
+            title: Text(tr('ui.a590f99f04'),
                 style: TextStyle(color: Colors.white)),
             onTap: () async {
               Navigator.pop(context);
@@ -1397,15 +1397,15 @@ class _ReelItemState extends State<_ReelItem> {
                 });
                 if (okRes.statusCode >= 400) throw Exception();
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Ба история илова шуд ✓'),
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(tr('ui.b2d970d7e0')),
                       backgroundColor: Colors.green,
                       duration: Duration(seconds: 2)));
                 }
               } catch (_) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Хато ҳангоми илова'),
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(tr('ui.15142ab580')),
                       duration: Duration(seconds: 2)));
                 }
               }
@@ -1414,22 +1414,22 @@ class _ReelItemState extends State<_ReelItem> {
             leading: const CircleAvatar(
                 backgroundColor: Colors.white12,
                 child: Icon(AppIcons.link, color: Colors.white, size: 18)),
-            title: const Text('Линкро нусха кун',
+            title: Text(tr('ui.e940f097b5'),
                 style: TextStyle(color: Colors.white)),
             onTap: () {
               Clipboard.setData(ClipboardData(text: url));
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Линк нусха шуд ✓'),
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr('ui.2713bf4095')),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2)));
             }),
         ListTile(
-            leading: const CircleAvatar(
+            leading: CircleAvatar(
                 backgroundColor: Colors.white12,
                 child: Icon(AppIcons.share_outlined,
                     color: Colors.white, size: 18)),
-            title: const Text('Дигар барномаҳо',
+            title: Text(tr('ui.857068bca0'),
                 style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pop(context);
@@ -1771,7 +1771,7 @@ class _ReelItemState extends State<_ReelItem> {
                                           color: Colors.white, width: 1.2),
                                       borderRadius:
                                           BorderRadius.circular(20)),
-                                  child: const Text('Пайравӣ кунед',
+                                  child: Text(tr('ui.61dfadd676'),
                                       style: TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w600,

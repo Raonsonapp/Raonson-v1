@@ -11,6 +11,7 @@ import 'create_post/create_post_screen.dart';
 import 'create_reel/create_reel_screen.dart';
 import 'create_story/create_story_screen.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 enum CreateMode { post, story, reel }
 
@@ -101,8 +102,8 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
     // Дар режими Reel танҳо видео қабул мешавад (акс compressVideo-ро вайрон мекунад).
     if (_mode == CreateMode.reel && a.type != AssetType.video) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Барои Reel видео интихоб кунед'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.5dea613947')),
             duration: Duration(seconds: 2)));
       }
       return;
@@ -160,7 +161,7 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
         backgroundColor: Colors.black,
         elevation: 0,
         leading: IconButton(
-            icon: const Icon(AppIcons.close, color: Colors.white),
+            icon: Icon(AppIcons.close, color: Colors.white),
             onPressed: () => Navigator.pop(context)),
         centerTitle: true,
         title: Text(_title,
@@ -195,26 +196,26 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
           const Icon(AppIcons.photo_library_outlined,
               color: Colors.white30, size: 48),
           const SizedBox(height: 14),
-          const Text('Барои нишон додани галерея иҷозат лозим аст',
+          Text(tr('ui.7282ab6f08'),
               style: TextStyle(color: Colors.white54, fontSize: 14),
               textAlign: TextAlign.center),
           const SizedBox(height: 14),
           TextButton(
             onPressed: () => PhotoManager.openSetting(),
-            child: const Text('Кушодани танзимот',
+            child: Text(tr('ui.1ff449882a'),
                 style: TextStyle(color: Color(0xFF0095F6))),
           ),
         ]),
       );
     }
     if (_assets.isEmpty) {
-      return const Center(
-          child: Text('Расм нест', style: TextStyle(color: Colors.white38)));
+      return Center(
+          child: Text(tr('ui.e91800a3f9'), style: TextStyle(color: Colors.white38)));
     }
     return GridView.builder(
       controller: _scroll,
       padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 4, mainAxisSpacing: 2, crossAxisSpacing: 2),
       itemCount: _assets.length + 1,
       itemBuilder: (_, i) {
@@ -309,12 +310,12 @@ class _CameraTile extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         color: const Color(0xFF1C1C1C),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(AppIcons.photo_camera_rounded, color: Colors.white, size: 26),
             SizedBox(height: 4),
-            Text('Камера',
+            Text(tr('ui.a71a775fd9'),
                 style: TextStyle(color: Colors.white70, fontSize: 11)),
           ],
         ),

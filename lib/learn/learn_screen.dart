@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import 'tutor_chat_screen.dart';
+import '../core/i18n/strings.dart';
 
 class _Track {
   final String id, title, sub;
@@ -42,15 +43,14 @@ class LearnScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Омӯзиш бо Устоз AI',
+        title: Text(tr('ui.52e7234545'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 18,
                 fontWeight: FontWeight.bold)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Соҳаеро интихоб кун — Устоз ҳар рӯз қадам ба қадам, содда '
-              'мисли ба кӯдаки 10-сола, ба ту меомӯзонад 👇',
+          Text(tr('ui.0f1340e088'),
               style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
           const SizedBox(height: 16),
           ..._tracks.map((t) => _card(context, t)),

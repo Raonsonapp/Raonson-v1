@@ -9,16 +9,19 @@ import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
 import 'receipt_screen.dart';
+import '../core/i18n/strings.dart';
 
-const Map<String, ({String label, Color color})> kOrderStatuses = {
-  'pending':   (label: 'Дар интизор',    color: Color(0xFFF7971E)),
-  'confirmed': (label: 'Тасдиқшуда',      color: Color(0xFF00C6FF)),
-  'packed':    (label: 'Бастабандӣ',      color: Color(0xFF7F00FF)),
-  'shipping':  (label: 'Дар роҳ',         color: Color(0xFF00A8E8)),
-  'delivered': (label: 'Расонида шуд',    color: Color(0xFF00C853)),
-  'returned':  (label: 'Баргардонида',    color: Color(0xFF9E9E9E)),
-  'refunded':  (label: 'Пул баргашт',     color: Color(0xFF9E9E9E)),
-  'cancelled': (label: 'Бекоршуда',       color: Color(0xFFE53935)),
+// Не const: tr() ҳангоми иҷро кор мекунад ва ҳамчунин ҳангоми
+// иваз кардани забон матни нав бармегардонад.
+Map<String, ({String label, Color color})> get kOrderStatuses => {
+  'pending':   (label: tr('ui.3e9f5603be'),    color: Color(0xFFF7971E)),
+  'confirmed': (label: tr('ui.dcd1405bea'),      color: Color(0xFF00C6FF)),
+  'packed':    (label: tr('ui.5cfb364bf7'),      color: Color(0xFF7F00FF)),
+  'shipping':  (label: tr('ui.030d49a8ff'),         color: Color(0xFF00A8E8)),
+  'delivered': (label: tr('ui.d619632ac3'),    color: Color(0xFF00C853)),
+  'returned':  (label: tr('ui.843d4cd0fb'),    color: Color(0xFF9E9E9E)),
+  'refunded':  (label: tr('ui.4349c55041'),     color: Color(0xFF9E9E9E)),
+  'cancelled': (label: tr('ui.75c2266665'),       color: Color(0xFFE53935)),
 };
 
 class OrderManagementScreen extends StatefulWidget {
@@ -70,7 +73,7 @@ class _OrderManagementState extends State<OrderManagementScreen> {
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
-          Text('Ҳолати фармоиш',
+          Text(tr('ui.674ea28485'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 6),
@@ -100,7 +103,7 @@ class _OrderManagementState extends State<OrderManagementScreen> {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         title: Row(mainAxisSize: MainAxisSize.min, children: [
           TajikshopBrand.logoCompact(size: 14),
-          Text(' — Фармоишҳо',
+          Text(tr('ui.a76988d263'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 15, fontWeight: FontWeight.bold)),
         ]),
@@ -126,7 +129,7 @@ class _OrderManagementState extends State<OrderManagementScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
                         const SizedBox(height: 180),
-                        Center(child: Text('Фармоиш нест',
+                        Center(child: Text(tr('ui.5b7c3e6c1a'),
                             style: TextStyle(color: AppColors.textFaint))),
                       ])
                   : ListView.builder(

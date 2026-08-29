@@ -11,6 +11,7 @@ import '../../core/webrtc_service.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/ui/app_icons.dart';
 import '../chat_repository.dart';
+import '../../core/i18n/strings.dart';
 
 enum CallType { voice, video }
 
@@ -113,8 +114,8 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   Future<void> _joinAgora() async {
     if (kAgoraAppId.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Зангҳо ҳозир дастрас нест'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.cce2a178f1')),
             backgroundColor: Colors.red, duration: Duration(seconds: 3)));
         Navigator.pop(context);
       }
@@ -127,7 +128,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _timer = Timer.periodic(Duration(seconds: 1), (_) {
       if (mounted) setState(() => _seconds++);
     });
   }
@@ -181,7 +182,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     _agora.leaveCall();
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Занг рад шуд')));
+        .showSnackBar(SnackBar(content: Text(tr('ui.30bcc62c44'))));
     Navigator.pop(context);
   }
 
@@ -215,7 +216,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   // ══════════════════ VOICE UI ══════════════════
 
   Widget _buildVoice() => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topLeft, end: Alignment.bottomRight,
         colors: [Color(0xFF050914), Color(0xFF0D1B3E), Color(0xFF050914)],
@@ -262,7 +263,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
           _EndBtn(onTap: _endCall),
           _Btn(
             icon:   _agora.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_down_rounded,
-            label:  'Баланд',
+            label:  tr('ui.ce3cad995c'),
             active: _agora.speakerOn,
             onTap:  _agora.toggleSpeaker,
           ),
@@ -347,14 +348,14 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
         )),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
           _Btn(icon: _agora.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
-              label: 'Овоз', active: _agora.muted, onTap: _agora.toggleMute),
+              label: tr('ui.485bf9ddc4'), active: _agora.muted, onTap: _agora.toggleMute),
           _Btn(icon: _agora.cameraOff ? AppIcons.videocam_off_rounded : AppIcons.videocam_rounded,
-              label: 'Камера', active: _agora.cameraOff, onTap: _agora.toggleCamera),
+              label: tr('ui.a71a775fd9'), active: _agora.cameraOff, onTap: _agora.toggleCamera),
           _EndBtn(onTap: _endCall),
           _Btn(icon: AppIcons.flip_camera_ios_rounded,
-              label: 'Тағир', active: false, onTap: _agora.flipCamera),
+              label: tr('ui.05a19ea7d3'), active: false, onTap: _agora.flipCamera),
           _Btn(icon: _agora.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_off_rounded,
-              label: 'Баланд', active: _agora.speakerOn, onTap: _agora.toggleSpeaker),
+              label: tr('ui.ce3cad995c'), active: _agora.speakerOn, onTap: _agora.toggleSpeaker),
         ]),
       ),
     ),
@@ -373,10 +374,10 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       borderRadius: BorderRadius.circular(20),
       border: Border.all(color: Colors.green.withOpacity(0.4)),
     ),
-    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(AppIcons.circle, color: Colors.green, size: 8),
       SizedBox(width: 6),
-      Text('Пайваст', style: TextStyle(color: Colors.green, fontSize: 13)),
+      Text(tr('ui.bbd96268bb'), style: TextStyle(color: Colors.green, fontSize: 13)),
     ]),
   );
 }
@@ -388,7 +389,7 @@ class _Btn extends StatelessWidget {
   final String       label;
   final bool         active;
   final VoidCallback onTap;
-  const _Btn({required this.icon, required this.label,
+  _Btn({required this.icon, required this.label,
       required this.active, required this.onTap});
 
   @override
@@ -434,7 +435,7 @@ class _EndBtn extends StatelessWidget {
         child: Icon(AppIcons.call_end_rounded, color: AppColors.textPrimary, size: 32),
       ),
       const SizedBox(height: 6),
-      Text('Қатъ', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+      Text(tr('ui.f0718687b4'), style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
     ]),
   );
 }

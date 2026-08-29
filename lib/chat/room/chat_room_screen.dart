@@ -21,6 +21,7 @@ import 'message_input.dart';
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -437,8 +438,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (perm == LocationPermission.denied ||
         perm == LocationPermission.deniedForever) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Иҷозати ҷойгиршавӣ дода нашуд'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.2cce78d6a6')),
             duration: Duration(seconds: 2)));
       }
       return;
@@ -446,11 +447,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     Position pos;
     try {
       pos = await Geolocator.getCurrentPosition()
-          .timeout(const Duration(seconds: 12));
+          .timeout(Duration(seconds: 12));
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Ҷойгиршавӣ дастрас нашуд'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.b3ab6650c0')),
             duration: Duration(seconds: 2)));
       }
       return;
@@ -544,8 +545,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (mounted) {
         setState(() =>
             _messages.removeWhere((m) => m.id == optimistic.id));
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Фиристодан нашуд'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.c3fd5b17ac')),
             duration: Duration(seconds: 2)));
       }
     }
@@ -592,8 +593,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (okRes.statusCode >= 400) throw Exception();
     } catch (_) {}
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Шикоят фиристода шуд'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('ui.3fed985ffa')),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 2)));
     }
@@ -610,7 +611,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (_scroll.hasClients) {
         _scroll.animateTo(
           _scroll.position.maxScrollExtent + 80,
-          duration: const Duration(milliseconds: 300),
+          duration: Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
@@ -716,7 +717,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: _blockRequest,
-                child: const Text('Блок'),
+                child: Text(tr('ui.00eb06d58a')),
               ),
             ),
             const SizedBox(width: 8),
@@ -729,7 +730,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: _deleteRequest,
-                child: const Text('Нест'),
+                child: Text(tr('ui.93cfce891b')),
               ),
             ),
             const SizedBox(width: 8),
@@ -743,7 +744,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 onPressed: _acceptRequest,
-                child: const Text('Қабул',
+                child: Text(tr('ui.5d3c9ee794'),
                     style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ),
@@ -859,7 +860,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
-          Text('Мавзӯи чат',
+          Text(tr('ui.3bd88dbe86'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600, fontSize: 15)),
           const SizedBox(height: 14),
@@ -981,7 +982,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   fontSize: 13,
                 )),
           const SizedBox(height: 20),
-          Text('Чизе гӯед! 👋',
+          Text(tr('ui.58a1db8579'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
           const SizedBox(height: 24),
           Row(
@@ -989,12 +990,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             children: [
               _QuickBtn(
                   icon: AppIcons.call_rounded,
-                  label: 'Зангӣ овозӣ',
+                  label: tr('ui.0c8b865eae'),
                   onTap: () => _startCall(CallType.voice)),
               const SizedBox(width: 16),
               _QuickBtn(
                   icon: AppIcons.videocam_rounded,
-                  label: 'Зангӣ видео',
+                  label: tr('ui.0bb1bc2b58'),
                   onTap: () => _startCall(CallType.video)),
             ],
           ),

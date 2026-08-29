@@ -238,19 +238,19 @@ class _PostCardState extends State<PostCard>
     final items = await CollectionsApi.list();
     if (!mounted) return;
     if (items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Ҳанӯз папка нест — дар «Захирашуда» созед')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.90548a028a'))));
       return;
     }
     final chosen = await showModalBottomSheet<SavedCollection>(
       context: context,
       backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 12),
-          Text('Ба кадом папка?',
+          Text(tr('ui.bf2be553fa'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(height: 6),
@@ -433,8 +433,8 @@ class _PostCardState extends State<PostCard>
       if (okRes.statusCode >= 400) throw Exception();
       widget.onDeleted?.call(); // аз феед/профил мепарад
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Ба бойгонӣ кӯчид ✓'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.3175443c32')),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2)));
       }
@@ -463,8 +463,8 @@ class _PostCardState extends State<PostCard>
           .delete('/posts/${widget.post.id}/tag');
       if (!mounted) return;
       if (res.statusCode < 400) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Қайди шумо бардошта шуд')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.60881fb4df'))));
       } else {
         throw Exception();
       }
@@ -490,17 +490,17 @@ class _PostCardState extends State<PostCard>
           //  метавонӣ онро аз профили худ бигирӣ).
           if (_taggedMe)
             _MenuItem(icon: AppIcons.person_off_rounded,
-                label: 'Қайди худро бардор',
+                label: tr('ui.fc18bb515b'),
                 onTap: () { Navigator.pop(context); _removeMyTag(); }),
           _MenuItem(icon: Icons.volume_off_outlined,
               label: 'Постҳои @${widget.post.user.username}-ро бандош',
               onTap: () { Navigator.pop(context); _muteUser(); }),
           _MenuItem(icon: AppIcons.flag_outlined, iconColor: Colors.redAccent,
-              label: 'Жалоб партофтан', labelColor: Colors.redAccent,
+              label: tr('ui.fb18e0d540'), labelColor: Colors.redAccent,
               onTap: () { Navigator.pop(context); _reportPost(); }),
-          _MenuItem(icon: AppIcons.thumb_up_outlined, label: 'Интересно',
+          _MenuItem(icon: AppIcons.thumb_up_outlined, label: tr('ui.45b14bf6ba'),
               onTap: () { Navigator.pop(context); _markInterest(true); }),
-          _MenuItem(icon: AppIcons.thumb_down_outlined, label: 'Неинтересно',
+          _MenuItem(icon: AppIcons.thumb_down_outlined, label: tr('ui.4024f45285'),
               onTap: () { Navigator.pop(context); _markInterest(false); }),
           _MenuItem(icon: AppIcons.person_outline_rounded,
               label: 'Профили @${widget.post.user.username}',
@@ -520,15 +520,15 @@ class _PostCardState extends State<PostCard>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Ҳазф кардан?',
+        title: Text(tr('ui.6136a3ac94'),
             style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Пост тамоман ҳазф мешавад.',
+        content: Text(tr('ui.0e82492480'),
             style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Ҳазф', style: TextStyle(color: Colors.redAccent))),
+              child: Text(tr('ui.1cd58d88f1'), style: TextStyle(color: Colors.redAccent))),
         ],
       ),
     );
@@ -538,16 +538,16 @@ class _PostCardState extends State<PostCard>
       if (res.statusCode < 400) {
         widget.onDeleted?.call();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Пост ҳазф шуд'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.bdc6aeeb07')),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2)));
         }
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Хатогӣ. Дубора кӯшиш кунед'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.52b12aaebc')),
           duration: Duration(seconds: 2)));
       }
     }
@@ -571,9 +571,9 @@ class _PostCardState extends State<PostCard>
                 borderRadius: BorderRadius.circular(2))),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             TextButton(onPressed: () { ctrl.dispose(); Navigator.pop(ctx); },
-              child: Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.textTertiary))),
-            Text('Таҳрир кардан', style: TextStyle(
+            Text(tr('ui.ec93da70f5'), style: TextStyle(
                 color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
             TextButton(
               onPressed: () async {
@@ -585,16 +585,16 @@ class _PostCardState extends State<PostCard>
                   body: {'caption': newCaption});
                 if (res.statusCode < 400 && mounted) {
                   setState(() => _caption = newCaption);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Навшуд ✓'),
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(tr('ui.5dda457972')),
                     backgroundColor: Colors.green,
                     duration: Duration(seconds: 2)));
                 }
               },
-              child: const Text('Захира', style: TextStyle(
+              child: Text(tr('ui.41cb3d0b3b'), style: TextStyle(
                   color: AppColors.neonBlue, fontWeight: FontWeight.w600))),
           ]),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           if (widget.post.media.isNotEmpty)
             ClipRRect(borderRadius: BorderRadius.circular(8),
               child: CachedNetworkImage(
@@ -610,7 +610,7 @@ class _PostCardState extends State<PostCard>
             controller: ctrl, autofocus: true, maxLines: 6, maxLength: 2200,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 15),
             decoration: InputDecoration(
-              hintText: 'Тавсиф ё матн...',
+              hintText: tr('ui.5e58800050'),
               hintStyle: TextStyle(color: AppColors.textFaint),
               border: InputBorder.none,
               counterStyle: TextStyle(color: AppColors.textFaint))),
@@ -625,7 +625,7 @@ class _PostCardState extends State<PostCard>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Тағир додани мусиқа',
+        title: Text(tr('ui.e6c199732e'),
             style: TextStyle(color: AppColors.textPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _dialogField(titleCtrl,  'Номи суруд'),
@@ -636,7 +636,7 @@ class _PostCardState extends State<PostCard>
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
@@ -648,7 +648,7 @@ class _PostCardState extends State<PostCard>
                   'musicUrl':    urlCtrl.text.trim(),
                 });
             },
-            child: Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
+            child: Text(tr('ui.41cb3d0b3b'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -679,7 +679,7 @@ class _PostCardState extends State<PostCard>
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(color: AppColors.textFaint,
                 borderRadius: BorderRadius.circular(2))),
-          Text('Зикр кардан', style: TextStyle(
+          Text(tr('ui.e20a8c5462'), style: TextStyle(
               color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 12),
           TextField(controller: ctrl, autofocus: true,
@@ -702,7 +702,7 @@ class _PostCardState extends State<PostCard>
                   '/posts/${widget.post.id}/mention',
                   body: {'username': m.replaceAll('@', '')});
               },
-              child: const Text('Зикр кун'))),
+              child: Text(tr('ui.4ed1632448')))),
         ])));
     ctrl.dispose();
   }
@@ -728,7 +728,7 @@ class _PostCardState extends State<PostCard>
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         leading: BackButton(color: AppColors.textPrimary),
-        title: Text('Статистика',
+        title: Text(tr('ui.a77d7f6c0d'),
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
         centerTitle: true),
       body: SingleChildScrollView(padding: const EdgeInsets.all(16),
@@ -749,10 +749,10 @@ class _PostCardState extends State<PostCard>
           const SizedBox(height: 24),
           _SectionTitle('Аудитория'),
           const SizedBox(height: 12),
-          _AudienceBar(label: 'Обунашудагон', pct: fPct,
+          _AudienceBar(label: tr('ui.b1f4937925'), pct: fPct,
               color: const Color(0xFF00C6FF)),
           const SizedBox(height: 8),
-          _AudienceBar(label: 'Дигарон', pct: oPct,
+          _AudienceBar(label: tr('ui.3436f9ab60'), pct: oPct,
               color: const Color(0xFF00E87A)),
           const SizedBox(height: 24),
           _SectionTitle('Амалиётҳо'),
@@ -779,8 +779,8 @@ class _PostCardState extends State<PostCard>
         body: {'reason': result.reason, 'description': result.description});
       if (okRes.statusCode >= 400) throw Exception();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Жалоб фиристода шуд. Раҳмат!'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.3d42af2ead')),
           backgroundColor: Colors.green, duration: Duration(seconds: 2)));
       }
     } catch (_) {}
@@ -799,9 +799,9 @@ class _PostCardState extends State<PostCard>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Постҳои @${widget.post.user.username} пинҳон шуд'),
       backgroundColor: Colors.grey[800],
-      duration: const Duration(seconds: 3),
+      duration: Duration(seconds: 3),
       action: SnackBarAction(
-        label: 'Бекор',
+        label: tr('ui.47ba09d086'),
         textColor: Colors.white,
         onPressed: () {
           ApiClient.instance.delete('/users/${widget.post.user.id}/mute');
@@ -824,15 +824,15 @@ class _PostCardState extends State<PostCard>
     if (!interested && mounted) {
       setState(() => _hidden = true);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Пост пинҳон шуд. Алгоритм навшуд.'),
+        content: Text(tr('ui.6637908434')),
         backgroundColor: Colors.grey[800],
         duration: const Duration(seconds: 3),
-        action: SnackBarAction(label: 'Бекор', textColor: AppColors.textPrimary,
+        action: SnackBarAction(label: tr('ui.47ba09d086'), textColor: AppColors.textPrimary,
           onPressed: () { if (mounted) setState(() => _hidden = false); }),
       ));
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Алгоритм навшуд ✓'), backgroundColor: Colors.green,
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('ui.942c10ff05')), backgroundColor: Colors.green,
         duration: Duration(seconds: 2)));
     }
   }
@@ -856,12 +856,12 @@ class _PostCardState extends State<PostCard>
     showModalBottomSheet(
       context: context, backgroundColor: AppColors.card,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (sheetCtx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         _handle(),
         Padding(padding: EdgeInsets.only(bottom: 8),
-          child: Text('Мубодила кунед', style: TextStyle(
+          child: Text(tr('ui.69ec823ada'), style: TextStyle(
               color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 16))),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -872,7 +872,7 @@ class _PostCardState extends State<PostCard>
               SizedBox(width: 10),
               Icon(AppIcons.search, color: AppColors.textFaint, size: 18),
               SizedBox(width: 6),
-              Text('Ҷустуҷӯ...', style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
+              Text(tr('ui.74571a2fe4'), style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
             ]))),
 
         // Ба чатҳо фиристодан — мисли Instagram
@@ -891,7 +891,7 @@ class _PostCardState extends State<PostCard>
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           child: Row(children: [
             _ShareActionBtn(svgPath: 'assets/icons/add_story.svg',
-              color: const Color(0xFF833AB4), label: 'Сторис',
+              color: const Color(0xFF833AB4), label: tr('ui.7a1a87cda7'),
               onTap: () { Navigator.pop(sheetCtx);
                 Navigator.pushNamed(context, '/create-story'); }),
             _ShareActionBtn(icon: FontAwesomeIcons.whatsapp,
@@ -926,16 +926,16 @@ class _PostCardState extends State<PostCard>
                 _recordShare();
               }),
             _ShareActionBtn(svgPath: 'assets/icons/link.svg',
-              color: AppColors.divider, label: 'Линк',
+              color: AppColors.divider, label: tr('ui.a93e860059'),
               onTap: () {
                 Clipboard.setData(ClipboardData(text: url));
                 Navigator.pop(sheetCtx);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Линк нусха шуд ✓'),
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr('ui.2713bf4095')),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2))); }),
             _ShareActionBtn(svgPath: 'assets/icons/download.svg',
-              color: AppColors.divider, label: 'Зеркашӣ',
+              color: AppColors.divider, label: tr('ui.64b22cb779'),
               onTap: () {
                 Navigator.pop(sheetCtx);
                 final media = widget.post.media.isNotEmpty
@@ -947,20 +947,20 @@ class _PostCardState extends State<PostCard>
                 }
               }),
             _ShareActionBtn(svgPath: 'assets/icons/share.svg',
-              color: AppColors.divider, label: 'Бештар',
+              color: AppColors.divider, label: tr('ui.9d3992d048'),
               onTap: () { Navigator.pop(sheetCtx);
                 Share.share(url).then((_) {
                   _recordShare(); }); }),
           ])),
         Divider(color: AppColors.dividerFaint, height: 1),
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           leading: Container(width: 44, height: 44,
             decoration: const BoxDecoration(color: Color(0xFF0095F6), shape: BoxShape.circle),
             child: Icon(AppIcons.send_rounded, color: AppColors.textPrimary, size: 20)),
-          title: Text('Ба чат фиристодан', style: TextStyle(
+          title: Text(tr('ui.f252a562fb'), style: TextStyle(
               color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w500)),
-          subtitle: Text('Паёми мустақим',
+          subtitle: Text(tr('ui.4e7e7184bc'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           onTap: () { Navigator.pop(sheetCtx);
             Navigator.pushNamed(context, '/chat'); }),
@@ -1005,8 +1005,8 @@ class _PostCardState extends State<PostCard>
   void _openComments() {
     // Шарҳҳо хомӯшанд → пайғоми маҳдудият (соҳиб метавонад боз кунад).
     if (_commentsDisabled && !_isOwner) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Шарҳҳо барои ин пост хомӯш карда шудаанд'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('ui.049bf02e2e')),
         duration: Duration(seconds: 2)));
       return;
     }
@@ -1015,7 +1015,7 @@ class _PostCardState extends State<PostCard>
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.85,
@@ -1038,7 +1038,7 @@ class _PostCardState extends State<PostCard>
                   borderRadius: BorderRadius.circular(2))),
           Padding(
             padding: EdgeInsets.only(bottom: 8),
-            child: Text('Дар ин пост зикршудагон',
+            child: Text(tr('ui.389af7361c'),
                 style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600, fontSize: 15)),
           ),
@@ -1126,7 +1126,7 @@ class _PostCardState extends State<PostCard>
     // Лайкҳо пинҳонанд ва бинанда соҳиб нест → рақам не, танҳо калима
     // «Лайкҳо» (мисли Instagram — «отметки Нравится»).
     if (_hideLikes && !_isOwner) {
-      return Text('Лайкҳо',
+      return Text(tr('ui.a12587206f'),
           style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14, fontWeight: FontWeight.w600));
@@ -1188,7 +1188,7 @@ class _PostCardState extends State<PostCard>
                   const VerifiedBadge(size: 15) ],
                 // Соавтор (2 user 1 публикатсия) — мисли Instagram
                 if (post.collaborators.isNotEmpty) ...[
-                  Text(' ва ',
+                  Text(tr('ui.a8e76e4df4'),
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                   Flexible(child: GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/profile-by-username',
@@ -1421,7 +1421,7 @@ class _PostCardState extends State<PostCard>
             Icon(AppIcons.mode_comment_outlined,
                 size: 13, color: AppColors.grey),
             const SizedBox(width: 5),
-            Text('Шарҳҳо хомӯш карда шудаанд',
+            Text(tr('ui.27b054989c'),
                 style: TextStyle(
                     color: AppColors.grey, fontSize: 13,
                     fontWeight: FontWeight.w500)),
@@ -1615,7 +1615,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
       height: MediaQuery.of(context).size.height * 0.55,
       child: Column(children: [
         _handle(),
-        Text('Лайк гузоштанд',
+        Text(tr('ui.4bfa7c2c25'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
@@ -1624,7 +1624,7 @@ class _WhoLikedSheetState extends State<_WhoLikedSheet> {
               ? const Center(child: CircularProgressIndicator(
                   color: AppColors.neonBlue, strokeWidth: 2))
               : _users.isEmpty
-                  ? Center(child: Text('Ҳанӯз лайк нест',
+                  ? Center(child: Text(tr('ui.474f6cf1bb'),
                       style: TextStyle(color: AppColors.textFaint)))
                   : ListView.builder(
                       itemCount: _users.length,

@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
+import '../core/i18n/strings.dart';
 
 class ProductReviewsScreen extends StatefulWidget {
   final String postId;
@@ -72,7 +73,7 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Баҳоҳо',
+        title: Text(tr('ui.95664aa4ae'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
       ),
@@ -97,7 +98,7 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
                 const SizedBox(height: 16),
                 Divider(color: AppColors.dividerFaint),
                 // Иловаи баҳо
-                Text('Баҳои шумо',
+                Text(tr('ui.0925309e5e'),
                     style: TextStyle(color: AppColors.textPrimary,
                         fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
@@ -116,7 +117,7 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
                   maxLines: 3, maxLength: 500,
                   style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'Фикратонро нависед (ихтиёрӣ)...',
+                    hintText: tr('ui.2ad715b37d'),
                     hintStyle: TextStyle(color: AppColors.textFaint),
                     filled: true, fillColor: AppColors.surface,
                     border: OutlineInputBorder(
@@ -135,7 +136,7 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
                         ? const SizedBox(width: 18, height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2,
                                 color: Colors.white))
-                        : const Text('Фиристодани баҳо',
+                        : Text(tr('ui.582e3366c8'),
                             style: TextStyle(color: Colors.white,
                                 fontWeight: FontWeight.bold)),
                   ),
@@ -144,7 +145,7 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
                 Divider(color: AppColors.dividerFaint),
                 if (_reviews.isEmpty)
                   Padding(padding: const EdgeInsets.all(20),
-                    child: Center(child: Text('Ҳанӯз баҳо нест',
+                    child: Center(child: Text(tr('ui.72f4bb2cc1'),
                         style: TextStyle(color: AppColors.textFaint)))),
                 ..._reviews.map((r) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),

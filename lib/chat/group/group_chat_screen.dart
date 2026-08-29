@@ -16,6 +16,7 @@ import '../room/message_input.dart';
 import 'group_model.dart';
 import 'group_repository.dart';
 import 'group_info_screen.dart';
+import '../../core/i18n/strings.dart';
 
 class GroupChatScreen extends StatefulWidget {
   final GroupModel group;
@@ -208,7 +209,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 )
               : _messages.isEmpty
                   ? Center(
-                      child: Text('Ҳанӯз паём нест — аввалин шавед!',
+                      child: Text(tr('ui.d564af1bcc'),
                           style: TextStyle(color: AppColors.textFaint)))
                   : ListView.builder(
                       reverse: true,

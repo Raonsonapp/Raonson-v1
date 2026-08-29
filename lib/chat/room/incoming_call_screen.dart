@@ -7,6 +7,7 @@ import '../../core/webrtc_service.dart';
 import '../../models/user_model.dart';
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final UserModel caller;
@@ -183,7 +184,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                   children: [
                     _actionBtn(
                       icon:  AppIcons.call_end_rounded,
-                      label: 'Рад кун',
+                      label: tr('ui.efdc7ddae3'),
                       color: const Color(0xFFFF3B55),
                       onTap: _decline,
                     ),
@@ -191,7 +192,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
                       icon:  widget.callType == CallType.video
                           ? AppIcons.videocam_rounded
                           : AppIcons.call_rounded,
-                      label: 'Қабул',
+                      label: tr('ui.5d3c9ee794'),
                       color: const Color(0xFF00C853),
                       onTap: _accept,
                     ),

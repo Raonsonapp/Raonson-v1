@@ -19,6 +19,7 @@ import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/i18n/strings.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -70,14 +71,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
           _focus.requestFocus();
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('AI шарҳ ҳозир дастрас нест'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.f0a90ac67c')),
             duration: Duration(seconds: 2)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хато ҳангоми пешниҳоди шарҳ'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.c7e7be176f')),
             duration: Duration(seconds: 2)));
       }
     }
@@ -218,8 +219,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
       } else {
         setState(() => _comments.removeWhere((c) => c.id == tempId));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хато — шарҳ фиристода нашуд'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.adf53b93fc')),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 2)));
         }
@@ -277,7 +278,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
     for (final c in _comments) {
       if (c.parentId.isNotEmpty) continue; // root-ҳо
       out.add((c, false));
-      for (final r in (repliesByParent[c.id] ?? const <CommentModel>[])) {
+      for (final r in (repliesByParent[c.id] ?? <CommentModel>[])) {
         out.add((r, true));
       }
     }
@@ -301,7 +302,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 38),
             const SizedBox(height: 10),
-            Text('Ҷамъбасти шарҳҳо бо AI — хусусияти Raonson Pro',
+            Text(tr('ui.58a616c99d'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 15, fontWeight: FontWeight.bold)),
@@ -312,7 +313,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               onPressed: () { Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(
                     builder: (_) => const SubscriptionScreen())); },
-              child: const Text('Raonson Pro гирифтан',
+              child: Text(tr('ui.a26ac78e3e'),
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             )),
           ]),
@@ -349,7 +350,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             Row(children: [
               Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 18),
               const SizedBox(width: 6),
-              Text('Ҷамъбасти шарҳҳо',
+              Text(tr('ui.f27ac8613d'),
                   style: TextStyle(color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold, fontSize: 15)),
             ]),
@@ -390,10 +391,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       colors: [Color(0xFF7F00FF), Color(0xFFE100FF)]),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.bolt_rounded, color: Colors.white, size: 14),
                   SizedBox(width: 4),
-                  Text('Ҷамъбаст', style: TextStyle(color: Colors.white,
+                  Text(tr('ui.53269aaa5e'), style: TextStyle(color: Colors.white,
                       fontSize: 12, fontWeight: FontWeight.w700)),
                 ]),
               ),
@@ -409,7 +410,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 baseColor: AppColors.card,
                 highlightColor: AppColors.divider,
                 child: ListView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics: NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   itemCount: 7,
                   itemBuilder: (_, __) => Padding(
@@ -449,7 +450,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     Icon(AppIcons.chat_bubble_outline,
                         color: AppColors.textFaint, size: 48),
                     const SizedBox(height: 12),
-                    Text('Аввалин шарҳро шумо гузоред!',
+                    Text(tr('ui.82db245061'),
                         style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
                   ]))
                 : Builder(builder: (_) {
@@ -562,7 +563,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   : IconButton(
                       icon: Icon(AppIcons.bolt_rounded,
                           color: AppColors.textSecondary, size: 20),
-                      tooltip: 'AI шарҳ пешниҳод кунад',
+                      tooltip: tr('ui.5cbe072f44'),
                       onPressed: _suggestComment,
                     ),
               // Тӯҳфа (gift) — мисли Instagram
@@ -636,13 +637,13 @@ class _CommentItemState extends State<_CommentItem> {
         final b = jsonDecode(res.body);
         if (mounted) setState(() => _translated = (b['translated'] ?? '').toString());
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Тарҷума дастрас нест'), duration: Duration(seconds: 2)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.72ba9efd82')), duration: Duration(seconds: 2)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хато ҳангоми тарҷума'), duration: Duration(seconds: 2)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.cb51d52751')), duration: Duration(seconds: 2)));
       }
     }
     if (mounted) setState(() => _translating = false);
@@ -694,12 +695,12 @@ class _CommentItemState extends State<_CommentItem> {
           _handle(),
           ListTile(
             leading: const Icon(AppIcons.delete_outline, color: Colors.redAccent, size: 22),
-            title: const Text('Нест кардан',
+            title: Text(tr('ui.bffaabdbc0'),
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
             onTap: () { Navigator.pop(context); widget.onDelete(); }),
           ListTile(
             leading: Icon(AppIcons.edit_outlined, color: AppColors.textPrimary, size: 22),
-            title: Text('Таҳрир кардан',
+            title: Text(tr('ui.ec93da70f5'),
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () { Navigator.pop(context); _editComment(); }),
           const SizedBox(height: 8),
@@ -722,7 +723,7 @@ class _CommentItemState extends State<_CommentItem> {
           ListTile(
             leading: const Icon(AppIcons.flag_outlined,
                 color: Colors.redAccent, size: 22),
-            title: const Text('Шикоят кардан',
+            title: Text(tr('ui.0f9765f1b4'),
                 style: TextStyle(color: Colors.redAccent, fontSize: 15)),
             onTap: () async {
               Navigator.pop(context);
@@ -733,15 +734,15 @@ class _CommentItemState extends State<_CommentItem> {
                   body: {'reason': result.reason, 'description': result.description});
               if (okRes.statusCode >= 400) throw Exception();
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Шикоят фиристода шуд ✓'),
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr('ui.476cbb2898')),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2)));
               }
             }),
           ListTile(
             leading: Icon(AppIcons.block, color: AppColors.textPrimary, size: 22),
-            title: Text('Маҳдуд кардан',
+            title: Text(tr('ui.095102cc71'),
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () async {
               Navigator.pop(context);
@@ -750,25 +751,25 @@ class _CommentItemState extends State<_CommentItem> {
                     .post('/users/${widget.comment.user.id}/restrict');
               } catch (_) {}
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Корбар маҳдуд карда шуд ✓'),
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr('ui.47558f97c0')),
                   backgroundColor: Colors.green,
                   duration: Duration(seconds: 2)));
               }
             }),
           ListTile(
             leading: Icon(AppIcons.link, color: AppColors.textPrimary, size: 22),
-            title: Text('Нусха гирифтан',
+            title: Text(tr('ui.9db9026e1f'),
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () {
               Navigator.pop(context);
               Clipboard.setData(ClipboardData(text: widget.comment.text));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Нусха гирифта шуд ✓'),
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(tr('ui.855fd16102')),
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 2)));
             }),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
       )),
     );
@@ -780,22 +781,22 @@ class _CommentItemState extends State<_CommentItem> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Таҳрир кардан',
+        title: Text(tr('ui.ec93da70f5'),
             style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
           controller: ctrl, autofocus: true, maxLines: 4, maxLength: 1000,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Шарҳ...',
+            hintText: tr('ui.962fa381ff'),
             hintStyle: TextStyle(color: AppColors.textFaint),
             filled: true, fillColor: AppColors.surface,
             border: OutlineInputBorder(borderSide: BorderSide.none)),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text('Захира', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('ui.41cb3d0b3b'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -898,7 +899,7 @@ class _CommentItemState extends State<_CommentItem> {
               // ── Ответить — барои ҲАМА ──────────────────────
               GestureDetector(
                 onTap: widget.onReply,
-                child: Text('Ҷавоб',
+                child: Text(tr('ui.99f4dcb706'),
                     style: TextStyle(
                         color: AppColors.textTertiary, fontSize: 12,
                         fontWeight: FontWeight.w600)),

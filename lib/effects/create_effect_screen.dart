@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import 'effects_repository.dart';
+import '../core/i18n/strings.dart';
 
 class CreateEffectScreen extends StatefulWidget {
   const CreateEffectScreen({super.key});
@@ -67,7 +68,7 @@ class _CreateEffectScreenState extends State<CreateEffectScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Сохтани эффект',
+        title: Text(tr('ui.627e44b744'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         actions: [
           TextButton(
@@ -75,7 +76,7 @@ class _CreateEffectScreenState extends State<CreateEffectScreen> {
             child: _saving
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : Text('Нашр',
+                : Text(tr('ui.0696376fbb'),
                     style: TextStyle(
                         color: AppColors.neonBlue,
                         fontWeight: FontWeight.bold, fontSize: 15)),
@@ -112,7 +113,7 @@ class _CreateEffectScreenState extends State<CreateEffectScreen> {
           controller: _name,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Номи эффект',
+            hintText: tr('ui.c01abd34f4'),
             hintStyle: TextStyle(color: AppColors.textFaint),
             filled: true, fillColor: AppColors.surface,
             border: OutlineInputBorder(
@@ -126,7 +127,7 @@ class _CreateEffectScreenState extends State<CreateEffectScreen> {
           keyboardType: TextInputType.number,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Нарх (0 = ройгон)',
+            hintText: tr('ui.b7eb4deb9c'),
             hintStyle: TextStyle(color: AppColors.textFaint),
             filled: true, fillColor: AppColors.surface,
             border: OutlineInputBorder(
@@ -135,8 +136,7 @@ class _CreateEffectScreenState extends State<CreateEffectScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text('Танҳо корбарони галочкадор эффект нашр карда метавонанд. '
-            'Аз ҳар фуруши эффект комиссияи 5% ба платформа меравад.',
+        Text(tr('ui.503ed3b395'),
             style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
       ]),
     );

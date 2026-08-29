@@ -7,6 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
+import '../core/i18n/strings.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -60,7 +61,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
-        title: Text('Статистика',
+        title: Text(tr('ui.a77d7f6c0d'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -70,14 +71,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
           : (_error != null)
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: TextStyle(color: AppColors.textFaint)),
-                  TextButton(onPressed: _load, child: const Text('Аз нав')),
+                  TextButton(onPressed: _load, child: Text(tr('ui.fa89cda51f'))),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      Text('Обзори 30 рӯзи охир',
+                      Text(tr('ui.7f0f72e05c'),
                           style: TextStyle(color: AppColors.textFaint,
                               fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
@@ -121,13 +122,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
       ),
       child: Row(children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Пешрафти обуначиён',
+          Text(tr('ui.b05fae7be7'),
               style: TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 6),
           Text('${up ? '+' : ''}$gained',
               style: const TextStyle(color: Colors.white,
                   fontSize: 30, fontWeight: FontWeight.w800)),
-          Text('дар 30 рӯз', style: TextStyle(color: Colors.white70, fontSize: 11)),
+          Text(tr('ui.e88115fd37'), style: TextStyle(color: Colors.white70, fontSize: 11)),
         ]),
         const Spacer(),
         Column(children: [
@@ -218,12 +219,12 @@ class _InsightsScreenState extends State<InsightsScreen> {
       Row(children: [
         Icon(AppIcons.bolt_rounded, color: const Color(0xFFFFD700), size: 18),
         const SizedBox(width: 6),
-        Text('Идеяҳои нав (тренд)',
+        Text(tr('ui.c7242016a0'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 15, fontWeight: FontWeight.w700)),
       ]),
       const SizedBox(height: 4),
-      Text('Мавзӯъҳое, ки ҳозир машҳуранд — барои видеои навбатии шумо.',
+      Text(tr('ui.e430bb8720'),
           style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
       const SizedBox(height: 10),
       Wrap(spacing: 8, runSpacing: 8, children: ideas.map((e) {

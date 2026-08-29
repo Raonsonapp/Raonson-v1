@@ -4,6 +4,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/tajikshop_brand.dart';
 import 'shop_repository.dart';
+import '../core/i18n/strings.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -51,7 +52,7 @@ class _OrdersScreenState extends State<OrdersScreen>
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         title: Row(mainAxisSize: MainAxisSize.min, children: [
           TajikshopBrand.logoCompact(size: 14),
-          Text(' — Фармоишҳо',
+          Text(tr('ui.a76988d263'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
         ]),
         bottom: TabBar(
@@ -77,7 +78,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   Widget _list(List<Map<String, dynamic>> orders, String party) {
     if (orders.isEmpty) {
       return Center(
-          child: Text('Ҳанӯз фармоиш нест',
+          child: Text(tr('ui.66ad4fde33'),
               style: TextStyle(color: AppColors.textFaint)));
     }
     return RefreshIndicator(

@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -102,7 +103,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
           Padding(padding: EdgeInsets.only(bottom: 8),
-            child: Text('Мӯҳлати галочка',
+            child: Text(tr('ui.38a2373b62'),
                 style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600, fontSize: 15))),
           ...options.map((o) => ListTile(
@@ -142,18 +143,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Нест кардани аккаунт?',
+        title: Text(tr('ui.358a05761e'),
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: Text('Аккаунти @$uname пурра нест мешавад. Ин амал бебозгашт аст.',
             style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Нест кун',
+              child: Text(tr('ui.b03ce66658'),
                   style: TextStyle(
                       color: Colors.redAccent, fontWeight: FontWeight.bold))),
         ],
@@ -202,11 +203,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     Navigator.pop(context); // loader
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: AppColors.card,
-      title: Text('Тести email', style: TextStyle(color: AppColors.textPrimary)),
+      title: Text(tr('ui.6ebbcc8880'), style: TextStyle(color: AppColors.textPrimary)),
       content: SelectableText(result,
           style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
       actions: [TextButton(onPressed: () => Navigator.pop(context),
-          child: Text('Хуб', style: TextStyle(color: AppColors.neonBlue)))],
+          child: Text(tr('ui.375ec3fb24'), style: TextStyle(color: AppColors.neonBlue)))],
     ));
   }
 
@@ -221,20 +222,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context)),
-        title: Text('Панели идоракунӣ',
+        title: Text(tr('ui.6f40da635d'),
             style: TextStyle(
                 color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
-            tooltip: 'Шикоятҳо',
+            tooltip: tr('ui.096b78c734'),
             icon: Icon(AppIcons.flag_outlined,
                 color: Colors.redAccent),
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AdminReportsScreen())),
           ),
           IconButton(
-            tooltip: 'Тест email',
+            tooltip: tr('ui.161f18ca89'),
             icon: Icon(AppIcons.mark_email_read_outlined,
                 color: AppColors.textPrimary),
             onPressed: _testEmail,
@@ -249,7 +250,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             onChanged: _onSearchChanged,
             style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Ҷустуҷӯи корбар...',
+              hintText: tr('ui.9fa2244b6a'),
               hintStyle: TextStyle(color: AppColors.textFaint),
               prefixIcon: Icon(AppIcons.search_rounded, color: AppColors.textFaint),
               filled: true,
@@ -268,7 +269,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       color: AppColors.neonBlue, strokeWidth: 2))
               : _users.isEmpty
                   ? Center(
-                      child: Text('Корбаре ёфт нашуд',
+                      child: Text(tr('ui.0031e85764'),
                           style: TextStyle(color: AppColors.textFaint)))
                   : ListView.separated(
                       itemCount: _users.length,
@@ -315,7 +316,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             decoration: BoxDecoration(
                 color: AppColors.neonBlue.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(6)),
-            child: const Text('Соҳиб',
+            child: Text(tr('ui.1ab5690f7b'),
                 style: TextStyle(color: AppColors.neonBlue, fontSize: 11)),
           ),
         ],
@@ -350,7 +351,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     onPressed: () => _setVerified(u, !verified),
                   ),
                   IconButton(
-                    tooltip: 'Нест кун',
+                    tooltip: tr('ui.b03ce66658'),
                     icon: const Icon(AppIcons.delete_outline_rounded,
                         color: Colors.redAccent, size: 22),
                     onPressed: () => _deleteUser(u),
@@ -423,7 +424,7 @@ class _AdminReportsState extends State<AdminReportsScreen> {
           icon: Icon(AppIcons.arrow_back_ios_new_rounded,
               color: AppColors.textPrimary, size: 20),
           onPressed: () => Navigator.pop(context)),
-        title: Text('Шикоятҳо',
+        title: Text(tr('ui.096b78c734'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16,
                 fontWeight: FontWeight.bold)),
         centerTitle: true,
@@ -468,7 +469,7 @@ class _AdminReportsState extends State<AdminReportsScreen> {
               ? const Center(child: CircularProgressIndicator(
                   color: AppColors.neonBlue, strokeWidth: 2))
               : _reports.isEmpty
-                  ? Center(child: Text('Шикоят нест',
+                  ? Center(child: Text(tr('ui.da2b5cd3f8'),
                       style: TextStyle(color: AppColors.textFaint)))
                   : RefreshIndicator(
                       onRefresh: _load,

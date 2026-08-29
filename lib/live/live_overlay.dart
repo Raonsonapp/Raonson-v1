@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
+import '../core/i18n/strings.dart';
 
 // Ранги брендии Live — кабуду сабз (на пушти Instagram).
 const List<Color> kLiveGradient = [Color(0xFF00C6FF), Color(0xFF00E87A)];
@@ -209,13 +210,13 @@ class _LiveInteractionOverlayState extends State<LiveInteractionOverlay> {
                   style: const TextStyle(color: Colors.white),
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => _send(),
-                  decoration: const InputDecoration(
-                    hintText: 'Шарҳ...',
+                  decoration: InputDecoration(
+                    hintText: tr('ui.962fa381ff'),
                     hintStyle: TextStyle(color: Colors.white54),
                     border: InputBorder.none, isDense: true),
                 )),
                 GestureDetector(onTap: _send,
-                    child: const Icon(AppIcons.send_rounded,
+                    child: Icon(AppIcons.send_rounded,
                         color: Colors.white, size: 20)),
               ]),
             )),

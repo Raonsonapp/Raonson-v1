@@ -17,6 +17,7 @@ import 'photo_filters.dart';
 import '../../effects/effects_repository.dart';
 import '../../core/ui/app_icons.dart';
 import '../../ai/ai_tools.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -87,18 +88,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(color: Colors.white24,
               borderRadius: BorderRadius.circular(2))),
-        const Padding(padding: EdgeInsets.only(bottom: 12),
-          child: Text('Чӣ илова мекунед?',
+        Padding(padding: EdgeInsets.only(bottom: 12),
+          child: Text(tr('ui.1d5f177feb'),
               style: TextStyle(color: Colors.white,
                   fontWeight: FontWeight.w700, fontSize: 16))),
         ListTile(
           leading: Container(width: 44, height: 44,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
                 color: Color(0xFF0095F6), shape: BoxShape.circle),
             child: const Icon(AppIcons.image_outlined, color: Colors.white, size: 22)),
-          title: const Text('Расм', style: TextStyle(color: Colors.white, fontSize: 16,
+          title: Text(tr('ui.34ced71ce6'), style: TextStyle(color: Colors.white, fontSize: 16,
               fontWeight: FontWeight.w500)),
-          subtitle: const Text('Аз галерея',
+          subtitle: Text(tr('ui.2b827fba21'),
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () => Navigator.pop(_, 'image')),
         ListTile(
@@ -106,9 +107,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             decoration: const BoxDecoration(
                 color: Color(0xFF833AB4), shape: BoxShape.circle),
             child: const Icon(AppIcons.videocam_outlined, color: Colors.white, size: 22)),
-          title: const Text('Видео', style: TextStyle(color: Colors.white, fontSize: 16,
+          title: Text(tr('ui.8e7b9894c7'), style: TextStyle(color: Colors.white, fontSize: 16,
               fontWeight: FontWeight.w500)),
-          subtitle: const Text('Аз галерея',
+          subtitle: Text(tr('ui.2b827fba21'),
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () => Navigator.pop(_, 'video')),
         const SizedBox(height: 12),
@@ -172,15 +173,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           ListTile(
             leading: const Icon(AppIcons.check_circle_rounded,
                 color: Color(0xFF00C853)),
-            title: const Text('Нашри фаврӣ',
+            title: Text(tr('ui.54344b89bd'),
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             onTap: () => Navigator.pop(context, 'now'),
           ),
           ListTile(
             leading: const Icon(AppIcons.schedule_rounded, color: Color(0xFFE100FF)),
-            title: const Text('Ба нақша гирифтан',
+            title: Text(tr('ui.3aec8f3992'),
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-            subtitle: const Text('Дар вақти муайян нашр мешавад (Pro)',
+            subtitle: Text(tr('ui.d634388a89'),
                 style: TextStyle(color: Colors.white38, fontSize: 12)),
             onTap: () => Navigator.pop(context, 'schedule'),
           ),
@@ -283,18 +284,18 @@ class _PostEditorState extends State<_PostEditor> {
           _captionCtrl.selection =
               TextSelection.collapsed(offset: _captionCtrl.text.length);
         } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ҳэштег ёфт нашуд'), duration: Duration(seconds: 2)));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('ui.f02349eb17')), duration: Duration(seconds: 2)));
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('AI ҳэштег ҳозир дастрас нест'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.5b5998c932')),
             duration: Duration(seconds: 2)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хато ҳангоми пешниҳоди ҳэштег'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.318f0fa745')),
             duration: Duration(seconds: 2)));
       }
     }
@@ -309,27 +310,27 @@ class _PostEditorState extends State<_PostEditor> {
     final topic = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(AppIcons.bolt_rounded, color: Color(0xFF00E87A), size: 20),
           SizedBox(width: 8),
-          Text('AI Пост Созед', style: TextStyle(color: Colors.white)),
+          Text(tr('ui.6d71300c15'), style: TextStyle(color: Colors.white)),
         ]),
         content: TextField(
           controller: topicCtrl, autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Дар бораи чӣ пост нависам? (масалан: футбол)',
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: tr('ui.48623aed6c'),
             hintStyle: TextStyle(color: Colors.white38),
           ),
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           TextButton(onPressed: () => Navigator.pop(ctx, topicCtrl.text),
-              child: const Text('Созед',
+              child: Text(tr('ui.41cc0f2ade'),
                   style: TextStyle(color: Color(0xFF00E87A), fontWeight: FontWeight.bold))),
         ],
       ),
@@ -341,7 +342,7 @@ class _PostEditorState extends State<_PostEditor> {
     setState(() => _generatingPost = true);
     try {
       final res = await ApiClient.instance.post('/ai/post-creator', body: {'topic': t})
-          .timeout(const Duration(seconds: 30));
+          .timeout(Duration(seconds: 30));
       if (res.statusCode < 400) {
         final b = jsonDecode(res.body);
         final caption = (b['caption'] ?? '').toString();
@@ -354,14 +355,14 @@ class _PostEditorState extends State<_PostEditor> {
           });
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('AI Пост Созед ҳозир дастрас нест'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.c3adfa5b48')),
             duration: Duration(seconds: 2)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хато ҳангоми сохтани пост'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.9bf544a2f7')),
             duration: Duration(seconds: 2)));
       }
     }
@@ -450,17 +451,17 @@ class _PostEditorState extends State<_PostEditor> {
       builder: (_) => StatefulBuilder(builder: (ctx, setDlg) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(AppIcons.group_add_rounded, color: Color(0xFF0095F6), size: 20),
           SizedBox(width: 8),
-          Text('Соавтор', style: TextStyle(color: Colors.white)),
+          Text(tr('ui.b65b33d102'), style: TextStyle(color: Colors.white)),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: ctrl, autofocus: true,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: '@номи корбар',
+            style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: tr('ui.a52b321138'),
               hintStyle: TextStyle(color: Colors.white38),
               enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.white24)),
@@ -477,7 +478,7 @@ class _PostEditorState extends State<_PostEditor> {
             },
           ),
           if (_collaborators.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Wrap(spacing: 6, runSpacing: 6, children: _collaborators
                 .map((u) => Chip(
                       backgroundColor: const Color(0xFF2A2A2C),
@@ -494,7 +495,7 @@ class _PostEditorState extends State<_PostEditor> {
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Тайёр',
+              child: Text(tr('ui.07d25782f7'),
                   style: TextStyle(color: Color(0xFF0095F6), fontWeight: FontWeight.bold))),
         ],
       )),
@@ -509,16 +510,16 @@ class _PostEditorState extends State<_PostEditor> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(children: [
+        title: Row(children: [
           Icon(AppIcons.location_on, color: Color(0xFFFF3040), size: 20),
           SizedBox(width: 8),
-          Text('Ҷойгиршавӣ', style: TextStyle(color: Colors.white)),
+          Text(tr('ui.552d7f2fe4'), style: TextStyle(color: Colors.white)),
         ]),
         content: TextField(
           controller: ctrl, autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            hintText: 'Ҷойро нависед...',
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: tr('ui.4a26403e50'),
             hintStyle: TextStyle(color: Colors.white38),
             enabledBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.white24)),
@@ -528,13 +529,13 @@ class _PostEditorState extends State<_PostEditor> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           TextButton(
               onPressed: () {
                 setState(() => _location = ctrl.text.trim());
                 Navigator.pop(context);
               },
-              child: const Text('Илова',
+              child: Text(tr('ui.d4a317a798'),
                   style: TextStyle(color: Color(0xFF0095F6), fontWeight: FontWeight.bold))),
         ],
       ),
@@ -545,15 +546,15 @@ class _PostEditorState extends State<_PostEditor> {
     final ctrl = TextEditingController();
     showDialog(context: context, barrierColor: Colors.black87,
       builder: (_) => StatefulBuilder(builder: (ctx, setDlg) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
+        backgroundColor: Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Матн', style: TextStyle(color: Colors.white)),
+        title: Text(tr('ui.e2a4599cfc'), style: TextStyle(color: Colors.white)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: ctrl, autofocus: true,
             style: TextStyle(color: _textColor, fontSize: _fontSize, fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(hintText: 'Матн нависед...',
+            decoration: InputDecoration(hintText: tr('ui.905b21a78a'),
               hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none)),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children:
             [Colors.white, Colors.yellow, Colors.red, Colors.cyan, Colors.green, Colors.orange].map((c) =>
               GestureDetector(onTap: () { setDlg(() {}); setState(() => _textColor = c); },
@@ -565,7 +566,7 @@ class _PostEditorState extends State<_PostEditor> {
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
@@ -576,7 +577,7 @@ class _PostEditorState extends State<_PostEditor> {
                 color: _textColor, fontSize: _fontSize))); }
               Navigator.pop(context);
             },
-            child: const Text('Илова', style: TextStyle(color: Colors.black))),
+            child: Text(tr('ui.d4a317a798'), style: TextStyle(color: Colors.black))),
         ])));
   }
 
@@ -586,14 +587,14 @@ class _PostEditorState extends State<_PostEditor> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Зикр кунед', style: TextStyle(color: Colors.white)),
+        title: Text(tr('ui.db62ebe335'), style: TextStyle(color: Colors.white)),
         content: TextField(controller: ctrl, autofocus: true,
           style: const TextStyle(color: Colors.white, fontSize: 18),
           decoration: const InputDecoration(hintText: '@username',
             hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
@@ -604,7 +605,7 @@ class _PostEditorState extends State<_PostEditor> {
                   MediaQuery.of(context).size.height / 2)))); }
               Navigator.pop(context);
             },
-            child: const Text('Илова', style: TextStyle(color: Colors.black))),
+            child: Text(tr('ui.d4a317a798'), style: TextStyle(color: Colors.black))),
         ]));
   }
 
@@ -617,7 +618,7 @@ class _PostEditorState extends State<_PostEditor> {
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        const Text('Стикер', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(tr('ui.149c202875'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: emojis.map((e) =>
           GestureDetector(onTap: () {
@@ -785,8 +786,8 @@ class _PostEditorState extends State<_PostEditor> {
                     controller: _captionCtrl, autofocus: true,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
                     maxLines: 4, maxLength: 500,
-                    decoration: const InputDecoration(
-                      hintText: 'Тавсиф нависед...',
+                    decoration: InputDecoration(
+                      hintText: tr('ui.5927e29104'),
                       hintStyle: TextStyle(color: Colors.white38),
                       contentPadding: EdgeInsets.all(12),
                       border: InputBorder.none,
@@ -796,7 +797,7 @@ class _PostEditorState extends State<_PostEditor> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 8, bottom: 8),
+                      padding: EdgeInsets.only(right: 8, bottom: 8),
                       child: GestureDetector(
                         onTap: _suggestingTags ? null : _suggestHashtags,
                         child: Container(
@@ -811,7 +812,7 @@ class _PostEditorState extends State<_PostEditor> {
                                         strokeWidth: 1.5, color: Colors.white70))
                                 : const Icon(AppIcons.bolt_rounded, size: 15, color: Colors.white70),
                             const SizedBox(width: 6),
-                            const Text('AI ҳэштег',
+                            Text(tr('ui.c09415cdf1'),
                                 style: TextStyle(color: Colors.white70, fontSize: 12,
                                     fontWeight: FontWeight.w600)),
                           ]),
@@ -864,7 +865,7 @@ class _PostEditorState extends State<_PostEditor> {
                 child: widget.isUploading
                     ? const SizedBox(width: 18, height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : const Text('Нашр кун',
+                    : Text(tr('ui.2e25f8a101'),
                         style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
             ]))),
 
@@ -877,27 +878,27 @@ class _PostEditorState extends State<_PostEditor> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                _ToolBtn(icon: AppIcons.text_fields,         label: 'Текст',
+                _ToolBtn(icon: AppIcons.text_fields,         label: tr('ui.93970437e2'),
                   onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
-                _ToolBtn(icon: AppIcons.brush,               label: 'Расм',
+                _ToolBtn(icon: AppIcons.brush,               label: tr('ui.34ced71ce6'),
                   isActive: _tool == _Tool.draw,
                   onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
-                _ToolBtn(icon: AppIcons.emoji_emotions_outlined, label: 'Стикер',
+                _ToolBtn(icon: AppIcons.emoji_emotions_outlined, label: tr('ui.149c202875'),
                   onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
-                _ToolBtn(icon: AppIcons.music_note,          label: 'Мусиқӣ',
+                _ToolBtn(icon: AppIcons.music_note,          label: tr('ui.d4583b94ee'),
                   onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
-                _ToolBtn(icon: AppIcons.alternate_email,     label: 'Зикр',
+                _ToolBtn(icon: AppIcons.alternate_email,     label: tr('ui.16d45c3f81'),
                   onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
-                _ToolBtn(icon: AppIcons.group_add_outlined,  label: 'Соавтор',
+                _ToolBtn(icon: AppIcons.group_add_outlined,  label: tr('ui.b65b33d102'),
                   isActive: _collaborators.isNotEmpty,
                   onTap: () { setState(() => _tool = _Tool.none); _showCollaboratorDialog(); }),
-                _ToolBtn(icon: AppIcons.location_on_outlined, label: 'Ҷой',
+                _ToolBtn(icon: AppIcons.location_on_outlined, label: tr('ui.be7de29b97'),
                   isActive: _location.isNotEmpty,
                   onTap: () { setState(() => _tool = _Tool.none); _showLocationDialog(); }),
-                _ToolBtn(icon: AppIcons.edit_note,           label: 'Тавсиф',
+                _ToolBtn(icon: AppIcons.edit_note,           label: tr('ui.13c977b6ae'),
                   isActive: _showCaption,
                   onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),
-                _ToolBtn(icon: AppIcons.bolt_rounded,        label: 'AI Пост',
+                _ToolBtn(icon: AppIcons.bolt_rounded,        label: tr('ui.2c656fd31e'),
                   isActive: _generatingPost,
                   onTap: _generatingPost ? () {} : () { setState(() => _tool = _Tool.none); _showAiPostCreator(); }),
               ]))))),
@@ -918,7 +919,7 @@ class _PostEditorState extends State<_PostEditor> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text('Бор мешавад...',
+                Text(tr('ui.1ddb84cf4f'),
                     style: TextStyle(color: Colors.white70, fontSize: 15)),
               ]))),
         ]),
@@ -1030,13 +1031,13 @@ class _MusicPanelState extends State<_MusicPanel> {
       child: Column(children: [
         Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        const Text('Мусиқӣ 🎵', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(tr('ui.6cf38316d7'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(controller: _ctrl, style: const TextStyle(color: Colors.white),
             textInputAction: TextInputAction.search, onSubmitted: _search,
             decoration: InputDecoration(
-              hintText: 'Суруд ё хонанда...', hintStyle: const TextStyle(color: Colors.white38),
+              hintText: tr('ui.c55bd13afb'), hintStyle: const TextStyle(color: Colors.white38),
               prefixIcon: const Icon(AppIcons.search, color: Colors.white38),
               suffixIcon: IconButton(icon: const Icon(AppIcons.send, color: Color(0xFF0095F6)),
                 onPressed: () => _search(_ctrl.text)),
@@ -1047,9 +1048,9 @@ class _MusicPanelState extends State<_MusicPanel> {
         if (_error != null) Padding(padding: const EdgeInsets.all(16),
           child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
         if (!_loading && _tracks.isEmpty && _error == null)
-          const Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(AppIcons.music_note, color: Colors.white24, size: 48), SizedBox(height: 12),
-            Text('Суруд ёбед', style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(tr('ui.1aebf2a2fc'), style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
           ]))),
         if (!_loading && _tracks.isNotEmpty)
           Expanded(child: ListView.builder(itemCount: _tracks.length, itemBuilder: (_, i) {
@@ -1058,7 +1059,7 @@ class _MusicPanelState extends State<_MusicPanel> {
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
                     child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
-                : const Icon(AppIcons.music_note, color: Colors.white54),
+                : Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(t.artist, style: const TextStyle(color: Colors.white54),

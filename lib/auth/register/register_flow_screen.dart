@@ -142,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return AlertDialog(
           backgroundColor: AppColors.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Тасдиқи телефон',
+          title: Text(tr('ui.d0e79670ac'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             Text('Рамзи 6-рақама ба $phone тавассути Telegram фиристода шуд.',
@@ -496,7 +496,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: GestureDetector(
                       onTap: () => launchUrl(Uri.parse('https://raonson.app/terms'),
                           mode: LaunchMode.externalApplication),
-                      child: Text('Шартҳои истифода',
+                      child: Text(tr('ui.ff5f014e89'),
                           style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
                               decoration: TextDecoration.underline,
                               decorationColor: AppColors.neonBlue)),
@@ -509,7 +509,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: GestureDetector(
                       onTap: () => launchUrl(Uri.parse('https://raonson.app/privacy'),
                           mode: LaunchMode.externalApplication),
-                      child: Text('Сиёсати махфият',
+                      child: Text(tr('ui.04b1f79cc0'),
                           style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
                               decoration: TextDecoration.underline,
                               decorationColor: AppColors.neonBlue)),

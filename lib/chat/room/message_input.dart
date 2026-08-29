@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../app/app_theme.dart';
 import '../../models/message_model.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  MessageInput — 10/10 Instagram style (матн + медиа + овоз)
@@ -163,17 +164,17 @@ class _MessageInputState extends State<MessageInput>
                 _AttachTile(
                     icon: AppIcons.photo_library_rounded,
                     color: const Color(0xFFE1306C),
-                    label: 'Галерея',
+                    label: tr('ui.e6f95e75e2'),
                     onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.gallery); }),
                 _AttachTile(
                     icon: AppIcons.photo_camera_rounded,
                     color: const Color(0xFF1D9BF0),
-                    label: 'Камера',
+                    label: tr('ui.a71a775fd9'),
                     onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.camera); }),
                 _AttachTile(
                     icon: AppIcons.visibility_outlined,
                     color: const Color(0xFF7B5CFF),
-                    label: 'Як бор',
+                    label: tr('ui.b7ecf54883'),
                     onTap: () {
                       Navigator.pop(ctx);
                       _pickImage(ImageSource.gallery, viewOnce: true);
@@ -181,12 +182,12 @@ class _MessageInputState extends State<MessageInput>
                 _AttachTile(
                     icon: AppIcons.videocam_rounded,
                     color: const Color(0xFF00C853),
-                    label: 'Видео',
+                    label: tr('ui.8e7b9894c7'),
                     onTap: () { Navigator.pop(ctx); _pickVideo(); }),
                 _AttachTile(
                     icon: AppIcons.location_on,
                     color: const Color(0xFFFF6D00),
-                    label: 'Ҷойгиршавӣ',
+                    label: tr('ui.552d7f2fe4'),
                     onTap: () { Navigator.pop(ctx); widget.onSendLocation?.call(); }),
               ],
             ),
@@ -300,7 +301,7 @@ class _MessageInputState extends State<MessageInput>
             style: TextStyle(
                 color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
         Expanded(
-          child: Text('  Сабти овоз...',
+          child: Text(tr('ui.bb9d5b8a2a'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 13),
               overflow: TextOverflow.ellipsis),
         ),
@@ -357,7 +358,7 @@ class _MessageInputState extends State<MessageInput>
                     style: TextStyle(
                         color: AppColors.textPrimary, fontSize: 15),
                     decoration: InputDecoration(
-                      hintText: 'Паём...',
+                      hintText: tr('ui.4353605720'),
                       hintStyle: TextStyle(
                           color: AppColors.textFaint, fontSize: 15),
                       contentPadding: EdgeInsets.fromLTRB(16, 10, 8, 10),

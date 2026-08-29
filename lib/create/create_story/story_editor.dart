@@ -161,14 +161,14 @@ class _StoryEditorState extends State<StoryEditor> {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Пурсиш',
+          title: Text(tr('ui.f7d873645d'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
               controller: qCtrl, autofocus: true, maxLength: 80,
               style: TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
-                counterText: '', hintText: 'Саволатонро нависед…',
+                counterText: '', hintText: tr('ui.1539d80e7f'),
                 hintStyle: TextStyle(color: AppColors.textFaint)),
             ),
             const SizedBox(height: 8),
@@ -190,7 +190,7 @@ class _StoryEditorState extends State<StoryEditor> {
             if (_poll != null)
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Бардор',
+                child: Text(tr('ui.7b186b9530'),
                     style: TextStyle(color: Color(0xFFFF3B30)))),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -245,17 +245,17 @@ class _StoryEditorState extends State<StoryEditor> {
         builder: (ctx, setDlg) => AlertDialog(
           backgroundColor: const Color(0xFF1C1C1E),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Матн', style: TextStyle(color: Colors.white)),
+          title: Text(tr('ui.e2a4599cfc'), style: TextStyle(color: Colors.white)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(controller: ctrl, autofocus: true,
               style: TextStyle(color: _textColor, fontSize: _fontSize,
                   fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                hintText: 'Матн нависед...',
+              decoration: InputDecoration(
+                hintText: tr('ui.905b21a78a'),
                 hintStyle: TextStyle(color: Colors.white38),
                 border: InputBorder.none),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [Colors.white, Colors.yellow, Colors.red,
                 Colors.cyan, Colors.green, Colors.orange].map((c) =>
@@ -271,7 +271,7 @@ class _StoryEditorState extends State<StoryEditor> {
           ]),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context),
-              child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
               onPressed: () {
@@ -284,7 +284,7 @@ class _StoryEditorState extends State<StoryEditor> {
                 }
                 Navigator.pop(context);
               },
-              child: const Text('Илова', style: TextStyle(color: Colors.black))),
+              child: Text(tr('ui.d4a317a798'), style: TextStyle(color: Colors.black))),
           ]),
       ),
     );
@@ -297,7 +297,7 @@ class _StoryEditorState extends State<StoryEditor> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Зикр кунед', style: TextStyle(color: Colors.white)),
+        title: Text(tr('ui.db62ebe335'), style: TextStyle(color: Colors.white)),
         content: TextField(controller: ctrl, autofocus: true,
           style: const TextStyle(color: Colors.white, fontSize: 18),
           decoration: const InputDecoration(
@@ -305,7 +305,7 @@ class _StoryEditorState extends State<StoryEditor> {
             border: InputBorder.none)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
@@ -319,7 +319,7 @@ class _StoryEditorState extends State<StoryEditor> {
               }
               Navigator.pop(context);
             },
-            child: const Text('Илова', style: TextStyle(color: Colors.black))),
+            child: Text(tr('ui.d4a317a798'), style: TextStyle(color: Colors.black))),
         ]));
   }
 
@@ -336,7 +336,7 @@ class _StoryEditorState extends State<StoryEditor> {
         Container(margin: const EdgeInsets.symmetric(vertical: 8),
           width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        const Text('Стикер', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(tr('ui.149c202875'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: emojis.map((e) =>
           GestureDetector(onTap: () {
@@ -489,30 +489,30 @@ class _StoryEditorState extends State<StoryEditor> {
           // ── RIGHT SIDEBAR TOOLBAR (Instagram style) ────────
           Positioned(top: 80, right: 12,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              _SideBtn(isText: true, label: 'Текст',
+              _SideBtn(isText: true, label: tr('ui.93970437e2'),
                 onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
               const SizedBox(height: 2),
-              _SideBtn(svgPath: 'assets/icons/sticker.svg', label: 'Стикерҳо',
+              _SideBtn(svgPath: 'assets/icons/sticker.svg', label: tr('ui.e216a5edbc'),
                 onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
               const SizedBox(height: 2),
               _SideBtn(icon: AppIcons.bar_chart_rounded,
                 label: _poll == null ? 'Пурсиш' : 'Пурсиш ✓',
                 onTap: () { setState(() => _tool = _Tool.none); _addPoll(); }),
               const SizedBox(height: 2),
-              _SideBtn(svgPath: 'assets/icons/music.svg', label: 'Мусиқӣ',
+              _SideBtn(svgPath: 'assets/icons/music.svg', label: tr('ui.d4583b94ee'),
                 onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
               const SizedBox(height: 2),
-              _SideBtn(svgPath: 'assets/icons/draw.svg', label: 'Рисунок',
+              _SideBtn(svgPath: 'assets/icons/draw.svg', label: tr('ui.8554b34b52'),
                 isActive: _tool == _Tool.draw,
                 onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
               const SizedBox(height: 2),
-              _SideBtn(svgPath: 'assets/icons/mention.svg', label: 'Зикр',
+              _SideBtn(svgPath: 'assets/icons/mention.svg', label: tr('ui.16d45c3f81'),
                 onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
               const SizedBox(height: 2),
-              _SideBtn(icon: AppIcons.download_rounded, label: 'Захира',
+              _SideBtn(icon: AppIcons.download_rounded, label: tr('ui.41cb3d0b3b'),
                 onTap: _saveStory),
               const SizedBox(height: 2),
-              _SideBtn(icon: AppIcons.more_horiz_rounded, label: 'Боз',
+              _SideBtn(icon: AppIcons.more_horiz_rounded, label: tr('ui.352c0b3052'),
                 onTap: _saveStory),
             ])),
 
@@ -529,15 +529,15 @@ class _StoryEditorState extends State<StoryEditor> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF262626),
                       borderRadius: BorderRadius.circular(24)),
-                    child: const Row(mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(AppIcons.add_circle, color: Colors.white, size: 20),
                         SizedBox(width: 8),
-                        Text('Сторис шумо',
+                        Text(tr('ui.b1e4b09106'),
                           style: TextStyle(color: Colors.white,
                               fontWeight: FontWeight.w600, fontSize: 14)),
                       ])))),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 // «Наздикон» — close friends
                 GestureDetector(
                   onTap: widget.isUploading
@@ -548,14 +548,14 @@ class _StoryEditorState extends State<StoryEditor> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF262626),
                       borderRadius: BorderRadius.circular(24)),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(AppIcons.star, color: Color(0xFF4AC959), size: 18),
                       SizedBox(width: 6),
-                      Text('Наздикон',
+                      Text(tr('ui.0d78bd9660'),
                         style: TextStyle(color: Colors.white,
                             fontWeight: FontWeight.w600, fontSize: 14)),
                     ]))),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 // Send → (нашр)
                 GestureDetector(
                   onTap: widget.isUploading ? null : _onPublish,
@@ -574,10 +574,10 @@ class _StoryEditorState extends State<StoryEditor> {
           // ── Upload overlay ──────────────────────
           if (widget.isUploading)
             Container(color: Colors.black54,
-              child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                 CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                 SizedBox(height: 16),
-                Text('Бор мешавад...', style: TextStyle(color: Colors.white70, fontSize: 15)),
+                Text(tr('ui.1ddb84cf4f'), style: TextStyle(color: Colors.white70, fontSize: 15)),
               ]))),
         ]),
       ),
@@ -592,7 +592,7 @@ class _StoryEditorState extends State<StoryEditor> {
           aspectRatio: _videoCtrl!.value.aspectRatio,
           child: VideoPlayer(_videoCtrl!));
       }
-      return const CircularProgressIndicator(color: Colors.white30);
+      return CircularProgressIndicator(color: Colors.white30);
     }
     // Расм — contain, формат нигоҳ дорем, letterbox сиёҳ
     return Image.file(widget.media, fit: BoxFit.contain);
@@ -666,13 +666,13 @@ class _MusicPanelState extends State<_MusicPanel> {
       child: Column(children: [
         Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        const Text('Мусиқӣ 🎵', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(tr('ui.6cf38316d7'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(controller: _ctrl, style: const TextStyle(color: Colors.white),
             textInputAction: TextInputAction.search, onSubmitted: _search,
             decoration: InputDecoration(
-              hintText: 'Суруд ё хонанда...', hintStyle: const TextStyle(color: Colors.white38),
+              hintText: tr('ui.c55bd13afb'), hintStyle: const TextStyle(color: Colors.white38),
               prefixIcon: const Icon(AppIcons.search, color: Colors.white38),
               suffixIcon: IconButton(icon: const Icon(AppIcons.send, color: Color(0xFF0095F6)),
                 onPressed: () => _search(_ctrl.text)),
@@ -684,11 +684,11 @@ class _MusicPanelState extends State<_MusicPanel> {
         if (_error != null) Padding(padding: const EdgeInsets.all(16),
           child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
         if (!_loading && _tracks.isEmpty && _error == null)
-          const Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(AppIcons.music_note, color: Colors.white24, size: 48),
             SizedBox(height: 12),
-            Text('Суруд ёбед', style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('Масалан: Coldplay, Тарона...', style: TextStyle(color: Colors.white24, fontSize: 12)),
+            Text(tr('ui.1aebf2a2fc'), style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(tr('ui.8605fbcb58'), style: TextStyle(color: Colors.white24, fontSize: 12)),
           ]))),
         if (!_loading && _tracks.isNotEmpty)
           Expanded(child: ListView.builder(itemCount: _tracks.length, itemBuilder: (_, i) {
@@ -697,7 +697,7 @@ class _MusicPanelState extends State<_MusicPanel> {
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
                     child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
-                : const Icon(AppIcons.music_note, color: Colors.white54),
+                : Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(t.artist, style: const TextStyle(color: Colors.white54),

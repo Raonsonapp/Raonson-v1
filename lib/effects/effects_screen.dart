@@ -5,6 +5,7 @@ import '../core/ui/app_icons.dart';
 import '../widgets/avatar.dart';
 import 'effects_repository.dart';
 import 'create_effect_screen.dart';
+import '../core/i18n/strings.dart';
 
 class EffectsScreen extends StatefulWidget {
   const EffectsScreen({super.key});
@@ -52,7 +53,7 @@ class _EffectsScreenState extends State<EffectsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Бозори эффектҳо',
+        title: Text(tr('ui.f8bb40968b'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 18,
                 fontWeight: FontWeight.bold)),
       ),
@@ -64,7 +65,7 @@ class _EffectsScreenState extends State<EffectsScreen> {
           _load();
         },
         icon: Icon(AppIcons.add_rounded, color: AppColors.textPrimary),
-        label: Text('Сохтан',
+        label: Text(tr('ui.b979a5a4c1'),
             style: TextStyle(
                 color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
       ),
@@ -76,9 +77,9 @@ class _EffectsScreenState extends State<EffectsScreen> {
                   Icon(AppIcons.bolt_rounded,
                       color: AppColors.textFaint, size: 56),
                   const SizedBox(height: 12),
-                  Text('Ҳанӯз эффект нест',
+                  Text(tr('ui.1774e9406b'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
-                  Text('Галочкадорон эффект месозанд 👇',
+                  Text(tr('ui.058eba1aae'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
                 ]))
               : RefreshIndicator(

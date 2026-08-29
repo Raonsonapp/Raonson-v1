@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
+import '../core/i18n/strings.dart';
 
 class AutoReplyScreen extends StatefulWidget {
   const AutoReplyScreen({super.key});
@@ -40,8 +41,8 @@ class _AutoReplyState extends State<AutoReplyScreen> {
       if (okRes.statusCode >= 400) throw Exception();
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Ҷавоби худкор сабт шуд ✓'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.3358400c00')),
             backgroundColor: Colors.green));
       }
     } catch (_) {}
@@ -55,17 +56,17 @@ class _AutoReplyState extends State<AutoReplyScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Ҷавоби худкор',
+        title: Text(tr('ui.5fae95bc45'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           if (_saving)
-            const Padding(padding: EdgeInsets.all(14),
+            Padding(padding: EdgeInsets.all(14),
                 child: SizedBox(width: 20, height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2)))
           else
             TextButton(onPressed: _save,
-                child: Text('Сабт', style: TextStyle(color: AppColors.neonBlue,
+                child: Text(tr('ui.cb206b6c88'), style: TextStyle(color: AppColors.neonBlue,
                     fontWeight: FontWeight.bold, fontSize: 15))),
         ],
       ),
@@ -91,8 +92,7 @@ class _AutoReplyState extends State<AutoReplyScreen> {
                     maxLines: 5, maxLength: 500,
                     style: TextStyle(color: AppColors.textPrimary),
                     decoration: InputDecoration(
-                      hintText: 'Мисол: Салом! Ташаккур барои паём. '
-                          'Ба зудӣ ҷавоб медиҳам 🙏',
+                      hintText: tr('ui.f4ef65a377'),
                       hintStyle: TextStyle(color: AppColors.textFaint),
                       filled: true, fillColor: AppColors.surface,
                       border: OutlineInputBorder(
@@ -101,7 +101,7 @@ class _AutoReplyState extends State<AutoReplyScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text('Барои хомӯш кардан — матнро холӣ кунед ва сабт кунед.',
+                  Text(tr('ui.6721b21fc6'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
                 ]),
             ),

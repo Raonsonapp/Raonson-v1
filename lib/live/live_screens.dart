@@ -11,6 +11,7 @@ import '../core/agora_service.dart';
 import '../core/services/user_session.dart';
 import '../widgets/avatar.dart';
 import 'live_overlay.dart';
+import '../core/i18n/strings.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  РӮЙХАТИ LIVE + Go Live
@@ -49,17 +50,17 @@ class _LiveListState extends State<LiveListScreen> {
         final ctrl = TextEditingController();
         return AlertDialog(
           backgroundColor: AppColors.card,
-          title: Text('Live сар кардан',
+          title: Text(tr('ui.6f5dcd57dd'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
           content: TextField(controller: ctrl, autofocus: true,
             style: TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(hintText: 'Унвон (ихтиёрӣ)',
+            decoration: InputDecoration(hintText: tr('ui.70de8996f5'),
                 hintStyle: TextStyle(color: AppColors.textFaint))),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context),
-                child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+                child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
             TextButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-                child: const Text('Сар кун', style: TextStyle(color: Colors.red))),
+                child: Text(tr('ui.03f536a70b'), style: TextStyle(color: Colors.red))),
           ],
         );
       },
@@ -95,9 +96,9 @@ class _LiveListState extends State<LiveListScreen> {
                   Icon(AppIcons.videocam_rounded,
                       color: AppColors.textFaint, size: 48),
                   const SizedBox(height: 12),
-                  Text('Ҳозир касе Live нест',
+                  Text(tr('ui.ab3f66f381'),
                       style: TextStyle(color: AppColors.textFaint)),
-                  Text('Аввалин шуда Live кун 🔴',
+                  Text(tr('ui.1d3cc06b6b'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
                 ]))
               : RefreshIndicator(
@@ -263,12 +264,12 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
                           const Icon(AppIcons.videocam_rounded,
                               color: Colors.white38, size: 48),
                           const SizedBox(height: 12),
-                          const Text('Live сар нашуд. Дубора кӯшиш кунед.',
+                          Text(tr('ui.2e7662a55c'),
                               style: TextStyle(color: Colors.white70)),
                           const SizedBox(height: 14),
                           TextButton(
                               onPressed: () => Navigator.pop(context),
-                              child: const Text('Бозгашт',
+                              child: Text(tr('ui.da334b1057'),
                                   style: TextStyle(color: Colors.white))),
                         ]))
                     : const Center(child: CircularProgressIndicator(
@@ -406,8 +407,8 @@ class _LiveViewerState extends State<LiveViewerScreen> {
             onClose: _leave,
             onStreamGone: () {
               if (!mounted || _leaving) return;
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Live тамом шуд'),
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(tr('ui.9fb07491df')),
                   duration: Duration(seconds: 2)));
               _leave();
             },

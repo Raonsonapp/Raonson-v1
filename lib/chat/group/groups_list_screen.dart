@@ -8,6 +8,7 @@ import 'group_model.dart';
 import 'group_repository.dart';
 import 'group_chat_screen.dart';
 import 'create_group_screen.dart';
+import '../../core/i18n/strings.dart';
 
 class GroupsListScreen extends StatefulWidget {
   const GroupsListScreen({super.key});
@@ -48,14 +49,14 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Ҳамроҳ шудан бо линк',
+        title: Text(tr('ui.d07486c132'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Линк ё коди даъватро гузоред…',
+            hintText: tr('ui.ec0a445b65'),
             hintStyle: TextStyle(color: AppColors.textFaint),
             filled: true, fillColor: AppColors.surface,
             border: OutlineInputBorder(
@@ -66,11 +67,11 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text('Ҳамроҳ шудан',
+              child: Text(tr('ui.b0933ef19a'),
                   style: TextStyle(
                       color: AppColors.neonBlue,
                       fontWeight: FontWeight.bold))),
@@ -87,7 +88,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
     if (!mounted) return;
     if (group == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Гурӯҳ ёфт нашуд ё линк нодуруст аст')));
+          SnackBar(content: Text(tr('ui.0139730163'))));
       return;
     }
     await Navigator.push(context,
@@ -102,11 +103,11 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Гурӯҳҳо',
+        title: Text(tr('ui.7f171db3b5'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         actions: [
           IconButton(
-            tooltip: 'Ҳамроҳ шудан бо линк',
+            tooltip: tr('ui.d07486c132'),
             icon: Icon(AppIcons.link_rounded, color: AppColors.textPrimary),
             onPressed: _joinByLink,
           ),
@@ -122,7 +123,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
               baseColor: AppColors.card,
               highlightColor: AppColors.divider,
               child: ListView.builder(
-                physics: const NeverScrollableScrollPhysics(),
+                physics: NeverScrollableScrollPhysics(),
                 itemCount: 6,
                 itemBuilder: (_, __) => Padding(
                   padding: const EdgeInsets.symmetric(
@@ -154,10 +155,10 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
                   Icon(AppIcons.group_rounded,
                       color: AppColors.textFaint, size: 56),
                   const SizedBox(height: 12),
-                  Text('Ҳанӯз гурӯҳ нест',
+                  Text(tr('ui.3abdeea199'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
                   const SizedBox(height: 4),
-                  Text('Гурӯҳи нав созед 👇',
+                  Text(tr('ui.91fbd9c41d'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
                 ]))
               : RefreshIndicator(

@@ -8,6 +8,7 @@ import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../core/services/subscription_service.dart';
 import '../subscription/subscription_screen.dart';
+import '../core/i18n/strings.dart';
 
 class AiService {
   static Future<String> text(String task, String input, {String lang = ''}) async {
@@ -55,7 +56,7 @@ class _AiToolsButtonState extends State<AiToolsButton> {
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 18),
             const SizedBox(width: 6),
-            Text('AI абзорҳо',
+            Text(tr('ui.d379837116'),
                 style: TextStyle(color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold, fontSize: 16)),
           ]),
@@ -91,13 +92,13 @@ class _AiToolsButtonState extends State<AiToolsButton> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (res == '__NOT_CONFIGURED__') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('AI ҳанӯз танзим нашудааст (калиди LLM лозим)')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.6041188b9a'))));
       return;
     }
     if (res.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('AI ҷавоб надод. Дубора кӯшиш кунед')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.af517eb55b'))));
       return;
     }
     setState(() {
@@ -123,13 +124,12 @@ class _AiToolsButtonState extends State<AiToolsButton> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 40),
           const SizedBox(height: 12),
-          Text('AI абзорҳо — хусусияти Raonson Pro',
+          Text(tr('ui.4c0742534e'),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Caption, Hashtag, тарҷума ва беҳтар кардани матн бо AI — '
-              'бо обунаи Pro фаъол мешавад.',
+          Text(tr('ui.a81915825e'),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           const SizedBox(height: 16),
@@ -146,7 +146,7 @@ class _AiToolsButtonState extends State<AiToolsButton> {
                 Navigator.push(context, MaterialPageRoute(
                     builder: (_) => const SubscriptionScreen()));
               },
-              child: const Text('Raonson Pro гирифтан',
+              child: Text(tr('ui.a26ac78e3e'),
                   style: TextStyle(color: Colors.white,
                       fontWeight: FontWeight.bold)),
             ),

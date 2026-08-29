@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import 'app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class ReportResult {
   final String reason;
@@ -134,7 +135,7 @@ class _ReportDialogState extends State<ReportDialog> {
                   maxLength: 500,
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Тавсифи иловагӣ (ихтиёрӣ)',
+                    hintText: tr('ui.a7e9a87503'),
                     hintStyle: TextStyle(color: AppColors.textFaint),
                     filled: true,
                     fillColor: AppColors.card,
@@ -162,7 +163,7 @@ class _ReportDialogState extends State<ReportDialog> {
                         borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Фиристодан',
+                    child: Text(tr('ui.713a3b33c3'),
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                   ),
                 ),

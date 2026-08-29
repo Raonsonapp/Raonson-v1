@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../app/app_theme.dart';
 import '../auth_repository.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String identifier;
@@ -43,8 +44,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           identifier: widget.identifier, otp: otp, newPassword: pass);
       if (!mounted) return;
       if (ok) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Парол иваз шуд ✓'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.c15c4b02d1')),
           backgroundColor: Colors.green));
         Navigator.popUntil(context, (r) => r.isFirst);
       } else {
@@ -63,11 +64,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.bg, elevation: 0,
-        title: const Text('Рамзро ворид кунед',
+        title: Text(tr('ui.4eaf94a860'),
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        padding: EdgeInsets.fromLTRB(24, 16, 24, 24),
         children: [
           Text('Рамзи 6-рақамаро, ки ба ${widget.identifier} '
               'фиристодем, ворид кунед ва пароли нав созед.',
@@ -115,7 +116,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               child: _loading
                   ? SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textPrimary))
-                  : const Text('Иваз кардани парол',
+                  : Text(tr('ui.cb9327b595'),
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),

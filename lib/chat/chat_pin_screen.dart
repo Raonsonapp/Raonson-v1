@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/services/chat_lock_service.dart';
+import '../core/i18n/strings.dart';
 
 // ── Танзими PIN (аз Settings) ──────────────────────────────────────
 class ChatPinScreen extends StatefulWidget {
@@ -30,8 +31,8 @@ class _ChatPinScreenState extends State<ChatPinScreen> {
     await ChatLockService.instance.setPin(p);
     if (mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('PIN-и чат гузошта шуд ✓'), backgroundColor: Colors.green));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.cae0e3edea')), backgroundColor: Colors.green));
     }
   }
 
@@ -39,8 +40,8 @@ class _ChatPinScreenState extends State<ChatPinScreen> {
     await ChatLockService.instance.setPin(null);
     if (mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('PIN тоза шуд')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.382ba154ae'))));
     }
   }
 
@@ -52,7 +53,7 @@ class _ChatPinScreenState extends State<ChatPinScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('PIN-и чат',
+        title: Text(tr('ui.7c49e29a8b'),
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 16, fontWeight: FontWeight.bold)),
       ),
@@ -81,14 +82,14 @@ class _ChatPinScreenState extends State<ChatPinScreen> {
                 backgroundColor: AppColors.neonBlue,
                 padding: const EdgeInsets.symmetric(vertical: 13)),
             onPressed: _save,
-            child: const Text('Сабт', style: TextStyle(color: Colors.white,
+            child: Text(tr('ui.cb206b6c88'), style: TextStyle(color: Colors.white,
                 fontWeight: FontWeight.bold)),
           )),
           if (has) ...[
             const SizedBox(height: 10),
             SizedBox(width: double.infinity, child: TextButton(
               onPressed: _remove,
-              child: const Text('Тоза кардани PIN',
+              child: Text(tr('ui.3c529fb7f6'),
                   style: TextStyle(color: Colors.redAccent)),
             )),
           ],
@@ -147,11 +148,11 @@ class _ChatLockGateState extends State<ChatLockGate> {
           Icon(AppIcons.lock_outline_rounded,
               color: AppColors.neonBlue, size: 56),
           const SizedBox(height: 16),
-          Text('Чатҳо қулф шудаанд',
+          Text(tr('ui.455f9cde5a'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text('PIN-ро ворид кунед',
+          Text(tr('ui.ccf143518f'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           const SizedBox(height: 20),
           TextField(

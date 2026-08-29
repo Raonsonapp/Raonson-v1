@@ -11,6 +11,7 @@ import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/ui/app_icons.dart';
 import '../../widgets/avatar.dart';
+import '../../core/i18n/strings.dart';
 
 class ShareToChatRow extends StatefulWidget {
   /// 'post' | 'reel' | 'story'
@@ -101,14 +102,14 @@ class _ShareToChatRowState extends State<ShareToChatRow> {
     });
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Фиристода нашуд')));
+          SnackBar(content: Text(tr('ui.5a26777edc'))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const SizedBox(
+      return SizedBox(
         height: 108,
         child: Center(child: SizedBox(width: 20, height: 20,
             child: CircularProgressIndicator(strokeWidth: 2))),
@@ -167,7 +168,7 @@ class _ShareToChatRowState extends State<ShareToChatRow> {
                         child: CircularProgressIndicator(strokeWidth: 1.4)),
                   )
                 else if (sent)
-                  Text('Фиристода шуд',
+                  Text(tr('ui.2a925f06eb'),
                       style: TextStyle(color: AppColors.neonBlue, fontSize: 9)),
               ]),
             ),

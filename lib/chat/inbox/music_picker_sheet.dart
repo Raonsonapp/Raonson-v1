@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../../app/app_theme.dart';
 import '../../models/note_model.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 // ══════════════════════════════════════════════════════════════════
 //  ЭКРАНИ 1 — Рӯйхати сурудҳо
@@ -144,7 +145,7 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
           child: Row(children: [
             _IconBtn(AppIcons.close_rounded, onTap: () => Navigator.pop(context)),
             const SizedBox(width: 14),
-            Expanded(child: Text('Мусиқӣ интихоб кун',
+            Expanded(child: Text(tr('ui.90a7c1c216'),
                 style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 17, fontWeight: FontWeight.bold))),
           ]),
@@ -402,7 +403,7 @@ class _SegmentScreenState extends State<_SegmentScreen> {
                   gradient: _kGrad,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('Тасдиқ',
+                child: Text(tr('ui.3e90848f22'),
                     style: TextStyle(color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold, fontSize: 14)),
               ),
@@ -908,7 +909,7 @@ class _SearchField extends StatelessWidget {
       controller: ctrl,
       style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
       decoration: InputDecoration(
-        hintText: 'Суруд ё хонанда...',
+        hintText: tr('ui.c55bd13afb'),
         hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
         prefixIcon: Icon(AppIcons.search_rounded, color: AppColors.textFaint, size: 20),
         suffixIcon: searching
@@ -1104,7 +1105,7 @@ class _WheelPopupState extends State<_WheelPopup> {
           // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: Text('Сония',
+            child: Text(tr('ui.349850eb9a'),
                 style: TextStyle(
                     color: AppColors.textPrimary.withOpacity(0.5),
                     fontSize: 12, fontWeight: FontWeight.w500)),

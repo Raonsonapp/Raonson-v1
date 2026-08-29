@@ -8,6 +8,7 @@ import '../../core/api/api_client.dart';
 import '../../core/utils/media_compressor.dart';
 import '../../stories/story_repository.dart';
 import '../upload/upload_manager.dart';
+import '../../core/i18n/strings.dart';
 
 class CreateStoryScreen extends StatefulWidget {
   final File? initialFile;
@@ -201,7 +202,7 @@ class _StoryMediaPickerState extends State<_StoryMediaPicker> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black, elevation: 0,
-        title: const Text('Сторис',
+        title: Text(tr('ui.7a1a87cda7'),
             style: TextStyle(color: Colors.white, fontSize: 16)),
         leading: IconButton(
           icon: const Icon(AppIcons.close, color: Colors.white),
@@ -210,11 +211,11 @@ class _StoryMediaPickerState extends State<_StoryMediaPicker> {
       body: _denied
           ? Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('Барои галерея иҷозат лозим аст',
+                Text(tr('ui.315f9b5aa3'),
                     style: TextStyle(color: Colors.white54)),
                 TextButton(
                     onPressed: PhotoManager.openSetting,
-                    child: const Text('Кушодани танзимот',
+                    child: Text(tr('ui.1ff449882a'),
                         style: TextStyle(color: Color(0xFF0095F6)))),
               ]))
           : _loading

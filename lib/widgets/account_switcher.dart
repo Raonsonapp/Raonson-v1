@@ -7,6 +7,7 @@ import '../core/services/user_session.dart';
 import 'avatar.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 void showAccountSwitcher(BuildContext context) {
   showModalBottomSheet(
@@ -28,7 +29,7 @@ void showAccountSwitcher(BuildContext context) {
             ),
             Padding(
               padding: EdgeInsets.only(bottom: 6),
-              child: Text('Аккаунтҳо',
+              child: Text(tr('ui.3c100771bd'),
                   style: TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600, fontSize: 16)),
@@ -67,7 +68,7 @@ void showAccountSwitcher(BuildContext context) {
                     radius: 21,
                     backgroundColor: Color(0xFF2A2A2C),
                     child: Icon(AppIcons.add_rounded, color: AppColors.textPrimary)),
-                title: const Text('Илова кардани аккаунт',
+                title: Text(tr('ui.aee1d3fbad'),
                     style: TextStyle(
                         color: Color(0xFF1D9BF0), fontWeight: FontWeight.w600)),
                 onTap: () {
@@ -80,7 +81,7 @@ void showAccountSwitcher(BuildContext context) {
             else
               Padding(
                 padding: EdgeInsets.all(14),
-                child: Text('Ҳадди аксар 3 аккаунт',
+                child: Text(tr('ui.a6419e14da'),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
               ),
             const SizedBox(height: 8),

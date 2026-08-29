@@ -7,6 +7,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/tajikshop_brand.dart';
 import 'shop_repository.dart';
+import '../core/i18n/strings.dart';
 
 class SellScreen extends StatefulWidget {
   const SellScreen({super.key});
@@ -53,14 +54,14 @@ class _SellScreenState extends State<SellScreen> {
     if (perm == LocationPermission.denied ||
         perm == LocationPermission.deniedForever) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Иҷозати ҷойгиршавӣ дода нашуд')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.2cce78d6a6'))));
       }
       return;
     }
     try {
       final pos = await Geolocator.getCurrentPosition()
-          .timeout(const Duration(seconds: 12));
+          .timeout(Duration(seconds: 12));
       if (mounted) {
         setState(() {
           _lat = pos.latitude;
@@ -118,7 +119,7 @@ class _SellScreenState extends State<SellScreen> {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         title: Row(mainAxisSize: MainAxisSize.min, children: [
           TajikshopBrand.logoCompact(size: 15),
-          Text(' — Эълон',
+          Text(tr('ui.cd7d5059a4'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
         ]),
         actions: [
@@ -127,7 +128,7 @@ class _SellScreenState extends State<SellScreen> {
             child: _publishing
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : Text('Эълон',
+                : Text(tr('ui.c181b26d36'),
                     style: TextStyle(
                         color: AppColors.neonBlue,
                         fontWeight: FontWeight.bold, fontSize: 15)),
@@ -153,7 +154,7 @@ class _SellScreenState extends State<SellScreen> {
                     Icon(AppIcons.add_a_photo_rounded,
                         color: AppColors.textFaint, size: 40),
                     const SizedBox(height: 8),
-                    Text('Расми маҳсулот',
+                    Text(tr('ui.d0e225a4fb'),
                         style: TextStyle(color: AppColors.textFaint)),
                   ]))
                 : null,
@@ -216,7 +217,7 @@ class _SellScreenState extends State<SellScreen> {
           ),
         ),
         const SizedBox(height: 18),
-        Text('Харидор чӣ тавр бо шумо алоқа кунад?',
+        Text(tr('ui.b6f1327933'),
             style: TextStyle(
                 color: AppColors.textSecondary, fontSize: 13,
                 fontWeight: FontWeight.w600)),
@@ -229,7 +230,7 @@ class _SellScreenState extends State<SellScreen> {
             value: _raonson,
             onChanged: (v) => setState(() => _raonson = v),
             activeColor: AppColors.neonBlue,
-            title: Text('Чати Raonson',
+            title: Text(tr('ui.006e5dbe34'),
                 style: TextStyle(color: AppColors.textPrimary)),
             secondary: Icon(AppIcons.chat_bubble_rounded,
                 color: AppColors.neonBlue),
@@ -242,8 +243,7 @@ class _SellScreenState extends State<SellScreen> {
         _field(_phone, 'Рақами телефон (ихтиёрӣ)',
             keyboard: TextInputType.phone),
         const SizedBox(height: 8),
-        Text('Метавонед ҳар се роҳро монед — харидор худаш интихоб мекунад.\n'
-            'Комиссияи платформа: 5% аз ҳар фуруш.',
+        Text(tr('ui.ab71954396'),
             style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
       ]),
     );

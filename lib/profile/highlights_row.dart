@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import 'highlight_model.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class HighlightsRow extends StatelessWidget {
   final List<HighlightModel> highlights;
@@ -33,7 +34,7 @@ class HighlightsRow extends StatelessWidget {
         children: [
           if (isMe)
             _HlItem(
-              label:    'Нав',
+              label:    tr('ui.38179692b6'),
               coverUrl: '',
               isAdd:    true,
               onTap:    onAdd,

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class _Group {
   final String emoji, title;
@@ -190,7 +191,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           const SizedBox(height: 20),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Фаҳмидам',
+            child: Text(tr('ui.871f022a8e'),
                 style: TextStyle(color: AppColors.neonBlue, fontSize: 15)),
           ),
           const SizedBox(height: 12),
@@ -242,7 +243,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               Text('$_price сомонӣ',
                   style: const TextStyle(color: Colors.white,
                       fontSize: 28, fontWeight: FontWeight.w900)),
-              const Text('дар як моҳ',
+              Text(tr('ui.bc3b3c9c55'),
                   style: TextStyle(color: Colors.white70, fontSize: 12)),
             ]),
           ),
@@ -279,7 +280,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     borderRadius: BorderRadius.circular(14)),
               ),
               onPressed: _subscribe,
-              child: const Text('Ба зудӣ фаъол мешавад',
+              child: Text(tr('ui.342b7f567d'),
                   style: TextStyle(color: Colors.white,
                       fontSize: 16, fontWeight: FontWeight.bold)),
             ),
@@ -340,7 +341,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(color: AppColors.surface,
                       borderRadius: BorderRadius.circular(5)),
-                  child: Text('ба зудӣ',
+                  child: Text(tr('ui.0ba9823f99'),
                       style: TextStyle(color: AppColors.textFaint, fontSize: 9)),
                 ),
             ]),

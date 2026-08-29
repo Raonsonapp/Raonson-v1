@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import 'highlight_model.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class HighlightViewer extends StatefulWidget {
   final HighlightModel highlight;
@@ -182,13 +183,13 @@ class _HighlightViewerState extends State<HighlightViewer>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Номивазкунӣ',
+        title: Text(tr('ui.efc0a35af9'),
             style: TextStyle(color: AppColors.textPrimary)),
         content: TextField(
           controller: ctrl, autofocus: true, maxLength: 20,
           style: TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Ном...',
+            hintText: tr('ui.3679b2134b'),
             hintStyle: TextStyle(color: AppColors.textFaint),
             counterStyle: TextStyle(color: AppColors.textFaint),
             enabledBorder: UnderlineInputBorder(
@@ -199,10 +200,10 @@ class _HighlightViewerState extends State<HighlightViewer>
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-              child: Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, ctrl.text),
-              child: const Text('Сабт',
+              child: Text(tr('ui.cb206b6c88'),
                   style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
@@ -234,14 +235,14 @@ class _HighlightViewerState extends State<HighlightViewer>
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Нест кардан?', style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Актуалӣ тамоман нест мешавад.',
+        title: Text(tr('ui.e6326ea2d4'), style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(tr('ui.5a9e354e38'),
             style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Нест кун',
+              child: Text(tr('ui.b03ce66658'),
                   style: TextStyle(color: Colors.redAccent))),
         ],
       ),

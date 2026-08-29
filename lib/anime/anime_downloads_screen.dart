@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import 'anime_player_screen.dart';
 import 'download_service.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class AnimeDownloadsScreen extends StatefulWidget {
   const AnimeDownloadsScreen({super.key});
@@ -39,25 +40,25 @@ class _AnimeDownloadsScreenState extends State<AnimeDownloadsScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black, elevation: 0,
-        title: const Text('Зеркашшуда',
+        title: Text(tr('ui.1bf6df78c7'),
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(
               color: AppColors.neonBlue, strokeWidth: 2))
           : _files.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Icon(AppIcons.download_done_rounded, color: Colors.white24, size: 48),
                     SizedBox(height: 12),
-                    Text('Ҳанӯз чизе зеркашӣ нашудааст',
+                    Text(tr('ui.d8b2d0b72f'),
                         style: TextStyle(color: Colors.white38)),
                   ]),
                 )
               : ListView.separated(
                   itemCount: _files.length,
                   separatorBuilder: (_, __) =>
-                      const Divider(color: Colors.white10, height: 1),
+                      Divider(color: Colors.white10, height: 1),
                   itemBuilder: (_, i) {
                     final f = _files[i];
                     final title = DownloadService.titleOf(f);

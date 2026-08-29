@@ -8,6 +8,7 @@ import '../../core/ui/app_icons.dart';
 import '../../widgets/avatar.dart';
 import 'group_repository.dart';
 import 'group_chat_screen.dart';
+import '../../core/i18n/strings.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -74,7 +75,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Номи гурӯҳро нависед')));
+          SnackBar(content: Text(tr('ui.061bf26272'))));
       return;
     }
     setState(() => _creating = true);
@@ -83,7 +84,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     setState(() => _creating = false);
     if (group == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Гурӯҳ сохта нашуд')));
+          SnackBar(content: Text(tr('ui.7b8905aa2c'))));
       return;
     }
     Navigator.pushReplacement(context,
@@ -97,7 +98,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Гурӯҳи нав',
+        title: Text(tr('ui.b89746110f'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         actions: [
           TextButton(
@@ -105,7 +106,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             child: _creating
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : Text('Сохтан',
+                : Text(tr('ui.b979a5a4c1'),
                     style: TextStyle(
                         color: AppColors.neonBlue,
                         fontWeight: FontWeight.bold, fontSize: 15)),
@@ -120,7 +121,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             controller: _nameCtrl,
             style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Номи гурӯҳ…',
+              hintText: tr('ui.207e86ab97'),
               hintStyle: TextStyle(color: AppColors.textFaint),
               prefixIcon: Icon(AppIcons.group_rounded, color: AppColors.textFaint),
               filled: true, fillColor: AppColors.surface,
@@ -160,7 +161,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
             onChanged: _onSearch,
             style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Одам ҷустуҷӯ кунед…',
+              hintText: tr('ui.1890b14be0'),
               hintStyle: TextStyle(color: AppColors.textFaint),
               prefixIcon: Icon(AppIcons.search, color: AppColors.textFaint),
               filled: true, fillColor: AppColors.surface,

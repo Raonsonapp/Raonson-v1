@@ -114,13 +114,13 @@ class _CollectionsRowState extends State<CollectionsRow> {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Папкаи нав',
+          title: Text(tr('ui.108bae9189'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
           content: TextField(
             controller: ctrl, autofocus: true, maxLength: 40,
             style: TextStyle(color: AppColors.textPrimary),
             decoration: InputDecoration(
-                counterText: '', hintText: 'Ном',
+                counterText: '', hintText: tr('ui.f916566d1a'),
                 hintStyle: TextStyle(color: AppColors.textFaint)),
             onSubmitted: (v) => Navigator.pop(ctx, v),
           ),
@@ -152,7 +152,7 @@ class _CollectionsRowState extends State<CollectionsRow> {
     if (!mounted) return;
     if (posts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ин папка холӣ аст')));
+          SnackBar(content: Text(tr('ui.74974cb2a8'))));
       return;
     }
     Navigator.push(context, MaterialPageRoute(
@@ -167,7 +167,7 @@ class _CollectionsRowState extends State<CollectionsRow> {
         backgroundColor: AppColors.card,
         title: Text('«${c.name}»-ро нест кунем?',
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
-        content: Text('Постҳо захира мемонанд — танҳо папка нест мешавад.',
+        content: Text(tr('ui.3471935aa9'),
             style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
         actions: [
           TextButton(
@@ -177,7 +177,7 @@ class _CollectionsRowState extends State<CollectionsRow> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(tr('common.delete'),
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: Color(0xFFFF3B30), fontWeight: FontWeight.bold))),
         ],
       ),
@@ -203,7 +203,7 @@ class _CollectionsRowState extends State<CollectionsRow> {
               onTap: _create,
               child: Icon(AppIcons.add_rounded,
                   color: AppColors.textSecondary, size: 26),
-              label: 'Нав',
+              label: tr('ui.38179692b6'),
             );
           }
           final c = _items[i - 1];

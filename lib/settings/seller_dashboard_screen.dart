@@ -11,6 +11,7 @@ import '../core/api/api_client.dart';
 import '../shop/order_management_screen.dart';
 import '../shop/crm_screen.dart';
 import '../shop/promo_codes_screen.dart';
+import '../core/i18n/strings.dart';
 
 class SellerDashboardScreen extends StatefulWidget {
   const SellerDashboardScreen({super.key});
@@ -75,14 +76,14 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
           : (_error != null)
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: TextStyle(color: AppColors.textFaint)),
-                  TextButton(onPressed: _load, child: const Text('Аз нав')),
+                  TextButton(onPressed: _load, child: Text(tr('ui.fa89cda51f'))),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      Text('30 рӯзи охир',
+                      Text(tr('ui.8e472efb6b'),
                           style: TextStyle(color: AppColors.textFaint,
                               fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
@@ -132,7 +133,7 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Даромади умумӣ',
+        Text(tr('ui.79c390823b'),
             style: TextStyle(color: Colors.white70, fontSize: 12)),
         const SizedBox(height: 6),
         Text(_money(_d('revenue30d')),
@@ -200,15 +201,15 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
         child: Center(child: Column(children: [
           Icon(AppIcons.storefront_rounded, color: AppColors.textFaint, size: 40),
           const SizedBox(height: 10),
-          Text('Ҳанӯз фурӯш нест',
+          Text(tr('ui.702bceb1f1'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
-          Text('Махсулот эълон кунед ва фурӯшро оғоз намоед',
+          Text(tr('ui.9a6e37fd2f'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
         ])),
       );
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Махсули беҳтарин',
+      Text(tr('ui.7199ff3ce4'),
           style: TextStyle(color: AppColors.textPrimary,
               fontSize: 15, fontWeight: FontWeight.w700)),
       const SizedBox(height: 10),
@@ -262,7 +263,7 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
       if (c > maxCount) maxCount = c;
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Фурӯш аз рӯи рӯз',
+      Text(tr('ui.77d600ff9d'),
           style: TextStyle(color: AppColors.textPrimary,
               fontSize: 15, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
@@ -293,7 +294,7 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
         ),
       ),
       const SizedBox(height: 6),
-      Text('Ҳар сутун = 1 рӯз (30 рӯзи охир)',
+      Text(tr('ui.921d558756'),
           style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
       const SizedBox(height: 20),
     ]);

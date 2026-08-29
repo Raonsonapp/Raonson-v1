@@ -265,14 +265,14 @@ class _SearchScreenState extends State<SearchScreen>
         });
         _tabs.index = 0;
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('AI ҷустуҷӯ ҳозир дастрас нест'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.9b7cca187b')),
             duration: Duration(seconds: 2)));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Хато ҳангоми AI ҷустуҷӯ'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('ui.8930ef4390')),
             duration: Duration(seconds: 2)));
       }
     }
@@ -496,7 +496,7 @@ class _SearchScreenState extends State<SearchScreen>
             const SizedBox(width: 10),
             GestureDetector(
               onTap: _cancelSearch,
-              child: const Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.neonBlue,
                       fontSize: 14, fontWeight: FontWeight.w500)),
             ),
@@ -507,7 +507,7 @@ class _SearchScreenState extends State<SearchScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
             child: Row(children: [
-              Text('Охирин',
+              Text(tr('ui.0759823efe'),
                   style: TextStyle(color: AppColors.textPrimary,
                       fontSize: 16, fontWeight: FontWeight.w700)),
               const Spacer(),
@@ -516,7 +516,7 @@ class _SearchScreenState extends State<SearchScreen>
                   await SearchHistory.clear();
                   _loadHistory();
                 },
-                child: const Text('Ҳамаро тоза кун',
+                child: Text(tr('ui.8042ac7dd5'),
                     style: TextStyle(color: AppColors.neonBlue,
                         fontSize: 13, fontWeight: FontWeight.w500)),
               ),
@@ -536,7 +536,7 @@ class _SearchScreenState extends State<SearchScreen>
         ] else
           Expanded(
             child: Center(
-              child: Text('Ҷустуҷӯи охирин нест',
+              child: Text(tr('ui.1387a7ff94'),
                   style: TextStyle(
                       color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
             ),
@@ -668,7 +668,7 @@ class _SearchScreenState extends State<SearchScreen>
             const SizedBox(width: 6),
             GestureDetector(
               onTap: _cancelSearch,
-              child: const Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.neonBlue,
                       fontSize: 14, fontWeight: FontWeight.w500)),
             ),
@@ -770,7 +770,7 @@ class _SearchBar extends StatelessWidget {
           const SizedBox(width: 10),
           GestureDetector(
             onTap: onCancel,
-            child: const Text('Бекор',
+            child: Text(tr('ui.47ba09d086'),
                 style: TextStyle(color: AppColors.neonBlue,
                     fontSize: 14, fontWeight: FontWeight.w500)),
           ),
@@ -1333,7 +1333,7 @@ class _FeedCardState extends State<_FeedCard> {
                 Icon(AppIcons.storefront_rounded,
                     color: AppColors.textPrimary, size: 26),
                 const SizedBox(height: 3),
-                Text('Харид',
+                Text(tr('ui.7b504dd5e1'),
                     style: TextStyle(
                         color: AppColors.textPrimary, fontSize: 11,
                         fontWeight: FontWeight.w600)),
@@ -1455,7 +1455,7 @@ class _FeedCardState extends State<_FeedCard> {
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white24, width: 0.6),
                 ),
-                child: const Text('Изоҳ илова кунед…',
+                child: Text(tr('ui.1445ea06ef'),
                     style: TextStyle(color: Colors.white70, fontSize: 14)),
               ),
             ),
@@ -1593,7 +1593,7 @@ class _ForYouTab extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text('Аккаунтҳо',
+              child: Text(tr('ui.3c100771bd'),
                   style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 15, fontWeight: FontWeight.w700)),
@@ -1621,7 +1621,7 @@ class _ForYouTab extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Text('Аудио',
+              child: Text(tr('ui.24321cb540'),
                   style: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 15, fontWeight: FontWeight.w700)),
@@ -2034,7 +2034,7 @@ class _NoResult extends StatelessWidget {
       Icon(AppIcons.search_off_rounded,
           size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
       const SizedBox(height: 10),
-      Text('Ёфт нашуд',
+      Text(tr('ui.eff21525ef'),
           style: TextStyle(
               color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
     ]),
@@ -2053,7 +2053,7 @@ class _ErrView extends StatelessWidget {
         Icon(AppIcons.wifi_off_rounded,
             color: AppColors.textFaint, size: 48),
         const SizedBox(height: 12),
-        Text('Пайвастшавӣ нашуд',
+        Text(tr('ui.491ea2cedb'),
             style: TextStyle(
                 color: AppColors.textTertiary, fontSize: 15,
                 fontWeight: FontWeight.w600)),
@@ -2067,7 +2067,7 @@ class _ErrView extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(AppIcons.refresh_rounded, size: 18),
-            label: const Text('Такрор кӯшиш'),
+            label: Text(tr('ui.602fab7c97')),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.neonBlue,
               foregroundColor: AppColors.textPrimary,
@@ -2151,7 +2151,7 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
-          Text('Шарҳҳо',
+          Text(tr('ui.8be35deea4'),
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600, fontSize: 15)),
           Divider(color: AppColors.dividerFaint),
@@ -2160,7 +2160,7 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
                 ? Center(child: CircularProgressIndicator(
                     color: AppColors.textFaint, strokeWidth: 2))
                 : _comments.isEmpty
-                    ? Center(child: Text('Ҳанӯз шарҳ нест',
+                    ? Center(child: Text(tr('ui.656a3f32d0'),
                         style: TextStyle(color: AppColors.textFaint)))
                     : ListView.builder(
                         itemCount: _comments.length,
@@ -2191,7 +2191,7 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
                   maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                   decoration: InputDecoration(
-                    hintText: 'Шарҳ нависед...',
+                    hintText: tr('ui.945641e96c'),
                     hintStyle: TextStyle(color: AppColors.textFaint),
                     filled: true, fillColor: AppColors.dividerFaint,
                     border: OutlineInputBorder(

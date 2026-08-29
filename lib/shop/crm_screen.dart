@@ -7,6 +7,7 @@ import '../core/ui/app_icons.dart';
 import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
+import '../core/i18n/strings.dart';
 
 class CrmScreen extends StatefulWidget {
   const CrmScreen({super.key});
@@ -40,8 +41,8 @@ class _CrmScreenState extends State<CrmScreen> {
 
   Future<void> _broadcast() async {
     if (_customers.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Ҳанӯз муштарӣ нест')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('ui.be2757bada'))));
       return;
     }
     final ctrl = TextEditingController();
@@ -49,18 +50,18 @@ class _CrmScreenState extends State<CrmScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Паём ба ҳама муштариён',
+        title: Text(tr('ui.df904489f6'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: TextField(controller: ctrl, autofocus: true, maxLines: 4,
           maxLength: 1000,
           style: TextStyle(color: AppColors.textPrimary),
-          decoration: InputDecoration(hintText: 'Матни паём (аксия, хабар…)',
+          decoration: InputDecoration(hintText: tr('ui.7762e0dbc3'),
               hintStyle: TextStyle(color: AppColors.textFaint))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор', style: TextStyle(color: AppColors.textTertiary))),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text('Фиристодан', style: TextStyle(color: AppColors.neonBlue))),
+              child: Text(tr('ui.713a3b33c3'), style: TextStyle(color: AppColors.neonBlue))),
         ],
       ),
     );
@@ -95,20 +96,20 @@ class _CrmScreenState extends State<CrmScreen> {
         ]),
         actions: [
           IconButton(
-            tooltip: 'Паём ба ҳама',
+            tooltip: tr('ui.9e7c09d738'),
             icon: Icon(AppIcons.send_rounded, color: AppColors.textPrimary),
             onPressed: _broadcast,
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          ? Center(child: CircularProgressIndicator(strokeWidth: 2))
           : _customers.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.people_outline_rounded,
                       color: AppColors.textFaint, size: 44),
                   const SizedBox(height: 10),
-                  Text('Ҳанӯз муштарӣ нест',
+                  Text(tr('ui.be2757bada'),
                       style: TextStyle(color: AppColors.textFaint)),
                 ]))
               : RefreshIndicator(

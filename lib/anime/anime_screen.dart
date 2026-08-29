@@ -9,6 +9,7 @@ import 'aparat_api.dart';
 import 'anime_player_screen.dart';
 import 'anime_downloads_screen.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class AnimeScreen extends StatefulWidget {
   const AnimeScreen({super.key});
@@ -67,11 +68,11 @@ class _AnimeScreenState extends State<AnimeScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black, elevation: 0,
-        title: const Text('Аниме', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(tr('ui.7337e416da'), style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
             icon: const Icon(AppIcons.download_rounded, color: Colors.white),
-            tooltip: 'Зеркашшуда',
+            tooltip: tr('ui.1bf6df78c7'),
             onPressed: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const AnimeDownloadsScreen())),
           ),
@@ -91,7 +92,7 @@ class _AnimeScreenState extends State<AnimeScreen> {
               textInputAction: TextInputAction.search,
               onSubmitted: _onSearch,
               decoration: InputDecoration(
-                hintText: 'Ҷустуҷӯи аниме (тоҷикӣ ҳам мешавад)',
+                hintText: tr('ui.ff28165c03'),
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 14),
                 prefixIcon: const Icon(AppIcons.search, color: Colors.white38, size: 20),
                 suffixIcon: _searchCtrl.text.isEmpty ? null : IconButton(
@@ -154,10 +155,10 @@ class _AnimeScreenState extends State<AnimeScreen> {
         const SizedBox(height: 120),
         const Icon(AppIcons.movie_outlined, color: Colors.white24, size: 48),
         const SizedBox(height: 12),
-        const Center(child: Text('Натиҷае нест ё Aparat дастрас нест',
+        Center(child: Text(tr('ui.3c1d253e5d'),
             style: TextStyle(color: Colors.white38))),
         if (AparatApi.lastDebug.isNotEmpty) ...[
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(AparatApi.lastDebug, textAlign: TextAlign.center,
@@ -169,7 +170,7 @@ class _AnimeScreenState extends State<AnimeScreen> {
           child: OutlinedButton.icon(
             onPressed: _load,
             icon: const Icon(AppIcons.refresh_rounded, color: Colors.white, size: 18),
-            label: const Text('Такрор', style: TextStyle(color: Colors.white)),
+            label: Text(tr('ui.fa5607ad24'), style: TextStyle(color: Colors.white)),
             style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Colors.white24)),
           ),

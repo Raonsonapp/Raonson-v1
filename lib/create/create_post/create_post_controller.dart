@@ -14,6 +14,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -74,18 +75,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(color: Colors.white24,
               borderRadius: BorderRadius.circular(2))),
-        const Padding(padding: EdgeInsets.only(bottom: 12),
-          child: Text('Чӣ илова мекунед?',
+        Padding(padding: EdgeInsets.only(bottom: 12),
+          child: Text(tr('ui.1d5f177feb'),
               style: TextStyle(color: Colors.white,
                   fontWeight: FontWeight.w700, fontSize: 16))),
         ListTile(
           leading: Container(width: 44, height: 44,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
                 color: Color(0xFF0095F6), shape: BoxShape.circle),
             child: const Icon(AppIcons.image_outlined, color: Colors.white, size: 22)),
-          title: const Text('Расм', style: TextStyle(color: Colors.white, fontSize: 16,
+          title: Text(tr('ui.34ced71ce6'), style: TextStyle(color: Colors.white, fontSize: 16,
               fontWeight: FontWeight.w500)),
-          subtitle: const Text('Аз галерея',
+          subtitle: Text(tr('ui.2b827fba21'),
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () => Navigator.pop(_, 'image')),
         ListTile(
@@ -93,9 +94,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             decoration: const BoxDecoration(
                 color: Color(0xFF833AB4), shape: BoxShape.circle),
             child: const Icon(AppIcons.videocam_outlined, color: Colors.white, size: 22)),
-          title: const Text('Видео', style: TextStyle(color: Colors.white, fontSize: 16,
+          title: Text(tr('ui.8e7b9894c7'), style: TextStyle(color: Colors.white, fontSize: 16,
               fontWeight: FontWeight.w500)),
-          subtitle: const Text('Аз галерея',
+          subtitle: Text(tr('ui.2b827fba21'),
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () => Navigator.pop(_, 'video')),
         const SizedBox(height: 12),
@@ -263,13 +264,13 @@ class _PostEditorState extends State<_PostEditor> {
       builder: (_) => StatefulBuilder(builder: (ctx, setDlg) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Матн', style: TextStyle(color: Colors.white)),
+        title: Text(tr('ui.e2a4599cfc'), style: TextStyle(color: Colors.white)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: ctrl, autofocus: true,
             style: TextStyle(color: _textColor, fontSize: _fontSize, fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(hintText: 'Матн нависед...',
+            decoration: InputDecoration(hintText: tr('ui.905b21a78a'),
               hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none)),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children:
             [Colors.white, Colors.yellow, Colors.red, Colors.cyan, Colors.green, Colors.orange].map((c) =>
               GestureDetector(onTap: () { setDlg(() {}); setState(() => _textColor = c); },
@@ -281,7 +282,7 @@ class _PostEditorState extends State<_PostEditor> {
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
@@ -294,7 +295,7 @@ class _PostEditorState extends State<_PostEditor> {
               }
               Navigator.pop(context);
             },
-            child: const Text('Илова', style: TextStyle(color: Colors.black))),
+            child: Text(tr('ui.d4a317a798'), style: TextStyle(color: Colors.black))),
         ])));
   }
 
@@ -304,14 +305,14 @@ class _PostEditorState extends State<_PostEditor> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Зикр кунед', style: TextStyle(color: Colors.white)),
+        title: Text(tr('ui.db62ebe335'), style: TextStyle(color: Colors.white)),
         content: TextField(controller: ctrl, autofocus: true,
           style: const TextStyle(color: Colors.white, fontSize: 18),
           decoration: const InputDecoration(hintText: '@username',
             hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Бекор', style: TextStyle(color: Colors.white54))),
+            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
             onPressed: () {
@@ -324,7 +325,7 @@ class _PostEditorState extends State<_PostEditor> {
               }
               Navigator.pop(context);
             },
-            child: const Text('Илова', style: TextStyle(color: Colors.black))),
+            child: Text(tr('ui.d4a317a798'), style: TextStyle(color: Colors.black))),
         ]));
   }
 
@@ -337,7 +338,7 @@ class _PostEditorState extends State<_PostEditor> {
       builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        const Text('Стикер', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(tr('ui.149c202875'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: emojis.map((e) =>
           GestureDetector(onTap: () {
@@ -447,8 +448,8 @@ class _PostEditorState extends State<_PostEditor> {
                   controller: _captionCtrl, autofocus: true,
                   style: const TextStyle(color: Colors.white, fontSize: 15),
                   maxLines: 4, maxLength: 500,
-                  decoration: const InputDecoration(
-                    hintText: 'Тавсиф нависед...',
+                  decoration: InputDecoration(
+                    hintText: tr('ui.5927e29104'),
                     hintStyle: TextStyle(color: Colors.white38),
                     contentPadding: EdgeInsets.all(12),
                     border: InputBorder.none,
@@ -462,7 +463,7 @@ class _PostEditorState extends State<_PostEditor> {
               child: Column(children:
                 [Colors.white, Colors.red, Colors.yellow, Colors.cyan, Colors.green, Colors.black].map((c) =>
                   GestureDetector(onTap: () => setState(() => _drawColor = c),
-                    child: Container(margin: const EdgeInsets.only(bottom: 8),
+                    child: Container(margin: EdgeInsets.only(bottom: 8),
                       width: 30, height: 30,
                       decoration: BoxDecoration(color: c, shape: BoxShape.circle,
                         border: Border.all(
@@ -499,7 +500,7 @@ class _PostEditorState extends State<_PostEditor> {
                 child: widget.isUploading
                     ? const SizedBox(width: 18, height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : const Text('Нашр кун',
+                    : Text(tr('ui.2e25f8a101'),
                         style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold))),
             ]))),
 
@@ -509,18 +510,18 @@ class _PostEditorState extends State<_PostEditor> {
               color: Colors.black54,
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                _ToolBtn(icon: AppIcons.text_fields,         label: 'Текст',
+                _ToolBtn(icon: AppIcons.text_fields,         label: tr('ui.93970437e2'),
                   onTap: () { setState(() => _tool = _Tool.none); _showTextDialog(); }),
-                _ToolBtn(icon: AppIcons.brush,               label: 'Расм',
+                _ToolBtn(icon: AppIcons.brush,               label: tr('ui.34ced71ce6'),
                   isActive: _tool == _Tool.draw,
                   onTap: () => setState(() => _tool = _tool == _Tool.draw ? _Tool.none : _Tool.draw)),
-                _ToolBtn(icon: AppIcons.emoji_emotions_outlined, label: 'Стикер',
+                _ToolBtn(icon: AppIcons.emoji_emotions_outlined, label: tr('ui.149c202875'),
                   onTap: () { setState(() => _tool = _Tool.none); _showStickerPanel(); }),
-                _ToolBtn(icon: AppIcons.music_note,          label: 'Мусиқӣ',
+                _ToolBtn(icon: AppIcons.music_note,          label: tr('ui.d4583b94ee'),
                   onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),
-                _ToolBtn(icon: AppIcons.alternate_email,     label: 'Зикр',
+                _ToolBtn(icon: AppIcons.alternate_email,     label: tr('ui.16d45c3f81'),
                   onTap: () { setState(() => _tool = _Tool.none); _showMentionDialog(); }),
-                _ToolBtn(icon: AppIcons.edit_note,           label: 'Тавсиф',
+                _ToolBtn(icon: AppIcons.edit_note,           label: tr('ui.13c977b6ae'),
                   isActive: _showCaption,
                   onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),
               ])))),
@@ -528,10 +529,10 @@ class _PostEditorState extends State<_PostEditor> {
           // ── Upload overlay ──────────────────────
           if (widget.isUploading)
             Container(color: Colors.black54,
-              child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                 CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                 SizedBox(height: 16),
-                Text('Бор мешавад...', style: TextStyle(color: Colors.white70, fontSize: 15)),
+                Text(tr('ui.1ddb84cf4f'), style: TextStyle(color: Colors.white70, fontSize: 15)),
               ]))),
         ]),
       ),
@@ -544,7 +545,7 @@ class _PostEditorState extends State<_PostEditor> {
         return AspectRatio(aspectRatio: _videoCtrl!.value.aspectRatio,
           child: VideoPlayer(_videoCtrl!));
       }
-      return const CircularProgressIndicator(color: Colors.white30);
+      return CircularProgressIndicator(color: Colors.white30);
     }
     return Image.file(widget.media, fit: BoxFit.contain);
   }
@@ -637,13 +638,13 @@ class _MusicPanelState extends State<_MusicPanel> {
       child: Column(children: [
         Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
           decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        const Text('Мусиқӣ 🎵', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(tr('ui.6cf38316d7'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(controller: _ctrl, style: const TextStyle(color: Colors.white),
             textInputAction: TextInputAction.search, onSubmitted: _search,
             decoration: InputDecoration(
-              hintText: 'Суруд ё хонанда...', hintStyle: const TextStyle(color: Colors.white38),
+              hintText: tr('ui.c55bd13afb'), hintStyle: const TextStyle(color: Colors.white38),
               prefixIcon: const Icon(AppIcons.search, color: Colors.white38),
               suffixIcon: IconButton(icon: const Icon(AppIcons.send, color: Color(0xFF0095F6)),
                 onPressed: () => _search(_ctrl.text)),
@@ -654,9 +655,9 @@ class _MusicPanelState extends State<_MusicPanel> {
         if (_error != null) Padding(padding: const EdgeInsets.all(16),
           child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
         if (!_loading && _tracks.isEmpty && _error == null)
-          const Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(AppIcons.music_note, color: Colors.white24, size: 48), SizedBox(height: 12),
-            Text('Суруд ёбед', style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(tr('ui.1aebf2a2fc'), style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
           ]))),
         if (!_loading && _tracks.isNotEmpty)
           Expanded(child: ListView.builder(itemCount: _tracks.length, itemBuilder: (_, i) {
@@ -665,7 +666,7 @@ class _MusicPanelState extends State<_MusicPanel> {
               leading: t.artworkUrl.isNotEmpty
                 ? ClipRRect(borderRadius: BorderRadius.circular(6),
                     child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
-                : const Icon(AppIcons.music_note, color: Colors.white54),
+                : Icon(AppIcons.music_note, color: Colors.white54),
               title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(t.artist, style: const TextStyle(color: Colors.white54),

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class NewsItem {
   final String title, link, description, image, source, pubDate, isoDate;
@@ -143,7 +144,7 @@ class _NewsScreenState extends State<NewsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Ахбор',
+        title: Text(tr('ui.a83e1c07cf'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 18,
                 fontWeight: FontWeight.bold)),
         bottom: PreferredSize(
@@ -189,7 +190,7 @@ class _NewsScreenState extends State<NewsScreen> {
                   const SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: AppColors.textFaint)),
                   TextButton(onPressed: () => _load(reset: true),
-                      child: const Text('Аз нав')),
+                      child: Text(tr('ui.fa89cda51f'))),
                 ]))
               : RefreshIndicator(
                   onRefresh: () => _load(reset: true),
@@ -207,7 +208,7 @@ class _NewsScreenState extends State<NewsScreen> {
                             child: _hasMore
                                 ? const SizedBox(width: 22, height: 22,
                                     child: CircularProgressIndicator(strokeWidth: 2))
-                                : Text('Ин ҳама ахбор',
+                                : Text(tr('ui.1f954aa2ab'),
                                     style: TextStyle(color: AppColors.textFaint,
                                         fontSize: 12)),
                           ),
@@ -239,7 +240,7 @@ class _NewsScreenState extends State<NewsScreen> {
                       decoration: BoxDecoration(
                           color: const Color(0xFF00C853).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(5)),
-                      child: const Text('🇹🇯 Тоҷикистон',
+                      child: Text(tr('ui.20516275e8'),
                           style: TextStyle(
                               color: Color(0xFF00C853), fontSize: 10,
                               fontWeight: FontWeight.w700)),
@@ -347,7 +348,7 @@ class NewsDetailScreen extends StatelessWidget {
                     onPressed: _openLink,
                     icon: const Icon(AppIcons.open_in_new_rounded,
                         color: Colors.white, size: 18),
-                    label: const Text('Хондани пурра',
+                    label: Text(tr('ui.0a6e2f86ac'),
                         style: TextStyle(color: Colors.white,
                             fontSize: 15, fontWeight: FontWeight.w600)),
                   ),

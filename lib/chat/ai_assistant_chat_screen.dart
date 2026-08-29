@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class AiAssistantChatScreen extends StatefulWidget {
   const AiAssistantChatScreen({super.key});
@@ -96,7 +97,7 @@ class _AiAssistantChatScreenState extends State<AiAssistantChatScreen> {
             child: Icon(AppIcons.bolt_rounded, color: Colors.white, size: 18),
           ),
           const SizedBox(width: 10),
-          Text('Ёрдамчии AI',
+          Text(tr('ui.e2a057248b'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 16,
                   fontWeight: FontWeight.w600)),
         ]),
@@ -124,7 +125,7 @@ class _AiAssistantChatScreenState extends State<AiAssistantChatScreen> {
         child: Row(children: [
           Icon(AppIcons.bolt_rounded, color: AppColors.neonBlue, size: 18),
           const SizedBox(width: 8),
-          Text('Менависад…',
+          Text(tr('ui.f7a42633ff'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
         ]),
       );
@@ -163,7 +164,7 @@ class _AiAssistantChatScreenState extends State<AiAssistantChatScreen> {
               textInputAction: TextInputAction.send,
               onSubmitted: (t) => _send(t),
               decoration: InputDecoration(
-                hintText: 'Савол навис…',
+                hintText: tr('ui.787d741abc'),
                 hintStyle: TextStyle(color: AppColors.textFaint),
                 filled: true, fillColor: AppColors.surface,
                 contentPadding:

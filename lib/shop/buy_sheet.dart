@@ -13,6 +13,7 @@ import '../models/post_model.dart';
 import '../models/user_model.dart';
 import '../chat/room/chat_room_screen.dart';
 import 'shop_repository.dart';
+import '../core/i18n/strings.dart';
 
 void showBuySheet(BuildContext context, PostModel post) {
   showModalBottomSheet(
@@ -175,7 +176,7 @@ class _BuySheetState extends State<_BuySheet> {
               ],
               style: TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
-                hintText: 'Промокод',
+                hintText: tr('ui.01a191694a'),
                 hintStyle: TextStyle(color: AppColors.textFaint),
                 prefixIcon: Icon(AppIcons.tag_rounded,
                     color: AppColors.textFaint, size: 18),
@@ -192,7 +193,7 @@ class _BuySheetState extends State<_BuySheet> {
               child: _checking
                   ? const SizedBox(width: 16, height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text('Татбиқ',
+                  : Text(tr('ui.198e8aa827'),
                       style: TextStyle(color: AppColors.neonBlue,
                           fontWeight: FontWeight.bold)),
             ),
@@ -211,13 +212,13 @@ class _BuySheetState extends State<_BuySheet> {
         Divider(color: AppColors.dividerFaint),
         Padding(
           padding: const EdgeInsets.only(top: 4, bottom: 4),
-          child: Text('Алоқа бо фурӯшанда',
+          child: Text(tr('ui.d74c3a1ba0'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
         ),
         if (methods.contains('raonson'))
           ListTile(
             leading: Icon(AppIcons.chat_bubble_rounded, color: AppColors.neonBlue),
-            title: Text('Чати Raonson',
+            title: Text(tr('ui.006e5dbe34'),
                 style: TextStyle(color: AppColors.textPrimary)),
             onTap: () => _contact('raonson'),
           ),
@@ -231,7 +232,7 @@ class _BuySheetState extends State<_BuySheet> {
         if (methods.contains('phone'))
           ListTile(
             leading: Icon(AppIcons.call_rounded, color: AppColors.neonBlue),
-            title: Text('Занг задан',
+            title: Text(tr('ui.2db9c265c7'),
                 style: TextStyle(color: AppColors.textPrimary)),
             onTap: () => _contact('phone'),
           ),

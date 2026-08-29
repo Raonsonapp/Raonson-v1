@@ -9,6 +9,7 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import 'my_promotions_screen.dart';
 import '../core/ui/app_icons.dart';
+import '../core/i18n/strings.dart';
 
 class PromoteScreen extends StatefulWidget {
   final String postId;
@@ -104,7 +105,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
               child: Icon(AppIcons.check_rounded, color: AppColors.textPrimary, size: 36),
             ),
             const SizedBox(height: 16),
-            Text('Реклама ба баррасӣ фиристода шуд',
+            Text(tr('ui.9a318c6c69'),
                 style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
@@ -118,7 +119,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
             SizedBox(
               width: double.infinity,
               child: _GradientButton(
-                label: 'Тайёр',
+                label: tr('ui.07d25782f7'),
                 onTap: () {
                   Navigator.pop(context);          // sheet
                   Navigator.pop(context, true);     // screen
@@ -138,12 +139,12 @@ class _PromoteScreenState extends State<PromoteScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
-        title: const Text('Тарғиб кардан',
+        title: Text(tr('ui.d8222358e0'),
             style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
             icon: const Icon(AppIcons.bar_chart_rounded),
-            tooltip: 'Рекламаҳои ман',
+            tooltip: tr('ui.66611b7212'),
             onPressed: () => Navigator.push(context, MaterialPageRoute(
                 builder: (_) => const MyPromotionsScreen())),
           ),
@@ -165,7 +166,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text('Ин пост тарғиб мешавад',
+              child: Text(tr('ui.09561dead4'),
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             ),
           ]),
@@ -193,14 +194,14 @@ class _PromoteScreenState extends State<PromoteScreen> {
           const SizedBox(height: 24),
           _section('Аудитория'),
           _RadioRow(
-            label: 'Худкор',
-            subtitle: 'Ба одамони монанди пайравони шумо мерасонем',
+            label: tr('ui.d66c785864'),
+            subtitle: tr('ui.438241246a'),
             selected: _audience == 0,
             onTap: () => setState(() => _audience = 0),
           ),
           _RadioRow(
-            label: 'Дастӣ',
-            subtitle: 'Худатон ҷой ва шавқҳоро интихоб мекунед',
+            label: tr('ui.87e3fc8fa8'),
+            subtitle: tr('ui.314b830012'),
             selected: _audience == 1,
             onTap: () => setState(() => _audience = 1),
           ),
@@ -208,7 +209,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
           const SizedBox(height: 24),
           _section('Буҷет ва давомнокӣ'),
           _sliderTile(
-            label: 'Буҷет (рӯзона)',
+            label: tr('ui.04662839c1'),
             value: '\$${_budget.toStringAsFixed(0)}',
             child: Slider(
               value: _budget, min: 1, max: 50, divisions: 49,
@@ -218,7 +219,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
             ),
           ),
           _sliderTile(
-            label: 'Давомнокӣ',
+            label: tr('ui.d221b8ac0a'),
             value: '$_days рӯз',
             child: Slider(
               value: _days.toDouble(), min: 1, max: 30, divisions: 29,
@@ -243,7 +244,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Фарогирии тахминӣ',
+                    Text(tr('ui.a30d7b7a41'),
                         style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                     Text('$_estReachLow – $_estReachHigh нафар',
                         style: TextStyle(color: AppColors.textPrimary,

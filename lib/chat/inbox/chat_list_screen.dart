@@ -331,14 +331,14 @@ class _ChatView extends StatelessWidget {
                             Icon(AppIcons.wifi_off_rounded,
                                 color: AppColors.textFaint, size: 44),
                             const SizedBox(height: 12),
-                            Text('Пайвастшавӣ нашуд',
+                            Text(tr('ui.491ea2cedb'),
                                 style: TextStyle(color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w600, fontSize: 15)),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
                               onPressed: () => ctrl.loadChats(),
                               icon: const Icon(AppIcons.refresh_rounded, size: 18),
-                              label: const Text('Такрор кӯшиш'),
+                              label: Text(tr('ui.602fab7c97')),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.neonBlue,
                                 foregroundColor: AppColors.textPrimary,
@@ -1049,7 +1049,7 @@ class _ChatTile extends StatelessWidget {
                     onPressed: () => context
                         .read<ChatListController>()
                         .acceptRequest(chat.peer.id),
-                    child: const Text('Қабул',
+                    child: Text(tr('ui.5d3c9ee794'),
                         style: TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w700)),
                   ),
@@ -1071,7 +1071,7 @@ class _ChatTile extends StatelessWidget {
                     onPressed: () => context
                         .read<ChatListController>()
                         .deleteRequest(chat.peer.id),
-                    child: const Text('Нест кардан',
+                    child: Text(tr('ui.bffaabdbc0'),
                         style: TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w600)),
                   ),

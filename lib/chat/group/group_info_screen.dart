@@ -12,6 +12,7 @@ import '../../core/services/user_session.dart';
 import '../../widgets/avatar.dart';
 import 'group_model.dart';
 import 'group_repository.dart';
+import '../../core/i18n/strings.dart';
 
 class GroupInfoScreen extends StatefulWidget {
   final GroupModel group;
@@ -77,16 +78,16 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Аз гурӯҳ баромадан?',
+        title: Text(tr('ui.7600c72564'),
             style: TextStyle(color: AppColors.textPrimary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Бекор',
+              child: Text(tr('ui.47ba09d086'),
                   style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Баромадан',
+              child: Text(tr('ui.fbc101bbb5'),
                   style: TextStyle(color: Colors.red))),
         ],
       ),
@@ -103,7 +104,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
-        title: Text('Маълумоти гурӯҳ',
+        title: Text(tr('ui.f67f46d899'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
       ),
       body: _loading
@@ -156,7 +157,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               // Invite link
               ListTile(
                 leading: Icon(AppIcons.link_rounded, color: AppColors.neonBlue),
-                title: Text('Линки даъват',
+                title: Text(tr('ui.29af1cc204'),
                     style: TextStyle(color: AppColors.textPrimary)),
                 subtitle: Text(_inviteLink,
                     maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -167,8 +168,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                         color: AppColors.textSecondary, size: 20),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: _inviteLink));
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Линк нусхабардорӣ шуд'),
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(tr('ui.0e9393ee76')),
                           duration: Duration(seconds: 2)));
                     },
                   ),
@@ -183,8 +184,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               Divider(color: AppColors.dividerFaint),
 
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-                child: Text('АЪЗОЁН',
+                padding: EdgeInsets.fromLTRB(16, 12, 16, 6),
+                child: Text(tr('ui.28985887f7'),
                     style: TextStyle(
                         color: AppColors.textFaint, fontSize: 12,
                         fontWeight: FontWeight.w600, letterSpacing: 1)),
@@ -197,7 +198,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     child: Icon(AppIcons.person_add_rounded,
                         color: AppColors.neonBlue, size: 22),
                   ),
-                  title: Text('Аъзо илова кардан',
+                  title: Text(tr('ui.0137e45fbe'),
                       style: TextStyle(
                           color: AppColors.neonBlue,
                           fontWeight: FontWeight.w600)),
@@ -217,7 +218,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                           decoration: BoxDecoration(
                               color: AppColors.neonBlue.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(6)),
-                          child: Text('админ',
+                          child: Text(tr('ui.3d9d408c9c'),
                               style: TextStyle(
                                   color: AppColors.neonBlue, fontSize: 10)),
                         ),
@@ -234,7 +235,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
               Divider(color: AppColors.dividerFaint),
               ListTile(
                 leading: const Icon(AppIcons.logout_rounded, color: Colors.red),
-                title: const Text('Аз гурӯҳ баромадан',
+                title: Text(tr('ui.3951e3f878'),
                     style: TextStyle(color: Colors.red)),
                 onTap: _leave,
               ),
@@ -322,7 +323,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 8, 4),
             child: Row(children: [
-              Text('Аъзо илова кардан',
+              Text(tr('ui.0137e45fbe'),
                   style: TextStyle(
                       color: AppColors.textPrimary, fontSize: 16,
                       fontWeight: FontWeight.bold)),
@@ -348,7 +349,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
               autofocus: true,
               style: TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
-                hintText: 'Одам ҷустуҷӯ кунед…',
+                hintText: tr('ui.1890b14be0'),
                 hintStyle: TextStyle(color: AppColors.textFaint),
                 prefixIcon: Icon(AppIcons.search, color: AppColors.textFaint),
                 filled: true, fillColor: AppColors.surface,
