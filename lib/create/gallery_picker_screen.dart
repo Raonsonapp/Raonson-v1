@@ -47,9 +47,29 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
       if (mounted) setState(() { _denied = true; _loading = false; });
       return;
     }
+    // Filter-и возеҳ: бе ин photo_manager ба видео маҳдудияти
+    // давомнокии пешфарз мемонад ва videoҳо аз рӯйхат мебароянд —
+    // корбар танҳо расмҳоро медид.
+    final filter = FilterOptionGroup(
+      imageOption: const FilterOption(needTitle: true),
+      videoOption: const FilterOption(
+        needTitle: true,
+        durationConstraint: DurationConstraint(
+          min: Duration.zero,
+          max: Duration(hours: 6),
+        ),
+      ),
+      createTimeCond: DateTimeCond(
+        min: DateTime.utc(1970), max: DateTime.utc(2100),
+      ),
+      orders: const [
+        OrderOption(type: OrderOptionType.createDate, asc: false),
+      ],
+    );
     final albums = await PhotoManager.getAssetPathList(
       type: RequestType.common, // расм + видео
       onlyAll: true,
+      filterOption: filter,
     );
     if (albums.isEmpty) {
       if (mounted) setState(() => _loading = false);

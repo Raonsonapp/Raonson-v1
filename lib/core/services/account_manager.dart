@@ -14,6 +14,7 @@ import '../../feed/feed_repository.dart';
 import '../../reels/reels_repository.dart';
 import '../../stories/story_repository.dart';
 import '../../chat/chat_repository.dart';
+import '../../profile/profile_repository.dart';
 
 class StoredAccount {
   final String userId;
@@ -141,6 +142,9 @@ class AccountManager {
     // Best-effort (async, fire-and-forget).
     StoryRepository.clearAllCaches();
     ChatRepository.clearAllCaches();
+    // Профил бо калиди 'me' cache мешуд — бе ин корбари нав профили
+    // корбари қаблиро медид.
+    ProfileRepository.clearAllCaches();
 
     // Тартиб муҳим: аввал username/avatar, охирон userId — то BottomNav-и
     // ба userIdNotifier гӯшкунанда аллакай маълумоти комил бинад.

@@ -19,10 +19,14 @@ class FollowService {
     return states.value[userId] ?? fallback;
   }
 
-  /// Ҳолатро бе дархост танзим мекунад (масалан вақте маълумот бор мешавад).
+  /// Ҳолатро аз маълумоти сервер ТАНҲО вақте мегузорад, ки ҳанӯз
+  /// ҳолате нест. Пештар он ҳар боре менавишт: агар шумо аз профил
+  /// обуна мешудед ва баъд рилсеро мебинед, ки пеш аз обуна бор шуда
+  /// буд, prime «обуна» -ро ба «не» бармегардонд ва тугма дубора
+  /// «Пайравӣ кунед» мешуд. Амали корбар дар давоми сессия бартарӣ дорад.
   void prime(String userId, bool following) {
     if (userId.isEmpty) return;
-    if (states.value[userId] == following) return;
+    if (states.value.containsKey(userId)) return;
     final next = Map<String, bool>.from(states.value);
     next[userId] = following;
     states.value = next;

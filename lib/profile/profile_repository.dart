@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/services/user_session.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/user_model.dart';
@@ -15,9 +16,29 @@ class ProfileRepository {
 
   static const _diskCacheTTL = Duration(hours: 24);
 
-  String _profileKey(String id) => 'profile_cache_$id';
-  String _postsKey(String id)   => 'profile_posts_$id';
-  String _reelsKey(String id)   => 'profile_reels_$id';
+  /// 'me' барои ҳар аккаунт як чиз нест — калидро бо id-и воқеӣ
+  /// месозем, вагарна баъд аз иваз кардани аккаунт профили корбари
+  /// қаблӣ то 24 соат бармегашт.
+  String _scope(String id) =>
+      id == 'me' ? (UserSession.userId ?? 'me') : id;
+
+  String _profileKey(String id) => 'profile_cache_${_scope(id)}';
+  String _postsKey(String id)   => 'profile_posts_${_scope(id)}';
+  String _reelsKey(String id)   => 'profile_reels_${_scope(id)}';
+
+  /// Ҳамаи cache-и профилҳоро тоза мекунад (ҳангоми иваз кардани аккаунт).
+  static Future<void> clearAllCaches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final k in prefs.getKeys().toList()) {
+        if (k.startsWith('profile_cache_') ||
+            k.startsWith('profile_posts_') ||
+            k.startsWith('profile_reels_')) {
+          await prefs.remove(k);
+        }
+      }
+    } catch (_) {}
+  }
 
   Future<void> _save(String key, dynamic data) async {
     try {
