@@ -894,6 +894,11 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, sql); err != nil {
 		log.Fatalf("❌ Migration failed: %v", err)
 	}
+	// Схемаи Creator Marketplace — ҷудо нигоҳ дошта мешавад, то схемаи
+	// мавҷуда бетағйир монад. Ҳам идемпотент аст.
+	if _, err := Pool.Exec(ctx, marketplaceSchema); err != nil {
+		log.Fatalf("❌ Marketplace migration failed: %v", err)
+	}
 	backfillCounters(ctx)
 	log.Println("✅ DB schema ready")
 }
