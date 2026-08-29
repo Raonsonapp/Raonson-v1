@@ -2,7 +2,7 @@ name: raonson
 description: Raonson social app
 publish_to: "none"
 
-version: 1.0.5+5
+version: 1.0.6+6
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

@@ -29,6 +29,14 @@ Future<void> main() async {
     debugPrint('[CRASH] ${details.exceptionAsString()}');
   };
 
+  // Хатоҳои async-и берун аз zone-и Flutter (platform channel, callback-и
+  // async) ба FlutterError.onError намерасанд — бе ин барнома мебарояд.
+  // true бармегардонем: сабт мекунем ва идома медиҳем, на crash.
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('[CRASH:async] $error');
+    return true;
+  };
+
   // ✅ 1. Edge-to-edge (Android 15+ ҳатмӣ бо targetSdk 36)
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
