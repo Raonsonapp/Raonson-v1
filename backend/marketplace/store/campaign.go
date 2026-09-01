@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"raonson/marketplace/domain"
+	"raonson/marketplace/matching"
 	"raonson/marketplace/money"
 )
 
@@ -28,6 +29,7 @@ type CampaignInput struct {
 	TargetAgeMin        int
 	TargetAgeMax        int
 	TargetGender        string
+	TargetLanguage      string
 	TargetInterests     []string
 	BudgetMinor         int64
 	Currency            string
@@ -110,15 +112,15 @@ func CreateCampaign(ctx context.Context, tx Tx, advertiserID string,
 	err := tx.QueryRow(ctx, `
 		INSERT INTO campaigns
 		  (advertiser_id,title,description,category,target_country,target_city,
-		   target_age_min,target_age_max,target_gender,target_interests,
-		   budget_minor,currency,campaign_type,start_at,end_at,
+		   target_age_min,target_age_max,target_gender,target_language,
+		   target_interests,budget_minor,currency,campaign_type,start_at,end_at,
 		   required_impressions,required_clicks,creator_count,status,commission_bps)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'DRAFT',$19)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'DRAFT',$20)
 		RETURNING id, advertiser_id, title, description, category, target_country,
 		          budget_minor, currency, status, creator_count, commission_bps, created_at`,
 		advertiserID, strings.TrimSpace(in.Title), in.Description, in.Category,
 		in.TargetCountry, in.TargetCity, in.TargetAgeMin, in.TargetAgeMax,
-		in.TargetGender, in.TargetInterests, in.BudgetMinor, string(cur),
+		in.TargetGender, in.TargetLanguage, in.TargetInterests, in.BudgetMinor, string(cur),
 		in.CampaignType, in.StartAt, in.EndAt, in.RequiredImpressions,
 		in.RequiredClicks, in.CreatorCount, commissionBPS).
 		Scan(&c.ID, &c.AdvertiserID, &c.Title, &c.Description, &c.Category,
@@ -215,4 +217,63 @@ func TransitionCampaign(ctx context.Context, tx Tx, campaignID string,
 		return err
 	}
 	return setCampaignStatus(ctx, tx, campaignID, from, to, actorID, reason)
+}
+
+// CampaignCriteria талаботи кампанияро барои matching тайёр мекунад.
+//
+// PerCreatorBudget аз буҷет ва шумораи эҷодкорон ҳисоб мешавад — сервер,
+// на client, ҳудуди нархи як эҷодкорро муайян мекунад.
+func CampaignCriteria(ctx context.Context, tx Tx, c Campaign) (matching.Criteria, error) {
+	var city, gender, lang string
+	var interests []string
+	err := tx.QueryRow(ctx, `
+		SELECT COALESCE(target_city,''), COALESCE(target_gender,''),
+		       COALESCE(target_interests,'{}'), COALESCE(target_language,'')
+		FROM campaigns WHERE id=$1`, c.ID).Scan(&city, &gender, &interests, &lang)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return matching.Criteria{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return matching.Criteria{}, err
+	}
+	count := c.CreatorCount
+	if count < 1 {
+		count = 1
+	}
+	per := money.Amount{
+		Minor:    money.Minor(int64(c.Budget.Minor) / int64(count)),
+		Currency: c.Budget.Currency,
+	}
+	return matching.Criteria{
+		Category:         c.Category,
+		TargetCountry:    c.TargetCountry,
+		TargetLanguage:   lang,
+		TargetInterests:  interests,
+		PerCreatorBudget: per,
+	}, nil
+}
+
+// MatchForCreator холи мувофиқати ЯК эҷодкорро бо ҳамон engine ҳисоб
+// мекунад, ки рӯйхати номзадҳоро месозад.
+//
+// Ҳамин тавр холи дар даъват сабтшуда бо холи дар рӯйхат нишондодашуда
+// як хел мешавад. Агар эҷодкор профил надошта бошад, хол сифр аст —
+// сохта намешавад.
+func MatchForCreator(ctx context.Context, tx Tx, c Campaign, creatorID string) (matching.Match, error) {
+	crit, err := CampaignCriteria(ctx, tx, c)
+	if err != nil {
+		return matching.Match{}, err
+	}
+	cands, err := FindCandidates(ctx, tx, c.Budget.Currency, 0, 500)
+	if err != nil {
+		return matching.Match{}, err
+	}
+	for _, m := range matching.NewEngine().Rank(cands, crit) {
+		if m.CreatorID == creatorID {
+			return m, nil
+		}
+	}
+	// Эҷодкор дар рӯйхати мувофиқ нест (профил надорад ё дастрас нест).
+	// Даъвати дастӣ иҷозат аст, вале холи сохта сабт намешавад.
+	return matching.Match{CreatorID: creatorID, Reasons: []string{}}, nil
 }

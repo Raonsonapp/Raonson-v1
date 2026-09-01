@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     target_age_max      INTEGER DEFAULT 0,
     target_gender       TEXT DEFAULT '',
     target_interests    TEXT[] DEFAULT '{}',
+    target_language     TEXT DEFAULT '',
     budget_minor        BIGINT NOT NULL,
     currency            TEXT NOT NULL DEFAULT 'TJS',
     campaign_type       TEXT DEFAULT 'POST',
@@ -288,4 +289,9 @@ CREATE TABLE IF NOT EXISTS fraud_flags (
 );
 CREATE INDEX IF NOT EXISTS idx_fraud_flags_entity ON fraud_flags(entity_type, entity_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_fraud_flags_status ON fraud_flags(status, created_at DESC);
+
+-- ── Сутунҳои баъдтар иловашуда ───────────────────────────────────
+-- CREATE TABLE IF NOT EXISTS ба ҷадвали мавҷуда сутун илова намекунад,
+-- бинобар ин сутунҳои нав ин ҷо ба таври идемпотентӣ илова мешаванд.
+ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS target_language TEXT DEFAULT '';
 `

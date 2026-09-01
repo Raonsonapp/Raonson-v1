@@ -14,14 +14,16 @@ import (
 
 // PaymentOrder — сатри payment_orders.
 type PaymentOrder struct {
-	ID                string
-	CampaignID        string
-	AdvertiserID      string
-	Amount            money.Amount
-	Status            domain.PaymentStatus
-	Provider          string
-	ProviderReference string
-	IdempotencyKey    string
+	ID           string       `json:"id"`
+	CampaignID   string       `json:"campaignId"`
+	AdvertiserID string       `json:"advertiserId"`
+	Amount       money.Amount `json:"amount"`
+
+	Status            domain.PaymentStatus `json:"status"`
+	Provider          string               `json:"provider"`
+	ProviderReference string               `json:"providerReference"`
+	// Калиди идемпотентӣ ба client дода намешавад — он дохилист.
+	IdempotencyKey string `json:"-"`
 }
 
 var ErrAmountMismatch = errors.New("store: маблағи webhook ба фармоиш мувофиқ нест")

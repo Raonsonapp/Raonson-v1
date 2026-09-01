@@ -457,7 +457,45 @@ func main() {
 		ad.GET("/reports",          handlers.AdminGetReports)
 		ad.POST("/reports/resolve", handlers.AdminResolveReport)
 		ad.GET("/reports/count",    handlers.AdminReportCount)
+
+		// Creator Marketplace — интиқолҳои дастӣ ва омори молиявӣ.
+		ad.GET("/marketplace/stats",             handlers.AdminMarketplaceStats)
+		ad.GET("/marketplace/payouts",           handlers.AdminListPayouts)
+		ad.POST("/marketplace/payouts/:id/settle", handlers.AdminSettlePayout)
+		ad.POST("/marketplace/payouts/:id/fail",   handlers.AdminFailPayout)
 	}
+
+	// ── CREATOR MARKETPLACE ─────────────────────────────────────
+	// Рекламадиҳанда кампания месозад ва пардохт мекунад; эҷодкор
+	// даъватро қабул мекунад ва мӯҳтаво месупорад.
+	mp := r.Group("/marketplace", auth, rl100)
+	{
+		mp.GET("/advertiser",  handlers.GetAdvertiser)
+		mp.PUT("/advertiser",  handlers.UpdateAdvertiser)
+
+		mp.POST("/campaigns",     rl20, handlers.CreateCampaign)
+		mp.GET("/campaigns",            handlers.ListCampaigns)
+		mp.GET("/campaigns/:id",        handlers.GetCampaignDetail)
+		mp.POST("/campaigns/:id/checkout", rl20, handlers.CheckoutCampaign)
+		mp.POST("/campaigns/:id/cancel",         handlers.CancelCampaign)
+		mp.POST("/campaigns/:id/complete",       handlers.CompleteCampaign)
+		mp.GET("/campaigns/:id/candidates",      handlers.GetCampaignCandidates)
+		mp.POST("/campaigns/:id/invite",         handlers.InviteCreator)
+
+		mp.GET("/creator/me", handlers.GetCreatorMarketplaceProfile)
+		mp.PUT("/creator/me", handlers.UpdateCreatorMarketplaceProfile)
+		mp.GET("/wallet",     handlers.GetMarketplaceWallet)
+
+		mp.GET("/offers",              handlers.ListMyOffers)
+		mp.POST("/offers/:id/respond", handlers.RespondToOffer)
+		mp.POST("/offers/:id/content", handlers.SubmitOfferContent)
+		mp.POST("/offers/:id/approve", handlers.ApproveOfferContent)
+	}
+
+	// Webhook-ҳо БЕ auth — онҳоро provider даъват мекунад, на корбар.
+	// Ҳимоя аз имзои криптографӣ + тасдиқи мустақим аз provider меояд.
+	r.POST("/payments/webhook/:provider", handlers.PaymentWebhook)
+	r.POST("/payouts/webhook/:provider",  handlers.PayoutWebhook)
 
 	// Child Safety Standards & Community Guidelines (public, no auth)
 	r.GET("/child-safety", handlers.GetChildSafetyPolicy)

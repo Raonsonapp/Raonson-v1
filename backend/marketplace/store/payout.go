@@ -20,12 +20,12 @@ var (
 
 // PayoutOrder — сатри payout_orders.
 type PayoutOrder struct {
-	ID         string
-	CampaignID string
-	CreatorID  string
-	Amount     money.Amount
-	Status     domain.PayoutStatus
-	Provider   string
+	ID         string              `json:"id"`
+	CampaignID string              `json:"campaignId"`
+	CreatorID  string              `json:"creatorId"`
+	Amount     money.Amount        `json:"amount"`
+	Status     domain.PayoutStatus `json:"status"`
+	Provider   string              `json:"provider"`
 }
 
 // CreatePayoutOrder payout-и эҷодкорро месозад.
@@ -186,4 +186,75 @@ func MarkPayoutStatus(ctx context.Context, tx Tx, payoutID string,
 		UPDATE payout_orders SET status=$2, failure_reason=$3, updated_at=NOW()
 		WHERE id=$1`, payoutID, string(to), reason)
 	return err
+}
+
+// PayoutWebhookInput — ҳодисаи нормализашудаи payout аз provider.
+type PayoutWebhookInput struct {
+	EventID           string
+	EventType         string
+	ProviderReference string
+	Status            domain.PayoutStatus
+	FailureReason     string
+	RawJSON           string
+}
+
+// ApplyPayoutWebhook ҳолати payout-ро аз рӯи ҳодисаи provider нав мекунад.
+//
+// Мисли ApplyPaymentWebhook, се қабати идемпотентӣ:
+//   - webhook_events UNIQUE(provider, event_id) — такрор бетаъсир
+//   - қуфли сатр + мошинаи ҳолат — гузариши нодуруст рад мешавад
+//   - такрори ҳамон ҳолат ErrAlreadyInState → DUPLICATE, бе хато
+//
+// МУҲИМ: ин ҷо ҳеҷ сабти нави дафтар сохта намешавад. Пул аллакай
+// ҳангоми CreatePayoutOrder аз escrow ба ҳамёни эҷодкор гузашт;
+// webhook танҳо тақдири интиқоли БЕРУНиро сабт мекунад. Агар интиқол
+// ноком шавад, маблағ дар ҳамёни эҷодкор мемонад ва кӯшиши нав мумкин аст.
+func ApplyPayoutWebhook(ctx context.Context, tx Tx, provider string,
+	ev PayoutWebhookInput) (applied bool, err error) {
+
+	var eventRow int64
+	err = tx.QueryRow(ctx, `
+		INSERT INTO webhook_events(provider, event_id, event_type, payload, status)
+		VALUES ($1,$2,$3,$4,'RECEIVED')
+		ON CONFLICT (provider, event_id) DO NOTHING
+		RETURNING id`, provider, ev.EventID, ev.EventType, ev.RawJSON).Scan(&eventRow)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("store: сабти webhook-и payout: %w", err)
+	}
+
+	var id, status string
+	err = tx.QueryRow(ctx, `
+		SELECT id, status FROM payout_orders
+		WHERE provider=$1 AND provider_reference=$2
+		FOR UPDATE`, provider, ev.ProviderReference).Scan(&id, &status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		_ = markWebhook(ctx, tx, eventRow, "IGNORED", "фармоиши payout ёфт нашуд")
+		return false, domain.ErrNotFound
+	}
+	if err != nil {
+		return false, err
+	}
+
+	from := domain.PayoutStatus(status)
+	if err := from.Transition(ev.Status); err != nil {
+		if errors.Is(err, domain.ErrAlreadyInState) {
+			_ = markWebhook(ctx, tx, eventRow, "DUPLICATE", "")
+			return false, nil
+		}
+		_ = markWebhook(ctx, tx, eventRow, "REJECTED", err.Error())
+		return false, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE payout_orders SET status=$2, failure_reason=$3, updated_at=NOW()
+		WHERE id=$1`, id, string(ev.Status), ev.FailureReason); err != nil {
+		return false, err
+	}
+
+	_ = markWebhook(ctx, tx, eventRow, "PROCESSED", "")
+	_ = Audit(ctx, tx, "", "provider", "payout.webhook", "payout_order", id,
+		map[string]any{"status": ev.Status, "eventId": ev.EventID})
+	return true, nil
 }

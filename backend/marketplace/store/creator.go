@@ -342,7 +342,12 @@ func GetCreatorWallet(ctx context.Context, tx Tx, creatorID string,
 	if err != nil {
 		return CreatorWallet{}, err
 	}
-	w.Available = bal
+	// Ҳисоби бе ҳаракат асъор надорад — дар ин ҳолат асъори дархостшуда
+	// нигоҳ дошта мешавад, вагарна ҳамён бо асъори холӣ бармегардад ва
+	// client «0 » бе асъор нишон медиҳад.
+	if bal.Currency != "" {
+		w.Available = bal
+	}
 
 	// Дар роҳ: payout-ҳое, ки ҳанӯз ба ҳолати ниҳоӣ нарасидаанд.
 	var pending int64

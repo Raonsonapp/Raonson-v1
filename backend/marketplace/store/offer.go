@@ -120,10 +120,12 @@ func RespondToOffer(ctx context.Context, tx Tx, offerID, creatorID string, accep
 	var stOut, curOut, campaignID string
 	var amt int64
 	err := tx.QueryRow(ctx, `
-		SELECT id, campaign_id, creator_id, status, agreed_minor, currency
+		SELECT id, campaign_id, creator_id, status, match_score,
+		       COALESCE(match_reasons,'{}'), agreed_minor, currency
 		FROM campaign_creators
 		WHERE id=$1 AND creator_id=$2 FOR UPDATE`, offerID, creatorID).
-		Scan(&o.ID, &campaignID, &o.CreatorID, &stOut, &amt, &curOut)
+		Scan(&o.ID, &campaignID, &o.CreatorID, &stOut, &o.MatchScore,
+			&o.Reasons, &amt, &curOut)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Offer{}, domain.ErrNotFound
 	}
@@ -199,7 +201,9 @@ func SubmitContent(ctx context.Context, tx Tx, offerID, creatorID, contentID, co
 	_ = CampaignEvent(ctx, tx, campaignID, creatorID, "content.delivered",
 		string(from), "DELIVERED", creatorID,
 		map[string]any{"contentId": contentID, "contentType": contentType})
-	return nil
+
+	// Мӯҳтаво зинда аст — кампания воқеан фаъол шуд.
+	return AdvanceCampaignOnDelivery(ctx, tx, campaignID, creatorID)
 }
 
 // ApproveContent — рекламадиҳанда мӯҳтаворо тасдиқ мекунад.
@@ -232,7 +236,9 @@ func ApproveContent(ctx context.Context, tx Tx, offerID, advertiserID string) er
 	}
 	_ = CampaignEvent(ctx, tx, campaignID, creatorID, "content.approved",
 		string(from), "APPROVED", advertiserID, nil)
-	return nil
+
+	// Агар ҳама эҷодкорон тасдиқ шуда бошанд — кампания ба REVIEW.
+	return AdvanceCampaignOnApproval(ctx, tx, campaignID, advertiserID)
 }
 
 // ListOffersForCreator — даъватҳои эҷодкор.
@@ -264,4 +270,33 @@ func ListOffersForCreator(ctx context.Context, tx Tx, creatorID, statusFilter st
 		out = append(out, o)
 	}
 	return out, nil
+}
+
+// ListOffersForCampaign — эҷодкорони як кампания.
+func ListOffersForCampaign(ctx context.Context, tx Tx, campaignID string) ([]Offer, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT id, campaign_id, creator_id, status, match_score,
+		       COALESCE(match_reasons,'{}'), agreed_minor, currency
+		FROM campaign_creators
+		WHERE campaign_id=$1
+		ORDER BY match_score DESC, creator_id ASC`, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Offer{}
+	for rows.Next() {
+		var o Offer
+		var st, cur string
+		var amt int64
+		if err := rows.Scan(&o.ID, &o.CampaignID, &o.CreatorID, &st,
+			&o.MatchScore, &o.Reasons, &amt, &cur); err != nil {
+			continue
+		}
+		c, _ := money.ParseCurrency(cur)
+		o.Agreed = money.Amount{Minor: money.Minor(amt), Currency: c}
+		o.Status = domain.OfferStatus(st)
+		out = append(out, o)
+	}
+	return out, rows.Err()
 }
