@@ -34,6 +34,9 @@ func StartJobs() {
 		}
 	}()
 
+	// Creator Marketplace — метрика, ҷамъбаст ва такрори payout.
+	StartMarketplaceJobs()
+
 	log.Println("✅ All background jobs + queues started")
 }
 

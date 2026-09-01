@@ -480,6 +480,7 @@ func main() {
 		mp.POST("/campaigns/:id/cancel",         handlers.CancelCampaign)
 		mp.POST("/campaigns/:id/complete",       handlers.CompleteCampaign)
 		mp.GET("/campaigns/:id/candidates",      handlers.GetCampaignCandidates)
+		mp.GET("/campaigns/:id/metrics",         handlers.GetCampaignMetrics)
 		mp.POST("/campaigns/:id/invite",         handlers.InviteCreator)
 
 		mp.GET("/creator/me", handlers.GetCreatorMarketplaceProfile)

@@ -550,3 +550,42 @@ func CompleteCampaign(c *gin.Context) {
 		"payouts": payouts,
 	})
 }
+
+// GET /marketplace/campaigns/:id/metrics — натиҷаи воқеии кампания.
+//
+// Рақамҳо аз мӯҳтавои воқеан нашршуда ҷамъ мешаванд (кори пасзамина).
+// Агар эҷодкор ҳанӯз чизе насупорида бошад, ӯ дар рӯйхат нест —
+// рақами тахминӣ нишон дода намешавад.
+func GetCampaignMetrics(c *gin.Context) {
+	ctx := c.Request.Context()
+	var rows []store.CampaignMetricsRow
+	err := mpTx(ctx, func(tx store.Tx) error {
+		advID, err := currentAdvertiser(ctx, tx, mw.UID(c))
+		if err != nil {
+			return err
+		}
+		if _, err := store.GetCampaign(ctx, tx, c.Param("id"), advID); err != nil {
+			return err
+		}
+		// Пеш аз нишон додан як бор нав мекунем, то рекламадиҳанда
+		// маълумоти кӯҳнаи то давраи навбатии job-ро набинад.
+		if err := store.AggregateCampaignMetrics(ctx, tx, c.Param("id")); err != nil {
+			return err
+		}
+		rows, err = store.GetCampaignMetrics(ctx, tx, c.Param("id"))
+		return err
+	})
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	var totals store.CampaignMetricsRow
+	for _, r := range rows {
+		totals.Impressions += r.Impressions
+		totals.Views += r.Views
+		totals.Likes += r.Likes
+		totals.Comments += r.Comments
+		totals.Saves += r.Saves
+	}
+	c.JSON(http.StatusOK, gin.H{"creators": rows, "totals": totals})
+}
