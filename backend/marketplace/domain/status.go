@@ -67,6 +67,11 @@ func (s CampaignStatus) Transition(to CampaignStatus) error {
 	if !to.Valid() {
 		return fmt.Errorf("campaign: ҳолати мақсади номаълум %q", to)
 	}
+	// Такрори ҳамон ҳолат хато нест: як webhook ё retry метавонад
+	// дубора ҳамон гузаришро талаб кунад — он бояд no-op шавад.
+	if s == to {
+		return ErrAlreadyInState
+	}
 	if !s.CanTransition(to) {
 		return fmt.Errorf("campaign: гузариш аз %s ба %s иҷозат нест", s, to)
 	}
