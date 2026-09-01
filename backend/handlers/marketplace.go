@@ -589,3 +589,101 @@ func GetCampaignMetrics(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"creators": rows, "totals": totals})
 }
+
+// POST /marketplace/campaigns/:id/match — матчинг + даъвати худкор.
+//
+// Сервер номзадҳоро тартиб медиҳад ва то creator_count-и кампания
+// даъват мефиристад. Маблағи ҳар даъват аз нархи ЭЪЛОНШУДАи эҷодкор
+// гирифта мешавад ва бо буҷет маҳдуд аст — client ҳеҷ рақам намедиҳад.
+//
+// Даъвате, ки ба буҷет намеғунҷад, партофта мешавад, на кам карда:
+// нархи эҷодкор аз они ӯст, на чизе ки мо мувофиқ мекунем.
+func MatchCampaign(c *gin.Context) {
+	ctx := c.Request.Context()
+	var invited []store.Offer
+	var skipped int
+
+	err := mpTx(ctx, func(tx store.Tx) error {
+		advID, err := currentAdvertiser(ctx, tx, mw.UID(c))
+		if err != nil {
+			return err
+		}
+		camp, err := store.GetCampaign(ctx, tx, c.Param("id"), advID)
+		if err != nil {
+			return err
+		}
+		crit, err := store.CampaignCriteria(ctx, tx, camp)
+		if err != nil {
+			return err
+		}
+		cands, err := store.FindCandidates(ctx, tx, camp.Budget.Currency,
+			int64(crit.PerCreatorBudget.Minor), 300)
+		if err != nil {
+			return err
+		}
+		ranked := matching.NewEngine().Rank(cands, crit)
+
+		// Нархи ҳар номзад — барои маблағи даъват.
+		price := make(map[string]int64, len(cands))
+		for _, cd := range cands {
+			price[cd.CreatorID] = int64(cd.Price.Minor)
+		}
+
+		for _, m := range ranked {
+			if len(invited) >= camp.CreatorCount {
+				break
+			}
+			agreed := price[m.CreatorID]
+			if agreed <= 0 {
+				skipped++
+				continue
+			}
+			o, err := store.InviteCreator(ctx, tx, camp.ID, m.CreatorID,
+				mw.UID(c), agreed, m)
+			switch {
+			case err == nil:
+				invited = append(invited, o)
+			case errors.Is(err, store.ErrBudgetExceeded),
+				errors.Is(err, store.ErrOfferExists):
+				// Буҷет тамом шуд ё аллакай даъват шудааст — ин
+				// хатои кампания нест, номзади навбатӣ.
+				skipped++
+			default:
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	for _, o := range invited {
+		notifyCampaignInvite(o)
+	}
+	if invited == nil {
+		invited = []store.Offer{}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"invited": invited,
+		"skipped": skipped,
+	})
+}
+
+// ApproveOfferContentByParam — ҳамон тасдиқи мӯҳтаво, вале offer id
+// дар :offerId аст (роҳи /campaigns/:id/creators/:offerId/approve).
+func ApproveOfferContentByParam(c *gin.Context) {
+	ctx := c.Request.Context()
+	err := mpTx(ctx, func(tx store.Tx) error {
+		advID, err := currentAdvertiser(ctx, tx, mw.UID(c))
+		if err != nil {
+			return err
+		}
+		return store.ApproveContent(ctx, tx, c.Param("offerId"), advID)
+	})
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Мӯҳтаво тасдиқ шуд"})
+}

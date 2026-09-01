@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS creator_metrics (
     score_confidence DOUBLE PRECISION DEFAULT 0,
     sample_size      BIGINT DEFAULT 0,
     computed_at      TIMESTAMPTZ,
+    score_version    INTEGER DEFAULT 0,
+    score_params     JSONB DEFAULT '{}'::jsonb,
+    score_breakdown  JSONB DEFAULT '{}'::jsonb,
     created_at       TIMESTAMPTZ DEFAULT NOW(),
     updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
@@ -294,4 +297,7 @@ CREATE INDEX IF NOT EXISTS idx_fraud_flags_status ON fraud_flags(status, created
 -- CREATE TABLE IF NOT EXISTS ба ҷадвали мавҷуда сутун илова намекунад,
 -- бинобар ин сутунҳои нав ин ҷо ба таври идемпотентӣ илова мешаванд.
 ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS target_language TEXT DEFAULT '';
+ALTER TABLE creator_metrics ADD COLUMN IF NOT EXISTS score_version   INTEGER DEFAULT 0;
+ALTER TABLE creator_metrics ADD COLUMN IF NOT EXISTS score_params    JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE creator_metrics ADD COLUMN IF NOT EXISTS score_breakdown JSONB DEFAULT '{}'::jsonb;
 `

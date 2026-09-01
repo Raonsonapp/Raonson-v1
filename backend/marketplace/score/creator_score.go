@@ -8,6 +8,34 @@ package score
 
 import "math"
 
+// Version — нусхаи алгоритми ҳисоб.
+//
+// Дар ҳар сатри creator_metrics нигоҳ дошта мешавад. Вақте вазнҳо ё
+// формула тағйир меёбад, ин рақам боло меравад ва холи кӯҳна ҳамчун
+// холи алгоритми кӯҳна боқӣ мемонад — вагарна 87-и имрӯза ва 87-и
+// панҷ моҳ пеш як чиз ҳисоб мешаванд, ҳол он ки маънои гуногун доранд.
+//
+// Таърих:
+//
+//	1 — engagement 40 / reach 25 / audience 15 / track record 20
+const Version = 1
+
+// Параметрҳои танзим. Онҳо ошкоро эълон мешаванд, то ҳисоб
+// шарҳдиҳанда бошад ва тағйирашон дар як ҷо дида шавад.
+const (
+	// excellentEngagement — 8% ҳамчун «хеле хуб» гирифта мешавад.
+	excellentEngagement = 0.08
+	// maxAverageViews — аз ин боло холи reach зиёд намешавад.
+	maxAverageViews = 100_000
+	// maxFollowers — аз ин боло холи audience зиёд намешавад.
+	maxFollowers = 500_000
+
+	weightEngagement  = 40.0
+	weightReach       = 25.0
+	weightAudience    = 15.0
+	weightTrackRecord = 20.0
+)
+
 // Metrics — вуруди ҳисоб. Ҳама аз ҷадвалҳои воқеӣ меоянд.
 type Metrics struct {
 	Followers           int64
@@ -36,6 +64,11 @@ type Result struct {
 	EngagementRate float64
 	// Breakdown — саҳми ҳар омил, барои шаффофият.
 	Breakdown map[string]float64
+	// Version — кадом нусхаи алгоритм ин холро сохт.
+	Version int
+	// Params — параметрҳои истифодашуда. Бо холи захирашуда нигоҳ
+	// дошта мешаванд, то баъдтар маълум бошад, ки хол чӣ гуна ҳисоб шуд.
+	Params map[string]float64
 }
 
 // minContentForFullConfidence — аз ин шумора боло маълумот кофӣ ҳисоб мешавад.
@@ -54,21 +87,21 @@ const minContentForFullConfidence = 10
 func Compute(m Metrics) Result {
 	er := EngagementRate(m)
 
-	// 1) Engagement: 8% ҳамчун «хеле хуб» гирифта мешавад.
-	engagement := clamp(er/0.08, 0, 1) * 40
+	// 1) Engagement — сифати аудитория.
+	engagement := clamp(er/excellentEngagement, 0, 1) * weightEngagement
 
-	// 2) Reach: 100k бинандаи миёна = ҳадди боло.
-	reach := logScore(m.AverageViews, 100_000) * 25
+	// 2) Reach — миёнаи бинандаҳо, логарифмӣ.
+	reach := logScore(m.AverageViews, maxAverageViews) * weightReach
 
-	// 3) Audience: 500k пайрав = ҳадди боло.
-	audience := logScore(m.Followers, 500_000) * 15
+	// 3) Audience — андозаи аудитория, логарифмӣ.
+	audience := logScore(m.Followers, maxFollowers) * weightAudience
 
 	// 4) Track record: танҳо вақте кампания доштааст.
 	var track float64
 	if m.CampaignCount > 0 {
 		successRate := float64(m.SuccessfulCampaigns) / float64(m.CampaignCount)
 		// Натиҷаи миёна ва ҳиссаи муваффақият баробар вазн доранд.
-		track = (successRate*0.5 + clamp(m.AverageCampaignResult, 0, 1)*0.5) * 20
+		track = (successRate*0.5 + clamp(m.AverageCampaignResult, 0, 1)*0.5) * weightTrackRecord
 	}
 
 	total := engagement + reach + audience + track
@@ -83,6 +116,16 @@ func Compute(m Metrics) Result {
 			"reach":        math.Round(reach*100) / 100,
 			"audience":     math.Round(audience*100) / 100,
 			"track_record": math.Round(track*100) / 100,
+		},
+		Version: Version,
+		Params: map[string]float64{
+			"excellentEngagement": excellentEngagement,
+			"maxAverageViews":     maxAverageViews,
+			"maxFollowers":        maxFollowers,
+			"weightEngagement":    weightEngagement,
+			"weightReach":         weightReach,
+			"weightAudience":      weightAudience,
+			"weightTrackRecord":   weightTrackRecord,
 		},
 	}
 }

@@ -487,16 +487,60 @@ func main() {
 		mp.PUT("/creator/me", handlers.UpdateCreatorMarketplaceProfile)
 		mp.GET("/wallet",     handlers.GetMarketplaceWallet)
 
+		mp.GET("/creator/campaigns", handlers.ListMyCampaigns)
+		mp.GET("/creator/earnings",  handlers.GetMyEarnings)
+		mp.GET("/creator/payouts",   handlers.ListMyPayouts)
+
 		mp.GET("/offers",              handlers.ListMyOffers)
 		mp.POST("/offers/:id/respond", handlers.RespondToOffer)
+		mp.POST("/offers/:id/accept",  handlers.AcceptOffer)
+		mp.POST("/offers/:id/reject",  handlers.RejectOffer)
 		mp.POST("/offers/:id/content", handlers.SubmitOfferContent)
 		mp.POST("/offers/:id/approve", handlers.ApproveOfferContent)
+	}
+
+	// ── /api/v1 — ҳамон handler-ҳо бо роҳҳои versiondor ────────────
+	// Raonson-и мавҷуда роҳҳои ҳамворро истифода мебарад ва онҳо
+	// нигоҳ дошта мешаванд, то client-и ҳозира нашиканад. Ин гурӯҳ
+	// ҳамон handler-ҳоро зери роҳҳои /api/v1 медиҳад — ду роҳ, як код.
+	v1 := r.Group("/api/v1", auth, rl100)
+	{
+		adv := v1.Group("/advertiser")
+		{
+			adv.GET("/profile",   handlers.GetAdvertiser)
+			adv.PUT("/profile",   handlers.UpdateAdvertiser)
+			adv.POST("/campaigns", rl20, handlers.CreateCampaign)
+			adv.GET("/campaigns",        handlers.ListCampaigns)
+			adv.GET("/campaigns/:id",    handlers.GetCampaignDetail)
+			adv.POST("/campaigns/:id/payment", rl20, handlers.CheckoutCampaign)
+			adv.POST("/campaigns/:id/match",         handlers.MatchCampaign)
+			adv.GET("/campaigns/:id/candidates",     handlers.GetCampaignCandidates)
+			adv.POST("/campaigns/:id/cancel",        handlers.CancelCampaign)
+			adv.POST("/campaigns/:id/complete",      handlers.CompleteCampaign)
+			adv.POST("/campaigns/:id/creators/:offerId/approve",
+				handlers.ApproveOfferContentByParam)
+		}
+		cr := v1.Group("/creator")
+		{
+			cr.GET("/profile",  handlers.GetCreatorMarketplaceProfile)
+			cr.PUT("/profile",  handlers.UpdateCreatorMarketplaceProfile)
+			cr.GET("/campaign-offers", handlers.ListMyOffers)
+			cr.POST("/campaign-offers/:id/accept", handlers.AcceptOffer)
+			cr.POST("/campaign-offers/:id/reject", handlers.RejectOffer)
+			cr.POST("/campaign-offers/:id/content", handlers.SubmitOfferContent)
+			cr.GET("/campaigns", handlers.ListMyCampaigns)
+			cr.GET("/earnings",  handlers.GetMyEarnings)
+			cr.GET("/payouts",   handlers.ListMyPayouts)
+		}
+		v1.GET("/campaigns/:id/analytics", handlers.GetCampaignMetrics)
 	}
 
 	// Webhook-ҳо БЕ auth — онҳоро provider даъват мекунад, на корбар.
 	// Ҳимоя аз имзои криптографӣ + тасдиқи мустақим аз provider меояд.
 	r.POST("/payments/webhook/:provider", handlers.PaymentWebhook)
 	r.POST("/payouts/webhook/:provider",  handlers.PayoutWebhook)
+	r.POST("/api/v1/payments/webhook/:provider", handlers.PaymentWebhook)
+	r.POST("/api/v1/payouts/webhook/:provider",  handlers.PayoutWebhook)
 
 	// Child Safety Standards & Community Guidelines (public, no auth)
 	r.GET("/child-safety", handlers.GetChildSafetyPolicy)

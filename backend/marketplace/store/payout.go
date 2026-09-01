@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -257,4 +258,154 @@ func ApplyPayoutWebhook(ctx context.Context, tx Tx, provider string,
 	_ = Audit(ctx, tx, "", "provider", "payout.webhook", "payout_order", id,
 		map[string]any{"status": ev.Status, "eventId": ev.EventID})
 	return true, nil
+}
+
+// CreatorPayout — як сатри таърихи пардохт барои эҷодкор.
+type CreatorPayout struct {
+	ID         string              `json:"id"`
+	CampaignID string              `json:"campaignId"`
+	Title      string              `json:"campaignTitle"`
+	Amount     money.Amount        `json:"amount"`
+	Status     domain.PayoutStatus `json:"status"`
+	Provider   string              `json:"provider"`
+	Reason     string              `json:"failureReason,omitempty"`
+	CreatedAt  time.Time           `json:"createdAt"`
+}
+
+// ListPayoutsForCreator таърихи пардохтҳои эҷодкорро бармегардонад.
+//
+// creator_id аз токен меояд ва дар WHERE аст — эҷодкор пардохти каси
+// дигарро дида наметавонад.
+func ListPayoutsForCreator(ctx context.Context, tx Tx, creatorID string,
+	limit, offset int) ([]CreatorPayout, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT p.id, p.campaign_id, COALESCE(c.title,''), p.amount_minor,
+		       p.currency, p.status, p.provider, COALESCE(p.failure_reason,''),
+		       p.created_at
+		FROM payout_orders p
+		LEFT JOIN campaigns c ON c.id = p.campaign_id
+		WHERE p.creator_id=$1
+		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`, creatorID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []CreatorPayout{}
+	for rows.Next() {
+		var p CreatorPayout
+		var amt int64
+		var cur, st string
+		if err := rows.Scan(&p.ID, &p.CampaignID, &p.Title, &amt, &cur,
+			&st, &p.Provider, &p.Reason, &p.CreatedAt); err != nil {
+			continue
+		}
+		c, _ := money.ParseCurrency(cur)
+		p.Amount = money.Amount{Minor: money.Minor(amt), Currency: c}
+		p.Status = domain.PayoutStatus(st)
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// CreatorEarnings — ҷамъбасти даромади эҷодкор.
+//
+// Ҳар рақам аз ҷадвалҳо ҳисоб мешавад, на аз сутуни ҷамъшуда.
+type CreatorEarnings struct {
+	Wallet    CreatorWallet `json:"wallet"`
+	PaidOut   money.Amount  `json:"paidOut"`
+	Upcoming  money.Amount  `json:"upcoming"`
+	Campaigns int64         `json:"completedCampaigns"`
+}
+
+// GetCreatorEarnings даромади эҷодкорро ҷамъбаст мекунад.
+//
+// Upcoming — маблағи offer-ҳои тасдиқшуда, ки кампанияашон ҳанӯз
+// пӯшида нашудааст: пул ваъда шудааст, вале ҳанӯз ҳисоб нашудааст.
+// Комиссия аз он тарҳ мешавад, то рақам ваъдаи аз ҳад набошад.
+func GetCreatorEarnings(ctx context.Context, tx Tx, creatorID string,
+	cur money.Currency) (CreatorEarnings, error) {
+	var e CreatorEarnings
+	w, err := GetCreatorWallet(ctx, tx, creatorID, cur)
+	if err != nil {
+		return CreatorEarnings{}, err
+	}
+	e.Wallet = w
+
+	var paid int64
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(SUM(amount_minor),0) FROM payout_orders
+		WHERE creator_id=$1 AND currency=$2 AND status='SUCCEEDED'`,
+		creatorID, string(cur)).Scan(&paid); err != nil {
+		return CreatorEarnings{}, err
+	}
+	e.PaidOut = money.Amount{Minor: money.Minor(paid), Currency: cur}
+
+	// Маблағи интизорӣ: offer-и APPROVED дар кампанияи ҳанӯз накушода,
+	// бо тарҳи комиссияи ҚУФЛшудаи ҳамон кампания.
+	var upcoming int64
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(SUM(
+		         cc.agreed_minor - ((cc.agreed_minor * c.commission_bps + 5000) / 10000)
+		       ),0)
+		FROM campaign_creators cc
+		JOIN campaigns c ON c.id = cc.campaign_id
+		WHERE cc.creator_id=$1 AND cc.currency=$2
+		  AND cc.status='APPROVED'
+		  AND c.status NOT IN ('COMPLETED','CANCELLED','REFUNDED')`,
+		creatorID, string(cur)).Scan(&upcoming); err != nil {
+		return CreatorEarnings{}, err
+	}
+	e.Upcoming = money.Amount{Minor: money.Minor(upcoming), Currency: cur}
+
+	if err := tx.QueryRow(ctx, `
+		SELECT COUNT(*) FROM campaign_creators cc
+		JOIN campaigns c ON c.id = cc.campaign_id
+		WHERE cc.creator_id=$1 AND cc.status='APPROVED' AND c.status='COMPLETED'`,
+		creatorID).Scan(&e.Campaigns); err != nil {
+		return CreatorEarnings{}, err
+	}
+	return e, nil
+}
+
+// CreatorCampaign — кампанияе, ки эҷодкор дар он иштирок дорад.
+type CreatorCampaign struct {
+	CampaignID string             `json:"campaignId"`
+	Title      string             `json:"title"`
+	Status     string             `json:"campaignStatus"`
+	OfferID    string             `json:"offerId"`
+	Offer      domain.OfferStatus `json:"offerStatus"`
+	Agreed     money.Amount       `json:"agreed"`
+	ContentID  string             `json:"contentId,omitempty"`
+}
+
+// ListCampaignsForCreator кампанияҳои эҷодкорро бармегардонад.
+func ListCampaignsForCreator(ctx context.Context, tx Tx, creatorID string,
+	limit, offset int) ([]CreatorCampaign, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT cc.campaign_id, COALESCE(c.title,''), COALESCE(c.status,''),
+		       cc.id, cc.status, cc.agreed_minor, cc.currency,
+		       COALESCE(cc.content_id,'')
+		FROM campaign_creators cc
+		JOIN campaigns c ON c.id = cc.campaign_id
+		WHERE cc.creator_id=$1 AND cc.status IN ('ACCEPTED','DELIVERED','APPROVED')
+		ORDER BY cc.created_at DESC LIMIT $2 OFFSET $3`, creatorID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []CreatorCampaign{}
+	for rows.Next() {
+		var r CreatorCampaign
+		var amt int64
+		var cur, st string
+		if err := rows.Scan(&r.CampaignID, &r.Title, &r.Status, &r.OfferID,
+			&st, &amt, &cur, &r.ContentID); err != nil {
+			continue
+		}
+		c, _ := money.ParseCurrency(cur)
+		r.Agreed = money.Amount{Minor: money.Minor(amt), Currency: c}
+		r.Offer = domain.OfferStatus(st)
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -156,6 +157,11 @@ type CreatorMetrics struct {
 	Score           float64 `json:"creatorScore"`
 	Confidence      float64 `json:"scoreConfidence"`
 	SampleSize      int64   `json:"sampleSize"`
+
+	// Метаи ҳисоб — то холи кӯҳна бо алгоритми нав омехта нашавад.
+	ScoreVersion   int                `json:"scoreVersion"`
+	ScoreParams    map[string]float64 `json:"scoreParams,omitempty"`
+	ScoreBreakdown map[string]float64 `json:"scoreBreakdown,omitempty"`
 }
 
 // SaveCreatorMetrics метрикаро бо холи ҳисобшуда сабт мекунад.
@@ -185,14 +191,18 @@ func SaveCreatorMetrics(ctx context.Context, tx Tx, creatorID string,
 		Score:           res.Score,
 		Confidence:      res.Confidence,
 		SampleSize:      res.SampleSize,
+		ScoreVersion:    res.Version,
+		ScoreParams:     res.Params,
+		ScoreBreakdown:  res.Breakdown,
 	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO creator_metrics
 		  (creator_id, followers_count, total_views, average_views, likes,
 		   comments, shares, saves, engagement_rate, content_count,
 		   campaign_count, successful_campaign_count, average_campaign_result,
-		   creator_score, score_confidence, sample_size, computed_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
+		   creator_score, score_confidence, sample_size, computed_at,
+		   score_version, score_params, score_breakdown)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),$17,$18,$19)
 		ON CONFLICT (creator_id) DO UPDATE SET
 		  followers_count           = EXCLUDED.followers_count,
 		  total_views               = EXCLUDED.total_views,
@@ -209,12 +219,16 @@ func SaveCreatorMetrics(ctx context.Context, tx Tx, creatorID string,
 		  creator_score             = EXCLUDED.creator_score,
 		  score_confidence          = EXCLUDED.score_confidence,
 		  sample_size               = EXCLUDED.sample_size,
+		  score_version             = EXCLUDED.score_version,
+		  score_params              = EXCLUDED.score_params,
+		  score_breakdown           = EXCLUDED.score_breakdown,
 		  computed_at               = NOW(),
 		  updated_at                = NOW()`,
 		creatorID, out.Followers, out.TotalViews, out.AverageViews, out.Likes,
 		out.Comments, out.Shares, out.Saves, out.EngagementRate, out.ContentCount,
 		out.CampaignCount, out.SuccessfulCount, out.AverageResult,
-		out.Score, out.Confidence, out.SampleSize)
+		out.Score, out.Confidence, out.SampleSize,
+		out.ScoreVersion, mustJSON(out.ScoreParams), mustJSON(out.ScoreBreakdown))
 	if err != nil {
 		return CreatorMetrics{}, fmt.Errorf("store: сабти метрика: %w", err)
 	}
@@ -227,22 +241,29 @@ func SaveCreatorMetrics(ctx context.Context, tx Tx, creatorID string,
 // эҷодкори нав метрика надорад ва ин ҳолати муқаррарист.
 func GetCreatorMetrics(ctx context.Context, tx Tx, creatorID string) (CreatorMetrics, error) {
 	m := CreatorMetrics{CreatorID: creatorID}
+	var params, breakdown []byte
 	err := tx.QueryRow(ctx, `
 		SELECT followers_count, total_views, average_views, likes, comments,
 		       shares, saves, engagement_rate, content_count, campaign_count,
 		       successful_campaign_count, average_campaign_result,
-		       creator_score, score_confidence, sample_size
+		       creator_score, score_confidence, sample_size,
+		       COALESCE(score_version,0),
+		       COALESCE(score_params,'{}'::jsonb),
+		       COALESCE(score_breakdown,'{}'::jsonb)
 		FROM creator_metrics WHERE creator_id=$1`, creatorID).
 		Scan(&m.Followers, &m.TotalViews, &m.AverageViews, &m.Likes, &m.Comments,
 			&m.Shares, &m.Saves, &m.EngagementRate, &m.ContentCount,
 			&m.CampaignCount, &m.SuccessfulCount, &m.AverageResult,
-			&m.Score, &m.Confidence, &m.SampleSize)
+			&m.Score, &m.Confidence, &m.SampleSize,
+			&m.ScoreVersion, &params, &breakdown)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, nil
 	}
 	if err != nil {
 		return CreatorMetrics{}, err
 	}
+	_ = json.Unmarshal(params, &m.ScoreParams)
+	_ = json.Unmarshal(breakdown, &m.ScoreBreakdown)
 	return m, nil
 }
 

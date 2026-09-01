@@ -310,3 +310,92 @@ func notifyPayoutsCreated(orders []store.PayoutOrder) {
 			"Пардохти кампания омода шуд")
 	}
 }
+
+// GET /marketplace/creator/payouts — таърихи пардохтҳо.
+func ListMyPayouts(c *gin.Context) {
+	ctx := c.Request.Context()
+	limit := atoiDefault(c.Query("limit"), 30, 1, 100)
+	offset := atoiDefault(c.Query("offset"), 0, 0, 100000)
+
+	var out []store.CreatorPayout
+	err := mpTx(ctx, func(tx store.Tx) error {
+		var err error
+		out, err = store.ListPayoutsForCreator(ctx, tx, mw.UID(c), limit, offset)
+		return err
+	})
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"payouts": out})
+}
+
+// GET /marketplace/creator/earnings — ҷамъбасти даромад.
+func GetMyEarnings(c *gin.Context) {
+	svc, ok := mpService(c)
+	if !ok {
+		return
+	}
+	cur, err := money.ParseCurrency(svc.Cfg.DefaultCurrency)
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	ctx := c.Request.Context()
+	var e store.CreatorEarnings
+	err = mpTx(ctx, func(tx store.Tx) error {
+		var err error
+		e, err = store.GetCreatorEarnings(ctx, tx, mw.UID(c), cur)
+		return err
+	})
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, e)
+}
+
+// GET /marketplace/creator/campaigns — кампанияҳои ҷории эҷодкор.
+func ListMyCampaigns(c *gin.Context) {
+	ctx := c.Request.Context()
+	limit := atoiDefault(c.Query("limit"), 30, 1, 100)
+	offset := atoiDefault(c.Query("offset"), 0, 0, 100000)
+
+	var out []store.CreatorCampaign
+	err := mpTx(ctx, func(tx store.Tx) error {
+		var err error
+		out, err = store.ListCampaignsForCreator(ctx, tx, mw.UID(c), limit, offset)
+		return err
+	})
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"campaigns": out})
+}
+
+// POST /marketplace/offers/:id/accept — қабули даъват.
+func AcceptOffer(c *gin.Context) { respondToOffer(c, true) }
+
+// POST /marketplace/offers/:id/reject — рад кардани даъват.
+func RejectOffer(c *gin.Context) { respondToOffer(c, false) }
+
+// respondToOffer мантиқи муштараки қабул/рад аст.
+//
+// RespondToOffer-и қаблӣ (бо майдони accept дар бадан) нигоҳ дошта
+// мешавад, то client-и мавҷуда нашиканад.
+func respondToOffer(c *gin.Context, accept bool) {
+	ctx := c.Request.Context()
+	var offer store.Offer
+	err := mpTx(ctx, func(tx store.Tx) error {
+		var err error
+		offer, err = store.RespondToOffer(ctx, tx, c.Param("id"), mw.UID(c), accept)
+		return err
+	})
+	if err != nil {
+		mpFail(c, err)
+		return
+	}
+	notifyOfferResponse(offer)
+	c.JSON(http.StatusOK, offer)
+}
