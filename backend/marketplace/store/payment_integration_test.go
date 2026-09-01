@@ -205,8 +205,13 @@ func withTx(pool *pgxpool.Pool, fn func(Tx) error) error {
 	if err != nil {
 		return err
 	}
+	// Rollback-и таъхирӣ ҲАТМИСТ: агар fn t.Fatalf кунад, runtime.Goexit
+	// рух медиҳад ва сатрҳои поёнӣ иҷро намешаванд. Бе ин, транзаксия
+	// кушода мемонад, қулфҳояшро нигоҳ медорад ва TRUNCATE-и тести
+	// навбатӣ то абад мунтазир мешавад. Баъди Commit rollback бе таъсир аст.
+	defer tx.Rollback(ctx)
+
 	if err := fn(tx); err != nil {
-		tx.Rollback(ctx)
 		return err
 	}
 	return tx.Commit(ctx)

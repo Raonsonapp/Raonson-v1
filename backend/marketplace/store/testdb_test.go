@@ -49,8 +49,10 @@ func resetTables(t *testing.T, pool *pgxpool.Pool) {
 	_, err := pool.Exec(context.Background(), `
 		TRUNCATE ledger_entries, ledger_transactions, ledger_accounts,
 		         payment_orders, payout_orders, platform_fees,
-		         webhook_events, marketplace_audit_logs, campaign_events,
-		         campaign_creators, campaigns, advertisers RESTART IDENTITY CASCADE;`)
+		         webhook_events, idempotency_keys, marketplace_audit_logs,
+		         campaign_events, campaign_metrics, campaign_creators,
+		         campaigns, advertisers, creator_profiles, creator_metrics,
+		         fraud_flags RESTART IDENTITY CASCADE;`)
 	if err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
