@@ -38,6 +38,8 @@ import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
 import 'child_safety_screen.dart';
 import 'community_guidelines_screen.dart';
+import '../marketplace/creator_marketplace_screen.dart';
+import '../marketplace/advertiser_campaigns_screen.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -145,6 +147,19 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('shop.sellerPanel'),
                 sub:   tr('shop.sellerPanelSub'),
                 onTap: () => _go(ctx, const SellerDashboardScreen()),
+              ),
+              // ── Creator Marketplace ──
+              _NavTile(
+                icon:  AppIcons.campaign_outlined,
+                title: tr('mp.creatorTab'),
+                sub:   tr('mp.joinSub'),
+                onTap: () => _go(ctx, const CreatorMarketplaceScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.trending_up_rounded,
+                title: tr('mp.advertiserTab'),
+                sub:   tr('mp.campaigns'),
+                onTap: () => _go(ctx, const AdvertiserCampaignsScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.chat_bubble_rounded,
