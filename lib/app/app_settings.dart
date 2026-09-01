@@ -58,11 +58,16 @@ class AppSettingsState extends ChangeNotifier {
   }
 
   void _pushServer() {
+    // Танзимот аллакай маҳаллӣ захира шуд — ин ҳамоҳангсозии иловагист.
+    //
+    // try/catch хатои Future-и радшударо ДОШТА НАМЕТАВОНАД (он баъди
+    // async gap меояд), бинобар ин onError лозим аст: вагарна иваз
+    // кардани забон дар ҳолати офлайн хатои дошта нашуда медиҳад.
     try {
       ApiClient.instance.put('/profile/settings', body: {
         'theme':    _theme == ThemeMode.light ? 'light' : 'dark',
         'language': _lang,
-      });
+      }).then((_) {}, onError: (_) {});
     } catch (_) {}
   }
 }

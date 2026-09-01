@@ -20,6 +20,7 @@ import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/utils/time_ago.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -548,7 +549,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   onSubmitted: (_) => _send(),
                   decoration: InputDecoration(
                     hintText: _replyTo != null
-                        ? '@${_replyTo!.user.username}-га ҷавоб...'
+                        ? tr('comments.replyTo', {'user': _replyTo!.user.username})
                         : 'Шарҳ нависед...',
                     hintStyle: TextStyle(color: AppColors.textFaint),
                     border: InputBorder.none),
@@ -818,16 +819,7 @@ class _CommentItemState extends State<_CommentItem> {
     decoration: BoxDecoration(color: AppColors.textFaint,
         borderRadius: BorderRadius.circular(2)));
 
-  String _timeAgo() {
-    final d = DateTime.now().difference(widget.comment.createdAt.toLocal());
-    if (d.inSeconds < 60) return '${d.inSeconds} сония пеш';
-    if (d.inMinutes < 60) return '${d.inMinutes} дақиқа пеш';
-    if (d.inHours   < 24) return '${d.inHours} соат пеш';
-    if (d.inDays    < 7)  return '${d.inDays} рӯз пеш';
-    if (d.inDays    < 30) return '${(d.inDays / 7).floor()} ҳафта пеш';
-    if (d.inDays    < 365) return '${(d.inDays / 30).floor()} моҳ пеш';
-    return '${(d.inDays / 365).floor()} сол пеш';
-  }
+  String _timeAgo() => timeAgo(widget.comment.createdAt.toLocal());
 
   @override
   Widget build(BuildContext context) {
@@ -890,7 +882,7 @@ class _CommentItemState extends State<_CommentItem> {
                   style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
               if (_likeCount > 0) ...[
                 const SizedBox(width: 12),
-                Text('$_likeCount лайк',
+                Text(trn('count.likes', _likeCount),
                     style: TextStyle(
                         color: AppColors.textFaint, fontSize: 12,
                         fontWeight: FontWeight.w600)),

@@ -23,6 +23,7 @@ import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
 import '../chat/share/share_to_chat_row.dart';
+import '../core/utils/time_ago.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -521,7 +522,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         ],
       });
       if (res.statusCode >= 400) throw Exception();
-      _toast('Ба «$name» илова шуд ✓');
+      _toast(tr('story.addedTo', {'name': name}));
     } catch (_) { _toast('Хато'); }
     _resume();
   }
@@ -792,7 +793,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.white38, width: 1.5),
                   borderRadius: BorderRadius.circular(24)),
-                child: Text('${_current.user.username}-га ҷавоб...',
+                child: Text(tr('story.replyTo', {'user': _current.user.username}),
                     style: const TextStyle(color: Colors.white70, fontSize: 14))),
             )),
         const SizedBox(width: 12),
@@ -816,7 +817,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         style: const TextStyle(color: Colors.white),
         onSubmitted: (_) => _sendReply(),
         decoration: InputDecoration(
-          hintText: '${_current.user.username}-га ҷавоб...',
+          hintText: tr('story.replyTo', {'user': _current.user.username}),
           hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
           filled: true, fillColor: Colors.white12,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
@@ -858,12 +859,9 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   String _timeAgo() {
+    // Стори 24 соат зинда аст — вақти сохташуда аз вақти анҷом ҳисоб мешавад.
     final created = _current.expiresAt.subtract(const Duration(hours: 24));
-    final diff = DateTime.now().difference(created);
-    if (diff.inMinutes < 1)  return 'ҳозир';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} дақ';
-    if (diff.inHours   < 24) return '${diff.inHours} соат';
-    return '${diff.inDays} рӯз';
+    return timeAgoMedium(created);
   }
 }
 
@@ -1182,8 +1180,13 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '$_folViewed аз ${_folTotal == 0 ? _folViewed : _folTotal} пайрав дид'
-                  '${_nonFol > 0 ? '  ·  $_nonFol ғайри пайрав' : ''}',
+                  tr('story.viewedBy', {
+                    'seen': _folViewed,
+                    'total': _folTotal == 0 ? _folViewed : _folTotal,
+                  }) +
+                      (_nonFol > 0
+                          ? '  ·  ${tr('count.nonFollowers', {'n': _nonFol})}'
+                          : ''),
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ),
@@ -1423,7 +1426,7 @@ class _PollSticker extends StatelessWidget {
         ]),
         if (showResults) ...[
           const SizedBox(height: 8),
-          Text(poll.total == 1 ? '1 овоз' : '${poll.total} овоз',
+          Text(trn('count.votes', poll.total),
               style: const TextStyle(color: Colors.black54, fontSize: 11)),
         ],
       ]),

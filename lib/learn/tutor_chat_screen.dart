@@ -27,7 +27,7 @@ class _TutorChatScreenState extends State<TutorChatScreen> {
     super.initState();
     // Худкор аз Устоз дарси якумро мепурсем.
     _send(
-      'Салом Устоз! Ман мехоҳам «${widget.trackName}»-ро аз сифр ёд гирам. '
+      '${tr('tutor.greeting', {'track': widget.trackName})} '
       'Аз қадами якуми хеле содда оғоз кун ва дар охир ба ман як вазифаи хурд деҳ.',
       hidden: true,
     );

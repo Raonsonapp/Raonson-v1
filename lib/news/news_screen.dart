@@ -9,6 +9,7 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
+import '../core/utils/time_ago.dart';
 
 class NewsItem {
   final String title, link, description, image, source, pubDate, isoDate;
@@ -33,10 +34,7 @@ class NewsItem {
   String get timeAgo {
     final t = DateTime.tryParse(isoDate.isNotEmpty ? isoDate : pubDate);
     if (t == null) return source;
-    final d = DateTime.now().difference(t);
-    if (d.inMinutes < 60) return '$source · ${d.inMinutes}д';
-    if (d.inHours < 24) return '$source · ${d.inHours}с';
-    return '$source · ${d.inDays}р';
+    return '$source · ${timeAgoShort(t)}';
   }
 }
 

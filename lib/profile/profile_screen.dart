@@ -243,7 +243,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final u = _ctrl.profile; if (u == null) return;
     _sheet([
       _tile(u.isBlocked ? AppIcons.lock_open_rounded : AppIcons.block_rounded,
-          u.isBlocked ? 'Блокро бардор' : '${u.username}-ро блок кун',
+          u.isBlocked ? tr('profile.unblock') : tr('profile.blockUser', {'user': u.username}),
           () { Navigator.pop(context); _confirmBlock(u.isBlocked); },
           red: !u.isBlocked),
       _tile(AppIcons.flag_outlined, 'Шикоят кун',
@@ -278,11 +278,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     final u = _ctrl.profile!;
     showDialog(context: context, builder: (_) => AlertDialog(
       backgroundColor: AppColors.card,
-      title: Text(cur ? 'Блокро бардор?' : '${u.username}-ро блок кун?',
+      title: Text(cur ? tr('profile.unblockQ') : tr('profile.blockUserQ', {'user': u.username}),
           style: TextStyle(color: AppColors.textPrimary)),
       content: Text(cur
-          ? '${u.username} барнома-и шуморо дида метавонад.'
-          : '${u.username} шуморо дида наметавонад.',
+          ? tr('profile.blockedCanSee', {'user': u.username})
+          : tr('profile.blockedCannotSee', {'user': u.username}),
           style: TextStyle(color: AppColors.textSecondary)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context),
@@ -343,13 +343,17 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   String _mutualTxt(UserModel u) {
     if (u.mutualCount == 0) return '';
-    if (u.mutualNames.isEmpty) return '${u.mutualCount} умумӣ пайрав';
-    if (u.mutualCount == 1) return '${u.mutualNames.first} пайрав мешавад';
+    if (u.mutualNames.isEmpty) return tr('count.mutualFollowers', {'n': u.mutualCount});
+    if (u.mutualCount == 1) return tr('profile.followedBy', {'user': u.mutualNames.first});
     if (u.mutualCount == 2) {
-      return '${u.mutualNames.first} ва ${u.mutualNames.last} пайрав мешаванд';
+      return tr('profile.followedByTwo',
+          {'first': u.mutualNames.first, 'second': u.mutualNames.last});
     }
-    return '${u.mutualNames.first}, ${u.mutualNames.last} ва '
-        '${u.mutualCount - 2} нафари дигар';
+    return tr('profile.followedByMore', {
+      'first': u.mutualNames.first,
+      'second': u.mutualNames.last,
+      'n': u.mutualCount - 2,
+    });
   }
 
   // ── BUILD ─────────────────────────────────────────────────────────
@@ -1150,7 +1154,7 @@ class _ULS extends State<_UserListSheet> {
             : list.isEmpty
                 ? Center(child: Text(_query.isNotEmpty
                         ? 'Натиҷае нест'
-                        : 'Ҳанӯз ${widget.title.toLowerCase()} нест',
+                        : tr('profile.emptyYet', {'what': widget.title.toLowerCase()}),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 14)))
                 : ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
                     final u = list[i];

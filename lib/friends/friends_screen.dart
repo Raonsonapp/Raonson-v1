@@ -361,7 +361,7 @@ class _RequestCard extends StatelessWidget {
             ],
             if (user.mutualFriends > 0) ...[
               const SizedBox(height: 2),
-              Text('${user.mutualFriends} дӯсти умумӣ',
+              Text(trn('count.mutualFriends', user.mutualFriends),
                   style: TextStyle(
                       color: AppColors.grey, fontSize: 12)),
             ],
@@ -422,7 +422,7 @@ class _SuggestionCard extends StatelessWidget {
             ],
             if (user.mutualFriends > 0) ...[
               const SizedBox(height: 2),
-              Text('${user.mutualFriends} дӯсти умумӣ',
+              Text(trn('count.mutualFriends', user.mutualFriends),
                   style: TextStyle(color: AppColors.grey, fontSize: 12)),
             ],
           ],

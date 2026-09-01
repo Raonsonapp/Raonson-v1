@@ -1771,7 +1771,7 @@ class _HashtagTab extends StatelessWidget {
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text('$cnt пост',
+                Text(trn('count.posts', cnt),
                     style: TextStyle(
                         color: AppColors.textFaint, fontSize: 12)),
               ]),
@@ -1845,7 +1845,8 @@ class _UserRowState extends State<_UserRow> {
                         color: AppColors.textFaint, fontSize: 12),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
-              Text('${_fmtFollowers(widget.user.followersCount)} обуначи',
+              Text(tr('count.followers.many',
+                  {'n': _fmtFollowers(widget.user.followersCount)}),
                   style: TextStyle(
                       color: AppColors.textFaint, fontSize: 11)),
             ],

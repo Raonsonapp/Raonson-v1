@@ -150,7 +150,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                   style: TextStyle(
                       color: AppColors.textPrimary, fontSize: 20,
                       fontWeight: FontWeight.bold))),
-              Center(child: Text('${_members.length} аъзо',
+              Center(child: Text(trn('count.members', _members.length),
                   style: TextStyle(color: AppColors.textFaint, fontSize: 13))),
               const SizedBox(height: 20),
 
@@ -177,7 +177,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
                     icon: Icon(AppIcons.share_rounded,
                         color: AppColors.textSecondary, size: 20),
                     onPressed: () => Share.share(
-                        'Ба гурӯҳи «${widget.group.name}» ҳамроҳ шав:\n$_inviteLink'),
+                        tr('group.inviteText',
+                            {'name': widget.group.name, 'link': _inviteLink})),
                   ),
                 ]),
               ),

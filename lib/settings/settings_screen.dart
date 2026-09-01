@@ -1245,7 +1245,7 @@ class AboutScreen extends StatelessWidget {
           ),
           const SizedBox(height: 28),
           Center(
-            child: Text('© $_year Raonson. Ҳамаи ҳуқуқҳо ҳифз шудаанд.',
+            child: Text(tr('settings.copyright', {'year': _year}),
                 style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
           ),
         ],

@@ -166,7 +166,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           color: AppColors.textPrimary, fontSize: 15,
                           fontWeight: FontWeight.w600)),
                   if (widget.group.members > 0)
-                    Text('${widget.group.members} аъзо',
+                    Text(trn('count.members', widget.group.members),
                         style: TextStyle(
                             color: AppColors.textFaint, fontSize: 11)),
                 ],

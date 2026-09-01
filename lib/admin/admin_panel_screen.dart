@@ -145,7 +145,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(tr('ui.358a05761e'),
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-        content: Text('Аккаунти @$uname пурра нест мешавад. Ин амал бебозгашт аст.',
+        content: Text(tr('admin.deleteAccountBody', {'user': uname}),
             style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
@@ -168,7 +168,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         setState(() => _users.removeWhere(
             (x) => (x['_id'] ?? x['id']).toString() == id));
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('@$uname нест карда шуд')));
+            SnackBar(content: Text(tr('admin.accountDeleted', {'user': uname}))));
       } else if (mounted) {
         final msg = (jsonDecode(res.body) as Map)['error']?.toString() ??
             'Хатогӣ';
@@ -443,7 +443,7 @@ class _AdminReportsState extends State<AdminReportsScreen> {
               Icon(AppIcons.security_outlined, color: Colors.redAccent, size: 22),
               const SizedBox(width: 10),
               Expanded(child: Text(
-                '$_csCount шикояти бехатарии кӯдакон дар интизор',
+                tr('count.safetyReports', {'n': _csCount}),
                 style: TextStyle(color: Colors.redAccent,
                     fontWeight: FontWeight.w600, fontSize: 13))),
             ]),

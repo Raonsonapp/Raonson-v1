@@ -176,7 +176,7 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
                                 fontWeight: FontWeight.w600)),
                         subtitle: Text(
                             g.preview.isEmpty
-                                ? '${g.members} аъзо'
+                                ? trn('count.members', g.members)
                                 : g.preview,
                             maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: AppColors.textFaint)),

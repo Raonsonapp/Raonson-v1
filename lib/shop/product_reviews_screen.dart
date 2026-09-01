@@ -91,7 +91,7 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     _stars(_avg.round(), size: 18),
                     const SizedBox(height: 4),
-                    Text('$_count баҳо',
+                    Text(trn('count.reviews', _count),
                         style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
                   ]),
                 ]),

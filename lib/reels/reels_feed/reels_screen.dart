@@ -1125,7 +1125,7 @@ class _ReelItemState extends State<_ReelItem> {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                          content: Text('@$uname зикр шуд'),
+                                          content: Text(tr('reels.mentioned', {'user': uname})),
                                           duration:
                                               const Duration(seconds: 2)));
                                 }

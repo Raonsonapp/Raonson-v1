@@ -131,7 +131,7 @@ class HighlightOptionsSheet extends StatelessWidget {
               color: AppColors.textFaint, borderRadius: BorderRadius.circular(2)))),
         ListTile(
           leading: const Icon(AppIcons.delete_outline_rounded, color: Colors.redAccent),
-          title: Text('«${highlight.title}»-ро нест кун',
+          title: Text(tr('highlight.deleteTitle', {'name': highlight.title}),
               style: const TextStyle(color: Colors.redAccent, fontSize: 15)),
           onTap: () {
             Navigator.pop(context);

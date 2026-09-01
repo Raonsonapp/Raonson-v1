@@ -8,6 +8,7 @@
 // ки ба видео монанд аст (uid + poster), ҷамъ мекунем.
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../core/i18n/strings.dart';
 
 class AnimeItem {
   final String hash;     // uid-и видео дар Aparat
@@ -183,7 +184,7 @@ class AparatApi {
       if (out.isEmpty) {
         _appendDebug('200 вале 0 видео · ${_snippet(res.body)}');
       } else {
-        _appendDebug('200, ${out.length} видео');
+        _appendDebug(tr('anime.videosFound', {'n': out.length}));
       }
       return out;
     } catch (e) {

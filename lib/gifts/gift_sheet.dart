@@ -65,7 +65,8 @@ class _GiftSheetState extends State<_GiftSheet> {
       if (res.statusCode < 400) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('⭐ $_selected ситора ба @${widget.authorName} фиристода шуд'),
+          content: Text(tr('gift.sent',
+              {'n': _selected, 'user': widget.authorName})),
           backgroundColor: AppColors.divider,
           duration: const Duration(seconds: 2),
         ));
@@ -130,7 +131,7 @@ class _GiftSheetState extends State<_GiftSheet> {
           ),
         ),
         const SizedBox(height: 10),
-        Text('Танҳо @${widget.authorName} тӯҳфаи шуморо мебинад.',
+        Text(tr('gift.onlySees', {'user': widget.authorName}),
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
       ]),

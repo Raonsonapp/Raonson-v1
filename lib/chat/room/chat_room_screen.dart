@@ -700,8 +700,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(
-            '@${widget.peer.username} мехоҳад ба шумо паём нависад. '
-            'Агар қабул кунед, ӯ инро мебинад.',
+            tr('chat.wantsToMessageFull', {'user': widget.peer.username}),
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textTertiary, fontSize: 12.5,
                 height: 1.35),

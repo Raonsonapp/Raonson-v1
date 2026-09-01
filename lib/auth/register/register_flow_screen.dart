@@ -145,7 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           title: Text(tr('ui.d0e79670ac'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Рамзи 6-рақама ба $phone тавассути Telegram фиристода шуд.',
+            Text(tr('register.codeSentTo', {'phone': phone}),
                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
             const SizedBox(height: 16),
             TextField(

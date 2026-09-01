@@ -32,6 +32,7 @@ import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
 import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/utils/time_ago.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -279,7 +280,7 @@ class _PostCardState extends State<PostCard>
     if (ok) setState(() => _saved = true);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(ok
-            ? 'Ба «${chosen.name}» илова шуд'
+            ? tr('collection.addedTo', {'name': chosen.name})
             : tr('common.error'))));
   }
 
@@ -493,7 +494,7 @@ class _PostCardState extends State<PostCard>
                 label: tr('ui.fc18bb515b'),
                 onTap: () { Navigator.pop(context); _removeMyTag(); }),
           _MenuItem(icon: Icons.volume_off_outlined,
-              label: 'Постҳои @${widget.post.user.username}-ро бандош',
+              label: tr('post.hidePostsOf', {'user': widget.post.user.username}),
               onTap: () { Navigator.pop(context); _muteUser(); }),
           _MenuItem(icon: AppIcons.flag_outlined, iconColor: Colors.redAccent,
               label: tr('ui.fb18e0d540'), labelColor: Colors.redAccent,
@@ -797,7 +798,8 @@ class _PostCardState extends State<PostCard>
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Постҳои @${widget.post.user.username} пинҳон шуд'),
+      content: Text(tr('post.postsHidden',
+          {'user': widget.post.user.username})),
       backgroundColor: Colors.grey[800],
       duration: Duration(seconds: 3),
       action: SnackBarAction(
@@ -1059,18 +1061,8 @@ class _PostCardState extends State<PostCard>
     );
   }
 
-  String _timeAgo(DateTime dt) {
-    // ✅ toLocal() — серверни UTC вақтини маҳаллӣ мекунад
-    final d = DateTime.now().difference(dt.toLocal());
-    if (d.inSeconds < 30)  return 'ҳозир';
-    if (d.inMinutes < 1)   return '${d.inSeconds} сония пеш';
-    if (d.inMinutes < 60)  return '${d.inMinutes} дақиқа пеш';
-    if (d.inHours   < 24)  return '${d.inHours} соат пеш';
-    if (d.inDays    < 7)   return '${d.inDays} рӯз пеш';
-    if (d.inDays    < 30)  return '${(d.inDays / 7).floor()} ҳафта пеш';
-    if (d.inDays    < 365) return '${(d.inDays / 30).floor()} моҳ пеш';
-    return '${(d.inDays / 365).floor()} сол пеш';
-  }
+  // ✅ toLocal() — серверни UTC вақтини маҳаллӣ мекунад
+  String _timeAgo(DateTime dt) => timeAgo(dt.toLocal());
 
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
@@ -1435,7 +1427,7 @@ class _PostCardState extends State<PostCard>
             child: Text(
               _commentCount == 1
                   ? 'Намоиш 1 шарҳ'
-                  : 'Намоиш ҳама $_commentCount шарҳ',
+                  : tr('comments.showAll', {'n': _commentCount}),
               style: TextStyle(
                 color: AppColors.grey,
                 fontSize: 13.5,

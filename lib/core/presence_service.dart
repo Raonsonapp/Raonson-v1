@@ -2,6 +2,7 @@
 import 'package:flutter/foundation.dart';
 import 'services/socket_service.dart';
 import 'storage/token_storage.dart';
+import 'i18n/strings.dart';
 
 class PresenceInfo {
   final bool isOnline;
@@ -24,15 +25,15 @@ class PresenceService extends ChangeNotifier {
   String lastSeenLabel(String userId) {
     final p = _status[userId];
     if (p == null)  return '';
-    if (p.isOnline) return 'дар сайт';
+    if (p.isOnline) return tr('presence.online');
     final ls = p.lastSeen;
-    if (ls == null) return 'офлайн';
+    if (ls == null) return tr('presence.offline');
     final diff = DateTime.now().difference(ls);
-    if (diff.inSeconds < 60)  return 'ҳозир буд';
-    if (diff.inMinutes < 60)  return '${diff.inMinutes} дақ пеш';
-    if (diff.inHours   < 24)  return '${diff.inHours} соат пеш';
-    if (diff.inDays    == 1)  return 'дирӯз буд';
-    return '${diff.inDays} рӯз пеш';
+    if (diff.inSeconds < 60)  return tr('presence.justNow');
+    if (diff.inMinutes < 60)  return tr('time.minutesAgo', {'n': diff.inMinutes});
+    if (diff.inHours   < 24)  return tr('time.hoursAgo', {'n': diff.inHours});
+    if (diff.inDays    == 1)  return tr('presence.yesterday');
+    return tr('time.daysAgo', {'n': diff.inDays});
   }
 
   Future<void> connect() async {

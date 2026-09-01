@@ -171,7 +171,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           Text('Фаъол кардани $_name',
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold, fontSize: 16)),
-          Text('$_price сомонӣ / моҳ',
+          Text(tr('subscription.perMonth', {'n': _price}),
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           const SizedBox(height: 16),
           Padding(
@@ -240,7 +240,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 12),
-              Text('$_price сомонӣ',
+              Text(tr('subscription.price', {'n': _price}),
                   style: const TextStyle(color: Colors.white,
                       fontSize: 28, fontWeight: FontWeight.w900)),
               Text(tr('ui.bc3b3c9c55'),

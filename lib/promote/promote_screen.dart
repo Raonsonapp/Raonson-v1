@@ -220,7 +220,7 @@ class _PromoteScreenState extends State<PromoteScreen> {
           ),
           _sliderTile(
             label: tr('ui.d221b8ac0a'),
-            value: '$_days рӯз',
+            value: trn('count.days', _days),
             child: Slider(
               value: _days.toDouble(), min: 1, max: 30, divisions: 29,
               activeColor: AppColors.storyEnd,
@@ -246,7 +246,8 @@ class _PromoteScreenState extends State<PromoteScreen> {
                   children: [
                     Text(tr('ui.a30d7b7a41'),
                         style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                    Text('$_estReachLow – $_estReachHigh нафар',
+                    Text(tr('promote.estReach',
+                        {'low': _estReachLow, 'high': _estReachHigh}),
                         style: TextStyle(color: AppColors.textPrimary,
                             fontSize: 15, fontWeight: FontWeight.w600)),
                   ],

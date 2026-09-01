@@ -37,7 +37,7 @@ class _CrmScreenState extends State<CrmScreen> {
   }
 
   String _money(double v) =>
-      '${v.toStringAsFixed(v % 1 == 0 ? 0 : 2)} сом';
+      tr('shop.somoni', {'n': v.toStringAsFixed(v % 1 == 0 ? 0 : 2)});
 
   Future<void> _broadcast() async {
     if (_customers.isEmpty) {
@@ -73,7 +73,7 @@ class _CrmScreenState extends State<CrmScreen> {
         if (r.statusCode < 400 && mounted) {
           final sent = (jsonDecode(r.body)['sent'] as num?)?.toInt() ?? 0;
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Паём ба $sent муштарӣ фиристода шуд ✓'),
+              content: Text(tr('crm.messageSent', {'n': sent})),
               backgroundColor: Colors.green));
         }
       } catch (_) {}
@@ -143,7 +143,7 @@ class _CrmScreenState extends State<CrmScreen> {
                                   maxLines: 1, overflow: TextOverflow.ellipsis,
                                   style: TextStyle(color: AppColors.textPrimary,
                                       fontWeight: FontWeight.w600)),
-                              Text('$count фармоиш',
+                              Text(trn('count.orders', count),
                                   style: TextStyle(color: AppColors.textFaint,
                                       fontSize: 12)),
                             ])),

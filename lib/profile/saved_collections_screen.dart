@@ -165,7 +165,7 @@ class _CollectionsRowState extends State<CollectionsRow> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('«${c.name}»-ро нест кунем?',
+        title: Text(tr('collection.deleteTitle', {'name': c.name}),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
         content: Text(tr('ui.3471935aa9'),
             style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),

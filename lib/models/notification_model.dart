@@ -1,4 +1,5 @@
 import 'user_model.dart';
+import '../core/utils/time_ago.dart';
 
 class NotificationModel {
   final String id;
@@ -40,11 +41,7 @@ class NotificationModel {
   }
 
   String get timeAgo {
-    final diff = DateTime.now().difference(createdAt);
-    if (diff.inMinutes < 1) return 'ҳозир';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}д';
-    if (diff.inHours < 24) return '${diff.inHours}с';
-    return '${diff.inDays}р';
+    return timeAgoShort(createdAt);
   }
 
   NotificationModel copyWith({bool? read}) => NotificationModel(

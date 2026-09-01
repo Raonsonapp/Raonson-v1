@@ -75,7 +75,7 @@ class _BuySheetState extends State<_BuySheet> {
         setState(() {
           _discountPct = (b['discountPct'] as num?)?.toInt() ?? 0;
           _promoCode = code;
-          _promoMsg = 'Тахфиф $_discountPct% татбиқ шуд ✓';
+          _promoMsg = tr('shop.promoApplied', {'n': _discountPct});
         });
       } else {
         setState(() {
@@ -101,11 +101,13 @@ class _BuySheetState extends State<_BuySheet> {
       _ordered = true;
       ShopRepository().placeOrder(post.id, promoCode: _promoCode);
     }
-    final name = post.productName.isNotEmpty ? post.productName : 'маҳсул';
-    var msg = 'Салом! «$name» (${_priceLabel(_finalPrice)})-ро дар Raonson '
-        'дидам, мехоҳам харам.';
+    final name = post.productName.isNotEmpty
+        ? post.productName
+        : tr('shop.defaultProduct');
+    var msg = tr('shop.buyFull',
+        {'name': name, 'price': _priceLabel(_finalPrice)});
     if (_promoCode.isNotEmpty) {
-      msg += ' Промокод: $_promoCode ($_discountPct% тахфиф).';
+      msg += tr('shop.promoLine', {'code': _promoCode, 'n': _discountPct});
     }
     if (mounted) Navigator.pop(context);
     if (method == 'raonson') {

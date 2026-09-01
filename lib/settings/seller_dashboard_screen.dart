@@ -240,7 +240,7 @@ class _SellerDashboardState extends State<SellerDashboardScreen> {
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600)),
-              Text('$sold фурӯш',
+              Text(trn('count.sales', sold),
                   style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
             ])),
             Text(_money(revenue),
