@@ -934,6 +934,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, marketplaceSchema); err != nil {
 		log.Fatalf("❌ Marketplace migration failed: %v", err)
 	}
+	// Схемаи «Лентаи AI» — қабати идорашавандаи тавсия. Идемпотент.
+	if _, err := Pool.Exec(ctx, feedAISchema); err != nil {
+		log.Fatalf("❌ AI Feed migration failed: %v", err)
+	}
 	backfillCounters(ctx)
 	log.Println("✅ DB schema ready")
 }
