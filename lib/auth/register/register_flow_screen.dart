@@ -25,6 +25,7 @@ import '../widgets/auth_kit.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../auth_repository.dart';
+import '../../feed_ai/interests_onboarding_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -328,7 +329,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ── STEP 4 finish ──
   void _finish() {
     context.read<AppState>().login();
-    Navigator.of(context).popUntil((r) => r.isFirst);
+    // Пеш аз ворид шудан як қадам: шавқҳо. Ин лентаро аз рӯзи аввал
+    // маънодор мекунад. Гузаштан имконпазир аст — ҳеҷ кас маҷбур нест.
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => InterestsOnboardingScreen(
+        onDone: () => Navigator.of(context).popUntil((r) => r.isFirst),
+      ),
+    ));
   }
 
   void _err(String m) {

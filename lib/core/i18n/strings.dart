@@ -1093,6 +1093,10 @@ const Map<String, Map<String, String>> _strings = {
     'story.saveVideo':           'Видеоро захира кун',
     'story.settings':            'Танзимот',
     'story.shareAction':         'Мубодила кун',
+    'onboarding.interestsTitle': 'Ба чӣ шавқ доред?',
+    'onboarding.interestsSub':   'Интихоб кунед — лентаи шумо аз ҳамин лаҳза шахсӣ мешавад. Инро баъдтар тағйир дода метавонед.',
+    'onboarding.skip':           'Ҳозир не',
+    'onboarding.continueWith':   'Давом ({n})',
 
     // ── Creator Studio ─────────────────────────────────────────────
     'cs.title':                  'Студияи эҷодкор',
@@ -2394,6 +2398,10 @@ const Map<String, Map<String, String>> _strings = {
     'story.saveVideo':           'Сохранить видео',
     'story.settings':            'Настройки',
     'story.shareAction':         'Поделиться',
+    'onboarding.interestsTitle': 'Что вам интересно?',
+    'onboarding.interestsSub':   'Выберите темы — лента станет персональной сразу. Это можно изменить позже.',
+    'onboarding.skip':           'Не сейчас',
+    'onboarding.continueWith':   'Продолжить ({n})',
 
     // ── Creator Studio ─────────────────────────────────────────────
     'cs.title':                  'Студия автора',
@@ -3705,6 +3713,10 @@ const Map<String, Map<String, String>> _strings = {
     'story.saveVideo':           'Save video',
     'story.settings':            'Settings',
     'story.shareAction':         'Share',
+    'onboarding.interestsTitle': 'What are you interested in?',
+    'onboarding.interestsSub':   'Pick a few and your feed becomes personal right away. You can change this later.',
+    'onboarding.skip':           'Not now',
+    'onboarding.continueWith':   'Continue ({n})',
 
     // ── Creator Studio ─────────────────────────────────────────────
     'cs.title':                  'Creator Studio',
