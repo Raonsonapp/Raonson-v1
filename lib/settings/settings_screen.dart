@@ -41,6 +41,7 @@ import 'community_guidelines_screen.dart';
 import '../marketplace/creator_marketplace_screen.dart';
 import '../marketplace/advertiser_campaigns_screen.dart';
 import '../feed_ai/ai_feed_screen.dart';
+import '../creator_studio/creator_studio_screen.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -148,6 +149,13 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('shop.sellerPanel'),
                 sub:   tr('shop.sellerPanelSub'),
                 onTap: () => _go(ctx, const SellerDashboardScreen()),
+              ),
+              // ── Студияи эҷодкор ──
+              _NavTile(
+                icon:  AppIcons.auto_awesome_rounded,
+                title: tr('cs.title'),
+                sub:   tr('cs.entrySub'),
+                onTap: () => _go(ctx, const CreatorStudioScreen()),
               ),
               // ── Лентаи AI ──
               _NavTile(
