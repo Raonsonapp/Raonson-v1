@@ -433,6 +433,22 @@ func main() {
 		ai.POST("/search", handlers.AiSearch)
 	}
 
+	// ── ЛЕНТАИ AI — қабати идорашавандаи тавсия ─────────────────
+	// Рейтинги мавҷуда (GetSmartFeed/GetSmartReels) бетағйир мемонад;
+	// ин endpoint-ҳо танҳо афзалияти корбарро идора мекунанд.
+	fa := r.Group("/feed", auth, rl100)
+	{
+		fa.GET("/preferences",         handlers.GetFeedPreferences)
+		fa.PUT("/preferences",         handlers.UpdateFeedPreferences)
+		fa.PUT("/preferences/topic",   handlers.SetFeedTopicPreference)
+		fa.PUT("/preferences/creator", handlers.SetFeedCreatorPreference)
+		// Таҷзияи забони табиӣ гаронтар аст — маҳдудияти сахттар.
+		fa.POST("/preferences/natural-language", rl20, handlers.ParseFeedCommand)
+		fa.POST("/feedback",           handlers.RecordFeedFeedback)
+		fa.POST("/reset",              rl20, handlers.ResetFeedPreferences)
+		fa.GET("/explanation/:contentType/:contentId", handlers.GetFeedExplanation)
+	}
+
 	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)
 
 	// Ахбор — RSS-и манбаъҳои боэътимод (cache дар худи handler).
