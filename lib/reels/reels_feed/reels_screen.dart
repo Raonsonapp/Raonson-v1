@@ -30,6 +30,7 @@ import '../../feed/comments/comments_screen.dart';
 import '../../core/ads/ads_manager.dart';
 import '../../core/ads/rewarded_ad_flow.dart';
 import '../../core/ui/app_icons.dart';
+import '../audio/audio_page_screen.dart';
 
 class ReelsScreen extends StatelessWidget {
   final bool isActive;
@@ -1799,6 +1800,7 @@ class _ReelItemState extends State<_ReelItem> {
                   _AudioBar(
                       title: reel.audioTitle,
                       artist: reel.audioArtist,
+                      audioId: reel.audioId,
                       avatar: reel.user.avatar,
                       isPlaying: _initialized && !_paused),
                 ])),
@@ -1863,12 +1865,14 @@ class _CaptionWidget extends StatelessWidget {
 
 class _AudioBar extends StatefulWidget {
   final String title, artist, avatar;
+  final String audioId;
   final bool isPlaying;
   const _AudioBar(
       {required this.title,
       required this.artist,
       required this.avatar,
-      required this.isPlaying});
+      required this.isPlaying,
+      this.audioId = ''});
   @override
   State<_AudioBar> createState() => _AudioBarState();
 }
@@ -1913,7 +1917,7 @@ class _AudioBarState extends State<_AudioBar>
             ? '${widget.title} — ${widget.artist}'
             : widget.title);
 
-    return Row(mainAxisSize: MainAxisSize.min, children: [
+    final row = Row(mainAxisSize: MainAxisSize.min, children: [
       const Icon(AppIcons.music_note_rounded,
           color: Colors.white,
           size: 15,
@@ -1944,7 +1948,33 @@ class _AudioBarState extends State<_AudioBar>
           ),
         ),
       ),
+      // Садои воқеӣ саҳифа дорад — тир нишон медиҳад, ки зер кардан мумкин.
+      if (widget.audioId.isNotEmpty) ...[
+        const SizedBox(width: 4),
+        const Icon(AppIcons.chevron_right_rounded,
+            color: Colors.white70,
+            size: 14,
+            shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+      ],
     ]);
+
+    // Танҳо садои дар реестр буда саҳифа дорад. Барои «оригинал садо»
+    // (audioId холӣ) зер кардан ҷои рафтан надорад.
+    if (widget.audioId.isEmpty) return row;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AudioPageScreen(
+            audioId: widget.audioId,
+            initialTitle: widget.title,
+            initialArtist: widget.artist,
+          ),
+        ),
+      ),
+      child: row,
+    );
   }
 }
 

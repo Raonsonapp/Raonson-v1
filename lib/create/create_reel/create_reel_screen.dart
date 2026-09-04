@@ -12,10 +12,29 @@ import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
+import '../../chat/inbox/music_picker_sheet.dart';
+import '../../models/note_model.dart';
 
 class CreateReelScreen extends StatefulWidget {
   final File? initialFile;
-  const CreateReelScreen({super.key, this.initialFile});
+
+  /// Садои пешакӣ интихобшуда — вақте экран аз саҳифаи садо бо
+  /// «Ин садоро истифода бар» кушода мешавад.
+  final String? presetAudioId;
+  final String? presetAudioTitle;
+  final String? presetAudioArtist;
+  final String? presetAudioCover;
+  final String? presetAudioPreview;
+
+  const CreateReelScreen({
+    super.key,
+    this.initialFile,
+    this.presetAudioId,
+    this.presetAudioTitle,
+    this.presetAudioArtist,
+    this.presetAudioCover,
+    this.presetAudioPreview,
+  });
   @override
   State<CreateReelScreen> createState() => _CreateReelScreenState();
 }
@@ -28,9 +47,24 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
   double  _progress = 0;
   final   _caption  = TextEditingController();
 
+  // ── Садои интихобшуда ──
+  String _audioId     = '';
+  String _audioTitle  = '';
+  String _audioArtist = '';
+  String _audioCover  = '';
+  String _audioPreview = '';
+
+  bool get _hasAudio => _audioId.isNotEmpty && _audioTitle.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
+    _audioId      = widget.presetAudioId ?? '';
+    _audioTitle   = widget.presetAudioTitle ?? '';
+    _audioArtist  = widget.presetAudioArtist ?? '';
+    _audioCover   = widget.presetAudioCover ?? '';
+    _audioPreview = widget.presetAudioPreview ?? '';
+
     if (widget.initialFile != null) {
       _file = widget.initialFile;
     } else {
@@ -40,6 +74,88 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
 
   @override
   void dispose() { _caption.dispose(); super.dispose(); }
+
+  /// Сатри садо: интихоб, тағйир ё бардоштани суруд.
+  Widget _audioRow() => Material(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: _busy ? null : _pickAudio,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(children: [
+              const Icon(AppIcons.music_note, color: Colors.white70, size: 18),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _hasAudio
+                      ? (_audioArtist.isEmpty
+                          ? _audioTitle
+                          : '$_audioTitle • $_audioArtist')
+                      : tr('audio.pick'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: _hasAudio ? Colors.white : Colors.white54,
+                      fontSize: 14),
+                ),
+              ),
+              if (_hasAudio)
+                GestureDetector(
+                  onTap: _busy
+                      ? null
+                      : () => setState(() {
+                            _audioId = '';
+                            _audioTitle = '';
+                            _audioArtist = '';
+                            _audioCover = '';
+                            _audioPreview = '';
+                          }),
+                  child: const Icon(AppIcons.close,
+                      color: Colors.white38, size: 16),
+                )
+              else
+                const Icon(AppIcons.chevron_right_rounded,
+                    color: Colors.white38, size: 18),
+            ]),
+          ),
+        ),
+      );
+
+  /// Ҷустуҷӯи суруд бо ҳамон picker-е, ки барои note-и профил истифода
+  /// мешавад — ду рӯйхати ҷудогонаи мусиқӣ лозим нест.
+  Future<void> _pickAudio() async {
+    final song = await showModalBottomSheet<SongInfo>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
+      builder: (_) => const MusicPickerSheet(),
+    );
+    if (song == null || !mounted || song.isEmpty) return;
+    setState(() {
+      _audioId = _audioIdFor(song.title, song.artist);
+      _audioTitle = song.title;
+      _audioArtist = song.artist;
+      _audioCover = song.artUrl;
+      _audioPreview = song.previewUrl;
+    });
+  }
+
+  /// Шиносаи устувори садо аз ном ва ҳунарманд.
+  ///
+  /// SongInfo id надорад, вале шиноса бояд БАЙНИ КОРБАРОН якхела
+  /// бошад — вагарна ҳар кас барои ҳамон суруд садои алоҳида месозад
+  /// ва саҳифаи садо ҷамъ намешавад. Нормализатсия (хурд, бе фосилаи
+  /// изофӣ) ҳамин якхелагиро таъмин мекунад.
+  static String _audioIdFor(String title, String artist) {
+    String norm(String v) =>
+        v.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    final key = 'itunes:${norm(title)}|${norm(artist)}';
+    // Сервер шиносаро то 100 аломат маҳдуд мекунад.
+    return key.length <= 100 ? key : key.substring(0, 100);
+  }
 
   Future<void> _pick() async {
     final xf = await ImagePicker().pickVideo(source: ImageSource.gallery);
@@ -110,6 +226,15 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
           if (videoUrlLow.isNotEmpty) 'videoUrlLow': videoUrlLow,
           if (thumbnailUrl.isNotEmpty) 'thumbnailUrl': thumbnailUrl,
           'caption' : _caption.text.trim(),
+          // Садо танҳо вақте фиристода мешавад, ки воқеан интихоб шуда
+          // бошад — вагарна сервер сатри холии садо сабт мекунад.
+          if (_hasAudio) 'audio': {
+            'id'        : _audioId,
+            'title'     : _audioTitle,
+            'artist'    : _audioArtist,
+            'coverUrl'  : _audioCover,
+            'previewUrl': _audioPreview,
+          },
         }),
       ).timeout(const Duration(seconds: 30));
 
@@ -253,6 +378,9 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                 counterStyle: const TextStyle(color: Colors.white24),
               ),
             ),
+
+            const SizedBox(height: 12),
+            _audioRow(),
 
             // ── Error ──────────────────────────────────────────
             if (_error != null) ...[
