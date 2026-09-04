@@ -37,6 +37,9 @@ func StartJobs() {
 	// Creator Marketplace — метрика, ҷамъбаст ва такрори payout.
 	StartMarketplaceJobs()
 
+	// Лентаи AI — таснифи мӯҳтаво ва ҷамъбасти ҳодисаҳо.
+	StartFeedAIJobs()
+
 	log.Println("✅ All background jobs + queues started")
 }
 

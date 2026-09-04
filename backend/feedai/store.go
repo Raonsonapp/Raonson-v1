@@ -429,3 +429,19 @@ func ApplyIntent(ctx context.Context, db DB, userID string, in Intent) error {
 	}
 	return nil
 }
+
+// ApplyEvent сигнали ҷамъшударо ба профил мегузаронад.
+//
+// Job онро барои ҳодисаҳои ЗАИФ даъват мекунад; сигналҳои қавӣ
+// аллакай ҳангоми сабт татбиқ шудаанд.
+func ApplyEvent(ctx context.Context, db DB, userID, contentType,
+	contentID, creatorID string, weight float64) error {
+	if weight == 0 {
+		return nil
+	}
+	return applyFeedbackNow(ctx, db, userID, FeedbackInput{
+		ContentType: contentType,
+		ContentID:   contentID,
+		CreatorID:   creatorID,
+	}, weight)
+}

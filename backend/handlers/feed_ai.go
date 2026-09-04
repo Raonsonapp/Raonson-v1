@@ -235,3 +235,43 @@ func invalidateFeedCache(userID string) {
 		"smartreels:"+userID+":1", "smartreels:"+userID+":2",
 	)
 }
+
+// POST /feed/find-people — «Одамони ман».
+//
+// Корбар шавқи худро бо матн тавсиф мекунад ё матн намедиҳад ва
+// профили ҷории ӯ истифода мешавад.
+func FindMyPeople(c *gin.Context) {
+	var b struct {
+		Text string `json:"text"`
+	}
+	_ = c.ShouldBindJSON(&b)
+
+	ctx := c.Request.Context()
+	var want []string
+
+	if strings.TrimSpace(b.Text) != "" {
+		if len([]rune(b.Text)) > 500 {
+			c.JSON(http.StatusBadRequest,
+				gin.H{"message": "Матн хеле дароз"})
+			return
+		}
+		topics, err := feedai.LoadTopics(ctx, db.Pool)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Хатои сервер"})
+			return
+		}
+		// Ин ҷо ният ЗАХИРА НАМЕШАВАД: ҷустуҷӯи одамон набояд
+		// хомӯшона афзалиятҳои лентаи корбарро тағйир диҳад.
+		intent, err := feedai.ParseIntent(b.Text, topics)
+		if err == nil {
+			want = intent.PositiveTopics
+		}
+	}
+
+	people, err := feedai.FindPeople(ctx, db.Pool, mw.UID(c), want, 20)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Хатои сервер"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"people": people})
+}

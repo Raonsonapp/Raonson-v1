@@ -447,6 +447,7 @@ func main() {
 		fa.POST("/feedback",           handlers.RecordFeedFeedback)
 		fa.POST("/reset",              rl20, handlers.ResetFeedPreferences)
 		fa.GET("/explanation/:contentType/:contentId", handlers.GetFeedExplanation)
+		fa.POST("/find-people",        rl20, handlers.FindMyPeople)
 	}
 
 	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)
