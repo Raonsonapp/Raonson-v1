@@ -461,6 +461,14 @@ func main() {
 		cs.POST("/ideas",    rl20, handlers.GenerateCreatorIdeas)
 	}
 
+	// ── КАШФИЁТ ─────────────────────────────────────────────────
+	dc := r.Group("/discover", auth, rl100)
+	{
+		dc.GET("",           handlers.GetDiscoverToday)
+		dc.GET("/trending",  cache30s, handlers.GetTrendRadar)
+		dc.GET("/people",    handlers.GetDiscoverPeople)
+	}
+
 	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)
 
 	// Ахбор — RSS-и манбаъҳои боэътимод (cache дар худи handler).

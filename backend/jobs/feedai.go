@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"raonson/db"
+	"raonson/discover"
 	"raonson/feedai"
 )
 
@@ -47,6 +48,7 @@ func runFeedAICycle() {
 	}()
 	classifyNewContent()
 	aggregateEvents()
+	recomputeDiscovery()
 }
 
 // classifyNewContent мӯҳтавои ҳанӯз таснифнашударо ба мавзӯъҳо тақсим
@@ -179,4 +181,26 @@ func aggregateEvents() {
 		return
 	}
 	log.Printf("feedai jobs: %d ҳодиса коркард шуд", len(ids))
+}
+
+// recomputeDiscovery трендҳо ва эҷодкорони боло равандаро аз нав
+// ҳисоб мекунад.
+//
+// Ин ҳисоб гарон аст ва дар вақти дархост иҷро НАМЕШАВАД: муқоисаи
+// ду ҳафтаи ҳодисаҳо дар ҳар кушодани экран сервери суст медод.
+func recomputeDiscovery() {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	if n, err := discover.RecomputeTopicTrends(ctx, db.Pool); err != nil {
+		log.Printf("discover jobs: тренди мавзӯъ: %v", err)
+	} else if n > 0 {
+		log.Printf("discover jobs: %d мавзӯъ ҳисоб шуд", n)
+	}
+
+	if n, err := discover.RecomputeRisingCreators(ctx, db.Pool); err != nil {
+		log.Printf("discover jobs: эҷодкорон: %v", err)
+	} else if n > 0 {
+		log.Printf("discover jobs: %d эҷодкори боло раванда", n)
+	}
 }

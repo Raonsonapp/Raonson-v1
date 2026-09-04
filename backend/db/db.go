@@ -938,6 +938,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, feedAISchema); err != nil {
 		log.Fatalf("❌ AI Feed migration failed: %v", err)
 	}
+	// Схемаи кашфиёт: тренд, эҷодкорони боло, ҷамъбасти ҳафтаина.
+	if _, err := Pool.Exec(ctx, discoverSchema); err != nil {
+		log.Fatalf("❌ Discover migration failed: %v", err)
+	}
 	backfillCounters(ctx)
 	log.Println("✅ DB schema ready")
 }
