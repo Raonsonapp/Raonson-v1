@@ -303,6 +303,13 @@ func main() {
 	{
 		re.GET("/",              cache3s, handlers.GetReels)
 		re.GET("/smart",         handlers.GetSmartReels)   // Instagram algorithm
+		// ── Садои рилс («Ин садоро истифода бар») ──
+		// Роҳҳои статикӣ ПЕШ аз "/:id" меоянд, то "audio" ҳамчун id
+		// фаҳмида нашавад.
+		re.GET("/audio/trending",       cache30s, handlers.GetTrendingAudios)
+		re.GET("/audio/saved",          handlers.GetSavedAudios)
+		re.GET("/audio/:audioId",       cache3s, handlers.GetReelAudio)
+		re.POST("/audio/:audioId/save", handlers.ToggleSaveAudio)
 		re.GET("/:id",           cache3s, handlers.GetReelByID)
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)

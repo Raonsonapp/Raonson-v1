@@ -19,8 +19,8 @@ import (
 // 3. Нав нишондашуда нест (dedup)
 // 4. Нав корбарони шабеҳ (interest graph)
 func GetSmartReels(c *gin.Context) {
-	myID  := mw.UID(c)
-	page  := toInt(c.Query("page"), 1)
+	myID := mw.UID(c)
+	page := toInt(c.Query("page"), 1)
 	limit := toInt(c.Query("limit"), 15) // Instagram 15 рил бор мекунад
 	offset := (page - 1) * limit
 
@@ -70,6 +70,10 @@ func GetSmartReels(c *gin.Context) {
 		    r.id, r.video_url, COALESCE(r.video_url_low,'') AS video_url_low,
 		    COALESCE(r.thumbnail_url,'') AS thumbnail_url,
 		    r.caption, r.views_count,
+		    COALESCE(r.audio_id,'')     AS audio_id,
+		    COALESCE(r.audio_title,'')  AS audio_title,
+		    COALESCE(r.audio_artist,'') AS audio_artist,
+		    COALESCE(r.audio_cover,'')  AS audio_cover,
 		    CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1
 		         THEN -1 ELSE r.likes_count END AS likes_count,
 		    r.comments_count, r.created_at,
@@ -136,7 +140,7 @@ func GetSmartReels(c *gin.Context) {
 		       views_count, likes_count,
 		       comments_count, created_at, uid, username, avatar,
 		       verified, liked, saved, following, hide_likes, comments_off,
-		       has_story, score
+		       has_story, audio_id, audio_title, audio_artist, audio_cover, score
 		FROM scored
 		ORDER BY score DESC
 		LIMIT $2 OFFSET $3
@@ -152,6 +156,7 @@ func GetSmartReels(c *gin.Context) {
 	reels := []gin.H{}
 	for rows.Next() {
 		var id, videoURL, videoURLLow, thumb, cap, uid, uname, uavatar string
+		var audioID, audioTitle, audioArtist, audioCover string
 		var views, likes, comms int
 		var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
 		var createdAt interface{}
@@ -160,7 +165,8 @@ func GetSmartReels(c *gin.Context) {
 		if err := rows.Scan(&id, &videoURL, &videoURLLow, &thumb, &cap, &views, &likes,
 			&comms, &createdAt, &uid, &uname, &uavatar,
 			&verified, &liked, &saved, &following, &hideLikes, &commentsOff,
-			&hasStory, &score); err != nil {
+			&hasStory, &audioID, &audioTitle, &audioArtist, &audioCover,
+			&score); err != nil {
 			continue
 		}
 		reels = append(reels, gin.H{
@@ -171,6 +177,7 @@ func GetSmartReels(c *gin.Context) {
 			"commentsCount": comms, "createdAt": createdAt,
 			"isLiked": liked, "isSaved": saved,
 			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
+			"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
 			"user": gin.H{
 				"id": uid, "_id": uid,
 				"username": uname, "avatar": uavatar,
@@ -201,7 +208,7 @@ func GetSmartReels(c *gin.Context) {
 
 // POST /reels/:id/view — view tracking (dedup барои алгоритм)
 func TrackReelView(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 
 	// Ҳар як user танҳо 1 маротиба ҳисоб мешавад.

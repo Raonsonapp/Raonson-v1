@@ -703,6 +703,41 @@ func migrate() {
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS ai_quality_score INTEGER DEFAULT 0;
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS hide_likes    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS comments_off  BOOLEAN DEFAULT FALSE;
+
+	-- ── Садои рилс («Ин садоро истифода бар») ──────────────────────
+	-- Рилс садоро НИШОН медод, вале ҳеҷ ҷо захира намекард: ҳар рилс
+	-- ҳамеша «оригинал садо» менамуд. Ин сутунҳо садои интихобшударо
+	-- нигоҳ медоранд ва reel_audios онҳоро ба як реестр мепайвандад.
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS audio_id     TEXT DEFAULT '';
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS audio_title  TEXT DEFAULT '';
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS audio_artist TEXT DEFAULT '';
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS audio_cover  TEXT DEFAULT '';
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS audio_url    TEXT DEFAULT '';
+	CREATE INDEX IF NOT EXISTS idx_reels_audio ON reels(audio_id, created_at DESC)
+		WHERE audio_id <> '';
+
+	-- Реестри садоҳо. usage_count аз рилсҳо ҳисоб мешавад, на дастӣ.
+	CREATE TABLE IF NOT EXISTS reel_audios (
+		id          TEXT PRIMARY KEY,
+		title       TEXT NOT NULL DEFAULT '',
+		artist      TEXT DEFAULT '',
+		cover_url   TEXT DEFAULT '',
+		preview_url TEXT DEFAULT '',
+		-- Соҳиби садои оригиналӣ (агар садо аз рилси корбар бошад).
+		owner_id    TEXT DEFAULT '',
+		usage_count INTEGER DEFAULT 0,
+		created_at  TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_reel_audios_usage ON reel_audios(usage_count DESC);
+
+	-- Садоҳои захиракардаи корбар.
+	CREATE TABLE IF NOT EXISTS saved_audios (
+		user_id    TEXT NOT NULL,
+		audio_id   TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, audio_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_saved_audios_user ON saved_audios(user_id, created_at DESC);
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS audience    TEXT DEFAULT 'all';

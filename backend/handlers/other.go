@@ -18,7 +18,7 @@ import (
 // POST /comments/:id  (id = postID)
 func AddComment(c *gin.Context) {
 	postID := c.Param("id")
-	myID   := mw.UID(c)
+	myID := mw.UID(c)
 	var b struct {
 		Text     string `json:"text"`
 		ParentID string `json:"parentId"`
@@ -106,9 +106,9 @@ func AddComment(c *gin.Context) {
 // GET /comments/:id  (id = postID)
 func GetComments(c *gin.Context) {
 	postID := c.Param("id")
-	myID   := mw.UID(c)
-	page   := toInt(c.Query("page"), 1)
-	limit  := toInt(c.Query("limit"), 20)
+	myID := mw.UID(c)
+	page := toInt(c.Query("page"), 1)
+	limit := toInt(c.Query("limit"), 20)
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
@@ -143,7 +143,7 @@ func GetComments(c *gin.Context) {
 
 // DELETE /posts/:postId/comments/:id
 func DeleteComment(c *gin.Context) {
-	cid  := c.Param("id")
+	cid := c.Param("id")
 	myID := mw.UID(c)
 	var postID string
 	err := db.Pool.QueryRow(context.Background(),
@@ -173,7 +173,7 @@ func DeleteComment(c *gin.Context) {
 
 // POST /posts/:postId/comments/:id/like
 func ToggleCommentLike(c *gin.Context) {
-	cid  := c.Param("id")
+	cid := c.Param("id")
 	myID := mw.UID(c)
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
@@ -205,9 +205,10 @@ func ToggleCommentLike(c *gin.Context) {
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"liked": !liked})
 }
+
 // PUT /comments/:id — таҳрири comment
 func EditComment(c *gin.Context) {
-	cid  := c.Param("id")
+	cid := c.Param("id")
 	myID := mw.UID(c)
 
 	var b struct {
@@ -255,7 +256,7 @@ func EditComment(c *gin.Context) {
 // POST /follow/:id
 func FollowUser(c *gin.Context) {
 	targetID := c.Param("id")
-	myID     := mw.UID(c)
+	myID := mw.UID(c)
 	if targetID == myID {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Cannot follow yourself"})
 		return
@@ -313,7 +314,7 @@ func FollowUser(c *gin.Context) {
 			`SELECT username FROM users WHERE id=$1`, myID).Scan(&username)
 		if username != "" {
 			SendPushToUser(targetID, "Raonson", username+" started following you",
-				map[string]string{"type":"follow","userId":myID})
+				map[string]string{"type": "follow", "userId": myID})
 		}
 	}()
 	c.JSON(http.StatusOK, gin.H{"following": true})
@@ -322,7 +323,7 @@ func FollowUser(c *gin.Context) {
 // DELETE /follow/:id  or POST /unfollow/:id
 func UnfollowUser(c *gin.Context) {
 	targetID := c.Param("id")
-	myID     := mw.UID(c)
+	myID := mw.UID(c)
 	// RETURNING — шумориш танҳо вақте кам мешавад, ки сатр воқеан нест
 	// шуда бошад. Бе ин такрори дархост шуморишро поин мебарад.
 	var deleted int
@@ -343,7 +344,7 @@ func UnfollowUser(c *gin.Context) {
 
 // POST /follow/request/:id/accept
 func AcceptRequest(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`, rid, myID)
@@ -364,7 +365,7 @@ func AcceptRequest(c *gin.Context) {
 
 // POST /follow/request/:id/reject
 func RejectRequest(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`, rid, myID)
@@ -516,10 +517,11 @@ func SearchUsers(c *gin.Context) {
 func CreateReel(c *gin.Context) {
 	myID := mw.UID(c)
 	var b struct {
-		Caption      string `json:"caption"`
-		VideoURL     string `json:"videoUrl"`
-		VideoURLLow  string `json:"videoUrlLow"`
-		ThumbnailURL string `json:"thumbnailUrl"`
+		Caption      string     `json:"caption"`
+		VideoURL     string     `json:"videoUrl"`
+		VideoURLLow  string     `json:"videoUrlLow"`
+		ThumbnailURL string     `json:"thumbnailUrl"`
+		Audio        AudioInput `json:"audio"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.VideoURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "videoUrl is required"})
@@ -531,25 +533,37 @@ func CreateReel(c *gin.Context) {
 			"message": "Тавсиф қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
 		return
 	}
+	audio := b.Audio.clean()
+
 	var rid string
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO reels(user_id,caption,video_url,video_url_low,thumbnail_url)
-		 VALUES($1,$2,$3,$4,$5) RETURNING id`,
-		myID, b.Caption, b.VideoURL, b.VideoURLLow, b.ThumbnailURL).Scan(&rid)
+		`INSERT INTO reels(user_id,caption,video_url,video_url_low,thumbnail_url,
+		                   audio_id,audio_title,audio_artist,audio_cover,audio_url)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+		myID, b.Caption, b.VideoURL, b.VideoURLLow, b.ThumbnailURL,
+		audio.ID, audio.Title, audio.Artist, audio.CoverURL, audio.PreviewURL).Scan(&rid)
+
+	// Садоро дар реестр сабт мекунем — то «Ин садоро истифода бар»
+	// ва рӯйхати садоҳои маъмул кор кунад.
+	registerAudio(context.Background(), audio, myID)
 	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": rid, "videoUrl": b.VideoURL, "videoUrlLow": b.VideoURLLow,
 		"thumbnailUrl": b.ThumbnailURL,
-		"caption": b.Caption, "likesCount": 0, "viewsCount": 0,
+		"caption":      b.Caption, "likesCount": 0, "viewsCount": 0,
+		"audio": gin.H{
+			"id": audio.ID, "title": audio.Title, "artist": audio.Artist,
+			"coverUrl": audio.CoverURL, "previewUrl": audio.PreviewURL,
+		},
 	})
 }
 
 // GET /reels
 func GetReels(c *gin.Context) {
-	myID   := mw.UID(c)
-	page   := toInt(c.Query("page"), 1)
-	limit  := toInt(c.Query("limit"), 20)
+	myID := mw.UID(c)
+	page := toInt(c.Query("page"), 1)
+	limit := toInt(c.Query("limit"), 20)
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
@@ -562,7 +576,9 @@ func GetReels(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text)))
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text))),
+		       COALESCE(r.audio_id,''), COALESCE(r.audio_title,''),
+		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,'')
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE ($4 = FALSE OR EXISTS (
 		    SELECT 1 FROM follows f2
@@ -579,18 +595,21 @@ func GetReels(c *gin.Context) {
 	reels := []gin.H{}
 	for rows.Next() {
 		var rid, vurl, vurlLow, thumb, cap, uid, uname, uavatar string
+		var audioID, audioTitle, audioArtist, audioCover string
 		var views, likes, comms int
 		var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
 		var createdAt interface{}
 		rows.Scan(&rid, &vurl, &vurlLow, &thumb, &cap, &views, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
-			&hideLikes, &commentsOff, &hasStory)
+			&hideLikes, &commentsOff, &hasStory,
+			&audioID, &audioTitle, &audioArtist, &audioCover)
 		reels = append(reels, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 			"thumbnailUrl": thumb, "caption": cap,
 			"viewsCount": views, "likesCount": likes, "commentsCount": comms,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
 			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
+			"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 				"verified": verified, "isFollowing": following, "hasStory": hasStory},
 		})
@@ -607,7 +626,7 @@ func AddReelView(c *gin.Context) {
 
 // POST /reels/:id/like
 func ToggleReelLike(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
@@ -641,7 +660,7 @@ func ToggleReelLike(c *gin.Context) {
 
 // POST /reels/:id/save
 func ToggleReelSave(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 	var saved bool
 	db.Pool.QueryRow(context.Background(),
@@ -660,7 +679,7 @@ func ToggleReelSave(c *gin.Context) {
 
 // DELETE /reels/:id
 func DeleteReel(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 	res, _ := db.Pool.Exec(context.Background(),
 		`DELETE FROM reels WHERE id=$1 AND user_id=$2::text`, rid, myID)
@@ -668,17 +687,17 @@ func DeleteReel(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
 		return
 	}
-	mw.CacheDel("explore:grid") // то аз search фавран нопадид шавад
+	mw.CacheDel("explore:grid")  // то аз search фавран нопадид шавад
 	mw.InvalidateUserCache(myID) // fizardan pok kunam profile/user reels list
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
 // GET /reels/:id/comments
 func GetReelComments(c *gin.Context) {
-	rid    := c.Param("id")
-	myID   := mw.UID(c)
-	page   := toInt(c.Query("page"), 1)
-	limit  := toInt(c.Query("limit"), 20)
+	rid := c.Param("id")
+	myID := mw.UID(c)
+	page := toInt(c.Query("page"), 1)
+	limit := toInt(c.Query("limit"), 20)
 	offset := (page - 1) * limit
 
 	// Ҳамон шакли ҷавоб мисли шарҳҳои пост — likes, replies ва pagination.
@@ -713,7 +732,7 @@ func GetReelComments(c *gin.Context) {
 
 // POST /reels/:id/comments
 func AddReelComment(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 	var b struct {
 		Text     string `json:"text"`
@@ -757,7 +776,7 @@ func AddReelComment(c *gin.Context) {
 // Бе ин, зеркунии огоҳинома ё корти мубодилашуда танҳо барои реелҳои
 // худи корбар кор мекард (client маҷбур буд /users/me/reels-ро скан кунад).
 func GetReelByID(c *gin.Context) {
-	rid  := c.Param("id")
+	rid := c.Param("id")
 	myID := mw.UID(c)
 
 	var vurl, vurlLow, thumb, capt, uid, uname, uavatar string
