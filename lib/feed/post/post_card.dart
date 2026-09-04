@@ -33,6 +33,7 @@ import '../../core/ui/tajikshop_brand.dart';
 import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/utils/time_ago.dart';
+import '../../feed_ai/why_this_sheet.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -503,6 +504,34 @@ class _PostCardState extends State<PostCard>
               onTap: () { Navigator.pop(context); _markInterest(true); }),
           _MenuItem(icon: AppIcons.thumb_down_outlined, label: tr('ui.4024f45285'),
               onTap: () { Navigator.pop(context); _markInterest(false); }),
+          // ── Лентаи AI ──
+          _MenuItem(icon: AppIcons.thumb_up_outlined,
+              label: tr('aifeed.moreLikeThis'),
+              onTap: () {
+                Navigator.pop(context);
+                sendFeedLikeSignal(context,
+                    more: true,
+                    contentType: 'post',
+                    contentId: widget.post.id,
+                    creatorId: widget.post.user.id);
+              }),
+          _MenuItem(icon: AppIcons.thumb_down_outlined,
+              label: tr('aifeed.lessLikeThis'),
+              onTap: () {
+                Navigator.pop(context);
+                sendFeedLikeSignal(context,
+                    more: false,
+                    contentType: 'post',
+                    contentId: widget.post.id,
+                    creatorId: widget.post.user.id);
+              }),
+          _MenuItem(icon: AppIcons.info_outline_rounded,
+              label: tr('aifeed.whyTitle'),
+              onTap: () {
+                Navigator.pop(context);
+                showWhyThisSheet(context,
+                    contentType: 'post', contentId: widget.post.id);
+              }),
           _MenuItem(icon: AppIcons.person_outline_rounded,
               label: 'Профили @${widget.post.user.username}',
               onTap: () {
