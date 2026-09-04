@@ -450,6 +450,17 @@ func main() {
 		fa.POST("/find-people",        rl20, handlers.FindMyPeople)
 	}
 
+	// ── CREATOR STUDIO ──────────────────────────────────────────
+	// Эҷодкор ТАНҲО маълумоти худро мебинад — id аз токен меояд.
+	cs := r.Group("/creator", auth, rl100)
+	{
+		cs.GET("/studio",    handlers.GetCreatorStudio)
+		cs.GET("/analytics", handlers.GetCreatorAnalytics)
+		cs.GET("/insights",  handlers.GetCreatorInsights)
+		// Даъвати LLM — маҳдудияти сахттар.
+		cs.POST("/ideas",    rl20, handlers.GenerateCreatorIdeas)
+	}
+
 	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)
 
 	// Ахбор — RSS-и манбаъҳои боэътимод (cache дар худи handler).
