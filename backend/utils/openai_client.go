@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"raonson/ai"
 )
 
 // ── OpenAI integration ─────────────────────────────────────────────
@@ -24,8 +26,17 @@ var httpClient = &http.Client{Timeout: 25 * time.Second}
 
 func openAIKey() string { return os.Getenv("OPENAI_API_KEY") }
 
-// OpenAIEnabled — агар калид танзим шуда бошад.
-func OpenAIEnabled() bool { return openAIKey() != "" }
+// OpenAIEnabled — оё ягон provider-и LLM танзим шудааст?
+//
+// Пештар ин танҳо OPENAI_API_KEY-ро месанҷид, бинобар ин хэштег,
+// тарҷума ва холи сифат бе калиди ПУЛАКӢ умуман кор намекарданд.
+// Ҳоло ҳар provider-и OpenAI-compatible (аз ҷумла ройгон) кофист.
+func OpenAIEnabled() bool { return ai.Enabled(ai.TaskFast) }
+
+// hasOpenAIModeration — endpoint-и /moderations танҳо дар OpenAI ҳаст.
+// Provider-ҳои дигар онро надоранд, бинобар ин модератсия роҳи
+// дигар мегирад (ниг. ModerateText).
+func hasOpenAIModeration() bool { return openAIKey() != "" }
 
 func openAIModel() string {
 	if m := os.Getenv("OPENAI_MODEL"); m != "" {
@@ -34,16 +45,32 @@ func openAIModel() string {
 	return "gpt-4o-mini"
 }
 
+// openAIRequest дархостро ба provider-и танзимшуда мефиристад.
+//
+// /chat/completions ба ҳар provider-и OpenAI-compatible меравад;
+// /moderations танҳо ба OpenAI, зеро дигарон онро надоранд.
 func openAIRequest(ctx context.Context, path string, body any, out any) error {
-	key := openAIKey()
+	key, url := openAIKey(), openAIBaseURL+path
+	if path == "/chat/completions" {
+		cfg := ai.ConfigFor(ai.TaskFast)
+		if cfg.APIKey != "" {
+			key, url = cfg.APIKey, cfg.APIURL
+			// Модели танзимшуда бартарӣ дорад: сохтори chatReq
+			// майдони Model дорад, вале он ба OpenAI ишора мекунад.
+			if m, ok := body.(chatReq); ok {
+				m.Model = cfg.Model
+				body = m
+			}
+		}
+	}
 	if key == "" {
-		return errors.New("OPENAI_API_KEY not configured")
+		return errors.New("ai: LLM provider not configured")
 	}
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, openAIBaseURL+path, bytes.NewReader(buf))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(buf))
 	if err != nil {
 		return err
 	}
@@ -77,8 +104,14 @@ type moderationResp struct {
 // шавад (хатои шабака, timeout), матн иҷозат дода мешавад — то
 // хатои беруна корбаронро аз нашри мӯҳтаво маҳдуд накунад.
 func ModerateText(ctx context.Context, text string) (flagged bool, categories []string) {
-	if strings.TrimSpace(text) == "" || !OpenAIEnabled() {
+	if strings.TrimSpace(text) == "" {
 		return false, nil
+	}
+	// Provider-и ройгон endpoint-и /moderations надорад. Ба ҷои
+	// хомӯшона гузарондани ҳама чиз, модератсия бо худи модел иҷро
+	// мешавад — ин модератсияи ВОҚЕӢ аст, на рад кардани санҷиш.
+	if !hasOpenAIModeration() {
+		return moderateWithModel(ctx, text)
 	}
 	var out moderationResp
 	err := openAIRequest(ctx, "/moderations", map[string]string{
@@ -437,4 +470,36 @@ func AskAssistant(ctx context.Context, systemPrompt string, history []ChatTurn) 
 		return "", errors.New("empty response from openai")
 	}
 	return strings.TrimSpace(out.Choices[0].Message.Content), nil
+}
+
+// moderateWithModel матнро бо модели чат тафтиш мекунад.
+//
+// Барои provider-ҳое, ки endpoint-и махсуси модератсия надоранд.
+// Ҳангоми ҳар гуна шубҳа (хато, ҷавоби нофаҳмо) матн ИҶОЗАТ дода
+// мешавад — ҳамон рафторе, ки OpenAI-и танзимнашуда дошт. Бастани
+// пости бегуноҳ аз надидани як пости бад бадтар аст, ва модератсияи
+// дастӣ (report) ба ҳар ҳол кор мекунад.
+func moderateWithModel(ctx context.Context, text string) (bool, []string) {
+	if !ai.Enabled(ai.TaskFast) {
+		return false, nil
+	}
+	var out struct {
+		Flagged    bool     `json:"flagged"`
+		Categories []string `json:"categories"`
+	}
+	err := ai.CompleteJSON(ctx, ai.TaskFast, []ai.Message{
+		{Role: "system", Content: "You are a content safety classifier for a social app. " +
+			"Reply ONLY with JSON: {\"flagged\":bool,\"categories\":[string]}. " +
+			"Flag only genuinely harmful content: sexual content involving minors, " +
+			"credible threats of violence, terrorism, or explicit sexual content. " +
+			"Ordinary criticism, slang, jokes and strong language are NOT flagged."},
+		{Role: "user", Content: text},
+	}, ai.Options{Temperature: 0, MaxTokens: 120}, &out)
+	if err != nil {
+		return false, nil
+	}
+	if !out.Flagged {
+		return false, nil
+	}
+	return true, out.Categories
 }
