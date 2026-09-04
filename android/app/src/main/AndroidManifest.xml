@@ -51,6 +51,33 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- ✅ DEEP LINKS — raonson://profile/ali, raonson://reel/<id> ва ғ.
+                 Схемаи худӣ ҳамеша кор мекунад ва тасдиқи домен намехоҳад. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="raonson"/>
+            </intent-filter>
+
+            <!-- ✅ App Links аз саҳифаи веб. autoVerify талаб мекунад, ки
+                 assetlinks.json дар домен ҷойгир бошад; то он вақт Android
+                 интихоби барномаро мепурсад — линк ба ҳар ҳол кор мекунад. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"
+                      android:host="raonsonapp.github.io"
+                      android:pathPrefix="/Raonson-v1/l"/>
+            </intent-filter>
+
+            <!-- Flutter худаш URI-ро ба onGenerateRoute мерасонад:
+                 ҳеҷ пакети иловагӣ ва ҳеҷ routing-и дуюм лозим нест. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="true" />
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

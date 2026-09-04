@@ -18,6 +18,8 @@ import '../auth/password/forgot_password_screen.dart';
 import '../auth/password/reset_password_screen.dart';
 import '../feed/hashtag/hashtag_screen.dart';
 import '../friends/friends_screen.dart'; // ✅ НАВ
+import '../core/links/deep_links.dart';
+import '../core/links/deep_link_resolver_screen.dart';
 
 class AppController {
   final AppState appState;
@@ -106,6 +108,22 @@ class AppController {
             HashtagScreen(hashtag: settings.arguments as String? ?? ''));
 
       default:
+        // Линки чуқур: Flutter URI-ро ҳамчун номи роҳ мерасонад.
+        // Ҳамон onGenerateRoute истифода мешавад — routing-и дуюм нест.
+        final link = DeepLinks.parse(settings.name ?? '');
+        if (link.isValid) {
+          switch (link.kind) {
+            case DeepLinkKind.profile:
+              return _page(ProfileScreen(userId: link.id, byUsername: true));
+            case DeepLinkKind.post:
+            case DeepLinkKind.reel:
+              return _page(DeepLinkResolverScreen(link: link));
+            case DeepLinkKind.topic:
+            case DeepLinkKind.referral:
+            case DeepLinkKind.unknown:
+              break;
+          }
+        }
         return _page(const LoginScreen());
     }
   }

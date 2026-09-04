@@ -1093,6 +1093,10 @@ const Map<String, Map<String, String>> _strings = {
     'story.saveVideo':           'Видеоро захира кун',
     'story.settings':            'Танзимот',
     'story.shareAction':         'Мубодила кун',
+    'link.unavailable':          'Ин мӯҳтаво дастрас нест',
+    'share.copyLink':            'Нусхаи линк',
+    'share.linkCopied':          'Линк нусхабардорӣ шуд',
+    'share.share':               'Мубодила',
 
     // ── Кашфиёт ────────────────────────────────────────────────────
     'dc.title':                  'Кашфи имрӯз',
@@ -2414,6 +2418,10 @@ const Map<String, Map<String, String>> _strings = {
     'story.saveVideo':           'Сохранить видео',
     'story.settings':            'Настройки',
     'story.shareAction':         'Поделиться',
+    'link.unavailable':          'Этот контент недоступен',
+    'share.copyLink':            'Копировать ссылку',
+    'share.linkCopied':          'Ссылка скопирована',
+    'share.share':               'Поделиться',
 
     // ── Открытия ───────────────────────────────────────────────────
     'dc.title':                  'Открытия сегодня',
@@ -3745,6 +3753,10 @@ const Map<String, Map<String, String>> _strings = {
     'story.saveVideo':           'Save video',
     'story.settings':            'Settings',
     'story.shareAction':         'Share',
+    'link.unavailable':          'This content is not available',
+    'share.copyLink':            'Copy link',
+    'share.linkCopied':          'Link copied',
+    'share.share':               'Share',
 
     // ── Discover ───────────────────────────────────────────────────
     'dc.title':                  'Discover Today',
