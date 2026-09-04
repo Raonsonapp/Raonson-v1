@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"raonson/db"
@@ -19,12 +20,16 @@ import (
 // 2. Маъмул постҳо — likes > 10 — охирин 7 рӯз
 // 3. Ташрифи якхела — дубора намеояд
 func GetSmartFeed(c *gin.Context) {
-	myID  := mw.UID(c)
-	page  := toInt(c.Query("page"), 1)
+	myID := mw.UID(c)
+	page := toInt(c.Query("page"), 1)
 	limit := toInt(c.Query("limit"), 20)
 	offset := (page - 1) * limit
 
-	cacheKey := "smartfeed:" + myID + ":" + c.Query("page")
+	// Калид аз саҳифаи ТАҶЗИЯШУДА сохта мешавад, на аз сатри хом.
+	// Вақте client "page"-ро намефиристад, сатри хом холист ва калид
+	// "...:"-и бемаъно мешуд, ки ҳеҷ invalidate ба он намерасид —
+	// лента то анҷоми TTL кӯҳна мемонд.
+	cacheKey := "smartfeed:" + myID + ":" + strconv.Itoa(page)
 	if page <= 2 {
 		if cached, ok := mw.CacheGet(cacheKey); ok {
 			c.Header("X-Cache", "HIT")
@@ -94,12 +99,37 @@ func GetSmartFeed(c *gin.Context) {
 		   -- AI Feed: холи AI-и ҷолибияти мӯҳтаво (0-100 → то +20 балл)
 		   + LEAST(20, COALESCE(p.ai_quality_score,0) / 5)
 		   - CASE WHEN pv.post_id IS NOT NULL THEN 45 ELSE 0 END
+
+		   -- ── Лентаи AI: қабати идорашавандаи корбар ──────────────
+		   -- Ин ҷамъкунандаҳо тартибро ТАНЗИМ мекунанд, на аз нав
+		   -- менависанд: обуна (100) аз ҳар афзалияти алоҳида
+		   -- вазнинтар мемонад. Агар корбар ҳеҷ афзалият надошта
+		   -- бошад, ҳама COALESCE сифр мешавад ва рейтинг маҳз мисли
+		   -- пештара мемонад.
+		   -- Мавзӯъ: миёнаи вазндор, то пости бисёрмавзӯъ танҳо аз
+		   -- рӯи шумораи мавзӯъҳояш боло наравад.
+		   + COALESCE((
+		       SELECT SUM(tp.score * ct.weight) / NULLIF(SUM(ct.weight),0) * 45
+		       FROM content_topics ct
+		       JOIN feed_topic_prefs tp
+		            ON tp.topic_slug = ct.topic_slug AND tp.user_id = $1
+		       WHERE ct.content_type='post' AND ct.content_id = p.id
+		     ), 0)
+		   + COALESCE(cp.score, 0) * 40
+		   + CASE WHEN COALESCE(fp.prefer_following,FALSE)
+		               AND f.following_id IS NOT NULL THEN 30 ELSE 0 END
+		   -- «Камтар тавсия» танҳо мӯҳтавои беруни обунаро ҷарима мекунад.
+		   - CASE WHEN COALESCE(fp.fewer_recommendations,FALSE)
+		               AND f.following_id IS NULL THEN 35 ELSE 0 END
 		  ) AS score
 		FROM posts p
 		JOIN users u ON u.id=p.user_id
 		LEFT JOIN follows     f  ON f.follower_id=$1 AND f.following_id=p.user_id
 		LEFT JOIN post_views  pv ON pv.post_id=p.id AND pv.user_id=$1
 		LEFT JOIN paff        pa ON pa.creator_id=p.user_id
+		LEFT JOIN feed_creator_prefs cp
+		       ON cp.user_id = $1 AND cp.creator_id = p.user_id
+		LEFT JOIN feed_prefs fp ON fp.user_id = $1
 		WHERE
 		  u.banned = FALSE
 		  AND COALESCE(p.hidden,false) = FALSE
@@ -184,7 +214,7 @@ func GetSmartFeed(c *gin.Context) {
 
 // POST /posts/:id/view — track viewed posts (for feed dedup)
 func TrackPostView(c *gin.Context) {
-	pid  := c.Param("id")
+	pid := c.Param("id")
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO post_views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"raonson/db"
@@ -25,7 +26,11 @@ func GetSmartReels(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	// Cache барои page 1 (30 сония)
-	cacheKey := "smartreels:" + myID + ":" + c.Query("page")
+	// Калид аз саҳифаи ТАҶЗИЯШУДА сохта мешавад, на аз сатри хом.
+	// Вақте client "page"-ро намефиристад, сатри хом холист ва калид
+	// "...:"-и бемаъно мешуд, ки ҳеҷ invalidate ба он намерасид —
+	// лента то анҷоми TTL кӯҳна мемонд.
+	cacheKey := "smartreels:" + myID + ":" + strconv.Itoa(page)
 	if page == 1 {
 		if cached, ok := mw.CacheGet(cacheKey); ok {
 			c.Header("X-Cache", "HIT")
@@ -104,12 +109,29 @@ func GetSmartReels(c *gin.Context) {
 		      + LEAST(50, COALESCE(af.aff,0) * 6)
 		      -- 7. Тасодуфӣ барои variety (0-8)
 		      + (RANDOM() * 8)
+
+		      -- ── Лентаи AI: афзалияти худи корбар ─────────────────
+		      + COALESCE((
+		          SELECT SUM(tp.score * ct.weight) / NULLIF(SUM(ct.weight),0) * 45
+		          FROM content_topics ct
+		          JOIN feed_topic_prefs tp
+		               ON tp.topic_slug = ct.topic_slug AND tp.user_id = $1
+		          WHERE ct.content_type='reel' AND ct.content_id = r.id
+		        ), 0)
+		      + COALESCE(cp.score, 0) * 40
+		      + CASE WHEN COALESCE(fp.prefer_following,FALSE)
+		                  AND f.following_id IS NOT NULL THEN 30 ELSE 0 END
+		      - CASE WHEN COALESCE(fp.fewer_recommendations,FALSE)
+		                  AND f.following_id IS NULL THEN 35 ELSE 0 END
 		    ) AS score
 		  FROM reels r
 		  JOIN users u ON u.id=r.user_id
 		  LEFT JOIN follows f ON f.follower_id=$1 AND f.following_id=r.user_id
 		  LEFT JOIN aff af ON af.creator_id = u.id
 		  LEFT JOIN cr ON cr.reel_id = r.id
+		  LEFT JOIN feed_creator_prefs cp
+		         ON cp.user_id = $1 AND cp.creator_id = r.user_id
+		  LEFT JOIN feed_prefs fp ON fp.user_id = $1
 		  WHERE
 		    u.banned = FALSE
 		    AND r.created_at > NOW() - INTERVAL '30 days'
