@@ -34,8 +34,6 @@ const (
 func BuildInsights(ctx context.Context, db DB, userID string,
 	w Window) ([]Insight, error) {
 
-	out := []Insight{}
-
 	ov, err := GetOverview(ctx, db, userID, w)
 	if err != nil {
 		return nil, err
@@ -48,6 +46,17 @@ func BuildInsights(ctx context.Context, db DB, userID string,
 	if err != nil {
 		return nil, err
 	}
+	return insightsFrom(ov, rec, topics, string(w)), nil
+}
+
+// insightsFrom ҳамон қоидаҳо, вале аз рақамҳои ТАЙЁР.
+//
+// Ҷамъбасти ҳафтагӣ ҳамин рақамҳоро аллакай дорад; такрори се дархост
+// ҳам исрофкорист ва ҳам хатари ду мантиқи ҷудошударо меорад.
+func insightsFrom(ov Overview, rec RecommendationStats,
+	topics []TopicPerformance, window string) []Insight {
+
+	out := []Insight{}
 
 	// 1. Мавзӯи беҳтарин — танҳо вақте ду мавзӯъ барои МУҚОИСА ҳаст.
 	//    Бе муқоиса «беҳтарин» маъно надорад.
@@ -107,7 +116,7 @@ func BuildInsights(ctx context.Context, db DB, userID string,
 			Priority: 75,
 			Params: map[string]any{
 				"count":  ov.FollowersGained,
-				"window": string(w),
+				"window": window,
 			},
 		})
 	}
@@ -124,7 +133,7 @@ func BuildInsights(ctx context.Context, db DB, userID string,
 	if len(out) > 5 {
 		out = out[:5]
 	}
-	return out, nil
+	return out
 }
 
 // ContentIdea — як пешниҳоди мӯҳтаво.

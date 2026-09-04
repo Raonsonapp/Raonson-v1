@@ -1,9 +1,12 @@
 package creator
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
-// Давра ба SQL ҳамчун сатри тайёр дохил мешавад, бинобар ин вуруди
-// корбар набояд ҳеҷ гоҳ ба он бирасад. Ин муҳимтарин тести ин пакет аст.
+// Давраи номаълум набояд ба ҳисоб таъсир расонад: ҳар вуруди
+// ғайримунтазир ба давраи пешфарз меафтад ва ҳудуди он маҳдуд аст.
 func TestParseWindowRejectsEverythingUnknown(t *testing.T) {
 	malicious := []string{
 		"1 day'; DROP TABLE users; --",
@@ -15,15 +18,17 @@ func TestParseWindowRejectsEverythingUnknown(t *testing.T) {
 		"TODAY",
 		"7D",
 	}
+	now := time.Date(2026, 3, 12, 15, 4, 0, 0, time.UTC)
 	for _, in := range malicious {
 		got := ParseWindow(in)
 		// Ҳар вуруди номаълум бояд ба давраи пешфарз афтад.
 		if got != Window30d {
 			t.Errorf("вуруди %q ба %q рафт, интизори 30d", in, got)
 		}
-		// Ва интервали ҳосилшуда бояд аз рӯйхати сафед бошад.
-		if !isSafeInterval(got.interval()) {
-			t.Fatalf("интервали хатарнок аз вуруди %q: %q", in, got.interval())
+		// Ва ҳудуди ҳосилшуда бояд маҳдуд бошад — на «999 сол».
+		from, to := got.bounds(now)
+		if d := to.Sub(from); d != 30*24*time.Hour {
+			t.Fatalf("вуруди %q давраи %v дод, интизори 30 рӯз", in, d)
 		}
 	}
 }
@@ -41,17 +46,22 @@ func TestParseWindowAcceptsKnownValues(t *testing.T) {
 	}
 }
 
-func TestEveryWindowIntervalIsWhitelisted(t *testing.T) {
-	for _, w := range []Window{WindowToday, Window7d, Window30d} {
-		if !isSafeInterval(w.interval()) {
-			t.Errorf("%q интервали ғайримунтазир дорад: %q", w, w.interval())
+func TestEveryWindowHasExpectedBounds(t *testing.T) {
+	now := time.Date(2026, 3, 12, 15, 4, 0, 0, time.UTC)
+	want := map[Window]time.Duration{
+		WindowToday: 24 * time.Hour,
+		Window7d:    7 * 24 * time.Hour,
+		Window30d:   30 * 24 * time.Hour,
+	}
+	for w, d := range want {
+		from, to := w.bounds(now)
+		if !to.Equal(now) {
+			t.Errorf("%q: анҷоми давра %v, интизори %v", w, to, now)
+		}
+		if got := to.Sub(from); got != d {
+			t.Errorf("%q: давомнокӣ %v, интизори %v", w, got, d)
 		}
 	}
-}
-
-// isSafeInterval — танҳо ҳамин се сатр ба SQL мераванд.
-func isSafeInterval(s string) bool {
-	return s == "1 day" || s == "7 days" || s == "30 days"
 }
 
 func TestRound3(t *testing.T) {

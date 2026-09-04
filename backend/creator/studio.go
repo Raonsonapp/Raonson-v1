@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -30,18 +31,19 @@ const (
 	Window30d   Window = "30d"
 )
 
-// interval SQL-и давраро бармегардонад.
+// bounds ҳудуди дақиқи давраро нисбат ба лаҳзаи додашуда медиҳад.
 //
-// Давра ҳамчун сатри тайёр ба SQL дохил мешавад, бинобар ин он бояд
-// ТАНҲО аз рӯйхати сафед биёяд — сатри корбар ҳеҷ гоҳ ин ҷо намерасад.
-func (w Window) interval() string {
+// Ҷамъбасти ҳафтагӣ ҳудуди ДАҚИҚ мехоҳад (душанбе то душанбе), на
+// «7 рӯзи охир аз ҳозир». Бинобар ин ҳама ҳисоб дар як ҷо бо ду
+// вақти возеҳ кор мекунад ва давраи номбаршуда танҳо онҳоро месозад.
+func (w Window) bounds(now time.Time) (time.Time, time.Time) {
 	switch w {
 	case WindowToday:
-		return "1 day"
+		return now.AddDate(0, 0, -1), now
 	case Window7d:
-		return "7 days"
+		return now.AddDate(0, 0, -7), now
 	default:
-		return "30 days"
+		return now.AddDate(0, 0, -30), now
 	}
 }
 
@@ -79,43 +81,49 @@ type Overview struct {
 // Ҳама дар ЯК дархост: ҳашт SELECT-и ҷудогона барои як экран
 // исрофкорист ва бо афзоиши маълумот сустар мешавад.
 func GetOverview(ctx context.Context, db DB, userID string, w Window) (Overview, error) {
-	iv := w.interval()
-	o := Overview{Window: string(w)}
+	from, to := w.bounds(time.Now())
+	return GetOverviewRange(ctx, db, userID, string(w), from, to)
+}
+
+// GetOverviewRange ҳамон ҳисоб, вале бо ҳудуди дақиқи вақт.
+func GetOverviewRange(ctx context.Context, db DB, userID, label string,
+	from, to time.Time) (Overview, error) {
+	o := Overview{Window: label}
 
 	err := db.QueryRow(ctx, `
 		SELECT
 		  COALESCE((SELECT COUNT(*) FROM follows WHERE following_id=$1),0),
 		  COALESCE((SELECT COUNT(*) FROM follows
 		            WHERE following_id=$1
-		              AND created_at > NOW() - INTERVAL '`+iv+`'),0),
+		              AND created_at >= $2 AND created_at < $3),0),
 		  COALESCE((SELECT COUNT(*) FROM posts
 		            WHERE user_id=$1 AND COALESCE(archived,false)=FALSE
-		              AND created_at > NOW() - INTERVAL '`+iv+`'),0),
+		              AND created_at >= $2 AND created_at < $3),0),
 		  COALESCE((SELECT COUNT(*) FROM reels
 		            WHERE user_id=$1
-		              AND created_at > NOW() - INTERVAL '`+iv+`'),0),
+		              AND created_at >= $2 AND created_at < $3),0),
 		  COALESCE((SELECT SUM(likes_count) FROM posts
-		            WHERE user_id=$1 AND created_at > NOW() - INTERVAL '`+iv+`'),0)
+		            WHERE user_id=$1 AND created_at >= $2 AND created_at < $3),0)
 		  + COALESCE((SELECT SUM(likes_count) FROM reels
-		            WHERE user_id=$1 AND created_at > NOW() - INTERVAL '`+iv+`'),0),
+		            WHERE user_id=$1 AND created_at >= $2 AND created_at < $3),0),
 		  COALESCE((SELECT SUM(comments_count) FROM posts
-		            WHERE user_id=$1 AND created_at > NOW() - INTERVAL '`+iv+`'),0)
+		            WHERE user_id=$1 AND created_at >= $2 AND created_at < $3),0)
 		  + COALESCE((SELECT SUM(comments_count) FROM reels
-		            WHERE user_id=$1 AND created_at > NOW() - INTERVAL '`+iv+`'),0),
+		            WHERE user_id=$1 AND created_at >= $2 AND created_at < $3),0),
 		  COALESCE((SELECT SUM(views_count) FROM reels
-		            WHERE user_id=$1 AND created_at > NOW() - INTERVAL '`+iv+`'),0)
+		            WHERE user_id=$1 AND created_at >= $2 AND created_at < $3),0)
 		  + COALESCE((SELECT COUNT(*) FROM post_views pv
 		            JOIN posts p ON p.id = pv.post_id
 		            WHERE p.user_id=$1
-		              AND pv.viewed_at > NOW() - INTERVAL '`+iv+`'),0),
+		              AND pv.viewed_at >= $2 AND pv.viewed_at < $3),0),
 		  COALESCE((SELECT COUNT(*) FROM post_saves ps
 		            JOIN posts p ON p.id = ps.post_id
 		            WHERE p.user_id=$1),0),
 		  COALESCE((SELECT COUNT(*) FROM post_shares psh
 		            JOIN posts p ON p.id = psh.post_id
 		            WHERE p.user_id=$1),0)`,
-		userID).Scan(&o.Followers, &o.FollowersGained, &o.Posts, &o.Reels,
-		&o.Likes, &o.Comments, &o.Views, &o.Saves, &o.Shares)
+		userID, from, to).Scan(&o.Followers, &o.FollowersGained, &o.Posts,
+		&o.Reels, &o.Likes, &o.Comments, &o.Views, &o.Saves, &o.Shares)
 	if err != nil {
 		return Overview{}, fmt.Errorf("creator: overview: %w", err)
 	}
@@ -124,8 +132,8 @@ func GetOverview(ctx context.Context, db DB, userID string, w Window) (Overview,
 	db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM feed_events
 		WHERE creator_id=$1 AND event='PROFILE_VIEW'
-		  AND created_at > NOW() - INTERVAL '`+iv+`'`,
-		userID).Scan(&o.ProfileVisits)
+		  AND created_at >= $2 AND created_at < $3`,
+		userID, from, to).Scan(&o.ProfileVisits)
 
 	if o.Views > 0 {
 		o.EngagementRate = round3(
@@ -155,8 +163,14 @@ type RecommendationStats struct {
 // GetRecommendationStats натиҷаи тавсияро ҷамъ мекунад.
 func GetRecommendationStats(ctx context.Context, db DB, userID string,
 	w Window) (RecommendationStats, error) {
-	iv := w.interval()
-	s := RecommendationStats{Window: string(w)}
+	from, to := w.bounds(time.Now())
+	return GetRecommendationStatsRange(ctx, db, userID, string(w), from, to)
+}
+
+// GetRecommendationStatsRange ҳамон ҳисоб бо ҳудуди дақиқи вақт.
+func GetRecommendationStatsRange(ctx context.Context, db DB, userID,
+	label string, from, to time.Time) (RecommendationStats, error) {
+	s := RecommendationStats{Window: label}
 
 	var starts int
 	err := db.QueryRow(ctx, `
@@ -170,8 +184,8 @@ func GetRecommendationStats(ctx context.Context, db DB, userID string,
 		  COUNT(*) FILTER (WHERE event='SHARE'),
 		  COUNT(*) FILTER (WHERE event='FOLLOW')
 		FROM feed_events
-		WHERE creator_id=$1 AND created_at > NOW() - INTERVAL '`+iv+`'`,
-		userID).Scan(&s.Impressions, &s.Opens, &starts, &s.Completions,
+		WHERE creator_id=$1 AND created_at >= $2 AND created_at < $3`,
+		userID, from, to).Scan(&s.Impressions, &s.Opens, &starts, &s.Completions,
 		&s.Likes, &s.Saves, &s.Shares, &s.Follows)
 	if err != nil {
 		return RecommendationStats{}, fmt.Errorf("creator: rec stats: %w", err)
@@ -204,10 +218,16 @@ type TopContent struct {
 // GetTopRecommended мӯҳтавои беҳтарини тавсияшударо мегирад.
 func GetTopRecommended(ctx context.Context, db DB, userID string,
 	w Window, limit int) ([]TopContent, error) {
+	from, to := w.bounds(time.Now())
+	return GetTopRecommendedRange(ctx, db, userID, from, to, limit)
+}
+
+// GetTopRecommendedRange ҳамон интихоб бо ҳудуди дақиқи вақт.
+func GetTopRecommendedRange(ctx context.Context, db DB, userID string,
+	from, to time.Time, limit int) ([]TopContent, error) {
 	if limit <= 0 || limit > 20 {
 		limit = 5
 	}
-	iv := w.interval()
 	rows, err := db.Query(ctx, `
 		WITH ev AS (
 		  SELECT content_type, content_id,
@@ -216,7 +236,7 @@ func GetTopRecommended(ctx context.Context, db DB, userID string,
 		         COUNT(*) FILTER (WHERE event='FOLLOW')          AS follows
 		  FROM feed_events
 		  WHERE creator_id=$1 AND content_id <> ''
-		    AND created_at > NOW() - INTERVAL '`+iv+`'
+		    AND created_at >= $2 AND created_at < $3
 		  GROUP BY content_type, content_id
 		)
 		SELECT ev.content_type, ev.content_id,
@@ -234,7 +254,7 @@ func GetTopRecommended(ctx context.Context, db DB, userID string,
 		-- Мӯҳтавои нестшуда набояд дар рӯйхат монад.
 		WHERE p.id IS NOT NULL OR r.id IS NOT NULL
 		ORDER BY ev.impressions DESC, ev.completions DESC
-		LIMIT $2`, userID, limit)
+		LIMIT $4`, userID, from, to, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -268,18 +288,24 @@ type TopicPerformance struct {
 // тасодуфан вирусӣ набояд «беҳтарин мавзӯи шумо» эълон шавад.
 func GetTopicPerformance(ctx context.Context, db DB, userID string,
 	w Window) ([]TopicPerformance, error) {
-	iv := w.interval()
+	from, to := w.bounds(time.Now())
+	return GetTopicPerformanceRange(ctx, db, userID, from, to)
+}
+
+// GetTopicPerformanceRange ҳамон ҳисоб бо ҳудуди дақиқи вақт.
+func GetTopicPerformanceRange(ctx context.Context, db DB, userID string,
+	from, to time.Time) ([]TopicPerformance, error) {
 	rows, err := db.Query(ctx, `
 		WITH mine AS (
 		  SELECT 'post' AS ct, p.id, p.likes_count, p.comments_count,
 		         (SELECT COUNT(*) FROM post_views v WHERE v.post_id=p.id) AS views
 		  FROM posts p
 		  WHERE p.user_id=$1 AND COALESCE(p.archived,false)=FALSE
-		    AND p.created_at > NOW() - INTERVAL '`+iv+`'
+		    AND p.created_at >= $2 AND p.created_at < $3
 		  UNION ALL
 		  SELECT 'reel', r.id, r.likes_count, r.comments_count, r.views_count
 		  FROM reels r
-		  WHERE r.user_id=$1 AND r.created_at > NOW() - INTERVAL '`+iv+`'
+		  WHERE r.user_id=$1 AND r.created_at >= $2 AND r.created_at < $3
 		)
 		SELECT ct.topic_slug,
 		       COUNT(*) AS content_count,
@@ -290,7 +316,7 @@ func GetTopicPerformance(ctx context.Context, db DB, userID string,
 		     ON ct.content_type = m.ct AND ct.content_id = m.id
 		GROUP BY ct.topic_slug
 		HAVING COUNT(*) >= 2
-		ORDER BY engagement DESC`, userID)
+		ORDER BY engagement DESC`, userID, from, to)
 	if err != nil {
 		return nil, err
 	}

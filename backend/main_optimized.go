@@ -457,9 +457,13 @@ func main() {
 		cs.GET("/studio",    handlers.GetCreatorStudio)
 		cs.GET("/analytics", handlers.GetCreatorAnalytics)
 		cs.GET("/insights",  handlers.GetCreatorInsights)
+		cs.GET("/recap/week", handlers.GetCreatorRecap)
 		// Даъвати LLM — маҳдудияти сахттар.
 		cs.POST("/ideas",    rl20, handlers.GenerateCreatorIdeas)
 	}
+
+	// ── ҶАМЪБАСТИ ҲАФТАГӢ ───────────────────────────────────────
+	r.GET("/recap/week", auth, rl100, handlers.GetViewerRecap)
 
 	// ── КАШФИЁТ ─────────────────────────────────────────────────
 	dc := r.Group("/discover", auth, rl100)
