@@ -494,6 +494,10 @@ func main() {
 		ad.GET("/reports/count",    handlers.AdminReportCount)
 
 		// Creator Marketplace — интиқолҳои дастӣ ва омори молиявӣ.
+		// Тафтиши танзимоти AI — танҳо админ.
+		ad.GET("/ai/health",   handlers.GetAIHealth)
+		ad.GET("/ai/selftest", handlers.GetAISelfTest)
+
 		ad.GET("/marketplace/stats",             handlers.AdminMarketplaceStats)
 		ad.GET("/marketplace/payouts",           handlers.AdminListPayouts)
 		ad.POST("/marketplace/payouts/:id/settle", handlers.AdminSettlePayout)
