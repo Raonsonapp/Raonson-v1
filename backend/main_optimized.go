@@ -458,6 +458,7 @@ func main() {
 		cs.GET("/analytics", handlers.GetCreatorAnalytics)
 		cs.GET("/insights",  handlers.GetCreatorInsights)
 		cs.GET("/recap/week", handlers.GetCreatorRecap)
+		cs.GET("/achievements", handlers.GetCreatorAchievements)
 		// Даъвати LLM — маҳдудияти сахттар.
 		cs.POST("/ideas",    rl20, handlers.GenerateCreatorIdeas)
 	}
