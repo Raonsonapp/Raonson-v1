@@ -411,8 +411,7 @@ func TogglePostLike(c *gin.Context) {
 				 JOIN users u ON u.id=(SELECT id FROM users WHERE id=$2)
 				 WHERE p.id=$1`, pid, myID).Scan(&ownerID, &username)
 			if ownerID != "" && ownerID != myID {
-				SendPushToUser(ownerID, "Raonson", username+" liked your post",
-					map[string]string{"type":"like","postId":pid})
+				pushNotify(ownerID, myID, "like", pid, "")
 			}
 		}()
 	}

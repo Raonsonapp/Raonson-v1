@@ -405,6 +405,7 @@ func main() {
 		no.GET("/",             handlers.GetNotifications)
 		no.GET("/unread-count", handlers.GetUnreadNotifCount)
 		no.POST("/push-token",  handlers.SavePushToken)
+		no.DELETE("/push-token", handlers.DeletePushToken)
 		no.POST("/read-all",    handlers.MarkAllNotifsRead)
 		no.POST("/:id/read",    handlers.MarkNotifRead)
 		no.DELETE("/:id",       handlers.DeleteNotification)

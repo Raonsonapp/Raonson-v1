@@ -4,7 +4,6 @@ import (
 	"context"
 	"regexp"
 	"strings"
-	"time"
 
 	"raonson/db"
 )
@@ -74,33 +73,5 @@ func notify(userID, fromID, ntype, targetID string) {
 		db.Pool.Exec(context.Background(), `
 			INSERT INTO notifications(user_id, from_user_id, type, target_id)
 			VALUES($1,$2,$3,$4)`, userID, fromID, ntype, targetID)
-	}()
-}
-
-// pushNotify як push-notification-и FCM мефиристад (Instagram-барин).
-//   - Худи коратарро push намекунад (userID == fromID → skip), мисли notify.
-//   - Дар background иҷро мешавад, то ҷавоби амал тезтар бошад.
-//   - title = @username-и коратар (OS-и телефон номи/иконаи Raonson-ро зам мекунад).
-//   - data map калидҳои "type" ва "targetId"-ро дорад, то барнома deep-link кунад.
-func pushNotify(userID, fromID, ntype, targetID, body string) {
-	if userID == "" || userID == fromID {
-		return
-	}
-	go func() {
-		// Сабти огоҳинома аллакай дар notify() шуд; ин ҷо танҳо
-		// ларзиши телефон санҷида мешавад (ниг. notify_policy.go).
-		if !allowPush(userID, ntype, time.Now()) {
-			return
-		}
-		var username string
-		db.Pool.QueryRow(context.Background(),
-			`SELECT username FROM users WHERE id=$1`, fromID).Scan(&username)
-		if username == "" {
-			return
-		}
-		SendPushToUser(userID, "@"+username, body, map[string]string{
-			"type":     ntype,
-			"targetId": targetID,
-		})
 	}()
 }

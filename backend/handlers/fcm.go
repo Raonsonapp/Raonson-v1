@@ -1,106 +1,60 @@
 package handlers
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"io"
-	"log"
 	"net/http"
-	"os"
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/push"
 
 	"github.com/gin-gonic/gin"
 )
 
-// ── FCM Push Notifications ────────────────────────────────────────
-// Барои Firebase Cloud Messaging (FCM)
-// env: FCM_SERVER_KEY = ключи Firebase
+// ── Токени дастгоҳ ───────────────────────────────────────────────
+//
+// Худи фиристодан дар пакети push аст (FCM HTTP v1). Танзимот:
+// FCM_SERVICE_ACCOUNT_JSON ё FCM_SERVICE_ACCOUNT_FILE.
+//
+// FCM_SERVER_KEY-и қаблӣ дигар кор НАМЕКУНАД: Google Legacy API-ро
+// хомӯш кард ва он суроға 404 бармегардонад.
 
-// POST /notifications/push-token   ← Flutter FCM token-ро мефиристад
+// POST /notifications/push-token   ← барнома токени FCM-ро мефиристад
+//
+// Як дастгоҳ — як сатр. Ҷадвали қаблӣ UNIQUE(user_id, platform) дошт,
+// яъне телефон ва планшети ҳамон корбар ҳамдигарро мепӯшониданд ва
+// огоҳинома танҳо ба дастгоҳи охирин мерасид.
 func SavePushToken(c *gin.Context) {
 	myID := mw.UID(c)
 	var b struct {
 		Token    string `json:"token"`
-		Platform string `json:"platform"` // android|ios
+		Platform string `json:"platform"` // android | ios
+		// DeviceID ихтиёрист: бо он токени кӯҳнаи ҲАМОН дастгоҳ пок
+		// мешавад, вагарна сатрҳои мурда ҷамъ мешаванд.
+		DeviceID string `json:"deviceId"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.Token == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "token required"})
 		return
 	}
-
-	db.Pool.Exec(context.Background(), `
-		INSERT INTO push_tokens(user_id, token, platform)
-		VALUES($1,$2,$3)
-		ON CONFLICT(user_id, platform)
-		DO UPDATE SET token=$3, updated_at=NOW()`,
-		myID, b.Token, b.Platform)
-
+	if err := push.SaveToken(c.Request.Context(), db.Pool,
+		myID, b.Token, b.Platform, b.DeviceID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Хатои сервер"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"saved": true})
 }
 
-// SendPushToUser — helper барои дигар handler-ҳо
-func SendPushToUser(toUserID, title, body string, data map[string]string) {
-	fcmKey := os.Getenv("FCM_SERVER_KEY")
-	if fcmKey == "" {
-		return // FCM configured nist
+// DELETE /notifications/push-token — баромадан аз аккаунт дар ин дастгоҳ.
+//
+// Бе ин, огоҳиномаҳои корбари қаблӣ ба ҳамон телефон мерафтанд.
+func DeletePushToken(c *gin.Context) {
+	var b struct {
+		Token string `json:"token"`
 	}
-
-	// Get user's FCM tokens
-	rows, err := db.Pool.Query(context.Background(),
-		`SELECT token FROM push_tokens WHERE user_id=$1`, toUserID)
-	if err != nil {
-		return
+	c.ShouldBindJSON(&b)
+	if b.Token == "" {
+		b.Token = c.Query("token")
 	}
-	defer rows.Close()
-
-	var tokens []string
-	for rows.Next() {
-		var t string
-		rows.Scan(&t)
-		tokens = append(tokens, t)
-	}
-	if len(tokens) == 0 {
-		return
-	}
-
-	// Send to each token
-	for _, token := range tokens {
-		go sendFCM(fcmKey, token, title, body, data)
-	}
-}
-
-func sendFCM(key, token, title, body string, data map[string]string) {
-	payload := map[string]interface{}{
-		"to": token,
-		"notification": map[string]string{
-			"title": title,
-			"body":  body,
-			"sound": "default",
-		},
-		"data":     data,
-		"priority": "high",
-	}
-
-	b, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST",
-		"https://fcm.googleapis.com/fcm/send",
-		bytes.NewReader(b))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Authorization", "key="+key)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
-	if resp.StatusCode >= 400 {
-		log.Printf("[FCM] push failed status:%d", resp.StatusCode)
-	}
+	push.DeleteToken(c.Request.Context(), db.Pool, mw.UID(c), b.Token)
+	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }

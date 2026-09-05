@@ -307,16 +307,10 @@ func FollowUser(c *gin.Context) {
 	mw.InvalidateUserCache(myID)
 	mw.InvalidateUserCache(targetID)
 
-	// Push notification to target
-	go func() {
-		var username string
-		db.Pool.QueryRow(context.Background(),
-			`SELECT username FROM users WHERE id=$1`, myID).Scan(&username)
-		if username != "" {
-			SendPushToUser(targetID, "Raonson", username+" started following you",
-				map[string]string{"type": "follow", "userId": myID})
-		}
-	}()
+	// Push: аз ҳамон роҳи ягона мегузарад — танзимот, соатҳои ором ва
+	// маҳдудият ба он низ татбиқ мешаванд. Матн дар сервер аз рӯи
+	// забони гиранда сохта мешавад.
+	pushNotify(targetID, myID, "follow", myID, "")
 	c.JSON(http.StatusOK, gin.H{"following": true})
 }
 
