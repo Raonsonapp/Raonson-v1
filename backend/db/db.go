@@ -942,6 +942,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, discoverSchema); err != nil {
 		log.Fatalf("❌ Discover migration failed: %v", err)
 	}
+	// Схемаи ҳамкорӣ: даъват бо розигӣ.
+	if _, err := Pool.Exec(ctx, collabSchema); err != nil {
+		log.Fatalf("❌ Collab migration failed: %v", err)
+	}
 	// Схемаи даъват: коди доимӣ ва мансубияти якдафъаина.
 	if _, err := Pool.Exec(ctx, referralSchema); err != nil {
 		log.Fatalf("❌ Referral migration failed: %v", err)

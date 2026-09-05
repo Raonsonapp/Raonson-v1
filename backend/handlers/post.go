@@ -82,7 +82,10 @@ func CreatePost(c *gin.Context) {
 	if err = tx.QueryRow(context.Background(),
 		`INSERT INTO posts(user_id,caption,music_title,music_artist,location,tagged_users,collaborators,scheduled_at)
 		 VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-		myID, b.Caption, b.MusicTitle, b.MusicArtist, b.Location, b.TaggedUsers, b.Collaborators, scheduledAt).Scan(&postID); err != nil {
+		// Ҳамкорон холӣ оғоз мешаванд: ном танҳо пас аз розигии
+		// худи одам ба пост баста мешавад (ниг. collab.go).
+		myID, b.Caption, b.MusicTitle, b.MusicArtist, b.Location, b.TaggedUsers,
+		[]string{}, scheduledAt).Scan(&postID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
 		return
 	}
@@ -125,6 +128,8 @@ func CreatePost(c *gin.Context) {
 
 	// @зикр дар тавсиф — ҳар корбари зикршударо огоҳ кун
 	notifyMentions(myID, "mention", postID, b.Caption, "шуморо дар публикатсия зикр кард")
+	// Даъвати ҳамкорӣ: то розигӣ ном ба пост баста намешавад.
+	inviteCollaborators(postID, myID, b.Collaborators)
 
 // ➕ ИЛОВА
 var uname, uavatar string
@@ -147,7 +152,8 @@ wsPost := gin.H{
 	"musicArtist":   b.MusicArtist,
 	"location":      b.Location,
 	"taggedUsers":   b.TaggedUsers,
-	"collaborators": b.Collaborators,
+	// Ҷавоб вазъи ВОҚЕИИ пост аст: даъватҳо ҳанӯз тасдиқ нашудаанд.
+	"collaborators": []string{},
 	"createdAt":     time.Now().Format(time.RFC3339),
 	"user": gin.H{
 		"_id":      myID,

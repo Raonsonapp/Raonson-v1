@@ -186,7 +186,11 @@ func GetUserPosts(c *gin.Context) {
 	// liked/saved/isPinned — то дар экрани кушодашуда (мисли home) кор кунад.
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
-		WHERE p.user_id=$2 AND COALESCE(p.archived,false)=FALSE
+		-- Пости ҳамкорӣ дар профили ҳарду нишон дода мешавад. Дар
+		-- collaborators танҳо касони ТАСДИҚКАРДА ҳастанд, бинобар ин
+		-- ин ҷо санҷиши иловагӣ лозим нест.
+		WHERE (p.user_id=$2 OR $2 = ANY(COALESCE(p.collaborators,'{}')))
+		  AND COALESCE(p.archived,false)=FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY COALESCE(p.is_pinned,false) DESC, p.created_at DESC
 		LIMIT $3 OFFSET $4`,

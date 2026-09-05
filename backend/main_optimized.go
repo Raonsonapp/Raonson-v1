@@ -206,6 +206,8 @@ func main() {
 		po.GET("/:id/likes",         handlers.GetPostLikers)
 		po.GET("/:id/comments",      cache3s, handlers.GetComments)
 		po.POST("/:id/comments",     handlers.AddComment)
+		po.POST("/:id/collab/accept",  handlers.AcceptCollab)
+		po.POST("/:id/collab/decline", handlers.DeclineCollab)
 		po.DELETE("/:id",            handlers.DeletePost)
 		po.POST("/:id/like",         handlers.TogglePostLike)
 		po.POST("/:id/save",         handlers.TogglePostSave)
@@ -468,6 +470,9 @@ func main() {
 
 	// ── ДАЪВАТ ──────────────────────────────────────────────────
 	r.GET("/referrals/me", auth, rl100, handlers.GetMyReferrals)
+
+	// ── ҲАМКОРӢ ─────────────────────────────────────────────────
+	r.GET("/collabs/pending", auth, rl100, handlers.GetPendingCollabs)
 
 	// ── КАШФИЁТ ─────────────────────────────────────────────────
 	dc := r.Group("/discover", auth, rl100)
