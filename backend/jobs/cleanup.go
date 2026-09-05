@@ -40,6 +40,9 @@ func StartJobs() {
 	// Лентаи AI — таснифи мӯҳтаво ва ҷамъбасти ҳодисаҳо.
 	StartFeedAIJobs()
 
+	// Огоҳиномаҳои вақтӣ: ҷамъбаст, нишон, поксозии токен.
+	StartNotificationJobs()
+
 	log.Println("✅ All background jobs + queues started")
 }
 
