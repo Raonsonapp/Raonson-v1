@@ -466,6 +466,9 @@ func main() {
 	// ── ҶАМЪБАСТИ ҲАФТАГӢ ───────────────────────────────────────
 	r.GET("/recap/week", auth, rl100, handlers.GetViewerRecap)
 
+	// ── ДАЪВАТ ──────────────────────────────────────────────────
+	r.GET("/referrals/me", auth, rl100, handlers.GetMyReferrals)
+
 	// ── КАШФИЁТ ─────────────────────────────────────────────────
 	dc := r.Group("/discover", auth, rl100)
 	{

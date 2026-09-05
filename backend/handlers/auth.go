@@ -13,6 +13,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/referral"
 	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
@@ -36,6 +37,9 @@ func Register(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 		FullName string `json:"fullName"`
 		Phone    string `json:"phone"`
+		// Коди даъват аз линки чуқур. Коди нодуруст бақайдгириро
+		// БАС НАМЕКУНАД — он ҷузъи ихтиёрист.
+		ReferralCode string `json:"referralCode"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing fields"})
@@ -97,6 +101,15 @@ func Register(c *gin.Context) {
 	refreshSecret := mw.RefreshSecret()
 
 	recordLogin(id, c)
+
+	// Даъват: як бор ва танҳо дар сервер. Хато сабт мешавад, вале
+	// бақайдгирии муваффақро вайрон намекунад.
+	if b.ReferralCode != "" {
+		if _, err := referral.Attribute(context.Background(), db.Pool,
+			id, b.ReferralCode); err != nil {
+			log.Printf("[Register] referral: %v", err)
+		}
+	}
 
 	c.JSON(http.StatusCreated, gin.H{
 		"success":      true,
