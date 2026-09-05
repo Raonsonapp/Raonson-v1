@@ -60,6 +60,36 @@ void main() {
     });
   });
 
+  group('ҷамъбасти ҳафтагӣ', () {
+    // Ин ду сатр ҷойгир доранд ва дар ҳар се забон бояд пур шаванд:
+    // «Ҳафтаи {date}» бе сана маъно надорад.
+    test('ҷойгирҳо дар ҳар се забон пур мешаванд', () async {
+      for (final lang in ['tj', 'ru', 'en']) {
+        await AppSettingsState.instance.setLang(lang);
+
+        final week = tr('recap.weekOf', {'date': '2026-08-24'});
+        expect(week, contains('2026-08-24'), reason: lang);
+        expect(week, isNot(contains('{')), reason: lang);
+
+        final topic = tr('recap.topTopicIs', {'topic': 'Бозиҳо'});
+        expect(topic, contains('Бозиҳо'), reason: lang);
+        expect(topic, isNot(contains('{')), reason: lang);
+      }
+    });
+
+    test('ҳар се забон матни худро дорад', () async {
+      final seen = <String>{};
+      for (final lang in ['tj', 'ru', 'en']) {
+        await AppSettingsState.instance.setLang(lang);
+        final t = tr('recap.quietWeek');
+        // Калид ҳамчун матн баргардонда нашавад — яъне тарҷума ҳаст.
+        expect(t, isNot('recap.quietWeek'), reason: lang);
+        seen.add(t);
+      }
+      expect(seen.length, 3, reason: 'забонҳо матни якхела доранд');
+    });
+  });
+
   group('ҷамъбандӣ', () {
     test('тоҷикӣ: як ва зиёд', () {
       expect(trn('count.votes', 1), '1 овоз');

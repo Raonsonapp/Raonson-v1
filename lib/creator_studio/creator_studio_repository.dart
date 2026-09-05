@@ -36,8 +36,21 @@ extension StudioWindowX on StudioWindow {
   }
 }
 
-int _i(Map<String, dynamic> j, String k) => (j[k] as num?)?.toInt() ?? 0;
-double _d(Map<String, dynamic> j, String k) => (j[k] as num?)?.toDouble() ?? 0;
+// Навъи ғайримунтазир (сатр, рӯйхат, null) барномаро НАМЕПАРТОЯД:
+// экрани таҳлил бо рақами нопурра аз экрани афтода беҳтар аст.
+int _i(Map<String, dynamic> j, String k) {
+  final v = j[k];
+  if (v is num) return v.toInt();
+  if (v is String) return num.tryParse(v)?.toInt() ?? 0;
+  return 0;
+}
+
+double _d(Map<String, dynamic> j, String k) {
+  final v = j[k];
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? 0;
+  return 0;
+}
 
 /// Рақамҳои асосӣ.
 class CreatorOverview {
