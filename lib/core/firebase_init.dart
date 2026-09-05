@@ -1,11 +1,28 @@
 // lib/core/firebase_init.dart
-// Firebase + FCM push. Backend аллакай /notifications/push-token ва sendFCM
-// дорад — мо token-ро мефиристем, паёмҳои background-ро система нишон медиҳад,
-// ва дар foreground худамон бо flutter_local_notifications banner нишон медиҳем.
+// ════════════════════════════════════════════════════════════════════
+//  Firebase + FCM push.
+//
+//  Се ҳолати кушодани огоҳинома вуҷуд дорад ва ҳар се бояд ба ҲАМОН
+//  ҷо барад:
+//    • барнома кушода (foreground) — banner-и маҳаллӣ
+//    • барнома дар паснамо — onMessageOpenedApp
+//    • барнома пӯшида буд — getInitialMessage
+//
+//  Пештар ҳеҷ яке аз онҳо коркард намешуд: огоҳинома кушода мешуд,
+//  вале барнома танҳо экрани асосиро нишон медод.
+//
+//  Routing-и дуюм сохта намешавад — ҳамон DeepLinks истифода мешавад.
+// ════════════════════════════════════════════════════════════════════
+import 'dart:io' show Platform;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 import 'api/api_client.dart';
+import 'links/deep_links.dart';
+import 'notifications/notification_channels.dart';
 
 // Background/terminated — система худаш огоҳиро нишон медиҳад.
 @pragma('vm:entry-point')
@@ -15,16 +32,16 @@ class FirebaseInit {
   static final FlutterLocalNotificationsPlugin _localNotif =
       FlutterLocalNotificationsPlugin();
 
-  // Channel-и огоҳиҳо (Android 8+ талаб мекунад).
-  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    'raonson', 'Raonson',
-    description: 'Огоҳиҳои Raonson',
-    importance: Importance.high,
-  );
+  /// Navigator барои кушодани мӯҳтаво аз огоҳинома.
+  ///
+  /// Бе он огоҳинома танҳо барномаро мекушояд ва одам худаш бояд
+  /// мӯҳтаворо ҷустуҷӯ кунад.
+  static GlobalKey<NavigatorState>? navigatorKey;
 
-  static Future<void> init() async {
-    // Ҳама дар try — агар Firebase танзим нашуда бошад (google-services.json
-    // нест), барнома ҳаргиз crash намекунад, танҳо push кор намекунад.
+  static Future<void> init({GlobalKey<NavigatorState>? navigator}) async {
+    navigatorKey = navigator;
+    // Ҳама дар try — агар Firebase танзим нашуда бошад
+    // (google-services.json нест), барнома ҳаргиз crash намекунад.
     try {
       await Firebase.initializeApp();
       await _initLocalNotif();
@@ -41,67 +58,148 @@ class FirebaseInit {
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(),
         ),
+        // Пахши banner-и маҳаллӣ низ бояд ба ҳамон ҷо барад.
+        onDidReceiveNotificationResponse: (r) {
+          final payload = r.payload;
+          if (payload != null && payload.isNotEmpty) _openLink(payload);
+        },
       );
-      await _localNotif
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(_channel);
+      final android = _localNotif.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      for (final ch in NotificationChannels.all()) {
+        await android?.createNotificationChannel(ch);
+      }
     } catch (_) {}
+  }
+
+  static Future<void> _initFCM() async {
+    final fm = FirebaseMessaging.instance;
+    FirebaseMessaging.onBackgroundMessage(_fcmBgHandler);
+
+    await _sendToken(await fm.getToken());
+    fm.onTokenRefresh.listen(_sendToken);
+
+    // Foreground — система banner нишон намедиҳад, мо худамон.
+    FirebaseMessaging.onMessage.listen(_showLocal);
+
+    // Барнома дар паснамо буд ва корбар огоҳиномаро пахш кард.
+    FirebaseMessaging.onMessageOpenedApp.listen((m) {
+      _openLink(m.data['link']?.toString() ?? '');
+    });
+
+    // Барнома ПӮШИДА буд: огоҳинома онро кушод.
+    final initial = await fm.getInitialMessage();
+    if (initial != null) {
+      // Каме таъхир, то Navigator тайёр шавад.
+      Future.delayed(const Duration(milliseconds: 400), () {
+        _openLink(initial.data['link']?.toString() ?? '');
+      });
+    }
+  }
+
+  static Future<void> _sendToken(String? token) async {
+    if (token == null || token.isEmpty) return;
+    try {
+      await ApiClient.instance.post('/notifications/push-token', body: {
+        'token': token,
+        // Сервер платформаро барои шакли payload истифода мебарад.
+        'platform': _platform(),
+      });
+    } catch (_) {
+      // Токен ҳангоми оғози оянда дубора фиристода мешавад.
+    }
+  }
+
+  // Танҳо ду қимат: сервер ҳар чизи дигарро android мешуморад.
+  static String _platform() => Platform.isIOS ? 'ios' : 'android';
+
+  /// Banner-и маҳаллӣ ҳангоми кушода будани барнома.
+  ///
+  /// Канал аз сервер меояд; канали номаълум огоҳиномаро дар Android
+  /// хомӯшона нобуд мекунад, бинобар ин он тафтиш мешавад.
+  static void _showLocal(RemoteMessage msg) {
+    final n = msg.notification;
+    if (n == null) return;
+    final channel = NotificationChannels.resolve(
+        msg.notification?.android?.channelId ??
+            msg.data['channelId']?.toString());
+    final link = msg.data['link']?.toString() ?? '';
+
+    _localNotif.show(
+      msg.hashCode,
+      n.title,
+      n.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channel,
+          channel,
+          importance: NotificationChannels.importanceOf(channel),
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      payload: link,
+    );
+  }
+
+  /// Мӯҳтаворо аз линки огоҳинома мекушояд.
+  ///
+  /// Линки холӣ ё ношинос барномаро НАМЕПАРТОЯД: он танҳо ҳамон ҷое
+  /// мемонад, ки ҳаст.
+  static void _openLink(String link) {
+    if (link.isEmpty) return;
+    final nav = navigatorKey?.currentState;
+    if (nav == null) return;
+    if (!DeepLinks.parse(link).isValid) return;
+    nav.pushNamed(link);
   }
 
   static bool _permissionRequested = false;
 
-  static Future<void> _initFCM() async {
-    try {
-      final fm = FirebaseMessaging.instance;
-      FirebaseMessaging.onBackgroundMessage(_fcmBgHandler);
-
-      // Token-ро ба backend мефиристем (push_tokens table).
-      final token = await fm.getToken();
-      if (token != null && token.isNotEmpty) {
-        ApiClient.instance.post('/notifications/push-token',
-            body: {'token': token, 'platform': 'fcm'});
-      }
-      // Token нав шуд → дубора фирист.
-      fm.onTokenRefresh.listen((t) {
-        ApiClient.instance.post('/notifications/push-token',
-            body: {'token': t, 'platform': 'fcm'});
-      });
-
-      // Foreground — система banner нишон намедиҳад, мо худамон нишон медиҳем.
-      FirebaseMessaging.onMessage.listen((msg) {
-        final n = msg.notification;
-        if (n == null) return;
-        _localNotif.show(
-          msg.hashCode, n.title, n.body,
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              _channel.id, _channel.name,
-              channelDescription: _channel.description,
-              importance: Importance.high,
-              priority: Priority.high,
-              icon: '@mipmap/ic_launcher',
-            ),
-            iOS: const DarwinNotificationDetails(),
-          ),
-        );
-      });
-    } catch (_) {
-      // Push танзим нашуд — барнома бе он кор мекунад.
-    }
-  }
-
-  static Future<void> requestNotificationPermission() async {
-    if (_permissionRequested) return;
+  /// Иҷозати огоҳиномаро мепурсад.
+  ///
+  /// Дар кадри аввал пурсида НАМЕШАВАД: экран бояд аввал фоидаро
+  /// шарҳ диҳад (ниг. notification_permission_sheet.dart).
+  ///
+  /// Пас аз рад кардан такрор пурсида намешавад — Android/iOS ҳам
+  /// такрорро иҷозат намедиҳанд ва такрор пурсидан безоркунанда аст.
+  static Future<bool> requestNotificationPermission() async {
+    if (_permissionRequested) return false;
     _permissionRequested = true;
     try {
       final fm = FirebaseMessaging.instance;
-      await fm.requestPermission();
-      final token = await fm.getToken();
-      if (token != null && token.isNotEmpty) {
-        ApiClient.instance.post('/notifications/push-token',
-            body: {'token': token, 'platform': 'fcm'});
-      }
+      final settings = await fm.requestPermission();
+      final granted = settings.authorizationStatus ==
+              AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+      if (granted) await _sendToken(await fm.getToken());
+      return granted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Ҳолати ҷории иҷозат.
+  static Future<AuthorizationStatus> permissionStatus() async {
+    try {
+      final s = await FirebaseMessaging.instance.getNotificationSettings();
+      return s.authorizationStatus;
+    } catch (_) {
+      return AuthorizationStatus.notDetermined;
+    }
+  }
+
+  /// Ҳангоми баромадан аз аккаунт токенро мебарад.
+  ///
+  /// Бе ин, огоҳиномаҳои корбари қаблӣ ба ҳамон телефон мерафтанд.
+  static Future<void> clearToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null || token.isEmpty) return;
+      // delete() бадан қабул намекунад — токен дар query меравад.
+      await ApiClient.instance
+          .delete('/notifications/push-token?token=$token');
     } catch (_) {}
   }
 }

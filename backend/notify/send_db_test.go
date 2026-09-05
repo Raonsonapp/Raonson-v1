@@ -48,9 +48,13 @@ func capture(res push.Result) (func(context.Context, push.Message) (push.Result,
 }
 
 // seed ду корбар ва як постро месозад.
+//
+// Ном бо вақт беназир мешавад: вагарна такрори тест ба сатрҳои
+// боқимондаи гардиши қаблӣ бармехӯрд.
 func seed(t *testing.T, pool *pgxpool.Pool, suffix string) (owner, actor, post string) {
 	t.Helper()
 	ctx := context.Background()
+	suffix = suffix + "_" + itoa(int(time.Now().UnixNano()%1e9))
 	err := pool.QueryRow(ctx, `
 		INSERT INTO users(username, email, password, language)
 		VALUES ('owner_`+suffix+`','o_`+suffix+`@t.tj','x','ru')
@@ -162,12 +166,16 @@ func TestGroupingCountsOtherPeople(t *testing.T) {
 	send, got := capture(push.Sent)
 	d := Deps{DB: pool, Send: send}
 
+	run := itoa(int(time.Now().UnixNano() % 1e9))
 	for i := 0; i < 5; i++ {
 		var actor string
-		pool.QueryRow(ctx, `
+		if err := pool.QueryRow(ctx, `
 			INSERT INTO users(username, email, password)
 			VALUES ($1,$2,'x') RETURNING id`,
-			"liker_group_"+itoa(i), "lg"+itoa(i)+"@t.tj").Scan(&actor)
+			"liker_"+run+"_"+itoa(i),
+			"l"+run+itoa(i)+"@t.tj").Scan(&actor); err != nil {
+			t.Fatal(err)
+		}
 		Notify(ctx, d, Event{UserID: owner, ActorID: actor,
 			Kind: Like, TargetID: post})
 	}

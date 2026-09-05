@@ -119,6 +119,35 @@ void main() {
         reason: 'линки хом ба ҷои DeepLinks.share: $offenders');
   });
 
+  group('шартномаи сервер ↔ барнома', () {
+    // Сервер линкро дар payload-и огоҳинома мефиристад
+    // (backend/notify/text.go, функсияи Link). Агар барнома ин
+    // шаклҳоро нафаҳмад, пахши огоҳинома ба ҳеҷ ҷо намебарад — ва
+    // ин хатогӣ хомӯш аст.
+    const serverLinks = {
+      '/post/abc-123': DeepLinkKind.post,
+      '/reel/xyz-789': DeepLinkKind.reel,
+      '/profile/ali': DeepLinkKind.profile,
+      '/topic/gaming': DeepLinkKind.topic,
+    };
+
+    test('ҳар линки сервер фаҳмида мешавад', () {
+      serverLinks.forEach((link, kind) {
+        final parsed = DeepLinks.parse(link);
+        expect(parsed.isValid, isTrue, reason: link);
+        expect(parsed.kind, kind, reason: link);
+        expect(parsed.id, isNotEmpty, reason: link);
+      });
+    });
+
+    test('ҳар линки сервер роҳи мушаххас дорад', () {
+      for (final link in serverLinks.keys) {
+        final parsed = DeepLinks.parse(link);
+        expect(DeepLinks.routeFor(parsed), isNotNull, reason: link);
+      }
+    });
+  });
+
   test('роҳҳо ба routing-и МАВҶУДА ишора мекунанд', () {
     // Ҳеҷ роҳи нав ихтироъ намешавад.
     expect(DeepLinks.routeFor(const DeepLink(DeepLinkKind.profile, 'ali')),

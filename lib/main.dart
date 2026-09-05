@@ -85,7 +85,7 @@ Future<void> main() async {
   }
 
   // ✅ 6.1 Firebase + FCM push (бехатар: агар танзим набошад, crash намешавад)
-  FirebaseInit.init();
+  FirebaseInit.init(navigator: appNavigatorKey);
 
   // ✅ 7. App-ро кушо — ФАВРАН, бе интернет интизор шудан
   runApp(const RaonsonApp());

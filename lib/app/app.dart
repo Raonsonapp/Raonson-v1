@@ -13,6 +13,13 @@ import '../auth/login/login_screen.dart';
 import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
 import '../core/analytics/analytics_observer.dart';
 
+/// Navigator-и умумӣ.
+///
+/// Огоҳинома метавонад вақте расад, ки ҳеҷ экран context надорад —
+/// бинобар ин навигатсия аз калиди умумӣ мегузарад.
+final GlobalKey<NavigatorState> appNavigatorKey =
+    GlobalKey<NavigatorState>();
+
 class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
 
@@ -52,6 +59,8 @@ class RaonsonApp extends StatelessWidget {
                         ? BottomNavScaffold()
                         : LoginScreen()),
                 onGenerateRoute: controller.onGenerateRoute,
+                // Пахши огоҳинома бе он ҷое рафта наметавонад.
+                navigatorKey: appNavigatorKey,
                 navigatorObservers: [_analyticsObserver],
               );
             },

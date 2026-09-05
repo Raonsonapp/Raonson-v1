@@ -1,4 +1,5 @@
 import '../core/api/api_client.dart';
+import '../core/firebase_init.dart';
 import '../core/storage/token_storage.dart';
 import 'auth_repository.dart';
 import '../core/services/user_session.dart';
@@ -85,6 +86,10 @@ class AuthService {
 
   // ================= LOGOUT =================
   Future<void> logout() async {
+    // Токени дастгоҳ пеш аз ҳама пок мешавад: вагарна огоҳиномаҳои
+    // ин корбар ба ҳамон телефон мерафтанд, ки касе дигар онро
+    // истифода мебарад.
+    await FirebaseInit.clearToken();
     await _repository.logout();
     await _tokenStorage.clear();
     ApiClient.instance.setAuthToken(null);

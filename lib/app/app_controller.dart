@@ -19,6 +19,7 @@ import '../auth/password/reset_password_screen.dart';
 import '../feed/hashtag/hashtag_screen.dart';
 import '../friends/friends_screen.dart'; // ✅ НАВ
 import '../core/links/deep_links.dart';
+import '../discover/discover_screen.dart';
 import '../core/links/pending_invite.dart';
 import '../core/links/deep_link_resolver_screen.dart';
 
@@ -125,6 +126,9 @@ class AppController {
               PendingInvite.save(link.id);
               break;
             case DeepLinkKind.topic:
+              // Мавзӯъ дар «Кашфи имрӯз» зиндагӣ мекунад — экрани нав
+              // сохта намешавад.
+              return _page(const DiscoverScreen());
             case DeepLinkKind.unknown:
               break;
           }

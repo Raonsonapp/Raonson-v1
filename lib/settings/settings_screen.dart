@@ -693,6 +693,13 @@ class _NotifState extends State<NotificationsScreen> {
   int  _quietStart = 23;
   int  _quietEnd   = 8;
 
+  // Категорияҳои нав — ҳамон калидҳое, ки сервер мехонад
+  // (backend/notify/gate.go).
+  bool _mentions        = true;
+  bool _recommendations = true;
+  bool _creator         = true;
+  bool _achievements    = true;
+
   @override
   void initState() {
     super.initState();
@@ -711,6 +718,10 @@ class _NotifState extends State<NotificationsScreen> {
           _messages  = b['messages']  as bool? ?? true;
           _reels     = b['reels']     as bool? ?? true;
           _push      = b['push']      as bool? ?? true;
+          _mentions        = b['mentions']        as bool? ?? true;
+          _recommendations = b['recommendations'] as bool? ?? true;
+          _creator         = b['creator']         as bool? ?? true;
+          _achievements    = b['achievements']    as bool? ?? true;
           final q = (b['quietHours'] as Map?)?.cast<String, dynamic>();
           if (q != null) {
             _quiet      = q['enabled'] as bool? ?? false;
@@ -734,6 +745,10 @@ class _NotifState extends State<NotificationsScreen> {
         'likes': _likes, 'comments': _comments,
         'followers': _followers, 'messages': _messages,
         'reels': _reels, 'push': _push,
+        'mentions': _mentions,
+        'recommendations': _recommendations,
+        'creator': _creator,
+        'achievements': _achievements,
         'quietHours': {
           'enabled': _quiet,
           'startHour': _quietStart,
@@ -811,6 +826,29 @@ class _NotifState extends State<NotificationsScreen> {
               _SwTile(icon: AppIcons.slow_motion_video_rounded,
                   title: tr('ui.d2d780f54a'), value: _reels,
                   onChanged: (v) { setState(() => _reels = v); _save(); }),
+              const _ThinDiv(),
+              _SwTile(icon: AppIcons.alternate_email_rounded,
+                  title: tr('nset.mentions'), value: _mentions,
+                  onChanged: (v) { setState(() => _mentions = v); _save(); }),
+              const _ThinDiv(),
+              _SwTile(icon: AppIcons.search,
+                  title: tr('nset.recommendations'),
+                  sub: tr('nset.recommendationsSub'),
+                  value: _recommendations,
+                  onChanged: (v) {
+                    setState(() => _recommendations = v); _save();
+                  }),
+              const _ThinDiv(),
+              _SwTile(icon: AppIcons.auto_awesome_rounded,
+                  title: tr('nset.creator'), sub: tr('nset.creatorSub'),
+                  value: _creator,
+                  onChanged: (v) { setState(() => _creator = v); _save(); }),
+              const _ThinDiv(),
+              _SwTile(icon: AppIcons.star_rounded,
+                  title: tr('nset.achievements'), value: _achievements,
+                  onChanged: (v) {
+                    setState(() => _achievements = v); _save();
+                  }),
               Divider(color: AppColors.dividerFaint, height: 28, indent: 16, endIndent: 16),
               _SwTile(icon: AppIcons.notifications_rounded,
                   title: tr('ui.f694047b90'), sub: 'Огоҳиҳои телефонӣ',

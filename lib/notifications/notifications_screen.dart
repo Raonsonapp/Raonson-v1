@@ -1,5 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart' show AuthorizationStatus;
+
+import '../core/firebase_init.dart';
+import '../core/notifications/notification_permission_sheet.dart';
 import 'package:shimmer/shimmer.dart';
 import 'notifications_repository.dart';
 import 'notification_item.dart';
@@ -39,6 +43,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationBadgeController.instance.reset();
     NotificationService.markRead();
     _load();
+    // Иҷозат маҳз ин ҷо пурсида мешавад: корбар аллакай ба
+    // огоҳиномаҳо таваҷҷуҳ дорад. Дар кадри аввали барнома пурсидан
+    // одатан ба «Рад» меанҷомад ва баъд такрор пурсидан мумкин нест.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeAskPermission());
+  }
+
+  Future<void> _maybeAskPermission() async {
+    final status = await FirebaseInit.permissionStatus();
+    // Танҳо вақте мепурсем, ки корбар ҳанӯз қарор накардааст.
+    if (status != AuthorizationStatus.notDetermined) return;
+    if (!mounted) return;
+    await NotificationPermissionSheet.ask(context);
   }
 
   Future<void> _load() async {
