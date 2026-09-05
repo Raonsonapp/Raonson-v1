@@ -44,6 +44,7 @@ import '../feed_ai/ai_feed_screen.dart';
 import '../creator_studio/creator_studio_screen.dart';
 import '../recap/weekly_recap_screen.dart';
 import '../referral/referral_screen.dart';
+import '../collab/collab_invites_screen.dart';
 import '../discover/discover_screen.dart';
 
 /// Theme label in the active language.
@@ -159,6 +160,13 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('dc.title'),
                 sub:   tr('dc.entrySub'),
                 onTap: () => _go(ctx, const DiscoverScreen()),
+              ),
+              // ── Даъватҳои ҳамкорӣ ──
+              _NavTile(
+                icon:  AppIcons.group_rounded,
+                title: tr('collab.title'),
+                sub:   tr('collab.entrySub'),
+                onTap: () => _go(ctx, const CollabInvitesScreen()),
               ),
               // ── Даъвати дӯстон ──
               _NavTile(

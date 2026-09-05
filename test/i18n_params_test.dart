@@ -126,6 +126,35 @@ void main() {
     });
   });
 
+  group('ҳамкорӣ ва даъват', () {
+    test('номи корбар дар матн ҷойгир мешавад', () async {
+      for (final lang in ['tj', 'ru', 'en']) {
+        await AppSettingsState.instance.setLang(lang);
+        final t = tr('collab.invitedYou', {'user': 'ali'});
+        expect(t, contains('ali'), reason: lang);
+        expect(t, isNot(contains('{')), reason: lang);
+      }
+    });
+
+    test('матнҳои даъват дар ҳар се забон ҳастанд', () async {
+      const keys = [
+        'collab.title',
+        'collab.accept',
+        'collab.decline',
+        'collab.none',
+        'invite.title',
+        'invite.yourCode',
+        'invite.nobodyYet',
+      ];
+      for (final lang in ['tj', 'ru', 'en']) {
+        await AppSettingsState.instance.setLang(lang);
+        for (final k in keys) {
+          expect(tr(k), isNot(k), reason: '$lang: $k тарҷума надорад');
+        }
+      }
+    });
+  });
+
   group('ҷамъбандӣ', () {
     test('тоҷикӣ: як ва зиёд', () {
       expect(trn('count.votes', 1), '1 овоз');

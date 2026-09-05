@@ -1222,6 +1222,17 @@ const Map<String, Map<String, String>> _strings = {
     'invite.youWereInvited':     'Шумо низ бо даъват омадед.',
     'invite.shareText':          'Биё ба Raonson',
 
+    // ── Ҳамкорӣ ────────────────────────────────────────────────────
+    'collab.title':              'Даъватҳои ҳамкорӣ',
+    'collab.entrySub':           'Постҳое, ки шуморо ҳамкор гуфтаанд',
+    'collab.explain':            'Номи шумо ба пост танҳо бо розигии шумо баста мешавад. Пас аз тасдиқ пост дар профили шумо низ нишон дода мешавад.',
+    'collab.invitedYou':         '@{user} шуморо ҳамчун ҳамкор даъват кард',
+    'collab.accept':             'Тасдиқ',
+    'collab.decline':            'Рад',
+    'collab.accepted':           'Тасдиқ шуд',
+    'collab.declined':           'Рад шуд',
+    'collab.none':               'Даъвати нав нест',
+
     // ── Лентаи AI ──────────────────────────────────────────────────
     'aifeed.title':              'Лентаи AI',
     'aifeed.subtitle':           'Лентаи шумо. Қоидаҳои шумо.',
@@ -2604,6 +2615,17 @@ const Map<String, Map<String, String>> _strings = {
     'invite.nobodyYet':          'По вашей ссылке пока никто не пришёл.',
     'invite.youWereInvited':     'Вы тоже пришли по приглашению.',
     'invite.shareText':          'Заходи в Raonson',
+
+    // ── Совместные публикации ──────────────────────────────────────
+    'collab.title':              'Приглашения к соавторству',
+    'collab.entrySub':           'Публикации, где вас указали соавтором',
+    'collab.explain':            'Ваше имя добавляется к публикации только с вашего согласия. После подтверждения публикация появится и в вашем профиле.',
+    'collab.invitedYou':         '@{user} приглашает вас в соавторы',
+    'collab.accept':             'Подтвердить',
+    'collab.decline':            'Отклонить',
+    'collab.accepted':           'Подтверждено',
+    'collab.declined':           'Отклонено',
+    'collab.none':               'Новых приглашений нет',
 
     // ── AI-лента ───────────────────────────────────────────────────
     'aifeed.title':              'AI-лента',
@@ -3997,6 +4019,17 @@ const Map<String, Map<String, String>> _strings = {
     'invite.nobodyYet':          'Nobody has joined through your link yet.',
     'invite.youWereInvited':     'You joined through an invite too.',
     'invite.shareText':          'Come join me on Raonson',
+
+    // ── Collaborations ─────────────────────────────────────────────
+    'collab.title':              'Collaboration invites',
+    'collab.entrySub':           'Posts that name you as a collaborator',
+    'collab.explain':            'Your name is added to a post only with your consent. Once you accept, the post also appears on your profile.',
+    'collab.invitedYou':         '@{user} invited you as a collaborator',
+    'collab.accept':             'Accept',
+    'collab.decline':            'Decline',
+    'collab.accepted':           'Accepted',
+    'collab.declined':           'Declined',
+    'collab.none':               'No new invites',
 
     // ── AI Feed ────────────────────────────────────────────────────
     'aifeed.title':              'AI Feed',
