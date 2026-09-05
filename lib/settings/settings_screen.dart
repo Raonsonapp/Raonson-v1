@@ -671,6 +671,12 @@ class _NotifState extends State<NotificationsScreen> {
   bool _push      = true;
   bool _loading   = true;
 
+  // ── Соатҳои ором ──
+  // Хомӯш аст, то ки барнома худсарона хабарро нигоҳ надорад.
+  bool _quiet      = false;
+  int  _quietStart = 23;
+  int  _quietEnd   = 8;
+
   @override
   void initState() {
     super.initState();
@@ -689,6 +695,12 @@ class _NotifState extends State<NotificationsScreen> {
           _messages  = b['messages']  as bool? ?? true;
           _reels     = b['reels']     as bool? ?? true;
           _push      = b['push']      as bool? ?? true;
+          final q = (b['quietHours'] as Map?)?.cast<String, dynamic>();
+          if (q != null) {
+            _quiet      = q['enabled'] as bool? ?? false;
+            _quietStart = (q['startHour'] as num?)?.toInt() ?? 23;
+            _quietEnd   = (q['endHour']   as num?)?.toInt() ?? 8;
+          }
           _loading   = false;
         });
       } else {
@@ -699,11 +711,62 @@ class _NotifState extends State<NotificationsScreen> {
     }
   }
 
+  // Ҳама танзимот дар як объект нигоҳ дошта мешавад, бинобар ин
+  // соатҳои ором ҳам бояд ҳар бор фиристода шаванд — вагарна
+  // тағйири ягон тугма онҳоро нест мекард.
   void _save() => ApiClient.instance.put('/profile/notifications', body: {
         'likes': _likes, 'comments': _comments,
         'followers': _followers, 'messages': _messages,
         'reels': _reels, 'push': _push,
+        'quietHours': {
+          'enabled': _quiet,
+          'startHour': _quietStart,
+          'endHour': _quietEnd,
+          // Сервер вақти маҳаллиро намедонад; бе ин рақам соатҳои
+          // ором татбиқ намешаванд.
+          'tzOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+        },
       });
+
+  Future<void> _pickHour(bool start) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: start ? _quietStart : _quietEnd, minute: 0),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (start) {
+        _quietStart = picked.hour;
+      } else {
+        _quietEnd = picked.hour;
+      }
+    });
+    _save();
+  }
+
+  String _hh(int h) => '${h.toString().padLeft(2, '0')}:00';
+
+  Widget _hourBtn(String label, int hour, VoidCallback onTap) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.divider),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(children: [
+            Text(label,
+                style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+            const Spacer(),
+            Text(_hh(hour),
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -737,6 +800,27 @@ class _NotifState extends State<NotificationsScreen> {
                   title: tr('ui.f694047b90'), sub: 'Огоҳиҳои телефонӣ',
                   value: _push,
                   onChanged: (v) { setState(() => _push = v); _save(); }),
+              const _ThinDiv(),
+              _SwTile(icon: AppIcons.dark_mode_rounded,
+                  title: tr('notif.quietHours'),
+                  sub: tr('notif.quietHoursSub'),
+                  value: _quiet,
+                  onChanged: (v) { setState(() => _quiet = v); _save(); }),
+              if (_quiet)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(56, 0, 16, 12),
+                  child: Row(children: [
+                    Expanded(
+                      child: _hourBtn(tr('notif.quietFrom'), _quietStart,
+                          () => _pickHour(true)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _hourBtn(tr('notif.quietTo'), _quietEnd,
+                          () => _pickHour(false)),
+                    ),
+                  ]),
+                ),
             ]),
     );
   }

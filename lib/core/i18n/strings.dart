@@ -1207,6 +1207,10 @@ const Map<String, Map<String, String>> _strings = {
     'ach.code.tenThousandViews': '10 000 биниш',
     'ach.code.hundredLikes':     '100 писанд',
     'ach.code.fourActiveWeeks':  '4 ҳафтаи фаъол',
+    'notif.quietHours':          'Соатҳои ором',
+    'notif.quietHoursSub':       'Дар ин вақт телефон намеларзад; огоҳиномаҳо дар барнома мемонанд',
+    'notif.quietFrom':           'Аз',
+    'notif.quietTo':             'То',
 
     // ── Лентаи AI ──────────────────────────────────────────────────
     'aifeed.title':              'Лентаи AI',
@@ -2576,6 +2580,10 @@ const Map<String, Map<String, String>> _strings = {
     'ach.code.tenThousandViews': '10 000 просмотров',
     'ach.code.hundredLikes':     '100 лайков',
     'ach.code.fourActiveWeeks':  '4 активные недели',
+    'notif.quietHours':          'Тихие часы',
+    'notif.quietHoursSub':       'В это время телефон не вибрирует; уведомления остаются в приложении',
+    'notif.quietFrom':           'С',
+    'notif.quietTo':             'До',
 
     // ── AI-лента ───────────────────────────────────────────────────
     'aifeed.title':              'AI-лента',
@@ -3955,6 +3963,10 @@ const Map<String, Map<String, String>> _strings = {
     'ach.code.tenThousandViews': '10,000 views',
     'ach.code.hundredLikes':     '100 likes',
     'ach.code.fourActiveWeeks':  '4 active weeks',
+    'notif.quietHours':          'Quiet hours',
+    'notif.quietHoursSub':       'Your phone stays silent; notifications still wait in the app',
+    'notif.quietFrom':           'From',
+    'notif.quietTo':             'To',
 
     // ── AI Feed ────────────────────────────────────────────────────
     'aifeed.title':              'AI Feed',

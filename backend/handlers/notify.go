@@ -4,6 +4,7 @@ import (
 	"context"
 	"regexp"
 	"strings"
+	"time"
 
 	"raonson/db"
 )
@@ -86,6 +87,11 @@ func pushNotify(userID, fromID, ntype, targetID, body string) {
 		return
 	}
 	go func() {
+		// Сабти огоҳинома аллакай дар notify() шуд; ин ҷо танҳо
+		// ларзиши телефон санҷида мешавад (ниг. notify_policy.go).
+		if !allowPush(userID, ntype, time.Now()) {
+			return
+		}
 		var username string
 		db.Pool.QueryRow(context.Background(),
 			`SELECT username FROM users WHERE id=$1`, fromID).Scan(&username)
