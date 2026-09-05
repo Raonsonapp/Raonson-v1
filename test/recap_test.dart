@@ -107,6 +107,16 @@ void main() {
       expect(r.insights.single.params['count'], 4);
     });
 
+    test('навъи нодурусти рӯйхат ба крах намеорад', () {
+      // Агар сервер ба ҷои рӯйхат сатр диҳад, экран набояд афтад.
+      final r = CreatorRecap.fromJson(const {
+        'topContent': 'ду пост',
+        'insights': 42,
+      });
+      expect(r.topContent, isEmpty);
+      expect(r.insights, isEmpty);
+    });
+
     test('ҷамъбасти холӣ рӯйхатҳои холӣ медиҳад, на null', () {
       final r = CreatorRecap.fromJson(const {});
       expect(r.hasEnoughData, isFalse);
@@ -141,6 +151,11 @@ void main() {
         'level': {'level': 5, 'stats': {}},
       });
       expect(p.level.next, isNull);
+      expect(p.achievements, isEmpty);
+    });
+
+    test('навъи нодурусти рӯйхати нишонҳо ба крах намеорад', () {
+      final p = CreatorProgress.fromJson(const {'achievements': 'firstPost'});
       expect(p.achievements, isEmpty);
     });
 

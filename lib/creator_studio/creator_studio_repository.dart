@@ -52,6 +52,9 @@ double _d(Map<String, dynamic> j, String k) {
   return 0;
 }
 
+// Рӯйхат аз JSON: навъи ғайримунтазир рӯйхати холӣ мешавад, на крах.
+List<dynamic> _list(dynamic v) => v is List ? v : const [];
+
 /// Рақамҳои асосӣ.
 class CreatorOverview {
   final int followers, followersGained, posts, reels, views;
@@ -220,7 +223,7 @@ class ContentIdea {
         format: (j['format'] ?? '').toString(),
         duration: (j['duration'] ?? '').toString(),
         cta: (j['cta'] ?? '').toString(),
-        hashtags: ((j['hashtags'] as List?) ?? const [])
+        hashtags: _list(j['hashtags'])
             .map((e) => e.toString())
             .toList(),
       );
@@ -247,15 +250,15 @@ class StudioData {
             (j['overview'] as Map?)?.cast<String, dynamic>() ?? {}),
         recommendation: RecommendationStats.fromJson(
             (j['recommendation'] as Map?)?.cast<String, dynamic>() ?? {}),
-        topContent: ((j['topContent'] as List?) ?? const [])
+        topContent: _list(j['topContent'])
             .whereType<Map>()
             .map((e) => TopContent.fromJson(e.cast<String, dynamic>()))
             .toList(),
-        topics: ((j['topics'] as List?) ?? const [])
+        topics: _list(j['topics'])
             .whereType<Map>()
             .map((e) => TopicPerformance.fromJson(e.cast<String, dynamic>()))
             .toList(),
-        insights: ((j['insights'] as List?) ?? const [])
+        insights: _list(j['insights'])
             .whereType<Map>()
             .map((e) => CreatorInsight.fromJson(e.cast<String, dynamic>()))
             .toList(),
@@ -363,7 +366,7 @@ class CreatorProgress {
   const CreatorProgress({required this.achievements, required this.level});
 
   factory CreatorProgress.fromJson(Map<String, dynamic> j) => CreatorProgress(
-        achievements: ((j['achievements'] as List?) ?? const [])
+        achievements: _list(j['achievements'])
             .whereType<Map>()
             .map((e) => CreatorAchievement.fromJson(e.cast<String, dynamic>()))
             .toList(),
@@ -411,7 +414,7 @@ class CreatorStudioRepository {
       if (topic != null && topic.isNotEmpty) 'topic': topic,
       if (format != null && format.isNotEmpty) 'format': format,
     }));
-    return ((b['ideas'] as List?) ?? const [])
+    return _list(b['ideas'])
         .whereType<Map>()
         .map((e) => ContentIdea.fromJson(e.cast<String, dynamic>()))
         .toList();

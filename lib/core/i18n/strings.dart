@@ -1212,6 +1212,16 @@ const Map<String, Map<String, String>> _strings = {
     'notif.quietFrom':           'Аз',
     'notif.quietTo':             'То',
 
+    // ── Даъвати дӯстон ─────────────────────────────────────────────
+    'invite.title':              'Даъвати дӯстон',
+    'invite.entrySub':           'Линки худро паҳн кунед',
+    'invite.explain':            'Ҳар кас, ки бо линки шумо ба Raonson ҳамроҳ шавад, дар ин ҷо ҳисоб мешавад. Мукофоти пулӣ нест — ин танҳо ҳисоби воқеӣ аст.',
+    'invite.yourCode':           'Коди шумо',
+    'invite.joined':             'Ҳамроҳ шуданд',
+    'invite.nobodyYet':          'Ҳанӯз касе бо линки шумо наомадааст.',
+    'invite.youWereInvited':     'Шумо низ бо даъват омадед.',
+    'invite.shareText':          'Биё ба Raonson',
+
     // ── Лентаи AI ──────────────────────────────────────────────────
     'aifeed.title':              'Лентаи AI',
     'aifeed.subtitle':           'Лентаи шумо. Қоидаҳои шумо.',
@@ -2584,6 +2594,16 @@ const Map<String, Map<String, String>> _strings = {
     'notif.quietHoursSub':       'В это время телефон не вибрирует; уведомления остаются в приложении',
     'notif.quietFrom':           'С',
     'notif.quietTo':             'До',
+
+    // ── Приглашение друзей ─────────────────────────────────────────
+    'invite.title':              'Пригласить друзей',
+    'invite.entrySub':           'Поделитесь своей ссылкой',
+    'invite.explain':            'Каждый, кто присоединится к Raonson по вашей ссылке, будет учтён здесь. Денежного вознаграждения нет — это просто честный счёт.',
+    'invite.yourCode':           'Ваш код',
+    'invite.joined':             'Присоединились',
+    'invite.nobodyYet':          'По вашей ссылке пока никто не пришёл.',
+    'invite.youWereInvited':     'Вы тоже пришли по приглашению.',
+    'invite.shareText':          'Заходи в Raonson',
 
     // ── AI-лента ───────────────────────────────────────────────────
     'aifeed.title':              'AI-лента',
@@ -3967,6 +3987,16 @@ const Map<String, Map<String, String>> _strings = {
     'notif.quietHoursSub':       'Your phone stays silent; notifications still wait in the app',
     'notif.quietFrom':           'From',
     'notif.quietTo':             'To',
+
+    // ── Invite friends ─────────────────────────────────────────────
+    'invite.title':              'Invite friends',
+    'invite.entrySub':           'Share your link',
+    'invite.explain':            'Anyone who joins Raonson through your link is counted here. There is no cash reward — this is just an honest count.',
+    'invite.yourCode':           'Your code',
+    'invite.joined':             'Joined',
+    'invite.nobodyYet':          'Nobody has joined through your link yet.',
+    'invite.youWereInvited':     'You joined through an invite too.',
+    'invite.shareText':          'Come join me on Raonson',
 
     // ── AI Feed ────────────────────────────────────────────────────
     'aifeed.title':              'AI Feed',

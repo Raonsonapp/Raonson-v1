@@ -19,6 +19,7 @@ import '../auth/password/reset_password_screen.dart';
 import '../feed/hashtag/hashtag_screen.dart';
 import '../friends/friends_screen.dart'; // ✅ НАВ
 import '../core/links/deep_links.dart';
+import '../core/links/pending_invite.dart';
 import '../core/links/deep_link_resolver_screen.dart';
 
 class AppController {
@@ -118,8 +119,12 @@ class AppController {
             case DeepLinkKind.post:
             case DeepLinkKind.reel:
               return _page(DeepLinkResolverScreen(link: link));
-            case DeepLinkKind.topic:
             case DeepLinkKind.referral:
+              // Код то бақайдгирӣ интизор мешавад; мансубият дар
+              // сервер ҳал мешавад, на ин ҷо.
+              PendingInvite.save(link.id);
+              break;
+            case DeepLinkKind.topic:
             case DeepLinkKind.unknown:
               break;
           }

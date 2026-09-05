@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/links/pending_invite.dart';
 import '../../core/api/api_endpoints.dart';
 import '../../core/storage/token_storage.dart';
 import '../../core/services/user_session.dart';
@@ -62,12 +63,16 @@ class RegisterController extends ChangeNotifier {
 
     try {
       // 1. Register
+      // Коди даъват ихтиёрист: агар набошад ё нодуруст бошад,
+      // сервер бақайдгириро бас намекунад.
+      final invite = await PendingInvite.read();
       final res = await ApiClient.instance.post(
         ApiEndpoints.register,
         body: {
           'username': _state.username.trim(),
           'email':    _state.email.trim(),
           'password': _state.password,
+          if (invite.isNotEmpty) 'referralCode': invite,
         },
       );
 
@@ -112,6 +117,10 @@ class RegisterController extends ChangeNotifier {
           }
         }
       }
+
+      // Аккаунт сохта шуд — код дигар лозим нест. Бе ин, ҳамон код
+      // ба аккаунти дуюми ҳамин телефон мечаспид.
+      await PendingInvite.clear();
 
       AnalyticsService.instance.logEvent(AnalyticsEvents.register);
       _state = _state.copyWith(isLoading: false);

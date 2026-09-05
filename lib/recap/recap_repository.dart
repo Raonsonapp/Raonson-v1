@@ -26,6 +26,9 @@ int _i(Map<String, dynamic> j, String k) {
   return 0;
 }
 
+// Рӯйхат аз JSON: навъи ғайримунтазир рӯйхати холӣ мешавад, на крах.
+List<dynamic> _list(dynamic v) => v is List ? v : const [];
+
 /// Номи мавзӯъ бо се забон.
 class TopicName {
   final String tj, ru, en;
@@ -126,7 +129,7 @@ class CreatorRecap {
             (j['overview'] as Map?)?.cast<String, dynamic>() ?? {}),
         recommendation: RecommendationStats.fromJson(
             (j['recommendation'] as Map?)?.cast<String, dynamic>() ?? {}),
-        topContent: ((j['topContent'] as List?) ?? const [])
+        topContent: _list(j['topContent'])
             .whereType<Map>()
             .map((e) => TopContent.fromJson(e.cast<String, dynamic>()))
             .toList(),
@@ -135,7 +138,7 @@ class CreatorRecap {
             ? TopicName.fromJson(
                 (j['topTopicName'] as Map).cast<String, dynamic>())
             : null,
-        insights: ((j['insights'] as List?) ?? const [])
+        insights: _list(j['insights'])
             .whereType<Map>()
             .map((e) => CreatorInsight.fromJson(e.cast<String, dynamic>()))
             .toList(),
