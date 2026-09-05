@@ -1,8 +1,7 @@
 package middleware
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"hash/fnv"
 	"net/http"
 	"os"
 	"strconv"
@@ -108,8 +107,15 @@ func spamLimit() int {
 
 func spamKey(c *gin.Context) string {
 	if h := c.GetHeader("Authorization"); len(h) > 24 {
-		sum := sha256.Sum256([]byte(h))
-		return "t:" + hex.EncodeToString(sum[:8])
+		// FNV, на SHA-256: ин калиди СATЛИ спам аст, на сарҳади
+		// амниятӣ. Хеши криптографӣ дар ҳар дархост тақрибан 10%
+		// гузаронишро мехӯрд ва ҳеҷ чизи иловагӣ намедод.
+		//
+		// Худи токен ҳамчун калид гирифта намешавад: он вақт маводи
+		// токен дар хотираи харита мемонд.
+		hsh := fnv.New64a()
+		hsh.Write([]byte(h))
+		return "t:" + strconv.FormatUint(hsh.Sum64(), 36)
 	}
 	return "ip:" + clientIP(c)
 }

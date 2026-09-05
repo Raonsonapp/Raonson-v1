@@ -82,7 +82,8 @@ func openAIRequest(ctx context.Context, path string, body any, out any) error {
 		return err
 	}
 	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
+	// Маҳдуд: ҷавоби бепоён набояд хотираро тамом кунад.
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("openai %s: %d %s", path, resp.StatusCode, string(data))
 	}

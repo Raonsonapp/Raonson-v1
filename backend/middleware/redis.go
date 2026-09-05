@@ -26,9 +26,9 @@ var (
 )
 
 func InitRedis() {
-	redisURL   = os.Getenv("UPSTASH_REDIS_REST_URL")
+	redisURL = os.Getenv("UPSTASH_REDIS_REST_URL")
 	redisToken = os.Getenv("UPSTASH_REDIS_REST_TOKEN")
-	redisOK    = redisURL != "" && redisToken != ""
+	redisOK = redisURL != "" && redisToken != ""
 
 	httpClient = &http.Client{
 		Timeout: 1500 * time.Millisecond,
@@ -137,7 +137,9 @@ func redisGet(key string) ([]byte, bool) {
 		return nil, false
 	}
 	defer resp.Body.Close()
-	var result struct{ Result *string `json:"result"` }
+	var result struct {
+		Result *string `json:"result"`
+	}
 	body, _ := io.ReadAll(resp.Body)
 	if json.Unmarshal(body, &result) != nil || result.Result == nil {
 		return nil, false

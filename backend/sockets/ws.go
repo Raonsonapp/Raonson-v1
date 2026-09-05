@@ -143,8 +143,14 @@ func Handler(c *gin.Context) {
 
 	cl := &client{userID: userID, conn: conn, send: make(chan []byte, 256)}
 	mu.Lock()
+	old := clients[userID]
 	clients[userID] = cl
 	mu.Unlock()
+	// Пайвасти кӯҳнаро фавран мебандем: вагарна он то timeout зинда
+	// мемонад ва ҳодисаҳоро ба сокети мурда мефиристад.
+	if old != nil && old != cl {
+		old.conn.Close()
+	}
 
 	// Online — танҳо ба пайравони ONLINE мефиристем (на ба ҳама).
 	// Дар миқёси 20k+ корбар, broadcast ба ҳама O(N²) мешуд ва серверро
@@ -158,9 +164,24 @@ func Handler(c *gin.Context) {
 	go cl.writePump()
 
 	defer func() {
+		// Танҳо пайвасти ХУДРО мебарорем.
+		//
+		// Ҳангоми аз нав пайвастшавӣ (шабакаи мобилӣ, бедор шудани
+		// барнома) пайвасти нав аллакай дар харита сабт шудааст. Агар
+		// поксозии пайвасти кӯҳна кӯр-кӯрона delete кунад, он сабти
+		// НАВРО мебарорад: корбар пайваст аст, вале ҳеҷ ҳодиса
+		// намегирад ва инро намефаҳмад.
 		mu.Lock()
-		delete(clients, userID)
+		removed := clients[userID] == cl
+		if removed {
+			delete(clients, userID)
+		}
 		mu.Unlock()
+		if !removed {
+			// Корбар аллакай бо пайвасти нав онлайн аст.
+			log.Printf("[WS] %s пайвасти кӯҳна пӯшида шуд", userID)
+			return
+		}
 		now := time.Now()
 		db.Pool.Exec(context.Background(),
 			`UPDATE users SET last_seen=$1 WHERE id=$2`, now, userID)

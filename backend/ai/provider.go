@@ -24,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -56,7 +57,30 @@ type Config struct {
 	Model  string
 }
 
-var httpClient = &http.Client{Timeout: 60 * time.Second}
+// maxResponseBytes — ҳадди ҷавоби провайдер.
+//
+// Ҷавоби воқеӣ даҳҳо килобайт аст; ин ҳад танҳо аз ҷавоби вайрон ё
+// бадният муҳофизат мекунад.
+const maxResponseBytes = 4 << 20 // 4 МБ
+
+// httpClient — вақти интизорӣ.
+//
+// 60 сония барои дархосте, ки одам мунтазир аст, хеле дароз буд:
+// экран як дақиқа мехобид ва баъд ҳам метавонист хато диҳад.
+// Ҳадди воқеии моделҳо чанд сония аст.
+var httpClient = &http.Client{
+	Timeout: time.Duration(envInt("AI_TIMEOUT_SECONDS", 20)) * time.Second,
+}
+
+// envInt — танзими адад аз env.
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return def
+}
 
 // defaultURL — endpoint-и OpenAI-compatible.
 //
@@ -181,7 +205,9 @@ func Complete(ctx context.Context, t Task, msgs []Message, opt Options) (string,
 		return "", err
 	}
 	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
+	// Ҷавоб маҳдуд хонда мешавад: провайдери вайрон ё бадният
+	// метавонад ҷавоби бепоён диҳад ва хотираро тамом кунад.
+	data, _ := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 	if resp.StatusCode >= 400 {
 		// Матни хатои provider ба корбар НАМЕРАВАД — он метавонад
 		// маълумоти дохилӣ дошта бошад. Танҳо код сабт мешавад.

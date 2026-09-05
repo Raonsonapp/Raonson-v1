@@ -5,6 +5,8 @@ package middleware
 // RTT Redis: ~20-50ms | RTT in-process: ~0ms
 
 import (
+	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -31,6 +33,22 @@ func init() {
 	})
 }
 
+// maxCacheEntries — ҳадди шумораи вурудиҳо.
+//
+// TTL хотираро маҳдуд мекунад, вале НА якбора: дар 50 000 корбар
+// байни ду поксозӣ метавонад даҳҳо ҳазор ҷавоб ҷамъ шавад. Ин ҳад
+// таваррумро дар лаҳзаи авҷи бор нигоҳ медорад.
+var maxCacheEntries = envIntDefault("CACHE_MAX_ENTRIES", 50000)
+
+func envIntDefault(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return def
+}
+
 func cleanExpired() {
 	cacheMu.Lock()
 	defer cacheMu.Unlock()
@@ -39,6 +57,39 @@ func cleanExpired() {
 		if now.After(v.expiresAt) {
 			delete(localCache, k)
 		}
+	}
+	enforceLimitLocked(now)
+}
+
+// enforceLimitLocked вурудиҳои изофиро мебарорад.
+//
+// Аввал онҳое, ки ба зудӣ кӯҳна мешаванд. Ин LRU-и дақиқ нест —
+// барои он вақти охирин истифода лозим буд, ки дар роҳи гарм арзиш
+// дорад. Ҳадаф танҳо нигоҳ доштани ҳад аст.
+//
+// Даъваткунанда бояд cacheMu-ро гирифта бошад.
+func enforceLimitLocked(now time.Time) {
+	over := len(localCache) - maxCacheEntries
+	if over <= 0 {
+		return
+	}
+	for k, v := range localCache {
+		if over <= 0 {
+			break
+		}
+		// Аввал онҳое, ки камтар аз як дақиқа мондаанд.
+		if v.expiresAt.Sub(now) < time.Minute {
+			delete(localCache, k)
+			over--
+		}
+	}
+	// Ҳанӯз зиёд — ҳар кадомро мебарорем.
+	for k := range localCache {
+		if over <= 0 {
+			break
+		}
+		delete(localCache, k)
+		over--
 	}
 }
 
@@ -55,10 +106,17 @@ func LocalGet(key string) ([]byte, bool) {
 
 // LocalSet — in-process cache set
 func LocalSet(key string, value []byte, ttl time.Duration) {
+	now := time.Now()
 	cacheMu.Lock()
 	localCache[key] = cacheEntry{
 		value:     value,
-		expiresAt: time.Now().Add(ttl),
+		expiresAt: now.Add(ttl),
+	}
+	// Ҳад дар лаҳзаи навиштан низ санҷида мешавад: интизори
+	// поксозии панҷдақиқагӣ маънои онро дошт, ки дар авҷи бор
+	// хотира метавонад хеле баланд равад.
+	if len(localCache) > maxCacheEntries {
+		enforceLimitLocked(now)
 	}
 	cacheMu.Unlock()
 }
