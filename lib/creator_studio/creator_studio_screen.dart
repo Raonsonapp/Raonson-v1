@@ -26,6 +26,8 @@ class _CreatorStudioScreenState extends State<CreatorStudioScreen> {
 
   StudioWindow _window = StudioWindow.month;
   StudioData? _data;
+  // Пешрафт аз давра вобаста нест — рақамҳои умрӣ.
+  CreatorProgress? _progress;
   String? _error;
 
   @override
@@ -40,6 +42,12 @@ class _CreatorStudioScreenState extends State<CreatorStudioScreen> {
       final d = await _repo.studio(_window);
       if (!mounted) return;
       setState(() => _data = d);
+      // Пешрафт бахши дуюмдараҷа аст: хатои он набояд тамоми
+      // экранро хароб кунад.
+      final p = await _repo.progress().then<CreatorProgress?>((v) => v,
+          onError: (_) => null);
+      if (!mounted || p == null) return;
+      setState(() => _progress = p);
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
@@ -118,6 +126,15 @@ class _CreatorStudioScreenState extends State<CreatorStudioScreen> {
               const SizedBox(height: 20),
               _section(tr('cs.topTopics')),
               for (final t in _data!.topics) _topicTile(t),
+            ],
+            if (_progress != null) ...[
+              const SizedBox(height: 20),
+              _levelBlock(_progress!.level),
+              if (_progress!.achievements.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _section(tr('ach.title')),
+                _achievementWrap(_progress!.achievements),
+              ],
             ],
             const SizedBox(height: 20),
             _ideasTile(),
@@ -283,6 +300,102 @@ class _CreatorStudioScreenState extends State<CreatorStudioScreen> {
                 color: AppColors.textPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700)),
+      );
+
+
+  /// Зина ва роҳи то зинаи оянда.
+  ///
+  /// Ҳар се шарт возеҳ нишон дода мешавад: эҷодкор бояд бидонад, ки
+  /// чаро ҳанӯз ба зинаи оянда нарасид.
+  Widget _levelBlock(CreatorLevel l) {
+    final next = l.next;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _section(tr('ach.level')),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(tr('ach.levelN', {'n': l.level}),
+              style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 10),
+          if (next == null)
+            Text(tr('ach.topLevel'),
+                style:
+                    TextStyle(color: AppColors.textTertiary, fontSize: 13))
+          else ...[
+            Text(tr('ach.toNext', {'n': next.level}),
+                style:
+                    TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+            const SizedBox(height: 8),
+            _need(tr('cs.followers'), l.stats.followers, next.followers),
+            _need(tr('recap.views'), l.stats.views, next.views),
+            _need(tr('recap.published'), l.stats.content, next.content),
+          ],
+        ]),
+      ),
+    ]);
+  }
+
+  /// Як шарт: чӣ қадар ҳаст аз чӣ қадар лозим.
+  Widget _need(String label, int have, int need) {
+    final done = have >= need;
+    final ratio = need <= 0 ? 1.0 : (have / need).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Text(label,
+                style:
+                    TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          ),
+          Text('$have / $need',
+              style: TextStyle(
+                  color: done ? AppColors.verified : AppColors.textTertiary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ]),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: ratio,
+            minHeight: 4,
+            backgroundColor: AppColors.divider,
+            valueColor: AlwaysStoppedAnimation(
+                done ? AppColors.verified : AppColors.neonBlue),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _achievementWrap(List<CreatorAchievement> list) => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final a in list)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: Text(tr('ach.code.${a.code}'),
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600)),
+            ),
+        ],
       );
 
   Widget _topContentTile(TopContent t) => Container(

@@ -262,6 +262,116 @@ class StudioData {
       );
 }
 
+
+/// Рақамҳои умрии эҷодкор — асоси нишонҳо ва зина.
+class CreatorLifetimeStats {
+  final int followers, posts, reels, views, likes, activeWeeks;
+
+  const CreatorLifetimeStats({
+    required this.followers,
+    required this.posts,
+    required this.reels,
+    required this.views,
+    required this.likes,
+    required this.activeWeeks,
+  });
+
+  factory CreatorLifetimeStats.fromJson(Map<String, dynamic> j) =>
+      CreatorLifetimeStats(
+        followers: _i(j, 'followers'),
+        posts: _i(j, 'posts'),
+        reels: _i(j, 'reels'),
+        views: _i(j, 'views'),
+        likes: _i(j, 'likes'),
+        activeWeeks: _i(j, 'activeWeeks'),
+      );
+
+  int get content => posts + reels;
+
+  static const empty = CreatorLifetimeStats(
+    followers: 0, posts: 0, reels: 0, views: 0, likes: 0, activeWeeks: 0,
+  );
+}
+
+/// Шартҳои зинаи оянда.
+class LevelTarget {
+  final int level, followers, views, content;
+  const LevelTarget({
+    required this.level,
+    required this.followers,
+    required this.views,
+    required this.content,
+  });
+
+  factory LevelTarget.fromJson(Map<String, dynamic> j) => LevelTarget(
+        level: _i(j, 'level'),
+        followers: _i(j, 'followers'),
+        views: _i(j, 'views'),
+        content: _i(j, 'content'),
+      );
+}
+
+/// Зинаи эҷодкор — ҳамеша аз сервер, ҳеҷ гоҳ дар client ҳисоб намешавад.
+class CreatorLevel {
+  final int level;
+  final CreatorLifetimeStats stats;
+  /// null дар зинаи охирин.
+  final LevelTarget? next;
+
+  const CreatorLevel({
+    required this.level,
+    required this.stats,
+    this.next,
+  });
+
+  factory CreatorLevel.fromJson(Map<String, dynamic> j) => CreatorLevel(
+        level: _i(j, 'level'),
+        stats: CreatorLifetimeStats.fromJson(
+            (j['stats'] as Map?)?.cast<String, dynamic>() ?? {}),
+        next: (j['next'] is Map)
+            ? LevelTarget.fromJson((j['next'] as Map).cast<String, dynamic>())
+            : null,
+      );
+
+  static const empty =
+      CreatorLevel(level: 1, stats: CreatorLifetimeStats.empty);
+}
+
+/// Нишони гирифташуда.
+class CreatorAchievement {
+  final String code, earnedAt;
+  final int value;
+
+  const CreatorAchievement({
+    required this.code,
+    required this.value,
+    required this.earnedAt,
+  });
+
+  factory CreatorAchievement.fromJson(Map<String, dynamic> j) =>
+      CreatorAchievement(
+        code: (j['code'] ?? '').toString(),
+        value: _i(j, 'value'),
+        earnedAt: (j['earnedAt'] ?? '').toString(),
+      );
+}
+
+/// Нишонҳо + зина дар як ҷавоб.
+class CreatorProgress {
+  final List<CreatorAchievement> achievements;
+  final CreatorLevel level;
+  const CreatorProgress({required this.achievements, required this.level});
+
+  factory CreatorProgress.fromJson(Map<String, dynamic> j) => CreatorProgress(
+        achievements: ((j['achievements'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => CreatorAchievement.fromJson(e.cast<String, dynamic>()))
+            .toList(),
+        level: CreatorLevel.fromJson(
+            (j['level'] as Map?)?.cast<String, dynamic>() ?? {}),
+      );
+}
+
 class StudioException implements Exception {
   final String message;
   final int statusCode;
@@ -290,6 +400,10 @@ class CreatorStudioRepository {
 
   Future<StudioData> studio(StudioWindow w) async => StudioData.fromJson(
       _decode(await _api.get('/creator/studio', query: {'window': w.value})));
+
+  /// Нишонҳо ва зина. Сервер ҳангоми дархост нишонҳои навро сабт мекунад.
+  Future<CreatorProgress> progress() async => CreatorProgress.fromJson(
+      _decode(await _api.get('/creator/achievements')));
 
   /// Ғояҳо. Рӯйхати холӣ хато НЕСТ — AI метавонад ҷавоб надиҳад.
   Future<List<ContentIdea>> ideas({String? topic, String? format}) async {

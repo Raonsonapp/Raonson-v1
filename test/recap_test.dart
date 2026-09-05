@@ -2,6 +2,7 @@
 // Ҷамъбасти ҳафтагӣ. Хатари асосӣ — рақами ихтироъшуда: агар сервер
 // чизе нафиристад, client НАБОЯД онро худаш пур кунад.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:raonson/creator_studio/creator_studio_repository.dart';
 import 'package:raonson/recap/recap_repository.dart';
 
 void main() {
@@ -113,6 +114,41 @@ void main() {
       expect(r.insights, isEmpty);
       expect(r.recommendation.hasData, isFalse);
       expect(r.overview.views, 0);
+    });
+  });
+
+  group('пешрафти эҷодкор', () {
+    test('зина ва ҳадафи оянда хонда мешаванд', () {
+      final p = CreatorProgress.fromJson(const {
+        'achievements': [
+          {'code': 'firstPost', 'value': 3, 'earnedAt': '2026-09-01T00:00:00Z'},
+        ],
+        'level': {
+          'level': 2,
+          'stats': {'followers': 12, 'posts': 3, 'reels': 1, 'views': 400},
+          'next': {'level': 3, 'followers': 100, 'views': 1000, 'content': 10},
+        },
+      });
+      expect(p.achievements.single.code, 'firstPost');
+      expect(p.achievements.single.value, 3);
+      expect(p.level.level, 2);
+      expect(p.level.stats.content, 4, reason: 'пост + рилс');
+      expect(p.level.next!.followers, 100);
+    });
+
+    test('зинаи охирин ҳадафи оянда надорад', () {
+      final p = CreatorProgress.fromJson(const {
+        'level': {'level': 5, 'stats': {}},
+      });
+      expect(p.level.next, isNull);
+      expect(p.achievements, isEmpty);
+    });
+
+    test('ҷавоби холӣ ба крах намеорад', () {
+      final p = CreatorProgress.fromJson(const {});
+      expect(p.level.level, 0);
+      expect(p.level.stats.followers, 0);
+      expect(p.achievements, isEmpty);
     });
   });
 }

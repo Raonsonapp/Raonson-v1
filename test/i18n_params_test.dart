@@ -90,6 +90,42 @@ void main() {
     });
   });
 
+  group('нишонҳо', () {
+    // Рамзҳо дар сервер муайян мешаванд (creator/achievements.go).
+    // Агар тарҷума набошад, корбар рамзи техникиро мебинад.
+    const codes = [
+      'firstPost',
+      'tenPosts',
+      'fiftyPosts',
+      'tenFollowers',
+      'hundredFollowers',
+      'thousandFollowers',
+      'thousandViews',
+      'tenThousandViews',
+      'hundredLikes',
+      'fourActiveWeeks',
+    ];
+
+    test('ҳар рамз дар ҳар се забон ном дорад', () async {
+      for (final lang in ['tj', 'ru', 'en']) {
+        await AppSettingsState.instance.setLang(lang);
+        for (final c in codes) {
+          final key = 'ach.code.$c';
+          expect(tr(key), isNot(key), reason: '$lang: $key тарҷума надорад');
+        }
+      }
+    });
+
+    test('зина рақами худро нишон медиҳад', () async {
+      for (final lang in ['tj', 'ru', 'en']) {
+        await AppSettingsState.instance.setLang(lang);
+        expect(tr('ach.levelN', {'n': 3}), contains('3'), reason: lang);
+        expect(tr('ach.toNext', {'n': 4}), contains('4'), reason: lang);
+        expect(tr('ach.toNext', {'n': 4}), isNot(contains('{')), reason: lang);
+      }
+    });
+  });
+
   group('ҷамъбандӣ', () {
     test('тоҷикӣ: як ва зиёд', () {
       expect(trn('count.votes', 1), '1 овоз');

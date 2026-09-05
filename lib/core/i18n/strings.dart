@@ -1191,6 +1191,23 @@ const Map<String, Map<String, String>> _strings = {
     'recap.discover':            'Ба кашфиёт',
     'recap.shareText':           'Ҳафтаи ман дар Raonson',
 
+    // ── Нишонҳо ва зина ────────────────────────────────────────────
+    'ach.title':                 'Нишонҳо',
+    'ach.level':                 'Зина',
+    'ach.levelN':                'Зинаи {n}',
+    'ach.toNext':                'Барои зинаи {n} лозим аст:',
+    'ach.topLevel':              'Зинаи болоӣ. Ҳамаи шартҳо иҷро шуданд.',
+    'ach.code.firstPost':        'Аввалин нашр',
+    'ach.code.tenPosts':         '10 нашр',
+    'ach.code.fiftyPosts':       '50 нашр',
+    'ach.code.tenFollowers':     '10 обуначӣ',
+    'ach.code.hundredFollowers': '100 обуначӣ',
+    'ach.code.thousandFollowers': '1000 обуначӣ',
+    'ach.code.thousandViews':    '1000 биниш',
+    'ach.code.tenThousandViews': '10 000 биниш',
+    'ach.code.hundredLikes':     '100 писанд',
+    'ach.code.fourActiveWeeks':  '4 ҳафтаи фаъол',
+
     // ── Лентаи AI ──────────────────────────────────────────────────
     'aifeed.title':              'Лентаи AI',
     'aifeed.subtitle':           'Лентаи шумо. Қоидаҳои шумо.',
@@ -2542,6 +2559,23 @@ const Map<String, Map<String, String>> _strings = {
     'recap.quietWeek':           'Неделя выдалась тихой. Это тоже нормально — итоги дождутся вашего возвращения.',
     'recap.discover':            'К рекомендациям',
     'recap.shareText':           'Моя неделя в Raonson',
+
+    // ── Значки и уровень ───────────────────────────────────────────
+    'ach.title':                 'Значки',
+    'ach.level':                 'Уровень',
+    'ach.levelN':                'Уровень {n}',
+    'ach.toNext':                'Для уровня {n} нужно:',
+    'ach.topLevel':              'Высший уровень. Все условия выполнены.',
+    'ach.code.firstPost':        'Первая публикация',
+    'ach.code.tenPosts':         '10 публикаций',
+    'ach.code.fiftyPosts':       '50 публикаций',
+    'ach.code.tenFollowers':     '10 подписчиков',
+    'ach.code.hundredFollowers': '100 подписчиков',
+    'ach.code.thousandFollowers': '1000 подписчиков',
+    'ach.code.thousandViews':    '1000 просмотров',
+    'ach.code.tenThousandViews': '10 000 просмотров',
+    'ach.code.hundredLikes':     '100 лайков',
+    'ach.code.fourActiveWeeks':  '4 активные недели',
 
     // ── AI-лента ───────────────────────────────────────────────────
     'aifeed.title':              'AI-лента',
@@ -3904,6 +3938,23 @@ const Map<String, Map<String, String>> _strings = {
     'recap.quietWeek':           'A quiet week. That is fine too — the recap will be here when you come back.',
     'recap.discover':            'Go to Discover',
     'recap.shareText':           'My week on Raonson',
+
+    // ── Badges and level ───────────────────────────────────────────
+    'ach.title':                 'Badges',
+    'ach.level':                 'Level',
+    'ach.levelN':                'Level {n}',
+    'ach.toNext':                'For level {n} you need:',
+    'ach.topLevel':              'Top level. Every condition is met.',
+    'ach.code.firstPost':        'First post',
+    'ach.code.tenPosts':         '10 posts',
+    'ach.code.fiftyPosts':       '50 posts',
+    'ach.code.tenFollowers':     '10 followers',
+    'ach.code.hundredFollowers': '100 followers',
+    'ach.code.thousandFollowers': '1000 followers',
+    'ach.code.thousandViews':    '1000 views',
+    'ach.code.tenThousandViews': '10,000 views',
+    'ach.code.hundredLikes':     '100 likes',
+    'ach.code.fourActiveWeeks':  '4 active weeks',
 
     // ── AI Feed ────────────────────────────────────────────────────
     'aifeed.title':              'AI Feed',
