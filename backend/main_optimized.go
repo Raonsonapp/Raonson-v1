@@ -519,6 +519,7 @@ func main() {
 		// Тафтиши танзимоти AI — танҳо админ.
 		ad.GET("/ai/health",   handlers.GetAIHealth)
 		ad.GET("/notifications/health", handlers.NotificationHealth)
+		ad.GET("/system/health", handlers.SystemHealth)
 		ad.GET("/ai/selftest", handlers.GetAISelfTest)
 
 		ad.GET("/marketplace/stats",             handlers.AdminMarketplaceStats)

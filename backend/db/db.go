@@ -36,10 +36,10 @@ func Init() {
 	// ── Оптимизатсияи пул барои HuggingFace (2 CPU, 16GB RAM) ──
 	// Барои horizontal scaling: DB_MAX_CONNS/DB_MIN_CONNS-ро дар ҳар нусха
 	// танзим кунед (default 25/5). Маҷмӯъ аз ҳади DB-и шумо камтар бошад.
-	cfg.MaxConns          = int32(envInt("DB_MAX_CONNS", 25))
-	cfg.MinConns          = int32(envInt("DB_MIN_CONNS", 5))
-	cfg.MaxConnLifetime   = 30 * time.Minute
-	cfg.MaxConnIdleTime   = 5 * time.Minute
+	cfg.MaxConns = int32(envInt("DB_MAX_CONNS", 25))
+	cfg.MinConns = int32(envInt("DB_MIN_CONNS", 5))
+	cfg.MaxConnLifetime = 30 * time.Minute
+	cfg.MaxConnIdleTime = 5 * time.Minute
 	cfg.HealthCheckPeriod = 30 * time.Second
 
 	// Supabase pgBouncer: SimpleProtocol барои prepared statement bug
@@ -47,6 +47,25 @@ func Init() {
 
 	// Timeout барои пешгирии freeze
 	cfg.ConnConfig.ConnectTimeout = 10 * time.Second
+
+	// ── Маҳдудияти вақти дархост ────────────────────────────────
+	//
+	// Бе ин як дархости суст пайвастро АБАДӢ нигоҳ медошт. Бисёр
+	// ҷойҳои код context.Background()-ро истифода мебаранд, ки ҳеҷ
+	// гоҳ бекор намешавад — яъне 25 дархости чунин пул пурра банд
+	// мекард ва тамоми API меистод.
+	//
+	// Ин ҷо худи Postgres дархости дарозро мекушад ва пайваст озод
+	// мешавад. Ин дар сатҳи ПАЙВАСТ гузошта мешавад, бинобар ин
+	// ҳама дархост — новобаста аз context — ҳифз мешавад.
+	if cfg.ConnConfig.RuntimeParams == nil {
+		cfg.ConnConfig.RuntimeParams = map[string]string{}
+	}
+	cfg.ConnConfig.RuntimeParams["statement_timeout"] =
+		strconv.Itoa(envInt("DB_STATEMENT_TIMEOUT_MS", 15000))
+	// Транзаксияи фаромӯшшуда низ пайвастро банд мекунад.
+	cfg.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] =
+		strconv.Itoa(envInt("DB_IDLE_TX_TIMEOUT_MS", 30000))
 
 	Pool, err = pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
@@ -954,6 +973,12 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, referralSchema); err != nil {
 		log.Fatalf("❌ Referral migration failed: %v", err)
 	}
+	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
+	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
+		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —
+		// барнома бе он кор мекунад, танҳо ҷустуҷӯ сусттар аст.
+		log.Printf("⚠️ Index migration: %v", err)
+	}
 	backfillCounters(ctx)
 	log.Println("✅ DB schema ready")
 }
@@ -966,8 +991,7 @@ func backfillCounters(ctx context.Context) {
 	const name = "recount_follow_and_comment_counters_v1"
 	var exists bool
 	if err := Pool.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM schema_backfills WHERE name=$1)`, name).Scan(&exists);
-		err != nil || exists {
+		`SELECT EXISTS(SELECT 1 FROM schema_backfills WHERE name=$1)`, name).Scan(&exists); err != nil || exists {
 		return
 	}
 	stmts := []string{

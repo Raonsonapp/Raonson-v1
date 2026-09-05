@@ -1,7 +1,11 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -44,9 +48,18 @@ type spamEntry struct {
 	last  time.Time
 }
 
+// AntiSpam аз селоби дархост муҳофизат мекунад.
+//
+// Калид: корбар, агар ӯ ворид шуда бошад; вагарна IP.
+//
+// Чаро на ҳамеша IP: дар шабакаҳои мобилӣ ҳазорон корбар паси ЯК
+// суроғаи IP мешинанд (CGNAT). Бо калиди IP онҳо якдигарро маҳдуд
+// мекарданд ва барнома «худсарона суст» менамуд. Корбари воридшуда
+// аллакай маҳдудияти шахсии худро дорад (RateLimit).
 func AntiSpam() gin.HandlerFunc {
+	spamSweepOnce.Do(startSpamSweeper)
 	return func(c *gin.Context) {
-		key := clientIP(c) + ":" + c.FullPath()
+		key := spamKey(c) + ":" + c.FullPath()
 		now := time.Now()
 		spamMu.Lock()
 		e, ok := spamMap[key]
@@ -62,13 +75,66 @@ func AntiSpam() gin.HandlerFunc {
 		e.last = now
 		count := e.count
 		spamMu.Unlock()
-		if count > 30 { // 20 → 30 (мобайл тезтар запрос мефиристад)
+		if count > spamLimit() {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Spam detected. Please slow down."})
 			c.Abort()
 			return
 		}
 		c.Next()
 	}
+}
+
+// spamKey як «фиристанда»-ро муайян мекунад.
+//
+// AntiSpam ПЕШ аз миёнафзори авторизатсия иҷро мешавад, бинобар ин
+// UID(c) ҳанӯз холист. Аз ин рӯ худи токен ҳамчун нишона гирифта
+// мешавад: ду корбар токенҳои гуногун доранд, вале дархостҳои ҳамон
+// корбар як калид мегиранд.
+//
+// Токен ба хотира ё log намеравад — танҳо хулосаи кӯтоҳи он.
+// spamLimit — ҳадди дархост дар як сония.
+//
+// Пешфарз 30: мобилӣ дархостҳоро дастаҷамъӣ мефиристад. Муҳити
+// санҷиш метавонад онро баланд кунад; production бе тағйир мемонад.
+func spamLimit() int {
+	n := 30
+	if v := os.Getenv("RATE_LIMIT_MULTIPLIER"); v != "" {
+		if m, err := strconv.Atoi(v); err == nil && m > 1 {
+			n *= m
+		}
+	}
+	return n
+}
+
+func spamKey(c *gin.Context) string {
+	if h := c.GetHeader("Authorization"); len(h) > 24 {
+		sum := sha256.Sum256([]byte(h))
+		return "t:" + hex.EncodeToString(sum[:8])
+	}
+	return "ip:" + clientIP(c)
+}
+
+var spamSweepOnce sync.Once
+
+// startSpamSweeper вурудиҳои кӯҳнаро мебарорад.
+//
+// spamMap низ бе ин абадӣ калон мешуд: ҳар ҷуфти «корбар/IP + роҳ»
+// дар хотира мемонд.
+func startSpamSweeper() {
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			cutoff := time.Now().Add(-5 * time.Minute)
+			spamMu.Lock()
+			for k, e := range spamMap {
+				if e.last.Before(cutoff) {
+					delete(spamMap, k)
+				}
+			}
+			spamMu.Unlock()
+		}
+	}()
 }
 
 // ── Anti-Abuse (per user action) ─────────────────────────────────
@@ -121,7 +187,42 @@ var (
 	rlMu  sync.Mutex
 )
 
+// rlSweepOnce корҳои поксозиро як бор оғоз мекунад.
+var rlSweepOnce sync.Once
+
+// startRLSweeper вурудиҳои кӯҳнаро мебарорад.
+//
+// Бе ин rlMap АБАДӢ калон мешуд: ҳар корбар ва ҳар IP, ки ягон бор
+// омад, дар хотира мемонд ва ҳеҷ гоҳ пок намешуд. Дар 50 000 корбар
+// ин оҳиста-оҳиста хотираро мехӯрад.
+func startRLSweeper() {
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			cutoff := time.Now().Add(-10 * time.Minute)
+			rlMu.Lock()
+			for k, times := range rlMap {
+				if len(times) == 0 || times[len(times)-1].Before(cutoff) {
+					delete(rlMap, k)
+				}
+			}
+			rlMu.Unlock()
+		}
+	}()
+}
+
+// RateLimit маҳдудияти суръатро месозад.
+//
+// Ҳадҳо аз env танзим мешаванд, вале пешфарз ҳамон аст: муҳити
+// санҷиш метавонад онҳоро баланд кунад, production бе тағйир монад.
 func RateLimit(limit int, windowSec int) gin.HandlerFunc {
+	rlSweepOnce.Do(startRLSweeper)
+	if v := os.Getenv("RATE_LIMIT_MULTIPLIER"); v != "" {
+		if m, err := strconv.Atoi(v); err == nil && m > 1 {
+			limit *= m
+		}
+	}
 	window := time.Duration(windowSec) * time.Second
 	return func(c *gin.Context) {
 		// Калид: userID (агар login карда) ё IP

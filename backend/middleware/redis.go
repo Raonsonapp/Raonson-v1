@@ -183,3 +183,9 @@ func (w *responseWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
 }
+
+// RedisConfigured мегӯяд, ки оё кэши дуюмдараҷа танзим шудааст.
+//
+// Барои ташхис: бе Redis барнома кор мекунад, вале ҳар нусхаи сервер
+// кэши худро дорад.
+func RedisConfigured() bool { return redisOK }
