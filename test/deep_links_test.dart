@@ -1,6 +1,8 @@
 // test/deep_links_test.dart
 // Таҷзияи линкҳои чуқур. Линки вайрон корбарро ба ҷои нодуруст
 // намебарад — ҳар шакли ғайримунтазир «номаълум» мешавад.
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raonson/core/links/deep_links.dart';
 
@@ -99,6 +101,22 @@ void main() {
       final s = DeepLinks.share(DeepLinkKind.profile, '');
       expect(DeepLinks.parse(s).isValid, isFalse);
     });
+  });
+
+  test('ҳеҷ ҷо суроғаи хом мубодила намешавад', () {
+    // Пештар линкҳо ба host-и API ё ба файли видео мерафтанд: онҳо
+    // барномаро НАМЕКУШОДАНД ва гиранда ба ҷои холӣ мерасид.
+    // Танҳо линки МӮҲТАВО санҷида мешавад: '${...}' дар роҳ маънои
+    // «ин линк ба пост, рилс ё профили мушаххас мебарад»-ро дорад.
+    // Саҳифаҳои статикӣ (шартнома, махфият) ин ҷо дахл надоранд.
+    final bad = RegExp(r"'https?://[^']*(hf\.space|raonson\.app)/[^']*\$\{");
+    final offenders = <String>[];
+    for (final f in Directory('lib').listSync(recursive: true)) {
+      if (f is! File || !f.path.endsWith('.dart')) continue;
+      if (bad.hasMatch(f.readAsStringSync())) offenders.add(f.path);
+    }
+    expect(offenders, isEmpty,
+        reason: 'линки хом ба ҷои DeepLinks.share: $offenders');
   });
 
   test('роҳҳо ба routing-и МАВҶУДА ишора мекунанд', () {

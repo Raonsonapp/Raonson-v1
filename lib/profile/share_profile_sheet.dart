@@ -11,6 +11,7 @@ import '../app/app_theme.dart';
 import '../models/user_model.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
+import '../core/links/deep_links.dart';
 
 class ShareProfileSheet extends StatefulWidget {
   final UserModel user;
@@ -22,7 +23,10 @@ class ShareProfileSheet extends StatefulWidget {
 class _ShareState extends State<ShareProfileSheet> {
   bool _dark = true;
 
-  String get _url => 'https://raonson.app/${widget.user.username}';
+  // Линки профил ҳамон линкест, ки барнома онро мекушояд —
+  // вагарна гиранда ба саҳифаи нобуд меафтад.
+  String get _url =>
+      DeepLinks.share(DeepLinkKind.profile, widget.user.username);
 
   @override
   Widget build(BuildContext context) {

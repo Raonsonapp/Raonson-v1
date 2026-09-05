@@ -29,6 +29,7 @@ import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
 import 'search_history.dart';
 import '../core/i18n/strings.dart';
+import '../core/links/deep_links.dart';
 import '../core/ui/app_icons.dart';
 import '../shop/buy_sheet.dart';
 import '../live/live_rail.dart';
@@ -363,9 +364,10 @@ class _SearchScreenState extends State<SearchScreen>
         },
         onShare: () {
           Navigator.pop(ctx);
-          final kind = item.type == _ItemType.reel ? 'reels' : 'p';
-          Share.share(
-              'https://mahmadmurodov-raonson.hf.space/$kind/${item.id}');
+          final kind = item.type == _ItemType.reel
+              ? DeepLinkKind.reel
+              : DeepLinkKind.post;
+          Share.share(DeepLinks.share(kind, item.id));
         },
       ),
     );

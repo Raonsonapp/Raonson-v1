@@ -20,6 +20,7 @@ import '../../models/post_model.dart';
 import '../reels_repository.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/links/deep_links.dart';
 import '../../chat/share/share_to_chat_row.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../app/app_theme.dart';
@@ -1341,8 +1342,8 @@ class _ReelItemState extends State<_ReelItem> {
   void _share() {
     AnalyticsService.instance.logEvent(AnalyticsEvents.reelShare,
         params: {'reelId': widget.reel.id});
-    final url =
-        'https://mahmadmurodov-raonson.hf.space/reels/${widget.reel.id}';
+    // Линки чуқур: барномаро мекушояд, вагарна саҳифаи веб.
+    final url = DeepLinks.share(DeepLinkKind.reel, widget.reel.id);
     _ctrl?.pause();
     showModalBottomSheet(
       context: context,

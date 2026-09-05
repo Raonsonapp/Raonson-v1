@@ -39,6 +39,7 @@ import '../settings/settings_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
+import '../core/links/deep_links.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -267,8 +268,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           }),
       _tile(AppIcons.link_rounded, 'Линкро нусха кун', () {
         Navigator.pop(context);
-        Clipboard.setData(
-            ClipboardData(text: 'https://raonson.app/${u.username}'));
+        Clipboard.setData(ClipboardData(
+            text: DeepLinks.share(DeepLinkKind.profile, u.username)));
         _snack('Линк нусхабардорӣ шуд');
       }),
     ]);

@@ -12,6 +12,7 @@ import '../../core/services/user_session.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/links/deep_links.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -65,7 +66,9 @@ class _ReelControlsState extends State<ReelControls> {
     ApiClient.instance.post('/reels/${reel.id}/save').then((_) {}, onError: (_) {});
   }
 
-  void _share() => Share.share('Raonson Reel: ${reel.videoUrl}');
+  // Пештар суроғаи файли видео фиристода мешуд: он барномаро
+  // намекушод ва гиранда танҳо як файлро мегирифт.
+  void _share() => Share.share(DeepLinks.share(DeepLinkKind.reel, reel.id));
 
   void _openProfile() =>
       Navigator.pushNamed(context, '/user-profile', arguments: reel.user.id);
