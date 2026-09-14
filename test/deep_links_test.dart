@@ -119,6 +119,45 @@ void main() {
         reason: 'линки хом ба ҷои DeepLinks.share: $offenders');
   });
 
+  group('линки мубодила барои мессенҷер', () {
+    // Шикояти воқеӣ: «видеоро ба чат мепартоям — линк меравад, на
+    // видео». Сабаб ин буд, ки линк ба саҳифаи статикӣ мерафт, ки
+    // ҳеҷ теги OpenGraph надошт. Акнун пост ва рилс ба саҳифаи
+    // ПЕШНАМОИШИ сервер мераванд, ки видеоро нишон медиҳад.
+    test('пост ва рилс ба саҳифаи пешнамоиш мераванд', () {
+      final post = DeepLinks.share(DeepLinkKind.post, 'p1');
+      final reel = DeepLinks.share(DeepLinkKind.reel, 'r1');
+      expect(post, startsWith(DeepLinks.previewBase));
+      expect(reel, startsWith(DeepLinks.previewBase));
+      expect(post, endsWith('/p/p1'));
+      expect(reel, endsWith('/r/r1'));
+    });
+
+    test('линки пешнамоиш дубора фаҳмида мешавад', () {
+      for (final kind in [DeepLinkKind.post, DeepLinkKind.reel]) {
+        final built = DeepLinks.share(kind, 'abc-123');
+        final back = DeepLinks.parse(built);
+        expect(back.kind, kind, reason: built);
+        expect(back.id, 'abc-123', reason: built);
+        expect(DeepLinks.routeFor(back), isNotNull, reason: built);
+      }
+    });
+
+    test('профил ва мавзӯъ ҳамон домени вебро нигоҳ медоранд', () {
+      // Барои онҳо саҳифаи пешнамоиш нест — линки веб мемонад.
+      expect(DeepLinks.share(DeepLinkKind.profile, 'ali'),
+          startsWith(DeepLinks.webBase));
+      expect(DeepLinks.share(DeepLinkKind.topic, 'gaming'),
+          startsWith(DeepLinks.webBase));
+    });
+
+    test('шиносаи холӣ линки вайрон намесозад', () {
+      for (final kind in [DeepLinkKind.post, DeepLinkKind.reel]) {
+        expect(DeepLinks.parse(DeepLinks.share(kind, '')).isValid, isFalse);
+      }
+    });
+  });
+
   group('шартномаи сервер ↔ барнома', () {
     // Сервер линкро дар payload-и огоҳинома мефиристад
     // (backend/notify/text.go, функсияи Link). Агар барнома ин

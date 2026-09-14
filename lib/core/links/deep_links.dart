@@ -41,6 +41,26 @@ class DeepLinks {
   /// Роҳи `/l/` кӯтоҳ аст ва аз саҳифаҳои дигари сайт ҷудо мемонад.
   static const webBase = 'https://raonsonapp.github.io/Raonson-v1/l';
 
+  /// Асоси саҳифаи ПЕШНАМОИШ (сервер).
+  ///
+  /// Чаро ду асос ҳаст: GitHub Pages саҳифаи статикист ва ҳеҷ тегҳои
+  /// OpenGraph надорад. Ҳангоми фиристодан ба WhatsApp ё Telegram
+  /// мессенҷер маҳз ҳамон саҳифаро мехонад ва тегҳоро меҷӯяд — бе
+  /// онҳо гиранда танҳо СATРИ УРЁНро мебинад, на видео.
+  ///
+  /// Саҳифаҳои /p/ ва /r/ дар сервер видео, аксбардор ва тавсифро
+  /// медиҳанд, ва баъд корбарро ба барнома мебаранд.
+  static const previewBase = String.fromEnvironment(
+    'RAONSON_PREVIEW_BASE',
+    defaultValue: 'https://mahmadmurodov-raonson.hf.space',
+  );
+
+  /// Роҳҳои кӯтоҳи саҳифаи пешнамоиш.
+  static const _previewPaths = {
+    DeepLinkKind.post: 'p',
+    DeepLinkKind.reel: 'r',
+  };
+
   static const _paths = {
     DeepLinkKind.profile: 'profile',
     DeepLinkKind.post: 'post',
@@ -54,9 +74,17 @@ class DeepLinks {
   /// Ҳамеша линки ВЕБ бармегардад, на схемаи худӣ: агар гиранда
   /// барномаро надошта бошад, схемаи `raonson://` дар ҳеҷ ҷо кушода
   /// намешавад ва линк мурда менамояд.
+  ///
+  /// Барои пост ва рилс линки САҲИФАИ ПЕШНАМОИШ дода мешавад, то
+  /// дар чати гиранда видео ва аксбардор бароянд — на сатри урён.
   static String share(DeepLinkKind kind, String id) {
+    if (id.isEmpty) return webBase;
+    final preview = _previewPaths[kind];
+    if (preview != null) {
+      return '$previewBase/$preview/${Uri.encodeComponent(id)}';
+    }
     final path = _paths[kind];
-    if (path == null || id.isEmpty) return webBase;
+    if (path == null) return webBase;
     return '$webBase/$path/${Uri.encodeComponent(id)}';
   }
 
@@ -92,7 +120,11 @@ class DeepLinks {
 
     // Префикси веб (`Raonson-v1`, `l`) партофта мешавад, то ҳарду
     // шакли линк ба як натиҷа расанд.
-    final known = _paths.values.toSet();
+    //
+    // Ба ғайр аз номҳои пурра, шаклҳои кӯтоҳи саҳифаи пешнамоиш
+    // (`/p/<id>`, `/r/<id>`) низ фаҳмида мешаванд — маҳз онҳо ба
+    // мессенҷерҳо фиристода мешаванд.
+    final known = {..._paths.values, ..._previewPaths.values};
     var i = 0;
     while (i < segments.length && !known.contains(segments[i].toLowerCase())) {
       i++;
@@ -104,10 +136,16 @@ class DeepLinks {
         ? Uri.decodeComponent(segments[i + 1])
         : '';
 
-    final kind = _paths.entries
+    var kind = _paths.entries
         .firstWhere((e) => e.value == name,
             orElse: () => const MapEntry(DeepLinkKind.unknown, ''))
         .key;
+    if (kind == DeepLinkKind.unknown) {
+      kind = _previewPaths.entries
+          .firstWhere((e) => e.value == name,
+              orElse: () => const MapEntry(DeepLinkKind.unknown, ''))
+          .key;
+    }
 
     if (id.isEmpty) return const DeepLink(DeepLinkKind.unknown, '');
     return DeepLink(kind, id);

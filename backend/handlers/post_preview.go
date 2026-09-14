@@ -1,134 +1,225 @@
 package handlers
 
+// Саҳифаи пешнамоиши мӯҳтаво.
+//
+// ⚠️ Чаро ин муҳим аст:
+//
+// Ҳангоми мубодила ба WhatsApp, Telegram ё ҳар барномаи дигар
+// НАХУСТ ҲАМИН саҳифа хонда мешавад. Барнома мӯҳтаворо намефиристад
+// — он линкро мефиристад ва гиранда он чиро мебинад, ки дар ин ҷо
+// дар тегҳои OpenGraph навишта шудааст.
+//
+// Пештар:
+//   • линки мубодила умуман ба ин ҷо ишора намекард (ба саҳифаи
+//     статикии GitHub Pages мерафт, ки ҳеҷ тег надошт) — гиранда
+//     танҳо сатри урёнро медид;
+//   • барои видео og:image ба худи файли mp4 ишора мекард — ҳеҷ
+//     мессенҷер mp4-ро ҳамчун расм нишон дода наметавонад.
+//
+// Акнун:
+//   • видео og:video + og:image (thumbnail) мегирад;
+//   • Twitter card навъи «player» мешавад — видео дар худи чат
+//     пахш мешавад;
+//   • рилс низ саҳифаи худро дорад.
+
 import (
 	"context"
 	"fmt"
 	"html"
 	"net/http"
+	"strings"
 
 	"raonson/db"
 
 	"github.com/gin-gonic/gin"
 )
 
-// GET /posts/preview/:id — public HTML (no auth, no templates needed)
-// Uses c.Data() directly — NO LoadHTMLGlob required
+// previewData — он чи саҳифа нишон медиҳад.
+type previewData struct {
+	Kind      string // post | reel
+	ID        string
+	Caption   string
+	Username  string
+	Avatar    string
+	MediaURL  string
+	MediaType string // image | video
+	Thumbnail string
+	Likes     int
+	Comments  int
+}
+
+// GET /p/:id — пешнамоиши пост.
 func PostPreview(c *gin.Context) {
-	pid := c.Param("id")
+	d, ok := loadPostPreview(c.Request.Context(), c.Param("id"))
+	if !ok {
+		c.Data(http.StatusNotFound, ctHTML, notFoundHTML())
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=300")
+	c.Data(http.StatusOK, ctHTML, renderPreview(d))
+}
 
-	var caption, username, avatar string
-	var mediaURL, mediaType string
+// GET /r/:id — пешнамоиши рилс.
+func ReelPreview(c *gin.Context) {
+	d, ok := loadReelPreview(c.Request.Context(), c.Param("id"))
+	if !ok {
+		c.Data(http.StatusNotFound, ctHTML, notFoundHTML())
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=300")
+	c.Data(http.StatusOK, ctHTML, renderPreview(d))
+}
 
-	err := db.Pool.QueryRow(context.Background(), `
-		SELECT p.caption, u.username, COALESCE(u.avatar,''),
-		       COALESCE(m.url,''), COALESCE(m.type,'image')
+const ctHTML = "text/html; charset=utf-8"
+
+func loadPostPreview(ctx context.Context, id string) (previewData, bool) {
+	d := previewData{Kind: "post", ID: id}
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(p.caption,''), u.username, COALESCE(u.avatar,''),
+		       COALESCE(m.url,''), COALESCE(m.type,'image'),
+		       COALESCE(p.likes_count,0), COALESCE(p.comments_count,0)
 		FROM posts p
 		JOIN users u ON u.id = p.user_id
 		LEFT JOIN post_media m ON m.post_id=p.id AND m.position=0
-		WHERE p.id=$1`, pid).Scan(&caption, &username, &avatar, &mediaURL, &mediaType)
-
+		WHERE p.id=$1 AND COALESCE(p.archived,false)=FALSE`, id).
+		Scan(&d.Caption, &d.Username, &d.Avatar, &d.MediaURL, &d.MediaType,
+			&d.Likes, &d.Comments)
 	if err != nil {
-		c.Data(http.StatusNotFound, "text/html; charset=utf-8", notFoundHTML())
-		return
+		return d, false
 	}
-
-	// XSS guard — ҳар арзиши аз БД пеш аз гузоштан ба HTML escape мешавад.
-	caption = html.EscapeString(caption)
-	username = html.EscapeString(username)
-	avatar = html.EscapeString(avatar)
-	mediaURL = html.EscapeString(mediaURL)
-
-	var mediaTag string
-	switch {
-	case mediaType == "video" && mediaURL != "":
-		mediaTag = fmt.Sprintf(
-			`<video src="%s" controls autoplay muted loop playsinline `+
-				`style="width:100%%;height:100%%;object-fit:cover"></video>`, mediaURL)
-	case mediaURL != "":
-		mediaTag = fmt.Sprintf(
-			`<img src="%s" alt="post" style="width:100%%;height:100%%;object-fit:cover"/>`,
-			mediaURL)
-	default:
-		mediaTag = `<div style="background:#1a1a1a;width:100%;height:100%;` +
-			`display:flex;align-items:center;justify-content:center;font-size:48px">🖼️</div>`
-	}
-
-	avatarTag := ""
-	if avatar != "" {
-		avatarTag = fmt.Sprintf(`<img src="%s" class="av" alt="%s"/>`, avatar, username)
-	} else {
-		avatarTag = `<div class="av" style="font-size:18px">👤</div>`
-	}
-
-	ogImage := ""
-	if mediaURL != "" {
-		ogImage = fmt.Sprintf(`<meta property="og:image" content="%s"/>`, mediaURL)
-	}
-
-	captionHTML := ""
-	if caption != "" {
-		captionHTML = fmt.Sprintf(
-			`<div class="cap"><strong>%s</strong> %s</div>`, username, caption)
-	}
-
-	html := fmt.Sprintf(`<!DOCTYPE html>
-<html lang="tg">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>%s — Raonson</title>
-  <meta property="og:title" content="%s — Raonson"/>
-  <meta property="og:description" content="%s"/>
-  %s
-  <meta property="og:type" content="article"/>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#0a0a0a;color:#fff;font-family:-apple-system,sans-serif;
-      min-height:100vh;display:flex;flex-direction:column;align-items:center}
-    .hdr{width:100%%;max-width:480px;padding:14px 16px;
-      display:flex;align-items:center;gap:12px}
-    .av{width:40px;height:40px;border-radius:50%%;background:#2a2a2a;
-      object-fit:cover;display:flex;align-items:center;justify-content:center}
-    .uname{font-weight:600;font-size:15px}
-    .media{width:100%%;max-width:480px;aspect-ratio:1;overflow:hidden;background:#111}
-    .info{width:100%%;max-width:480px;padding:14px 16px}
-    .cap{font-size:14px;line-height:1.5;color:#eee;margin-top:4px}
-    .btn{margin-top:20px;padding:13px 28px;background:#0095f6;color:#fff;
-      border:none;border-radius:8px;font-size:15px;font-weight:600;
-      cursor:pointer;text-decoration:none;display:inline-block}
-    .btn:hover{background:#0086e0}
-    .foot{margin-top:32px;color:#444;font-size:12px;padding-bottom:24px}
-  </style>
-</head>
-<body>
-  <div class="hdr">
-    %s
-    <div>
-      <div class="uname">%s</div>
-      <div style="color:#888;font-size:12px">Raonson</div>
-    </div>
-  </div>
-  <div class="media">%s</div>
-  <div class="info">
-    %s
-    <div style="margin-top:18px;text-align:center">
-      <a href="raonson://post/%s" class="btn">📱 Raonson-да очиш</a>
-    </div>
-  </div>
-  <div class="foot">© 2026 Raonson</div>
-</body>
-</html>`,
-		username, username, caption, ogImage,
-		avatarTag, username, mediaTag, captionHTML, pid)
-
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+	return d, true
 }
 
-func notFoundHTML() []byte {
-	return []byte(`<!DOCTYPE html>
-<html><head><meta charset="UTF-8"/>
-<style>body{background:#000;color:#fff;font-family:sans-serif;
-  display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-</style></head>
-<body><h2>Пост ёфт нашуд 🔍</h2></body></html>`)
+func loadReelPreview(ctx context.Context, id string) (previewData, bool) {
+	d := previewData{Kind: "reel", ID: id, MediaType: "video"}
+	err := db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(r.caption,''), u.username, COALESCE(u.avatar,''),
+		       COALESCE(r.video_url,''), COALESCE(r.thumbnail_url,''),
+		       COALESCE(r.likes_count,0), COALESCE(r.comments_count,0)
+		FROM reels r
+		JOIN users u ON u.id = r.user_id
+		WHERE r.id=$1`, id).
+		Scan(&d.Caption, &d.Username, &d.Avatar, &d.MediaURL, &d.Thumbnail,
+			&d.Likes, &d.Comments)
+	if err != nil {
+		return d, false
+	}
+	return d, true
+}
+
+// esc — ҳар арзиши аз БД пеш аз HTML escape мешавад.
+func esc(s string) string { return html.EscapeString(s) }
+
+// truncate — тавсифи дароз дар пешнамоиш буриш мешавад.
+func truncate(s string, n int) string {
+	s = strings.TrimSpace(strings.ReplaceAll(s, "\n", " "))
+	if len(s) <= n {
+		return s
+	}
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return strings.TrimSpace(string(r[:n])) + "…"
+}
+
+// renderPreview саҳифаро месозад.
+func renderPreview(d previewData) []byte {
+	isVideo := d.MediaType == "video" && d.MediaURL != ""
+
+	// og:image бояд РАСМ бошад. Барои видео ин thumbnail аст —
+	// мессенҷер mp4-ро ҳамчун расм хонда наметавонад.
+	ogImage := d.Thumbnail
+	if ogImage == "" && !isVideo {
+		ogImage = d.MediaURL
+	}
+
+	title := d.Username
+	if title == "" {
+		title = "Raonson"
+	}
+	desc := truncate(d.Caption, 160)
+	if desc == "" {
+		if isVideo {
+			desc = "Видео дар Raonson"
+		} else {
+			desc = "Акс дар Raonson"
+		}
+	}
+
+	var meta strings.Builder
+	w := func(f string, a ...any) { fmt.Fprintf(&meta, f+"\n", a...) }
+
+	w(`<meta property="og:site_name" content="Raonson"/>`)
+	w(`<meta property="og:title" content="%s"/>`, esc(title))
+	w(`<meta property="og:description" content="%s"/>`, esc(desc))
+	if ogImage != "" {
+		w(`<meta property="og:image" content="%s"/>`, esc(ogImage))
+		w(`<meta property="og:image:width" content="1080"/>`)
+		w(`<meta property="og:image:height" content="1080"/>`)
+	}
+
+	if isVideo {
+		// Ҳамин чор тег кор мекунанд, ки видео дар чат ПАХШ шавад,
+		// на ҳамчун линки урён монад.
+		w(`<meta property="og:type" content="video.other"/>`)
+		w(`<meta property="og:video" content="%s"/>`, esc(d.MediaURL))
+		w(`<meta property="og:video:secure_url" content="%s"/>`, esc(d.MediaURL))
+		w(`<meta property="og:video:type" content="video/mp4"/>`)
+		w(`<meta property="og:video:width" content="720"/>`)
+		w(`<meta property="og:video:height" content="1280"/>`)
+		w(`<meta name="twitter:card" content="player"/>`)
+		w(`<meta name="twitter:player:stream" content="%s"/>`, esc(d.MediaURL))
+		w(`<meta name="twitter:player:stream:content_type" content="video/mp4"/>`)
+	} else {
+		w(`<meta property="og:type" content="article"/>`)
+		w(`<meta name="twitter:card" content="summary_large_image"/>`)
+	}
+	w(`<meta name="twitter:title" content="%s"/>`, esc(title))
+	w(`<meta name="twitter:description" content="%s"/>`, esc(desc))
+	if ogImage != "" {
+		w(`<meta name="twitter:image" content="%s"/>`, esc(ogImage))
+	}
+
+	// Медиаи худи саҳифа.
+	var mediaTag string
+	switch {
+	case isVideo:
+		poster := ""
+		if d.Thumbnail != "" {
+			poster = fmt.Sprintf(` poster="%s"`, esc(d.Thumbnail))
+		}
+		mediaTag = fmt.Sprintf(
+			`<video src="%s"%s controls playsinline preload="metadata"></video>`,
+			esc(d.MediaURL), poster)
+	case d.MediaURL != "":
+		mediaTag = fmt.Sprintf(`<img src="%s" alt=""/>`, esc(d.MediaURL))
+	default:
+		mediaTag = `<div class="ph">🖼️</div>`
+	}
+
+	avatarTag := `<div class="av ph2">👤</div>`
+	if d.Avatar != "" {
+		avatarTag = fmt.Sprintf(`<img class="av" src="%s" alt=""/>`, esc(d.Avatar))
+	}
+
+	capHTML := ""
+	if d.Caption != "" {
+		capHTML = fmt.Sprintf(
+			`<p class="cap"><b>%s</b> %s</p>`, esc(d.Username), esc(d.Caption))
+	}
+
+	deepLink := fmt.Sprintf("raonson://%s/%s", d.Kind, d.ID)
+
+	return []byte(fmt.Sprintf(previewHTML,
+		esc(title), meta.String(), avatarTag, esc(d.Username),
+		esc(kindLabel(d.Kind)), mediaTag,
+		d.Likes, d.Comments, capHTML, esc(deepLink)))
+}
+
+func kindLabel(kind string) string {
+	if kind == "reel" {
+		return "Reel"
+	}
+	return "Post"
 }

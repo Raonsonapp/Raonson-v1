@@ -93,7 +93,11 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	r.GET("/posts/preview/:id", handlers.PostPreview)
+	// Саҳифаҳои пешнамоиш — БЕ авторизатсия, чунки маҳз онҳоро
+	// WhatsApp/Telegram барои сохтани корти пешнамоиш мехонанд.
+	r.GET("/p/:id", handlers.PostPreview)
+	r.GET("/r/:id", handlers.ReelPreview)
+	r.GET("/posts/preview/:id", handlers.PostPreview) // роҳи кӯҳна
 	r.GET("/ws", sockets.Handler)
 
 	auth  := mw.Auth()
