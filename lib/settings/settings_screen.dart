@@ -46,6 +46,7 @@ import '../recap/weekly_recap_screen.dart';
 import '../referral/referral_screen.dart';
 import '../collab/collab_invites_screen.dart';
 import '../verification/verification_screen.dart';
+import '../core/ads/ads_debug_screen.dart';
 import '../discover/discover_screen.dart';
 
 /// Theme label in the active language.
@@ -293,6 +294,13 @@ class SettingsScreen extends StatelessWidget {
                   title: tr('admin.panel'),
                   sub:   tr('admin.panelSub'),
                   onTap: () => _go(ctx, const AdminPanelScreen()),
+                ),
+                // Ташхиси реклама — абзори кор, на хусусияти корбар.
+                _NavTile(
+                  icon:  AppIcons.campaign_outlined,
+                  title: tr('adbg.entry'),
+                  sub:   tr('adbg.entrySub'),
+                  onTap: () => _go(ctx, const AdsDebugScreen()),
                 ),
               ],
 

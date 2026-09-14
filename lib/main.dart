@@ -82,6 +82,17 @@ Future<void> main() async {
   if (AdConsentService.instance.consentGiven) {
     MobileAds.initialize();
     AdsManager.instance.init();
+    // Шиносаи корбар ба ҳар дархости реклама дода мешавад: бе он
+    // callback-и Yandex намедонад реклама ба КӢ тааллуқ дорад ва
+    // нишондиҳӣ ба галочка намеравад.
+    //
+    // Ба тағйирот гӯш медиҳем — аккаунт метавонад иваз шавад.
+    void syncAdsUser() {
+      final id = UserSession.userId;
+      if (id != null && id.isNotEmpty) AdsManager.instance.setUserId(id);
+    }
+    syncAdsUser();
+    UserSession.userIdNotifier.addListener(syncAdsUser);
   }
 
   // ✅ 6.1 Firebase + FCM push (бехатар: агар танзим набошад, crash намешавад)
