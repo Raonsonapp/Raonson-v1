@@ -45,6 +45,7 @@ import '../creator_studio/creator_studio_screen.dart';
 import '../recap/weekly_recap_screen.dart';
 import '../referral/referral_screen.dart';
 import '../collab/collab_invites_screen.dart';
+import '../verification/verification_screen.dart';
 import '../discover/discover_screen.dart';
 
 /// Theme label in the active language.
@@ -160,6 +161,13 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('dc.title'),
                 sub:   tr('dc.entrySub'),
                 onTap: () => _go(ctx, const DiscoverScreen()),
+              ),
+              // ── Галочка ва реклама ──
+              _NavTile(
+                icon:  AppIcons.verified_rounded,
+                title: tr('vf.entry'),
+                sub:   tr('vf.entrySub'),
+                onTap: () => _go(ctx, const VerificationScreen()),
               ),
               // ── Даъватҳои ҳамкорӣ ──
               _NavTile(

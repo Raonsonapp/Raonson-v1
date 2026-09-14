@@ -98,6 +98,10 @@ func main() {
 	r.GET("/p/:id", handlers.PostPreview)
 	r.GET("/r/:id", handlers.ReelPreview)
 	r.GET("/posts/preview/:id", handlers.PostPreview) // роҳи кӯҳна
+
+	// Callback-и шабакаи реклама — онро СЕРВЕРИ шабака мезанад, на
+	// телефон, бинобар ин токени корбар нест. Ҳимоя — имзо.
+	r.GET("/ads/callback", handlers.AdCallback)
 	r.GET("/ws", sockets.Handler)
 
 	auth  := mw.Auth()
@@ -472,6 +476,13 @@ func main() {
 
 	// ── ҶАМЪБАСТИ ҲАФТАГӢ ───────────────────────────────────────
 	r.GET("/recap/week", auth, rl100, handlers.GetViewerRecap)
+
+	// ── РЕКЛАМА ВА ГАЛОЧКА ──────────────────────────────────────
+	ad2 := r.Group("/ads", auth, rl100)
+	{
+		ad2.GET("/progress", handlers.AdProgress)
+		ad2.PUT("/goal", handlers.SetAdGoal)
+	}
 
 	// ── ДАЪВАТ ──────────────────────────────────────────────────
 	r.GET("/referrals/me", auth, rl100, handlers.GetMyReferrals)
