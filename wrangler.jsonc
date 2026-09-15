@@ -10,6 +10,18 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "raonson",
   "compatibility_date": "2026-09-11",
+  // Фармони сохтан ҲАМИН ҶО, на дар dashboard.
+  //
+  // Дар dashboard майдони «Build command» холӣ монд ва барои ҳамин
+  // `_site` сохта намешуд:
+  //   ✘ assets.directory ... does not exist: /opt/buildhome/repo/_site
+  //
+  // wrangler ин фармонро ПЕШ аз нашр иҷро мекунад, пас танзимот дар
+  // худи анбор мемонад ва касе онро дар интерфейс фаромӯш карда
+  // наметавонад.
+  "build": {
+    "command": "bash scripts/cloudflare-build.sh"
+  },
   "assets": {
     "directory": "_site",
     // Роҳи номаълум ба саҳифаи асосӣ намеравад — 404 медиҳад.
