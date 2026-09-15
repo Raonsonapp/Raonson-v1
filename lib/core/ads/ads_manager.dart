@@ -114,8 +114,23 @@ class AdsManager extends ChangeNotifier {
 
   bool _initialized = false;
 
-  Future<void> init() async {
-    if (_initialized) return;
+  /// Оғози ҷорӣ — то ду даъваткунанда ду оғоз насозанд.
+  ///
+  /// `_initialized` танҳо ПАС аз await гузошта мешавад, пас танҳо он
+  /// кофӣ набуд: main.dart ва reels_screen.dart метавонистанд
+  /// ҳамзамон аз назорат гузаранд ва MobileAds.initialize()-ро ду
+  /// бор даъват кунанд.
+  ///
+  /// Ин дуруст кардани тартиб аст. Ман НАМЕГӮЯМ, ки он хатои
+  /// network error-ро ҳал мекунад.
+  Future<void>? _initing;
+
+  Future<void> init() {
+    if (_initialized) return Future.value();
+    return _initing ??= _doInit();
+  }
+
+  Future<void> _doInit() async {
     try {
       await MobileAds.initialize();
       _initialized = true;
@@ -123,6 +138,7 @@ class AdsManager extends ChangeNotifier {
     } catch (e) {
       // Пештар хато хомӯш мемонд ва «чаро реклама нест» ҷавоб надошт.
       _initError = e.toString();
+      _initing = null;
       notifyListeners();
       return;
     }
@@ -185,6 +201,7 @@ class AdsManager extends ChangeNotifier {
         // Хато НИГОҲ дошта мешавад: бе он «чаро реклама намебарояд»
         // ҷавоб надошт.
         _interstitialError = _describe(error);
+        _recordFailure('Interstitial', error);
         notifyListeners();
         Future.delayed(const Duration(seconds: 30), _preloadInterstitial);
       },
@@ -209,6 +226,73 @@ class AdsManager extends ChangeNotifier {
       if (code != null || desc != null) return '$code: $desc';
     } catch (_) {}
     return error.toString();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Сабти пурраи хатоҳо
+  //
+  //  ⚠️ Муҳим: аз ин зиёд гирифтан ИМКОН НАДОРАД.
+  //
+  //  Синфи AdRequestError-и худи SDK (com.yandex.mobile.ads.common)
+  //  танҳо се метод дорад: getCode(), getDescription(),
+  //  getAdUnitId(). Ҳеҷ getCause(), ҳеҷ exception, ҳеҷ stack trace.
+  //  Пули Kotlin-и плагин (LoadListener.kt:31) маҳз ҳамон серо
+  //  мефиристад — яъне плагин чизе пинҳон НАМЕКУНАД.
+  //
+  //  Пас сабаби зеринро танҳо худи SDK дар logcat навишта
+  //  метавонад — баъд аз MobileAds.setLogging(true).
+  // ══════════════════════════════════════════════════════════════
+
+  /// Як нокомии боркунӣ — ҳар чизе, ки гирифта тавонистем.
+  static Map<String, String> _capture(String slot, dynamic error) {
+    String s(dynamic v) => v == null ? '—' : v.toString();
+    String code = '—', desc = '—', unit = '—';
+    try {
+      code = s((error as dynamic).code);
+    } catch (_) {}
+    try {
+      desc = s((error as dynamic).description);
+    } catch (_) {}
+    try {
+      unit = s((error as dynamic).adUnitId);
+    } catch (_) {}
+
+    return {
+      'time': DateTime.now().toIso8601String(),
+      'slot': slot,
+      'code': code,
+      'description': desc,
+      'adUnitId': unit,
+      'toString': s(error),
+      'runtimeType': s(error?.runtimeType),
+    };
+  }
+
+  /// Таърихи нокомиҳо — на танҳо охирин.
+  ///
+  /// Дар дастгоҳ 9 нокомӣ аз 14 кӯшиш буд. Танҳо охиринро дидан
+  /// намегӯяд, ки оё ҳама якхелаанд ё не.
+  final List<Map<String, String>> _failures = [];
+  List<Map<String, String>> get failures => List.unmodifiable(_failures);
+
+  void _recordFailure(String slot, dynamic error) {
+    final f = _capture(slot, error);
+    _failures.insert(0, f);
+    while (_failures.length > 15) {
+      _failures.removeLast();
+    }
+    // Сатри ягона ва ҷустуҷӯшаванда дар logcat.
+    debugPrint('[RAONSON_AD] ${f['slot']} code=${f['code']} '
+        'unit=${f['adUnitId']} desc=${f['description']} '
+        'type=${f['runtimeType']} raw=${f['toString']}');
+  }
+
+  /// Хатои охирин ҳамчун матни пурра — барои нусхабардорӣ.
+  String get lastFailureDetail {
+    if (_failures.isEmpty) return '';
+    return _failures.first.entries
+        .map((e) => '${e.key}: ${e.value}')
+        .join('\n');
   }
 
   void _onInterstitialDone() {
@@ -271,6 +355,7 @@ class AdsManager extends ChangeNotifier {
         _rewardedLoading = false;
         _rewardedFailures++;
         _rewardedError = _describe(error);
+        _recordFailure('Rewarded', error);
         notifyListeners();
         Future.delayed(const Duration(seconds: 30), _preloadRewarded);
       },
@@ -468,6 +553,7 @@ class AdsManager extends ChangeNotifier {
           if (!done.isCompleted) done.complete('✅ демо бор шуд');
         },
         onAdFailedToLoad: (error) {
+          _recordFailure('DEMO-probe', error);
           if (!done.isCompleted) done.complete('❌ демо: ${_describe(error)}');
         },
       );

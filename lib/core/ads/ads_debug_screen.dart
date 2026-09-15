@@ -222,6 +222,70 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
             const SizedBox(height: 10),
             _kv(tr('adbg.probeResult'), _ads.lastProbe, copyable: true),
           ],
+
+          // Хатои охирин ПУРРА — на танҳо «3: network error».
+          //
+          // Аз ин зиёд гирифтан имкон надорад: синфи AdRequestError-и
+          // SDK ҳамагӣ code, description ва adUnitId дорад.
+          if (_ads.failures.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(tr('adbg.lastError'),
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            SelectableText(_ads.lastFailureDetail,
+                style: TextStyle(
+                    color: AppColors.grey,
+                    fontSize: 11.5,
+                    height: 1.5,
+                    fontFamily: 'monospace')),
+            const SizedBox(height: 12),
+
+            // Таърих: оё ҳамаи нокомиҳо якхелаанд?
+            Text(tr('adbg.errorHistory', {'n': _ads.failures.length}),
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            for (final f in _ads.failures.take(10))
+              Text(
+                  '${f['time']?.substring(11, 19)}  ${f['slot']}  '
+                  'code=${f['code']}  ${f['description']}',
+                  style: TextStyle(
+                      color: AppColors.grey,
+                      fontSize: 11,
+                      height: 1.5,
+                      fontFamily: 'monospace')),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  final all = _ads.failures
+                      .map((f) => f.entries
+                          .map((e) => '${e.key}=${e.value}')
+                          .join(' | '))
+                      .join('\n');
+                  Clipboard.setData(ClipboardData(text: all));
+                  _say(tr('adbg.copied'));
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.divider),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(tr('adbg.copyAllErrors'),
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
         ]),
       );
 
