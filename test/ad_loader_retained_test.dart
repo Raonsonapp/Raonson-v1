@@ -25,6 +25,21 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+/// Матни як функсияро аз рӯи сарлавҳа то қавси пӯшандаи он мегирад.
+String _body(String code, String header) {
+  final start = code.indexOf(header);
+  if (start < 0) return '';
+  var depth = 0;
+  for (var i = start + header.length - 1; i < code.length; i++) {
+    if (code[i] == '{') depth++;
+    if (code[i] == '}') {
+      depth--;
+      if (depth == 0) return code.substring(start, i + 1);
+    }
+  }
+  return code.substring(start);
+}
+
 void main() {
   late String code;
 
@@ -80,6 +95,59 @@ void main() {
         reason: 'ду санҷиши ҳамзамон имконпазир аст');
     expect(code, contains('if (run != _probeRun) return;'),
         reason: 'ҷавоби санҷиши кӯҳна ба санҷиши нав нисбат дода мешавад');
+  });
+
+  group('дархости дар парвоз шикаста намешавад', () {
+    // Ин гурӯҳ хатои воқеиро нигоҳ медорад: барнома худаш
+    // NETWORK_ERROR месохт.
+
+    test('reload() назорати боркуниро тоза намекунад', () {
+      // Пештар reload() `_interstitialLoading = false` мегузошт.
+      // Он дархости дар парвозро «фаромӯш» мекард: дархости дуюм
+      // оғоз меёфт ва loader-и аввалро дар мобайни кор нест мекард.
+      final reload = _body(code, 'Future<void> reload() async {');
+      expect(reload, isNot(contains('_interstitialLoading = false')),
+          reason: 'reload() боркунии дар парвозро мешиканад');
+      expect(reload, isNot(contains('_rewardedLoading = false')),
+          reason: 'reload() боркунии дар парвозро мешиканад');
+    });
+
+    test('loader ҳангоми сохтани нав нест карда намешавад', () {
+      // `_interstitialLoader?.destroy()` пеш аз loadAd метавонист
+      // loader-и ҳанӯз коркунандаро нест кунад.
+      expect(code, isNot(contains('_interstitialLoader?.destroy()')),
+          reason: 'loader-и эҳтимолан фаъол нест карда мешавад');
+      expect(code, isNot(contains('_rewardedLoader?.destroy()')),
+          reason: 'loader-и эҳтимолан фаъол нест карда мешавад');
+    });
+
+    test('loader боз-боз истифода мешавад, на ҳар бор нав', () {
+      expect(code, contains('if (_interstitialLoader != null) {'),
+          reason: 'ҳар кӯшиш loader-и нав месозад');
+      expect(code, contains('if (_rewardedLoader != null) {'),
+          reason: 'ҳар кӯшиш loader-и нав месозад');
+    });
+
+    test('танҳо ЯК таймери такрор мемонад', () {
+      // Пештар ҳар нокомӣ `Future.delayed` мемонд ва онҳо ҷамъ
+      // мешуданд — чанд боркунии ба ҳам печида.
+      // Манъ маҳз ба `Future.delayed` аст: онро бекор кардан мумкин
+      // нест. `Timer` бекор мешавад ва иҷозат дода мешавад.
+      for (final slot in ['_preloadInterstitial', '_preloadRewarded']) {
+        expect(code, isNot(contains('Future.delayed(const Duration('
+            'seconds: 30), $slot)')),
+            reason: '$slot: таймери бекорнашаванда');
+      }
+      expect(code, contains('_interstitialRetry?.cancel();'));
+      expect(code, contains('_rewardedRetry?.cancel();'));
+    });
+
+    test('боркунии дармонда абадӣ намемонад', () {
+      // Бе ин, як нокомии бе callback шаклро то нав кардани барнома
+      // хомӯш мемонд.
+      expect(code, contains('_loadDeadline'));
+      expect(code, contains('_stale('));
+    });
   });
 
   test('«✅» танҳо аз callback-и onAdLoaded меояд', () {

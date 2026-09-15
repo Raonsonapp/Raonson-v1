@@ -174,9 +174,16 @@ class AdsManager extends ChangeNotifier {
   }
 
   /// Аз нав кӯшиш кардан — барои экрани ташхис.
+  ///
+  /// ⚠️ Пештар ин ҷо `_interstitialLoading = false` буд.
+  ///
+  /// Он дархости ДАР ПАРВОЗРО «фаромӯш» мекард: назорат кушода
+  /// мешуд, дархости дуюм оғоз меёфт ва loader-и аввал маҳз дар
+  /// мобайни кор нест карда мешуд. Дархости шикаста ҳамчун
+  /// NETWORK_ERROR бармегашт — яъне хаторо ХУДИ БАРНОМА месохт.
+  ///
+  /// Акнун боркунии дар парвоз даст нахӯрда мемонад.
   Future<void> reload() async {
-    _interstitialLoading = false;
-    _rewardedLoading = false;
     if (!_initialized) {
       await init();
       return;
@@ -186,8 +193,23 @@ class AdsManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Боркунии дармондаро пас аз ин муддат мурда ҳисоб мекунем.
+  ///
+  /// Бе он як нокомии бе callback шаклро то нав кардани барнома
+  /// хомӯш мемонд.
+  static const _loadDeadline = Duration(seconds: 90);
+
+  bool _stale(DateTime? startedAt) =>
+      startedAt == null ||
+      DateTime.now().difference(startedAt) > _loadDeadline;
+
+  Timer? _interstitialRetry;
+  DateTime? _interstitialLoadStartedAt;
+
   void _preloadInterstitial() {
-    if (_interstitialLoading || _interstitialReady) return;
+    // Боркунии дар парвоз халалдор карда НАМЕШАВАД.
+    if (_interstitialLoading && !_stale(_interstitialLoadStartedAt)) return;
+    if (_interstitialReady) return;
     final unitId = _interstitialId;
     if (unitId == null) {
       // Танзим нашудааст — боркунӣ умуман оғоз намешавад ва такрор
@@ -198,8 +220,19 @@ class AdsManager extends ChangeNotifier {
       return;
     }
     _interstitialLoading = true;
+    _interstitialLoadStartedAt = DateTime.now();
     _interstitialAttempts++;
     notifyListeners();
+
+    // Як loader барои тамоми умри барнома.
+    //
+    // Пештар ҳар кӯшиш loader-и НАВ месохт ва кӯҳнаро нест мекард.
+    // Агар кӯҳна ҳанӯз кор мекард, ҳамон нестшавӣ дархостро мешикаст.
+    // Акнун loader сохта мешавад ва боз-боз истифода мегардад.
+    if (_interstitialLoader != null) {
+      _interstitialLoader!.loadAd(adRequestConfiguration: _config(unitId));
+      return;
+    }
 
     InterstitialAdLoader.create(
       onAdLoaded: (InterstitialAd ad) {
@@ -227,16 +260,23 @@ class AdsManager extends ChangeNotifier {
         _interstitialError = _describe(error);
         _recordFailure('Interstitial', error);
         notifyListeners();
-        Future.delayed(const Duration(seconds: 30), _preloadInterstitial);
+        _retryInterstitial();
       },
     ).then((loader) {
-      // Loader-и кӯҳна возеҳан нест карда мешавад — вагарна ҳар
-      // кӯшиши нав яке мемонад ва нигоҳ доштани навбатӣ маънои
-      // «партови ҷамънашуда»-ро мегирифт.
-      _interstitialLoader?.destroy();
       _interstitialLoader = loader;
       loader.loadAd(adRequestConfiguration: _config(unitId));
     });
+  }
+
+  /// Танҳо ЯК кӯшиши интизорӣ.
+  ///
+  /// Пештар ҳар нокомӣ таймери нав мемонд ва онҳо ҷамъ мешуданд:
+  /// чанд таймер қариб якҷоя оташ мегирифт ва боркуниҳои ба ҳам
+  /// печида месохт.
+  void _retryInterstitial() {
+    _interstitialRetry?.cancel();
+    _interstitialRetry =
+        Timer(const Duration(seconds: 30), _preloadInterstitial);
   }
 
   /// Сабаби ягонаи «танзим нашудааст».
@@ -359,8 +399,12 @@ class AdsManager extends ChangeNotifier {
     }
   }
 
+  Timer? _rewardedRetry;
+  DateTime? _rewardedLoadStartedAt;
+
   void _preloadRewarded() {
-    if (_rewardedLoading || _rewardedReady) return;
+    if (_rewardedLoading && !_stale(_rewardedLoadStartedAt)) return;
+    if (_rewardedReady) return;
     final unitId = _rewardedId;
     if (unitId == null) {
       _rewardedError = _notConfigured;
@@ -368,8 +412,14 @@ class AdsManager extends ChangeNotifier {
       return;
     }
     _rewardedLoading = true;
+    _rewardedLoadStartedAt = DateTime.now();
     _rewardedAttempts++;
     notifyListeners();
+
+    if (_rewardedLoader != null) {
+      _rewardedLoader!.loadAd(adRequestConfiguration: _config(unitId));
+      return;
+    }
 
     RewardedAdLoader.create(
       onAdLoaded: (RewardedAd ad) {
@@ -386,13 +436,17 @@ class AdsManager extends ChangeNotifier {
         _rewardedError = _describe(error);
         _recordFailure('Rewarded', error);
         notifyListeners();
-        Future.delayed(const Duration(seconds: 30), _preloadRewarded);
+        _retryRewarded();
       },
     ).then((loader) {
-      _rewardedLoader?.destroy();
       _rewardedLoader = loader;
       loader.loadAd(adRequestConfiguration: _config(unitId));
     });
+  }
+
+  void _retryRewarded() {
+    _rewardedRetry?.cancel();
+    _rewardedRetry = Timer(const Duration(seconds: 30), _preloadRewarded);
   }
 
   /// Сарҳади сервер — тест онро иваз мекунад.
