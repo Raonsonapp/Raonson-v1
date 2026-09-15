@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 import '../api/api_client.dart';
 import '../i18n/strings.dart';
@@ -474,6 +475,13 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
                     fontWeight: FontWeight.w700)),
           ),
         ]),
+        const SizedBox(height: 8),
+        // Суроғаи ВОҚЕӢ, ки барнома ба он муроҷиат мекунад.
+        //
+        // Бе ин, хатои «Failed host lookup» намегӯяд, ки КАДОМ host
+        // ёфт нашуд — ва фарқи байни суроғаи нодуруст ва DNS-и
+        // нокор дида намешавад.
+        _kv('API', AppConfig.apiBaseUrl, copyable: true),
         const SizedBox(height: 8),
         if (s == null) ...[
           Text(tr('adbg.serverUnreachable'),
