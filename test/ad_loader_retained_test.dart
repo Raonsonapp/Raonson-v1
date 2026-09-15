@@ -24,6 +24,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:raonson/core/ads/ads_manager.dart';
 
 /// Матни як функсияро аз рӯи сарлавҳа то қавси пӯшандаи он мегирад.
 String _body(String code, String header) {
@@ -150,6 +151,8 @@ void main() {
     });
   });
 
+  _backoffTests();
+
   test('«✅» танҳо аз callback-и onAdLoaded меояд', () {
     // Агар ин сатр аз ҷои дигар ҳам гузошта шавад, «демо бор шуд»
     // дигар далели боркунии ВОҚЕӢ намешавад.
@@ -157,5 +160,51 @@ void main() {
     expect(successes, 1,
         reason: 'матни муваффақият дар $successes ҷо сохта мешавад — '
             'он бояд танҳо дар onAdLoaded бошад');
+  });
+}
+
+// ── Интизории афзоянда ─────────────────────────────────────────
+//
+// Дар дастгоҳ дархостҳо ҳар 30 сония БЕОХИР такрор мешуданд:
+//
+//   13:20:26  Interstitial code=3 / Rewarded code=3
+//   13:20:56  Interstitial code=3 / Rewarded code=3
+//   13:21:26  Interstitial code=3 / Rewarded code=3
+//
+// Фосила дақиқан 30 сония ва як дархост ба ҳар шакл — яъне таймери
+// такрории худи мо, на схемаи пинҳонӣ. Вале беохир такрор кардан
+// батареяро мехӯрад ва метавонад боиси маҳдудкунии Yandex шавад.
+void _backoffTests() {
+  group('интизории афзоянда', () {
+    test('аввалин кӯшиш зуд такрор мешавад', () {
+      expect(AdsManager.backoffFor(1), const Duration(seconds: 30));
+    });
+
+    test('фосила дучанд мешавад', () {
+      expect(AdsManager.backoffFor(2), const Duration(seconds: 60));
+      expect(AdsManager.backoffFor(3), const Duration(seconds: 120));
+      expect(AdsManager.backoffFor(4), const Duration(seconds: 240));
+    });
+
+    test('фосила аз 15 дақиқа зиёд намешавад', () {
+      for (var f = 5; f <= 12; f++) {
+        final d = AdsManager.backoffFor(f)!;
+        expect(d.inSeconds, lessThanOrEqualTo(900), reason: 'failures=$f');
+        expect(d.inSeconds, greaterThanOrEqualTo(30), reason: 'failures=$f');
+      }
+    });
+
+    test('баъд аз кӯшишҳои зиёд тамоман бас мекунад', () {
+      // Вагарна барнома то абад ҳар чанд дақиқа дархост мефиристад.
+      expect(AdsManager.backoffFor(13), isNull);
+      expect(AdsManager.backoffFor(100), isNull);
+    });
+
+    test('ҳеҷ гоҳ ба такрори 30-сонияи беохир барнамегардад', () {
+      final thirties = [
+        for (var f = 1; f <= 12; f++) AdsManager.backoffFor(f)
+      ].where((d) => d == const Duration(seconds: 30)).length;
+      expect(thirties, 1, reason: 'фосила намеафзояд');
+    });
   });
 }

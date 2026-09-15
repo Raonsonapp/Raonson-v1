@@ -184,13 +184,38 @@ class AdsManager extends ChangeNotifier {
   ///
   /// Акнун боркунии дар парвоз даст нахӯрда мемонад.
   Future<void> reload() async {
+    _trace('RELOAD');
     if (!_initialized) {
       await init();
       return;
     }
+    // Кӯшиши ДАСТӢ интизории афзояндаро аз сар оғоз мекунад ва
+    // таймерҳои интизориро бекор мекунад — вагарна пахши тугма
+    // ҳеҷ таъсир намедошт.
+    _interstitialRetry?.cancel();
+    _rewardedRetry?.cancel();
+    _interstitialRetry = null;
+    _rewardedRetry = null;
+    _interstitialFailures = 0;
+    _rewardedFailures = 0;
     _preloadInterstitial();
     _preloadRewarded();
     notifyListeners();
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Пайгирии дархостҳо
+  //
+  //  Ҳар қадам сабт мешавад, то дар logcat возеҳ бошад, ки КӢ
+  //  дархостро оғоз кард ва КАЙ.
+  //
+  //      adb logcat | grep RAONSON_AD_TRACE
+  // ══════════════════════════════════════════════════════════════
+  int _seq = 0;
+
+  void _trace(String event, {String slot = '-', String extra = ''}) {
+    debugPrint('[RAONSON_AD_TRACE] ${DateTime.now().toIso8601String()} '
+        'seq=$_seq slot=$slot $event $extra');
   }
 
   /// Боркунии дармондаро пас аз ин муддат мурда ҳисоб мекунем.
@@ -222,6 +247,13 @@ class AdsManager extends ChangeNotifier {
     _interstitialLoading = true;
     _interstitialLoadStartedAt = DateTime.now();
     _interstitialAttempts++;
+    _seq++;
+    _trace('REQUEST',
+        slot: 'Interstitial',
+        extra: 'unit=$unitId caller=${StackTrace.current.toString()
+            .split('\n')[1].trim()} '
+            'inFlight=false retryTimer=${_interstitialRetry != null} '
+            'attempt=$_interstitialAttempts');
     notifyListeners();
 
     // Як loader барои тамоми умри барнома.
@@ -230,6 +262,7 @@ class AdsManager extends ChangeNotifier {
     // Агар кӯҳна ҳанӯз кор мекард, ҳамон нестшавӣ дархостро мешикаст.
     // Акнун loader сохта мешавад ва боз-боз истифода мегардад.
     if (_interstitialLoader != null) {
+      _trace('LOADER_REUSE', slot: 'Interstitial');
       _interstitialLoader!.loadAd(adRequestConfiguration: _config(unitId));
       return;
     }
@@ -263,6 +296,7 @@ class AdsManager extends ChangeNotifier {
         _retryInterstitial();
       },
     ).then((loader) {
+      _trace('LOADER_CREATE', slot: 'Interstitial');
       _interstitialLoader = loader;
       loader.loadAd(adRequestConfiguration: _config(unitId));
     });
@@ -274,9 +308,24 @@ class AdsManager extends ChangeNotifier {
   /// чанд таймер қариб якҷоя оташ мегирифт ва боркуниҳои ба ҳам
   /// печида месохт.
   void _retryInterstitial() {
-    _interstitialRetry?.cancel();
-    _interstitialRetry =
-        Timer(const Duration(seconds: 30), _preloadInterstitial);
+    if (_interstitialRetry != null) {
+      _trace('TIMER_CANCEL', slot: 'Interstitial');
+      _interstitialRetry!.cancel();
+    }
+    final wait = backoffFor(_interstitialFailures);
+    if (wait == null) {
+      _trace('RETRY_GIVE_UP',
+          slot: 'Interstitial', extra: 'failures=$_interstitialFailures');
+      _interstitialRetry = null;
+      return;
+    }
+    _trace('TIMER_CREATE',
+        slot: 'Interstitial', extra: 'in=${wait.inSeconds}s');
+    _interstitialRetry = Timer(wait, () {
+      _trace('TIMER_FIRE', slot: 'Interstitial');
+      _interstitialRetry = null;
+      _preloadInterstitial();
+    });
   }
 
   /// Сабаби ягонаи «танзим нашудааст».
@@ -414,9 +463,17 @@ class AdsManager extends ChangeNotifier {
     _rewardedLoading = true;
     _rewardedLoadStartedAt = DateTime.now();
     _rewardedAttempts++;
+    _seq++;
+    _trace('REQUEST',
+        slot: 'Rewarded',
+        extra: 'unit=$unitId caller=${StackTrace.current.toString()
+            .split('\n')[1].trim()} '
+            'inFlight=false retryTimer=${_rewardedRetry != null} '
+            'attempt=$_rewardedAttempts');
     notifyListeners();
 
     if (_rewardedLoader != null) {
+      _trace('LOADER_REUSE', slot: 'Rewarded');
       _rewardedLoader!.loadAd(adRequestConfiguration: _config(unitId));
       return;
     }
@@ -439,14 +496,46 @@ class AdsManager extends ChangeNotifier {
         _retryRewarded();
       },
     ).then((loader) {
+      _trace('LOADER_CREATE', slot: 'Rewarded');
       _rewardedLoader = loader;
       loader.loadAd(adRequestConfiguration: _config(unitId));
     });
   }
 
   void _retryRewarded() {
-    _rewardedRetry?.cancel();
-    _rewardedRetry = Timer(const Duration(seconds: 30), _preloadRewarded);
+    if (_rewardedRetry != null) {
+      _trace('TIMER_CANCEL', slot: 'Rewarded');
+      _rewardedRetry!.cancel();
+    }
+    final wait = backoffFor(_rewardedFailures);
+    if (wait == null) {
+      _trace('RETRY_GIVE_UP',
+          slot: 'Rewarded', extra: 'failures=$_rewardedFailures');
+      _rewardedRetry = null;
+      return;
+    }
+    _trace('TIMER_CREATE', slot: 'Rewarded', extra: 'in=${wait.inSeconds}s');
+    _rewardedRetry = Timer(wait, () {
+      _trace('TIMER_FIRE', slot: 'Rewarded');
+      _rewardedRetry = null;
+      _preloadRewarded();
+    });
+  }
+
+  /// Интизории афзоянда: 30с, 1д, 2д, 4д, 8д, баъд 15д.
+  ///
+  /// Пештар ҳар 30 сония як дархост мерафт — БЕОХИР. Ин на танҳо
+  /// батареяро мехӯрд, балки метавонист боиси маҳдудкунии худи
+  /// Yandex шавад: барномае, ки ҳар ним дақиқа дархост мефиристад
+  /// ва ҳеҷ гоҳ реклама намегирад, мисли трафики бад менамояд.
+  ///
+  /// null = дигар кӯшиш накун (то reload-и дастӣ).
+  @visibleForTesting
+  static Duration? backoffFor(int failures) {
+    if (failures <= 0) return const Duration(seconds: 30);
+    if (failures > 12) return null;
+    final seconds = 30 * (1 << (failures - 1).clamp(0, 5));
+    return Duration(seconds: seconds.clamp(30, 900));
   }
 
   /// Сарҳади сервер — тест онро иваз мекунад.
