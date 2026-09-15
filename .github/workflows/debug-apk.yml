@@ -47,28 +47,45 @@ jobs:
       # Агар он 8.4.0 набошад, APK сохтан маъно надорад.
       - name: Check Yandex SDK version
         run: |
-          echo "── pubspec.lock ──"
-          grep -A 3 '^  yandex_mobileads:' pubspec.lock
-          if ! grep -A 3 '^  yandex_mobileads:' pubspec.lock \
-               | grep -q 'version: "8.4.0"'; then
-            echo "::error::плагин 8.4.0 нест"
-            exit 1
-          fi
-          # Плагин ва SDK-и натив нусхаҳои ҷудогона доранд. Роҳи
-          # плагин аз package_config.json гирифта мешавад — он
-          # ҳамеша дуруст аст, новобаста аз ҷои кэш.
-          ROOT=$(python3 -c "
-          import json, urllib.parse
+          python3 - <<'EOF'
+          import json, re, sys, urllib.parse
+
+          # ── 1. Нусхаи ҲАЛШУДАи плагин ──
+          #
+          # Сабти pubspec.lock ҳашт сатр аст ва `version:` дар охири
+          # он меояд. `grep -A 3` онро намебинад — маҳз ҳамин build-и
+          # аввалро шикаст.
+          lock = open('pubspec.lock').read()
+          m = re.search(
+              r'^  yandex_mobileads:\n(?:    .*\n|      .*\n)*',
+              lock, re.M)
+          if not m:
+              sys.exit('::error::yandex_mobileads дар pubspec.lock нест')
+          block = m.group(0)
+          print('── pubspec.lock ──')
+          print(block.rstrip())
+          v = re.search(r'version: "([^"]+)"', block)
+          if not v or v.group(1) != '8.4.0':
+              sys.exit(f'::error::плагин {v and v.group(1)} аст, на 8.4.0')
+
+          # ── 2. Нусхаи SDK-и НАТИВ ──
+          #
+          # Плагин ва SDK-и натив нусхаҳои ҷудогона доранд; дастгирии
+          # Yandex маҳз дар бораи SDK-и натив гуфт.
           cfg = json.load(open('.dart_tool/package_config.json'))
-          p = next(p for p in cfg['packages']
-                   if p['name'] == 'yandex_mobileads')
-          print(urllib.parse.urlparse(p['rootUri']).path)
-          ")
-          echo "── SDK-и натив ──"
-          grep 'com.yandex.android:mobileads' "$ROOT/android/build.gradle"
-          grep -q 'com.yandex.android:mobileads:8.4.0' \
-            "$ROOT/android/build.gradle" || {
-            echo "::error::SDK-и натив 8.4.0 нест"; exit 1; }
+          pkg = next(p for p in cfg['packages']
+                     if p['name'] == 'yandex_mobileads')
+          root = urllib.parse.urlparse(pkg['rootUri']).path
+          gradle = open(f'{root}/android/build.gradle').read()
+          line = next((l.strip() for l in gradle.splitlines()
+                       if 'com.yandex.android:mobileads' in l), None)
+          print('── SDK-и натив ──')
+          print(line)
+          if not line or '8.4.0' not in line:
+              sys.exit('::error::SDK-и натив 8.4.0 нест')
+
+          print('✅ плагин 8.4.0 ва SDK-и натив 8.4.0')
+          EOF
 
       - name: Flutter test
         run: flutter test
