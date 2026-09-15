@@ -1,0 +1,5 @@
+# Raonson — иҷозати пурраи индексатсия.
+User-agent: *
+Allow: /
+
+Sitemap: https://raonsonapp.github.io/Raonson-v1/sitemap.xml

@@ -28,6 +28,9 @@ jobs:
           cp index.html _site/index.html
           cp assets/icon.png _site/assets/icon.png
           cp app-ads.txt _site/app-ads.txt
+          # Барои индексатсияи Google.
+          cp robots.txt _site/robots.txt
+          cp sitemap.xml _site/sitemap.xml
           # Веб-клиент — худи Raonson дар браузер (webapp/).
           # Саҳифаи асосӣ таблиғотӣ мемонад, барнома дар /app/.
           cp webapp/index.html _site/app/index.html
