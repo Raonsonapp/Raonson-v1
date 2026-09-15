@@ -62,10 +62,13 @@ cp yandex_*.html "$OUT/" 2>/dev/null || true
 {
   echo "commit:  $(git rev-parse --short HEAD 2>/dev/null || echo '?')"
   echo "built:   $(date -u '+%Y-%m-%d %H:%M UTC')"
+  # Матн бо ҳарфи лотинӣ: version.txt файли оддист ва браузер
+  # кодировкаашро тахмин мекунад. Бо ҳарфи кириллӣ он дар экран
+  # вайрон намоён мешуд — «РїСѓСЂСЂР°» ба ҷои «пурра».
   if [ -f "$OUT/app/main.dart.js" ]; then
-    echo "app:     Flutter Web (пурра)"
+    echo "app:     Flutter Web (full)"
   else
-    echo "app:     веб-клиенти сабук"
+    echo "app:     lightweight web client"
   fi
 } > "$OUT/version.txt"
 
@@ -83,6 +86,15 @@ text-align:center;padding:24px}a{color:#0095f6}</style></head>
 <p><a href="/">Ба саҳифаи асосӣ</a> · <a href="/app/">Барнома</a></p>
 </div></body></html>
 HTML
+
+# Кодировка барои ҳамаи файлҳои матнӣ. Бе ин браузер тахмин
+# мекунад ва ҳарфи кириллӣ вайрон намоён мешавад.
+cat > "$OUT/_headers" <<'HDR'
+/*.txt
+  Content-Type: text/plain; charset=utf-8
+/*.xml
+  Content-Type: application/xml; charset=utf-8
+HDR
 
 # GitHub Pages вагарна феҳристҳои бо `_` сарро пинҳон мекунад.
 touch "$OUT/.nojekyll"
