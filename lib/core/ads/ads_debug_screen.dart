@@ -62,19 +62,54 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
     setState(() => _log.insert(0, '$stamp  $line'));
   }
 
+  /// Сабаби ДАҚИҚИ нарасидан ба сервер.
+  ///
+  /// Пештар ҳар хато хомӯшона фурӯ бурда мешуд ва экран танҳо
+  /// «Сервер ҷавоб надод» мегуфт. Ин се ҳолати тамоман гуногунро
+  /// як хел менамуд: коди 4xx/5xx, вақти тамомшуда, ва набудани
+  /// шабака. Акнун ҳар се фарқ мекунанд.
+  ///
+  /// ⚠️ Ин ба хатои рекламаи Yandex ҲЕҶ РАБТ НАДОРАД — ин
+  /// сервери худи мост (/ads/progress).
+  String _serverError = '';
+
   Future<void> _loadServer() async {
-    setState(() => _serverLoading = true);
+    setState(() {
+      _serverLoading = true;
+      _serverError = '';
+    });
+    final started = DateTime.now();
     try {
       final res = await ApiClient.instance.get('/ads/progress');
       if (!mounted) return;
+      final ms = DateTime.now().difference(started).inMilliseconds;
+      if (res.statusCode >= 400) {
+        // Матни ҷавоб бурида мешавад — саҳифаи хатои HTML дароз аст.
+        final body = res.body.length > 300
+            ? '${res.body.substring(0, 300)}…'
+            : res.body;
+        setState(() {
+          _server = null;
+          _serverError = 'HTTP ${res.statusCode} (${ms}ms)\n$body';
+          _serverLoading = false;
+        });
+        debugPrint('[RAONSON_AD] /ads/progress → HTTP '
+            '${res.statusCode} ${ms}ms');
+        return;
+      }
       setState(() {
-        _server = res.statusCode < 400
-            ? jsonDecode(res.body) as Map<String, dynamic>
-            : null;
+        _server = jsonDecode(res.body) as Map<String, dynamic>;
         _serverLoading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _serverLoading = false);
+    } catch (e) {
+      final ms = DateTime.now().difference(started).inMilliseconds;
+      debugPrint('[RAONSON_AD] /ads/progress → ${e.runtimeType}: $e (${ms}ms)');
+      if (!mounted) return;
+      setState(() {
+        _server = null;
+        _serverError = '${e.runtimeType} (${ms}ms)\n$e';
+        _serverLoading = false;
+      });
     }
   }
 
@@ -440,9 +475,27 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
           ),
         ]),
         const SizedBox(height: 8),
-        if (s == null)
+        if (s == null) ...[
           Text(tr('adbg.serverUnreachable'),
-              style: TextStyle(color: AppColors.red, fontSize: 12.5))
+              style: TextStyle(color: AppColors.red, fontSize: 12.5)),
+          if (_serverError.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            // Коди дақиқи HTTP ё истиснои дақиқ. Ин сервери ХУДИ
+            // мост ва ба хатои рекламаи Yandex рабт надорад.
+            SelectableText(_serverError,
+                style: TextStyle(
+                    color: AppColors.grey,
+                    fontSize: 11.5,
+                    height: 1.5,
+                    fontFamily: 'monospace')),
+            const SizedBox(height: 6),
+            Text(tr('adbg.serverNotYandex'),
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.5,
+                    height: 1.45)),
+          ],
+        ]
         else if (!enabled)
           Text(tr('adbg.secretMissing'),
               style: TextStyle(

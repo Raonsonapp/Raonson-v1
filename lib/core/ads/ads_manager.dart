@@ -102,6 +102,30 @@ class AdsManager extends ChangeNotifier {
 
   InterstitialAd? _interstitialAd;
   RewardedAd?     _rewardedAd;
+
+  // ⚠️ Loader-ҳо бояд НИГОҲ дошта шаванд.
+  //
+  // Плагин ба ҳар loader Finalizer мечаспонад (lib/ad.dart:12):
+  //
+  //     final _finalizer = Finalizer<MethodChannel>((channel) {
+  //       channel.invokeMethod('destroy');
+  //     });
+  //
+  // Яъне вақте объекти Dart-и loader дастнорас мешавад, ҷамъкунандаи
+  // партов loader-и НАТИВРО НЕСТ мекунад.
+  //
+  // Пештар loader танҳо тағйирёбандаи маҳаллӣ буд:
+  //
+  //     InterstitialAdLoader.create(...).then((loader) {
+  //       loader.loadAd(...);          // ← баъд аз ин дастнорас
+  //     });
+  //
+  // Дархост дар парвоз буд, вале loader метавонист дар ҳамон лаҳза
+  // нест шавад. Ин ғайримуайян аст — аз вақти GC вобаста. Ҳамин
+  // метавонад ҳам «ҷавоб наомад»-ро шарҳ диҳад, ҳам натиҷаи
+  // ноустуворро.
+  InterstitialAdLoader? _interstitialLoader;
+  RewardedAdLoader?     _rewardedLoader;
   bool _interstitialLoading = false;
   bool _rewardedLoading     = false;
   bool _interstitialReady   = false;
@@ -206,6 +230,11 @@ class AdsManager extends ChangeNotifier {
         Future.delayed(const Duration(seconds: 30), _preloadInterstitial);
       },
     ).then((loader) {
+      // Loader-и кӯҳна возеҳан нест карда мешавад — вагарна ҳар
+      // кӯшиши нав яке мемонад ва нигоҳ доштани навбатӣ маънои
+      // «партови ҷамънашуда»-ро мегирифт.
+      _interstitialLoader?.destroy();
+      _interstitialLoader = loader;
       loader.loadAd(adRequestConfiguration: _config(unitId));
     });
   }
@@ -360,6 +389,8 @@ class AdsManager extends ChangeNotifier {
         Future.delayed(const Duration(seconds: 30), _preloadRewarded);
       },
     ).then((loader) {
+      _rewardedLoader?.destroy();
+      _rewardedLoader = loader;
       loader.loadAd(adRequestConfiguration: _config(unitId));
     });
   }
@@ -524,10 +555,6 @@ class AdsManager extends ChangeNotifier {
     }
   }
 
-  /// Натиҷаи санҷиши ҷудогона.
-  String _lastProbe = '';
-  String get lastProbe => _lastProbe;
-
   /// Рекламаи ДЕМОи Yandex-ро бор мекунад — ҳамон дастгоҳ, ҳамон
   /// шабака, ҳамон SDK, вале ҷойгиршавии дигар.
   ///
@@ -540,38 +567,92 @@ class AdsManager extends ChangeNotifier {
   ///                       надорад.
   ///
   /// Ҳолати рекламаи асосӣ даст намехӯрад.
+  // ── Санҷиши ҷудогонаи ҷойгиршавии демо ───────────────────────
+  //
+  // Иҷрои пештара нодуруст буд ва натиҷаи ЗИДДИЯТНОК медод:
+  //
+  //   • loader дар тағйирёбандаи маҳаллӣ буд → GC метавонист онро
+  //     дар мобайни дархост нест кунад (Finalizer) → «ҷавоб наомад»;
+  //   • ҳеҷ назорати такрорӣ набуд → ду санҷиши ҳамзамон ҳарду ба
+  //     ҳамон `_lastProbe` менавиштанд, пас натиҷаи дар экран
+  //     нишондодашуда метавонист ба сатри log мувофиқ набошад;
+  //   • натиҷаи санҷиши ПЕШТАРА дар экран мемонд.
+  //
+  // Акнун: як санҷиш дар як вақт, loader нигоҳ дошта мешавад, ва ҳар
+  // санҷиш рақами худро дорад — ҷавоби дермонда ба санҷиши нав
+  // нисбат дода намешавад.
+
+  RewardedAdLoader? _probeLoader;
+  int _probeRun = 0;
+  bool _probeBusy = false;
+
+  /// Натиҷаи санҷиш. Холӣ = ҳеҷ санҷиш нашудааст.
+  String _lastProbe = '';
+  String get lastProbe => _lastProbe;
+
+  /// Оё санҷиш ҳоло давом дорад.
+  bool get probeBusy => _probeBusy;
+
+  /// Рекламаи ДЕМОи Yandex-ро бор мекунад — ҳамон дастгоҳ, ҳамон
+  /// шабака, ҳамон SDK, вале ҷойгиршавии дигар.
+  ///
+  /// Ҷавоби қатъӣ медиҳад:
+  ///
+  ///   демо бор шуд    → шабака ва SDK солиманд;
+  ///   демо ҳам хато 3 → масъала берун аз ҷойгиршавист.
+  ///
+  /// «✅» ТАНҲО аз худи callback-и onAdLoaded-и Yandex меояд.
   Future<String> probeDemoRewarded() async {
+    if (_probeBusy) return _lastProbe;
+
     const demoId = 'demo-rewarded-yandex';
+    final run = ++_probeRun;
+    _probeBusy = true;
     _lastProbe = 'санҷиш…';
     notifyListeners();
 
     final done = Completer<String>();
+    // Ҷавоби санҷиши КӮҲНА набояд ба санҷиши нав нисбат дода шавад.
+    void finish(String msg) {
+      if (run != _probeRun) return;
+      if (!done.isCompleted) done.complete(msg);
+    }
+
     try {
-      final loader = await RewardedAdLoader.create(
+      // Loader дар МАЙДОН нигоҳ дошта мешавад, вагарна Finalizer
+      // метавонад онро дар мобайни дархост нест кунад.
+      _probeLoader?.destroy();
+      _probeLoader = await RewardedAdLoader.create(
         onAdLoaded: (ad) {
           ad.destroy();
-          if (!done.isCompleted) done.complete('✅ демо бор шуд');
+          finish('✅ демо бор шуд (onAdLoaded)');
         },
         onAdFailedToLoad: (error) {
           _recordFailure('DEMO-probe', error);
-          if (!done.isCompleted) done.complete('❌ демо: ${_describe(error)}');
+          finish('❌ демо: ${_describe(error)}');
         },
       );
       // Бе ҳеҷ параметри иловагӣ — дархости соддатарини имконпазир.
-      loader.loadAd(
+      _probeLoader!.loadAd(
         adRequestConfiguration:
             const AdRequestConfiguration(adUnitId: demoId),
       );
     } catch (e) {
-      if (!done.isCompleted) done.complete('❌ демо: $e');
+      finish('❌ демо: $e');
     }
 
     final result = await done.future.timeout(
       const Duration(seconds: 30),
       onTimeout: () => '❌ демо: ҷавоб наомад (30 сония)',
     );
+
     _lastProbe = result;
+    _probeBusy = false;
+    // Loader нигоҳ дошта мешавад, то санҷиши навбатӣ онро нест
+    // кунад. Агар ҳозир null кунем, GC метавонад онро маҳз ҳангоми
+    // дархости ҳанӯз дар парвоз буда нест кунад.
     notifyListeners();
+    debugPrint('[RAONSON_AD] probe#$run → $result');
     return result;
   }
 
