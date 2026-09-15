@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="tg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Raonson дар веб — лента, сторис ва профил.">
+<title>Raonson Web</title>
+<link rel="icon" href="../assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Outfit:wght@600;700;800&display=swap">
+<style>
+/* ── Токенҳо ───────────────────────────────────────────────────
+   Равшан — забони визуалии веби Instagram: сафед, хатҳои мӯй,
+   матни #262626. Торик — сиёҳи худи барномаи Raonson.
+
+   Ҳалқаи сторис (teal→green) ва нишони тасдиқ (green) рангҳои
+   ХУДИ Raonson-анд ва дар ҳар ду мавзӯъ бетағйир мемонанд. */
+:root{
+  --ground:#ffffff;
+  --surface:#fafafa;
+  --raised:#ffffff;
+  --line:#dbdbdb;
+  --line-soft:#efefef;
+  --ink:#262626;
+  --muted:#8e8e8e;
+  --blue:#0095f6;
+  --blue-press:#1877f2;
+  --danger:#ed4956;
+  --story-a:#00c6ff;
+  --story-b:#00e87a;
+  --verified:#1db954;
+  --brand-1:#833ab4; --brand-2:#e1306c; --brand-3:#f77737; --brand-4:#fcaf45;
+  --shadow:0 1px 3px rgba(0,0,0,.06);
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#000000;
+    --surface:#121212;
+    --raised:#121212;
+    --line:#262626;
+    --line-soft:#1c1c1c;
+    --ink:#f5f5f5;
+    --muted:#a8a8a8;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#000000; --surface:#121212; --raised:#121212;
+  --line:#262626; --line-soft:#1c1c1c; --ink:#f5f5f5; --muted:#a8a8a8;
+  --shadow:none;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+img,video{max-width:100%;display:block}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.display{font-family:Outfit,"DM Sans",system-ui,sans-serif;letter-spacing:-.02em}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ── Нишони бренд ───────────────────────────────────────────── */
+.mark{
+  width:32px;height:32px;border-radius:10px;flex:none;
+  background:linear-gradient(135deg,var(--brand-1),var(--brand-2) 45%,var(--brand-3) 75%,var(--brand-4));
+  display:grid;place-items:center;
+}
+.mark span{
+  font-family:Outfit,sans-serif;font-weight:800;font-size:17px;color:#fff;
+  line-height:1;
+}
+
+/* ── Экрани вуруд ───────────────────────────────────────────── */
+#login{
+  min-height:100%;display:grid;place-items:center;
+  padding:32px 16px;background:var(--surface);
+}
+.login-card{
+  width:min(400px,100%);background:var(--raised);
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:36px 32px;display:flex;flex-direction:column;gap:14px;
+  box-shadow:var(--shadow);
+}
+.login-head{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:6px}
+.login-head .mark{width:56px;height:56px;border-radius:18px}
+.login-head .mark span{font-size:30px}
+.login-title{font-family:Outfit,sans-serif;font-size:26px;font-weight:700;letter-spacing:-.03em}
+.login-sub{color:var(--muted);font-size:13px;text-align:center;max-width:30ch}
+.field{
+  width:100%;padding:11px 12px;background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;color:var(--ink);
+}
+.field::placeholder{color:var(--muted)}
+.btn{
+  width:100%;min-height:42px;border-radius:8px;font-weight:700;
+  background:var(--blue);color:#fff;transition:background .15s;
+}
+.btn:hover:not(:disabled){background:var(--blue-press)}
+.btn:disabled{opacity:.45;cursor:default}
+.err{
+  color:var(--danger);font-size:13px;text-align:center;
+  min-height:19px;line-height:1.4;
+}
+.login-foot{
+  color:var(--muted);font-size:12px;text-align:center;
+  border-top:1px solid var(--line-soft);padding-top:14px;margin-top:4px;
+}
+
+/* ── Каркас ─────────────────────────────────────────────────── */
+#app{display:none;min-height:100%}
+#app.on{display:block}
+
+.topbar{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:20;
+  background:var(--ground);border-bottom:1px solid var(--line);
+  height:54px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;gap:12px;
+}
+.topbar .wordmark{font-family:Outfit,sans-serif;font-weight:700;font-size:20px}
+
+.shell{
+  display:grid;grid-template-columns:1fr;
+  max-width:975px;margin:0 auto;padding:0 16px 88px;gap:32px;
+}
+@media (min-width:1000px){
+  .topbar{display:none}
+  .shell{grid-template-columns:minmax(0,470px) 1fr;padding-top:28px;padding-bottom:40px}
+  body{padding-left:244px}
+  .sidebar{display:flex}
+}
+
+/* Сутуни канорӣ — танҳо дар компютер */
+.sidebar{
+  display:none;position:fixed;inset:0 auto 0 0;width:244px;
+  border-right:1px solid var(--line);background:var(--ground);
+  flex-direction:column;gap:6px;padding:26px 12px;z-index:20;
+}
+.sidebar .brand{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:18px}
+.sidebar .brand b{font-family:Outfit,sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.navlink{
+  display:flex;align-items:center;gap:14px;padding:11px 10px;
+  border-radius:10px;font-size:15px;transition:background .15s;
+}
+.navlink:hover{background:var(--surface)}
+.navlink.active{font-weight:700}
+.navlink .ico{width:22px;text-align:center;font-size:17px}
+.sidebar .spacer{flex:1}
+
+/* Панели поёнӣ — телефон */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;
+  background:var(--ground);border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;align-items:center;
+  height:52px;padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (min-width:1000px){.tabbar{display:none}}
+.tabbar button{font-size:20px;padding:8px 18px;opacity:.55}
+.tabbar button.active{opacity:1}
+
+/* ── Сторис ─────────────────────────────────────────────────── */
+.stories{
+  display:flex;gap:14px;overflow-x:auto;padding:16px 4px;
+  border-bottom:1px solid var(--line);margin-bottom:18px;
+  scrollbar-width:none;
+}
+.stories::-webkit-scrollbar{display:none}
+.story{width:66px;flex:none;text-align:center}
+.ring{
+  width:66px;height:66px;border-radius:50%;padding:2px;
+  background:linear-gradient(135deg,var(--story-a),var(--story-b));
+}
+.ring.seen{background:var(--line)}
+.ring img,.ring .ph{
+  width:100%;height:100%;border-radius:50%;object-fit:cover;
+  border:2px solid var(--ground);background:var(--surface);
+}
+.story small{
+  display:block;margin-top:6px;font-size:11px;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* ── Пост ───────────────────────────────────────────────────── */
+.post{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px}
+.post:last-child{border-bottom:0}
+.post-head{display:flex;align-items:center;gap:11px;padding:12px 2px}
+.ava{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--surface);flex:none}
+.uname{font-weight:700;font-size:13.5px}
+.check{color:var(--verified);font-size:12px}
+.when{color:var(--muted);font-size:12px}
+.post-media{
+  border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  background:var(--surface);
+}
+.post-media img,.post-media video{width:100%;max-height:70vh;object-fit:cover}
+.acts{display:flex;gap:16px;padding:12px 2px 6px;font-size:21px}
+.acts button{line-height:1;transition:transform .12s}
+.acts button:active{transform:scale(.88)}
+.acts .liked{color:var(--danger)}
+.acts .save{margin-left:auto}
+.count{font-weight:700;font-size:13.5px;padding:0 2px}
+.caption{padding:5px 2px 0;font-size:13.5px;overflow-wrap:anywhere}
+.caption b{font-weight:700;margin-right:6px}
+.cmts{padding:5px 2px 0;color:var(--muted);font-size:13px}
+
+/* ── Канори рост ────────────────────────────────────────────── */
+.rail{display:none}
+@media (min-width:1000px){.rail{display:block;padding-top:16px}}
+.me{display:flex;align-items:center;gap:13px;margin-bottom:22px}
+.me .ava{width:46px;height:46px}
+.me .h{font-weight:700}
+.me .s{color:var(--muted);font-size:13px}
+.rail h4{
+  font-size:13px;color:var(--muted);margin:0 0 12px;font-weight:700;
+  letter-spacing:.02em;
+}
+.tiers{display:flex;flex-direction:column;gap:9px;margin:0;padding:0;list-style:none}
+.tiers li{
+  display:flex;justify-content:space-between;gap:12px;
+  padding:11px 13px;background:var(--surface);
+  border:1px solid var(--line-soft);border-radius:10px;font-size:13px;
+}
+.tiers b{font-weight:700}
+.rail .note{color:var(--muted);font-size:12px;line-height:1.5;margin-top:14px}
+
+/* ── Ҳолатҳо ────────────────────────────────────────────────── */
+.state{
+  padding:44px 16px;text-align:center;color:var(--muted);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.state .big{font-size:30px}
+.state code{
+  font-size:12px;background:var(--surface);border:1px solid var(--line);
+  padding:8px 10px;border-radius:8px;display:block;max-width:100%;
+  overflow-x:auto;text-align:left;color:var(--ink);
+}
+.skel{
+  height:13px;border-radius:6px;background:var(--surface);
+  animation:pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+</head>
+<body>
+
+<!-- ══ ВУРУД ══════════════════════════════════════════════════ -->
+<section id="login">
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <div class="login-head">
+      <div class="mark"><span>R</span></div>
+      <div class="login-title">Raonson</div>
+      <p class="login-sub">Бо ҳамон почта ва рамзе ворид шавед, ки дар барномаи телефон истифода мебаред.</p>
+    </div>
+    <input class="field" id="email" type="email" name="email"
+           placeholder="Почтаи электронӣ" autocomplete="username" required>
+    <input class="field" id="password" type="password" name="password"
+           placeholder="Рамз" autocomplete="current-password" required>
+    <button class="btn" id="loginBtn" type="submit">Ворид шудан</button>
+    <p class="err" id="loginErr" role="alert"></p>
+    <p class="login-foot">Ҳисоб надоред? Барномаи Raonson-ро дар Google Play кушоед ва сабти ном кунед.</p>
+  </form>
+</section>
+
+<!-- ══ БАРНОМА ════════════════════════════════════════════════ -->
+<div id="app">
+
+  <nav class="sidebar">
+    <div class="brand"><div class="mark"><span>R</span></div><b>Raonson</b></div>
+    <button class="navlink active" data-tab="feed"><span class="ico">⌂</span> Лента</button>
+    <button class="navlink" data-tab="profile"><span class="ico">☺</span> Профил</button>
+    <div class="spacer"></div>
+    <button class="navlink" id="themeBtn"><span class="ico">◐</span> Мавзӯъ</button>
+    <button class="navlink" id="outBtn"><span class="ico">⇥</span> Баромад</button>
+  </nav>
+
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="mark"><span>R</span></div>
+      <span class="wordmark">Raonson</span>
+    </div>
+    <div style="display:flex;gap:4px">
+      <button id="themeBtn2" aria-label="Мавзӯъ" style="font-size:19px;padding:6px 10px">◐</button>
+      <button id="outBtn2" aria-label="Баромад" style="font-size:19px;padding:6px 10px">⇥</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div>
+      <div class="stories" id="stories"></div>
+      <div id="feed"></div>
+    </div>
+
+    <aside class="rail">
+      <div class="me">
+        <img class="ava" id="meAva" alt="">
+        <div>
+          <div class="h" id="meName">—</div>
+          <div class="s">Ҳисоби шумо</div>
+        </div>
+      </div>
+      <h4>ГАЛОЧКА АЗ РЕКЛАМА</h4>
+      <ul class="tiers">
+        <li><span>300 реклама</span><b>3 рӯз</b></li>
+        <li><span>600 реклама</span><b>1 ҳафта</b></li>
+        <li><span>1200 реклама</span><b>1 моҳ</b></li>
+      </ul>
+      <p class="note">Реклама танҳо дар барномаи телефон тамошо мешавад. Веб пешрафтро нишон медиҳад.</p>
+    </aside>
+  </main>
+
+  <nav class="tabbar">
+    <button class="active" data-tab="feed" aria-label="Лента">⌂</button>
+    <button data-tab="profile" aria-label="Профил">☺</button>
+  </nav>
+</div>
+
+<script>
+const API = 'https://mahmadmurodov-raonson.hf.space';
+const KEY = 'raonson.web';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let session = load();
+
+function load(){
+  try { return JSON.parse(localStorage.getItem(KEY) || 'null'); }
+  catch { return null; }
+}
+function save(s){
+  session = s;
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
+}
+function clear(){
+  session = null;
+  try { localStorage.removeItem(KEY); } catch {}
+}
+
+/* Ҳар дархост токенро мебарад. 401 маънои «сеанс тамом шуд». */
+async function api(path, opts = {}){
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(session?.token ? { Authorization: 'Bearer ' + session.token } : {}),
+      ...(opts.headers || {}),
+    },
+  });
+  if (res.status === 401){ clear(); render(); throw new Error('Сеанс тамом шуд'); }
+  return res;
+}
+
+/* ── Вуруд ─────────────────────────────────────────────────── */
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('#loginBtn'), err = $('#loginErr');
+  btn.disabled = true; btn.textContent = 'Интизор шавед…'; err.textContent = '';
+  try {
+    const res = await fetch(API + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: $('#email').value.trim(),
+        password: $('#password').value,
+      }),
+    });
+    let body = {};
+    try { body = await res.json(); } catch {}
+    if (!res.ok) throw new Error(body.message || `Хатои ${res.status}`);
+
+    // Барнома маҳз `accessToken`-ро интизор аст (login_controller.dart).
+    const token = body.accessToken || '';
+    if (!token) throw new Error('Сервер токен надод');
+
+    save({ token, user: body.user || null });
+    render();
+  } catch (e) {
+    // Хатои шабака аз хатои сервер фарқ мекунад — корбар бояд донад.
+    err.textContent = e instanceof TypeError
+      ? 'Ба сервер расида нашуд. Интернетро санҷед.'
+      : e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ворид шудан';
+  }
+});
+
+/* ── Лента ─────────────────────────────────────────────────── */
+function when(iso){
+  const t = Date.parse(iso);
+  if (!t) return '';
+  const m = Math.floor((Date.now() - t) / 60000);
+  if (m < 1) return 'ҳозир';
+  if (m < 60) return m + ' дақ';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + ' соат';
+  const d = Math.floor(h / 24);
+  return d < 7 ? d + ' рӯз' : new Date(t).toLocaleDateString('tg');
+}
+
+function postHTML(p){
+  const u = p.user || {};
+  const id = p._id || p.id || '';
+  const m = (p.media || [])[0] || {};
+  const media = !m.url ? '' :
+    (String(m.type).includes('video')
+      ? `<video src="${esc(m.url)}" controls playsinline preload="metadata"></video>`
+      : `<img src="${esc(m.url)}" alt="" loading="lazy">`);
+  const likes = Number(p.likesCount) || 0;
+  return `<article class="post" data-id="${esc(id)}">
+    <div class="post-head">
+      <img class="ava" src="${esc(u.avatar || '')}" alt="" loading="lazy">
+      <span class="uname">${esc(u.username || 'корбар')}</span>
+      ${u.verified ? '<span class="check" title="Тасдиқшуда">●</span>' : ''}
+      <span class="when">· ${esc(when(p.createdAt))}</span>
+    </div>
+    ${media ? `<div class="post-media">${media}</div>` : ''}
+    <div class="acts">
+      <button class="like ${p.liked ? 'liked' : ''}" aria-label="Писанд">${p.liked ? '♥' : '♡'}</button>
+      <button aria-label="Шарҳҳо">◌</button>
+      <button class="save" aria-label="Нигоҳ доштан">${p.saved ? '◼' : '▢'}</button>
+    </div>
+    <div class="count tnum">${likes} писанд</div>
+    ${p.caption ? `<div class="caption"><b>${esc(u.username || '')}</b>${esc(p.caption)}</div>` : ''}
+    ${p.commentsCount ? `<div class="cmts">Ҳамаи ${p.commentsCount} шарҳро дар барнома бинед</div>` : ''}
+  </article>`;
+}
+
+async function loadFeed(){
+  const box = $('#feed');
+  box.innerHTML = `<div class="post">
+    <div class="post-head"><div class="ava skel"></div><div class="skel" style="width:120px"></div></div>
+    <div class="post-media skel" style="aspect-ratio:1;height:auto"></div>
+  </div>`;
+  try {
+    const res = await api('/posts/feed');
+    const body = await res.json();
+    const list = Array.isArray(body) ? body : (body.posts || body.data || []);
+    box.innerHTML = list.length
+      ? list.map(postHTML).join('')
+      : `<div class="state"><span class="big">◌</span>
+           <b>Лента холист</b>
+           <span>Ба одамон обуна шавед — постҳои онҳо ин ҷо мебароянд.</span></div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="state"><span class="big">⚠</span>
+      <b>Лента бор нашуд</b><code>${esc(e.message)}</code></div>`;
+  }
+}
+
+/* Писанд — ҳолат фавран иваз мешавад, вале ҳангоми хато бармегардад. */
+$('#feed').addEventListener('click', async e => {
+  const btn = e.target.closest('.like, .save');
+  if (!btn) return;
+  const art = btn.closest('.post');
+  const id = art?.dataset.id;
+  if (!id) return;
+
+  const isLike = btn.classList.contains('like');
+  const was = isLike ? btn.classList.contains('liked') : btn.textContent === '◼';
+  const countEl = art.querySelector('.count');
+  const n = parseInt(countEl?.textContent, 10) || 0;
+
+  const paint = on => {
+    if (isLike){
+      btn.classList.toggle('liked', on);
+      btn.textContent = on ? '♥' : '♡';
+      if (countEl) countEl.textContent = (n + (on === was ? 0 : on ? 1 : -1)) + ' писанд';
+    } else {
+      btn.textContent = on ? '◼' : '▢';
+    }
+  };
+  paint(!was);
+  try {
+    const res = await api(`/posts/${encodeURIComponent(id)}/${isLike ? 'like' : 'save'}`,
+      { method: 'POST' });
+    if (!res.ok) throw new Error();
+  } catch {
+    paint(was);
+  }
+});
+
+/* ── Сторис ────────────────────────────────────────────────── */
+async function loadStories(){
+  const box = $('#stories');
+  try {
+    const res = await api('/stories/');
+    const body = await res.json();
+    const list = Array.isArray(body) ? body : (body.stories || body.data || []);
+    if (!list.length){ box.style.display = 'none'; return; }
+    box.style.display = 'flex';
+    box.innerHTML = list.slice(0, 20).map(s => {
+      const u = s.user || {};
+      const name = u.username || s.username || '';
+      const av = u.avatar || s.avatar || '';
+      return `<div class="story">
+        <div class="ring${s.seen ? ' seen' : ''}">
+          ${av ? `<img src="${esc(av)}" alt="" loading="lazy">` : '<div class="ph"></div>'}
+        </div>
+        <small>${esc(name)}</small>
+      </div>`;
+    }).join('');
+  } catch {
+    box.style.display = 'none';
+  }
+}
+
+/* ── Каркас ────────────────────────────────────────────────── */
+function setTab(tab){
+  document.querySelectorAll('[data-tab]').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab));
+  if (tab === 'profile'){
+    $('#feed').innerHTML = `<div class="state"><span class="big">☺</span>
+      <b>${esc(session?.user?.username || 'Профили шумо')}</b>
+      <span>Профили пурра, рилс ва чат ҳоло танҳо дар барномаи телефонанд.</span></div>`;
+    $('#stories').style.display = 'none';
+  } else {
+    loadStories(); loadFeed();
+  }
+}
+document.querySelectorAll('[data-tab]').forEach(b =>
+  b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+function toggleTheme(){
+  const now = document.documentElement.getAttribute('data-theme');
+  const next = now === 'dark' ? 'light' : now === 'light' ? '' : 'dark';
+  if (next) document.documentElement.setAttribute('data-theme', next);
+  else document.documentElement.removeAttribute('data-theme');
+  try { localStorage.setItem(KEY + '.theme', next); } catch {}
+}
+['#themeBtn','#themeBtn2'].forEach(s => $(s).addEventListener('click', toggleTheme));
+['#outBtn','#outBtn2'].forEach(s => $(s).addEventListener('click', () => {
+  clear(); render();
+}));
+try {
+  const t = localStorage.getItem(KEY + '.theme');
+  if (t) document.documentElement.setAttribute('data-theme', t);
+} catch {}
+
+function render(){
+  const inApp = !!session?.token;
+  $('#login').style.display = inApp ? 'none' : 'grid';
+  $('#app').classList.toggle('on', inApp);
+  if (!inApp) return;
+  const u = session.user || {};
+  $('#meName').textContent = u.username || 'Шумо';
+  $('#meAva').src = u.avatar || '';
+  setTab('feed');
+}
+render();
+</script>
+</body>
+</html>

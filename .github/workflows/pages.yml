@@ -24,10 +24,13 @@ jobs:
 
       - name: Prepare website
         run: |
-          mkdir -p _site/assets
+          mkdir -p _site/assets _site/app
           cp index.html _site/index.html
           cp assets/icon.png _site/assets/icon.png
           cp app-ads.txt _site/app-ads.txt
+          # Веб-клиент — худи Raonson дар браузер (webapp/).
+          # Саҳифаи асосӣ таблиғотӣ мемонад, барнома дар /app/.
+          cp webapp/index.html _site/app/index.html
           touch _site/.nojekyll
           chmod -R +rX _site
 
