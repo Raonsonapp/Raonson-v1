@@ -89,8 +89,7 @@ class AdsManager extends ChangeNotifier {
   /// Чунин callback вуҷуд надорад: `parameters` дар SDK «Custom
   /// parameters for ad loading request» аст, яъне ҳадафгирӣ. Пас он
   /// шиносаи корбарро бе ҳеҷ фоида ба шабакаи бегона медод.
-  AdRequestConfiguration _config(String unitId) =>
-      AdRequestConfiguration(adUnitId: unitId);
+  AdRequest _config(String unitId) => AdRequest(adUnitId: unitId);
 
   // Шиносаҳо аз AdConfig меоянд: debug → демои Yandex,
   // release → шиносаи воқеӣ аз --dart-define.
@@ -142,7 +141,7 @@ class AdsManager extends ChangeNotifier {
   ///
   /// `_initialized` танҳо ПАС аз await гузошта мешавад, пас танҳо он
   /// кофӣ набуд: main.dart ва reels_screen.dart метавонистанд
-  /// ҳамзамон аз назорат гузаранд ва MobileAds.initialize()-ро ду
+  /// ҳамзамон аз назорат гузаранд ва YandexAds.initialize()-ро ду
   /// бор даъват кунанд.
   ///
   /// Ин дуруст кардани тартиб аст. Ман НАМЕГӮЯМ, ки он хатои
@@ -156,7 +155,7 @@ class AdsManager extends ChangeNotifier {
 
   Future<void> _doInit() async {
     try {
-      await MobileAds.initialize();
+      await YandexAds.initialize();
       _initialized = true;
       _initError = '';
     } catch (e) {
@@ -256,49 +255,39 @@ class AdsManager extends ChangeNotifier {
             'attempt=$_interstitialAttempts');
     notifyListeners();
 
-    // Як loader барои тамоми умри барнома.
-    //
-    // Пештар ҳар кӯшиш loader-и НАВ месохт ва кӯҳнаро нест мекард.
-    // Агар кӯҳна ҳанӯз кор мекард, ҳамон нестшавӣ дархостро мешикаст.
-    // Акнун loader сохта мешавад ва боз-боз истифода мегардад.
-    if (_interstitialLoader != null) {
-      _trace('LOADER_REUSE', slot: 'Interstitial');
-      _interstitialLoader!.loadAd(adRequestConfiguration: _config(unitId));
-      return;
-    }
+    // SDK 8 loader-ро ҳамзамон месозад ва loadAd Future
+    // бармегардонад. Loader боз ҳам дар МАЙДОН нигоҳ дошта
+    // мешавад: Finalizer (ad.dart:12) ҳанӯз ҳаст ва loader-и
+    // дастнорасро нест мекунад.
+    final loader = _interstitialLoader ??= InterstitialAdLoader();
+    _trace(_interstitialLoader == loader ? 'LOADER_REUSE' : 'LOADER_CREATE',
+        slot: 'Interstitial');
 
-    InterstitialAdLoader.create(
-      onAdLoaded: (InterstitialAd ad) {
-        _interstitialAd      = ad;
-        _interstitialReady   = true;
-        _interstitialLoading = false;
-        _interstitialError   = '';
-        _interstitialLoadedAt = DateTime.now();
-        notifyListeners();
-        ad.setAdEventListener(
-          eventListener: InterstitialAdEventListener(
-            onAdShown:        ()  {},
-            onAdFailedToShow: (e) => _onInterstitialDone(),
-            onAdDismissed:    ()  => _onInterstitialDone(),
-            onAdClicked:      ()  {},
-            onAdImpression:   (d) {},
-          ),
-        );
-      },
-      onAdFailedToLoad: (error) {
-        _interstitialLoading = false;
-        _interstitialFailures++;
-        // Хато НИГОҲ дошта мешавад: бе он «чаро реклама намебарояд»
-        // ҷавоб надошт.
-        _interstitialError = _describe(error);
-        _recordFailure('Interstitial', error);
-        notifyListeners();
-        _retryInterstitial();
-      },
-    ).then((loader) {
-      _trace('LOADER_CREATE', slot: 'Interstitial');
-      _interstitialLoader = loader;
-      loader.loadAd(adRequestConfiguration: _config(unitId));
+    loader.loadAd(adRequest: _config(unitId)).then((ad) {
+      _interstitialAd = ad;
+      _interstitialReady = true;
+      _interstitialLoading = false;
+      _interstitialError = '';
+      _interstitialLoadedAt = DateTime.now();
+      _interstitialFailures = 0;
+      notifyListeners();
+      ad.setAdEventListener(
+        eventListener: InterstitialAdEventListener(
+          onAdShown: () {},
+          onAdFailedToShow: (e) => _onInterstitialDone(),
+          onAdDismissed: () => _onInterstitialDone(),
+          onAdClicked: () {},
+          onAdImpression: (d) {},
+        ),
+      );
+    }).catchError((Object error) {
+      // Дар SDK 8 нокомӣ ҳамчун истисно меояд, на callback.
+      _interstitialLoading = false;
+      _interstitialFailures++;
+      _interstitialError = _describe(error);
+      _recordFailure('Interstitial', error);
+      notifyListeners();
+      _retryInterstitial();
     });
   }
 
@@ -358,7 +347,7 @@ class AdsManager extends ChangeNotifier {
   //  мефиристад — яъне плагин чизе пинҳон НАМЕКУНАД.
   //
   //  Пас сабаби зеринро танҳо худи SDK дар logcat навишта
-  //  метавонад — баъд аз MobileAds.setLogging(true).
+  //  метавонад — баъд аз YandexAds.setLogging(true).
   // ══════════════════════════════════════════════════════════════
 
   /// Як нокомии боркунӣ — ҳар чизе, ки гирифта тавонистем.
@@ -472,33 +461,25 @@ class AdsManager extends ChangeNotifier {
             'attempt=$_rewardedAttempts');
     notifyListeners();
 
-    if (_rewardedLoader != null) {
-      _trace('LOADER_REUSE', slot: 'Rewarded');
-      _rewardedLoader!.loadAd(adRequestConfiguration: _config(unitId));
-      return;
-    }
+    final loader = _rewardedLoader ??= RewardedAdLoader();
+    _trace(_rewardedLoader == loader ? 'LOADER_REUSE' : 'LOADER_CREATE',
+        slot: 'Rewarded');
 
-    RewardedAdLoader.create(
-      onAdLoaded: (RewardedAd ad) {
-        _rewardedAd     = ad;
-        _rewardedReady   = true;
-        _rewardedLoading = false;
-        _rewardedError   = '';
-        _rewardedLoadedAt = DateTime.now();
-        notifyListeners();
-      },
-      onAdFailedToLoad: (error) {
-        _rewardedLoading = false;
-        _rewardedFailures++;
-        _rewardedError = _describe(error);
-        _recordFailure('Rewarded', error);
-        notifyListeners();
-        _retryRewarded();
-      },
-    ).then((loader) {
-      _trace('LOADER_CREATE', slot: 'Rewarded');
-      _rewardedLoader = loader;
-      loader.loadAd(adRequestConfiguration: _config(unitId));
+    loader.loadAd(adRequest: _config(unitId)).then((ad) {
+      _rewardedAd = ad;
+      _rewardedReady = true;
+      _rewardedLoading = false;
+      _rewardedError = '';
+      _rewardedLoadedAt = DateTime.now();
+      _rewardedFailures = 0;
+      notifyListeners();
+    }).catchError((Object error) {
+      _rewardedLoading = false;
+      _rewardedFailures++;
+      _rewardedError = _describe(error);
+      _recordFailure('Rewarded', error);
+      notifyListeners();
+      _retryRewarded();
     });
   }
 
@@ -680,7 +661,7 @@ class AdsManager extends ChangeNotifier {
   ///   adb logcat | grep -i yandex
   Future<void> enableSdkLogging() async {
     try {
-      await MobileAds.setLogging(true);
+      await YandexAds.setLogging(true);
     } catch (_) {}
   }
 
@@ -691,7 +672,7 @@ class AdsManager extends ChangeNotifier {
   /// коди мо дида наметавонад.
   Future<void> showYandexDebugPanel() async {
     try {
-      await MobileAds.showDebugPanel();
+      await YandexAds.showDebugPanel();
     } catch (e) {
       _lastProbe = 'debug panel: $e';
       notifyListeners();
@@ -754,40 +735,25 @@ class AdsManager extends ChangeNotifier {
     _lastProbe = 'санҷиш…';
     notifyListeners();
 
-    final done = Completer<String>();
-    // Ҷавоби санҷиши КӮҲНА набояд ба санҷиши нав нисбат дода шавад.
-    void finish(String msg) {
-      if (run != _probeRun) return;
-      if (!done.isCompleted) done.complete(msg);
-    }
-
     try {
-      // Loader дар МАЙДОН нигоҳ дошта мешавад, вагарна Finalizer
-      // метавонад онро дар мобайни дархост нест кунад.
       _probeLoader?.destroy();
-      _probeLoader = await RewardedAdLoader.create(
-        onAdLoaded: (ad) {
-          ad.destroy();
-          finish('✅ демо бор шуд (onAdLoaded)');
-        },
-        onAdFailedToLoad: (error) {
-          _recordFailure('DEMO-probe', error);
-          finish('❌ демо: ${_describe(error)}');
-        },
-      );
-      // Бе ҳеҷ параметри иловагӣ — дархости соддатарини имконпазир.
-      _probeLoader!.loadAd(
-        adRequestConfiguration:
-            const AdRequestConfiguration(adUnitId: demoId),
-      );
+      _probeLoader = RewardedAdLoader();
+      final ad = await _probeLoader!
+          .loadAd(adRequest: const AdRequest(adUnitId: demoId))
+          .timeout(const Duration(seconds: 30));
+      // Ҷавоби санҷиши КӮҲНА ба санҷиши нав нисбат дода намешавад.
+      if (run != _probeRun) return _lastProbe;
+      ad.destroy();
+      _lastProbe = '✅ демо бор шуд (onAdLoaded)';
+    } on TimeoutException {
+      if (run != _probeRun) return _lastProbe;
+      _lastProbe = '❌ демо: ҷавоб наомад (30 сония)';
     } catch (e) {
-      finish('❌ демо: $e');
+      if (run != _probeRun) return _lastProbe;
+      _recordFailure('DEMO-probe', e);
+      _lastProbe = '❌ демо: ${_describe(e)}';
     }
-
-    final result = await done.future.timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => '❌ демо: ҷавоб наомад (30 сония)',
-    );
+    final result = _lastProbe;
 
     _lastProbe = result;
     _probeBusy = false;

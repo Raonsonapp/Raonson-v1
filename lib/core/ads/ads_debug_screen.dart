@@ -14,6 +14,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:yandex_mobileads/mobile_ads.dart';
 
 import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
@@ -195,7 +196,7 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Yandex Mobile Ads SDK',
+                Text('Yandex Mobile Ads SDK ${YandexAds.pluginVersion}',
                     style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 14.5,
@@ -289,7 +290,8 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
             for (final f in _ads.failures.take(10))
               Text(
                   '${f['time']?.substring(11, 19)}  ${f['slot']}  '
-                  'code=${f['code']}  ${f['description']}',
+                  'code=${f['code']} ${_codeMeaning(f['code'])}  '
+                  '${f['description']}',
                   style: TextStyle(
                       color: AppColors.grey,
                       fontSize: 11,
@@ -324,6 +326,33 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
           ],
         ]),
       );
+
+  /// Маънои коди хатои SDK.
+  ///
+  /// Кодҳо аз AdRequestError.Code-и худи SDK:
+  ///   0 UNKNOWN  1 INTERNAL  2 INVALID_REQUEST
+  ///   3 NETWORK  4 NO_FILL   5 SYSTEM
+  ///
+  /// ⚠️ 4 хатои ҲАМГИРОӢ НЕСТ: дархост муваффақ ба Yandex расид ва
+  /// Yandex ҷавоб дод, ки ҳоло реклама надорад.
+  static String _codeMeaning(String? code) {
+    switch (code) {
+      case '0':
+        return '(unknown)';
+      case '1':
+        return '(internal)';
+      case '2':
+        return '(invalid request)';
+      case '3':
+        return '(network)';
+      case '4':
+        return '(no ads available)';
+      case '5':
+        return '(system)';
+      default:
+        return '';
+    }
+  }
 
   Widget _diagBtn(String label, Future<void> Function() onTap) => Padding(
         padding: const EdgeInsets.only(bottom: 8),

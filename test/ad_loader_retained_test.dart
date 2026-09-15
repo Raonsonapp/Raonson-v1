@@ -59,6 +59,9 @@ void main() {
   });
 
   test('ҳар loader пеш аз loadAd ба майдон дода мешавад', () {
+    // SDK 8 дигар `.then((loader)` надорад — loader ҳамзамон сохта
+    // мешавад. Тест намунаи кӯҳнаро нигоҳ медорад, то агар касе ба
+    // он баргардад, айб дубора пайдо нашавад.
     // Ҳар блоки `.then((loader) {` бояд дар ду сатри аввал
     // `... = loader;` дошта бошад.
     final lines = code.split('\n');
@@ -83,10 +86,13 @@ void main() {
   });
 
   test('санҷиши демо loader-ро дар майдон нигоҳ медорад', () {
-    // Дар probe loader бо `await` сохта мешавад, пас намунаи
-    // `.then` ин ҷо кор намекунад.
-    expect(code, contains('_probeLoader = await RewardedAdLoader.create('),
+    // SDK 8: конструктор ҳамзамон аст, вале Finalizer ҳанӯз ҳаст,
+    // пас loader бояд дар майдон монад, на дар тағйирёбандаи
+    // маҳаллӣ.
+    expect(code, contains('_probeLoader = RewardedAdLoader();'),
         reason: 'loader-и санҷиш ба майдон дода намешавад');
+    expect(code, contains('await _probeLoader!'),
+        reason: 'санҷиш аз майдон истифода намебарад');
   });
 
   test('санҷиши демо назорати такрорӣ дорад', () {
@@ -94,7 +100,7 @@ void main() {
     // натиҷаи дар экран нишондодашуда ба сатри log мувофиқ набуд.
     expect(code, contains('if (_probeBusy) return _lastProbe;'),
         reason: 'ду санҷиши ҳамзамон имконпазир аст');
-    expect(code, contains('if (run != _probeRun) return;'),
+    expect(code, contains('if (run != _probeRun) return _lastProbe;'),
         reason: 'ҷавоби санҷиши кӯҳна ба санҷиши нав нисбат дода мешавад');
   });
 
@@ -123,9 +129,10 @@ void main() {
     });
 
     test('loader боз-боз истифода мешавад, на ҳар бор нав', () {
-      expect(code, contains('if (_interstitialLoader != null) {'),
+      // SDK 8: `??=` loader-ро танҳо бори аввал месозад.
+      expect(code, contains('_interstitialLoader ??= InterstitialAdLoader()'),
           reason: 'ҳар кӯшиш loader-и нав месозад');
-      expect(code, contains('if (_rewardedLoader != null) {'),
+      expect(code, contains('_rewardedLoader ??= RewardedAdLoader()'),
           reason: 'ҳар кӯшиш loader-и нав месозад');
     });
 

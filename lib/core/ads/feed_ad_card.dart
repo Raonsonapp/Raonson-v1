@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../ui/app_icons.dart';
 
 import 'ad_config.dart';
@@ -15,6 +17,7 @@ class FeedAdCard extends StatefulWidget {
 class _FeedAdCardState extends State<FeedAdCard>
     with SingleTickerProviderStateMixin {
   BannerAd? _bannerAd;
+  StreamSubscription<BannerAdLoadState>? _sub;
   bool _isLoaded = false;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -33,29 +36,34 @@ class _FeedAdCardState extends State<FeedAdCard>
     if (_bannerAd == null) _loadAd();
   }
 
+  /// SDK 8: шиноса дар `load()` меравад ва ҳолат тавассути stream.
   void _loadAd() {
     // Танзим нашуда бошад, чизе бор намешавад: шиносаи бегона
     // ба хатои «AdUnitId does not exist» меорад.
     final unitId = AdConfig.idFor(AdFormat.banner);
     if (unitId == null) return;
     final width = MediaQuery.of(context).size.width.round();
-    _bannerAd = BannerAd(
-      adUnitId: unitId,
-      adSize: BannerAdSize.sticky(width: width),
-      adRequest: const AdRequest(),
-      onAdLoaded: () {
-        if (!mounted) return;
+
+    final ad = BannerAd(adSize: BannerAdSize.sticky(width: width));
+    _bannerAd = ad;
+
+    _sub = ad.loadStateStream.listen((state) {
+      if (!mounted) return;
+      if (state is BannerAdLoadStateLoaded) {
         setState(() => _isLoaded = true);
         _fadeCtrl.forward();
-      },
-      onAdFailedToLoad: (error) {
-        debugPrint('[FeedAdCard] failed: $error');
-      },
-    );
+      } else if (state is BannerAdLoadStateError) {
+        debugPrint('[FeedAdCard] code=${state.error.code} '
+            '${state.error.description}');
+      }
+    });
+
+    ad.load(AdRequest(adUnitId: unitId));
   }
 
   @override
   void dispose() {
+    _sub?.cancel();
     _fadeCtrl.dispose();
     _bannerAd?.destroy();
     super.dispose();

@@ -1,0 +1,176 @@
+// test/ads_sdk8_test.dart
+// Гузариш ба Yandex Mobile Ads SDK 8.4.0.
+//
+// Дастгирии Yandex гуфт: «реклама подбирается» танҳо аз нусхаи
+// 8.4.0. Ин тестҳо нигоҳ медоранд, ки гузариш ПУРРА бошад ва
+// касе тасодуфан ба API-и SDK 7 барнагардад.
+//
+// SDK 8 ин чизҳоро ИВАЗ кард (CHANGELOG 8.0.0):
+//   MobileAds              → YandexAds
+//   AdRequestConfiguration → AdRequest
+//   Loader.create()        → конструктори ҳамзамон
+//   loadAd(callbacks)      → Future<Ad>, хато ҳамчун истисно
+//   BannerAd(callbacks)    → load() + loadStateStream
+//   setLocationConsent     → setLocationTracking
+//   setAgeRestrictedUser   → setAgeRestricted
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  late Map<String, String> adFiles;
+
+  setUpAll(() {
+    adFiles = {
+      for (final f in Directory('lib').listSync(recursive: true))
+        if (f is File && f.path.endsWith('.dart'))
+          f.path.replaceAll(r'\', '/'): f.readAsStringSync(),
+    }..removeWhere((_, code) => !code.contains('yandex_mobileads'));
+  });
+
+  group('нусхаи вобастагӣ', () {
+    test('pubspec 8.4.0-ро талаб мекунад', () {
+      final spec = File('pubspec.yaml').readAsStringSync();
+      expect(spec, contains('yandex_mobileads: ^8.4.0'),
+          reason: 'нусхаи плагин нав карда нашуд');
+    });
+
+    test('нусхаи ҲАЛШУДА маҳз 8.4.0 аст', () {
+      // pubspec.yaml танҳо талаб аст. Нусхаи воқеӣ дар lock аст.
+      final lock = File('pubspec.lock').readAsStringSync();
+      final i = lock.indexOf('  yandex_mobileads:');
+      expect(i, greaterThan(-1), reason: 'дар lock нест');
+      // Сабт метавонад дар охири файл бошад — ҳудуд маҳдуд мешавад.
+      final block = lock.substring(i, (i + 300).clamp(i, lock.length));
+      expect(block, contains('version: "8.4.0"'),
+          reason: 'нусхаи ҳалшуда 8.4.0 нест: $block');
+    });
+
+    test('SDK-и НАТИВ низ 8.4.0 аст', () {
+      // Плагин ва SDK-и натив нусхаҳои ҷудогона доранд — дастгирии
+      // Yandex маҳз дар бораи SDK-и натив гап мезад.
+      final gradle = File('${_pluginRoot()}/android/build.gradle')
+          .readAsStringSync();
+      expect(gradle, contains("com.yandex.android:mobileads:8.4.0"),
+          reason: 'SDK-и натив 8.4.0 нест');
+    });
+  });
+
+  group('API-и SDK 7 дигар истифода намешавад', () {
+    test('MobileAds. боқӣ намондааст', () {
+      final offenders = <String>[];
+      adFiles.forEach((path, code) {
+        for (final line in code.split('\n')) {
+          if (line.trimLeft().startsWith('//')) continue;
+          if (RegExp(r'\bMobileAds\.').hasMatch(line)) {
+            offenders.add('$path: ${line.trim()}');
+          }
+        }
+      });
+      expect(offenders, isEmpty,
+          reason: 'API-и SDK 7:\n${offenders.join('\n')}');
+    });
+
+    test('AdRequestConfiguration боқӣ намондааст', () {
+      final offenders = <String>[];
+      adFiles.forEach((path, code) {
+        for (final line in code.split('\n')) {
+          if (line.trimLeft().startsWith('//')) continue;
+          if (line.contains('AdRequestConfiguration')) {
+            offenders.add('$path: ${line.trim()}');
+          }
+        }
+      });
+      expect(offenders, isEmpty,
+          reason: 'AdRequestConfiguration дар SDK 8 нест:\n'
+              '${offenders.join('\n')}');
+    });
+
+    test('Loader.create() боқӣ намондааст', () {
+      adFiles.forEach((path, code) {
+        for (final line in code.split('\n')) {
+          if (line.trimLeft().startsWith('//')) continue;
+          expect(line, isNot(contains('AdLoader.create(')), reason: path);
+        }
+      });
+    });
+
+    test('BannerAd дигар callback қабул намекунад', () {
+      // Дар SDK 8 конструктор танҳо андозаро мегирад.
+      adFiles.forEach((path, code) {
+        if (!code.contains('BannerAd(')) return;
+        expect(code, contains('BannerAd(adSize:'), reason: path);
+        expect(code, isNot(contains('adRequest:')), reason: path);
+      });
+    });
+  });
+
+  group('API-и нав дуруст истифода мешавад', () {
+    test('баннер ба stream обуна мешавад ва баъд load мекунад', () {
+      for (final path in [
+        'lib/core/ads/ad_banner_widget.dart',
+        'lib/core/ads/feed_ad_card.dart',
+      ]) {
+        final code = adFiles[path];
+        expect(code, isNotNull, reason: '$path yandex-ро истифода намебарад');
+        expect(code, contains('loadStateStream.listen'), reason: path);
+        expect(code, contains('BannerAdLoadStateLoaded'), reason: path);
+        expect(code, contains('BannerAdLoadStateError'), reason: path);
+        expect(code, contains('ad.load(AdRequest(adUnitId: unitId))'),
+            reason: path);
+      }
+    });
+
+    test('обуна ҳангоми dispose бекор мешавад', () {
+      // Бе ин, ҳар бор кушодани экран як обунаи нав мемонад.
+      for (final path in [
+        'lib/core/ads/ad_banner_widget.dart',
+        'lib/core/ads/feed_ad_card.dart',
+      ]) {
+        expect(adFiles[path], contains('_sub?.cancel();'), reason: path);
+        expect(adFiles[path], contains('_bannerAd?.destroy();'), reason: path);
+      }
+    });
+
+    test('нокомии боркунӣ ҳамчун истисно гирифта мешавад', () {
+      // SDK 8 хаторо бо `throw` медиҳад, на бо callback.
+      final code = adFiles['lib/core/ads/ads_manager.dart']!;
+      expect(code, contains('.catchError((Object error)'),
+          reason: 'нокомии боркунӣ гирифта намешавад');
+    });
+  });
+
+  group('шиносаҳо пас аз гузариш', () {
+    test('ҳар чор шиноса бетағйир мондаанд', () {
+      final units = jsonDecode(
+              File('dart_defines/ad_units.json').readAsStringSync())
+          as Map<String, dynamic>;
+      expect(units['YANDEX_INTERSTITIAL_ID'], 'R-M-19230220-1');
+      expect(units['YANDEX_REWARDED_ID'], 'R-M-19230220-2');
+      expect(units['YANDEX_BANNER_ID'], 'R-M-19230220-3');
+      expect(units['YANDEX_NATIVE_FEED_ID'], 'R-M-19230220-4');
+    });
+
+    test('шиносаи корбар ба Yandex намеравад', () {
+      // SDK 8 `AdRequest.parameters`-ро нигоҳ дошт — бояд холӣ монад.
+      adFiles.forEach((path, code) {
+        for (final line in code.split('\n')) {
+          if (line.trimLeft().startsWith('//')) continue;
+          expect(line, isNot(contains('parameters:')), reason: path);
+        }
+      });
+    });
+  });
+}
+
+/// Роҳи плагини ҳалшуда аз package_config.json.
+String _pluginRoot() {
+  final cfg = jsonDecode(
+          File('.dart_tool/package_config.json').readAsStringSync())
+      as Map<String, dynamic>;
+  final pkg = (cfg['packages'] as List)
+      .cast<Map<String, dynamic>>()
+      .firstWhere((p) => p['name'] == 'yandex_mobileads');
+  return Uri.parse(pkg['rootUri'] as String).toFilePath();
+}

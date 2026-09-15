@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'ad_config.dart';
@@ -13,6 +15,7 @@ class AdBannerWidget extends StatefulWidget {
 
 class _AdBannerWidgetState extends State<AdBannerWidget> {
   BannerAd? _bannerAd;
+  StreamSubscription<BannerAdLoadState>? _sub;
   bool _isLoaded = false;
 
   @override
@@ -21,27 +24,35 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
     if (_bannerAd == null) _loadBanner();
   }
 
+  /// SDK 8: BannerAd танҳо андозаро мегирад; шиноса дар `load()`
+  /// меравад ва ҳолат тавассути stream меояд.
   void _loadBanner() {
     // Танзим нашуда бошад, чизе бор намешавад: шиносаи бегона
     // ба хатои «AdUnitId does not exist» меорад.
     final unitId = AdConfig.idFor(AdFormat.banner);
     if (unitId == null) return;
     final width = MediaQuery.of(context).size.width.round();
-    _bannerAd = BannerAd(
-      adUnitId: unitId,
-      adSize: BannerAdSize.sticky(width: width),
-      adRequest: const AdRequest(),
-      onAdLoaded: () {
-        if (mounted) setState(() => _isLoaded = true);
-      },
-      onAdFailedToLoad: (error) {
-        debugPrint('[AdBanner] failed: $error');
-      },
-    );
+
+    final ad = BannerAd(adSize: BannerAdSize.sticky(width: width));
+    _bannerAd = ad;
+
+    // Обуна ПЕШ аз load — вагарна ҳолати аввал гум мешавад.
+    _sub = ad.loadStateStream.listen((state) {
+      if (!mounted) return;
+      if (state is BannerAdLoadStateLoaded) {
+        setState(() => _isLoaded = true);
+      } else if (state is BannerAdLoadStateError) {
+        debugPrint('[AdBanner] code=${state.error.code} '
+            '${state.error.description}');
+      }
+    });
+
+    ad.load(AdRequest(adUnitId: unitId));
   }
 
   @override
   void dispose() {
+    _sub?.cancel();
     _bannerAd?.destroy();
     super.dispose();
   }
