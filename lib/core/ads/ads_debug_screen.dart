@@ -139,6 +139,8 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
             const SizedBox(height: 14),
             for (final s in _ads.statuses()) _slotCard(s),
             const SizedBox(height: 14),
+            _diagnoseCard(),
+            const SizedBox(height: 14),
             _serverCard(),
             const SizedBox(height: 14),
             _logCard(),
@@ -180,6 +182,69 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
       ]),
     );
   }
+
+  /// Асбобҳои ёфтани сабаби ВОҚЕИИ хато.
+  ///
+  /// Хатои «network error» дар сатҳи SDK рух медиҳад ва сабабашро
+  /// намегӯяд. Се асбоб онро ошкор мекунанд.
+  Widget _diagnoseCard() => _card(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(tr('adbg.diagnose'),
+              style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(tr('adbg.diagnoseHint'),
+              style: TextStyle(
+                  color: AppColors.grey, fontSize: 12.5, height: 1.45)),
+          const SizedBox(height: 12),
+
+          // 1. Ҷойгиршавии демо — санҷиши қатъӣ.
+          _diagBtn(tr('adbg.probeDemo'), () async {
+            _say(tr('adbg.probeRunning'));
+            _say(await _ads.probeDemoRewarded());
+          }),
+
+          // 2. Таҳлилгари худи Yandex.
+          _diagBtn(tr('adbg.yandexPanel'), () async {
+            _say(tr('adbg.yandexPanelOpening'));
+            await _ads.showYandexDebugPanel();
+          }),
+
+          // 3. Сабт дар logcat.
+          _diagBtn(tr('adbg.sdkLogging'), () async {
+            await _ads.enableSdkLogging();
+            _say(tr('adbg.sdkLoggingOn'));
+          }),
+
+          if (_ads.lastProbe.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _kv(tr('adbg.probeResult'), _ads.lastProbe, copyable: true),
+          ],
+        ]),
+      );
+
+  Widget _diagBtn(String label, Future<void> Function() onTap) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => onTap(),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: AppColors.divider),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600)),
+          ),
+        ),
+      );
 
   /// Кадом шиносаҳо истифода мешаванд.
   ///

@@ -1,7 +1,6 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:yandex_mobileads/mobile_ads.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -80,7 +79,10 @@ Future<void> main() async {
 
   // ✅ 6. Ads — танҳо бо розигӣ
   if (AdConsentService.instance.consentGiven) {
-    MobileAds.initialize();
+    // `init()` худаш MobileAds.initialize()-ро бо `await` даъват
+    // мекунад ва хатои онро нигоҳ медорад. Даъвати дуюми ин ҷо
+    // ҳамон корро БЕ await мекард: хатои он ба ҳеҷ ҷо намерафт ва
+    // ду оғози ҳамзамон мешуд.
     AdsManager.instance.init();
     // Шиносаи корбар ба Yandex ФИРИСТОДА НАМЕШАВАД.
     //

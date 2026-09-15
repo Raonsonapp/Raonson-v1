@@ -19,7 +19,6 @@ import '../../widgets/offline_banner.dart';
 import '../../core/firebase_init.dart';
 import '../../core/services/ad_consent_service.dart';
 import '../../core/ads/ads_manager.dart';
-import 'package:yandex_mobileads/mobile_ads.dart';
 import '../../core/webrtc_service.dart';
 import '../../chat/room/incoming_call_screen.dart';
 import '../../chat/room/call_screen.dart';
@@ -105,7 +104,8 @@ class _BottomNavViewState extends State<_BottomNavView> {
     );
     if (accepted == true) {
       await AdConsentService.instance.grantConsent();
-      MobileAds.initialize();
+      // init() худаш MobileAds.initialize()-ро бо await даъват
+      // мекунад ва хаторо нигоҳ медорад.
       AdsManager.instance.init();
     }
   }

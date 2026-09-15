@@ -407,6 +407,88 @@ class AdsManager extends ChangeNotifier {
     Future.delayed(const Duration(seconds: 3), _preloadRewarded);
   }
 
+  // ══════════════════════════════════════════════════════════════
+  //  Асбобҳои ташхис
+  //
+  //  Хатои «3: Ad request failed with network error» дар сатҳи
+  //  SDK рух медиҳад ва сабаби ВОҚЕИИ он дар матни хато нест.
+  //  Ин се асбоб онро намоён мекунанд.
+  // ══════════════════════════════════════════════════════════════
+
+  /// Сабти муфассали SDK-ро дар logcat фаъол мекунад.
+  ///
+  /// Баъд аз ин:
+  ///   adb logcat | grep -i yandex
+  Future<void> enableSdkLogging() async {
+    try {
+      await MobileAds.setLogging(true);
+    } catch (_) {}
+  }
+
+  /// Панели ташхиси ХУДИ Yandex-ро мекушояд.
+  ///
+  /// Ин таҳлилгари дохилии SDK аст: он ҷойгиршавӣ, аккаунт ва
+  /// пайвастшавиро месанҷад ва сабаби дақиқро мегӯяд — чизе, ки
+  /// коди мо дида наметавонад.
+  Future<void> showYandexDebugPanel() async {
+    try {
+      await MobileAds.showDebugPanel();
+    } catch (e) {
+      _lastProbe = 'debug panel: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Натиҷаи санҷиши ҷудогона.
+  String _lastProbe = '';
+  String get lastProbe => _lastProbe;
+
+  /// Рекламаи ДЕМОи Yandex-ро бор мекунад — ҳамон дастгоҳ, ҳамон
+  /// шабака, ҳамон SDK, вале ҷойгиршавии дигар.
+  ///
+  /// Ин санҷиш ҷавоби ҚАТЪӢ медиҳад:
+  ///
+  ///   демо кор мекунад  → шабака ва SDK солиманд; масъала дар
+  ///                       ҷойгиршавӣ ё аккаунти Yandex аст;
+  ///   демо ҳам хато 3   → роҳ ба серверҳои рекламаи Yandex баста
+  ///                       аст (ISP, VPN, DNS). Коди барнома айб
+  ///                       надорад.
+  ///
+  /// Ҳолати рекламаи асосӣ даст намехӯрад.
+  Future<String> probeDemoRewarded() async {
+    const demoId = 'demo-rewarded-yandex';
+    _lastProbe = 'санҷиш…';
+    notifyListeners();
+
+    final done = Completer<String>();
+    try {
+      final loader = await RewardedAdLoader.create(
+        onAdLoaded: (ad) {
+          ad.destroy();
+          if (!done.isCompleted) done.complete('✅ демо бор шуд');
+        },
+        onAdFailedToLoad: (error) {
+          if (!done.isCompleted) done.complete('❌ демо: ${_describe(error)}');
+        },
+      );
+      // Бе ҳеҷ параметри иловагӣ — дархости соддатарини имконпазир.
+      loader.loadAd(
+        adRequestConfiguration:
+            const AdRequestConfiguration(adUnitId: demoId),
+      );
+    } catch (e) {
+      if (!done.isCompleted) done.complete('❌ демо: $e');
+    }
+
+    final result = await done.future.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => '❌ демо: ҷавоб наомад (30 сония)',
+    );
+    _lastProbe = result;
+    notifyListeners();
+    return result;
+  }
+
   bool get isInterstitialReady => _interstitialReady;
   bool get isRewardedReady     => _rewardedReady;
 
