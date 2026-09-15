@@ -26,9 +26,27 @@ cp robots.txt "$OUT/robots.txt"
 cp sitemap.xml "$OUT/sitemap.xml"
 cp app-ads.txt "$OUT/app-ads.txt"
 
-# ── Веб-клиент ───────────────────────────────────────────────────
-# Саҳифаи асосӣ таблиғотӣ мемонад; худи барнома дар /app/.
-cp webapp/index.html "$OUT/app/index.html"
+# ── Барнома дар /app/ ────────────────────────────────────────────
+#
+# Худи барномаи Flutter — ҳамон чизе, ки дар APK аст.
+#
+# Чаро ҲАМИН ҶО, на дар реша: Flutter Web ҳамаро дар <canvas>
+# мекашад. Googlebot ба он нигоҳ мекунад ва матни ХОЛӢ мебинад.
+# Агар саҳифаи асосӣ Flutter Web мебуд, сайт дар Google пайдо
+# намешуд. Пас реша HTML мемонад, барнома дар /app/.
+#
+# Flutter дар муҳити Cloudflare нест — он ҷо ин қадам мегузарад ва
+# веб-клиенти сабук гузошта мешавад. Дар GitHub Actions Flutter
+# ҳаст, пас барномаи пурра меравад.
+if command -v flutter >/dev/null 2>&1; then
+  echo "→ Flutter Web сохта мешавад…"
+  flutter build web --release --base-href /app/
+  cp -r build/web/. "$OUT/app/"
+  echo "  барномаи пурра дар $OUT/app/"
+else
+  echo "→ Flutter нест: веб-клиенти сабук гузошта мешавад"
+  cp webapp/index.html "$OUT/app/index.html"
+fi
 
 # ── Тасдиқи соҳибӣ ───────────────────────────────────────────────
 # Файли Google Search Console ё Yandex Webmaster, агар бошад.

@@ -1,0 +1,23 @@
+{
+  // Танзимоти Cloudflare барои сайти Raonson.
+  //
+  // ⚠️ Бе ин файл wrangler худаш тахмин мекард ва
+  // `"directory": "."` мегузошт — яъне ТАМОМИ анборро ҳамчун сайт
+  // нашр мекард: backend/, lib/, android/ ва ҳама чизи дигар.
+  //
+  // Акнун танҳо `_site/` нашр мешавад — он чи
+  // `scripts/build-site.sh` ҷамъ мекунад.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "raonson",
+  "compatibility_date": "2026-09-11",
+  "assets": {
+    "directory": "_site",
+    // Роҳи номаълум ба саҳифаи асосӣ намеравад — 404 медиҳад.
+    // Вагарна Google ҳар роҳи вайронро ҳамчун саҳифаи воқеӣ
+    // индекс мекунад.
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

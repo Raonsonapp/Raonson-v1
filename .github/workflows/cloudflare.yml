@@ -1,0 +1,73 @@
+name: Deploy to Cloudflare
+
+# Сайти Raonson ба Cloudflare — бо барномаи ПУРРАИ Flutter Web.
+#
+# Чаро аз ин ҷо, на аз худи Cloudflare:
+#
+# Дар муҳити сохтани Cloudflare Flutter НЕСТ. Агар Cloudflare худаш
+# аз Git созад, `scripts/build-site.sh` қадами Flutter-ро мегузарад
+# ва дар /app/ танҳо веб-клиенти сабук мемонад.
+#
+# Дар GitHub Actions Flutter ҳаст. Пас сайт ин ҷо сохта мешавад ва
+# тайёр ба Cloudflare фиристода мешавад.
+#
+# ⚠️ Дар Cloudflare пайвасти Git-ро ХОМӮШ кунед, вагарна ду
+# ҷойгиркунӣ бо ҳам меҷанганд ва натиҷа ғайримуайян мешавад.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'webapp/**'
+      - 'index.html'
+      - 'robots.txt'
+      - 'sitemap.xml'
+      - 'scripts/build-site.sh'
+      - 'wrangler.jsonc'
+      - 'pubspec.yaml'
+      - '.github/workflows/cloudflare.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.2'
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # Сайтро ҷамъ мекунад: саҳифаи HTML дар реша (Google инро
+      # мехонад) ва барномаи пурраи Flutter дар /app/.
+      - name: Build site
+        run: bash scripts/build-site.sh _site
+
+      # Агар Flutter Web насохта шуда бошад, беҳтар аст ҳозир
+      # афтем, назар ба он ки сайти нимкора нашр шавад.
+      - name: Check the app really got built
+        run: |
+          test -f _site/app/main.dart.js || {
+            echo "::error::Flutter Web сохта нашуд — /app/ нопурра аст"
+            exit 1
+          }
+          test -f _site/index.html
+          test -f _site/sitemap.xml
+          echo "✅ $(du -sh _site | cut -f1) — /app/ барномаи пурра дорад"
+
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
