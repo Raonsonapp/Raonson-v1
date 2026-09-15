@@ -52,7 +52,10 @@ void main() {
     for (final field in [
       'InterstitialAdLoader? _interstitialLoader',
       'RewardedAdLoader?     _rewardedLoader',
-      'RewardedAdLoader? _probeLoader',
+      'RewardedAdLoader? _probeRewardedLoader',
+      'InterstitialAdLoader? _probeInterstitialLoader',
+      'RewardedAd? _probeRewardedAd',
+      'InterstitialAd? _probeInterstitialAd',
     ]) {
       expect(code, contains(field), reason: 'майдон нест: $field');
     }
@@ -89,9 +92,15 @@ void main() {
     // SDK 8: конструктор ҳамзамон аст, вале Finalizer ҳанӯз ҳаст,
     // пас loader бояд дар майдон монад, на дар тағйирёбандаи
     // маҳаллӣ.
-    expect(code, contains('_probeLoader = RewardedAdLoader();'),
-        reason: 'loader-и санҷиш ба майдон дода намешавад');
-    expect(code, contains('await _probeLoader!'),
+    // Ҳар ду шакли демо loader-и худро дар МАЙДОН нигоҳ медорад.
+    expect(code, contains('_probeRewardedLoader ??= RewardedAdLoader();'),
+        reason: 'loader-и демои Rewarded ба майдон дода намешавад');
+    expect(code,
+        contains('_probeInterstitialLoader ??= InterstitialAdLoader();'),
+        reason: 'loader-и демои Interstitial ба майдон дода намешавад');
+    expect(code, contains('await _probeRewardedLoader!'),
+        reason: 'санҷиш аз майдон истифода намебарад');
+    expect(code, contains('await _probeInterstitialLoader!'),
         reason: 'санҷиш аз майдон истифода намебарад');
   });
 

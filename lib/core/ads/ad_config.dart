@@ -81,7 +81,18 @@ class AdConfig {
   /// null маънои «ин шаклро БОР НАКУН» дорад. Ҳеҷ гоҳ ба шиносаи
   /// дигар иваз намешавад.
   static String? idFor(AdFormat f) {
-    if (isDebugBuild) return _demo[f];
+    // Ду шарт, на як.
+    //
+    // `isDebugBuild` майдони тағйирёбанда аст — тест онро иваз
+    // мекунад. Танҳо он кифоя набуд: коди нодуруст метавонист
+    // онро дар release ба true гузорад ва шиносаи ДЕМО ба
+    // корбарони воқеӣ мерафт.
+    //
+    // `kDebugMode` бошад доимии ВАҚТИ ТАРҶУМА аст. Дар build-и
+    // release он false аст, пас ин шоха умуман ба barnoma дохил
+    // намешавад — демо дар release ҒАЙРИИМКОН мегардад, новобаста
+    // аз он ки касе `isDebugBuild`-ро чӣ кор кунад.
+    if (isDebugBuild && kDebugMode) return _demo[f];
     final id = _prod[f] ?? '';
     return id.isEmpty ? null : id;
   }

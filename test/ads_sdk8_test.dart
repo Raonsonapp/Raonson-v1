@@ -141,6 +141,8 @@ void main() {
     });
   });
 
+  _demoModeTests();
+
   group('шиносаҳо пас аз гузариш', () {
     test('ҳар чор шиноса бетағйир мондаанд', () {
       final units = jsonDecode(
@@ -173,4 +175,83 @@ String _pluginRoot() {
       .cast<Map<String, dynamic>>()
       .firstWhere((p) => p['name'] == 'yandex_mobileads');
   return Uri.parse(pkg['rootUri'] as String).toFilePath();
+}
+
+// ── Режими демо барои ташхиси дастгирии Yandex ─────────────────
+//
+// Дастгирии Yandex санҷиши блокҳои демоеро талаб кард. Хатари
+// асосӣ ин аст, ки шиносаи демо ба build-и release дарояд: он
+// рекламаи санҷиширо ба корбарони воқеӣ нишон медиҳад ва ҳеҷ
+// даромад намедиҳад — вале «кор мекунад» менамояд.
+void _demoModeTests() {
+  late String config;
+  late String manager;
+  late String screen;
+
+  setUpAll(() {
+    config = File('lib/core/ads/ad_config.dart').readAsStringSync();
+    manager = File('lib/core/ads/ads_manager.dart').readAsStringSync();
+    screen = File('lib/core/ads/ads_debug_screen.dart').readAsStringSync();
+  });
+
+  group('демо ба release намедарояд', () {
+    test('шохаи демо бо kDebugMode маҳкам аст', () {
+      // `isDebugBuild` майдони тағйирёбанда аст — танҳо он кифоя
+      // нест. `kDebugMode` доимии вақти тарҷума аст, пас дар
+      // release ин шоха умуман тарҷума намешавад.
+      expect(config, contains('if (isDebugBuild && kDebugMode)'),
+          reason: 'демо дар release дастрас мемонад');
+    });
+
+    test('ҳар ду функсияи демо kDebugMode-ро месанҷанд', () {
+      for (final fn in ['Future<String> probeDemo(', 'Future<String> showDemo(']) {
+        final i = manager.indexOf(fn);
+        expect(i, greaterThan(-1), reason: '$fn нест');
+        expect(manager.substring(i, i + 200), contains('if (!kDebugMode)'),
+            reason: '$fn дар release кор мекунад');
+      }
+    });
+
+    test('тугмаҳои демо дар release нишон дода намешаванд', () {
+      expect(screen, contains('if (kDebugMode) ...['),
+          reason: 'тугмаҳои демо дар release намоёнанд');
+    });
+  });
+
+  group('шиносаҳои демо', () {
+    test('маҳз шиносаҳои талабкардаи Yandex', () {
+      expect(manager,
+          contains("static const demoRewardedId = 'demo-rewarded-yandex'"));
+      expect(
+          manager,
+          contains("static const demoInterstitialId = "
+              "'demo-interstitial-yandex'"));
+    });
+
+    test('шиносаҳои production даст нахӯрдаанд', () {
+      final units = jsonDecode(
+              File('dart_defines/ad_units.json').readAsStringSync())
+          as Map<String, dynamic>;
+      expect(units['YANDEX_INTERSTITIAL_ID'], 'R-M-19230220-1');
+      expect(units['YANDEX_REWARDED_ID'], 'R-M-19230220-2');
+      expect(units['YANDEX_BANNER_ID'], 'R-M-19230220-3');
+      expect(units['YANDEX_NATIVE_FEED_ID'], 'R-M-19230220-4');
+    });
+
+    test('демо ба ҷараёни мукофот дахл надорад', () {
+      // showDemo набояд ба сервер хабар диҳад ё мукофот диҳад.
+      final i = manager.indexOf('Future<String> showDemo(');
+      final body = manager.substring(i, manager.indexOf('\n  }', i));
+      for (final forbidden in [
+        'rewardBackend',
+        'openSession',
+        'claim(',
+        '_remember(',
+      ]) {
+        expect(body, isNot(contains(forbidden)),
+            reason: 'санҷиши демо ба ҷараёни мукофот даст мерасонад: '
+                '$forbidden');
+      }
+    });
+  });
 }

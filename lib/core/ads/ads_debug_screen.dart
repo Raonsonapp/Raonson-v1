@@ -12,6 +12,7 @@
 // ════════════════════════════════════════════════════════════════════
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
@@ -237,11 +238,46 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
                   color: AppColors.grey, fontSize: 12.5, height: 1.45)),
           const SizedBox(height: 12),
 
-          // 1. Ҷойгиршавии демо — санҷиши қатъӣ.
-          _diagBtn(tr('adbg.probeDemo'), () async {
-            _say(tr('adbg.probeRunning'));
-            _say(await _ads.probeDemoRewarded());
-          }),
+          // ── Санҷиши блокҳои ДЕМО (дархости дастгирии Yandex) ──
+          //
+          // Танҳо дар build-и debug кор мекунад. Дар release ин
+          // тугмаҳо умуман нишон дода намешаванд.
+          if (kDebugMode) ...[
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+              decoration: BoxDecoration(
+                color: AppColors.red.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.red.withOpacity(0.4)),
+              ),
+              child: Text(tr('adbg.demoMode'),
+                  style: TextStyle(
+                      color: AppColors.red,
+                      fontSize: 12,
+                      height: 1.4,
+                      fontWeight: FontWeight.w600)),
+            ),
+            _diagBtn('1. ${AdsManager.demoRewardedId} — бор кардан',
+                () async {
+              _say(tr('adbg.probeRunning'));
+              _say(await _ads.probeDemo(AdFormat.rewarded));
+            }),
+            if (_ads.demoRewardedReady)
+              _diagBtn('2. demo Rewarded — НИШОН додан', () async {
+                _say(await _ads.showDemo(AdFormat.rewarded));
+              }),
+            _diagBtn('3. ${AdsManager.demoInterstitialId} — бор кардан',
+                () async {
+              _say(tr('adbg.probeRunning'));
+              _say(await _ads.probeDemo(AdFormat.interstitial));
+            }),
+            if (_ads.demoInterstitialReady)
+              _diagBtn('4. demo Interstitial — НИШОН додан', () async {
+                _say(await _ads.showDemo(AdFormat.interstitial));
+              }),
+          ],
 
           // 2. Таҳлилгари худи Yandex.
           _diagBtn(tr('adbg.yandexPanel'), () async {

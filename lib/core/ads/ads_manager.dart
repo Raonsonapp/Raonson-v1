@@ -706,7 +706,30 @@ class AdsManager extends ChangeNotifier {
   // санҷиш рақами худро дорад — ҷавоби дермонда ба санҷиши нав
   // нисбат дода намешавад.
 
-  RewardedAdLoader? _probeLoader;
+  // ── Санҷиши ҷойгиршавии ДЕМО ────────────────────────────────
+  //
+  // Дастгирии Yandex санҷиши блокҳои демоеро талаб кард. Шиносаҳо
+  // расмӣ ва ҷамъиятӣ мебошанд:
+  //
+  //     demo-rewarded-yandex
+  //     demo-interstitial-yandex
+  //
+  // ⚠️ Онҳо ба build-и release ҲЕҶ ГОҲ намераванд. Ин ҷо
+  // `kDebugMode` санҷида мешавад — доимии вақти тарҷума. Дар
+  // release ин функсияҳо фавран бармегарданд ва худи шиносаҳо ба
+  // коди release дохил намешаванд.
+
+  static const demoRewardedId = 'demo-rewarded-yandex';
+  static const demoInterstitialId = 'demo-interstitial-yandex';
+
+  RewardedAdLoader? _probeRewardedLoader;
+  InterstitialAdLoader? _probeInterstitialLoader;
+
+  // Рекламаи БОРШУДАИ демо нигоҳ дошта мешавад, то онро НИШОН ДОДАН
+  // мумкин бошад: «бор шуд» ва «нишон дода шуд» ду савол аст.
+  RewardedAd? _probeRewardedAd;
+  InterstitialAd? _probeInterstitialAd;
+
   int _probeRun = 0;
   bool _probeBusy = false;
 
@@ -717,52 +740,163 @@ class AdsManager extends ChangeNotifier {
   /// Оё санҷиш ҳоло давом дорад.
   bool get probeBusy => _probeBusy;
 
+  /// Оё реклами демои боршуда тайёр аст (барои тугмаи «Нишон додан»).
+  bool get demoRewardedReady => _probeRewardedAd != null;
+  bool get demoInterstitialReady => _probeInterstitialAd != null;
+
+  String _probeResult(int run, String text) {
+    if (run != _probeRun) return _lastProbe;
+    _lastProbe = text;
+    _probeBusy = false;
+    notifyListeners();
+    debugPrint('[RAONSON_AD_TRACE] probe#$run → $text');
+    return text;
+  }
+
   /// Рекламаи ДЕМОи Yandex-ро бор мекунад — ҳамон дастгоҳ, ҳамон
   /// шабака, ҳамон SDK, вале ҷойгиршавии дигар.
   ///
-  /// Ҷавоби қатъӣ медиҳад:
-  ///
-  ///   демо бор шуд    → шабака ва SDK солиманд;
-  ///   демо ҳам хато 3 → масъала берун аз ҷойгиршавист.
-  ///
-  /// «✅» ТАНҲО аз худи callback-и onAdLoaded-и Yandex меояд.
-  Future<String> probeDemoRewarded() async {
+  /// «✅» ТАНҲО пас аз бозгашти муваффақи `loadAd` гузошта мешавад.
+  Future<String> probeDemo(AdFormat format) async {
+    if (!kDebugMode) {
+      return _lastProbe = 'санҷиши демо танҳо дар build-и debug';
+    }
     if (_probeBusy) return _lastProbe;
+    if (format != AdFormat.rewarded && format != AdFormat.interstitial) {
+      return _lastProbe = 'ин шакл санҷиши демо надорад';
+    }
 
-    const demoId = 'demo-rewarded-yandex';
+    final rewarded = format == AdFormat.rewarded;
+    final unitId = rewarded ? demoRewardedId : demoInterstitialId;
+    final name = rewarded ? 'DEMO-rewarded' : 'DEMO-interstitial';
+
     final run = ++_probeRun;
     _probeBusy = true;
-    _lastProbe = 'санҷиш…';
+    _lastProbe = 'санҷиш… ($unitId)';
     notifyListeners();
+    _trace('DEMO_LOAD', slot: name, extra: 'unit=$unitId');
 
     try {
-      _probeLoader?.destroy();
-      _probeLoader = RewardedAdLoader();
-      final ad = await _probeLoader!
-          .loadAd(adRequest: const AdRequest(adUnitId: demoId))
-          .timeout(const Duration(seconds: 30));
-      // Ҷавоби санҷиши КӮҲНА ба санҷиши нав нисбат дода намешавад.
-      if (run != _probeRun) return _lastProbe;
-      ad.destroy();
-      _lastProbe = '✅ демо бор шуд (onAdLoaded)';
+      if (rewarded) {
+        _probeRewardedAd?.destroy();
+        _probeRewardedAd = null;
+        _probeRewardedLoader ??= RewardedAdLoader();
+        final ad = await _probeRewardedLoader!
+            .loadAd(adRequest: const AdRequest(adUnitId: demoRewardedId))
+            .timeout(const Duration(seconds: 30));
+        if (run != _probeRun) {
+          ad.destroy();
+          return _lastProbe;
+        }
+        _probeRewardedAd = ad;
+      } else {
+        _probeInterstitialAd?.destroy();
+        _probeInterstitialAd = null;
+        _probeInterstitialLoader ??= InterstitialAdLoader();
+        final ad = await _probeInterstitialLoader!
+            .loadAd(adRequest: const AdRequest(adUnitId: demoInterstitialId))
+            .timeout(const Duration(seconds: 30));
+        if (run != _probeRun) {
+          ad.destroy();
+          return _lastProbe;
+        }
+        _probeInterstitialAd = ad;
+      }
+      return _probeResult(run, '✅ $name бор шуд (onAdLoaded)');
     } on TimeoutException {
-      if (run != _probeRun) return _lastProbe;
-      _lastProbe = '❌ демо: ҷавоб наомад (30 сония)';
+      return _probeResult(run, '❌ $name: ҷавоб наомад (30 сония)');
     } catch (e) {
-      if (run != _probeRun) return _lastProbe;
-      _recordFailure('DEMO-probe', e);
-      _lastProbe = '❌ демо: ${_describe(e)}';
+      _recordFailure(name, e);
+      return _probeResult(run, '❌ $name: ${_describe(e)}');
     }
-    final result = _lastProbe;
+  }
 
-    _lastProbe = result;
-    _probeBusy = false;
-    // Loader нигоҳ дошта мешавад, то санҷиши навбатӣ онро нест
-    // кунад. Агар ҳозир null кунем, GC метавонад онро маҳз ҳангоми
-    // дархости ҳанӯз дар парвоз буда нест кунад.
+  /// Рекламаи демои боршударо НИШОН медиҳад.
+  ///
+  /// Ин саволи дуюми дастгирии Yandex аст: «оё онро нишон додан
+  /// мумкин аст». Натиҷа аз callback-ҳои воқеӣ ҷамъ карда мешавад.
+  ///
+  /// ⚠️ Ин ҳеҷ мукофот НАМЕДИҲАД: ҷараёни сеанси сервер ба он
+  /// тамоман дахл надорад.
+  Future<String> showDemo(AdFormat format) async {
+    if (!kDebugMode) {
+      return _lastProbe = 'санҷиши демо танҳо дар build-и debug';
+    }
+    final rewarded = format == AdFormat.rewarded;
+    final name = rewarded ? 'DEMO-rewarded' : 'DEMO-interstitial';
+    final events = <String>[];
+    final done = Completer<void>();
+
+    void finish() {
+      if (!done.isCompleted) done.complete();
+    }
+
+    try {
+      if (rewarded) {
+        final ad = _probeRewardedAd;
+        if (ad == null) return _lastProbe = '$name: аввал бор кунед';
+        ad.setAdEventListener(
+          eventListener: RewardedAdEventListener(
+            onAdShown: () => events.add('onAdShown'),
+            onAdFailedToShow: (e) {
+              events.add('onAdFailedToShow: ${e.description}');
+              finish();
+            },
+            onAdDismissed: () {
+              events.add('onAdDismissed');
+              finish();
+            },
+            onAdClicked: () => events.add('onAdClicked'),
+            onAdImpression: (_) => events.add('onAdImpression'),
+            onRewarded: (r) =>
+                events.add('onRewarded(${r.type} ${r.amount})'),
+          ),
+        );
+        _trace('DEMO_SHOW', slot: name);
+        await ad.show();
+      } else {
+        final ad = _probeInterstitialAd;
+        if (ad == null) return _lastProbe = '$name: аввал бор кунед';
+        ad.setAdEventListener(
+          eventListener: InterstitialAdEventListener(
+            onAdShown: () => events.add('onAdShown'),
+            onAdFailedToShow: (e) {
+              events.add('onAdFailedToShow: ${e.description}');
+              finish();
+            },
+            onAdDismissed: () {
+              events.add('onAdDismissed');
+              finish();
+            },
+            onAdClicked: () => events.add('onAdClicked'),
+            onAdImpression: (_) => events.add('onAdImpression'),
+          ),
+        );
+        _trace('DEMO_SHOW', slot: name);
+        await ad.show();
+      }
+
+      // Корбар метавонад рекламаро тамошо кунад — интизори дароз.
+      await done.future.timeout(const Duration(minutes: 2),
+          onTimeout: () => events.add('(ҷавоб наомад)'));
+    } catch (e) {
+      events.add('истисно: ${_describe(e)}');
+    } finally {
+      // Реклама як бор нишон дода мешавад — баъд нест мешавад.
+      if (rewarded) {
+        _probeRewardedAd?.destroy();
+        _probeRewardedAd = null;
+      } else {
+        _probeInterstitialAd?.destroy();
+        _probeInterstitialAd = null;
+      }
+    }
+
+    final text = '$name нишон: ${events.join(", ")}';
+    _lastProbe = text;
     notifyListeners();
-    debugPrint('[RAONSON_AD] probe#$run → $result');
-    return result;
+    debugPrint('[RAONSON_AD_TRACE] $text');
+    return text;
   }
 
   bool get isInterstitialReady => _interstitialReady;
