@@ -111,24 +111,46 @@ curl -i "https://<домен>/ads/callback?user_id=u1&transaction_id=t1&timestam
 
 ### Сохтани build-и production
 
+Шиносаҳо дар `dart_defines/ad_units.json` мемонанд ва ҳангоми сохтан
+дода мешаванд:
+
 ```bash
 flutter build appbundle --release \
-  --dart-define=YANDEX_INTERSTITIAL_ID=R-M-XXXXXXXX-1 \
-  --dart-define=YANDEX_REWARDED_ID=R-M-XXXXXXXX-2 \
-  --dart-define=YANDEX_BANNER_ID=R-M-XXXXXXXX-3 \
-  --dart-define=YANDEX_NATIVE_FEED_ID=R-M-XXXXXXXX-4
+  --dart-define-from-file=dart_defines/ad_units.json
 ```
 
-Шиносаҳоро аз кабинети Yandex гиред. Онҳо сир НЕСТАНД (дар барнома
-намоёнанд), вале дар код нигоҳ дошта намешаванд, то build-и
-санҷишӣ ва production омехта нашаванд.
+Ҳар ду workflow-и release (`release.yml` ва `flutter_full_build.yml`)
+ин файлро медиҳанд. `test/ad_units_file_test.dart` месанҷад, ки ҳеҷ
+қадами build онро фаромӯш накардааст — пештар маҳз `release.yml`
+(AAB барои Google Play) ҳеҷ `--dart-define` намедод.
+
+Чаро дар repository, на дар GitHub Secrets: шиноса сир нест (дар ҳар
+APK дида мешавад), вале агар он дар Secrets бошад ва касе онро
+нагузорад, build бе хатогӣ мегузарад ва реклама хомӯш мемонад. Ниг.
+`dart_defines/README.md`.
+
+### Ҳолати ҳар шиноса
+
+| Шакл | Шиноса | Дар дастгоҳ санҷида шуд? |
+|---|---|---|
+| Interstitial | `R-M-19230220-1` | Ҳа — ҷойгиршавӣ ҳаст, вале inventory нест |
+| Rewarded | `R-M-19230220-2` | НЕ — нав сохта шуд, санҷиш лозим |
+| Banner | `R-M-19230220-3` | НЕ |
+| Native feed | `R-M-19230220-4` | НЕ |
+
+Экрани ташхис (Танзимот → Ташхиси реклама) дар build-и release
+ҳолати ҳақиқии ҳар чорро нишон медиҳад.
 
 ### Барои Rewarded чӣ бояд кард
 
-1. Дар кабинети Yandex ҷойгиршавии нави **Rewarded** созед.
-2. Шиносаи онро гиред (`R-M-...-N`).
-3. Онро ба `--dart-define=YANDEX_REWARDED_ID=...` диҳед.
-4. Дар ҳамон ҷойгиршавӣ **S2S rewards**-ро танзим кунед (ниг. боло).
+1. ✅ Дар кабинети Yandex ҷойгиршавии **Rewarded** сохта шуд:
+   `R-M-19230220-2`.
+2. ✅ Он дар `dart_defines/ad_units.json` гузошта шуд.
+3. ⬜ Дар ҳамон ҷойгиршавӣ **S2S rewards**-ро танзим кунед (ниг. боло).
+4. ⬜ `ADS_CALLBACK_SECRET`-ро дар HuggingFace Space → Settings →
+   Secrets гузоред. То он вақт callback-и Yandex бо 403 рад мешавад
+   ва мукофот дода намешавад.
+5. ⬜ Build-и release-ро дар дастгоҳи воқеии Android санҷед.
 
 ## Зинаҳо
 

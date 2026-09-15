@@ -68,6 +68,15 @@ jobs:
             echo "No tests found, skipping."
           fi
 
+      # Санҷишҳои реклама ду роҳи ҷудогона доранд: бе шиноса (боло) ва
+      # бо шиносаи воқеии build-и production. Қадами болоӣ танҳо роҳи
+      # якумро месанҷад.
+      - name: Flutter test (шиносаҳои реклама)
+        run: |
+          flutter test --dart-define-from-file=dart_defines/ad_units.json \
+            test/ad_config_test.dart test/ad_units_file_test.dart \
+            test/ads_debug_test.dart
+
       # =============================
       # 7.4 CREATE .env (dart-define secrets)
       # =============================
@@ -98,14 +107,18 @@ jobs:
       # =============================
       - name: Build APK (release)
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        run: flutter build apk --release --dart-define-from-file=.env
+        run: |
+          flutter build apk --release --dart-define-from-file=.env \
+            --dart-define-from-file=dart_defines/ad_units.json
 
       # =============================
       # 8.1 BUILD AAB (RELEASE)
       # =============================
       - name: Build AAB (release)
         if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        run: flutter build appbundle --release --dart-define-from-file=.env
+        run: |
+          flutter build appbundle --release --dart-define-from-file=.env \
+            --dart-define-from-file=dart_defines/ad_units.json
 
       # =============================
       # 9. UPLOAD APK ARTIFACT

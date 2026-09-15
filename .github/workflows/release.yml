@@ -52,11 +52,33 @@ jobs:
           echo "APP_VERSION_CODE=$((1000 + ${{ github.run_number }}))" >> $GITHUB_ENV
           echo "✅ versionCode = $((1000 + ${{ github.run_number }}))"
 
+      # Шиносаҳои реклама ҳангоми сохтан дода мешаванд (dart_defines/README.md).
+      # Агар онҳо дода нашаванд, барнома бе хатогӣ сохта мешавад ва реклама
+      # хомӯш мемонад — хатои хомӯш. Ин ҷо build қасдан меафтад.
+      - name: Check ad unit IDs
+        run: |
+          python3 -c "
+          import json, sys
+          d = json.load(open('dart_defines/ad_units.json'))
+          missing = [k for k in (
+              'YANDEX_INTERSTITIAL_ID', 'YANDEX_REWARDED_ID',
+              'YANDEX_BANNER_ID', 'YANDEX_NATIVE_FEED_ID',
+          ) if not d.get(k)]
+          if missing:
+              sys.exit('::error::шиносаи реклама нест: ' + ', '.join(missing))
+          for k, v in d.items():
+              print(f'{k} = {v}')
+          "
+
       - name: Build signed release AAB
-        run: flutter build appbundle --release
+        run: |
+          flutter build appbundle --release \
+            --dart-define-from-file=dart_defines/ad_units.json
 
       - name: Build signed release APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release \
+            --dart-define-from-file=dart_defines/ad_units.json
 
       - name: Upload AAB (for Play Store)
         uses: actions/upload-artifact@v4
