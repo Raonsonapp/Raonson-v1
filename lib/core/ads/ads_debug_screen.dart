@@ -20,6 +20,7 @@ import '../api/api_client.dart';
 import '../i18n/strings.dart';
 import '../services/user_session.dart';
 import '../ui/app_icons.dart';
+import 'ad_config.dart';
 import 'ads_manager.dart';
 
 class AdsDebugScreen extends StatefulWidget {
@@ -138,6 +139,8 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
           children: [
             _sdkCard(),
             const SizedBox(height: 14),
+            _buildModeCard(),
+            const SizedBox(height: 14),
             for (final s in _ads.statuses()) _slotCard(s),
             const SizedBox(height: 14),
             _serverCard(),
@@ -178,6 +181,41 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
                         height: 1.4)),
               ]),
         ),
+      ]),
+    );
+  }
+
+  /// Кадом шиносаҳо истифода мешаванд.
+  ///
+  /// Дар ташхиси воқеӣ маълум шуд, ки шиносаи Rewarded дар кабинети
+  /// Yandex вуҷуд надорад. Ин корт нишон медиҳад, ки барнома ҲОЗИР
+  /// кадом шиносаро мефиристад.
+  Widget _buildModeCard() {
+    final debug = AdConfig.isDebugBuild;
+    final missing = AdConfig.missing;
+    return _card(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          _dot(missing.isEmpty),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(debug ? tr('adbg.modeDebug') : tr('adbg.modeRelease'),
+                style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700)),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        for (final f in AdFormat.values)
+          _kv(f.name, AdConfig.describe(f),
+              copyable: true, warn: AdConfig.idFor(f) == null),
+        if (missing.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(tr('adbg.missingIds'),
+              style: TextStyle(
+                  color: AppColors.red, fontSize: 12.5, height: 1.45)),
+        ],
       ]),
     );
   }

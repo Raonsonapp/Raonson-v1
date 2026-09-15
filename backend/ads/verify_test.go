@@ -210,3 +210,75 @@ func TestDailyCapIsPositive(t *testing.T) {
 		t.Error("ҳадди рӯзона бояд мусбат бошад")
 	}
 }
+
+// ── Ҳимоя аз ҷойивазкунии корбар ─────────────────────────────────
+
+// Ҳамлаи асосӣ: user_id иваз карда шавад, то мукофот ба аккаунти
+// дигар равад.
+//
+// Азбаски user_id ҷузъи сатри имзошаванда аст, ҳар тағйири он имзоро
+// вайрон мекунад.
+func TestUserIdCannotBeSwapped(t *testing.T) {
+	t.Setenv("ADS_CALLBACK_SECRET", testKey)
+	now := time.Now()
+
+	victim := params(now)
+	victim["user_id"] = "victim"
+	sig := Sign(victim, testKey)
+
+	// Имзои қурбонӣ бо шиносаи ҳамлакунанда кор намекунад.
+	attacker := params(now)
+	attacker["user_id"] = "attacker"
+	if err := Verify(attacker, sig, now); err == nil {
+		t.Error("шиносаи корбар иваз карда шуд")
+	}
+
+	// Ва баръакс.
+	if err := Verify(victim, Sign(attacker, testKey), now); err == nil {
+		t.Error("имзои бегона қабул шуд")
+	}
+}
+
+// Дархости нопурра ё вайрон қабул намешавад.
+func TestMalformedRequestsRejected(t *testing.T) {
+	t.Setenv("ADS_CALLBACK_SECRET", testKey)
+	now := time.Now()
+
+	cases := map[string]map[string]string{
+		"холӣ":             {},
+		"вақти матнӣ":      {"user_id": "u1", "timestamp": "дирӯз"},
+		"вақти манфӣ":      {"user_id": "u1", "timestamp": "-1"},
+		"вақти хеле калон": {"user_id": "u1", "timestamp": "99999999999999"},
+	}
+	for name, p := range cases {
+		if err := Verify(p, Sign(p, testKey), now); err == nil {
+			t.Errorf("%s: дархости вайрон қабул шуд", name)
+		}
+	}
+}
+
+// Сир набояд ба матни хато барояд.
+//
+// Хатоҳо ба log мераванд; агар сир дар онҳо бошад, он дар файли log
+// боқӣ мемонад.
+func TestErrorsNeverContainSecret(t *testing.T) {
+	const s3cret = "SUPER-SECRET-CALLBACK-KEY-123"
+	t.Setenv("ADS_CALLBACK_SECRET", s3cret)
+	now := time.Now()
+
+	// Ҳар се роҳи хато.
+	p := params(now)
+	errs := []error{
+		Verify(p, "bad-signature", now),
+		Verify(params(now.Add(-time.Hour)), Sign(params(now), s3cret), now),
+		Verify(map[string]string{"user_id": "u"}, "x", now),
+	}
+	for i, err := range errs {
+		if err == nil {
+			continue
+		}
+		if strings.Contains(err.Error(), s3cret) {
+			t.Errorf("хатои %d сирро ошкор кард: %v", i, err)
+		}
+	}
+}

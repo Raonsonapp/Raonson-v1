@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
+import 'ad_config.dart';
+
 /// Ҳолати як шакли реклама — барои экрани ташхис.
 ///
 /// Бе ин, вақте реклама намебарояд, ҳеҷ роҳи фаҳмидани сабаб нест:
@@ -60,7 +62,7 @@ class AdsManager extends ChangeNotifier {
   List<AdSlotStatus> statuses() => [
         AdSlotStatus(
           name: 'Interstitial',
-          unitId: _interstitialId,
+          unitId: AdConfig.describe(AdFormat.interstitial),
           loading: _interstitialLoading,
           ready: _interstitialReady,
           lastError: _interstitialError,
@@ -72,7 +74,7 @@ class AdsManager extends ChangeNotifier {
         ),
         AdSlotStatus(
           name: 'Rewarded',
-          unitId: _rewardedId,
+          unitId: AdConfig.describe(AdFormat.rewarded),
           loading: _rewardedLoading,
           ready: _rewardedReady,
           lastError: _rewardedError,
@@ -90,10 +92,13 @@ class AdsManager extends ChangeNotifier {
         parameters: _userId.isEmpty ? null : {'user_id': _userId},
       );
 
-  static const String _interstitialId = 'R-M-19230220-1';
-  static const String _rewardedId     = 'R-M-19230220-2';
-  static const String _bannerId       = 'R-M-19230220-3';
-  static const String _nativeFeedId   = 'R-M-19230220-4';
+  // Шиносаҳо аз AdConfig меоянд: debug → демои Yandex,
+  // release → шиносаи воқеӣ аз --dart-define.
+  //
+  // null маънои «танзим нашудааст» дорад ва боркунӣ умуман оғоз
+  // намешавад — на ин ки шиносаи дигар гузошта шавад.
+  static String? get _interstitialId => AdConfig.idFor(AdFormat.interstitial);
+  static String? get _rewardedId => AdConfig.idFor(AdFormat.rewarded);
 
   InterstitialAd? _interstitialAd;
   RewardedAd?     _rewardedAd;
@@ -141,6 +146,15 @@ class AdsManager extends ChangeNotifier {
 
   void _preloadInterstitial() {
     if (_interstitialLoading || _interstitialReady) return;
+    final unitId = _interstitialId;
+    if (unitId == null) {
+      // Танзим нашудааст — боркунӣ умуман оғоз намешавад ва такрор
+      // ҳам нест: такрори беохир барои чизе, ки ҳеҷ гоҳ кор
+      // намекунад, танҳо батареяро мехӯрад.
+      _interstitialError = _notConfigured;
+      notifyListeners();
+      return;
+    }
     _interstitialLoading = true;
     _interstitialAttempts++;
     notifyListeners();
@@ -173,9 +187,16 @@ class AdsManager extends ChangeNotifier {
         Future.delayed(const Duration(seconds: 30), _preloadInterstitial);
       },
     ).then((loader) {
-      loader.loadAd(adRequestConfiguration: _config(_interstitialId));
+      loader.loadAd(adRequestConfiguration: _config(unitId));
     });
   }
+
+  /// Сабаби ягонаи «танзим нашудааст».
+  ///
+  /// Дар release ин маънои онро дорад, ки шиноса ҳангоми сохтан
+  /// дода нашудааст (--dart-define).
+  static const _notConfigured =
+      'Ad unit ID is not configured for this build.';
 
   /// Хатои SDK-ро ба матни хондашаванда табдил медиҳад.
   static String _describe(dynamic error) {
@@ -225,6 +246,12 @@ class AdsManager extends ChangeNotifier {
 
   void _preloadRewarded() {
     if (_rewardedLoading || _rewardedReady) return;
+    final unitId = _rewardedId;
+    if (unitId == null) {
+      _rewardedError = _notConfigured;
+      notifyListeners();
+      return;
+    }
     _rewardedLoading = true;
     _rewardedAttempts++;
     notifyListeners();
@@ -246,7 +273,7 @@ class AdsManager extends ChangeNotifier {
         Future.delayed(const Duration(seconds: 30), _preloadRewarded);
       },
     ).then((loader) {
-      loader.loadAd(adRequestConfiguration: _config(_rewardedId));
+      loader.loadAd(adRequestConfiguration: _config(unitId));
     });
   }
 
@@ -294,8 +321,10 @@ class AdsManager extends ChangeNotifier {
 
   bool get isInterstitialReady => _interstitialReady;
   bool get isRewardedReady     => _rewardedReady;
-  String get bannerId          => _bannerId;
-  String get nativeFeedId      => _nativeFeedId;
+
+  /// null = танзим нашудааст; виджет набояд чизе нишон диҳад.
+  String? get bannerId     => AdConfig.idFor(AdFormat.banner);
+  String? get nativeFeedId => AdConfig.idFor(AdFormat.nativeFeed);
 
   @override
   void dispose() {

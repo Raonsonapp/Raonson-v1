@@ -53,6 +53,12 @@ func Configured() bool { return secret() != "" }
 // беназир онро ҳам мебандад.
 const maxSkew = 10 * time.Minute
 
+// maxSkewSec — ҳамон ҳад бо сония.
+//
+// Муқоиса бо сония иҷро мешавад, то ҳисоби time.Duration саршор
+// нашавад.
+const maxSkewSec = int64(maxSkew / time.Second)
+
 // Verify имзои callback-ро месанҷад.
 //
 // params — ҳамаи параметрҳои дархост ба ғайр аз худи имзо.
@@ -76,11 +82,14 @@ func Verify(params map[string]string, signature string, now time.Time) error {
 	if err != nil {
 		return ErrStale
 	}
-	diff := now.Sub(time.Unix(sec, 0))
-	if diff < 0 {
-		diff = -diff
-	}
-	if diff > maxSkew {
+	// Вақт бояд дар доираи оқилона бошад, ПЕШ аз ҳисоби фарқ.
+	//
+	// Бе ин санҷиш арзиши хеле калон (масалан 99999999999999)
+	// ҳисоби time.Duration-ро саршор мекард: натиҷа ба ҳадди int64
+	// мерасид ва баъд бо аломати манфӣ ба худаш бармегашт — яъне
+	// санҷиши «кӯҳна» бемаъно мешуд.
+	nowSec := now.Unix()
+	if sec < nowSec-maxSkewSec || sec > nowSec+maxSkewSec {
 		return ErrStale
 	}
 

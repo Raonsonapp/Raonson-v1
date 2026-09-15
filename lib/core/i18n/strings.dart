@@ -1309,6 +1309,9 @@ const Map<String, Map<String, String>> _strings = {
     'adbg.balance':              'Боқимонда',
     'adbg.log':                  'Гузориш',
     'adbg.logEmpty':             'Ҳанӯз чизе нест. Тугмаро пахш кунед.',
+    'adbg.modeDebug':            'Реҷаи санҷиш — шиносаҳои демои Yandex',
+    'adbg.modeRelease':          'Реҷаи production — шиносаҳои воқеӣ',
+    'adbg.missingIds':           'Шиноса ҳангоми сохтан дода нашудааст (--dart-define). Ин шакл хомӯш аст.',
 
     // ── Лентаи AI ──────────────────────────────────────────────────
     'aifeed.title':              'Лентаи AI',
@@ -2781,6 +2784,9 @@ const Map<String, Map<String, String>> _strings = {
     'adbg.balance':              'Остаток',
     'adbg.log':                  'Журнал',
     'adbg.logEmpty':             'Пока пусто. Нажмите кнопку.',
+    'adbg.modeDebug':            'Тестовый режим — демо-идентификаторы Yandex',
+    'adbg.modeRelease':          'Режим production — реальные идентификаторы',
+    'adbg.missingIds':           'Идентификатор не передан при сборке (--dart-define). Этот формат отключён.',
 
     // ── AI-лента ───────────────────────────────────────────────────
     'aifeed.title':              'AI-лента',
@@ -4262,6 +4268,9 @@ const Map<String, Map<String, String>> _strings = {
     'adbg.balance':              'Balance',
     'adbg.log':                  'Log',
     'adbg.logEmpty':             'Nothing yet. Press a button.',
+    'adbg.modeDebug':            'Debug build — Yandex demo ad units',
+    'adbg.modeRelease':          'Release build — real ad units',
+    'adbg.missingIds':           'Ad unit was not supplied at build time (--dart-define). This format is off.',
 
     // ── AI Feed ────────────────────────────────────────────────────
     'aifeed.title':              'AI Feed',

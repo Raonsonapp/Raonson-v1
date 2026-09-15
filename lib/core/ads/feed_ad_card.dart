@@ -1,4 +1,6 @@
 import '../ui/app_icons.dart';
+
+import 'ad_config.dart';
 import 'package:flutter/material.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 import '../../app/app_theme.dart';
@@ -32,9 +34,13 @@ class _FeedAdCardState extends State<FeedAdCard>
   }
 
   void _loadAd() {
+    // Танзим нашуда бошад, чизе бор намешавад: шиносаи бегона
+    // ба хатои «AdUnitId does not exist» меорад.
+    final unitId = AdConfig.idFor(AdFormat.banner);
+    if (unitId == null) return;
     final width = MediaQuery.of(context).size.width.round();
     _bannerAd = BannerAd(
-      adUnitId: 'R-M-19230220-3',
+      adUnitId: unitId,
       adSize: BannerAdSize.sticky(width: width),
       adRequest: const AdRequest(),
       onAdLoaded: () {

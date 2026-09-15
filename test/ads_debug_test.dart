@@ -37,8 +37,14 @@ void main() {
       expect(st.map((e) => e.name), containsAll(['Interstitial', 'Rewarded']));
       for (final s in st) {
         expect(s.unitId, isNotEmpty, reason: '${s.name} бе ID');
-        expect(s.unitId, startsWith('R-M-'),
-            reason: '${s.name}: ID-и Yandex шакли дигар дорад');
+      }
+      // Дар build-и санҷишӣ ҳамеша шиносаи ДЕМО истифода мешавад:
+      // шиносаи production дигар дар код нест (ниг. ad_config.dart).
+      for (final s in st) {
+        expect(s.unitId, contains('demo'),
+            reason: '${s.name}: дар тест шиносаи ғайридемо');
+        expect(s.unitId, isNot(startsWith('R-M-')),
+            reason: '${s.name}: шиносаи production дар код монд');
       }
     });
 
