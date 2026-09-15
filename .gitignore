@@ -125,3 +125,6 @@ android/key.properties
 # Secrets — never commit (rotate in hosting dashboard env vars)
 backend/render.yaml
 .env
+
+# Сайти ҷамъкардашуда (scripts/build-site.sh)
+_site/

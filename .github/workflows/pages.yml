@@ -22,25 +22,10 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      # ЯК скрипт барои GitHub Pages ва Cloudflare Pages —
+      # вагарна ду рӯйхати файл дер ё зуд аз ҳам дур мешаванд.
       - name: Prepare website
-        run: |
-          mkdir -p _site/assets _site/app
-          cp index.html _site/index.html
-          cp assets/icon.png _site/assets/icon.png
-          cp app-ads.txt _site/app-ads.txt
-          # Барои индексатсияи Google.
-          cp robots.txt _site/robots.txt
-          cp sitemap.xml _site/sitemap.xml
-          # Файли тасдиқи соҳибӣ (Google Search Console ва Yandex).
-          # Файлро ба решаи анбор партоед — ин ҷо худкор нашр мешавад.
-          # `|| true` — агар ҳанӯз файл набошад, build наафтад.
-          cp google*.html _site/ 2>/dev/null || true
-          cp yandex_*.html _site/ 2>/dev/null || true
-          # Веб-клиент — худи Raonson дар браузер (webapp/).
-          # Саҳифаи асосӣ таблиғотӣ мемонад, барнома дар /app/.
-          cp webapp/index.html _site/app/index.html
-          touch _site/.nojekyll
-          chmod -R +rX _site
+        run: bash scripts/build-site.sh _site
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
