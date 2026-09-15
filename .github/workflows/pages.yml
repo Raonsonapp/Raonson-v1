@@ -31,6 +31,11 @@ jobs:
           # Барои индексатсияи Google.
           cp robots.txt _site/robots.txt
           cp sitemap.xml _site/sitemap.xml
+          # Файли тасдиқи соҳибӣ (Google Search Console ва Yandex).
+          # Файлро ба решаи анбор партоед — ин ҷо худкор нашр мешавад.
+          # `|| true` — агар ҳанӯз файл набошад, build наафтад.
+          cp google*.html _site/ 2>/dev/null || true
+          cp yandex_*.html _site/ 2>/dev/null || true
           # Веб-клиент — худи Raonson дар браузер (webapp/).
           # Саҳифаи асосӣ таблиғотӣ мемонад, барнома дар /app/.
           cp webapp/index.html _site/app/index.html
