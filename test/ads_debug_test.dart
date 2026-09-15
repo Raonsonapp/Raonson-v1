@@ -3,6 +3,8 @@
 //
 // Ҳадаф: вақте реклама намебарояд, сабаб бояд ДИДА шавад. Пештар
 // ҳамаи хатоҳо хомӯшона фурӯ бурда мешуданд.
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raonson/core/ads/ads_manager.dart';
 
@@ -54,11 +56,35 @@ void main() {
       expect(AdsManager.instance.isInitialized, isFalse);
     });
 
-    test('шиносаи корбар қабул мешавад', () {
-      // Худи арзиш хонда намешавад (хусусӣ аст) — муҳим ин аст, ки
-      // даъват хато намедиҳад ва ҳолат вайрон намешавад.
-      AdsManager.instance.setUserId('user-123');
-      expect(AdsManager.instance.statuses().length, 2);
+    test('шиносаи корбар ба Yandex ФИРИСТОДА НАМЕШАВАД', () {
+      // Пештар шиносаи дохилии корбар ҳамчун
+      // `parameters: {'user_id': ...}` ба ҳар дархости реклама
+      // мерафт — бо умеди он ки Yandex онро ба callback-и сервер
+      // бармегардонад.
+      //
+      // Чунин callback вуҷуд надорад: Yandex server-side
+      // verification надорад, ва `parameters` дар SDK маънои
+      // ҳадафгириро дорад. Пас он танҳо шиносаи корбарро бе ҳеҷ
+      // фоида ба шабакаи бегона медод.
+      // Худи механизм санҷида мешавад — `parameters:` дар
+      // AdRequestConfiguration. Шарҳҳо ҳисоб намешаванд (онҳо маҳз
+      // ҳамин таърихро нақл мекунанд), ва нишон додани шиносаи худи
+      // корбар дар экрани ташхис низ дахл надорад: он аз дастгоҳ
+      // берун намеравад.
+      final offenders = <String>[];
+      for (final f in Directory('lib').listSync(recursive: true)) {
+        if (f is! File || !f.path.endsWith('.dart')) continue;
+        final code = f
+            .readAsLinesSync()
+            .where((l) => !l.trimLeft().startsWith('//'))
+            .join('\n');
+        if (code.contains('AdRequestConfiguration') &&
+            code.contains('parameters:')) {
+          offenders.add(f.path);
+        }
+      }
+      expect(offenders, isEmpty,
+          reason: 'ба дархости реклама параметри иловагӣ меравад: $offenders');
     });
   });
 }

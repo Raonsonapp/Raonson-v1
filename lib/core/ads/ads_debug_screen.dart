@@ -42,10 +42,6 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
   void initState() {
     super.initState();
     _ads.addListener(_onAds);
-    // Шиносаи корбар ба дархости реклама дода мешавад — бе он
-    // callback-и Yandex намедонад реклама ба кӣ тааллуқ дорад.
-    final uid = UserSession.userId;
-    if (uid != null && uid.isNotEmpty) _ads.setUserId(uid);
     _loadServer();
   }
 
@@ -85,13 +81,13 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
   Future<void> _showRewarded() async {
     _say(tr('adbg.showing', {'kind': 'Rewarded'}));
     final before = (_server?['watched'] as num?)?.toInt() ?? 0;
-    final ok = await _ads.showRewarded();
-    _say(ok ? tr('adbg.finished') : tr('adbg.notShown'));
-    if (!ok) return;
+    final outcome = await _ads.showRewarded();
+    _say(outcome.watched ? tr('adbg.finished') : tr('adbg.notShown'));
+    if (!outcome.watched) return;
 
-    // Нишондиҳӣ ба ҳисоб ТАНҲО пас аз callback-и шабака меравад.
-    // Он чанд сония дертар меояд, бинобар ин каме интизор мешавем.
-    await Future.delayed(const Duration(seconds: 3));
+    // Ҷавоби сервер возеҳ нишон дода мешавад: маҳз ӯ қарор мекунад,
+    // на барнома.
+    _say('server: ${outcome.status.name}');
     await _loadServer();
     if (!mounted) return;
     final after = (_server?['watched'] as num?)?.toInt() ?? 0;

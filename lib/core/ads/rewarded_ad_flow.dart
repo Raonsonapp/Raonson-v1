@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'ads_manager.dart';
+import 'reward_backend.dart';
 import '../../app/app_theme.dart';
+import '../i18n/strings.dart';
 import '../ui/app_icons.dart';
 
 /// ──────────────────────────────────────────────────────────────
@@ -58,15 +60,37 @@ Future<bool> showRewardedAdFlow(
 
   if (confirmed != true) return false;
 
-  // Show actual rewarded ad
-  final earned = await AdsManager.instance.showRewarded();
-  if (!earned) return false;
+  final outcome = await AdsManager.instance.showRewarded();
+
+  // Ин ҷо имтиёзи МАҲАЛЛӢ кушода мешавад (зеркашии видео ва ғ.), на
+  // галочка ва на баланс. Барои он кофист, ки реклама воқеан то
+  // охир дида шавад.
+  //
+  // Галочка роҳи дигар дорад: он танҳо аз ҳисоби сервер меояд —
+  // ниг. verification_screen.dart.
+  if (!outcome.watched) {
+    if (context.mounted) _showRewardError(context, outcome.status);
+    return false;
+  }
 
   // Success feedback
   if (context.mounted) {
     _showSuccessToast(context, rewardType);
   }
   return true;
+}
+
+/// Сабаби нашудани мукофотро мегӯяд.
+void _showRewardError(BuildContext context, RewardStatus status) {
+  final key = switch (status) {
+    RewardStatus.offline => 'ads.rewardOffline',
+    RewardStatus.unavailable => 'ads.rewardUnavailable',
+    _ => 'ads.rewardNotWatched',
+  };
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(tr(key)),
+    behavior: SnackBarBehavior.floating,
+  ));
 }
 
 // ── Reward success toast ─────────────────────────────────────────────────────

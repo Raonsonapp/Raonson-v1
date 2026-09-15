@@ -50,6 +50,22 @@ func runAll() {
 	cleanExpiredStories()
 	cleanOldNotifications()
 	cleanOldPostViews()
+	cleanOldAdSessions()
+}
+
+// cleanOldAdSessions сеансҳои кӯҳнаи рекламаро мебарорад.
+//
+// Сеанси кушода, ки реклама дар он бор нашуд, то абад мемонад.
+// Онҳо зиёданд: ҳар кӯшиши тамошо як сатр.
+//
+// Мӯҳлат + 1 рӯз интизор мешавем, то сатри навакак мӯҳлаташ
+// расида барои ташхис дастрас бошад.
+func cleanOldAdSessions() {
+	res, _ := db.Pool.Exec(context.Background(),
+		`DELETE FROM ad_watch_sessions WHERE expires_at < NOW() - INTERVAL '1 day'`)
+	if res.RowsAffected() > 0 {
+		log.Printf("[Job] deleted %d old ad watch sessions", res.RowsAffected())
+	}
 }
 
 func cleanExpiredStories() {

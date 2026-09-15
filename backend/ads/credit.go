@@ -7,9 +7,18 @@
 // оддии HTTP галочкаро ройгон гирад — бе он ки ягон реклама бинад.
 // Он вақт ҳам даромад нест, ҳам галочка маъно надорад.
 //
-// Аз ин рӯ ҳисоб ТАНҲО аз callback-и имзошудаи шабакаи реклама қабул
-// мешавад (server-side verification). Агар он танзим нашуда бошад,
-// реклама ҳисоб НАМЕШАВАД — на «ба эҳтимоли хуб» ҳисоб мешавад.
+// Ду роҳи ҳисоб вуҷуд дорад ва онҳо дараҷаи бовари ГУНОГУН доранд:
+//
+//	verify.go  — callback-и ИМЗОШУДАи шабака (SSV). Боварибахш.
+//	             Ҳоло ҳеҷ шабака онро истифода намебарад: Yandex
+//	             SSV надорад. Барои шабакаи оянда нигоҳ дошта шуд.
+//
+//	session.go — хабари худи БАРНОМА. Роҳи Yandex. Боварибахш НЕСТ
+//	             ва шуда ҳам наметавонад; он танҳо бо сеанс, мӯҳлат,
+//	             фосила ва ҳадди рӯзона маҳдуд карда мешавад.
+//
+// Дар ҷадвали `ad_rewards` сутуни `network` фарқи онҳоро нигоҳ
+// медорад: 'yandex-client' яъне «танҳо барнома гуфт».
 package ads
 
 import (
@@ -137,14 +146,18 @@ type Progress struct {
 	Tiers []Tier `json:"tiers"`
 	// Enabled — оё ҳисоби реклама умуман кор мекунад.
 	//
-	// false вақте callback-и шабакаи реклама танзим нашудааст. Он
-	// вақт экран бояд рост бигӯяд, на пешрафти бардурӯғ нишон диҳад.
+	// Роҳи Yandex аз YANDEX_REWARDED_ID вобаста аст, на аз
+	// ADS_CALLBACK_SECRET: Yandex ҳеҷ гоҳ ба callback занг намезанад,
+	// пас он сир ба ин роҳ дахл надорад.
+	//
+	// false вақте шиносаи Rewarded дар сервер нест. Он вақт экран
+	// бояд рост бигӯяд, на пешрафти бардурӯғ нишон диҳад.
 	Enabled bool `json:"enabled"`
 }
 
 // GetProgress вазъи ҷории корбарро мегирад.
 func GetProgress(ctx context.Context, db DB, userID string) (Progress, error) {
-	p := Progress{Tiers: Tiers(), DailyCap: DailyCap(), Enabled: Configured()}
+	p := Progress{Tiers: Tiers(), DailyCap: DailyCap(), Enabled: RewardedReady()}
 
 	goal := DefaultGoal
 	if err := db.QueryRow(ctx, `

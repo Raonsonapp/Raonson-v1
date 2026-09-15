@@ -482,6 +482,14 @@ func main() {
 	{
 		ad2.GET("/progress", handlers.AdProgress)
 		ad2.PUT("/goal", handlers.SetAdGoal)
+
+		// Мукофот аз Yandex: SSV нест, пас хабарро худи барнома
+		// меорад. Маҳдудияти сахттар аз rl100 — рекламаи воқеӣ
+		// 15–30 сония давом мекунад, пас аз 30 дар як дақиқа
+		// зиёд танҳо аз скрипт омада метавонад.
+		adRL := mw.RateLimit(30, 60)
+		ad2.POST("/watch-session", adRL, handlers.AdWatchSession)
+		ad2.POST("/watched", adRL, handlers.AdWatched)
 	}
 
 	// ── ДАЪВАТ ──────────────────────────────────────────────────

@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_theme.dart';
 import '../core/ads/ads_manager.dart';
+import '../core/ads/reward_backend.dart';
 import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
@@ -155,20 +156,42 @@ class _VerificationScreenState extends State<VerificationScreen> {
     } catch (_) {}
   }
 
+  /// Сабаби нашудани ҳисобро ба матни корбар табдил медиҳад.
+  static String _reasonKey(RewardOutcome o) {
+    if (!o.watched) {
+      return o.status == RewardStatus.offline
+          ? 'ads.rewardOffline'
+          : 'vf.adNotReady';
+    }
+    return switch (o.status) {
+      RewardStatus.dailyCap => 'ads.rewardDailyCap',
+      RewardStatus.tooFast => 'ads.rewardTooFast',
+      RewardStatus.duplicate => 'ads.rewardDuplicate',
+      RewardStatus.offline => 'ads.rewardOffline',
+      RewardStatus.unavailable => 'ads.rewardUnavailable',
+      _ => 'ads.rewardRejected',
+    };
+  }
+
   Future<void> _watch() async {
     if (_watching) return;
     setState(() => _watching = true);
     try {
-      final shown = await AdsManager.instance.showRewarded();
+      final outcome = await AdsManager.instance.showRewarded();
       if (!mounted) return;
-      if (!shown) {
+
+      // Танҳо ҷавоби СЕРВЕР маънои «ҳисоб шуд» дорад. Барнома
+      // худаш ҳеҷ гоҳ баланс ё галочка намедиҳад: Yandex тасдиқи
+      // server-side надорад, пас хабари барнома боварибахш нест ва
+      // қарори ниҳоӣ аз они сервер аст.
+      if (!outcome.counted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(tr('vf.adNotReady')),
+          content: Text(tr(_reasonKey(outcome))),
           behavior: SnackBarBehavior.floating,
         ));
       }
-      // Пешрафт ҳамеша аз СЕРВЕР гирифта мешавад: шабакаи реклама
-      // серверро хабардор мекунад ва танҳо он ҳисоб мекунад.
+
+      // Пешрафт ҳамеша аз СЕРВЕР гирифта мешавад.
       await _load();
     } finally {
       if (mounted) setState(() => _watching = false);

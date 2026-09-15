@@ -1312,6 +1312,13 @@ const Map<String, Map<String, String>> _strings = {
     'adbg.modeDebug':            'Реҷаи санҷиш — шиносаҳои демои Yandex',
     'adbg.modeRelease':          'Реҷаи production — шиносаҳои воқеӣ',
     'adbg.missingIds':           'Шиноса ҳангоми сохтан дода нашудааст (--dart-define). Ин шакл хомӯш аст.',
+    'ads.rewardOffline':         'Хабар ба сервер нарасид. Ҳангоми пайвастшавӣ такрор мешавад.',
+    'ads.rewardUnavailable':     'Реклама ҳоло дастрас нест. Баъдтар кӯшиш кунед.',
+    'ads.rewardNotWatched':      'Реклама то охир дида нашуд.',
+    'ads.rewardRejected':        'Ин тамошо ҳисоб нашуд.',
+    'ads.rewardDuplicate':       'Ин реклама аллакай ҳисоб шудааст.',
+    'ads.rewardTooFast':         'Каме сабр кунед ва боз кӯшиш кунед.',
+    'ads.rewardDailyCap':        'Ҳадди имрӯза пур шуд. Фардо давом диҳед.',
 
     // ── Лентаи AI ──────────────────────────────────────────────────
     'aifeed.title':              'Лентаи AI',
@@ -2787,6 +2794,13 @@ const Map<String, Map<String, String>> _strings = {
     'adbg.modeDebug':            'Тестовый режим — демо-идентификаторы Yandex',
     'adbg.modeRelease':          'Режим production — реальные идентификаторы',
     'adbg.missingIds':           'Идентификатор не передан при сборке (--dart-define). Этот формат отключён.',
+    'ads.rewardOffline':         'Сервер не получил уведомление. Повторим при подключении.',
+    'ads.rewardUnavailable':     'Реклама сейчас недоступна. Попробуйте позже.',
+    'ads.rewardNotWatched':      'Реклама не досмотрена до конца.',
+    'ads.rewardRejected':        'Этот просмотр не засчитан.',
+    'ads.rewardDuplicate':       'Этот просмотр уже засчитан.',
+    'ads.rewardTooFast':         'Подождите немного и попробуйте снова.',
+    'ads.rewardDailyCap':        'Дневной предел достигнут. Продолжите завтра.',
 
     // ── AI-лента ───────────────────────────────────────────────────
     'aifeed.title':              'AI-лента',
@@ -4271,6 +4285,13 @@ const Map<String, Map<String, String>> _strings = {
     'adbg.modeDebug':            'Debug build — Yandex demo ad units',
     'adbg.modeRelease':          'Release build — real ad units',
     'adbg.missingIds':           'Ad unit was not supplied at build time (--dart-define). This format is off.',
+    'ads.rewardOffline':         'The server was not notified. We will retry when you are back online.',
+    'ads.rewardUnavailable':     'Ads are unavailable right now. Try again later.',
+    'ads.rewardNotWatched':      'The ad was not watched to the end.',
+    'ads.rewardRejected':        'This view was not counted.',
+    'ads.rewardDuplicate':       'This view was already counted.',
+    'ads.rewardTooFast':         'Please wait a moment and try again.',
+    'ads.rewardDailyCap':        'Daily limit reached. Continue tomorrow.',
 
     // ── AI Feed ────────────────────────────────────────────────────
     'aifeed.title':              'AI Feed',

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
 import 'ad_config.dart';
+import 'reward_backend.dart';
 
 /// Ҳолати як шакли реклама — барои экрани ташхис.
 ///
@@ -37,14 +39,6 @@ class AdSlotStatus {
 class AdsManager extends ChangeNotifier {
   AdsManager._();
   static final AdsManager instance = AdsManager._();
-
-  /// Шиносаи корбар — ба дархости реклама дода мешавад.
-  ///
-  /// Барои мукофоти S2S: Yandex ҳамин арзишро ба callback-и сервер
-  /// бармегардонад. Бе он сервер намедонад реклама ба КӢ тааллуқ
-  /// дорад ва ҳисоб кор намекунад.
-  String _userId = '';
-  void setUserId(String id) => _userId = id;
 
   String _initError = '';
   String get initError => _initError;
@@ -86,11 +80,17 @@ class AdsManager extends ChangeNotifier {
         ),
       ];
 
-  /// Танзимоти дархост — ҳамеша бо шиносаи корбар.
-  AdRequestConfiguration _config(String unitId) => AdRequestConfiguration(
-        adUnitId: unitId,
-        parameters: _userId.isEmpty ? null : {'user_id': _userId},
-      );
+  /// Танзимоти дархост.
+  ///
+  /// Шиносаи ДОХИЛИИ корбар ин ҷо ФИРИСТОДА НАМЕШАВАД.
+  ///
+  /// Пештар он ҳамчун `parameters: {'user_id': ...}` мерафт — бо
+  /// умеди он ки Yandex онро ба callback-и сервер бармегардонад.
+  /// Чунин callback вуҷуд надорад: `parameters` дар SDK «Custom
+  /// parameters for ad loading request» аст, яъне ҳадафгирӣ. Пас он
+  /// шиносаи корбарро бе ҳеҷ фоида ба шабакаи бегона медод.
+  AdRequestConfiguration _config(String unitId) =>
+      AdRequestConfiguration(adUnitId: unitId);
 
   // Шиносаҳо аз AdConfig меоянд: debug → демои Yandex,
   // release → шиносаи воқеӣ аз --dart-define.
@@ -129,6 +129,8 @@ class AdsManager extends ChangeNotifier {
     _preloadInterstitial();
     _preloadRewarded();
     notifyListeners();
+    // Рекламае, ки дида шуд, вале хабараш нарасид.
+    unawaited(retryPendingClaims());
   }
 
   /// Аз нав кӯшиш кардан — барои экрани ташхис.
@@ -277,8 +279,33 @@ class AdsManager extends ChangeNotifier {
     });
   }
 
-  Future<bool> showRewarded() async {
-    if (!_rewardedReady || _rewardedAd == null) return false;
+  /// Сарҳади сервер — тест онро иваз мекунад.
+  RewardBackend rewardBackend = const ApiRewardBackend();
+
+  /// Рекламаи мукофотдорро нишон медиҳад ва серверро хабардор мекунад.
+  ///
+  /// Тартиб муҳим аст:
+  ///
+  ///   1. Сервер сеанс мекушояд. Агар нашавад, реклама нишон дода
+  ///      НАМЕШАВАД — вагарна корбар беҳуда тамошо мекард.
+  ///   2. Реклама нишон дода мешавад.
+  ///   3. ТАНҲО агар Yandex `onRewarded`-ро эълон кунад, хабар ба
+  ///      сервер меравад.
+  ///
+  /// Барнома ҳеҷ чизро худаш ҳисоб намекунад: `counted` фақат аз
+  /// ҷавоби сервер меояд.
+  Future<RewardOutcome> showRewarded() async {
+    final unitId = _rewardedId;
+    if (unitId == null || !_rewardedReady || _rewardedAd == null) {
+      return RewardOutcome.notShown;
+    }
+
+    final sessionId = await rewardBackend.openSession(unitId);
+    if (sessionId == null) {
+      // Сервер хомӯш ё шабака нест.
+      return const RewardOutcome(false, RewardStatus.offline);
+    }
+
     final completer = Completer<bool>();
 
     _rewardedAd!.setAdEventListener(
@@ -289,6 +316,7 @@ class AdsManager extends ChangeNotifier {
           _resetRewarded();
         },
         onAdDismissed:    ()       {
+          // Пӯшидан пеш аз мукофот — тамошо нашуд.
           if (!completer.isCompleted) completer.complete(false);
           _resetRewarded();
         },
@@ -310,7 +338,67 @@ class AdsManager extends ChangeNotifier {
       _resetRewarded();
     }
 
-    return completer.future;
+    final watched = await completer.future;
+    if (!watched) return RewardOutcome.notShown;
+
+    final status = await rewardBackend.claim(sessionId, unitId);
+    if (status == RewardStatus.offline) {
+      // Сеанс дар сервер ҲАНӮЗ кушода аст — кӯшиш баъдтар такрор
+      // мешавад. Бе ин, реклама ҳангоми қатъи шабака гум мешуд.
+      await _remember(sessionId, unitId);
+    }
+    _lastRewardStatus = status;
+    notifyListeners();
+    return RewardOutcome(true, status);
+  }
+
+  /// Ҷавоби охирини сервер — барои экрани ташхис.
+  RewardStatus? _lastRewardStatus;
+  RewardStatus? get lastRewardStatus => _lastRewardStatus;
+
+  // ── Хабарҳои нафиристода ─────────────────────────────────────
+  //
+  // Барнома метавонад маҳз дар лаҳзаи хабардиҳӣ кушта шавад ё
+  // шабака қатъ гардад. Он вақт корбар рекламаро дид, вале он ҳисоб
+  // нашуд. Сеанс дар сервер то мӯҳлаташ кушода мемонад, пас кӯшиши
+  // такрорӣ дуруст аст — ва такрор хатарнок нест, чунки сервер ҳар
+  // сеансро танҳо як бор мепазирад.
+  static const _pendingKey = 'ads.pendingClaims';
+
+  Future<void> _remember(String sessionId, String unitId) async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final list = sp.getStringList(_pendingKey) ?? <String>[];
+      final entry = '$sessionId|$unitId';
+      if (!list.contains(entry)) {
+        // Рӯйхат маҳдуд аст: сеанси кӯҳна ба ҳар ҳол мӯҳлаташ мегузарад.
+        list.add(entry);
+        while (list.length > 20) {
+          list.removeAt(0);
+        }
+        await sp.setStringList(_pendingKey, list);
+      }
+    } catch (_) {}
+  }
+
+  /// Хабарҳои нафиристодаро такрор мефиристад.
+  Future<void> retryPendingClaims() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final list = sp.getStringList(_pendingKey) ?? <String>[];
+      if (list.isEmpty) return;
+
+      final left = <String>[];
+      for (final entry in list) {
+        final parts = entry.split('|');
+        if (parts.length != 2) continue;
+        final status = await rewardBackend.claim(parts[0], parts[1]);
+        // Танҳо ҳангоми набудани шабака нигоҳ дошта мешавад: ҳар
+        // ҷавоби сервер — ҳатто рад — ҷавоби ниҳоӣ аст.
+        if (status == RewardStatus.offline) left.add(entry);
+      }
+      await sp.setStringList(_pendingKey, left);
+    } catch (_) {}
   }
 
   void _resetRewarded() {
