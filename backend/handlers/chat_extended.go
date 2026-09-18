@@ -134,6 +134,9 @@ type SendMessageExtRequest struct {
 	ShareUser  string `json:"shareUser"`
 	// Расм танҳо як бор дида мешавад.
 	ViewOnce   bool `json:"viewOnce"`
+	// Шиносаи маҳаллии телефон — барои такрорнашавӣ ҳангоми
+	// фиристодани дубора аз навбати офлайн.
+	ClientID   string `json:"clientId"`
 }
 
 func SendMessageExt(c *gin.Context) {
@@ -193,19 +196,40 @@ func SendMessageExt(c *gin.Context) {
 		replyToPtr = &body.ReplyToID
 	}
 
+	clientID := clampRunes(strings.TrimSpace(body.ClientID), 64)
+
+	// ⚠️ Такрор набояд паёми дуюм созад.
+	//
+	// Телефон паёмро дар навбат нигоҳ медорад ва ҳангоми баргаштани
+	// интернет аз нав мефиристад. Агар дархости аввал расида бошад,
+	// вале ҷавоб гум шуда бошад, бе ин санҷиш ҳамсӯҳбат ду паёми
+	// якхела медид.
+	if clientID != "" {
+		var existing string
+		db.Pool.QueryRow(context.Background(),
+			`SELECT id FROM messages WHERE sender_id=$1 AND client_id=$2`,
+			myID, clientID).Scan(&existing)
+		if existing != "" {
+			if msg, err := fetchMessageByID(existing, myID); err == nil {
+				c.JSON(http.StatusCreated, msg)
+				return
+			}
+		}
+	}
+
 	var msgID string
 	err := db.Pool.QueryRow(context.Background(), `
 		INSERT INTO messages
 		  (chat_id, sender_id, receiver_id, text, type, media_url, reply_to_id,
 		   share_id, share_kind, share_thumb, share_user, view_once,
-		   created_at, updated_at)
+		   client_id, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,
 		        NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),$12,
-		        NOW(),NOW())
+		        $13,NOW(),NOW())
 		RETURNING id
 	`, chatID, myID, receiver, body.Text, msgType, nullString(body.MediaURL), replyToPtr,
 		body.ShareID, body.ShareKind, body.ShareThumb, body.ShareUser,
-		body.ViewOnce).Scan(&msgID)
+		body.ViewOnce, clientID).Scan(&msgID)
 	if err != nil {
 		log.Printf("[Chat] send message failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})

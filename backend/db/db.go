@@ -523,6 +523,16 @@ func migrate() {
 	ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id      TEXT;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS type           VARCHAR(16) DEFAULT 'text';
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to_id    TEXT;
+	-- ⚠️ Калиди такрорнашавӣ.
+	--
+	-- Телефон паёмро дар навбат нигоҳ медорад ва ҳангоми баргаштани
+	-- интернет аз нав мефиристад. Агар дархости аввал ба сервер
+	-- расида бошад, вале ҷавоб гум шуда бошад, такрор паёми ДУЮМ
+	-- месохт. Ин шиносаро худи телефон медиҳад ва сервер бо ҳамон
+	-- паёми мавҷудро бармегардонад.
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS client_id      TEXT DEFAULT '';
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_client
+	  ON messages(sender_id, client_id) WHERE client_id <> '';
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted     BOOLEAN DEFAULT FALSE;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS updated_at     TIMESTAMPTZ DEFAULT NOW();
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS group_id       TEXT;

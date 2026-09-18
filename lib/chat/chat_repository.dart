@@ -211,6 +211,11 @@ class ChatRepository {
     String? mediaUrl,
     String? mediaType, // "image" | "video" | "audio" | "file"
     bool viewOnce = false,
+    /// Шиносаи маҳаллӣ барои такрорнашавӣ.
+    ///
+    /// Агар дархост ба сервер расида бошад, вале ҷавоб гум шуда
+    /// бошад, такрор бе ин паёми ДУЮМ месохт.
+    String? clientId,
   }) async {
     final myId = await _myId();
     var cid = chatId;
@@ -231,6 +236,7 @@ class ChatRepository {
         if (mediaUrl != null && mediaUrl.isNotEmpty) 'mediaUrl': mediaUrl,
         if (mediaType != null && mediaType.isNotEmpty) 'type': mediaType,
         if (viewOnce) 'viewOnce': true,
+        if (clientId != null && clientId.isNotEmpty) 'clientId': clientId,
       },
     ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 400) throw Exception('Send error');

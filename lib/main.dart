@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'app/app.dart';
 import 'app/app_restart.dart';
+import 'chat/outbox.dart';
 import 'app/app_config.dart';
 import 'app/app_settings.dart';
 import 'core/services/user_session.dart';
@@ -97,6 +98,10 @@ Future<void> main() async {
   FirebaseInit.init(navigator: appNavigatorKey);
 
   // ✅ 7. App-ро кушо — ФАВРАН, бе интернет интизор шудан
+  // Навбати паёмҳои нафиристода: ҳангоми баргаштани интернет
+  // худаш мефиристад. Бе ин паёми офлайн абадан гум мешуд.
+  Outbox.instance.start();
+
   // `AppRestartScope` — ҳангоми гузариш ба аккаунти дигар тамоми
   // дарахти виҷет аз нав сохта мешавад. Бе ин экранҳои аллакай
   // сохташуда маълумоти аккаунти пештараро дар хотира нигоҳ

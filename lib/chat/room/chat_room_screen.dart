@@ -1,4 +1,6 @@
 import 'dart:async';
+
+import '../outbox.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -65,7 +67,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   late bool _isRequest = widget.isRequest;
 
   // Offline queue
-  final List<Map<String, dynamic>> _offlineQueue = [];
+  /// Обуна ба навбати диск — ҳангоми фиристодан экран нав мешавад.
+  StreamSubscription<String>? _outboxSub;
   late StreamSubscription<List<ConnectivityResult>> _connectSub;
   bool _isOnline = true;
 
@@ -74,11 +77,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   void initState() {
     super.initState();
+    _listenOutbox();
     _init();
   }
 
   @override
   void dispose() {
+    _outboxSub?.cancel();
     _scroll.dispose();
     // onIncomingCall ба таври глобалӣ дар BottomNavScaffold идора мешавад —
     // ин ҷо null намекунем, вагарна занг берун аз чат қабул намешавад.
@@ -203,20 +208,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
   }
 
-  Future<void> _flushOfflineQueue() async {
-    final pending = List<Map<String, dynamic>>.from(_offlineQueue);
-    _offlineQueue.clear();
-    for (final item in pending) {
-      try {
-        await _repo.sendMessage(
-          toUserId: widget.peer.id,
-          text:     item['text'] as String,
-          replyToId: item['replyToId'] as String?,
-        );
-      } catch (_) {
-        _offlineQueue.add(item); // re-queue on failure
-      }
-    }
+  /// Навбат акнун дар ДИСК аст (`Outbox`), на дар хотира.
+  ///
+  /// ⚠️ Пеш он `List` дар худи экран буд: барномаро пӯшед — паёмҳо
+  /// абадан гум мешуданд ва корбар ҳеҷ гоҳ намедонист.
+  Future<void> _flushOfflineQueue() => Outbox.instance.drain();
+
+  /// Ҳангоми фиристодани паёми навбатӣ экранро нав мекунад.
+  void _listenOutbox() {
+    _outboxSub ??= Outbox.instance.onSent.listen((clientId) {
+      if (!mounted) return;
+      setState(() {
+        final idx = _messages.indexWhere((m) => m.id == clientId);
+        if (idx >= 0) {
+          _messages[idx] =
+              _messages[idx].copyWith(status: MessageStatus.sent);
+        }
+      });
+      // Ҷавоби ҳақиқии сервер аз нав бор мешавад.
+      _load();
+    });
   }
 
   Future<void> _load() async {
@@ -388,12 +399,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
     _scrollBottom();
 
-    // Offline
+    // Офлайн — ба навбати ДИСК, то паём гум нашавад.
     if (!_isOnline) {
-      _offlineQueue.add({
-        'text': text,
-        'replyToId': replyTo?.id,
-      });
+      await _queue(text, replyTo, optimistic.id);
       return;
     }
 
@@ -417,16 +425,38 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           if (idx >= 0) _messages[idx] = msg;
         });
       } catch (_) {
-        if (mounted) {
-          setState(() {
-            final idx = _messages.indexWhere((m) => m.id == optimistic.id);
-            if (idx >= 0) {
-              _messages[idx] = _messages[idx].copyWith(status: MessageStatus.sent);
-            }
-          });
-        }
+        // ⚠️ Пеш ин ҷо `status: MessageStatus.sent` гузошта мешуд —
+        // яъне барнома ДУРӮҒ мегуфт. Паём нарасида буд, вале дар
+        // экран «фиристода шуд» менамуд. Ин аз гум кардани паём
+        // БАДТАР аст: корбар боварӣ дорад, ки хабараш расид.
+        await _queue(text, replyTo, optimistic.id);
       }
     }
+  }
+
+  /// Паёмро ба навбати диск мегузорад ва дар экран ҳамчун
+  /// «нафиристода» нишон медиҳад.
+  Future<void> _queue(
+      String text, MessageModel? replyTo, String optimisticId) async {
+    final clientId = Outbox.instance.newClientId();
+    await Outbox.instance.add(PendingMessage(
+      clientId: clientId,
+      toUserId: widget.peer.id,
+      chatId: _chatId,
+      text: text,
+      replyToId: replyTo?.id,
+      createdAtMs: DateTime.now().millisecondsSinceEpoch,
+    ));
+    if (!mounted) return;
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.id == optimisticId);
+      if (idx >= 0) {
+        _messages[idx] = _messages[idx]
+            .copyWith(id: clientId, status: MessageStatus.failed);
+      }
+    });
+    // Агар интернет ҳозир бошад, фавран боз кӯшиш мекунем.
+    Outbox.instance.drain();
   }
 
   // ─── Send location (GPS) — мисли Instagram/Telegram ─────────
