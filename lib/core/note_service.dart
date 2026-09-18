@@ -74,7 +74,7 @@ class NoteService extends ChangeNotifier {
   Future<bool> setNote(String text, {SongInfo? song}) async {
     try {
       final body = <String, dynamic>{'note': text};
-      if (song != null && !song.isEmpty) body['song'] = song.toJson();
+      if (song != null && song.isNotEmpty) body['song'] = song.toJson();
       final r = await _api.post('/profile/note', body: body);
       if (r.statusCode != 200) return false;
       final resp = jsonDecode(r.body);

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/note_service.dart';
 import '../../models/note_model.dart';
-import 'music_picker_sheet.dart';
+import '../../core/music/music_picker.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
 
@@ -70,8 +70,15 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
       backgroundColor: Colors.transparent,
       useRootNavigator: true,
       builder: (_) => MusicPickerSheet(
-        initial:    _song,
-        noteText:   _txt.text.trim(),
+        initial:  _song,
+        windowMs: 30000,
+        // Ҳангоми интихоби порча ҳамон пуфаке нишон дода мешавад,
+        // ки дигарон дар лентаи чат мебинанд.
+        previewBuilder: (song) => _BubblePreview(
+          text:      _txt.text.trim(),
+          song:      song,
+          isPlaying: false,
+        ),
       ),
     );
     if (result != null && mounted) setState(() => _song = result);
@@ -126,8 +133,8 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
     }
   }
 
-  bool get _hasOld     => widget.initialNote.isNotEmpty || !widget.initialSong.isEmpty;
-  bool get _hasContent => _txt.text.trim().isNotEmpty || (_song != null && !_song!.isEmpty);
+  bool get _hasOld     => widget.initialNote.isNotEmpty || widget.initialSong.isNotEmpty;
+  bool get _hasContent => _txt.text.trim().isNotEmpty || (_song != null && _song!.isNotEmpty);
 
   // ═══════════════════════════════════════ BUILD ═══════════════
   @override
@@ -276,7 +283,7 @@ class _BubblePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasText = text.isNotEmpty;
-    final hasSong = song != null && !song!.isEmpty;
+    final hasSong = song != null && song!.isNotEmpty;
     final hasAny  = hasText || hasSong;
 
     return Column(mainAxisSize: MainAxisSize.min, children: [

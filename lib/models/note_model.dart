@@ -1,51 +1,10 @@
-class SongInfo {
-  final String title;
-  final String artist;
-  final String artUrl;
-  final String previewUrl;
-  final int    trackMs;   // full duration in ms
-  final int    startMs;   // segment start
-  final int    endMs;     // segment end (default 30s)
+// `SongInfo` ин ҷо буд. Акнун он дар `lib/core/music/song_info.dart`
+// аст, чунки на танҳо ёддошт, балки стори, пост ва Reels низ ҳамон
+// моделро истифода мебаранд. `export` барои он аст, ки файлҳои
+// кӯҳна, ки `note_model.dart`-ро мехонанд, бе тағйир кор кунанд.
+export '../core/music/song_info.dart';
 
-  const SongInfo({
-    required this.title,
-    required this.artist,
-    required this.artUrl,
-    this.previewUrl = '',
-    this.trackMs    = 0,
-    this.startMs    = 0,
-    this.endMs      = 30000,
-  });
-
-  bool get isEmpty => title.isEmpty && artist.isEmpty;
-
-  Duration get segStart => Duration(milliseconds: startMs);
-  Duration get segEnd   => Duration(milliseconds: endMs);
-  Duration get track    => Duration(milliseconds: trackMs > 0 ? trackMs : 30000);
-
-  factory SongInfo.fromJson(Map<String, dynamic>? j) {
-    if (j == null) return const SongInfo(title: '', artist: '', artUrl: '');
-    return SongInfo(
-      title:      j['title']      ?? '',
-      artist:     j['artist']     ?? '',
-      artUrl:     j['artUrl']     ?? '',
-      previewUrl: j['previewUrl'] ?? '',
-      trackMs:    (j['trackMs']   as num?)?.toInt() ?? 0,
-      startMs:    (j['startMs']   as num?)?.toInt() ?? 0,
-      endMs:      (j['endMs']     as num?)?.toInt() ?? 30000,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'title':      title,
-    'artist':     artist,
-    'artUrl':     artUrl,
-    'previewUrl': previewUrl,
-    'trackMs':    trackMs,
-    'startMs':    startMs,
-    'endMs':      endMs,
-  };
-}
+import '../core/music/song_info.dart';
 
 class NoteModel {
   final String   userId;
@@ -68,7 +27,7 @@ class NoteModel {
 
   bool get isExpired => expiresAt == null || DateTime.now().isAfter(expiresAt!);
   bool get hasText   => text.isNotEmpty;
-  bool get hasSong   => !song.isEmpty;
+  bool get hasSong   => song.isNotEmpty;
 
   factory NoteModel.fromJson(Map<String, dynamic> j) => NoteModel(
     userId:   j['_id']      ?? j['id'] ?? '',

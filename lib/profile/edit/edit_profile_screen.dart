@@ -12,7 +12,7 @@ import '../../core/analytics/analytics_events.dart';
 
 import '../../core/services/user_session.dart';
 import '../../models/note_model.dart';
-import '../../chat/inbox/music_picker_sheet.dart';
+import '../../core/music/music_picker.dart';
 import '../profile_repository.dart';
 import 'edit_profile_controller.dart';
 import '../../core/services/subscription_service.dart';
@@ -231,7 +231,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final result = await showModalBottomSheet<SongInfo>(
       context: context, isScrollControlled: true,
       backgroundColor: Colors.transparent, useRootNavigator: true,
-      builder: (_) => MusicPickerSheet(initial: _bioSong));
+      builder: (_) => MusicPickerSheet(initial: _bioSong, windowMs: 30000));
     if (result != null && mounted) { setState(() => _bioSong = result); }
   }
 

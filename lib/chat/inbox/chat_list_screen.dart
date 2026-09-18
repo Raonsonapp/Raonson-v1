@@ -801,7 +801,7 @@ class _SpeechBubble extends StatelessWidget {
     final borderColor = isMine
         ? AppColors.neonBlue.withOpacity(0.45)
         : AppColors.dividerFaint;
-    final hasSong = song != null && !song!.isEmpty;
+    final hasSong = song != null && song!.isNotEmpty;
     final hasText = text.isNotEmpty;
 
     return Stack(

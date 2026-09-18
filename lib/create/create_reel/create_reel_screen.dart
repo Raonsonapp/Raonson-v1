@@ -12,7 +12,7 @@ import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
-import '../../chat/inbox/music_picker_sheet.dart';
+import '../../core/music/music_picker.dart';
 import '../../models/note_model.dart';
 
 class CreateReelScreen extends StatefulWidget {
