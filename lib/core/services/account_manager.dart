@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../storage/secure_storage.dart';
+import '../../app/app_restart.dart';
 import '../api/api_client.dart';
 import 'socket_service.dart';
 import 'follow_service.dart';
@@ -155,6 +156,17 @@ class AccountManager {
     // Socket-и корбари куҳнаро мебандем ва бо токени нав пайваст мешавем.
     // Best-effort: агар нашавад, барномаро блок намекунад.
     SocketService.instance.reconnectAs(acc.token);
+
+    // ⚠️ Тоза кардани кэш КОФӢ НЕСТ.
+    //
+    // Экранҳо аллакай сохта шудаанд ва рӯйхатҳои худро дар ХОТИРА
+    // доранд. Тоза кардани кэш ба онҳо намегӯяд, ки аз нав бор
+    // кунанд — пас лента, профил ва ҳалқаи стори то чанд дақиқа
+    // ҳамон чизе мемонданд, ки буданд.
+    //
+    // Ин тамоми дарахти виҷетро аз нав месозад — ҳамон тавре ки
+    // барномаро пӯшида боз кушоӣ, вале дар як лаҳза.
+    restartApp();
     return true;
   }
 

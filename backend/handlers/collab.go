@@ -158,5 +158,23 @@ func setCollabStatus(c *gin.Context, accept bool) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Хатои сервер"})
 		return
 	}
+	// ⚠️ Ин НАБУД. Соҳиби пост даъват мефиристод ва ҳеҷ гоҳ
+	// намедонист, ки он қабул шуд ё рад.
+	// Танҳо ҳангоми ҚАБУЛ. Рад кардан огоҳинома намедиҳад —
+	// Instagram ҳам намедиҳад ва он хабари нохуш мебуд.
+	if accept {
+		if owner := postOwner(ctx, postID); owner != "" && owner != myID {
+			notify(owner, myID, "collab_accepted", postID)
+			pushNotify(owner, myID, "collab_accepted", postID, "")
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "status": status})
+}
+
+// postOwner шиносаи соҳиби постро медиҳад (холӣ, агар ёфт нашавад).
+func postOwner(ctx context.Context, postID string) string {
+	var id string
+	db.Pool.QueryRow(ctx, `SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&id)
+	return id
 }

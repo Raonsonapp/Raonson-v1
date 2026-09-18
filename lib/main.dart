@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 import 'app/app.dart';
+import 'app/app_restart.dart';
 import 'app/app_config.dart';
 import 'app/app_settings.dart';
 import 'core/services/user_session.dart';
@@ -96,5 +97,9 @@ Future<void> main() async {
   FirebaseInit.init(navigator: appNavigatorKey);
 
   // ✅ 7. App-ро кушо — ФАВРАН, бе интернет интизор шудан
-  runApp(const RaonsonApp());
+  // `AppRestartScope` — ҳангоми гузариш ба аккаунти дигар тамоми
+  // дарахти виҷет аз нав сохта мешавад. Бе ин экранҳои аллакай
+  // сохташуда маълумоти аккаунти пештараро дар хотира нигоҳ
+  // медоштанд (ниг. lib/app/app_restart.dart).
+  runApp(const AppRestartScope(child: RaonsonApp()));
 }

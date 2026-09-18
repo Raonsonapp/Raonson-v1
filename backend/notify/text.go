@@ -81,6 +81,11 @@ var bodies = map[Kind]map[Lang]string{
 		RU: "понравилась ваша история",
 		EN: "liked your story",
 	},
+	StoryPoll: {
+		TJ: "дар пурсиши шумо овоз дод",
+		RU: "проголосовал(а) в вашем опросе",
+		EN: "voted in your poll",
+	},
 	StoryReply: {
 		TJ: "ба сторисатон ҷавоб дод",
 		RU: "ответил(а) на вашу историю",
@@ -278,6 +283,12 @@ func Link(k Kind, targetID, actorName string) string {
 	case CollabInvite, CollabAccepted:
 		if targetID != "" {
 			return "/post/" + targetID
+		}
+	case StoryLike, StoryReply, StoryPoll:
+		// Стори баъди 24 соат нест мешавад; профили муаллиф
+		// ҷои боэътимодтар аст.
+		if actorName != "" {
+			return "/profile/" + actorName
 		}
 	case TrendingTopic:
 		if targetID != "" {

@@ -354,6 +354,13 @@ func AcceptRequest(c *gin.Context) {
 	}
 	mw.InvalidateUserCache(myID)
 	mw.InvalidateUserCache(rid)
+
+	// ⚠️ Ин НАБУД. Одам дархости обуна мефиристод, соҳиб қабул
+	// мекард — ва дархосткунанда ҳеҷ гоҳ намедонист. На сатр, на
+	// огоҳиномаи телефон.
+	notify(rid, myID, "follow_accepted", myID)
+	pushNotify(rid, myID, "follow_accepted", myID, "")
+
 	c.JSON(http.StatusOK, gin.H{"accepted": true})
 }
 

@@ -29,6 +29,8 @@ const (
 	// Сторис ва рилс.
 	StoryLike  Kind = "story_like"
 	StoryReply Kind = "story_reply"
+	// Касе дар пурсиши стори овоз дод.
+	StoryPoll  Kind = "story_poll"
 	ReelLike   Kind = "reel_like"
 	ReelReply  Kind = "reel_comment"
 
@@ -113,6 +115,8 @@ var rules = map[Kind]Rule{
 	Message: {High, ChannelMessages, "messages", false},
 
 	StoryLike:  {Normal, ChannelSocial, "likes", true},
+	// Овозҳо ҷамъ мешаванд: даҳ овоз як огоҳинома, на даҳто.
+	StoryPoll:  {Normal, ChannelSocial, "likes", true},
 	StoryReply: {Normal, ChannelSocial, "messages", false},
 	ReelLike:   {Normal, ChannelSocial, "likes", true},
 	ReelReply:  {Normal, ChannelSocial, "comments", true},

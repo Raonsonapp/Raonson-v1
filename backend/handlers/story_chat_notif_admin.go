@@ -1099,6 +1099,8 @@ func VoteStoryPoll(c *gin.Context) {
 
 	a, bb := storyPollCounts(sid)
 	notify(owner, myID, "story_poll", sid)
+	// Сатр буд, вале огоҳиномаи телефон не.
+	pushNotify(owner, myID, "story_poll", sid, "")
 	c.JSON(http.StatusOK, gin.H{"votesA": a, "votesB": bb, "myVote": *b.Choice})
 }
 
