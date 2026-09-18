@@ -19,6 +19,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// r2Configured мегӯяд, ки оё захира воқеан танзим шудааст.
+//
+// Ҳар чор арзиш ҳатмист. CF_R2_PUBLIC_URL низ: бе он файл бор
+// мешавад, вале суроғаи холӣ бармегардад — пост сохта мешавад ва
+// акс намоён НАМЕШАВАД. Ин хатои хомӯш аз хатои возеҳ бадтар аст.
+func r2Configured() (bool, string) {
+	missing := []string{}
+	for _, k := range []string{
+		"CF_ACCOUNT_ID", "CF_R2_ACCESS_KEY",
+		"CF_R2_SECRET_KEY", "CF_R2_PUBLIC_URL",
+	} {
+		if os.Getenv(k) == "" {
+			missing = append(missing, k)
+		}
+	}
+	return len(missing) == 0, strings.Join(missing, ", ")
+}
+
 func getR2Client() *s3.Client {
 	// Credentials come ONLY from env (set in Render). Never hardcode secrets.
 	accountID := os.Getenv("CF_ACCOUNT_ID")
@@ -114,6 +132,18 @@ func safeMediaType(data []byte, header *multipart.FileHeader) (string, string, b
 
 // POST /upload
 func UploadToR2(c *gin.Context) {
+	// Пештар боркунӣ бо калиди ХОЛӢ давом мекард: сервер танҳо дар
+	// log менавишт. Корбар хатои норавшани S3 мегирифт ё пости бе
+	// акс месохт ва сабаб маълум намешуд.
+	if ok, missing := r2Configured(); !ok {
+		log.Printf("[R2] танзим нашудааст: %s", missing)
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error":   "Захираи файл танзим нашудааст",
+			"missing": missing,
+		})
+		return
+	}
+
 	const maxUploadSize = 50 << 20 // 50 MB
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadSize)
 
