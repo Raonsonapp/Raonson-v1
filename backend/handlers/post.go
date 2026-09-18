@@ -5,6 +5,7 @@ import (
 	"log"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"raonson/db"
@@ -143,6 +144,25 @@ func CreatePost(c *gin.Context) {
 
 	// @зикр дар тавсиф — ҳар корбари зикршударо огоҳ кун
 	notifyMentions(myID, "mention", postID, b.Caption, "шуморо дар публикатсия зикр кард")
+
+	// ⚠️ Ин НАБУД. Зикр дар МАТН огоҳинома медод, вале зикр дар худи
+	// АКС («На этом фото») не — одам ҳеҷ гоҳ намедонист, ки ӯро дар
+	// пост нишон додаанд.
+	//
+	// `notifyMentions` матнро таҳлил мекунад, пас номҳоро ҳамчун
+	// матни «@ном» медиҳем ва ҳамон роҳ кор мекунад.
+	if len(b.TaggedUsers) > 0 {
+		var sb strings.Builder
+		for _, u := range b.TaggedUsers {
+			u = strings.TrimPrefix(strings.TrimSpace(u), "@")
+			if u == "" {
+				continue
+			}
+			sb.WriteString("@" + u + " ")
+		}
+		notifyMentions(myID, "mention", postID, sb.String(),
+			"шуморо дар акс нишон дод")
+	}
 	// Даъвати ҳамкорӣ: то розигӣ ном ба пост баста намешавад.
 	inviteCollaborators(postID, myID, b.Collaborators)
 

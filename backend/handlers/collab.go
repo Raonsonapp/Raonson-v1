@@ -13,6 +13,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -27,9 +28,19 @@ const maxCollaborators = 10
 
 // inviteCollaborators даъватҳоро сабт ва одамонро огоҳ мекунад.
 //
-// Танҳо шиносаҳои ВОҚЕӢ қабул мешаванд; худи муаллиф даъват
-// намешавад. Хато бармегардонда намешавад: пост аллакай сохта шуд ва
-// набояд аз сабаби даъват нобуд шавад.
+// Танҳо корбарони ВОҚЕӢ даъват мешаванд; худи муаллиф не. Хато
+// бармегардонда намешавад: пост аллакай сохта шуд ва набояд аз
+// сабаби даъват нобуд шавад.
+//
+// ⚠️ Сабаби он ки ҳамкорӣ ҲЕҶ ГОҲ кор намекард.
+//
+// Ин ҷо `WHERE id=$1` буд — яъне ШИНОСАИ корбар интизор мешуд.
+// Вале барнома НОМИ корбарро мефиристад: корбар «@ehson» менависад
+// ва ҳамон сатр меравад. Муқоисаи номи корбар бо шиноса ҳеҷ гоҳ
+// мувофиқ намеояд, пас ҳар даъват хомӯшона партофта мешавад.
+//
+// Акнун ҳарду шакл қабул мешавад: агар шиноса набошад, ном ҷустуҷӯ
+// мешавад.
 func inviteCollaborators(postID, ownerID string, ids []string) {
 	if postID == "" || len(ids) == 0 {
 		return
@@ -42,19 +53,11 @@ func inviteCollaborators(postID, ownerID string, ids []string) {
 			if sent >= maxCollaborators {
 				break
 			}
-			id := raw
+			id := resolveUserRef(ctx, raw)
 			if id == "" || seen[id] {
 				continue
 			}
 			seen[id] = true
-
-			// Шиносаи бегона қабул намешавад.
-			var exists bool
-			if err := db.Pool.QueryRow(ctx,
-				`SELECT EXISTS(SELECT 1 FROM users WHERE id=$1)`,
-				id).Scan(&exists); err != nil || !exists {
-				continue
-			}
 			if _, err := db.Pool.Exec(ctx, `
 				INSERT INTO post_collab_invites(post_id, user_id)
 				VALUES ($1,$2) ON CONFLICT DO NOTHING`, postID, id); err != nil {
@@ -65,6 +68,23 @@ func inviteCollaborators(postID, ownerID string, ids []string) {
 				"шуморо ҳамчун ҳамкор даъват кард")
 		}
 	}()
+}
+
+// resolveUserRef сатрро ба шиносаи корбар табдил медиҳад.
+//
+// Қабул мекунад: шиносаи корбар, «username» ё «@username». Агар
+// корбар ёфт нашавад, сатри холӣ бармегардад.
+func resolveUserRef(ctx context.Context, ref string) string {
+	ref = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(ref), "@"))
+	if ref == "" {
+		return ""
+	}
+	var id string
+	// Аввал ҳамчун шиноса, баъд ҳамчун ном — як дархост.
+	db.Pool.QueryRow(ctx,
+		`SELECT id FROM users WHERE id=$1 OR lower(username)=lower($1) LIMIT 1`,
+		ref).Scan(&id)
+	return id
 }
 
 // GET /collabs/pending — даъватҳои интизор.
