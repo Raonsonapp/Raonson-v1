@@ -31,7 +31,8 @@ func GetStories(c *gin.Context) {
 		       COALESCE(s.music_title,''),COALESCE(s.music_artist,''),
 		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
 		       COALESCE(s.music_track_ms,0),COALESCE(s.music_start_ms,0),
-		       COALESCE(s.music_end_ms,0)
+		       COALESCE(s.music_end_ms,0),
+		       COALESCE(s.shared_post_id,''),COALESCE(s.shared_reel_id,'')
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
 		  AND ($2::text = '' OR s.user_id = $2::text)
@@ -88,7 +89,8 @@ func GetMyStories(c *gin.Context) {
 		       COALESCE(s.music_title,''),COALESCE(s.music_artist,''),
 		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
 		       COALESCE(s.music_track_ms,0),COALESCE(s.music_start_ms,0),
-		       COALESCE(s.music_end_ms,0)
+		       COALESCE(s.music_end_ms,0),
+		       COALESCE(s.shared_post_id,''),COALESCE(s.shared_reel_id,'')
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.user_id=$1 AND s.expires_at > NOW()
 		ORDER BY s.created_at DESC`, myID)
@@ -114,6 +116,9 @@ func CreateStory(c *gin.Context) {
 		// Музика (ихтиёрӣ). Пеш он ҳамчун «🎵 ном» ба `caption`
 		// андохта мешуд — хонанда, суроға ва ҷои оғоз гум мешуданд.
 		Song *songInfo `json:"song"`
+		// Пост ё Reel, ки дар ин стори паҳн мешавад.
+		SharedPostID string `json:"sharedPostId"`
+		SharedReelID string `json:"sharedReelId"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.MediaURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
@@ -132,16 +137,23 @@ func CreateStory(c *gin.Context) {
 		song = &songInfo{}
 	}
 
+	// Танҳо мундариҷаи МАВҶУД паҳн мешавад — вагарна стори ба ҷои
+	// нест мебурд.
+	sharedPost := existingID(ctx0(), "posts", b.SharedPostID)
+	sharedReel := existingID(ctx0(), "reels", b.SharedReelID)
+
 	exp := time.Now().Add(24 * time.Hour)
 	var sid string
 	db.Pool.QueryRow(context.Background(),
 		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption,audience,
 		                     music_title,music_artist,music_url,music_art,
-		                     music_track_ms,music_start_ms,music_end_ms)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+		                     music_track_ms,music_start_ms,music_end_ms,
+		                     shared_post_id,shared_reel_id)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
 		myID, b.MediaURL, b.MediaType, exp, b.Caption, b.Audience,
 		song.Title, song.Artist, song.URL, song.ArtURL,
-		song.TrackMs, song.StartMs, song.EndMs).Scan(&sid)
+		song.TrackMs, song.StartMs, song.EndMs,
+		sharedPost, sharedReel).Scan(&sid)
 
 	if b.Poll != nil && strings.TrimSpace(b.Poll.Question) != "" {
 		qa := strings.TrimSpace(b.Poll.OptionA)
@@ -206,6 +218,33 @@ func CreateStory(c *gin.Context) {
 		out["song"] = songOut
 	}
 	c.JSON(http.StatusCreated, out)
+}
+
+// ctx0 — контексти кӯтоҳ барои санҷишҳои хурди дохилӣ.
+func ctx0() context.Context { return context.Background() }
+
+// existingID сатрро бармегардонад, танҳо агар чунин сатр дар ҷадвал
+// воқеан бошад. Вагарна сатри холӣ.
+//
+// Бе ин стори метавонист ба пости НЕСТ ишора кунад ва тамошобин
+// экрани холиро мегирифт.
+func existingID(ctx context.Context, table, id string) string {
+	if id == "" {
+		return ""
+	}
+	var ok bool
+	switch table {
+	case "posts":
+		db.Pool.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM posts WHERE id=$1)`, id).Scan(&ok)
+	case "reels":
+		db.Pool.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM reels WHERE id=$1)`, id).Scan(&ok)
+	}
+	if !ok {
+		return ""
+	}
+	return id
 }
 
 // POST /stories/:id/view
@@ -366,9 +405,11 @@ func scanStoryRows(rows interface {
 		var exp, createdAt interface{}
 		var mTitle, mArtist, mURL, mArt string
 		var mTrackMs, mStartMs, mEndMs int
+		var sharedPost, sharedReel string
 		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar,
 			&verified, &audience, &repliesOff,
-			&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs)
+			&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs,
+			&sharedPost, &sharedReel)
 		item := gin.H{
 			"_id": sid, "mediaUrl": murl, "mediaType": mtype,
 			"expiresAt": exp, "createdAt": createdAt,
@@ -380,6 +421,13 @@ func scanStoryRows(rows interface {
 		if song := songJSON(mTitle, mArtist, mArt, mURL,
 			mTrackMs, mStartMs, mEndMs); song != nil {
 			item["song"] = song
+		}
+		// Пост ё Reel-и дар ин стори паҳншуда — занед ва кушода мешавад.
+		if sharedPost != "" {
+			item["sharedPostId"] = sharedPost
+		}
+		if sharedReel != "" {
+			item["sharedReelId"] = sharedReel
 		}
 		attachPoll(sid, viewerID, item)
 		stories = append(stories, item)

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/content_events.dart';
+import '../../create/share_to_story.dart';
 import '../../core/music/music_bar.dart';
 import '../../core/music/song_info.dart';
 import '../../core/music/music_picker.dart';
@@ -351,6 +352,10 @@ class _PostCardState extends State<PostCard>
           _SvgMenuTile(assetPath: 'assets/icons/mention.svg',
               label: tr('post.mentionAction'),
               onTap: () { Navigator.pop(context); _mentionFriends(); }),
+          // Пост → стори. Ин хусусият ТАМОМАН набуд.
+          _MenuItem(icon: AppIcons.add_circle_outline,
+              label: 'Ба стори гузоштан',
+              onTap: () { Navigator.pop(context); _shareToStory(); }),
           _SvgMenuTile(assetPath: 'assets/icons/music.svg',
               label: tr('post.changeMusic'),
               onTap: () { Navigator.pop(context); _editMusic(); }),
@@ -796,6 +801,21 @@ class _PostCardState extends State<PostCard>
     )));
   }
 
+
+  /// Постро ҳамчун стори паҳн мекунад (мисли Instagram).
+  Future<void> _shareToStory() async {
+    final url = widget.post.media.isNotEmpty
+        ? (widget.post.media.first['url'] ?? '').toString()
+        : '';
+    if (url.isEmpty) return;
+    await shareToStory(
+      context,
+      id: widget.post.id,
+      mediaUrl: url,
+      username: widget.post.user.username,
+      avatarUrl: widget.post.user.avatar,
+    );
+  }
 
   Future<void> _reportPost() async {
     final result = await ReportDialog.showWithDescription(context);

@@ -16,7 +16,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/music/music_bar.dart';
+import '../models/post_model.dart';
+import '../models/reel_model.dart';
 import '../models/story_model.dart';
+import '../feed/post/post_detail_screen.dart';
+import '../reels/single_reel_screen.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../app/app_theme.dart';
@@ -211,6 +215,37 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   /// Ба профили муаллифи сторис мегузарад (зеркунии аватар ё username).
+  /// Пости аслиро мекушояд, ки дар ин стори паҳн шудааст.
+  Future<void> _openShared() async {
+    final st = _current;
+    _pause();
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (st.sharedReelId.isNotEmpty) {
+        final res = await ApiClient.instance.get('/reels/${st.sharedReelId}');
+        if (res.statusCode >= 400) throw Exception();
+        final reel = ReelModel.fromJson(
+            jsonDecode(res.body) as Map<String, dynamic>);
+        await navigator.push(
+            MaterialPageRoute(builder: (_) => SingleReelScreen(reel: reel)));
+      } else if (st.sharedPostId.isNotEmpty) {
+        final res = await ApiClient.instance.get('/posts/${st.sharedPostId}');
+        if (res.statusCode >= 400) throw Exception();
+        final post = PostModel.fromJson(
+            jsonDecode(res.body) as Map<String, dynamic>);
+        await navigator.push(MaterialPageRoute(
+            builder: (_) =>
+                PostDetailScreen(posts: [post], initialIndex: 0)));
+      }
+    } catch (_) {
+      // Пост метавонад ҳазф шуда бошад — стори 24 соат зиндагӣ мекунад.
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Публикатсия ёфт нашуд')));
+    }
+    if (mounted) _resume();
+  }
+
   void _openAuthorProfile() {
     final uid = _current.user.id.trim();
     if (uid.isEmpty) return;
@@ -731,6 +766,48 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                 autoPlay: !_isVideo,
                 paused: _paused,
                 compact: false,
+              ),
+            ),
+
+          // ── Пост ё Reel-и паҳншуда ─────────────────────────────
+          //
+          // Бе ин стори танҳо расм буд ва занед — ҳеҷ ҷо намебурд.
+          if (_current.hasShared)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).padding.bottom + 74,
+              child: Center(
+                child: GestureDetector(
+                  onTap: _openShared,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(
+                          _current.sharedReelId.isNotEmpty
+                              ? AppIcons.play_arrow_rounded
+                              : AppIcons.collections_rounded,
+                          color: Colors.white,
+                          size: 16),
+                      const SizedBox(width: 7),
+                      Text(
+                          _current.sharedReelId.isNotEmpty
+                              ? 'Reel-ро дидан'
+                              : 'Публикатсияро дидан',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
               ),
             ),
 

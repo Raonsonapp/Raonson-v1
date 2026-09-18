@@ -69,6 +69,15 @@ class StoryModel {
   /// намехонд.
   final SongInfo song;
 
+  /// Пост ё Reel, ки дар ин стори паҳн шудааст (мисли Instagram).
+  ///
+  /// Бе ин стори танҳо расм буд ва занед — ҳеҷ ҷо намебурд.
+  final String sharedPostId;
+  final String sharedReelId;
+
+  bool get hasShared =>
+      sharedPostId.isNotEmpty || sharedReelId.isNotEmpty;
+
   const StoryModel({
     required this.id,
     required this.user,
@@ -83,6 +92,8 @@ class StoryModel {
     required this.expiresAt,
     this.poll,
     this.song = SongInfo.none,
+    this.sharedPostId = '',
+    this.sharedReelId = '',
   });
 
   bool get isVideo => mediaType == 'video';
@@ -110,6 +121,8 @@ class StoryModel {
       expiresAt: DateTime.tryParse(json['expiresAt'] ?? '') ?? DateTime.now().add(const Duration(hours: 24)),
       poll: StoryPoll.fromJson(json['poll']),
       song: SongInfo.fromJson(json['song'] as Map<String, dynamic>?),
+      sharedPostId: (json['sharedPostId'] ?? '').toString(),
+      sharedReelId: (json['sharedReelId'] ?? '').toString(),
     );
   }
 }

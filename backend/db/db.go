@@ -790,6 +790,10 @@ func migrate() {
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_track_ms INTEGER DEFAULT 0;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_start_ms INTEGER DEFAULT 0;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_end_ms   INTEGER DEFAULT 0;
+	-- Пост ё Reel, ки дар ин стори паҳн шудааст (мисли Instagram).
+	-- Бе ин стори танҳо расм мебуд ва занед — ҳеҷ ҷо намебурд.
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS shared_post_id TEXT DEFAULT '';
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS shared_reel_id TEXT DEFAULT '';
 	ALTER TABLE post_media ADD COLUMN IF NOT EXISTS aspect_ratio REAL DEFAULT 0;
 
 	-- ── Live-стримҳо (Agora broadcast) ──
