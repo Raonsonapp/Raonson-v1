@@ -49,6 +49,9 @@ func TestExploreReelsCarryAuthor(t *testing.T) {
 	for _, field := range []string{
 		"u.username", "u.avatar", "u.verified", "r.caption",
 		"r.comments_count",
+		// Бе инҳо нишонҳои дил ва захира ҳамеша холӣ менамуданд,
+		// ҳатто агар корбар аллакай зада бошад.
+		"reel_likes", "reel_saves",
 	} {
 		if !strings.Contains(body, field) {
 			t.Errorf("reels %s-ро намегиранд", field)
