@@ -376,7 +376,14 @@ func DeletePost(c *gin.Context) {
 	// Cache-и корбарро пок мекунем, то пости ҳазфшуда фавран аз ҳама
 	// экранҳо (profile, feed, explore) нест шавад.
 	mw.InvalidateUserCache(myID)
-	mw.CacheDel("explore:grid") // фавран аз search/explore нопадид шавад
+	mw.CacheDel("explore:grid")
+	// ⚠️ Ду сатри боло кофӣ НЕСТ.
+	//
+	// `InvalidateUserCache` танҳо калидҳои ХУДИ соҳибро мепартояд,
+	// вале `/explore` ва ҷустуҷӯ барои ҳар тамошобин калиди ҷудогона
+	// доранд — ва `/explore` 5 дақиқа кэш мешуд. Маҳз барои ҳамин
+	// пости ҳазфшуда «баъди 5 дақиқа» нест мешуд.
+	mw.BumpContentEpoch()
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 

@@ -90,10 +90,26 @@ jobs:
       - name: Flutter test
         run: flutter test
 
+      # Калиди Agora ба APK-и санҷишӣ ҳам лозим аст — вагарна занг
+      # дар худи ҳамон build-е, ки барои санҷиш медиҳем, кор
+      # намекунад ва мо гумон мекунем, ки коди занг вайрон аст.
+      - name: Create .env for dart-define
+        env:
+          AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+        run: |
+          printf 'AGORA_APP_ID=%s\nBASE_URL=https://mahmadmurodov-raonson.hf.space\n' \
+            "$AGORA_APP_ID" > .env
+          if [ -z "$AGORA_APP_ID" ]; then
+            echo "::warning::AGORA_APP_ID нест — занг дар ин APK кор намекунад"
+          fi
+
       # Танҳо DEBUG. Дар он kDebugMode=true, пас тугмаҳои демо
       # намоён мешаванд ва AdConfig шиносаҳои демоиро медиҳад.
       - name: Build DEBUG APK
-        run: flutter build apk --debug
+        run: |
+          flutter build apk --debug \
+            --dart-define-from-file=.env \
+            --dart-define-from-file=dart_defines/ad_units.json
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

@@ -27,9 +27,15 @@ import 'song_info.dart';
 //  ҳама ҷо ислоҳ мешавад.
 // ══════════════════════════════════════════════════════════════════
 
-/// Градиенти бренди Raonson (теал → сабз, ҳамон ҳалқаи story).
+/// Градиенти музикаи Raonson.
+///
+/// Instagram барои музика градиенти норинҷӣ→гулобӣ→бунафш истифода
+/// мебарад, на кабуди худро. Мо ҳам ҳамин корро мекунем, вале бо
+/// рангҳои БРЕНДИ ХУД: ҳалқаи story-и Raonson теал→сабз аст, пас
+/// градиенти музика аз ҳамон теал сар шуда ба бунафш меравад —
+/// ҳамоҳанг бо барнома, вале аз тугмаҳои оддӣ фарқкунанда.
 const kMusicGradient = LinearGradient(
-  colors: AppColors.storyGradient,
+  colors: AppColors.musicGradient,
   begin: Alignment.centerLeft,
   end: Alignment.centerRight,
 );
@@ -234,14 +240,14 @@ class _MusicPickerSheetState extends State<MusicPickerSheet> {
             child: Row(children: [
               if (_isTrending) ...[
                 const Icon(AppIcons.trending_up_rounded,
-                    color: AppColors.storyStart, size: 15),
+                    color: AppColors.musicStart, size: 15),
                 const SizedBox(width: 5),
               ],
               Text(
                 _isTrending ? 'Тавсия' : 'Натиҷаҳо',
                 style: TextStyle(
                   color: _isTrending
-                      ? AppColors.storyStart
+                      ? AppColors.musicStart
                       : AppColors.textTertiary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -455,20 +461,25 @@ class _SegmentScreenState extends State<_SegmentScreen> {
               _IconBtn(AppIcons.arrow_back_ios_new_rounded,
                   onTap: () => Navigator.pop(context)),
               const Spacer(),
+              // Тасдиқ — аломати чек дар доира, мисли Instagram.
+              // Пеш ин тугмаи матнии «Тайёр» буд.
               GestureDetector(
                 onTap: () => Navigator.pop(context, _current),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
+                    shape: BoxShape.circle,
                     gradient: kMusicGradient,
-                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                          color: AppColors.musicEnd.withOpacity(0.4),
+                          blurRadius: 14,
+                          spreadRadius: 1),
+                    ],
                   ),
-                  child: const Text('Тайёр',
-                      style: TextStyle(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
+                  child: const Icon(AppIcons.check_rounded,
+                      color: AppColors.white, size: 24),
                 ),
               ),
             ]),
@@ -569,7 +580,7 @@ class _ArtPreview extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                    color: AppColors.storyStart.withOpacity(0.22),
+                    color: AppColors.musicStart.withOpacity(0.22),
                     blurRadius: 32,
                     spreadRadius: 2),
               ],
@@ -610,7 +621,7 @@ class _Artwork extends StatelessWidget {
       height: size,
       color: AppColors.card,
       child: Icon(AppIcons.music_note_rounded,
-          color: AppColors.storyStart, size: size * 0.4),
+          color: AppColors.musicStart, size: size * 0.4),
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
@@ -673,10 +684,10 @@ class _WaveformTimelineState extends State<_WaveformTimeline> {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        _TimeChip(widget.fmt(startMs), color: AppColors.storyStart),
+        _TimeChip(widget.fmt(startMs), color: AppColors.musicStart),
         Text(' – ',
             style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
-        _TimeChip(widget.fmt(endMs), color: AppColors.storyEnd),
+        _TimeChip(widget.fmt(endMs), color: AppColors.musicEnd),
         const Spacer(),
         _DurationBadge(
             windowMs: widget.windowMs, onDuration: widget.onDuration),
@@ -801,7 +812,7 @@ class _BarsPainter extends CustomPainter {
             rect,
             Paint()
               ..shader = const LinearGradient(
-                colors: AppColors.storyGradient,
+                colors: AppColors.musicGradient,
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ).createShader(Rect.fromCenter(
@@ -832,7 +843,7 @@ class _WindowBorderPainter extends CustomPainter {
           Path()..addRRect(inner)),
       Paint()
         ..shader = const LinearGradient(
-          colors: AppColors.storyGradient,
+          colors: AppColors.musicGradient,
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
@@ -850,7 +861,7 @@ class _DragHandle extends StatelessWidget {
         width: 8,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: AppColors.storyGradient,
+            colors: AppColors.musicGradient,
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -936,7 +947,7 @@ class _SearchField extends StatelessWidget {
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.storyStart)))
+                            strokeWidth: 2, color: AppColors.musicStart)))
                 : ctrl.text.isNotEmpty
                     ? IconButton(
                         icon: Icon(AppIcons.clear_rounded,
@@ -962,7 +973,7 @@ class _EmptyHint extends StatelessWidget {
   Widget build(BuildContext context) => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (searching)
-            const CircularProgressIndicator(color: AppColors.storyStart)
+            const CircularProgressIndicator(color: AppColors.musicStart)
           else ...[
             Icon(AppIcons.music_note_rounded,
                 size: 58, color: AppColors.textFaint.withOpacity(0.4)),
@@ -1043,13 +1054,13 @@ class _DurationBadge extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
-              colors: AppColors.storyGradient,
+              colors: AppColors.musicGradient,
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                  color: AppColors.storyStart.withOpacity(0.35),
+                  color: AppColors.musicStart.withOpacity(0.35),
                   blurRadius: 10,
                   spreadRadius: 1),
             ],

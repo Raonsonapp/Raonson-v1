@@ -1259,30 +1259,21 @@ class _PostCardState extends State<PostCard>
             child: MediaCarousel(media: post.media, isActive: widget.isActive),
           ),
 
-          // ── Music / mention chips (мисли Instagram) ──
-          // расми оддӣ → ягон icon нест; музика → icon-и музика;
-          // mention → icon-и одам; ҳарду → ҳарду.
-          if (post.musicTitle.isNotEmpty || post.taggedUsers.isNotEmpty)
+          // ── Нишони одамони зикршуда ─────────────────────────
+          //
+          // Музика ин ҷо БУД ва дар зери тугмаҳо низ — як суруд ду
+          // бор навишта мешуд. Акнун танҳо дар зер, чунки он ҷо
+          // сатри хондашаванда бо хати ҳаракаткунанда аст.
+          if (post.taggedUsers.isNotEmpty)
             Positioned(
               left: 10, bottom: 10, right: 10,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (post.musicTitle.isNotEmpty)
-                  Flexible(
-                    child: _MediaChip(
-                      icon: AppIcons.music_note_rounded,
-                      label: post.musicArtist.isNotEmpty
-                          ? '${post.musicTitle} • ${post.musicArtist}'
-                          : post.musicTitle),
-                  ),
-                if (post.musicTitle.isNotEmpty && post.taggedUsers.isNotEmpty)
-                  const SizedBox(width: 6),
-                if (post.taggedUsers.isNotEmpty)
-                  _MediaChip(
-                    icon: AppIcons.person_rounded,
-                    label: post.taggedUsers.length == 1
-                        ? '@${post.taggedUsers.first}'
-                        : '${post.taggedUsers.length}',
-                    onTap: () => _showTaggedUsers(post.taggedUsers)),
+                _MediaChip(
+                  icon: AppIcons.person_rounded,
+                  label: post.taggedUsers.length == 1
+                      ? '@${post.taggedUsers.first}'
+                      : '${post.taggedUsers.length}',
+                  onTap: () => _showTaggedUsers(post.taggedUsers)),
               ]),
             ),
           if (_showHeart)

@@ -9,6 +9,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	ntf "raonson/notify"
 	"raonson/sockets"
 
 	"github.com/gin-gonic/gin"
@@ -221,6 +222,17 @@ func SendMessageExt(c *gin.Context) {
 	// Push to the receiver in real time (sender already has it via this
 	// response / optimistic insert). Бе ин таъхири чанддақиқагӣ мешуд.
 	emitChat("chat:new", msg, receiver)
+
+	// ⚠️ Огоҳиномаи телефон. Ин ҶО НАБУД.
+	//
+	// `emitChat` танҳо ба WebSocket мефиристад — яъне танҳо ба
+	// барномаи КУШОДА. Агар корбар барномаро баста бошад (маҳз он
+	// вақте ки огоҳинома лозим аст), ҳеҷ чиз намеомад.
+	//
+	// Қабати огоҳинома навъи «message»-ро аллакай пурра дастгирӣ
+	// мекард (`notify/kind.go`: High, ChannelMessages) — танҳо ҳеҷ
+	// кас онро даъват намекард.
+	pushNotify(receiver, myID, string(ntf.Message), chatID, "")
 
 	// Ҷавоби худкор — агар ин аввалин паём ба корбари дорои auto-reply бошад.
 	maybeAutoReply(chatID, myID, receiver)

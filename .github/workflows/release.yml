@@ -70,14 +70,35 @@ jobs:
               print(f'{k} = {v}')
           "
 
+      # ⚠️ Занг ва видеозанг БЕ ин калид кор намекунанд.
+      #
+      # `kAgoraAppId` дар код нест — он ҳангоми сохтан дода мешавад.
+      # Ин қадам НАБУД, пас барномаи ба Play рафта калиди холӣ дошт
+      # ва ҳар занг фавран «хатогӣ» медод ва пӯшида мешуд. Ҳамон
+      # хатои хомӯше, ки бо шиносаҳои реклама рӯй дода буд.
+      - name: Create .env for dart-define
+        env:
+          AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+        run: |
+          if [ -z "$AGORA_APP_ID" ]; then
+            echo "::error::AGORA_APP_ID нест — занг кор нахоҳад кард."
+            echo "::error::GitHub → Settings → Secrets → AGORA_APP_ID"
+            exit 1
+          fi
+          printf 'AGORA_APP_ID=%s\nBASE_URL=https://mahmadmurodov-raonson.hf.space\n' \
+            "$AGORA_APP_ID" > .env
+          echo "AGORA_APP_ID гузошта шуд (${#AGORA_APP_ID} ҳарф)"
+
       - name: Build signed release AAB
         run: |
           flutter build appbundle --release \
+            --dart-define-from-file=.env \
             --dart-define-from-file=dart_defines/ad_units.json
 
       - name: Build signed release APK
         run: |
           flutter build apk --release \
+            --dart-define-from-file=.env \
             --dart-define-from-file=dart_defines/ad_units.json
 
       - name: Upload AAB (for Play Store)

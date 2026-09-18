@@ -506,7 +506,11 @@ func main() {
 		dc.GET("/people",    handlers.GetDiscoverPeople)
 	}
 
-	r.GET("/explore", auth, rl100, cache5m, handlers.ExploreGrid)
+	// Explore пештар 5 ДАҚИҚА кэш мешуд. Ин барои тамошобин дер буд:
+	// пости нав дер пайдо мешуд ва пости ҳазфшуда дер нест мешуд.
+	// Ҳазфро акнун `BumpContentEpoch` фавран мегирад, вале барои
+	// мундариҷаи НАВ ҳам 5 дақиқа зиёд аст.
+	r.GET("/explore", auth, rl100, cache30s, handlers.ExploreGrid)
 
 	// Ахбор — RSS-и манбаъҳои боэътимод (cache дар худи handler).
 	r.GET("/news", auth, rl100, handlers.GetNews)

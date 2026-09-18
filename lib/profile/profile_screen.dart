@@ -394,6 +394,13 @@ class _ProfileScreenState extends State<ProfileScreen>
       body: RefreshIndicator(
         color: AppColors.neonBlue,
         backgroundColor: AppColors.card,
+        // ⚠️ Бе ин кашидани экран ба поён ҲЕҶ КОР намекард.
+        //
+        // `RefreshIndicator` пешфарз танҳо ба хабарҳои `depth == 0`
+        // гӯш медиҳад. Дар `NestedScrollView` бошад вараққаи
+        // ҳақиқӣ дар дохили `TabBarView` аст ва хабарҳои он ба
+        // `depth == 2` мерасанд — пас онҳо партофта мешуданд.
+        notificationPredicate: (n) => n.depth == 0 || n.depth == 2,
         onRefresh: () async {
           await _ctrl.loadProfile();
           if (_tab.index == 2) await _ctrl.loadTaggedPosts();
@@ -889,6 +896,9 @@ class _PostGrid extends StatelessWidget {
       return _Empty(icon: AppIcons.grid_off_rounded, label: tr('ui.c977f697f6'));
     }
     return GridView.builder(
+      // Бе ин рӯйхати кӯтоҳ (аз экран хурдтар) ғелонда намешуд ва
+      // навсозӣ кор намекард.
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2,
@@ -1334,12 +1344,22 @@ class _ES extends State<_Empty> with SingleTickerProviderStateMixin {
   }
   @override void dispose() { _c.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context) => Center(child: Column(
-    mainAxisSize: MainAxisSize.min, children: [
-    ScaleTransition(scale: _s,
-        child: Icon(widget.icon, size: 52, color: AppColors.dividerFaint)),
-    const SizedBox(height: 10),
-    Text(widget.label,
-        style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
-  ]));
+  Widget build(BuildContext context) => LayoutBuilder(
+    // Марказ худаш ғелонда намешавад, пас дар вараққаи ХОЛӢ
+    // кашидан ба поён ғайриимкон буд — навсозӣ кор намекард.
+    builder: (_, c) => SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: c.maxHeight),
+        child: Center(child: Column(
+          mainAxisSize: MainAxisSize.min, children: [
+          ScaleTransition(scale: _s,
+              child: Icon(widget.icon, size: 52, color: AppColors.dividerFaint)),
+          const SizedBox(height: 10),
+          Text(widget.label,
+              style: TextStyle(color: AppColors.textFaint, fontSize: 14)),
+        ])),
+      ),
+    ),
+  );
 }

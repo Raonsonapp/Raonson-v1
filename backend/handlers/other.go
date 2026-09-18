@@ -683,6 +683,8 @@ func DeleteReel(c *gin.Context) {
 	}
 	mw.CacheDel("explore:grid")  // то аз search фавран нопадид шавад
 	mw.InvalidateUserCache(myID) // fizardan pok kunam profile/user reels list
+	// Кэши ҳар тамошобин — вагарна reel дар explore то 5 дақиқа мемонад.
+	mw.BumpContentEpoch()
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 

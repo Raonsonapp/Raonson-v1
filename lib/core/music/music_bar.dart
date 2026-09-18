@@ -237,7 +237,7 @@ class _MusicBarState extends State<MusicBar> {
                 minHeight: 2.5,
                 backgroundColor: fg.withOpacity(0.22),
                 valueColor:
-                    const AlwaysStoppedAnimation(AppColors.storyEnd),
+                    const AlwaysStoppedAnimation(AppColors.musicEnd),
               ),
             ),
           ],

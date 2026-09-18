@@ -14,6 +14,19 @@ class AppColors {
   static const Color storyStart  = Color(0xFF00C6FF);
   static const Color storyEnd    = Color(0xFF00E87A);
   static const List<Color> storyGradient = [Color(0xFF00C6FF), Color(0xFF00E87A)];
+  // ── Музика (доимӣ) ──
+  //
+  // Instagram барои музика градиенти ҷудогона дорад — на кабуди
+  // худаш, балки норинҷӣ→гулобӣ→бунафш. Мо ҳам ҳамин корро мекунем,
+  // вале аз ранги БРЕНДИ ХУД сар мекунем: теали ҳалқаи story →
+  // бунафш. Ҳамоҳанг бо барнома, вале аз тугмаҳои оддӣ фарқкунанда.
+  static const Color musicStart = Color(0xFF00C6FF); // теал (бренд)
+  static const Color musicMid   = Color(0xFF7B5CFF); // бунафши равшан
+  static const Color musicEnd   = Color(0xFFB14BFF); // бунафш
+  static const List<Color> musicGradient = [
+    Color(0xFF00C6FF), Color(0xFF7B5CFF), Color(0xFFB14BFF),
+  ];
+
   static const Color neonBlue    = Color(0xFF0095F6);
   static const Color neonBlueDim = Color(0xFF1877F2);
   static const Color verified    = Color(0xFF1DB954);

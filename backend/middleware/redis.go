@@ -13,6 +13,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -90,9 +92,34 @@ func InvalidateUserCache(userID string) {
 		return
 	}
 	LocalDelPrefix("cache:" + userID + ":")
-	// Redis — prefix scan гарон аст, дар инҷо skip мекунем; TTL-и кӯтоҳ
-	// (5s) кофӣ аст, ки Redis-и stale худ ба худ таъмир шавад.
+	// Redis — prefix scan гарон аст, дар инҷо skip мекунем. Барои
+	// ҳазф ин кофӣ НЕСТ — ниг. `BumpContentEpoch` дар поён.
 }
+
+// ── Насли мундариҷа ──────────────────────────────────────────────
+//
+// ⚠️ Маҳз ин ҷо сабаби «пост ҳазф шуд, вале баъди 5 дақиқа нест
+// мешавад» буд.
+//
+// `InvalidateUserCache` ду камбудӣ дошт:
+//
+//   1. танҳо кэши МАҲАЛЛӢ-ро пок мекард, Redis-ро не;
+//   2. танҳо калидҳои ХУДИ ҳамон корбарро пок мекард.
+//
+// Вале `/explore` ва ҷустуҷӯ барои ҲАР тамошобин калиди худро
+// доранд ва `/explore` 5 дақиқа кэш мешуд. Пас пости ҳазфшуда дар
+// экрани ҳама то охири ҳамон 5 дақиқа мемонд.
+//
+// Ҳалли содда: рақами насл дар КАЛИД. Бумп кардан ҳамаи калидҳои
+// кӯҳнаро дастнорас мекунад — ҳам маҳаллӣ, ҳам Redis — бе ягон
+// prefix scan-и гарон. Калидҳои кӯҳна баъди TTL худашон мемиранд.
+//
+// Ҳазф кам рух медиҳад, пас гум кардани кэш ҳамчун арзиш қобили
+// қабул аст.
+var contentEpoch atomic.Int64
+
+// BumpContentEpoch — баъди ҳазфи пост, reel ё стори ҷеғ зада шавад.
+func BumpContentEpoch() { contentEpoch.Add(1) }
 
 // CacheMiddleware — cache GET responses.
 // КРИТИКӢ: калиди cache бояд userID-ро дар бар гирад, вагарна User A
@@ -110,7 +137,10 @@ func CacheMiddleware(ttl time.Duration) gin.HandlerFunc {
 		if userKey == "" {
 			userKey = "anon"
 		}
-		key := "cache:" + userKey + ":" + c.Request.URL.String()
+		// Насл дар калид — ниг. `BumpContentEpoch`.
+		key := "cache:" + userKey + ":" +
+			strconv.FormatInt(contentEpoch.Load(), 10) + ":" +
+			c.Request.URL.String()
 		if cached, ok := CacheGet(key); ok {
 			c.Header("X-Cache", "HIT")
 			c.Data(http.StatusOK, "application/json", cached)

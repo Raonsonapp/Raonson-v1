@@ -346,6 +346,8 @@ func DeleteStory(c *gin.Context) {
 		return
 	}
 	mw.InvalidateUserCache(myID)
+	// Стори дар ҳалқаи ҳар пайрав кэш шудааст, на танҳо дар кэши соҳиб.
+	mw.BumpContentEpoch()
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }
 
