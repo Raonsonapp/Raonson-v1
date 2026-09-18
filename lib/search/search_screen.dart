@@ -974,6 +974,10 @@ class _ExploreGrid extends StatelessWidget {
       childrenDelegate: SliverChildBuilderDelegate(
         (_, i) => _ExploreCell(
           item:  items[i],
+          // Мисли Instagram: видео дар худи грид бозӣ мекунад, бе
+          // даромадан. Танҳо плиткаҳои аввал — ҳар видео як декодери
+          // системаро мегирад ва онҳо маҳдуданд.
+          autoPlay: i < 4,
           onTap: () => onTap(i),
           onLongPress: onLongPress == null ? null : () => onLongPress!(i),
         ),
@@ -987,7 +991,9 @@ class _ExploreCell extends StatelessWidget {
   final _ExploreItem item;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  const _ExploreCell({required this.item, required this.onTap, this.onLongPress});
+  final bool autoPlay;
+  const _ExploreCell({required this.item, required this.onTap,
+      this.onLongPress, this.autoPlay = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1004,6 +1010,7 @@ class _ExploreCell extends StatelessWidget {
           thumbUrl: item.url,
           videoUrl: item.videoUrl,
           fit: BoxFit.cover,
+          autoPlay: autoPlay,
         ),
         // Reel icon (top-right)
         if (item.type == _ItemType.reel)

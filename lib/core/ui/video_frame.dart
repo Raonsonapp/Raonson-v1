@@ -19,6 +19,18 @@ import '../../app/app_theme.dart';
 //  худаш кадри аввалро мекашад.
 // ══════════════════════════════════════════════════════════════════
 
+/// Ҳадди видеоҳои ҲАМЗАМОН кушода.
+///
+/// ⚠️ Ҳар видеои кушода як декодери СИСТЕМА мегирад ва телефон
+/// шумораи маҳдуд дорад (одатан 8–16). Гриди explore метавонад даҳҳо
+/// плитка бисозад; бе ҳад декодерҳо тамом мешуданд ва ҳам грид, ҳам
+/// плеери Reels аз кор мемонд — камбудии аз плиткаи сиёҳ БАДТАР.
+///
+/// Плиткае, ки ҷой намеёбад, танҳо ҷои холӣ нишон медиҳад. Ҳангоми
+/// ғелонидан плиткаҳои кӯҳна ҷои худро озод мекунанд.
+const int _kMaxLiveFrames = 4;
+int _liveFrames = 0;
+
 class VideoFrame extends StatefulWidget {
   /// Тасвири омода (агар бошад) — он ҳамеша авлотар аст, чунки
   /// кушодани видео гарон аст.
@@ -66,6 +78,7 @@ class _VideoFrameState extends State<VideoFrame> {
     if (old.videoUrl != widget.videoUrl || old.thumbUrl != widget.thumbUrl) {
       _c?.dispose();
       _c = null;
+      _releaseSlot();
       _ready = false;
       _failed = false;
       if (_needsVideo) _open();
@@ -74,13 +87,19 @@ class _VideoFrameState extends State<VideoFrame> {
     }
   }
 
+  bool _holdsSlot = false;
+
   Future<void> _open() async {
+    if (_liveFrames >= _kMaxLiveFrames) return;
+    _liveFrames++;
+    _holdsSlot = true;
     try {
       final c = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
       _c = c;
       await c.initialize();
       if (!mounted) {
         await c.dispose();
+        _releaseSlot();
         return;
       }
       // Садо ҳеҷ гоҳ — даҳ плитка = даҳ садои якбора.
@@ -95,13 +114,21 @@ class _VideoFrameState extends State<VideoFrame> {
       if (mounted) setState(() => _ready = true);
     } catch (e) {
       debugPrint('[VideoFrame] $e');
+      _releaseSlot();
       if (mounted) setState(() => _failed = true);
     }
+  }
+
+  void _releaseSlot() {
+    if (!_holdsSlot) return;
+    _holdsSlot = false;
+    if (_liveFrames > 0) _liveFrames--;
   }
 
   @override
   void dispose() {
     _c?.dispose();
+    _releaseSlot();
     super.dispose();
   }
 
