@@ -107,10 +107,18 @@ func aiConfigured() gin.H {
 }
 
 func storageConfigured() gin.H {
+	// ⚠️ Маҳз ҳамон номҳое, ки upload_r2.go мехонад.
+	//
+	// Пештар ин ҷо R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET
+	// буд — номҳое, ки дар ҳеҷ ҷои дигар истифода намешаванд. Пас
+	// саҳифаи саломатӣ ҳамеша «r2: false» мегуфт, ҳатто вақте
+	// боркунии файл дуруст кор мекард. Ин ҷустуҷӯи хаторо ба роҳи
+	// нодуруст мебурд.
 	return gin.H{
-		"r2": os.Getenv("R2_ACCESS_KEY_ID") != "" &&
-			os.Getenv("R2_SECRET_ACCESS_KEY") != "",
-		"bucket": os.Getenv("R2_BUCKET") != "",
+		"r2": os.Getenv("CF_R2_ACCESS_KEY") != "" &&
+			os.Getenv("CF_R2_SECRET_KEY") != "" &&
+			os.Getenv("CF_ACCOUNT_ID") != "",
+		"bucket": os.Getenv("CF_R2_BUCKET") != "",
 	}
 }
 
