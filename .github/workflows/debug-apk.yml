@@ -43,12 +43,24 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # Нусхаи SDK маҳз он чизест, ки дастгирии Yandex талаб кард.
-      # Агар он 8.4.0 набошад, APK сохтан маъно надорад.
+      # Дастгирии Yandex гуфт: реклама АЗ 8.4.0 САР КАРДА мувофиқ
+      # мешавад. Яъне талаб «на камтар аз 8.4.0» аст, на «маҳз
+      # 8.4.0» — санҷиши қаблӣ баробариро талаб мекард ва build
+      # ҳамон рӯзе афтод, ки Yandex 8.5.0-ро баровард.
       - name: Check Yandex SDK version
         run: |
           python3 - <<'EOF'
           import json, re, sys, urllib.parse
+
+          MIN_STR = '8.4.0'
+
+          def parse(v):
+              # `pub` танҳо рақамҳо ва пасванди -beta мебарорад;
+              # муқоисаи сатрӣ '8.10.0' < '8.4.0' медиҳад — ғалат.
+              head = re.split(r'[-+]', v)[0]
+              return tuple(int(x) for x in head.split('.'))
+
+          MIN = parse(MIN_STR)
 
           # ── 1. Нусхаи ҲАЛШУДАи плагин ──
           #
@@ -65,8 +77,11 @@ jobs:
           print('── pubspec.lock ──')
           print(block.rstrip())
           v = re.search(r'version: "([^"]+)"', block)
-          if not v or v.group(1) != '8.4.0':
-              sys.exit(f'::error::плагин {v and v.group(1)} аст, на 8.4.0')
+          if not v:
+              sys.exit('::error::нусхаи плагин хонда нашуд')
+          plugin_v = v.group(1)
+          if parse(plugin_v) < MIN:
+              sys.exit(f'::error::плагин {plugin_v} аст, на камтар аз 8.4.0 лозим')
 
           # ── 2. Нусхаи SDK-и НАТИВ ──
           #
@@ -81,10 +96,15 @@ jobs:
                        if 'com.yandex.android:mobileads' in l), None)
           print('── SDK-и натив ──')
           print(line)
-          if not line or '8.4.0' not in line:
-              sys.exit('::error::SDK-и натив 8.4.0 нест')
+          nv = re.search(r'mobileads:([0-9]+(?:\.[0-9]+)*)', line or '')
+          if not nv:
+              sys.exit('::error::нусхаи SDK-и натив хонда нашуд')
+          if parse(nv.group(1)) < MIN:
+              sys.exit(f'::error::SDK-и натив {nv.group(1)} аст, '
+                       f'на камтар аз {MIN_STR} лозим')
 
-          print('✅ плагин 8.4.0 ва SDK-и натив 8.4.0')
+          print(f'✅ плагин {plugin_v}, SDK-и натив {nv.group(1)} '
+                f'(ҳадди ақал {MIN_STR})')
           EOF
 
       - name: Flutter test
