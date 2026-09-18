@@ -90,7 +90,22 @@ func main() {
 		})
 	})
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		// Танҳо ҲА/НЕ — ҳеҷ калид, ҳеҷ сир, ҳеҷ суроға.
+		//
+		// Бе ин фаҳмидан, ки чаро огоҳинома намеояд, танҳо аз рӯи
+		// log имконпазир буд: «ё код вайрон аст, ё secret нест» —
+		// ва фарқи онҳоро аз берун дидан мумкин набуд.
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"ready": gin.H{
+				// Огоҳиномаи телефон (FCM_SERVICE_ACCOUNT_JSON).
+				"push": handlers.PushReady(),
+				// Захираи акс ва видео.
+				"storage": handlers.StorageReady(),
+				// Реклама (YANDEX_REWARDED_ID).
+				"rewardedAds": os.Getenv("YANDEX_REWARDED_ID") != "",
+			},
+		})
 	})
 
 	// Саҳифаҳои пешнамоиш — БЕ авторизатсия, чунки маҳз онҳоро

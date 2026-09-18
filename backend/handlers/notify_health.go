@@ -75,3 +75,9 @@ func NotificationHealth(c *gin.Context) {
 	out["checkedAt"] = time.Now().UTC().Format(time.RFC3339)
 	c.JSON(http.StatusOK, out)
 }
+
+// PushReady барои `/health` — оё огоҳиномаи телефон танзим шудааст.
+//
+// Бе ин фарқи «код вайрон аст» ва «secret нест» аз берун дида
+// намешуд.
+func PushReady() bool { return push.Configured() }

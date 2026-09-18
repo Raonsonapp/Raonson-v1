@@ -37,6 +37,12 @@ func r2Configured() (bool, string) {
 	return len(missing) == 0, strings.Join(missing, ", ")
 }
 
+// StorageReady барои `/health` — танҳо ҲА/НЕ, бе ном ва бе калид.
+func StorageReady() bool {
+	ok, _ := r2Configured()
+	return ok
+}
+
 func getR2Client() *s3.Client {
 	// Credentials come ONLY from env (set in Render). Never hardcode secrets.
 	accountID := os.Getenv("CF_ACCOUNT_ID")
