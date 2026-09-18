@@ -254,7 +254,11 @@ func RateLimit(limit int, windowSec int) gin.HandlerFunc {
 		if count > limit {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"success": false,
-				"message": "Too many requests. Please try again later.",
+				// Матн ба корбар нишон дода мешавад. «Try again
+				// later» намегӯяд, ки ин муваққатист ва ягон
+				// дақиқа интизор шудан кофист.
+				"message": "Дархост аз ҳад зиёд. Як дақиқа " +
+					"интизор шавед ва боз кӯшиш кунед.",
 			})
 			c.Abort()
 			return

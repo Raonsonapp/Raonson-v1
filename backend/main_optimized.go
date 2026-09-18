@@ -516,10 +516,24 @@ func main() {
 	r.POST("/ai/text", auth, rl100, handlers.AIText) // AI абзорҳо (Pro)
 	r.POST("/ai/moderate",  auth, rl100, handlers.AIModerate)  // модератсия (OpenAI)
 
-	r.POST("/upload",        auth, rl20, mw.AntiAbuse("upload", 50, 3600), handlers.UploadToR2)
-	r.POST("/upload/avatar", auth, rl20, handlers.UploadToR2)
-	r.POST("/upload/video",  auth, rl20, handlers.UploadToR2)
-	r.POST("/media/upload",  auth, rl20, handlers.UploadToR2)
+	// Боркунии файл ҳади ХУДРО дорад, на rl20.
+	//
+	// rl20 маънои 20 дархост дар як дақиқаро дошт. Барои API-и оддӣ
+	// ин бас аст, вале боркунӣ дафъатан меояд: як пости 10-акса =
+	// 10 боркунӣ, ва ApiClient ҳангоми нокомӣ худаш такрор мекунад.
+	// Дар натиҷа корбари ОДДӢ 429 мегирифт ва сабабро намедонист —
+	// маҳз ҳамин дар log-и сервер дида шуд:
+	//   [429] POST /upload 288.198µs
+	// 288 микросония яъне дархост ҳатто ба коди R2 нарасида буд.
+	//
+	// 60 дар як дақиқа ва 300 дар як соат: барои пости калон бас
+	// аст, вале скрипти селоб ба ҳар ҳол баста мемонад.
+	upl      := mw.RateLimit(60, 60)
+	uplAbuse := mw.AntiAbuse("upload", 300, 3600)
+	r.POST("/upload",        auth, upl, uplAbuse, handlers.UploadToR2)
+	r.POST("/upload/avatar", auth, upl, uplAbuse, handlers.UploadToR2)
+	r.POST("/upload/video",  auth, upl, uplAbuse, handlers.UploadToR2)
+	r.POST("/media/upload",  auth, upl, uplAbuse, handlers.UploadToR2)
 
 	ad := r.Group("/admin", auth, admin)
 	{
