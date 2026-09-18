@@ -289,6 +289,10 @@ func GetPost(c *gin.Context) {
 	var isProduct, contactRaonson bool
 	var price float64
 	var currency, productName, shopWhatsapp, shopPhone string
+	// ⚠️ Ин НАБУД. Лента ва профил музикаро бармегардонданд, вале
+	// худи пости кушодашуда НЕ — сатри музика нопадид мешуд.
+	var mTitle, mArtist, mURL, mArt string
+	var mTrackMs, mStartMs, mEndMs, mShares int
 
 	err := db.Pool.QueryRow(context.Background(), `
 		SELECT p.id, p.caption,
@@ -306,14 +310,21 @@ func GetPost(c *gin.Context) {
 		       COALESCE(p.is_product,false), COALESCE(p.price,0),
 		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
-		       COALESCE(p.shop_phone,'')
+		       COALESCE(p.shop_phone,''),
+		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+		       COALESCE(p.music_end_ms,0),
+		       (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=$1
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now() OR p.user_id=$2::text)`,
 		pid, myID).Scan(&pid2, &cap, &likes, &comms, &createdAt,
 		&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 		&hideLikes, &commentsOff,
 		&isProduct, &price, &currency, &productName,
-		&contactRaonson, &shopWhatsapp, &shopPhone)
+		&contactRaonson, &shopWhatsapp, &shopPhone,
+		&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs,
+		&mShares)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
@@ -325,6 +336,10 @@ func GetPost(c *gin.Context) {
 		"isProduct": isProduct, "price": price, "currency": currency,
 		"productName": productName, "contactRaonson": contactRaonson,
 		"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
+		"musicTitle": mTitle, "musicArtist": mArtist,
+		"sharesCount": mShares,
+		"song": songJSON(mTitle, mArtist, mArt, mURL,
+			mTrackMs, mStartMs, mEndMs),
 		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 	})
 }

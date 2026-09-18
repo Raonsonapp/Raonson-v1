@@ -229,6 +229,10 @@ func AiSearch(c *gin.Context) {
 		query := fmt.Sprintf(`
 			SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
 			       u.id, u.username, u.avatar, u.verified,
+			       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+			       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+			       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+			       COALESCE(p.music_end_ms,0),
 			       (SELECT COALESCE(json_agg(
 			                json_build_object('url',m.url,'type',m.type)
 			                ORDER BY m.position),'[]'::json)
@@ -243,10 +247,16 @@ func AiSearch(c *gin.Context) {
 				var likes, comms int
 				var verified bool
 				var createdAt, media interface{}
-				rows.Scan(&pid, &cap, &likes, &comms, &createdAt, &uid, &uname, &uavatar, &verified, &media)
+				var mTitle, mArtist, mURL, mArt string
+				var mTrackMs, mStartMs, mEndMs int
+				rows.Scan(&pid, &cap, &likes, &comms, &createdAt, &uid, &uname, &uavatar, &verified,
+					&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs, &media)
 				posts = append(posts, gin.H{
 					"_id": pid, "caption": cap, "likesCount": likes,
 					"commentsCount": comms, "createdAt": createdAt, "media": nilToEmpty(media),
+					"musicTitle": mTitle, "musicArtist": mArtist,
+					"song": songJSON(mTitle, mArtist, mArt, mURL,
+						mTrackMs, mStartMs, mEndMs),
 					"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 				})
 			}

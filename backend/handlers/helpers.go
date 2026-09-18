@@ -154,6 +154,10 @@ func postsForUser(userID string, limit int) []gin.H {
 		SELECT p.id, p.caption,
 		       COALESCE(p.likes_count,0), COALESCE(p.comments_count,0),
 		       p.created_at,
+		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+		       COALESCE(p.music_end_ms,0),
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position), '[]'::json)
@@ -175,7 +179,15 @@ func scanPostRows(rows pgx.Rows, myID string) []gin.H {
 		var pid, cap string
 		var likes, comms int
 		var createdAt, media interface{}
-		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt, &media); err != nil {
+		// Гриди профил танҳо расмҳоро нишон медиҳад, вале корбар
+		// метавонад постро аз ҳамон ҷо кушояд — пас музика бояд
+		// ҳамроҳ ояд, вагарна он «дар як ҷо ҳасту дар дигаре не»
+		// мешавад.
+		var mTitle, mArtist, mURL, mArt string
+		var mTrackMs, mStartMs, mEndMs int
+		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
+			&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs,
+			&media); err != nil {
 			log.Printf("[scanPostRows] error: %v", err)
 			continue
 		}
@@ -183,6 +195,9 @@ func scanPostRows(rows pgx.Rows, myID string) []gin.H {
 			"_id": pid, "caption": cap,
 			"likesCount": likes, "commentsCount": comms,
 			"createdAt": createdAt, "media": nilToEmpty(media),
+			"musicTitle": mTitle, "musicArtist": mArtist,
+			"song": songJSON(mTitle, mArtist, mArt, mURL,
+				mTrackMs, mStartMs, mEndMs),
 		})
 	}
 	return out

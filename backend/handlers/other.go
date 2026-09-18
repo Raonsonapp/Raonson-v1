@@ -409,6 +409,10 @@ func Search(c *gin.Context) {
 	pRows, _ := db.Pool.Query(context.Background(), `
 		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
 		       u.id, u.username, u.avatar, u.verified,
+		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+		       COALESCE(p.music_end_ms,0),
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
@@ -423,10 +427,18 @@ func Search(c *gin.Context) {
 			var likes, comms int
 			var verified bool
 			var createdAt, media interface{}
-			pRows.Scan(&pid, &cap, &likes, &comms, &createdAt, &uid, &uname, &uavatar, &verified, &media)
+			// Натиҷаи ҷустуҷӯ кушода мешавад — пас он бояд ҳамон
+			// маълумотро дошта бошад, ки лента дорад.
+			var mTitle, mArtist, mURL, mArt string
+			var mTrackMs, mStartMs, mEndMs int
+			pRows.Scan(&pid, &cap, &likes, &comms, &createdAt, &uid, &uname, &uavatar, &verified,
+				&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs, &media)
 			posts = append(posts, gin.H{
 				"_id": pid, "caption": cap, "likesCount": likes,
 				"commentsCount": comms, "createdAt": createdAt, "media": nilToEmpty(media),
+				"musicTitle": mTitle, "musicArtist": mArtist,
+				"song": songJSON(mTitle, mArtist, mArt, mURL,
+					mTrackMs, mStartMs, mEndMs),
 				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 			})
 		}
