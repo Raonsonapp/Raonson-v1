@@ -30,30 +30,77 @@ void main() {
   });
 
   group('нусхаи вобастагӣ', () {
-    test('pubspec 8.4.0-ро талаб мекунад', () {
+    // ⚠️ «НА КАМТАР АЗ», на «МАҲЗ».
+    //
+    // Дастгирии Yandex гуфт: реклама АЗ 8.4.0 САР КАРДА мувофиқ
+    // мешавад. Санҷиши қаблӣ баробариро талаб мекард ва ҳамон рӯзе
+    // шикаст, ки Yandex 8.5.0-ро баровард — дар ҳоле ки 8.5.0
+    // талабро пурра иҷро мекунад.
+    //
+    // `pubspec.lock` дар анбор нест, пас CI ҳар бор нусхаи
+    // навтаринро ҳал мекунад. Бо санҷиши «маҳз» ҳар барориши нави
+    // Yandex build-ро мешикаст.
+    const minVersion = [8, 4, 0];
+
+    List<int> parseVersion(String v) => v
+        .split(RegExp(r'[-+]'))
+        .first
+        .split('.')
+        .map((x) => int.tryParse(x) ?? 0)
+        .toList();
+
+    bool atLeastMin(String v) {
+      final got = parseVersion(v);
+      for (var i = 0; i < minVersion.length; i++) {
+        final a = i < got.length ? got[i] : 0;
+        if (a != minVersion[i]) return a > minVersion[i];
+      }
+      return true;
+    }
+
+    test('pubspec ҳадди ақал 8.4.0-ро талаб мекунад', () {
       final spec = File('pubspec.yaml').readAsStringSync();
-      expect(spec, contains('yandex_mobileads: ^8.4.0'),
-          reason: 'нусхаи плагин нав карда нашуд');
+      final m = RegExp(r'yandex_mobileads:\s*\^?([0-9.]+)').firstMatch(spec);
+      expect(m, isNotNull, reason: 'вобастагӣ дар pubspec.yaml нест');
+      expect(atLeastMin(m!.group(1)!), isTrue,
+          reason: 'pubspec нусхаи ${m.group(1)}-ро талаб мекунад, '
+              'на камтар аз 8.4.0 лозим');
     });
 
-    test('нусхаи ҲАЛШУДА маҳз 8.4.0 аст', () {
+    test('нусхаи ҲАЛШУДА на камтар аз 8.4.0 аст', () {
       // pubspec.yaml танҳо талаб аст. Нусхаи воқеӣ дар lock аст.
       final lock = File('pubspec.lock').readAsStringSync();
       final i = lock.indexOf('  yandex_mobileads:');
       expect(i, greaterThan(-1), reason: 'дар lock нест');
-      // Сабт метавонад дар охири файл бошад — ҳудуд маҳдуд мешавад.
       final block = lock.substring(i, (i + 300).clamp(i, lock.length));
-      expect(block, contains('version: "8.4.0"'),
-          reason: 'нусхаи ҳалшуда 8.4.0 нест: $block');
+      final m = RegExp(r'version: "([^"]+)"').firstMatch(block);
+      expect(m, isNotNull, reason: 'нусха дар lock хонда нашуд: $block');
+      expect(atLeastMin(m!.group(1)!), isTrue,
+          reason: 'нусхаи ҳалшуда ${m.group(1)} аст, '
+              'на камтар аз 8.4.0 лозим');
     });
 
-    test('SDK-и НАТИВ низ 8.4.0 аст', () {
+    test('SDK-и НАТИВ низ на камтар аз 8.4.0 аст', () {
       // Плагин ва SDK-и натив нусхаҳои ҷудогона доранд — дастгирии
       // Yandex маҳз дар бораи SDK-и натив гап мезад.
       final gradle = File('${_pluginRoot()}/android/build.gradle')
           .readAsStringSync();
-      expect(gradle, contains("com.yandex.android:mobileads:8.4.0"),
-          reason: 'SDK-и натив 8.4.0 нест');
+      final m = RegExp(r'com\.yandex\.android:mobileads:([0-9.]+)')
+          .firstMatch(gradle);
+      expect(m, isNotNull, reason: 'нусхаи SDK-и натив ёфт нашуд');
+      expect(atLeastMin(m!.group(1)!), isTrue,
+          reason: 'SDK-и натив ${m.group(1)} аст, на камтар аз 8.4.0 лозим');
+    });
+
+    test('муқоиса рақамӣ аст, на сатрӣ', () {
+      // '8.10.0' < '8.4.0' ҳамчун САТР дуруст аст — ва ин камбудии
+      // ниҳонӣ мебуд, ки танҳо баъди барориши 8.10 пайдо мешуд.
+      expect(atLeastMin('8.10.0'), isTrue);
+      expect(atLeastMin('9.0.0'), isTrue);
+      expect(atLeastMin('8.5.0'), isTrue);
+      expect(atLeastMin('8.4.0'), isTrue);
+      expect(atLeastMin('8.3.9'), isFalse);
+      expect(atLeastMin('7.18.0'), isFalse);
     });
   });
 
