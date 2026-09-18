@@ -25,6 +25,20 @@ void main() {
           reason: 'плеер `url`-ро мекушояд — барои reel он ТАСВИР аст');
     });
 
+    test('танҳо саҳифаи дидашаванда садо мебарорад', () {
+      // `PageView` саҳифаҳои ҳамсояро зинда нигоҳ медорад. Бе ин
+      // ҳар корт фавран бозӣ мекард ва корбар садои видеои
+      // НАВБАТИРО ҳамзамон бо ҷорӣ мешунид.
+      expect(src, contains('isActive'),
+          reason: 'корт намедонад, ки дида мешавад ё не');
+      expect(src, contains('onPageChanged'),
+          reason: 'иваз шудани саҳифа пайгирӣ намешавад');
+      expect(src, contains('if (widget.isActive) await c.play()'),
+          reason: 'саҳифаи ноаён низ фавран бозӣ мекунад');
+      expect(src, contains('_video?.pause()'),
+          reason: 'ҳангоми рафтан аз саҳифа садо қатъ намешавад');
+    });
+
     test('хатогии видео пинҳон намешавад', () {
       // Пеш `catch (_) {}` буд — корбар чархаки абадиро медид.
       expect(src, isNot(contains('await c.initialize();\n      if (!mounted) return;\n      c..setLooping(true)..play();\n      setState(() => _ready = true);\n    } catch (_) {}')),

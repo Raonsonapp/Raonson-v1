@@ -1214,9 +1214,17 @@ class _ExploreReelFeed extends StatefulWidget {
 class _ExploreReelFeedState extends State<_ExploreReelFeed> {
   late final PageController _page;
 
+  /// Кадом саҳифа ҲОЗИР дида мешавад.
+  ///
+  /// ⚠️ Бе ин ду садо якбора мебаромад. `PageView` саҳифаҳои
+  /// ҳамсояро зинда нигоҳ медорад ва ҳар корт фавран бозӣ мекард —
+  /// корбар видеои ҷориро медид, вале садои НАВБАТИРО низ мешунид.
+  late int _current;
+
   @override
   void initState() {
     super.initState();
+    _current = widget.initialIndex;
     _page = PageController(initialPage: widget.initialIndex);
   }
 
@@ -1232,8 +1240,12 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
           controller:  _page,
           scrollDirection: Axis.vertical,
           itemCount:   widget.items.length,
-          itemBuilder: (_, i) =>
-              _FeedCard(key: ValueKey(widget.items[i].id), item: widget.items[i]),
+          onPageChanged: (i) => setState(() => _current = i),
+          itemBuilder: (_, i) => _FeedCard(
+            key: ValueKey(widget.items[i].id),
+            item: widget.items[i],
+            isActive: i == _current,
+          ),
         ),
         // Back button
         Positioned(
@@ -1263,7 +1275,11 @@ class _ExploreReelFeedState extends State<_ExploreReelFeed> {
 // Single card in the explore feed (image OR playing video/reel)
 class _FeedCard extends StatefulWidget {
   final _ExploreItem item;
-  const _FeedCard({super.key, required this.item});
+
+  /// Танҳо саҳифаи дидашаванда садо мебарорад ва бозӣ мекунад.
+  final bool isActive;
+
+  const _FeedCard({super.key, required this.item, this.isActive = true});
   @override
   State<_FeedCard> createState() => _FeedCardState();
 }
@@ -1314,14 +1330,24 @@ class _FeedCardState extends State<_FeedCard> {
         await c.dispose();
         return;
       }
-      c..setLooping(true)..play();
-      setState(() => _ready = true);
+      await c.setLooping(true);
+      // Саҳифаи ҳамсоя омода мешавад, вале ХОМӮШ мемонад.
+      if (widget.isActive) await c.play();
+      if (mounted) setState(() => _ready = true);
     } catch (e) {
       // ⚠️ Пеш ин `catch (_) {}` буд — хатогӣ комилан нопадид мешуд
       // ва корбар чархаки абадиро медид, бе ҳеҷ фаҳмиш.
       debugPrint('[Explore] video: $e');
       if (mounted) setState(() => _failed = true);
     }
+  }
+
+  @override
+  void didUpdateWidget(_FeedCard old) {
+    super.didUpdateWidget(old);
+    if (old.isActive == widget.isActive) return;
+    // Аз саҳифа рафтем — садо бояд фавран қатъ шавад.
+    widget.isActive ? _video?.play() : _video?.pause();
   }
 
   @override
