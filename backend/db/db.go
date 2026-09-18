@@ -496,6 +496,12 @@ func migrate() {
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_title    TEXT DEFAULT '';
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_artist   TEXT DEFAULT '';
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_url      TEXT DEFAULT '';
+	-- Порчаи интихобкардаи муаллиф. Бе ин суруд ҳамеша аз сари худ
+	-- мехонд, ҳатто агар муаллиф ҷои дигарро интихоб карда бошад.
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_art      TEXT DEFAULT '';
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_track_ms INTEGER DEFAULT 0;
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_start_ms INTEGER DEFAULT 0;
+	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS music_end_ms   INTEGER DEFAULT 0;
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS location       TEXT DEFAULT '';
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS tagged_users   TEXT[] DEFAULT '{}';
 	ALTER TABLE posts    ADD COLUMN IF NOT EXISTS collaborators  TEXT[] DEFAULT '{}';
@@ -760,6 +766,16 @@ func migrate() {
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS archived    BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS replies_off BOOLEAN DEFAULT FALSE;
 	ALTER TABLE stories ADD COLUMN IF NOT EXISTS audience    TEXT DEFAULT 'all';
+	-- Музикаи стори. Пеш стори ҳеҷ сутуни музика надошт: ҳангоми
+	-- нашр танҳо «🎵 ном» ба МАТНИ стори меафтод ва хонанда, суроға
+	-- ва ҷои оғоз комилан гум мешуданд.
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_title    TEXT DEFAULT '';
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_artist   TEXT DEFAULT '';
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_url      TEXT DEFAULT '';
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_art      TEXT DEFAULT '';
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_track_ms INTEGER DEFAULT 0;
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_start_ms INTEGER DEFAULT 0;
+	ALTER TABLE stories ADD COLUMN IF NOT EXISTS music_end_ms   INTEGER DEFAULT 0;
 	ALTER TABLE post_media ADD COLUMN IF NOT EXISTS aspect_ratio REAL DEFAULT 0;
 
 	-- ── Live-стримҳо (Agora broadcast) ──

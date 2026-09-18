@@ -23,6 +23,9 @@ func CreatePost(c *gin.Context) {
 		Media         []map[string]interface{} `json:"media"`
 		MusicTitle    string                   `json:"musicTitle"`
 		MusicArtist   string                   `json:"musicArtist"`
+		// Порчаи интихобкардаи муаллиф. Бе ин суруд ҳамеша аз сари
+		// худ мехонд ва суроғааш умуман сабт намешуд.
+		Song          *songInfo                `json:"song"`
 		Location      string                   `json:"location"`
 		TaggedUsers   []string                 `json:"taggedUsers"`
 		Collaborators []string                 `json:"collaborators"`
@@ -78,13 +81,25 @@ func CreatePost(c *gin.Context) {
 	}
 	defer tx.Rollback(context.Background())
 
+	// Шакли нав `song`-ро мефиристад; барномаҳои кӯҳна танҳо ном ва
+	// хонандаро — ҳарду қабул мешаванд.
+	song := b.Song
+	if song == nil {
+		song = &songInfo{Title: b.MusicTitle, Artist: b.MusicArtist, EndMs: 15000}
+	}
+	song.clean()
+
 	var postID string
 	if err = tx.QueryRow(context.Background(),
-		`INSERT INTO posts(user_id,caption,music_title,music_artist,location,tagged_users,collaborators,scheduled_at)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+		`INSERT INTO posts(user_id,caption,music_title,music_artist,music_url,music_art,
+		                   music_track_ms,music_start_ms,music_end_ms,
+		                   location,tagged_users,collaborators,scheduled_at)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
 		// Ҳамкорон холӣ оғоз мешаванд: ном танҳо пас аз розигии
 		// худи одам ба пост баста мешавад (ниг. collab.go).
-		myID, b.Caption, b.MusicTitle, b.MusicArtist, b.Location, b.TaggedUsers,
+		myID, b.Caption, song.Title, song.Artist, song.URL, song.ArtURL,
+		song.TrackMs, song.StartMs, song.EndMs,
+		b.Location, b.TaggedUsers,
 		[]string{}, scheduledAt).Scan(&postID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
 		return
@@ -148,8 +163,10 @@ wsPost := gin.H{
 	"commentsCount": 0,
 	"liked":         false,
 	"saved":         false,
-	"musicTitle":    b.MusicTitle,
-	"musicArtist":   b.MusicArtist,
+	"musicTitle":    song.Title,
+	"musicArtist":   song.Artist,
+	"song": songJSON(song.Title, song.Artist, song.ArtURL, song.URL,
+		song.TrackMs, song.StartMs, song.EndMs),
 	"location":      b.Location,
 	"taggedUsers":   b.TaggedUsers,
 	// Ҷавоб вазъи ВОҚЕИИ пост аст: даъватҳо ҳанӯз тасдиқ нашудаанд.

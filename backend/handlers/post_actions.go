@@ -222,19 +222,39 @@ func UpdatePostMusic(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
 	var b struct {
+		// Шакли кӯҳна (майдонҳои алоҳида) — то барномаҳои насбшуда
+		// кор кунанд.
 		MusicTitle  string `json:"musicTitle"`
 		MusicArtist string `json:"musicArtist"`
 		MusicUrl    string `json:"musicUrl"`
+		// Шакли нав: порчаи пурра бо ҷои оғоз.
+		Song *songInfo `json:"song"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "music data required"})
 		return
 	}
 
+	song := b.Song
+	if song == nil {
+		song = &songInfo{
+			Title:  b.MusicTitle,
+			Artist: b.MusicArtist,
+			URL:    b.MusicUrl,
+			EndMs:  15000,
+		}
+	}
+	// `clean` суроғаи бегонаро мепартояд ва тирезаро ба ҳудуд меорад.
+	// Натиҷаи `false` маънои «музика тоза шуд» дорад — ин иҷозат аст.
+	song.clean()
+
 	res, _ := db.Pool.Exec(context.Background(),
-		`UPDATE posts SET music_title=$1, music_artist=$2, music_url=$3, updated_at=NOW()
-		 WHERE id=$4 AND user_id=$5`,
-		b.MusicTitle, b.MusicArtist, b.MusicUrl, pid, myID)
+		`UPDATE posts SET music_title=$1, music_artist=$2, music_url=$3,
+		                  music_art=$4, music_track_ms=$5,
+		                  music_start_ms=$6, music_end_ms=$7, updated_at=NOW()
+		 WHERE id=$8 AND user_id=$9`,
+		song.Title, song.Artist, song.URL, song.ArtURL,
+		song.TrackMs, song.StartMs, song.EndMs, pid, myID)
 	if res.RowsAffected() == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found or not owner"})
 		return

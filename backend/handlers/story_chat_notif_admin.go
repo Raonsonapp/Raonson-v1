@@ -28,7 +28,11 @@ func GetStories(c *gin.Context) {
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
 		       u.id,u.username,u.avatar,u.verified,
-		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
+		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false),
+		       COALESCE(s.music_title,''),COALESCE(s.music_artist,''),
+		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
+		       COALESCE(s.music_track_ms,0),COALESCE(s.music_start_ms,0),
+		       COALESCE(s.music_end_ms,0)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
 		  AND ($2::text = '' OR s.user_id = $2::text)
@@ -81,7 +85,11 @@ func GetMyStories(c *gin.Context) {
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
 		       u.id,u.username,u.avatar,u.verified,
-		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false)
+		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false),
+		       COALESCE(s.music_title,''),COALESCE(s.music_artist,''),
+		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
+		       COALESCE(s.music_track_ms,0),COALESCE(s.music_start_ms,0),
+		       COALESCE(s.music_end_ms,0)
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.user_id=$1 AND s.expires_at > NOW()
 		ORDER BY s.created_at DESC`, myID)
@@ -104,6 +112,9 @@ func CreateStory(c *gin.Context) {
 			X        float64 `json:"x"`
 			Y        float64 `json:"y"`
 		} `json:"poll"`
+		// Музика (ихтиёрӣ). Пеш он ҳамчун «🎵 ном» ба `caption`
+		// андохта мешуд — хонанда, суроға ва ҷои оғоз гум мешуданд.
+		Song *songInfo `json:"song"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.MediaURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
@@ -117,12 +128,21 @@ func CreateStory(c *gin.Context) {
 	if b.Audience != "close" {
 		b.Audience = "all"
 	}
+	song := b.Song
+	if song == nil || !song.clean() {
+		song = &songInfo{}
+	}
+
 	exp := time.Now().Add(24 * time.Hour)
 	var sid string
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption,audience)
-		 VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
-		myID, b.MediaURL, b.MediaType, exp, b.Caption, b.Audience).Scan(&sid)
+		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption,audience,
+		                     music_title,music_artist,music_url,music_art,
+		                     music_track_ms,music_start_ms,music_end_ms)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+		myID, b.MediaURL, b.MediaType, exp, b.Caption, b.Audience,
+		song.Title, song.Artist, song.URL, song.ArtURL,
+		song.TrackMs, song.StartMs, song.EndMs).Scan(&sid)
 
 	if b.Poll != nil && strings.TrimSpace(b.Poll.Question) != "" {
 		qa := strings.TrimSpace(b.Poll.OptionA)
@@ -148,6 +168,8 @@ func CreateStory(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT username, avatar, verified FROM users WHERE id=$1`, myID,
 	).Scan(&uname, &uavatar, &verified)
+	songOut := songJSON(song.Title, song.Artist, song.ArtURL, song.URL,
+		song.TrackMs, song.StartMs, song.EndMs)
 	wsStory := gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
 		"expiresAt": exp, "caption": b.Caption, "viewed": false,
@@ -155,6 +177,10 @@ func CreateStory(c *gin.Context) {
 			"_id": myID, "id": myID, "username": uname,
 			"avatar": uavatar, "verified": verified,
 		},
+	}
+	// Бе ин стори то навсозии дастӣ бе музика намоён мешуд.
+	if songOut != nil {
+		wsStory["song"] = songOut
 	}
 	go func() {
 		sockets.BroadcastNewStory(myID, wsStory)
@@ -173,10 +199,14 @@ func CreateStory(c *gin.Context) {
 		}
 	}()
 
-	c.JSON(http.StatusCreated, gin.H{
+	out := gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
 		"expiresAt": exp, "caption": b.Caption, "audience": b.Audience,
-	})
+	}
+	if songOut != nil {
+		out["song"] = songOut
+	}
+	c.JSON(http.StatusCreated, out)
 }
 
 // POST /stories/:id/view
@@ -333,13 +363,22 @@ func scanStoryRows(rows interface {
 		var sid, murl, mtype, uid, uname, uavatar, audience string
 		var verified, repliesOff bool
 		var exp, createdAt interface{}
+		var mTitle, mArtist, mURL, mArt string
+		var mTrackMs, mStartMs, mEndMs int
 		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar,
-			&verified, &audience, &repliesOff)
+			&verified, &audience, &repliesOff,
+			&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs)
 		item := gin.H{
 			"_id": sid, "mediaUrl": murl, "mediaType": mtype,
 			"expiresAt": exp, "createdAt": createdAt,
 			"audience": audience, "repliesOff": repliesOff,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
+		}
+		// `nil` мешавад, агар стори музика надошта бошад — то
+		// телефон сатри музикаи холӣ насозад.
+		if song := songJSON(mTitle, mArtist, mArt, mURL,
+			mTrackMs, mStartMs, mEndMs); song != nil {
+			item["song"] = song
 		}
 		attachPoll(sid, viewerID, item)
 		stories = append(stories, item)

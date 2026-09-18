@@ -26,12 +26,16 @@ func scanFeedPosts(rows interface {
 		var verified, liked, saved, pinned bool
 		var createdAt, media interface{}
 		var musicTitle, musicArtist, location string
+		var musicURL, musicArt string
+		var musicTrackMs, musicStartMs, musicEndMs int
 		var tagged []string
 		var collaborators []string
 		var hasStory bool
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
-			&musicTitle, &musicArtist, &location, &tagged, &collaborators, &hasStory); err != nil {
+			&musicTitle, &musicArtist,
+			&musicURL, &musicArt, &musicTrackMs, &musicStartMs, &musicEndMs,
+			&location, &tagged, &collaborators, &hasStory); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
@@ -39,6 +43,8 @@ func scanFeedPosts(rows interface {
 			"createdAt": createdAt, "media": nilToEmpty(media),
 			"liked": liked, "saved": saved, "isPinned": pinned,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
+			"song": songJSON(musicTitle, musicArtist, musicArt, musicURL,
+				musicTrackMs, musicStartMs, musicEndMs),
 			"location": location, "taggedUsers": tagged,
 			"collaborators": collaborators,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
@@ -62,6 +68,9 @@ const feedPostCols = `
 	       EXISTS(SELECT 1 FROM post_saves WHERE post_id=p.id AND user_id=$1::text),
 	       COALESCE(p.is_pinned,false),
 	       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+	       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+	       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+	       COALESCE(p.music_end_ms,0),
 	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 	       COALESCE(p.collaborators,'{}'),
 	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text)))

@@ -82,6 +82,9 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.hide_likes,false) AS hide_likes,
 		  COALESCE(p.comments_off,false) AS comments_off,
 		  COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+		  COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+		  COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+		  COALESCE(p.music_end_ms,0),
 		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 		  COALESCE(p.is_product,false), COALESCE(p.price,0),
 		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
@@ -167,6 +170,8 @@ func GetSmartFeed(c *gin.Context) {
 		var verified, liked, saved, hideLikes, commentsOff bool
 		var createdAt, media interface{}
 		var musicTitle, musicArtist, location string
+		var musicURL, musicArt string
+		var musicTrackMs, musicStartMs, musicEndMs int
 		var tagged []string
 		var hasStory bool
 		var score float64
@@ -176,7 +181,9 @@ func GetSmartFeed(c *gin.Context) {
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 			&hideLikes, &commentsOff,
-			&musicTitle, &musicArtist, &location, &tagged,
+			&musicTitle, &musicArtist,
+			&musicURL, &musicArt, &musicTrackMs, &musicStartMs, &musicEndMs,
+			&location, &tagged,
 			&isProduct, &price, &currency, &productName,
 			&contactRaonson, &shopWhatsapp, &shopPhone,
 			&hasStory, &score)
@@ -186,6 +193,10 @@ func GetSmartFeed(c *gin.Context) {
 			"media": nilToEmpty(media), "liked": liked, "saved": saved,
 			"hideLikes": hideLikes, "commentsOff": commentsOff,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
+			// Пеш танҳо ном ва хонанда бармегаштанд — бе суроға
+			// телефон суруди постро ҳеҷ гоҳ хонда наметавонист.
+			"song": songJSON(musicTitle, musicArtist, musicArt, musicURL,
+				musicTrackMs, musicStartMs, musicEndMs),
 			"location": location, "taggedUsers": tagged,
 			"isProduct": isProduct, "price": price, "currency": currency,
 			"productName": productName, "contactRaonson": contactRaonson,
