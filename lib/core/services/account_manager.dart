@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../storage/secure_storage.dart';
 import '../../app/app_restart.dart';
+import '../firebase_init.dart';
 import '../api/api_client.dart';
 import 'socket_service.dart';
 import 'follow_service.dart';
@@ -156,6 +157,14 @@ class AccountManager {
     // Socket-и корбари куҳнаро мебандем ва бо токени нав пайваст мешавем.
     // Best-effort: агар нашавад, барномаро блок намекунад.
     SocketService.instance.reconnectAs(acc.token);
+
+    // ⚠️ Токени огоҳинома аз нав баста мешавад.
+    //
+    // Токени FCM ба ДАСТГОҲ тааллуқ дорад, на ба аккаунт, ва дар
+    // сервер ба як корбар баста мешавад. Бе ин сатр он ба аккаунти
+    // КӮҲНА баста мемонд: огоҳиномаҳои аккаунти нав намеомаданд, ва
+    // огоҳиномаҳои аккаунти кӯҳна ба ҳамин телефон мерасиданд.
+    FirebaseInit.rebindToken();
 
     // ⚠️ Тоза кардани кэш КОФӢ НЕСТ.
     //
