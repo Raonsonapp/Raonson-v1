@@ -20,6 +20,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:shimmer/shimmer.dart';
+import '../core/content_events.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
@@ -356,6 +357,12 @@ class _SearchScreenState extends State<SearchScreen>
         item:         item,
         authorName:   authorName,
         authorAvatar: authorAvatar,
+        // Ҳазф танҳо барои мундариҷаи ХУДИ корбар. Худи сервер низ
+        // соҳибиро месанҷад (`WHERE user_id=$2`) — ин ҷо танҳо
+        // пинҳон кардани тугмаи бефоида аст.
+        onDelete: (authorId.isNotEmpty && authorId == UserSession.userId)
+            ? () { Navigator.pop(ctx); _confirmDeleteExplore(index); }
+            : null,
         onOpen: () { Navigator.pop(ctx); _openExploreAt(index); },
         onProfile: authorId.isEmpty ? null : () {
           Navigator.pop(ctx);
@@ -371,6 +378,57 @@ class _SearchScreenState extends State<SearchScreen>
         },
       ),
     );
+  }
+
+  /// Ҳазфи публикатсияи худ аз худи explore/ҷустуҷӯ.
+  ///
+  /// Пеш ин ғайриимкон буд: корбар маҷбур мешуд онро дар профил ёбад.
+  Future<void> _confirmDeleteExplore(int index) async {
+    if (index < 0 || index >= _exploreItems.length) return;
+    final item = _exploreItems[index];
+
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Ҳазф кардан?',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Ин публикатсия барои ҳама нест мешавад.',
+            style: TextStyle(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Бекор',
+                  style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Ҳазф',
+                  style: TextStyle(color: AppColors.red))),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
+
+    final path = item.type == _ItemType.reel
+        ? '/reels/${item.id}'
+        : '/posts/${item.id}';
+
+    // Аз рӯйхат ФАВРАН мебарорем — интизори шабака кашола мешавад
+    // ва корбар гумон мекунад, ки зеркунӣ нагирифт.
+    setState(() => _exploreItems.removeAt(index));
+
+    try {
+      final res = await ApiClient.instance.delete(path);
+      if (res.statusCode >= 400) throw Exception('${res.statusCode}');
+      ContentEvents.notifyDeleted(item.id);
+    } catch (e) {
+      if (!mounted) return;
+      // Ҳазф нашуд — рӯйхатро аз сервер аз нав мегирем, то экран
+      // ҳақиқатро нишон диҳад, на тахмини моро.
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ҳазф нашуд')));
+      _loadExplore();
+    }
   }
 
   // Open explore item → inline Reels-style feed
@@ -992,8 +1050,15 @@ class _ExplorePreviewDialog extends StatelessWidget {
   final String authorName, authorAvatar;
   final VoidCallback onOpen, onShare;
   final VoidCallback? onProfile;
+
+  /// Танҳо барои мундариҷаи ХУДИ корбар пур мешавад.
+  ///
+  /// Пеш публикатсияи худро аз explore/ҷустуҷӯ ҳазф кардан
+  /// ғайриимкон буд — корбар маҷбур мешуд онро дар профил ёбад.
+  final VoidCallback? onDelete;
   const _ExplorePreviewDialog({
     required this.item,
+    this.onDelete,
     required this.authorName,
     required this.authorAvatar,
     required this.onOpen,
@@ -1051,6 +1116,9 @@ class _ExplorePreviewDialog extends StatelessWidget {
                 _act(AppIcons.person_outline_rounded,
                     'Профили @$authorName', onProfile!),
               _act(AppIcons.share_outlined, 'Паҳн кардан', onShare),
+              if (onDelete != null)
+                _act(AppIcons.delete_outline_rounded, 'Ҳазф кардан',
+                    onDelete!, danger: true),
             ]),
           ),
         ),
@@ -1058,7 +1126,9 @@ class _ExplorePreviewDialog extends StatelessWidget {
     );
   }
 
-  Widget _act(IconData icon, String label, VoidCallback onTap) {
+  Widget _act(IconData icon, String label, VoidCallback onTap,
+      {bool danger = false}) {
+    final color = danger ? AppColors.red : AppColors.textPrimary;
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -1069,9 +1139,10 @@ class _ExplorePreviewDialog extends StatelessWidget {
           Expanded(
             child: Text(label,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14.5)),
+                style: TextStyle(color: color, fontSize: 14.5)),
           ),
-          Icon(icon, color: AppColors.textSecondary, size: 20),
+          Icon(icon, color: danger ? AppColors.red : AppColors.textSecondary,
+              size: 20),
         ]),
       ),
     );

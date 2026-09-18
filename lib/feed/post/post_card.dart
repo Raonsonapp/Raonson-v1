@@ -6,6 +6,7 @@ import 'dart:math' show Random;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../core/content_events.dart';
 import '../../core/music/music_bar.dart';
 import '../../core/music/song_info.dart';
 import '../../core/music/music_picker.dart';
@@ -575,6 +576,9 @@ class _PostCardState extends State<PostCard>
       final res = await ApiClient.instance.delete('/posts/${widget.post.id}');
       if (res.statusCode < 400) {
         widget.onDeleted?.call();
+        // Ба ҳамаи экранҳои дигар (профил, explore, ҷустуҷӯ) хабар.
+        // Бе ин пост аз лента мепарид, вале дар профил мемонд.
+        ContentEvents.notifyDeleted(widget.post.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(tr('ui.bdc6aeeb07')),

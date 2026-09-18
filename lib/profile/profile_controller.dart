@@ -1,7 +1,10 @@
 // lib/profile/profile_controller.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:async';
+
 import '../core/api/api_client.dart';
+import '../core/content_events.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
@@ -16,7 +19,19 @@ class ProfileController extends ChangeNotifier {
   final bool   byUsername;
   final ProfileRepository _repo = ProfileRepository(ApiClient.instance);
 
-  ProfileController({required this.userId, this.byUsername = false});
+  ProfileController({required this.userId, this.byUsername = false}) {
+    // Пост метавонад аз лента ё аз explore ҳазф шавад. Бе ин обуна
+    // он дар профил мемонд, то даме ки корбар экранро даст навсозад.
+    _deletedSub = ContentEvents.deleted.listen(removePostById);
+  }
+
+  StreamSubscription<String>? _deletedSub;
+
+  @override
+  void dispose() {
+    _deletedSub?.cancel();
+    super.dispose();
+  }
 
   bool get isOwnProfile =>
       userId == 'me' ||
@@ -163,9 +178,12 @@ class ProfileController extends ChangeNotifier {
   /// UI-only: пост аллакай дар сервер нест шуд (аз экрани кушодашуда).
   /// Танҳо рӯйхатҳоро навсозӣ мекунем — realtime, бе дубора API.
   void removePostById(String id) {
+    if (id.isEmpty) return;
     posts.removeWhere((p) => p.id == id);
     savedPosts.removeWhere((p) => p.id == id);
     taggedPosts.removeWhere((p) => p.id == id);
+    // Reel низ — вагарна reel-и ҳазфшуда дар вараққаи Reels мемонд.
+    reels.removeWhere((r) => r.id == id);
     notifyListeners();
   }
 
