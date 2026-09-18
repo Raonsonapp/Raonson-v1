@@ -1289,7 +1289,7 @@ class _FeedCardState extends State<_FeedCard> {
   bool _ready = false;
   bool _failed = false;
   bool _liked = false, _saved = false, _muted = false;
-  int  _likeCount = 0, _commentCount = 0;
+  int  _likeCount = 0, _commentCount = 0, _shareCount = 0;
 
   bool get _isVideo =>
       widget.item.type == _ItemType.video || widget.item.type == _ItemType.reel;
@@ -1306,9 +1306,11 @@ class _FeedCardState extends State<_FeedCard> {
       _saved = r['isSaved'] == true;
       _likeCount = (r['likesCount'] as num?)?.toInt() ?? 0;
       _commentCount = (r['commentsCount'] as num?)?.toInt() ?? 0;
+      _shareCount = (r['sharesCount'] as num?)?.toInt() ?? 0;
     } else if (p != null) {
       _liked = p.liked; _saved = p.saved;
       _likeCount = p.likesCount; _commentCount = p.commentsCount;
+      _shareCount = p.sharesCount;
     }
     if (_isVideo) _initVideo();
   }
@@ -1378,6 +1380,26 @@ class _FeedCardState extends State<_FeedCard> {
     ApiClient.instance
         .post(_isReel ? '/reels/$_id/save' : '/posts/$_id/save')
         .then((_) {}, onError: (_) {});
+  }
+
+  /// Паҳн кардан — ва ҳисоб кардани он.
+  ///
+  /// Пеш ин танҳо `Share.share(item.url)` буд: суроғаи ХОМИ файл
+  /// фиристода мешуд (на линки пост) ва сервер ҳеҷ гоҳ намедонист,
+  /// ки паҳнкунӣ шуд — рақам ҳамеша сифр мемонд.
+  Future<void> _share() async {
+    await Share.share(DeepLinks.share(
+        _isReel ? DeepLinkKind.reel : DeepLinkKind.post, _id));
+    try {
+      final res = await ApiClient.instance
+          .post(_isReel ? '/reels/$_id/share' : '/posts/$_id/share');
+      if (res.statusCode < 400 && mounted) {
+        final n = (jsonDecode(res.body)['shares'] as num?)?.toInt();
+        if (n != null) setState(() => _shareCount = n);
+      }
+    } catch (_) {
+      // Ҳисоб нашуд — паҳнкунӣ ба ҳар ҳол шуд, хатогӣ нишон надиҳем.
+    }
   }
 
   void _toggleMute() {
@@ -1629,7 +1651,8 @@ class _FeedCardState extends State<_FeedCard> {
           const SizedBox(height: 18),
           _ActionBtn(
               svg: 'assets/icons/share.svg',
-              onTap: () => Share.share(widget.item.url)),
+              label: _shareCount > 0 ? _fmt(_shareCount) : null,
+              onTap: _share),
           const SizedBox(height: 18),
           _ActionBtn(
               svg: _saved

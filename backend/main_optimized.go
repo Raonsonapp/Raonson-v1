@@ -342,6 +342,7 @@ func main() {
 		re.POST("/:id/watch",    handlers.TrackReelWatch)  // watch-time tracking
 		re.POST("/:id/like",     handlers.ToggleReelLike)
 		re.POST("/:id/save",     handlers.ToggleReelSave)
+		re.POST("/:id/share",    handlers.ShareReel)
 		re.GET("/:id/comments",  cache3s, handlers.GetReelComments)
 		re.POST("/:id/comments", handlers.AddReelComment)
 		re.POST("/:id/report",       handlers.ReportReel)

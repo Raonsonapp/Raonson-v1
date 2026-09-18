@@ -653,6 +653,26 @@ func ToggleReelLike(c *gin.Context) {
 }
 
 // POST /reels/:id/save
+// POST /reels/:id/share — паҳнкунии reel-ро ҳисоб мекунад.
+//
+// Пост ин ҷадвалро дошт, reel НЕ — барои ҳамин дар назди тугмаи
+// «паҳн кардан»-и reel ҳеҷ рақам набуд.
+//
+// Як корбар як reel-ро ҳар қадар паҳн кунад, ЯК бор ҳисоб мешавад
+// (калиди аввалия). Вагарна як нафар рақамро ба ҳар андоза калон
+// карда метавонист.
+func ShareReel(c *gin.Context) {
+	myID := mw.UID(c)
+	rid := c.Param("id")
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO reel_shares(user_id, reel_id) VALUES($1,$2)
+		 ON CONFLICT (user_id, reel_id) DO NOTHING`, myID, rid)
+	var shares int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM reel_shares WHERE reel_id=$1`, rid).Scan(&shares)
+	c.JSON(http.StatusOK, gin.H{"shares": shares})
+}
+
 func ToggleReelSave(c *gin.Context) {
 	rid := c.Param("id")
 	myID := mw.UID(c)

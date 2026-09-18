@@ -763,7 +763,8 @@ func ExploreGrid(c *gin.Context) {
 		       COALESCE(p.is_product,false), COALESCE(p.price,0),
 		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		       EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id=p.id AND pl.user_id=$1::text),
-		       EXISTS(SELECT 1 FROM post_saves ps WHERE ps.post_id=p.id AND ps.user_id=$1::text)
+		       EXISTS(SELECT 1 FROM post_saves ps WHERE ps.post_id=p.id AND ps.user_id=$1::text),
+		       (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
@@ -781,9 +782,11 @@ func ExploreGrid(c *gin.Context) {
 			var isProduct, verified, liked, saved bool
 			var price float64
 			var currency, productName string
+			var shares int
 			pRows.Scan(&pid, &likes, &comments, &createdAt, &caption, &media,
 				&uid, &uname, &uavatar, &verified, &views,
-				&isProduct, &price, &currency, &productName, &liked, &saved)
+				&isProduct, &price, &currency, &productName, &liked, &saved,
+				&shares)
 			posts = append(posts, gin.H{
 				"_id": pid, "likesCount": likes, "commentsCount": comments,
 				"viewsCount": views, "createdAt": createdAt,
@@ -791,7 +794,7 @@ func ExploreGrid(c *gin.Context) {
 				"media": nilToEmpty(media),
 				"isProduct": isProduct, "price": price,
 				"currency": currency, "productName": productName,
-				"liked": liked, "saved": saved,
+				"liked": liked, "saved": saved, "sharesCount": shares,
 				"user": gin.H{"_id": uid, "id": uid, "username": uname,
 					"avatar": uavatar, "verified": verified},
 			})
@@ -820,7 +823,8 @@ func ExploreGrid(c *gin.Context) {
 		       COALESCE(r.caption,''),
 		       u.id, u.username, u.avatar, COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
-		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text)
+		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
+		       (SELECT COUNT(*) FROM reel_shares sh WHERE sh.reel_id=r.id)
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE COALESCE(u.banned,false)=FALSE
 		ORDER BY r.likes_count DESC LIMIT 20`, myID)
@@ -831,8 +835,9 @@ func ExploreGrid(c *gin.Context) {
 			var rid, vurl, thumb, caption, uid, uname, uavatar string
 			var likes, comments, views int
 			var verified, liked, saved bool
+			var shares int
 			rRows.Scan(&rid, &vurl, &thumb, &likes, &comments, &views, &caption,
-				&uid, &uname, &uavatar, &verified, &liked, &saved)
+				&uid, &uname, &uavatar, &verified, &liked, &saved, &shares)
 			reels = append(reels, gin.H{
 				"_id": rid, "videoUrl": vurl,
 				"thumbnailUrl": thumb,
@@ -840,7 +845,7 @@ func ExploreGrid(c *gin.Context) {
 				"viewsCount": views, "caption": caption,
 				// Бе `isSaved` нишони захира ҳамеша холӣ менамуд,
 				// ҳатто агар корбар аллакай захира карда бошад.
-				"isLiked": liked, "isSaved": saved,
+				"isLiked": liked, "isSaved": saved, "sharesCount": shares,
 				"user": gin.H{"_id": uid, "id": uid, "username": uname,
 					"avatar": uavatar, "verified": verified},
 			})

@@ -52,10 +52,40 @@ func TestExploreReelsCarryAuthor(t *testing.T) {
 		// Бе инҳо нишонҳои дил ва захира ҳамеша холӣ менамуданд,
 		// ҳатто агар корбар аллакай зада бошад.
 		"reel_likes", "reel_saves",
+		// Дар назди тугмаи «паҳн кардан» ҳеҷ рақам набуд.
+		"reel_shares",
 	} {
 		if !strings.Contains(body, field) {
 			t.Errorf("reels %s-ро намегиранд", field)
 		}
+	}
+}
+
+// Паҳнкунӣ бояд ҲИСОБ шавад, вагарна рақам ҳамеша сифр мемонад.
+func TestShareIsCounted(t *testing.T) {
+	src, err := os.ReadFile("other.go")
+	if err != nil {
+		t.Fatalf("other.go хонда нашуд: %v", err)
+	}
+	s := string(src)
+	if !strings.Contains(s, "func ShareReel(") {
+		t.Fatal("reel роҳи паҳнкунӣ надорад — рақам ҳамеша сифр мемонад")
+	}
+	// Як корбар набояд рақамро бо такрор калон кунад.
+	i := strings.Index(s, "func ShareReel(")
+	body := s[i : i+strings.Index(s[i:], "\n}\n")]
+	if !strings.Contains(body, "ON CONFLICT (user_id, reel_id) DO NOTHING") {
+		t.Error("паҳнкунии такрории ҲАМОН корбар боз ҳисоб мешавад — " +
+			"як нафар рақамро ба ҳар андоза калон карда метавонад")
+	}
+
+	// Роҳ бояд дар router низ васл шуда бошад.
+	mainSrc, err := os.ReadFile("../main_optimized.go")
+	if err != nil {
+		t.Fatalf("main хонда нашуд: %v", err)
+	}
+	if !strings.Contains(string(mainSrc), "handlers.ShareReel") {
+		t.Error("ShareReel навишта шуд, вале ба ягон роҳ васл нашуд")
 	}
 }
 

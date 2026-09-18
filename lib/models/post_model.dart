@@ -23,6 +23,12 @@ class PostModel {
   /// `musicTitle`/`musicArtist` боқӣ мемонанд, чунки серверҳои
   /// кӯҳна танҳо ҳамонҳоро бармегардонанд.
   final SongInfo     song;
+
+  /// Чанд нафар ин постро паҳн карданд.
+  ///
+  /// Reel ин майдонро дошт, пост НЕ — пас дар назди тугмаи «паҳн
+  /// кардан» ҳеҷ рақам набуд.
+  final int          sharesCount;
   final bool         hideLikes;        // лайкҳо пинҳонанд (танҳо соҳиб мебинад)
   final bool         commentsDisabled; // шарҳҳо хомӯшанд
   // ── Магоза (пости маҳсулот) ──
@@ -51,6 +57,7 @@ class PostModel {
     this.musicTitle  = '',
     this.musicArtist = '',
     this.song        = SongInfo.none,
+    this.sharesCount = 0,
     this.hideLikes        = false,
     this.commentsDisabled = false,
     this.isProduct      = false,
@@ -81,6 +88,7 @@ class PostModel {
     DateTime? createdAt, String? location, List<String>? taggedUsers,
     List<String>? collaborators,
     String? musicTitle, String? musicArtist, SongInfo? song,
+    int? sharesCount,
     bool? hideLikes, bool? commentsDisabled,
     bool? isProduct, double? price, String? currency, String? productName,
     bool? contactRaonson, String? shopWhatsapp, String? shopPhone,
@@ -101,6 +109,7 @@ class PostModel {
     musicTitle:    musicTitle    ?? this.musicTitle,
     musicArtist:   musicArtist   ?? this.musicArtist,
     song:          song          ?? this.song,
+    sharesCount:   sharesCount   ?? this.sharesCount,
     hideLikes:        hideLikes        ?? this.hideLikes,
     commentsDisabled: commentsDisabled ?? this.commentsDisabled,
     isProduct:      isProduct      ?? this.isProduct,
@@ -148,6 +157,7 @@ class PostModel {
       collaborators: (json['collaborators'] as List? ?? []).map((e)=>e.toString()).toList(),
       musicTitle:    (json['musicTitle']  ?? json['music']?['title'] ?? '').toString(),
       musicArtist:   (json['musicArtist'] ?? json['music']?['artist'] ?? '').toString(),
+      sharesCount:   (json['sharesCount'] as num?)?.toInt() ?? 0,
       // Сервери кӯҳна `song` намедиҳад — он гоҳ ном ва хонандаи
       // ҷудогона истифода мешаванд, танҳо бе садо.
       song: json['song'] != null

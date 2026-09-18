@@ -431,6 +431,20 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_post_shares ON post_shares(post_id);
 
+	-- Паҳнкунии reel. Пост ин ҷадвалро дошт, reel НЕ — барои ҳамин
+	-- дар назди тугмаи «паҳн кардан»-и reel ҳеҷ рақам набуд.
+	--
+	-- Калиди аввалия (корбар, reel) аст: як корбар як reel-ро ҳар
+	-- қадар паҳн кунад, як бор ҳисоб мешавад. Вагарна як нафар
+	-- рақамро ба ҳар андоза калон карда метавонист.
+	CREATE TABLE IF NOT EXISTS reel_shares (
+		user_id TEXT NOT NULL,
+		reel_id TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY(user_id, reel_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_reel_shares ON reel_shares(reel_id);
+
 	-- ── Баҳо ва шарҳи маҳсул (Reviews) ──
 	CREATE TABLE IF NOT EXISTS product_reviews (
 		post_id    TEXT NOT NULL,
