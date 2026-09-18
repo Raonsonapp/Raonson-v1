@@ -97,7 +97,6 @@ func TogglePostArchive(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
 		return
 	}
-	mw.CacheDel("explore:grid")
 	c.JSON(http.StatusOK, gin.H{"archived": arch})
 }
 

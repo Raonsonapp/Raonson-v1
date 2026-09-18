@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"sort"
 	"strings"
@@ -742,76 +741,109 @@ func DeleteNotification(c *gin.Context) {
 
 // GET /explore  (cached 5 min)
 func ExploreGrid(c *gin.Context) {
-	cacheKey := "explore:grid"
-	if cached, ok := mw.CacheGet(cacheKey); ok {
-		c.Header("X-Cache", "HIT")
-		c.Data(http.StatusOK, "application/json", cached)
-		return
-	}
+	// ⚠️ Кэши МУШТАРАКИ «explore:grid» ин ҷо буд ва бартараф шуд.
+	//
+	// Он барои ҲАМА як буд. То ҳол ин бехатар буд, чунки ҷавоб ҳеҷ
+	// чизи шахсӣ надошт. Вале акнун `liked` ва `saved` бармегарданд
+	// — бо кэши муштарак корбари A лайкҳои корбари B-ро медид.
+	//
+	// Кэш гум нашуд: худи роҳ `cache30s`-ро дорад ва он калиди
+	// ҲАР КОРБАРРО ҷудо мекунад (ниг. middleware/redis.go).
+	myID := mw.UID(c)
+
 	pRows, _ := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.likes_count, p.created_at,
+		SELECT p.id, p.likes_count, COALESCE(p.comments_count,0), p.created_at,
+		       COALESCE(p.caption,''),
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
-		       u.id, u.username, u.avatar,
+		       u.id, u.username, u.avatar, COALESCE(u.verified,false),
 		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
 		       COALESCE(p.is_product,false), COALESCE(p.price,0),
-		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,'')
+		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
+		       EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id=p.id AND pl.user_id=$1::text),
+		       EXISTS(SELECT 1 FROM post_saves ps WHERE ps.post_id=p.id AND ps.user_id=$1::text)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
 		  AND COALESCE(u.banned,false)=FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
-		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`)
+		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`, myID)
 	posts := []gin.H{}
 	if pRows != nil {
 		defer pRows.Close()
 		for pRows.Next() {
-			var pid, uid, uname, uavatar string
-			var likes int
+			var pid, uid, uname, uavatar, caption string
+			var likes, comments int
 			var views int64
 			var createdAt, media interface{}
-			var isProduct bool
+			var isProduct, verified, liked, saved bool
 			var price float64
 			var currency, productName string
-			pRows.Scan(&pid, &likes, &createdAt, &media, &uid, &uname, &uavatar, &views,
-				&isProduct, &price, &currency, &productName)
+			pRows.Scan(&pid, &likes, &comments, &createdAt, &caption, &media,
+				&uid, &uname, &uavatar, &verified, &views,
+				&isProduct, &price, &currency, &productName, &liked, &saved)
 			posts = append(posts, gin.H{
-				"_id": pid, "likesCount": likes, "viewsCount": views,
-				"createdAt": createdAt,
+				"_id": pid, "likesCount": likes, "commentsCount": comments,
+				"viewsCount": views, "createdAt": createdAt,
+				"caption": caption,
 				"media": nilToEmpty(media),
 				"isProduct": isProduct, "price": price,
 				"currency": currency, "productName": productName,
-				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar},
+				"liked": liked, "saved": saved,
+				"user": gin.H{"_id": uid, "id": uid, "username": uname,
+					"avatar": uavatar, "verified": verified},
 			})
 		}
 	}
 
+	// ⚠️ Reels ин ҷо ҲЕҶ маълумоти муаллиф надоштанд.
+	//
+	// Дархост `SELECT id, video_url, thumbnail_url, likes_count,
+	// views_count FROM reels` буд — бе ягон JOIN ба users. Барои
+	// ҳамин ҳангоми кушодани reel аз explore экран холӣ буд: на
+	// ном, на аватар, на галочка, на тугмаи обуна, на матн.
 	rRows, _ := db.Pool.Query(context.Background(), `
-		SELECT id, video_url, COALESCE(NULLIF(thumbnail_url,''), video_url),
-		       likes_count, views_count
-		FROM reels
-		ORDER BY likes_count DESC LIMIT 20`)
+		SELECT r.id, r.video_url,
+		       -- ВАЙ ФАРҚИ КАЛОН ДОРАД: пеш ин ҷо NULLIF бо
+		       -- бозгашт ба video_url буд. Яъне агар тасвир
+		       -- набошад, суроғаи ВИДЕО ҳамчун «тасвир»
+		       -- бармегашт. Телефон онро ба CachedNetworkImage
+		       -- медод, он MP4-ро кушода наметавонист ва плитка
+		       -- КОМИЛАН СИЁҲ мемонд.
+		       --
+		       -- Акнун холӣ бармегардад ва телефон худаш кадри
+		       -- аввали видеоро мекашад.
+		       COALESCE(r.thumbnail_url,''),
+		       r.likes_count, COALESCE(r.comments_count,0), r.views_count,
+		       COALESCE(r.caption,''),
+		       u.id, u.username, u.avatar, COALESCE(u.verified,false),
+		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text)
+		FROM reels r JOIN users u ON u.id=r.user_id
+		WHERE COALESCE(u.banned,false)=FALSE
+		ORDER BY r.likes_count DESC LIMIT 20`, myID)
 	reels := []gin.H{}
 	if rRows != nil {
 		defer rRows.Close()
 		for rRows.Next() {
-			var rid, vurl, thumb string
-			var likes, views int
-			rRows.Scan(&rid, &vurl, &thumb, &likes, &views)
+			var rid, vurl, thumb, caption, uid, uname, uavatar string
+			var likes, comments, views int
+			var verified, liked bool
+			rRows.Scan(&rid, &vurl, &thumb, &likes, &comments, &views, &caption,
+				&uid, &uname, &uavatar, &verified, &liked)
 			reels = append(reels, gin.H{
 				"_id": rid, "videoUrl": vurl,
 				"thumbnailUrl": thumb,
-				"likesCount": likes, "viewsCount": views,
+				"likesCount": likes, "commentsCount": comments,
+				"viewsCount": views, "caption": caption,
+				"isLiked": liked,
+				"user": gin.H{"_id": uid, "id": uid, "username": uname,
+					"avatar": uavatar, "verified": verified},
 			})
 		}
 	}
-	result := gin.H{"posts": posts, "reels": reels}
-	if b, err := json.Marshal(result); err == nil {
-		mw.CacheSet(cacheKey, b, 5*time.Minute)
-	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, gin.H{"posts": posts, "reels": reels})
 }
 
 // POST /upload

@@ -21,6 +21,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:shimmer/shimmer.dart';
 import '../core/content_events.dart';
+import '../core/ui/report_dialog.dart';
+import '../core/ui/video_frame.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
@@ -172,18 +174,18 @@ class _SearchScreenState extends State<SearchScreen>
         // Reels
         for (final r in (body['reels'] as List? ?? [])) {
           final rm = r as Map<String, dynamic>;
-          final url = rm['thumbnailUrl']?.toString()
-              ?? rm['videoUrl']?.toString() ?? '';
-          if (url.isNotEmpty) {
-            items.add(_ExploreItem(
-              id:    rm['_id']?.toString() ?? '',
-              url:   url,
-              type:  _ItemType.reel,
-              views: (rm['viewsCount'] as num?)?.toInt()
-                  ?? (rm['views'] as num?)?.toInt() ?? 0,
-              reelData: rm,
-            ));
-          }
+          final thumb = rm['thumbnailUrl']?.toString() ?? '';
+          final video = rm['videoUrl']?.toString() ?? '';
+          if (video.isEmpty && thumb.isEmpty) continue;
+          items.add(_ExploreItem(
+            id:    rm['_id']?.toString() ?? '',
+            url:   thumb,          // метавонад холӣ бошад
+            videoUrl: video,
+            type:  _ItemType.reel,
+            views: (rm['viewsCount'] as num?)?.toInt()
+                ?? (rm['views'] as num?)?.toInt() ?? 0,
+            reelData: rm,
+          ));
         }
 
         // Shuffle for variety
@@ -459,17 +461,17 @@ class _SearchScreenState extends State<SearchScreen>
     }
     for (final r in _reels) {
       final rm = r as Map<String, dynamic>;
-      final url = rm['thumbnailUrl']?.toString()
-          ?? rm['videoUrl']?.toString() ?? '';
-      if (url.isNotEmpty) {
-        allItems.add(_ExploreItem(
-          id: rm['_id']?.toString() ?? '',
-          url: url,
-          type: _ItemType.reel,
-          views: (rm['viewsCount'] as num?)?.toInt() ?? 0,
-          reelData: rm,
-        ));
-      }
+      final thumb = rm['thumbnailUrl']?.toString() ?? '';
+      final video = rm['videoUrl']?.toString() ?? '';
+      if (video.isEmpty && thumb.isEmpty) continue;
+      allItems.add(_ExploreItem(
+        id: rm['_id']?.toString() ?? '',
+        url: thumb,
+        videoUrl: video,
+        type: _ItemType.reel,
+        views: (rm['viewsCount'] as num?)?.toInt() ?? 0,
+        reelData: rm,
+      ));
     }
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => _ExploreReelFeed(items: allItems, initialIndex: index),
@@ -899,7 +901,17 @@ enum _ItemType { image, video, reel }
 
 class _ExploreItem {
   final String     id;
+
+  /// Он чи дар ГРИД нишон дода мешавад (тасвир). Барои reel
+  /// метавонад холӣ бошад — он гоҳ кадри аввали видео кашида мешавад.
   final String     url;
+
+  /// Худи видео. Барои reel ин `url` НЕСТ.
+  ///
+  /// ⚠️ Пеш ҳарду як майдон буданд ва плеер тасвирро ҳамчун видео
+  /// кушодан мехост — reel аз explore ҳеҷ гоҳ намебозид.
+  final String     videoUrl;
+
   final _ItemType  type;
   final bool       isMulti;
   final bool       isProduct;
@@ -910,6 +922,7 @@ class _ExploreItem {
   const _ExploreItem({
     required this.id,
     required this.url,
+    this.videoUrl = '',
     required this.type,
     this.isMulti  = false,
     this.isProduct = false,
@@ -917,6 +930,9 @@ class _ExploreItem {
     this.postData,
     this.reelData,
   });
+
+  /// Суроғае, ки плеер бояд кушояд.
+  String get playUrl => videoUrl.isNotEmpty ? videoUrl : url;
 }
 
 class _ExploreGrid extends StatelessWidget {
@@ -979,15 +995,15 @@ class _ExploreCell extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Stack(fit: StackFit.expand, children: [
-        // Thumbnail
-        CachedNetworkImage(
-          imageUrl: item.url,
+        // Тасвир — ё расми омода, ё кадри аввали видео.
+        //
+        // Пеш ин ҳамеша `CachedNetworkImage` буд. Барои reel-и бе
+        // тасвир сервер суроғаи ВИДЕО-ро медод, расм кушода намешуд
+        // ва плитка комилан СИЁҲ мемонд.
+        VideoFrame(
+          thumbUrl: item.url,
+          videoUrl: item.videoUrl,
           fit: BoxFit.cover,
-          memCacheWidth: 450,
-          placeholder: (_, __) =>
-              Container(color: AppColors.surface),
-          errorWidget: (_, __, ___) =>
-              Container(color: AppColors.surface),
         ),
         // Reel icon (top-right)
         if (item.type == _ItemType.reel)
@@ -1248,6 +1264,7 @@ class _FeedCard extends StatefulWidget {
 class _FeedCardState extends State<_FeedCard> {
   VideoPlayerController? _video;
   bool _ready = false;
+  bool _failed = false;
   bool _liked = false, _saved = false, _muted = false;
   int  _likeCount = 0, _commentCount = 0;
 
@@ -1274,14 +1291,30 @@ class _FeedCardState extends State<_FeedCard> {
   }
 
   Future<void> _initVideo() async {
+    // ⚠️ Пеш ин ҷо `widget.item.url` буд — барои reel он ТАСВИР аст,
+    // на видео. Плеер JPEG-ро кушодан мехост, намешуд ва экран
+    // абадан сиёҳ бо чархак мемонд.
+    final src = widget.item.playUrl;
+    if (src.isEmpty) {
+      if (mounted) setState(() => _failed = true);
+      return;
+    }
     try {
-      final c = VideoPlayerController.networkUrl(Uri.parse(widget.item.url));
+      final c = VideoPlayerController.networkUrl(Uri.parse(src));
       _video = c;
       await c.initialize();
-      if (!mounted) return;
+      if (!mounted) {
+        await c.dispose();
+        return;
+      }
       c..setLooping(true)..play();
       setState(() => _ready = true);
-    } catch (_) {}
+    } catch (e) {
+      // ⚠️ Пеш ин `catch (_) {}` буд — хатогӣ комилан нопадид мешуд
+      // ва корбар чархаки абадиро медид, бе ҳеҷ фаҳмиш.
+      debugPrint('[Explore] video: $e');
+      if (mounted) setState(() => _failed = true);
+    }
   }
 
   @override
@@ -1319,6 +1352,119 @@ class _FeedCardState extends State<_FeedCard> {
     _video?.setVolume(_muted ? 0 : 1);
   }
 
+  /// Шиноса ва номи муаллифи ин мундариҷа.
+  (String, String) get _author {
+    final p = widget.item.postData;
+    if (p != null) return (p.user.id, p.user.username);
+    final u = (widget.item.reelData?['user'] ?? {}) as Map;
+    return ((u['_id'] ?? u['id'] ?? '').toString(),
+        (u['username'] ?? '').toString());
+  }
+
+  void _showMenu() {
+    final (authorId, authorName) = _author;
+    final isMine = authorId.isNotEmpty && authorId == UserSession.userId;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: AppColors.textFaint,
+                  borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 10),
+          _menuTile(AppIcons.share_outlined, 'Паҳн кардан', () {
+            Navigator.pop(ctx);
+            Share.share(DeepLinks.share(
+                _isReel ? DeepLinkKind.reel : DeepLinkKind.post, _id));
+          }),
+          if (authorName.isNotEmpty)
+            _menuTile(AppIcons.person_outline_rounded, 'Профили @$authorName',
+                () {
+              Navigator.pop(ctx);
+              Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => ProfileScreen(userId: authorId)));
+            }),
+          if (isMine)
+            _menuTile(AppIcons.delete_outline_rounded, 'Ҳазф кардан', () {
+              Navigator.pop(ctx);
+              _deleteMine();
+            }, danger: true)
+          else
+            _menuTile(AppIcons.flag_outlined, 'Шикоят', () {
+              Navigator.pop(ctx);
+              _report();
+            }, danger: true),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  Widget _menuTile(IconData icon, String label, VoidCallback onTap,
+      {bool danger = false}) {
+    final color = danger ? AppColors.red : AppColors.textPrimary;
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: color, size: 22),
+      title: Text(label, style: TextStyle(color: color, fontSize: 15)),
+    );
+  }
+
+  Future<void> _report() async {
+    final r = await ReportDialog.showWithDescription(context);
+    if (r == null || !mounted) return;
+    try {
+      await ApiClient.instance.post(
+          _isReel ? '/reels/$_id/report' : '/posts/$_id/report',
+          body: {'reason': r.reason, 'description': r.description});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Шикоят фиристода шуд')));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _deleteMine() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Ҳазф кардан?',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Ин барои ҳама нест мешавад.',
+            style: TextStyle(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Бекор',
+                  style: TextStyle(color: AppColors.textTertiary))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Ҳазф', style: TextStyle(color: AppColors.red))),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
+    try {
+      final res = await ApiClient.instance
+          .delete(_isReel ? '/reels/$_id' : '/posts/$_id');
+      if (res.statusCode >= 400) throw Exception('${res.statusCode}');
+      ContentEvents.notifyDeleted(_id);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ҳазф нашуд')));
+      }
+    }
+  }
+
   void _openComments() {
     showModalBottomSheet(
       context: context,
@@ -1354,11 +1500,29 @@ class _FeedCardState extends State<_FeedCard> {
                   ),
                 ),
               )
-            : Container(
-                color: AppColors.bg,
-                child: Center(
-                    child: CircularProgressIndicator(
-                        color: AppColors.textFaint, strokeWidth: 2))))
+            : Stack(fit: StackFit.expand, children: [
+                // Ҳангоми боршавӣ кадри аввал нишон дода мешавад —
+                // пеш ин ҷо ЭКРАНИ СИЁҲИ ХОЛӢ буд.
+                VideoFrame(
+                  thumbUrl: widget.item.url,
+                  videoUrl: widget.item.videoUrl,
+                  fit: BoxFit.contain,
+                ),
+                Center(
+                  child: _failed
+                      ? Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(AppIcons.videocam_off_rounded,
+                              color: AppColors.textSecondary, size: 34),
+                          const SizedBox(height: 8),
+                          Text('Видео кушода нашуд',
+                              style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13)),
+                        ])
+                      : CircularProgressIndicator(
+                          color: AppColors.textFaint, strokeWidth: 2),
+                ),
+              ]))
       else
         // Расм пурра нишон дода мешавад (мисли Instagram) — буриш намешавад
         CachedNetworkImage(
@@ -1377,6 +1541,22 @@ class _FeedCardState extends State<_FeedCard> {
             end: Alignment.bottomCenter,
             stops: [0.55, 1.0],
             colors: [Colors.transparent, Colors.black87],
+          ),
+        ),
+      ),
+      // Меню «⋯» — мисли Instagram ва мисли Reels-и худамон.
+      // Пеш дар explore ҳеҷ меню набуд: на шикоят, на ҳазфи худӣ.
+      Positioned(
+        top: MediaQuery.of(context).padding.top + 10,
+        right: 10,
+        child: GestureDetector(
+          onTap: _showMenu,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(AppIcons.more_vert,
+                color: AppColors.textPrimary, size: 24,
+                shadows: [Shadow(blurRadius: 8, color: Colors.black54)]),
           ),
         ),
       ),

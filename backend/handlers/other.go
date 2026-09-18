@@ -681,7 +681,6 @@ func DeleteReel(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
 		return
 	}
-	mw.CacheDel("explore:grid")  // то аз search фавран нопадид шавад
 	mw.InvalidateUserCache(myID) // fizardan pok kunam profile/user reels list
 	// Кэши ҳар тамошобин — вагарна reel дар explore то 5 дақиқа мемонад.
 	mw.BumpContentEpoch()
