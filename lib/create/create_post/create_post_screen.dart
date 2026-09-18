@@ -1,20 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import 'package:flutter/rendering.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/api/api_client.dart';
 import '../upload/post_upload_service.dart';
 import 'photo_filters.dart';
 import '../../effects/effects_repository.dart';
+import '../../core/music/music_picker.dart';
+import '../../core/music/song_info.dart';
 import '../../core/ui/app_icons.dart';
 import '../../ai/ai_tools.dart';
 import '../../core/i18n/strings.dart';
@@ -38,14 +37,6 @@ class _MentionItem {
 class _DrawPoint {
   final Offset point; final Color color; final double width; final bool isStart;
   _DrawPoint(this.point, this.color, this.width, {this.isStart = false});
-}
-class _MusicTrack {
-  final String title, artist, previewUrl, artworkUrl;
-  _MusicTrack({required this.title, required this.artist,
-    required this.previewUrl, required this.artworkUrl});
-  factory _MusicTrack.fromJson(Map j) => _MusicTrack(
-    title: j['trackName'] ?? '', artist: j['artistName'] ?? '',
-    previewUrl: j['previewUrl'] ?? '', artworkUrl: j['artworkUrl60'] ?? '');
 }
 
 // ─────────────────────────────────────────────
@@ -135,8 +126,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   // Загрузкаи фонӣ: корбар фавран ба Home бармегардад, бор кардан дар
   // фон давом мекунад ва progress дар боли Home нишон дода мешавад.
   Future<void> _publish(File capturedFile, String caption,
-      {String musicTitle = '',
-      String musicArtist = '',
+      {SongInfo? song,
       String location = '',
       List<String> taggedUsers = const [],
       List<String> collaborators = const []}) async {
@@ -150,8 +140,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       file: capturedFile,
       isVideo: _isVideo,
       caption: caption,
-      musicTitle: musicTitle,
-      musicArtist: musicArtist,
+      // Суруди пурра: ном, хонанда, СУРОҒА ва ҷои оғоз. Пеш танҳо
+      // ном ва хонанда мерафтанд — бе суроға пост ҳеҷ гоҳ намехонд.
+      song: song,
       location: location,
       taggedUsers: taggedUsers,
       collaborators: collaborators,
@@ -226,7 +217,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 class _PostEditor extends StatefulWidget {
   final File media; final bool isVideo, isUploading;
   final void Function(File, String,
-      {String musicTitle, String musicArtist, String location,
+      {SongInfo? song, String location,
        List<String> taggedUsers, List<String> collaborators}) onPublish;
   final VoidCallback onCancel; final String? errorMessage;
   const _PostEditor({required this.media, required this.isVideo,
@@ -257,7 +248,7 @@ class _PostEditorState extends State<_PostEditor> {
   bool   _isDrawing  = false;
   Color  _bgColor    = Colors.black;
 
-  _MusicTrack? _selectedTrack;
+  SongInfo? _song;
   String _location = '';
   final List<String> _collaborators = [];
   VideoPlayerController? _videoCtrl;
@@ -425,11 +416,9 @@ class _PostEditorState extends State<_PostEditor> {
         .map((m) => m.username.replaceAll('@', '').trim())
         .where((u) => u.isNotEmpty)
         .toList();
-    final mt = _selectedTrack?.title  ?? '';
-    final ma = _selectedTrack?.artist ?? '';
     if (widget.isVideo) {
       widget.onPublish(widget.media, caption,
-          musicTitle: mt, musicArtist: ma, location: _location,
+          song: _song, location: _location,
           taggedUsers: tagged, collaborators: _collaborators);
     } else {
       // Агар ягон overlay (матн/стикер/зикр/расм) НЕСТ → расми аслиро мегузорем,
@@ -438,7 +427,7 @@ class _PostEditorState extends State<_PostEditor> {
           _mentions.isNotEmpty || _drawPoints.isNotEmpty || _filterIndex != 0;
       final fileToPost = hasOverlays ? await _captureCanvas() : widget.media;
       widget.onPublish(fileToPost, caption,
-          musicTitle: mt, musicArtist: ma, location: _location,
+          song: _song, location: _location,
           taggedUsers: tagged, collaborators: _collaborators);
     }
   }
@@ -632,11 +621,10 @@ class _PostEditorState extends State<_PostEditor> {
       ])));
   }
 
-  void _showMusicPanel() {
-    showModalBottomSheet(context: context, isScrollControlled: true,
-      backgroundColor: const Color(0xFF1C1C1E),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => _MusicPanel(onSelected: (t) => setState(() => _selectedTrack = t)));
+  // Ҳамон панеле, ки ёддошт, стори ва Reels истифода мебаранд.
+  Future<void> _showMusicPanel() async {
+    final picked = await showMusicPicker(context, initial: _song);
+    if (picked != null && mounted) setState(() => _song = picked);
   }
 
   void _onDrawStart(DragStartDetails d) {
@@ -751,7 +739,7 @@ class _PostEditorState extends State<_PostEditor> {
             ),
 
           // ── Music badge ─────────────────────────
-          if (_selectedTrack != null)
+          if (_song != null)
             Positioned(bottom: 130, left: 16, right: 16,
               child: GestureDetector(onTap: _showMusicPanel,
                 child: Container(
@@ -761,10 +749,10 @@ class _PostEditorState extends State<_PostEditor> {
                   child: Row(children: [
                     const Icon(AppIcons.music_note, color: Colors.white, size: 18),
                     const SizedBox(width: 8),
-                    Expanded(child: Text('${_selectedTrack!.title} — ${_selectedTrack!.artist}',
+                    Expanded(child: Text(_song!.label,
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       overflow: TextOverflow.ellipsis)),
-                    GestureDetector(onTap: () => setState(() => _selectedTrack = null),
+                    GestureDetector(onTap: () => setState(() => _song = null),
                       child: const Icon(AppIcons.close, color: Colors.white54, size: 16)),
                   ])))),
 
@@ -986,96 +974,3 @@ class _DrawPainter extends CustomPainter {
   @override bool shouldRepaint(_DrawPainter _) => true;
 }
 
-// ─────────────────────────────────────────────
-// MUSIC PANEL
-// ─────────────────────────────────────────────
-class _MusicPanel extends StatefulWidget {
-  final void Function(_MusicTrack) onSelected;
-  const _MusicPanel({required this.onSelected});
-  @override State<_MusicPanel> createState() => _MusicPanelState();
-}
-
-class _MusicPanelState extends State<_MusicPanel> {
-  final _ctrl   = TextEditingController();
-  final _player = AudioPlayer();
-  List<_MusicTrack> _tracks = [];
-  bool _loading = false; String? _error; String? _playingUrl;
-
-  @override void dispose() { _ctrl.dispose(); _player.dispose(); super.dispose(); }
-
-  Future<void> _togglePlay(String url) async {
-    if (_playingUrl == url) { await _player.stop(); setState(() => _playingUrl = null); }
-    else { await _player.stop(); await _player.play(UrlSource(url)); setState(() => _playingUrl = url); }
-  }
-
-  Future<void> _search(String q) async {
-    if (q.trim().isEmpty) return;
-    setState(() { _loading = true; _error = null; });
-    try {
-      final res = await http.get(Uri.parse(
-        'https://itunes.apple.com/search?term=${Uri.encodeComponent(q)}&media=music&limit=20'))
-        .timeout(const Duration(seconds: 10));
-      final data = jsonDecode(res.body);
-      setState(() {
-        _tracks = (data['results'] as List)
-          .where((r) => r['previewUrl'] != null)
-          .map((r) => _MusicTrack.fromJson(r)).toList();
-        _loading = false;
-      });
-    } catch (e) { setState(() { _error = 'Хато: $e'; _loading = false; }); }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(height: MediaQuery.of(context).size.height * 0.75,
-      child: Column(children: [
-        Container(margin: const EdgeInsets.symmetric(vertical: 8), width: 36, height: 4,
-          decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-        Text(tr('ui.6cf38316d7'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 8),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(controller: _ctrl, style: const TextStyle(color: Colors.white),
-            textInputAction: TextInputAction.search, onSubmitted: _search,
-            decoration: InputDecoration(
-              hintText: tr('ui.c55bd13afb'), hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(AppIcons.search, color: Colors.white38),
-              suffixIcon: IconButton(icon: const Icon(AppIcons.send, color: Color(0xFF0095F6)),
-                onPressed: () => _search(_ctrl.text)),
-              filled: true, fillColor: Colors.white10,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
-        const SizedBox(height: 8),
-        if (_loading) const Expanded(child: Center(child: CircularProgressIndicator(color: Colors.white30))),
-        if (_error != null) Padding(padding: const EdgeInsets.all(16),
-          child: Text(_error!, style: const TextStyle(color: Colors.redAccent))),
-        if (!_loading && _tracks.isEmpty && _error == null)
-          Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(AppIcons.music_note, color: Colors.white24, size: 48), SizedBox(height: 12),
-            Text(tr('ui.1aebf2a2fc'), style: TextStyle(color: Colors.white54, fontSize: 16, fontWeight: FontWeight.bold)),
-          ]))),
-        if (!_loading && _tracks.isNotEmpty)
-          Expanded(child: ListView.builder(itemCount: _tracks.length, itemBuilder: (_, i) {
-            final t = _tracks[i];
-            return ListTile(
-              leading: t.artworkUrl.isNotEmpty
-                ? ClipRRect(borderRadius: BorderRadius.circular(6),
-                    child: CachedNetworkImage(imageUrl: t.artworkUrl, width: 44, height: 44, fit: BoxFit.cover, memCacheWidth: 88))
-                : Icon(AppIcons.music_note, color: Colors.white54),
-              title: Text(t.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(t.artist, style: const TextStyle(color: Colors.white54),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (t.previewUrl.isNotEmpty)
-                  GestureDetector(onTap: () => _togglePlay(t.previewUrl),
-                    child: Icon(_playingUrl == t.previewUrl
-                      ? AppIcons.stop_circle : AppIcons.play_circle_outline,
-                      color: Colors.white54, size: 28)),
-                const SizedBox(width: 8),
-                GestureDetector(onTap: () { _player.stop(); widget.onSelected(t); Navigator.pop(context); },
-                  child: const Icon(AppIcons.add_circle_outline, color: Color(0xFF0095F6), size: 28)),
-              ]),
-              onTap: () => _togglePlay(t.previewUrl));
-          })),
-      ]));
-  }
-}

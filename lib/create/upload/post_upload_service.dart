@@ -8,6 +8,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/music/song_info.dart';
 import '../../core/api/api_client.dart';
 import '../../core/utils/media_compressor.dart';
 import 'upload_manager.dart';
@@ -65,8 +66,10 @@ class PostUploadService {
     required File file,
     required bool isVideo,
     required String caption,
-    String musicTitle = '',
-    String musicArtist = '',
+    /// Суруди интихобкардаи муаллиф. Пеш танҳо ном ва хонанда
+    /// фиристода мешуданд — бе суроға ва ҷои оғоз пост ҳеҷ гоҳ
+    /// хонда намешуд.
+    SongInfo? song,
     String location = '',
     List<String> taggedUsers = const [],
     List<String> collaborators = const [],
@@ -95,8 +98,10 @@ class PostUploadService {
           {'url': url, 'type': isVideo ? 'video' : 'image',
            if (ar > 0) 'aspectRatio': ar}
         ],
-        'musicTitle': musicTitle,
-        'musicArtist': musicArtist,
+        // Майдонҳои кӯҳна барои мутобиқати сервери насбшуда.
+        'musicTitle': song?.title ?? '',
+        'musicArtist': song?.artist ?? '',
+        if (song != null && song.isNotEmpty) 'song': song.toJson(),
         'location': location,
         'taggedUsers': taggedUsers,
         'collaborators': collaborators,

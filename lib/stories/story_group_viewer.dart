@@ -15,6 +15,7 @@ import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/music/music_bar.dart';
 import '../models/story_model.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
@@ -711,6 +712,27 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                   child: Icon(AppIcons.close, color: Colors.white, size: 24))),
             ]),
           ),
+
+          // ── Музика ─────────────────────────────────────────────
+          //
+          // Пеш стори музикаро тамоман нишон намедод: ҳангоми нашр
+          // танҳо «🎵 ном» ба матн меафтод ва он ҳам ҷое намоён
+          // намешуд. Акнун ном, ХОНАНДА ва хати ҳаракаткунанда.
+          //
+          // Худкор танҳо барои акс мехонад: видео садои худро дорад
+          // ва ду садо якбора бесару нӯг мешавад.
+          if (_current.song.isNotEmpty)
+            Positioned(
+              top: top + 70,
+              left: 12,
+              child: MusicBar(
+                key: ValueKey('story-music-${_current.id}'),
+                song: _current.song,
+                autoPlay: !_isVideo,
+                paused: _paused,
+                compact: false,
+              ),
+            ),
 
           // ── Caption ────────────────────────────────────────────
           // if ((_current.caption ?? '').isNotEmpty)   (StoryModel has no caption field yet)

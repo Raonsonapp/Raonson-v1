@@ -6,6 +6,9 @@ import 'dart:math' show Random;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../core/music/music_bar.dart';
+import '../../core/music/song_info.dart';
+import '../../core/music/music_picker.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -65,6 +68,10 @@ class _PostCardState extends State<PostCard>
   late bool   _hideLikes;        // лайкҳо пинҳонанд
   late bool   _commentsDisabled; // шарҳҳо хомӯшанд
   late String _caption;
+  /// Музика метавонад баъди сохтани корт иваз шавад
+  /// (менюи «Иваз кардани музика»), пас онро маҳаллӣ
+  /// нигоҳ медорем — `widget.post` тағйирнопазир аст.
+  late SongInfo _song;
   bool        _captionExpanded = false; // ← Show more/less
 
   // ── View tracking — once per post, after 1s on screen ─────────
@@ -113,6 +120,7 @@ class _PostCardState extends State<PostCard>
     _hideLikes        = widget.post.hideLikes;
     _commentsDisabled = widget.post.commentsDisabled;
     _caption      = widget.post.caption;
+    _song         = widget.post.song;
 
     // Зарбаи фаврӣ, баъд каме "фурӯ" ва нишастани фаврӣ — ҳисси
     // тугмаи дили Instagram. Пештар танҳо як scale-и ҳамвор буд.
@@ -647,51 +655,36 @@ class _PostCardState extends State<PostCard>
         ])));
   }
 
+  /// Иваз кардани музикаи пост.
+  ///
+  /// Пеш ин се майдони матнӣ буд ва корбар бояд суроғаи сурудро
+  /// ДАСТӢ менавишт — ҳеҷ кас инро карда наметавонист. Акнун ҳамон
+  /// панеле кушода мешавад, ки ҳангоми сохтани пост буд.
   Future<void> _editMusic() async {
-    final titleCtrl  = TextEditingController();
-    final artistCtrl = TextEditingController();
-    final urlCtrl    = TextEditingController();
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        title: Text(tr('ui.e6c199732e'),
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _dialogField(titleCtrl,  'Номи суруд'),
-          const SizedBox(height: 8),
-          _dialogField(artistCtrl, 'Хонанда'),
-          const SizedBox(height: 8),
-          _dialogField(urlCtrl,    'URL мусиқа (ихтиёрӣ)'),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
-              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textTertiary))),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ApiClient.instance.put(
-                '/posts/${widget.post.id}/music',
-                body: {
-                  'musicTitle':  titleCtrl.text.trim(),
-                  'musicArtist': artistCtrl.text.trim(),
-                  'musicUrl':    urlCtrl.text.trim(),
-                });
-            },
-            child: Text(tr('ui.41cb3d0b3b'), style: TextStyle(color: AppColors.neonBlue))),
-        ],
-      ),
+    final song = await showMusicPicker(
+      context,
+      initial: _song.isNotEmpty ? _song : null,
     );
-    titleCtrl.dispose(); artistCtrl.dispose(); urlCtrl.dispose();
+    if (song == null || !mounted) return;
+
+    final res = await ApiClient.instance.put(
+      '/posts/${widget.post.id}/music',
+      body: {
+        // Майдонҳои кӯҳна барои сервери насбшуда.
+        'musicTitle': song.title,
+        'musicArtist': song.artist,
+        'musicUrl': song.previewUrl,
+        'song': song.toJson(),
+      },
+    );
+    if (!mounted) return;
+    if (res.statusCode >= 400) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Музика иваз нашуд')));
+      return;
+    }
+    setState(() => _song = song);
   }
-
-  TextField _dialogField(TextEditingController c, String hint) => TextField(
-    controller: c, style: TextStyle(color: AppColors.textPrimary),
-    decoration: InputDecoration(
-      hintText: hint, hintStyle: TextStyle(color: AppColors.textFaint),
-      filled: true, fillColor: AppColors.surface,
-      border: const OutlineInputBorder(borderSide: BorderSide.none)));
-
 
   Future<void> _mentionFriends() async {
     final ctrl = TextEditingController();
@@ -1412,27 +1405,18 @@ class _PostCardState extends State<PostCard>
       // ── "Намоиш ҳама N шарх" ──────────────────────────────────
 
       // ── MUSIC BAR — мисли Instagram ──────────────────────────
-      if (widget.post.musicTitle.isNotEmpty)
+      //
+      // Пеш ин танҳо МАТН буд — ҳеҷ гоҳ ҳеҷ чиз намехонд. Акнун
+      // занед → аз ҳамон ҷое, ки муаллиф интихоб кард, мехонад ва
+      // хат пеш меравад.
+      //
+      // Худкор намехонад: даҳ пост дар экран = даҳ суруд якбора.
+      if (_song.isNotEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(AppIcons.music_note_rounded,
-                  color: AppColors.textSecondary, size: 13),
-              const SizedBox(width: 5),
-              Flexible(child: Text(
-                widget.post.musicTitle +
-                    (widget.post.musicArtist.isNotEmpty
-                        ? ' — ${widget.post.musicArtist}' : ''),
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12),
-                maxLines: 1, overflow: TextOverflow.ellipsis)),
-            ]),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: MusicBar(song: _song),
           ),
         ),
       if (_commentsDisabled)

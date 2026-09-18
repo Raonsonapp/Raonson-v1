@@ -1,3 +1,4 @@
+import '../core/music/song_info.dart';
 import 'user_model.dart';
 
 /// Стикери пурсиш дар сторис (мисли Instagram).
@@ -63,6 +64,11 @@ class StoryModel {
   final DateTime expiresAt;
   final StoryPoll? poll;
 
+  /// Музикаи стори. Пеш стори ҳеҷ майдони музика надошт — ҳангоми
+  /// нашр танҳо «🎵 ном» ба матн меафтод ва ҳангоми тамошо ҳеҷ чиз
+  /// намехонд.
+  final SongInfo song;
+
   const StoryModel({
     required this.id,
     required this.user,
@@ -76,6 +82,7 @@ class StoryModel {
     this.audience = 'all',
     required this.expiresAt,
     this.poll,
+    this.song = SongInfo.none,
   });
 
   bool get isVideo => mediaType == 'video';
@@ -102,6 +109,7 @@ class StoryModel {
       audience: (json['audience'] ?? 'all').toString(),
       expiresAt: DateTime.tryParse(json['expiresAt'] ?? '') ?? DateTime.now().add(const Duration(hours: 24)),
       poll: StoryPoll.fromJson(json['poll']),
+      song: SongInfo.fromJson(json['song'] as Map<String, dynamic>?),
     );
   }
 }

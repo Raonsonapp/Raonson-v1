@@ -1,3 +1,4 @@
+import '../core/music/song_info.dart';
 import 'user_model.dart';
 
 class PostModel {
@@ -16,6 +17,12 @@ class PostModel {
   final List<String> collaborators;
   final String       musicTitle;   // ✅ НАВ
   final String       musicArtist;  // ✅ НАВ
+
+  /// Суруди пурра — бо суроға ва ҷои оғоз.
+  ///
+  /// `musicTitle`/`musicArtist` боқӣ мемонанд, чунки серверҳои
+  /// кӯҳна танҳо ҳамонҳоро бармегардонанд.
+  final SongInfo     song;
   final bool         hideLikes;        // лайкҳо пинҳонанд (танҳо соҳиб мебинад)
   final bool         commentsDisabled; // шарҳҳо хомӯшанд
   // ── Магоза (пости маҳсулот) ──
@@ -43,6 +50,7 @@ class PostModel {
     this.collaborators = const [],
     this.musicTitle  = '',
     this.musicArtist = '',
+    this.song        = SongInfo.none,
     this.hideLikes        = false,
     this.commentsDisabled = false,
     this.isProduct      = false,
@@ -72,7 +80,7 @@ class PostModel {
     bool? liked, bool? saved, bool? isPinned,
     DateTime? createdAt, String? location, List<String>? taggedUsers,
     List<String>? collaborators,
-    String? musicTitle, String? musicArtist,
+    String? musicTitle, String? musicArtist, SongInfo? song,
     bool? hideLikes, bool? commentsDisabled,
     bool? isProduct, double? price, String? currency, String? productName,
     bool? contactRaonson, String? shopWhatsapp, String? shopPhone,
@@ -92,6 +100,7 @@ class PostModel {
     collaborators: collaborators ?? this.collaborators,
     musicTitle:    musicTitle    ?? this.musicTitle,
     musicArtist:   musicArtist   ?? this.musicArtist,
+    song:          song          ?? this.song,
     hideLikes:        hideLikes        ?? this.hideLikes,
     commentsDisabled: commentsDisabled ?? this.commentsDisabled,
     isProduct:      isProduct      ?? this.isProduct,
@@ -139,6 +148,14 @@ class PostModel {
       collaborators: (json['collaborators'] as List? ?? []).map((e)=>e.toString()).toList(),
       musicTitle:    (json['musicTitle']  ?? json['music']?['title'] ?? '').toString(),
       musicArtist:   (json['musicArtist'] ?? json['music']?['artist'] ?? '').toString(),
+      // Сервери кӯҳна `song` намедиҳад — он гоҳ ном ва хонандаи
+      // ҷудогона истифода мешаванд, танҳо бе садо.
+      song: json['song'] != null
+          ? SongInfo.fromJson(json['song'] as Map<String, dynamic>?)
+          : SongInfo(
+              title:  (json['musicTitle']  ?? '').toString(),
+              artist: (json['musicArtist'] ?? '').toString(),
+              artUrl: ''),
       hideLikes:        likesHidden,
       commentsDisabled: json['commentsOff'] == true
           || json['commentsDisabled'] == true,

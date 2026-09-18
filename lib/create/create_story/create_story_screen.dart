@@ -4,6 +4,7 @@ import 'package:photo_manager/photo_manager.dart';
 import '../../core/ui/app_icons.dart';
 import 'package:flutter/material.dart';
 import 'story_editor.dart';
+import '../../core/music/song_info.dart';
 import '../../core/api/api_client.dart';
 import '../../core/utils/media_compressor.dart';
 import '../../stories/story_repository.dart';
@@ -58,7 +59,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
   }
 
   Future<void> _publish(File capturedFile, String caption, String audience,
-      [Map<String, dynamic>? poll]) async {
+      [Map<String, dynamic>? poll, SongInfo? song]) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });
@@ -100,6 +101,9 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         // Пештар фиристода намешуд — «дӯстони наздик» ба ҳама мерафт.
         'audience' : audience,
         if (poll != null) 'poll': poll,
+        // Суруд пурра меравад: ном, ХОНАНДА, суроға ва ҷои оғоз.
+        // Пештар танҳо «🎵 ном» дар `caption` мерафт.
+        if (song != null && song.isNotEmpty) 'song': song.toJson(),
       });
       if (res.statusCode >= 400) throw Exception('Story хато ${res.statusCode}');
       // Story-и нав нашр шуд — cache-и disk-и story-ро пок мекунем, то дар

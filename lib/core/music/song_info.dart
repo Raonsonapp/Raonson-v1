@@ -33,7 +33,17 @@ class SongInfo {
   /// кофист, вале барои ХОНДАН суроға лозим аст.
   bool get playable => previewUrl.isNotEmpty;
 
-  int get windowMs => (endMs - startMs).clamp(1000, 600000);
+  /// Дарозии порча.
+  ///
+  /// Ҳудудҳо АЙНАН ҳамонанд, ки дар сервер (`handlers/music.go`):
+  /// 1..60 сония, вагарна 15. Пеш ин ҷо `clamp(1000, …)` буд — порчаи
+  /// вайрон (анҷом пеш аз оғоз) дар телефон ҳалқаи 1-сония мешуд,
+  /// дар сервер бошад 15-сония. Як маълумот, ду рафтори гуногун.
+  int get windowMs {
+    final w = endMs - startMs;
+    if (w < 1000 || w > 60000) return 15000;
+    return w;
+  }
 
   Duration get segStart => Duration(milliseconds: startMs);
   Duration get segEnd => Duration(milliseconds: endMs);
