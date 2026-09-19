@@ -14,6 +14,7 @@ import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
 import '../app/app_settings.dart';
 import '../app/app_theme.dart';
+import 'hidden_words_screen.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/api/api_client.dart';
@@ -646,6 +647,15 @@ class _PrivacyState extends State<PrivacyScreen> {
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
                         builder: (_) => const CloseFriendsScreen())),
+              ),
+              const _ThinDiv(),
+              // Калимаҳои пинҳон — шарҳи нохуш пинҳон мешавад, на рад.
+              _NavTile(
+                icon:  AppIcons.privacy_tip_outlined,
+                title: 'Калимаҳои пинҳон',
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const HiddenWordsScreen())),
               ),
               const _ThinDiv(),
               _SwTile(

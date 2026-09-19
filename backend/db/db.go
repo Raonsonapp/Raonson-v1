@@ -225,6 +225,24 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at);
 
+	-- ── Калимаҳои пинҳон (Hidden Words, мисли Instagram) ────────
+	--
+	-- Ҳар корбар рӯйхати худро дорад. Шарҳе, ки ин калимаҳоро дорад,
+	-- РАД НАМЕШАВАД — он пинҳон мешавад.
+	--
+	-- Фарқ муҳим аст: агар шарҳ рад мешуд, муаллифи он фавран
+	-- мефаҳмид ва роҳи гузаштанро меҷуст. Пинҳон кардан бошад ба ӯ
+	-- намефаҳмонад — ӯ шарҳи худро мебинад, вале дигарон не.
+	CREATE TABLE IF NOT EXISTS hidden_words (
+		user_id TEXT NOT NULL,
+		word    TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, word)
+	);
+	CREATE INDEX IF NOT EXISTS idx_hidden_words_user ON hidden_words(user_id);
+
+	ALTER TABLE comments ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT FALSE;
+
 	CREATE TABLE IF NOT EXISTS comment_likes (
 		user_id TEXT NOT NULL,
 		comment_id TEXT NOT NULL,

@@ -185,6 +185,9 @@ func main() {
 		p.PUT("/",              handlers.UpdateProfile)
 		p.PUT("/settings",      handlers.UpdateSettings)
 		p.GET("/saved",         handlers.GetSavedPosts)
+		// Калимаҳои пинҳон — ҳимояи худи корбар аз шарҳи нохуш.
+		p.GET("/hidden-words", handlers.GetHiddenWords)
+		p.PUT("/hidden-words", handlers.SetHiddenWords)
 		p.GET("/notifications", handlers.GetNotifPrefs)
 		p.PUT("/notifications", handlers.UpdateNotifPrefs)
 		p.PUT("/username",      handlers.ChangeUsername)

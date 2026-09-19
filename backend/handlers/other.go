@@ -53,19 +53,40 @@ func AddComment(c *gin.Context) {
 		return
 	}
 
+	var postOwner string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&postOwner)
+
+	// ⚠️ Калимаҳои пинҳони СОҲИБИ ПОСТ, на нависанда.
+	//
+	// Шарҳ РАД НАМЕШАВАД — он пинҳон мешавад. Агар рад мешуд,
+	// нависанда фавран мефаҳмид ва роҳи гузаштанро меҷуст.
+	hidden := containsHiddenWord(b.Text,
+		hiddenWordsOf(context.Background(), postOwner))
+
 	var cid string
 	var createdAt interface{}
 	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO comments(post_id,user_id,text,parent_id)
-		 VALUES($1,$2,$3,NULLIF($4,'')) RETURNING id,created_at`,
-		postID, myID, b.Text, b.ParentID).Scan(&cid, &createdAt)
+		`INSERT INTO comments(post_id,user_id,text,parent_id,hidden)
+		 VALUES($1,$2,$3,NULLIF($4,''),$5) RETURNING id,created_at`,
+		postID, myID, b.Text, b.ParentID, hidden).Scan(&cid, &createdAt)
+
+	// Шарҳи пинҳон ба ҳисоб намеравад ва огоҳинома намедиҳад —
+	// вагарна соҳиб маҳз ҳамон чизеро мебинад, ки пинҳон кардан
+	// мехост.
+	if hidden {
+		c.JSON(http.StatusCreated, gin.H{
+			"_id": cid, "text": b.Text, "createdAt": createdAt,
+			"likesCount": 0, "parentId": b.ParentID,
+			"user": gin.H{"_id": myID},
+		})
+		return
+	}
+
 	db.Pool.Exec(context.Background(),
 		`UPDATE posts SET comments_count=comments_count+1 WHERE id=$1`, postID)
 
 	// Огоҳии соҳиби пост
-	var postOwner string
-	db.Pool.QueryRow(context.Background(),
-		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&postOwner)
 	notify(postOwner, myID, "comment", postID)
 	preview := b.Text
 	if r := []rune(preview); len(r) > 40 {
@@ -116,7 +137,14 @@ func GetComments(c *gin.Context) {
 		       u.id, u.username, u.avatar, u.verified,
 		       EXISTS(SELECT 1 FROM comment_likes cl WHERE cl.comment_id=c.id AND cl.user_id=$2)
 		FROM comments c JOIN users u ON u.id=c.user_id
-		WHERE c.post_id=$1 ORDER BY c.created_at DESC LIMIT $3 OFFSET $4`,
+		WHERE c.post_id=$1
+		  -- ⚠️ Шарҳи пинҳон танҳо ба НАВИСАНДАИ он намоён аст.
+		  --
+		  -- Ӯ шарҳи худро мебинад ва намедонад, ки дигарон онро
+		  -- намебинанд. Маҳз ҳамин фарқи «пинҳон» аз «рад» аст:
+		  -- агар ӯ мефаҳмид, роҳи гузаштанро меҷуст.
+		  AND (COALESCE(c.hidden,false) = FALSE OR c.user_id = $2::text)
+		ORDER BY c.created_at DESC LIMIT $3 OFFSET $4`,
 		postID, myID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get comments failed"})
