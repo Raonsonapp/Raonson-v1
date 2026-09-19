@@ -117,7 +117,11 @@ func TestNoManipulativeCopy(t *testing.T) {
 // Линк бояд ба роҳҳое ишора кунад, ки DeepLinks дар барнома
 // мефаҳмад — routing-и дуюм сохта намешавад.
 func TestLinksUseKnownPrefixes(t *testing.T) {
-	known := []string{"/post/", "/reel/", "/profile/", "/topic/"}
+	// `/collab-invites` роҳи БЕ объект аст: он ба рӯйхати даъватҳо
+	// мебарад, на ба як чиз. Даъват пеш ба худи ПОСТ мебурд, вале
+	// он ҷо тугмаи қабул нест — одам ҳанӯз ҳамкор нашудааст.
+	known := []string{"/post/", "/reel/", "/profile/", "/topic/",
+		"/collab-invites"}
 	for _, k := range AllKinds() {
 		l := Link(k, "obj1", "ali")
 		if l == "" {
@@ -141,7 +145,9 @@ func TestLinkTargets(t *testing.T) {
 		Comment:       "/post/obj1",
 		ReelLike:      "/reel/obj1",
 		Follow:        "/profile/ali",
-		CollabInvite:  "/post/obj1",
+		// Ба ҷои ҚАБУЛ мебарад, на ба пост: гиранда ҳанӯз ҳамкор
+		// нест ва дар пост ҳеҷ тугмаи қабул намебинад.
+		CollabInvite:  "/collab-invites",
 		TrendingTopic: "/topic/obj1",
 	}
 	for k, want := range cases {

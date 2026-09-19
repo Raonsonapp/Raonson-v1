@@ -1,3 +1,4 @@
+import '../core/utils/server_time.dart';
 import 'user_model.dart';
 
 class CommentModel {
@@ -57,7 +58,7 @@ class CommentModel {
       likesCount: (json['likes'] is List)
           ? (json['likes'] as List).length
           : (json['likesCount'] ?? 0),
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: parseServerTime(json['createdAt']) ?? DateTime.now(),
       parentId: (json['parentId'] ?? json['parent_id'] ?? '').toString(),
     );
   }

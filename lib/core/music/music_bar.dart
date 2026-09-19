@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../../app/app_theme.dart';
 import '../ui/app_icons.dart';
@@ -69,10 +71,26 @@ class _MusicBarState extends State<MusicBar> {
   bool _loading = false;
   int _posMs = 0;
 
+  /// Суроғае, ки ҳангоми зер кардан ёфта шуд.
+  ///
+  /// ⚠️ Постҳои КӮҲНА танҳо ном ва хонанда доранд: он вақт барнома
+  /// суроғаро умуман намефиристод. Дар экран ном менамуд, вале зада
+  /// ҳеҷ чиз намешуд — «номаш ҳасту намехонад».
+  ///
+  /// Барои онҳо суруд аз рӯи ном ёфта мешавад. Постҳои НАВ суроғаро
+  /// худашон доранд ва ин роҳ истифода намешавад.
+  SongInfo? _resolved;
+
+  /// Суруде, ки воқеан истифода мешавад.
+  SongInfo get _song => _resolved ?? widget.song;
+
+  /// Оё хондан имконпазир аст — ҳозир ё баъди ҷустуҷӯ?
+  bool get _canPlay => _song.playable || _song.title.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
-    if (widget.autoPlay && widget.song.playable && !widget.paused) {
+    if (widget.autoPlay && _song.playable && !widget.paused) {
       // Баъди аввалин кашидани экран — вагарна `setState` дар
       // `initState` огоҳинома медиҳад.
       WidgetsBinding.instance.addPostFrameCallback((_) => _start());
@@ -86,7 +104,7 @@ class _MusicBarState extends State<MusicBar> {
     // Суруд иваз шуд (стори-и дигар) → аз нав.
     if (old.song.previewUrl != widget.song.previewUrl) {
       _dispose();
-      if (widget.autoPlay && widget.song.playable && !widget.paused) _start();
+      if (widget.autoPlay && _song.playable && !widget.paused) _start();
       return;
     }
     if (widget.paused && _playing) {
@@ -122,12 +140,23 @@ class _MusicBarState extends State<MusicBar> {
   }
 
   Future<void> _start() async {
-    if (!widget.song.playable || _loading) return;
+    if (_loading) return;
     setState(() => _loading = true);
 
+    // Суроға нест — онро аз рӯи ном меёбем (пости кӯҳна).
+    if (!_song.playable) {
+      final found = await _lookup(_song);
+      if (found == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      if (!mounted) return;
+      setState(() => _resolved = found);
+    }
+
     final p = _player ??= AudioPlayer();
-    final startAt = previewOffsetMs(widget.song);
-    final windowMs = widget.song.windowMs.clamp(1000, kPreviewMs);
+    final startAt = previewOffsetMs(_song);
+    final windowMs = _song.windowMs.clamp(1000, kPreviewMs);
 
     _posSub ??= p.onPositionChanged.listen((d) {
       if (!mounted) return;
@@ -147,7 +176,7 @@ class _MusicBarState extends State<MusicBar> {
 
     try {
       await p.setReleaseMode(ReleaseMode.loop);
-      await p.setSource(UrlSource(widget.song.previewUrl));
+      await p.setSource(UrlSource(_song.previewUrl));
       await p.seek(Duration(milliseconds: startAt));
       await p.resume();
     } catch (e) {
@@ -157,7 +186,7 @@ class _MusicBarState extends State<MusicBar> {
   }
 
   Future<void> _toggle() async {
-    if (!widget.song.playable) return;
+    if (!_canPlay) return;
     if (_playing) {
       await _player?.pause();
       if (mounted) setState(() => _playing = false);
@@ -168,17 +197,47 @@ class _MusicBarState extends State<MusicBar> {
     }
   }
 
+  /// Сурудро аз рӯи ном ва хонанда меёбад.
+  ///
+  /// Ҳамон манбае, ки ҳангоми интихоб истифода шуд — пас натиҷа
+  /// ҳамон суруд аст. Ҷои оғоз аз худи пост гирифта мешавад.
+  Future<SongInfo?> _lookup(SongInfo s) async {
+    final term = '${s.title} ${s.artist}'.trim();
+    if (term.isEmpty) return null;
+    try {
+      final uri = Uri.parse(
+        'https://itunes.apple.com/search'
+        '?term=${Uri.encodeComponent(term)}&media=music&limit=1&country=US',
+      );
+      final res = await http.get(uri).timeout(const Duration(seconds: 6));
+      if (res.statusCode != 200) return null;
+      final list = (jsonDecode(res.body)['results'] as List? ?? []);
+      if (list.isEmpty) return null;
+      final url = (list.first['previewUrl'] ?? '').toString();
+      if (url.isEmpty) return null;
+      return s.copyWith(
+        previewUrl: url,
+        trackMs: s.trackMs > 0
+            ? s.trackMs
+            : ((list.first['trackTimeMillis'] as num?) ?? 210000).toInt(),
+      );
+    } catch (e) {
+      debugPrint('[MusicBar] lookup: $e');
+      return null;
+    }
+  }
+
   /// 0..1 — то чӣ андоза порча хонда шуд.
   double get _progress {
     if (!_playing) return 0;
-    final startAt = previewOffsetMs(widget.song);
-    final windowMs = widget.song.windowMs.clamp(1000, kPreviewMs);
+    final startAt = previewOffsetMs(_song);
+    final windowMs = _song.windowMs.clamp(1000, kPreviewMs);
     return ((_posMs - startAt) / windowMs).clamp(0.0, 1.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final song = widget.song;
+    final song = _song;
     if (song.isEmpty) return const SizedBox.shrink();
 
     final fg = widget.compact ? AppColors.textSecondary : AppColors.white;
@@ -187,7 +246,9 @@ class _MusicBarState extends State<MusicBar> {
         : Colors.black.withOpacity(0.42);
 
     return GestureDetector(
-      onTap: song.playable ? _toggle : null,
+      // Ҳатто агар суроға набошад, зер кардан кор мекунад: суруд аз
+      // рӯи ном ёфта мешавад.
+      onTap: _canPlay ? _toggle : null,
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
         decoration: BoxDecoration(
@@ -203,7 +264,7 @@ class _MusicBarState extends State<MusicBar> {
                   child: CircularProgressIndicator(strokeWidth: 1.8, color: fg))
             else
               Icon(
-                !song.playable
+                !_canPlay
                     ? AppIcons.music_note_rounded
                     : _playing
                         ? AppIcons.pause_rounded

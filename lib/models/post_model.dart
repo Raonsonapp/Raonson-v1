@@ -1,3 +1,4 @@
+import '../core/utils/server_time.dart';
 import '../core/music/song_info.dart';
 import 'user_model.dart';
 
@@ -151,7 +152,7 @@ class PostModel {
       liked:         json['liked'] == true,
       saved:         json['saved'] == true,
       isPinned:      json['isPinned'] == true,
-      createdAt:     DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt:     parseServerTime(json['createdAt']) ?? DateTime.now(),
       location:      (json['location']    ?? '').toString(),
       taggedUsers:   (json['taggedUsers'] as List? ?? []).map((e)=>e.toString()).toList(),
       collaborators: (json['collaborators'] as List? ?? []).map((e)=>e.toString()).toList(),

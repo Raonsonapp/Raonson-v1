@@ -1,3 +1,4 @@
+import '../core/utils/server_time.dart';
 import 'user_model.dart';
 
 // ── Enums ─────────────────────────────────────────────────────────
@@ -170,9 +171,8 @@ class MessageModel {
     final peerRaw = json['peer'];
     final peer = peerRaw is Map<String, dynamic>
         ? UserModel.fromJson(peerRaw) : _empty;
-    DateTime createdAt;
-    try { createdAt = DateTime.parse(json['createdAt'].toString()); }
-    catch (_) { createdAt = DateTime.now(); }
+    // Вақти нодуруст → вақти ҷорӣ, то паём дар охири рӯйхат монад.
+    final createdAt = parseServerTime(json['createdAt']) ?? DateTime.now();
 
     return MessageModel(
       id:        (json['_id'] ?? json['id'] ?? '').toString(),
@@ -206,9 +206,8 @@ class MessageModel {
       senderId = senderRaw?.toString() ?? '';
       peer = _empty;
     }
-    DateTime createdAt;
-    try { createdAt = DateTime.parse(json['createdAt'].toString()); }
-    catch (_) { createdAt = DateTime.now(); }
+    // Вақти нодуруст → вақти ҷорӣ, то паём дар охири рӯйхат монад.
+    final createdAt = parseServerTime(json['createdAt']) ?? DateTime.now();
 
     final rawReactions = json['reactions'];
     final reactions = <MessageReaction>[];

@@ -1,3 +1,4 @@
+import '../core/utils/server_time.dart';
 import 'user_model.dart';
 
 class ReelModel {
@@ -121,7 +122,7 @@ class ReelModel {
       location:      (json['location'] ?? '').toString(),
       taggedUsers:   rawTagged.map((e) => e.toString()).toList(),
       createdAt:     json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'].toString())
+          ? parseServerTime(json['createdAt'])
           : null,
       hideLikes:        (json['hideLikes'] == true) || rawLikes < 0,
       commentsDisabled: json['commentsDisabled'] == true

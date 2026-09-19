@@ -1,3 +1,4 @@
+import '../core/utils/server_time.dart';
 import '../core/music/song_info.dart';
 import 'user_model.dart';
 
@@ -118,7 +119,7 @@ class StoryModel {
       viewsCount: views is List ? views.length : (json['viewsCount'] ?? 0),
       repliesOff: json['repliesOff'] == true,
       audience: (json['audience'] ?? 'all').toString(),
-      expiresAt: DateTime.tryParse(json['expiresAt'] ?? '') ?? DateTime.now().add(const Duration(hours: 24)),
+      expiresAt: parseServerTime(json['expiresAt']) ?? DateTime.now().add(const Duration(hours: 24)),
       poll: StoryPoll.fromJson(json['poll']),
       song: SongInfo.fromJson(json['song'] as Map<String, dynamic>?),
       sharedPostId: (json['sharedPostId'] ?? '').toString(),

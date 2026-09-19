@@ -4,6 +4,7 @@
 // кӯҳна, ки `note_model.dart`-ро мехонанд, бе тағйир кор кунанд.
 export '../core/music/song_info.dart';
 
+import '../core/utils/server_time.dart';
 import '../core/music/song_info.dart';
 
 class NoteModel {
@@ -37,6 +38,6 @@ class NoteModel {
     text:     j['note']     ?? '',
     song:     SongInfo.fromJson(j['noteSong'] as Map<String, dynamic>?),
     expiresAt: j['noteExpiresAt'] != null
-        ? DateTime.tryParse(j['noteExpiresAt'].toString()) : null,
+        ? parseServerTime(j['noteExpiresAt']) : null,
   );
 }

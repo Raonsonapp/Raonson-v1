@@ -1,3 +1,4 @@
+import '../core/utils/server_time.dart';
 import 'user_model.dart';
 import '../core/utils/time_ago.dart';
 
@@ -58,7 +59,7 @@ class NotificationModel {
       id: (json['_id'] ?? json['id'] ?? '').toString(),
       type: json['type'] ?? '',
       read: json['read'] ?? false,
-      createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      createdAt: parseServerTime(json['createdAt']) ?? DateTime.now(),
       fromUser: (json['fromUser'] != null && json['fromUser'] is Map)
           ? UserModel.fromJson(json['fromUser'] as Map<String, dynamic>)
           : (json['from_user'] != null && json['from_user'] is Map)

@@ -1,4 +1,5 @@
 // lib/app/app_controller.dart
+import '../collab/collab_invites_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'app_state.dart';
@@ -53,6 +54,10 @@ class AppController {
         final uid    = settings.arguments;
         final userId = (uid is String && uid.isNotEmpty) ? uid : 'me';
         return _page(ProfileScreen(userId: userId));
+
+      // Даъвати ҳамкорӣ — ҷои қабул, на худи пост.
+      case '/collab-invites':
+        return _page(const CollabInvitesScreen());
 
       case '/profile-by-username':
         final uname = settings.arguments as String? ?? '';

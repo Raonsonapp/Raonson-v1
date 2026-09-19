@@ -100,6 +100,9 @@ func main() {
 			"ready": gin.H{
 				// Огоҳиномаи телефон (FCM_SERVICE_ACCOUNT_JSON).
 				"push": handlers.PushReady(),
+				// Агар `push: false` бошад, ин мегӯяд ЧАРО —
+				// бе ошкор кардани худи калид.
+				"pushDetail": handlers.PushDiagnosis(),
 				// Захираи акс ва видео.
 				"storage": handlers.StorageReady(),
 				// Реклама (YANDEX_REWARDED_ID).

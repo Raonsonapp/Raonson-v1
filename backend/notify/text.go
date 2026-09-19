@@ -285,7 +285,12 @@ func Link(k Kind, targetID, actorName string) string {
 		if actorName != "" {
 			return "/profile/" + actorName
 		}
-	case CollabInvite, CollabAccepted:
+	case CollabInvite:
+		// ⚠️ Пеш ин ба худи ПОСТ мебурд. Вале одам ҳанӯз ҳамкор
+		// нест: ӯ постро мебинад ва ҳеҷ тугмаи қабул намебинад.
+		// Даъват бояд ба ҷои ҚАБУЛ барад.
+		return "/collab-invites"
+	case CollabAccepted:
 		if targetID != "" {
 			return "/post/" + targetID
 		}

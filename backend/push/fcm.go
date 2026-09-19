@@ -142,6 +142,42 @@ func Configured() bool {
 	return err == nil
 }
 
+// Diagnose мегӯяд, ки ЧАРО push кор намекунад — бе ошкор кардани сир.
+//
+// ⚠️ Бе ин `/health` танҳо `false` медод ва фарқи ин ҳолатҳо дида
+// намешуд:
+//
+//   • тағйирёбанда умуман нест;
+//   • ном хато аст (масалан FCM_SERVER_KEY-и кӯҳна);
+//   • JSON вайрон аст (нусхабардорӣ нопурра);
+//   • JSON дуруст, вале майдонҳо намерасанд.
+//
+// Соҳиби барнома соатҳо тахмин мекард. Акнун ҷавоб як сатр аст.
+func Diagnose() map[string]any {
+	out := map[string]any{}
+
+	raw := os.Getenv("FCM_SERVICE_ACCOUNT_JSON")
+	file := os.Getenv("FCM_SERVICE_ACCOUNT_FILE")
+	out["jsonVarSet"] = raw != ""
+	out["fileVarSet"] = file != ""
+	// Дарозӣ сир нест ва фавран мегӯяд, ки нусхабардорӣ нопурра буд.
+	out["jsonLength"] = len(raw)
+
+	// Номи кӯҳна, ки дигар кор намекунад — сабаби маъмул.
+	if os.Getenv("FCM_SERVER_KEY") != "" {
+		out["legacyKeyPresent"] = true
+	}
+
+	if _, err := loadServiceAccount(); err != nil {
+		out["ok"] = false
+		out["reason"] = err.Error()
+		return out
+	}
+	out["ok"] = true
+	out["projectId"] = ProjectID()
+	return out
+}
+
 // ProjectID барои ташхис (бе сир).
 func ProjectID() string {
 	sa, err := loadServiceAccount()

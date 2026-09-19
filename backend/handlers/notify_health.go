@@ -81,3 +81,6 @@ func NotificationHealth(c *gin.Context) {
 // Бе ин фарқи «код вайрон аст» ва «secret нест» аз берун дида
 // намешуд.
 func PushReady() bool { return push.Configured() }
+
+// PushDiagnosis сабаби кор накардани push-ро медиҳад (бе сир).
+func PushDiagnosis() map[string]any { return push.Diagnose() }

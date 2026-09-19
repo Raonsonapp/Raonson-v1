@@ -151,6 +151,17 @@ class FirebaseInit {
     if (link.isEmpty) return;
     final nav = navigatorKey?.currentState;
     if (nav == null) return;
+
+    // Роҳҳои дохилӣ, ки линки умумӣ нестанд.
+    //
+    // ⚠️ Даъвати ҳамкорӣ пеш ба худи ПОСТ мебурд. Вале одам ҳанӯз
+    // ҳамкор нест: ӯ постро мебинад ва ҳеҷ тугмаи қабул намебинад —
+    // даъват «кор намекунад».
+    if (link == '/collab-invites') {
+      nav.pushNamed(link);
+      return;
+    }
+
     if (!DeepLinks.parse(link).isValid) return;
     nav.pushNamed(link);
   }

@@ -7,11 +7,12 @@
 //  timestamp untranslated. One implementation, driven by tr().
 // ════════════════════════════════════════════════════════════════════
 import '../i18n/strings.dart';
+import 'server_time.dart';
 
 /// Long form used under posts and comments: "5 дақиқа пеш".
 String timeAgo(DateTime? when) {
   if (when == null) return '';
-  final d = DateTime.now().difference(when);
+  final d = sinceServerTime(when);
   if (d.inSeconds < 5) return tr('time.justNow');
   if (d.inMinutes < 1) return tr('time.secondsAgo', {'n': d.inSeconds});
   if (d.inHours < 1) return tr('time.minutesAgo', {'n': d.inMinutes});
@@ -25,7 +26,7 @@ String timeAgo(DateTime? when) {
 /// Compact form for tight rows (notifications, news): "5д".
 String timeAgoShort(DateTime? when) {
   if (when == null) return '';
-  final d = DateTime.now().difference(when);
+  final d = sinceServerTime(when);
   if (d.inMinutes < 1) return tr('time.justNow');
   if (d.inHours < 1) return tr('time.shortMinutes', {'n': d.inMinutes});
   if (d.inDays < 1) return tr('time.shortHours', {'n': d.inHours});
@@ -35,7 +36,7 @@ String timeAgoShort(DateTime? when) {
 /// Medium form used on story rings and viewer lists: "5 дақ".
 String timeAgoMedium(DateTime? when) {
   if (when == null) return '';
-  final d = DateTime.now().difference(when);
+  final d = sinceServerTime(when);
   if (d.inMinutes < 1) return tr('time.justNow');
   if (d.inHours < 1) return tr('time.minutesShort', {'n': d.inMinutes});
   if (d.inDays < 1) return tr('time.hoursShort', {'n': d.inHours});
