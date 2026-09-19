@@ -119,6 +119,11 @@ func main() {
 	r.GET("/ads/callback", handlers.AdCallback)
 	r.GET("/ws", sockets.Handler)
 
+	// Занг ба корбари ОФЛАЙН бояд огоҳиномаи телефон диҳад.
+	// Callback аст, чунки `sockets` наметавонад `handlers`-ро
+	// import кунад — ҳалқаи вобастагӣ мешуд.
+	sockets.OnMissedCall = handlers.NotifyIncomingCall
+
 	auth  := mw.Auth()
 	admin := mw.AdminOnly()
 	rl100 := mw.RateLimit(500, 60)

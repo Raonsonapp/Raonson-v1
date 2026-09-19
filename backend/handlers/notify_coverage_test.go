@@ -48,6 +48,25 @@ func handlerSources(t *testing.T) map[string]string {
 	return out
 }
 
+// kindValueOf номи Go-ро («IncomingCall») ба қимати воқеии намуд
+// («incoming_call») табдил медиҳад.
+//
+// Муқоиса бо ҷадвали ҲАҚИҚИИ намудҳо мешавад, на бо тахмин: агар
+// касе номи нав илова кунад, тест худаш онро мефаҳмад.
+func kindValueOf(goName string) string {
+	norm := func(s string) string {
+		return strings.ToLower(strings.ReplaceAll(s, "_", ""))
+	}
+	target := norm(goName)
+	for _, k := range ntf.AllKinds() {
+		if norm(string(k)) == target {
+			return string(k)
+		}
+	}
+	// Номаълум — ҳамон тавр бармегардонем, то тест хато диҳад.
+	return strings.ToLower(goName)
+}
+
 func TestEveryNotificationAlsoReachesThePhone(t *testing.T) {
 	srcs := handlerSources(t)
 
@@ -63,8 +82,13 @@ func TestEveryNotificationAlsoReachesThePhone(t *testing.T) {
 				pushed[m[1]] = true
 			}
 			// `string(ntf.Message)` → "message"
+			//
+			// ⚠️ Хурд кардани ҳарфҳо КОФӢ НЕСТ: `IncomingCall` ба
+			// «incomingcall» табдил мешавад, вале қимати воқеӣ
+			// «incoming_call» аст. Барои ҳамин ном ба қимати
+			// ҲАҚИҚӢ мутобиқ карда мешавад.
 			if m[2] != "" {
-				pushed[strings.ToLower(m[2])] = true
+				pushed[kindValueOf(m[2])] = true
 			}
 		}
 	}
@@ -94,7 +118,7 @@ func TestEveryPushedKindHasText(t *testing.T) {
 				seen[m[1]] = true
 			}
 			if m[2] != "" {
-				seen[strings.ToLower(m[2])] = true
+				seen[kindValueOf(m[2])] = true
 			}
 		}
 	}

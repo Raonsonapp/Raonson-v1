@@ -25,6 +25,8 @@ const (
 
 	// Чат.
 	Message Kind = "message"
+	// Занги воридотӣ — ҳангоми баста будани барнома.
+	IncomingCall Kind = "incoming_call"
 
 	// Сторис ва рилс.
 	StoryLike  Kind = "story_like"
@@ -113,6 +115,9 @@ var rules = map[Kind]Rule{
 
 	// Паём ҳеҷ гоҳ ҷамъ ё таъхир намешавад.
 	Message: {High, ChannelMessages, "messages", false},
+	// Занг аз паём ҳам таъхирнопазиртар аст: агар дер расад,
+	// он умуман бефоида мешавад.
+	IncomingCall: {High, ChannelMessages, "messages", false},
 
 	StoryLike:  {Normal, ChannelSocial, "likes", true},
 	// Овозҳо ҷамъ мешаванд: даҳ овоз як огоҳинома, на даҳто.

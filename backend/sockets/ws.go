@@ -163,6 +163,28 @@ func Handler(c *gin.Context) {
 
 	go cl.writePump()
 
+	// ⚠️ Сигнали «пайваст шуд» ба ХУДИ мизоҷ.
+	//
+	// Бе ин телефон намедонад, ки пайваст воқеан барқарор шуд.
+	// `WebSocketChannel.connect` дар Dart КОСИЛ аст: он ҳатто
+	// ҳангоми 401 хато намедиҳад ва фавран бармегардад. Барои ҳамин
+	// мизоҷ пайвастро «муваффақ» мешумурд, ҳисоби такрорро сифр
+	// мекард ва пас аз 401 боз як сония баъд кӯшиш мекард — абадан,
+	// бе афзоиши фосила.
+	//
+	// Ин фрейм ягона нишонаи ҲАҚИҚИИ муваффақият аст.
+	if b, err := json.Marshal(wsMsg{
+		Event: "socket:ready",
+		Data:  toRaw(map[string]interface{}{"userId": userID}),
+	}); err == nil {
+		select {
+		case cl.send <- b:
+		default:
+			// Навбат пур — фрейм партофта мешавад; мизоҷ баъди
+			// аввалин ҳодисаи дигар ҳам мефаҳмад.
+		}
+	}
+
 	defer func() {
 		// Танҳо пайвасти ХУДРО мебарорем.
 		//
@@ -339,6 +361,11 @@ func dispatch(cl *client, raw []byte) {
 			"from": p.From, "fromUsername": p.FromUsername,
 			"fromAvatar": p.FromAvatar, "offer": p.Offer, "callType": p.CallType,
 		})
+		// Гиранда офлайн — сокет ҳеҷ ҷо намебарад. Огоҳиномаи
+		// телефон ягона роҳи расидан аст.
+		if p.To != "" && !isOnline(p.To) && OnMissedCall != nil {
+			go OnMissedCall(p.To, p.From)
+		}
 	case "call:answer":
 		var p struct {
 			To     string      `json:"to"`
@@ -423,6 +450,24 @@ func parseToken(s string) string {
 
 // EmitToUser - for use from handlers
 func EmitToUser(userID, event string, data interface{}) { emit(userID, event, data) }
+
+// OnMissedCall ҳангоми занг ба корбари ОФЛАЙН ҷеғ зада мешавад.
+//
+// ⚠️ Занг танҳо тавассути сокет мерафт. Агар гиранда барномаро
+// баста бошад — маҳз он вақте ки занг муҳим аст — ҳеҷ чиз намеомад.
+//
+// Ин ҷо callback аст, на даъвати мустақим: `handlers` аллакай
+// `sockets`-ро import мекунад, пас баръакс ҳалқаи вобастагӣ мешуд.
+// `main` онро васл мекунад.
+var OnMissedCall func(toUserID, fromUserID string)
+
+// isOnline мегӯяд, ки оё корбар пайвасти зинда дорад.
+func isOnline(userID string) bool {
+	mu.RLock()
+	_, ok := clients[userID]
+	mu.RUnlock()
+	return ok
+}
 // ── PATCH: backend/sockets/ws.go ─────────────────────────────────
 // Ин функсияҳоро ба охири ws.go илова кун (пеш аз охири файл)
 

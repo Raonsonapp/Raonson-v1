@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../app/app_config.dart';
+import '../api/api_client.dart';
 import '../storage/token_storage.dart';
 
 class SocketService {
@@ -21,6 +22,16 @@ class SocketService {
   String?     _lastToken;
   int         _retry = 0;
   Timer?      _reconnectTimer;
+
+  /// Оё аз сервер ҳадди ақал як фрейм омад?
+  ///
+  /// Бе ин пайвасти РАДШУДА (401) ҳамчун муваффақ ҳисоб мешуд.
+  bool        _handshakeOk = false;
+
+  /// Чанд бор пай дар пай пайваст нашуд БЕ як фрейм.
+  ///
+  /// Ин аломати токени кӯҳна аст, на шабакаи бад.
+  int         _authFailures = 0;
 
   final Map<String, List<void Function(dynamic)>> _listeners = {};
 
@@ -42,10 +53,24 @@ class SocketService {
       );
       _sub = _channel!.stream.listen(
         (raw) {
+          // ⚠️ Муваффақият МАҲЗ ИН ҶО тасдиқ мешавад.
+          //
+          // `WebSocketChannel.connect` косил аст: он ҳатто ҳангоми
+          // 401 хато намедиҳад ва фавран бармегардад. Пештар код
+          // фавран `_retry = 0` мекард — пас фосилаи такрор ҲЕҶ ГОҲ
+          // намеафзуд ва телефон ҳар сония серверро мезад, абадан.
+          //
+          // Аввалин фрейми ҳақиқӣ ягона нишонаи пайвасти воқеӣ аст.
+          if (!_handshakeOk) {
+            _handshakeOk = true;
+            _retry = 0;
+            debugPrint('[Socket] connected ✅');
+          }
           try {
             final msg   = jsonDecode(raw as String) as Map<String, dynamic>;
             final event = msg['event'] as String? ?? '';
             final data  = msg['data'];
+            if (event == 'socket:ready') return; // танҳо тасдиқ
             _dispatch(event, data);
           } catch (e) {
             debugPrint('[Socket] parse: $e');
@@ -57,8 +82,6 @@ class SocketService {
       );
       _connected  = true;
       _connecting = false;
-      _retry      = 0; // пайвасти муваффақ → backoff reset
-      debugPrint('[Socket] connected ✅');
     } catch (e) {
       _connecting = false;
       debugPrint('[Socket] connect failed: $e');
@@ -70,6 +93,9 @@ class SocketService {
   void _onClosed() {
     _connected  = false;
     _connecting = false;
+    // Пайваст канда шуд, вале ҳеҷ фрейм наомада буд → эҳтимол 401.
+    if (!_handshakeOk) _authFailures++;
+    _handshakeOk = false;
     _sub?.cancel();
     _channel = null;
     if (_manualClose) return;
@@ -84,8 +110,29 @@ class SocketService {
     if (_retry < 5) _retry++;
     _reconnectTimer = Timer(Duration(seconds: delay), () async {
       if (_manualClose) return;
-      final token = _lastToken ??
-          await TokenStorage.getAccessToken();
+
+      // ⚠️ Токен ҲАМЕША аз захира гирифта мешавад, на аз хотира.
+      //
+      // Пештар `_lastToken` авлотар буд. Вақте токени дастрасӣ
+      // мӯҳлаташ мегузашт, дархостҳои оддӣ онро нав мекарданд, вале
+      // сокет ҳамон токени КӮҲНАро абадан такрор мекард — 401, 401,
+      // 401… Дар лог ин ҳар ду сония дида мешуд.
+      //
+      // Маҳз ҳамин зангро мекушт: `call:offer` тавассути сокет
+      // меравад, ва сокет ҳеҷ гоҳ пайваст набуд.
+      var token = await TokenStorage.getAccessToken();
+
+      // Агар чанд бор пай дар пай ягон фрейм наомада бошад, токен
+      // кӯҳна аст — онро нав мекунем.
+      if (_authFailures >= 2) {
+        final ok = await ApiClient.instance.refreshSession();
+        if (ok) {
+          token = await TokenStorage.getAccessToken();
+          _authFailures = 0;
+        }
+      }
+
+      token ??= _lastToken;
       if (token != null && token.isNotEmpty) {
         await connect(token);
       }

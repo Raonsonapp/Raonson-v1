@@ -68,3 +68,11 @@ func pushNotify(userID, fromID, ntype, targetID, body string) {
 func NotifyEvent(e ntf.Event) {
 	go ntf.Notify(context.Background(), notifyDeps(), e)
 }
+
+// NotifyIncomingCall огоҳиномаи занги воридотиро мефиристад.
+//
+// Ин ба `sockets` вобаста нест ва аз он ҷо ҳамчун callback васл
+// мешавад (`main`), вагарна ҳалқаи вобастагӣ мешуд.
+func NotifyIncomingCall(toUserID, fromUserID string) {
+	pushNotify(toUserID, fromUserID, string(ntf.IncomingCall), "", "")
+}

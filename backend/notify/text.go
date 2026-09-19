@@ -71,6 +71,11 @@ var bodies = map[Kind]map[Lang]string{
 		RU: "упомянул(а) вас",
 		EN: "mentioned you",
 	},
+	IncomingCall: {
+		TJ: "ба шумо занг мезанад",
+		RU: "звонит вам",
+		EN: "is calling you",
+	},
 	Message: {
 		TJ: "ба шумо паём фиристод",
 		RU: "отправил(а) вам сообщение",

@@ -96,6 +96,20 @@ class ApiClient {
 
   Completer<bool>? _refreshCompleter;
 
+  /// Токени дастрасиро нав мекунад — барои он ки берун аз дархости
+  /// оддӣ низ истифода шавад.
+  ///
+  /// ⚠️ Ба сокет лозим аст. Сокет токенро дар суроға мебарад ва
+  /// худаш 401-ро идора карда наметавонад: ҳамон токени кӯҳнаро
+  /// абадан такрор мекард.
+  ///
+  /// Агар токени навсозӣ набошад, `false` бармегардад — бе кӯшиши
+  /// бефоида.
+  Future<bool> refreshSession() async {
+    if (_refreshToken == null || _refreshToken!.isEmpty) return false;
+    return _tryRefresh();
+  }
+
   Future<bool> _tryRefresh() async {
     if (_refreshCompleter != null) return _refreshCompleter!.future;
     _refreshCompleter = Completer<bool>();
