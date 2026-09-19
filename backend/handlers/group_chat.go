@@ -7,6 +7,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	ntf "raonson/notify"
 
 	"github.com/gin-gonic/gin"
 )
@@ -306,10 +307,17 @@ func SendGroupMessage(c *gin.Context) {
 		"sender": gin.H{"_id": myID, "username": uname, "avatar": uavatar, "verified": verified},
 	}
 	// Realtime — ба ҳамаи аъзоён (ғайр аз фиристанда).
+	//
+	// ⚠️ `emitChat` танҳо ба барномаи КУШОДА мерасад. Огоҳиномаи
+	// телефон ҷудогона лозим аст — бе он аъзои гурӯҳ, ки барномаро
+	// баста аст, ҳеҷ гоҳ намедонад, ки паёми нав ҳаст. Ҳамон камбудӣ
+	// дар чати яктарафа буд.
 	for _, uid := range groupMemberIDs(gid) {
-		if uid != myID {
-			emitChat("group:new", msg, uid)
+		if uid == myID {
+			continue
 		}
+		emitChat("group:new", msg, uid)
+		pushNotify(uid, myID, string(ntf.Message), gid, "")
 	}
 	c.JSON(http.StatusCreated, msg)
 }
