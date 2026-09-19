@@ -531,6 +531,14 @@ func migrate() {
 	-- месохт. Ин шиносаро худи телефон медиҳад ва сервер бо ҳамон
 	-- паёми мавҷудро бармегардонад.
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS client_id      TEXT DEFAULT '';
+	-- «Расид» — дастгоҳи гиранда паёмро ГИРИФТ (вале ҳанӯз нахонд).
+	--
+	-- Бе ин фиристанда танҳо ду ҳолат медид: «фиристода шуд» ва
+	-- «хонда шуд». Байни онҳо фарқи муҳим ҳаст: паём метавонад ба
+	-- телефони хомӯш нарасида бошад.
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS delivered_at   TIMESTAMPTZ;
+	CREATE INDEX IF NOT EXISTS idx_messages_undelivered
+	  ON messages(receiver_id) WHERE delivered_at IS NULL;
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_client
 	  ON messages(sender_id, client_id) WHERE client_id <> '';
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted     BOOLEAN DEFAULT FALSE;

@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
+import '../outbox.dart';
 import '../../core/api/api_client.dart';
 import '../../models/message_model.dart';
 import '../../models/post_model.dart';
@@ -121,6 +122,16 @@ class _MessageBubbleState extends State<MessageBubble>
     final isMine = m.isMine;
 
     return GestureDetector(
+      // Паёми ноком — зада шавад ва фавран аз нав фиристода шавад.
+      // Бе ин корбар мебинад, ки нашуд, вале коре карда наметавонад.
+      onTap: m.status == MessageStatus.failed
+          ? () {
+              Outbox.instance.drain();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Аз нав фиристода мешавад…'),
+                  duration: Duration(seconds: 2)));
+            }
+          : null,
       onLongPress: () => _showContextMenu(context),
       onDoubleTap: () => widget.onReact?.call('❤️'), // дубл-тап → дил (мисли Instagram)
       onHorizontalDragUpdate: _onHorizontalUpdate,
@@ -1017,6 +1028,13 @@ class _ReadTick extends StatelessWidget {
         child: CircularProgressIndicator(
             color: AppColors.textFaint, strokeWidth: 1.2),
       );
+    }
+
+    // ⚠️ Паёми нофиристода ҳамчун ТИК намоён мешуд — яъне экран низ
+    // дурӯғ мегуфт. Акнун он возеҳ нишон дода мешавад.
+    if (status == MessageStatus.failed) {
+      return Icon(AppIcons.error_outline_rounded,
+          color: AppColors.red, size: 13);
     }
 
     if (status == MessageStatus.read || status == MessageStatus.delivered) {

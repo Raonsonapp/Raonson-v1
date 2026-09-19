@@ -584,7 +584,7 @@ func GetMessages(c *gin.Context) {
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
 		       is_deleted,read,created_at,username,avatar,verified,
 		       share_id,share_kind,share_thumb,share_user,
-		       view_once,viewed_once
+		       view_once,viewed_once,delivered
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
@@ -593,7 +593,8 @@ func GetMessages(c *gin.Context) {
 		         COALESCE(m.share_id,'') share_id, COALESCE(m.share_kind,'') share_kind,
 		         COALESCE(m.share_thumb,'') share_thumb, COALESCE(m.share_user,'') share_user,
 		         COALESCE(m.view_once,false) view_once,
-		         COALESCE(m.viewed_once,false) viewed_once
+		         COALESCE(m.viewed_once,false) viewed_once,
+		         (m.delivered_at IS NOT NULL) delivered
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
@@ -612,11 +613,11 @@ func GetMessages(c *gin.Context) {
 		var uname, uavatar string
 		var verified bool
 		var shareID, shareKind, shareThumb, shareUser string
-		var viewOnce, viewedOnce bool
+		var viewOnce, viewedOnce, delivered bool
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
 			&read, &createdAt, &uname, &uavatar, &verified,
 			&shareID, &shareKind, &shareThumb, &shareUser,
-			&viewOnce, &viewedOnce)
+			&viewOnce, &viewedOnce, &delivered)
 		// «Як бор дида мешавад»: баъд аз кушодан URL дигар фиристода
 		// намешавад — на ба гиранда, на ба фиристанда.
 		if viewOnce && viewedOnce {
@@ -629,10 +630,52 @@ func GetMessages(c *gin.Context) {
 			"shareId": shareID, "shareKind": shareKind,
 			"shareThumb": shareThumb, "shareUser": shareUser,
 			"viewOnce": viewOnce, "viewedOnce": viewedOnce,
+			"delivered": delivered,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
+
+	// ⚠️ Расидани паём маҳз ҲОЗИР сабт мешавад.
+	//
+	// Гиранда паёмҳоро гирифт — пас онҳо «расиданд». Бе ин
+	// фиристанда танҳо ду ҳолат медид: «фиристода шуд» ва «хонда
+	// шуд», ва байни онҳо фарқи муҳим гум мешуд.
+	//
+	// Дар замина иҷро мешавад: ҷавоб набояд интизори ин шавад.
+	go markDelivered(chatID, myID)
+
 	c.JSON(http.StatusOK, gin.H{"messages": messages, "page": page, "limit": limit})
+}
+
+// markDelivered паёмҳои ба ин корбар фиристодашударо «расид» мекунад
+// ва ба фиристанда хабар медиҳад.
+//
+// Танҳо паёмҳои ҳанӯз нарасида навсозӣ мешаванд, вагарна ҳар
+// кушодани чат ба ҳамсӯҳбат селоби сигнал мефиристод.
+func markDelivered(chatID, receiverID string) {
+	rows, err := db.Pool.Query(context.Background(), `
+		UPDATE messages SET delivered_at=NOW()
+		 WHERE chat_id=$1 AND receiver_id=$2::text AND delivered_at IS NULL
+		 RETURNING id, sender_id`, chatID, receiverID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	bySender := map[string][]string{}
+	for rows.Next() {
+		var id, sender string
+		if rows.Scan(&id, &sender) == nil && sender != "" {
+			bySender[sender] = append(bySender[sender], id)
+		}
+	}
+	// Як сигнал ба ҳар фиристанда, на як сигнал ба ҳар паём.
+	for sender, ids := range bySender {
+		sockets.EmitToUser(sender, "chat:delivered", map[string]interface{}{
+			"chatId":     chatID,
+			"messageIds": ids,
+		})
+	}
 }
 
 // POST /chat/:chatId/messages

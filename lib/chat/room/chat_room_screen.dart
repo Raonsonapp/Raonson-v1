@@ -91,6 +91,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _socket.off('chat:new');
     _socket.off('chat:typing');
     _socket.off('chat:read');
+    _socket.off('chat:delivered');
     _socket.off('chat:reaction');
     _socket.off('chat:delete');
     if (_chatId.isNotEmpty) _socket.leaveChat(_chatId);
@@ -275,6 +276,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _socket.off('chat:new');
     _socket.off('chat:typing');
     _socket.off('chat:read');
+    _socket.off('chat:delivered');
     _socket.off('chat:reaction');
     _socket.off('chat:delete');
 
@@ -330,6 +332,30 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         _messages = _messages.map((m) {
           if (m.isMine && m.status != MessageStatus.read) {
             return m.copyWith(status: MessageStatus.read);
+          }
+          return m;
+        }).toList();
+      });
+    });
+
+    // «Расид» — дастгоҳи ҳамсӯҳбат паёмро ГИРИФТ.
+    //
+    // Ин аз «хонда шуд» фарқ мекунад ва фарқ муҳим аст: паём
+    // метавонад ба телефони хомӯш нарасида бошад.
+    _socket.on('chat:delivered', (data) {
+      if (data is! Map || !mounted) return;
+      final ids = (data['messageIds'] as List?)
+              ?.map((e) => e.toString())
+              .toSet() ??
+          <String>{};
+      if (ids.isEmpty) return;
+      setState(() {
+        _messages = _messages.map((m) {
+          // «Хонда шуд» аз «расид» болотар аст — онро паст накунем.
+          if (m.isMine &&
+              ids.contains(m.id) &&
+              m.status != MessageStatus.read) {
+            return m.copyWith(status: MessageStatus.delivered);
           }
           return m;
         }).toList();
