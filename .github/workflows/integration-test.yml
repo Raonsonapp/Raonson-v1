@@ -109,6 +109,7 @@ jobs:
             adb logcat -c || true
             adb logcat '*:E' > emulator-logcat.txt &
             flutter test integration_test/app_smoke_test.dart --dart-define-from-file=.env --dart-define-from-file=dart_defines/ad_units.json --reporter expanded
+            flutter test integration_test/user_journey_test.dart --dart-define-from-file=.env --dart-define-from-file=dart_defines/ad_units.json --reporter expanded
 
       # Агар тест афтад, log-и худи Android сабаби аслиро нишон
       # медиҳад (масалан плагини гумшуда ё OutOfMemory).
