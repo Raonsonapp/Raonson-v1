@@ -89,4 +89,29 @@ void main() {
         reason: 'идомаи сатр бо `\\` дар `script:` кор намекунад:\n'
             '${bad.join('\n')}');
   });
+
+  test('номи иловагии сирр ҳамеша бо номи АСЛӢ ҳамроҳ аст', () {
+    // `release.yml` (ки кор мекунад) `STORE_PASSWORD`-ро мехонад.
+    // `flutter_full_build.yml` бошад `KEYSTORE_PASSWORD` навишта
+    // буд — чунин сирр ВУҶУД НАДОРАД.
+    //
+    // GitHub барои сирри набуда огоҳӣ намедиҳад: он танҳо сатри
+    // ХОЛӢ мегузорад. Баъд Gradle мегӯяд «keystore password was
+    // incorrect» — ва сабаб дар ҷои тамоман дигар ҷустуҷӯ мешавад.
+    //
+    // Қоида: агар файл номи ИЛОВАГӢ истифода барад, ӯ бояд номи
+    // АСЛиро низ дошта бошад (ҳамчун эҳтиёт).
+    const primary = 'STORE_PASSWORD';
+    const alias = 'KEYSTORE_PASSWORD';
+
+    for (final f in _workflows()) {
+      final src = f.readAsStringSync();
+      final hasAlias = src.contains('secrets.$alias');
+      if (!hasAlias) continue;
+      expect(src.contains('secrets.$primary'), isTrue,
+          reason: '${f.path}: танҳо `$alias`-ро мехонад. Дар '
+              '`release.yml` ном `$primary` аст — пас ин ҷо сатри '
+              'ХОЛӢ мемонад ва имзо меафтад');
+    }
+  });
 }

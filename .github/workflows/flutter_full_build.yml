@@ -115,17 +115,36 @@ jobs:
             echo "::warning::KEYSTORE_BASE64 нест — APK/AAB сохта намешавад"
           fi
 
+      # ⚠️ Ин ҷо `secrets.KEYSTORE_PASSWORD` навишта шуда буд.
+      #
+      # Чунин сирр вуҷуд НАДОРАД. Дар `release.yml`, ки кор мекунад,
+      # ном `STORE_PASSWORD` аст. Сирри набуда ба сатри ХОЛӢ табдил
+      # мешавад — ва Gradle мегӯяд:
+      #
+      #   KeytoolException: keystore password was incorrect
+      #
+      # Ин ҳеҷ гоҳ дида нашуда буд, чунки худи workflow ҳатто оғоз
+      # намешуд (ниг. қадами «Санҷиши калиди имзо»).
+      #
+      # Акнун ҳамон номи `release.yml` гирифта мешавад; агар касе
+      # номи дигарро гузошта бошад, он ҳам қабул мешавад.
       - name: Setup release signing
         if: steps.signing.outputs.ready == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 -d > android/app/release-keystore.jks
+          STORE_PW="${STORE_PASSWORD:-$KEYSTORE_PASSWORD}"
+          if [ -z "$STORE_PW" ]; then
+            echo "::error::STORE_PASSWORD (ё KEYSTORE_PASSWORD) нест — имзо намешавад"
+            exit 1
+          fi
           printf 'storeFile=release-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
-            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/key.properties
+            "$STORE_PW" "$KEY_ALIAS" "$KEY_PASSWORD" > android/key.properties
 
       # =============================
       # 8. BUILD APK (RELEASE)
