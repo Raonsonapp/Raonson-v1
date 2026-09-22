@@ -126,6 +126,15 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_deep.py
 
+      # Ҷараёнҳои амиқ: стори бо пурсиш, «Актуальный», танзимоти
+      # ҳисоб, бойгонӣ, ҳаштаг. Маҳз ин санҷиш ошкор кард, ки
+      # «Актуальный» умуман сохта намешуд.
+      - name: Санҷиши ҷараёнҳои амиқ
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_flows.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

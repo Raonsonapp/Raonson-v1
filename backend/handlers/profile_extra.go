@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"context"
 	"strings"
 	"encoding/json"
@@ -228,11 +229,27 @@ func CreateHighlight(c *gin.Context) {
 	}
 	itemsJSON, _ := json.Marshal(b.Items)
 	var id string
+	// ⚠️ `string(itemsJSON)`, на `itemsJSON`.
+	//
+	// `json.Marshal` `[]byte` медиҳад. pgx `[]byte`-ро БАЙТ
+	// мешуморад, на матн — ва Postgres мегӯяд:
+	//
+	//   invalid input syntax for type json (SQLSTATE 22P02)
+	//
+	// Танҳо каст (`::jsonb`) кифоя НЕСТ: масъала на дар навъи
+	// сутун, балки дар ШАКЛИ фиристодани қимат аст.
+	//
+	// Натиҷа: «Актуальный» УМУМАН сохта намешуд. Дар барнома тугма
+	// буд, зер мешуд, ва ҳеҷ чиз намешуд.
 	err := db.Pool.QueryRow(context.Background(),
 		`INSERT INTO highlights (user_id, title, cover_url, story_ids, items)
-		 VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-		myID, b.Title, b.CoverURL, b.StoryIDs, itemsJSON).Scan(&id)
+		 VALUES ($1,$2,$3,$4,$5::jsonb) RETURNING id`,
+		myID, b.Title, b.CoverURL, b.StoryIDs, string(itemsJSON)).Scan(&id)
 	if err != nil {
+		// Сабаби аслӣ бояд дар log бошад. Бе ин «Create failed»
+		// ҳеҷ чиз намегӯяд ва ташхис ғайриимкон аст — маҳз ҳамин
+		// ҳолат ин камбудиро пинҳон дошт.
+		log.Printf("[CreateHighlight] %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create failed"})
 		return
 	}
@@ -256,9 +273,14 @@ func UpdateHighlight(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
 		return
 	}
-	var itemsJSON []byte
+	// Ҳамон сабаб: pgx `[]byte`-ро БАЙТ мешуморад. Бо `nil` кор
+	// мекард (NULL мешуд), вале бо қимати ҳақиқӣ не — яъне
+	// тағйири «Актуальный» низ хомӯш меафтод.
+	var itemsJSON *string
 	if b.Items != nil {
-		itemsJSON, _ = json.Marshal(*b.Items)
+		raw, _ := json.Marshal(*b.Items)
+		str := string(raw)
+		itemsJSON = &str
 	}
 	_, err := db.Pool.Exec(context.Background(), `
 		UPDATE highlights SET
@@ -268,6 +290,7 @@ func UpdateHighlight(c *gin.Context) {
 		WHERE id=$4 AND user_id=$5::text`,
 		b.Title, b.CoverURL, itemsJSON, id, myID)
 	if err != nil {
+		log.Printf("[UpdateHighlight] %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
