@@ -181,11 +181,29 @@ jobs:
       - name: Build APK (release, per-ABI)
         if: steps.signing.outputs.ready == 'true'
         run: |
+          # `--target-platform android-arm,android-arm64` — x86_64
+          # бароварда мешавад. Онро танҳо эмулятор истифода мебарад;
+          # дар телефони ҳақиқӣ ҳеҷ гоҳ лозим намешавад ва беҳуда
+          # даҳҳо мегабайт мегирад.
           flutter build apk --release --split-per-abi \
+            --target-platform android-arm,android-arm64 \
             --dart-define-from-file=.env \
             --dart-define-from-file=dart_defines/ad_units.json
+
+          # Ҳаҷм дар САҲИФАИ run намоён мешавад, на танҳо дар log —
+          # вагарна ҳар бор кофтан лозим мешуд.
+          {
+            echo "### Ҳаҷми APK"
+            echo ""
+            echo "| Файл | Ҳаҷм |"
+            echo "|---|---|"
+            for f in build/app/outputs/flutter-apk/*-release.apk; do
+              echo "| $(basename "$f") | $(du -h "$f" | cut -f1) |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
           echo "── ҳаҷми APK-ҳо ──"
-          ls -lh build/app/outputs/flutter-apk/*.apk | awk '{print $5, $9}'
+          du -h build/app/outputs/flutter-apk/*-release.apk
 
       # =============================
       # 8.1 BUILD AAB (RELEASE)
