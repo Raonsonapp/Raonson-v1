@@ -92,19 +92,23 @@ jobs:
           disable-animations: true
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # ⚠️ ҲАР ФАРМОН ДАР ЯК САТР.
+          #
+          # `android-emulator-runner` ҳар сатрро ҷудогона `sh -c`
+          # мекунад. Барои ҳамин `\` дар охири сатр идомаи фармон
+          # намешавад — он ҳамчун далели изофӣ мемонад. Маҳз аз ин
+          # ду build афтид:
+          #
+          #   [command]/usr/bin/sh -c flutter test ...dart \
+          #   Integration tests and unit tests cannot be run in a
+          #   single invocation
+          #
+          # Flutter далели `\`-ро ҳамчун роҳи ДУЮМИ тест мехонд, ки
+          # берун аз папкаи `integration_test` аст — пас «омехта».
           script: |
             adb logcat -c || true
             adb logcat '*:E' > emulator-logcat.txt &
-            # Роҳи ПУРРАИ файл, на папка.
-            #
-            # `flutter test integration_test` (папка) бо хатои
-            # «Integration tests and unit tests cannot be run in a
-            # single invocation» меафтад: асбоб папкаро ҳамчун
-            # омехтаи ду навъи тест мешуморад.
-            flutter test integration_test/app_smoke_test.dart \
-              --dart-define-from-file=.env \
-              --dart-define-from-file=dart_defines/ad_units.json \
-              --reporter expanded
+            flutter test integration_test/app_smoke_test.dart --dart-define-from-file=.env --dart-define-from-file=dart_defines/ad_units.json --reporter expanded
 
       # Агар тест афтад, log-и худи Android сабаби аслиро нишон
       # медиҳад (масалан плагини гумшуда ё OutOfMemory).
