@@ -72,6 +72,11 @@ jobs:
           JWT_REFRESH_SECRET: ci-only-not-a-real-secret-2
           PORT: '8099'
           GIN_MODE: debug
+          # Чор санҷиш пайдарпай кор мекунанд ва ҳар кадом корбари
+          # нав месозад. Лимити `/auth` (20 дар дақиқа) дуруст аст ва
+          # даст намехӯрад — танҳо дар ИН сервери санҷишӣ васеъ
+          # карда мешавад. Дар продакшн ин тағйирёбанда нест.
+          RATE_LIMIT_MULTIPLIER: '50'
         run: |
           /tmp/raonson-server > /tmp/server.log 2>&1 &
           for i in $(seq 1 40); do
@@ -110,6 +115,16 @@ jobs:
           BASE: http://127.0.0.1:8099
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_privacy.py
+
+      # Бахшҳои чуқур: оё он чи ваъда шудааст ВОҚЕАН мешавад?
+      # Стории «дӯстони наздик» ба бегона нарасад, шарҳи дорои
+      # калимаи пинҳон ба соҳиб нанамояд, паёми гурӯҳ ба ғайри аъзо
+      # нарасад.
+      - name: Санҷиши бахшҳои чуқур
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_deep.py
 
       - name: Log-и сервер
         if: always()

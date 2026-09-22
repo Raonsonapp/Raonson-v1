@@ -24,6 +24,7 @@
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -32,7 +33,16 @@ PW = "Test12345!"
 results = []
 
 
-def call(method, path, body=None, token=None):
+# ⚠️ 429 — лимити дархост, на камбудӣ.
+#
+# Чор санҷиш пайдарпай кор мекунанд ва ҳар кадом корбари нав
+# месозад. Роҳи `/auth` лимит дорад (ин дуруст аст — вагарна
+# пароли касеро кофтан мумкин мебуд). Пас ин ҷо интизор мешавем,
+# на ин ки санҷишро «афтид» ҳисоб кунем.
+_RETRY_ON = (429,)
+
+
+def _call_once(method, path, body=None, token=None):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(BASE + path, data=data, method=method)
     req.add_header("Content-Type", "application/json")
@@ -51,6 +61,16 @@ def call(method, path, body=None, token=None):
     except Exception as e:
         return 0, str(e)
 
+
+
+def call(method, path, body=None, token=None):
+    """Дархост бо интизории худкор ҳангоми лимит."""
+    for attempt in range(4):
+        st, resp = _call_once(method, path, body, token)
+        if st not in _RETRY_ON:
+            return st, resp
+        time.sleep(4 * (attempt + 1))
+    return st, resp
 
 def register(username, email, phone):
     st, _ = call("POST", "/auth/register", {
