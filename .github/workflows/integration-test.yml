@@ -71,14 +71,30 @@ jobs:
 
       # Калидҳо: агар набошанд, тест ҳам мешавад — вале он гоҳ
       # рӯирост мегӯем, ки кадом қисм санҷида нашуд.
+      # ⚠️ Парол ба `.env` навишта мешавад, вале ба log намеравад:
+      # GitHub қимати сирро ХУДКОР пинҳон мекунад, ва ин файл танҳо
+      # дар ҳамин runner мемонад (`.env` дар .gitignore аст).
+      #
+      # Ҳисоби санҷишӣ бояд ҶУДОГОНА бошад, на ҳисоби шахсӣ. Тест
+      # ҳеҷ чиз наменависад — вале ҳар эҳтимол, ҳисоби асосӣ набояд
+      # дар хатар бошад.
       - name: Create .env for dart-define
         env:
           AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
         run: |
-          printf 'AGORA_APP_ID=%s\nBASE_URL=https://mahmadmurodov-raonson.hf.space\n' \
-            "$AGORA_APP_ID" > .env
+          {
+            printf 'AGORA_APP_ID=%s\n' "$AGORA_APP_ID"
+            printf 'BASE_URL=https://mahmadmurodov-raonson.hf.space\n'
+            printf 'TEST_USERNAME=%s\n' "$TEST_USERNAME"
+            printf 'TEST_PASSWORD=%s\n' "$TEST_PASSWORD"
+          } > .env
           if [ -z "$AGORA_APP_ID" ]; then
             echo "::warning::AGORA_APP_ID нест — қисми занг санҷида намешавад"
+          fi
+          if [ -z "$TEST_USERNAME" ] || [ -z "$TEST_PASSWORD" ]; then
+            echo "::warning::TEST_USERNAME/TEST_PASSWORD нестанд — экранҳои ДОХИЛӢ (лента, Reels, чат, ҷустуҷӯ, профил) санҷида НАМЕШАВАНД"
           fi
 
       - name: Run app on Android emulator
@@ -110,6 +126,7 @@ jobs:
             adb logcat '*:E' > emulator-logcat.txt &
             flutter test integration_test/app_smoke_test.dart --dart-define-from-file=.env --dart-define-from-file=dart_defines/ad_units.json --reporter expanded
             flutter test integration_test/user_journey_test.dart --dart-define-from-file=.env --dart-define-from-file=dart_defines/ad_units.json --reporter expanded
+            flutter test integration_test/logged_in_test.dart --dart-define-from-file=.env --dart-define-from-file=dart_defines/ad_units.json --reporter expanded
 
       # Агар тест афтад, log-и худи Android сабаби аслиро нишон
       # медиҳад (масалан плагини гумшуда ё OutOfMemory).
