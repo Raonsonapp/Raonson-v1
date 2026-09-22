@@ -807,7 +807,9 @@ class _CommentItemState extends State<_CommentItem> {
     // Backend edit (PUT)
     if (newText.isEmpty || newText == widget.comment.text) return;
     try {
-      await ApiClient.instance.put('/comments/${widget.comment.id}',
+      // `putOk` — вагарна матни нав дар экран менамуд, вале дар
+      // сервер кӯҳна мемонд.
+      await ApiClient.instance.putOk('/comments/${widget.comment.id}',
           body: {'text': newText});
       widget.onEdit(newText);
     } catch (_) {}

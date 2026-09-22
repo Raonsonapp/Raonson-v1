@@ -2114,9 +2114,9 @@ class _UserRowState extends State<_UserRow> {
     setState(() => _loading = true);
     try {
       if (_following) {
-        await ApiClient.instance.delete('/follow/${widget.user.id}');
+        await ApiClient.instance.deleteOk('/follow/${widget.user.id}');
       } else {
-        await ApiClient.instance.post('/follow/${widget.user.id}');
+        await ApiClient.instance.postOk('/follow/${widget.user.id}');
       }
       if (mounted) setState(() { _following = !_following; _loading = false; });
     } catch (_) {

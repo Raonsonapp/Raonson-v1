@@ -1138,7 +1138,9 @@ class TwoFAState extends State<TwoFactorScreen> {
   Future<void> _toggle(bool v) async {
     setState(() => _enabled = v);
     try {
-      await ApiClient.instance.put('/profile/', body: {'twoFactor': v});
+      // `putOk` — вагарна рад кардани сервер хато ҳисоб намешуд ва
+      // дар экран «фаъол» мемонд, ҳол он ки 2FA хомӯш буд.
+      await ApiClient.instance.putOk('/profile/', body: {'twoFactor': v});
     } catch (_) {
       if (mounted) setState(() => _enabled = !v);
     }
@@ -1331,7 +1333,7 @@ class _BUSState extends State<BlockedUsersScreen> {
 
   Future<void> _unblock(String uid) async {
     try {
-      await ApiClient.instance.post('/users/$uid/unblock');
+      await ApiClient.instance.postOk('/users/$uid/unblock');
       if (mounted) _load();
     } catch (_) {}
   }

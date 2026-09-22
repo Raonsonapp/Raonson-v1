@@ -568,7 +568,8 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     if (text.isEmpty || _sendingReply) return;
     setState(() => _sendingReply = true);
     try {
-      await ApiClient.instance.post('/stories/${_current.id}/reply', body: {'text': text});
+      // `postOk` — вагарна майдон тоза мешуду паём нафиристода мемонд.
+      await ApiClient.instance.postOk('/stories/${_current.id}/reply', body: {'text': text});
       _replyCtrl.clear();
       if (mounted) { setState(() { _showReply = false; _sendingReply = false; }); _resume(); }
     } catch (_) {

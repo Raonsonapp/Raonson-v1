@@ -42,10 +42,13 @@ class FollowService {
     final next = !currentlyFollowing;
     _set(userId, next); // optimistic
     try {
+      // `…Ok` — вагарна рад кардани сервер (масалан маҳдудият ё
+      // бастани ҳисоб) хато ҳисоб намешуд ва дар экран «Обуна шуд»
+      // мемонд, ҳол он ки дар сервер ҳеҷ чиз нашуда буд.
       if (next) {
-        await ApiClient.instance.post('/follow/$userId');
+        await ApiClient.instance.postOk('/follow/$userId');
       } else {
-        await ApiClient.instance.delete('/follow/$userId');
+        await ApiClient.instance.deleteOk('/follow/$userId');
       }
     } catch (_) {
       _set(userId, currentlyFollowing); // баргардонӣ

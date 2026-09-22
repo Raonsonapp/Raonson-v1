@@ -52,9 +52,21 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
   }
 
   Future<void> _remove(GroupMember m) async {
-    await _repo.removeMember(_gid, m.id);
+    final ok = await _repo.removeMember(_gid, m.id);
     if (!mounted) return;
+    // Танҳо баъди тасдиқи сервер. Пеш аъзо ҳамеша нест мешуд —
+    // ҳатто вақте сервер рад мекард — ва баъди навсозӣ бармегашт.
+    if (!ok) {
+      _snack(tr('common.failedRetry'));
+      return;
+    }
     setState(() => _members.removeWhere((x) => x.id == m.id));
+  }
+
+  void _snack(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(text)));
   }
 
   // Аъзои нав илова кардан — ҷустуҷӯи корбар + POST /groups/:id/members
@@ -69,7 +81,8 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
           existingIds: _members.map((m) => m.id).toSet()),
     );
     if (added == null || added.isEmpty) return;
-    await _repo.addMembers(_gid, added);
+    final ok = await _repo.addMembers(_gid, added);
+    if (!ok) _snack(tr('common.failedRetry'));
     await _load();
   }
 
@@ -93,7 +106,12 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
       ),
     );
     if (ok != true) return;
-    await _repo.leave(_gid);
+    // Пеш экран ҳатто ҳангоми хато пӯшида мешуд: корбар гумон
+    // мекард, ки аз гурӯҳ баромад, вале дар он мемонд.
+    if (!await _repo.leave(_gid)) {
+      _snack(tr('common.failedRetry'));
+      return;
+    }
     if (mounted) Navigator.popUntil(context, (r) => r.isFirst);
   }
 

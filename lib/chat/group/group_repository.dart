@@ -68,22 +68,36 @@ class GroupRepository {
     }
   }
 
-  Future<void> addMembers(String groupId, List<String> userIds) async {
+  // Ин се усул пештар `void` буданд ва хатои серверро фурӯ
+  // мебурданд. Дар натиҷа экран ҳар дафъа «шуд» мекард: аъзо аз
+  // рӯйхат нест мешуд, гурӯҳ пӯшида мешуд — ҳол он ки дар сервер
+  // ҳеҷ чиз нашуда буд. Акнун `bool` бармегардонанд.
+
+  Future<bool> addMembers(String groupId, List<String> userIds) async {
     try {
-      await _api.post('/groups/$groupId/members', body: {'userIds': userIds});
-    } catch (_) {}
+      await _api.postOk('/groups/$groupId/members', body: {'userIds': userIds});
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  Future<void> removeMember(String groupId, String userId) async {
+  Future<bool> removeMember(String groupId, String userId) async {
     try {
-      await _api.delete('/groups/$groupId/members/$userId');
-    } catch (_) {}
+      await _api.deleteOk('/groups/$groupId/members/$userId');
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  Future<void> leave(String groupId) async {
+  Future<bool> leave(String groupId) async {
     try {
-      await _api.post('/groups/$groupId/leave');
-    } catch (_) {}
+      await _api.postOk('/groups/$groupId/leave');
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<GroupModel?> joinByToken(String token) async {

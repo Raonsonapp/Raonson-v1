@@ -5,9 +5,74 @@ import 'package:http/http.dart' as http;
 import '../../app/app_config.dart';
 import '../storage/token_storage.dart';
 
+/// Хатои ҷавоби сервер (4xx/5xx).
+///
+/// ⚠️ Чаро ин синф лозим шуд.
+///
+/// `post`/`put`/`delete` ҳангоми 400, 401, 403, 429 ё 500 хато
+/// НАМЕПАРТОЯНД — онҳо `Response`-ро бармегардонанд. Пас коди зерин,
+/// ки дар барнома даҳҳо ҷо такрор мешуд, ҲЕҶ ГОҲ кор намекард:
+///
+/// ```dart
+/// _set(userId, true);            // фавран «Обуна шуд» менависем
+/// try {
+///   await ApiClient.instance.post('/follow/$userId');
+/// } catch (_) {
+///   _set(userId, false);         // ← ин сатр ҳеҷ гоҳ иҷро намешуд
+/// }
+/// ```
+///
+/// Натиҷа: сервер рад мекард, вале дар экран «Обуна шуд» мемонд.
+/// Корбар баъди навсозӣ мебинад, ки обуна нашудааст — «функсия кор
+/// намекунад».
+///
+/// Барои ҳамин усулҳои `…Ok` ҳастанд: онҳо ҳамон коранд, вале
+/// хатои серверро мепартоянд. Дар ҷои даъват танҳо ном иваз мешавад
+/// — `post` → `postOk` — ва `catch`-и аллакай навишташуда зинда
+/// мешавад.
+class ApiException implements Exception {
+  final int status;
+  final String body;
+  const ApiException(this.status, this.body);
+
+  /// Матни `{"message": "..."}`-и сервер, агар бошад.
+  String? get message {
+    try {
+      final m = jsonDecode(body);
+      final s = (m is Map ? m['message'] : null)?.toString();
+      return (s == null || s.isEmpty) ? null : s;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  String toString() => 'ApiException($status): ${message ?? body}';
+}
+
 class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
+
+  /// Ҷавобро месанҷад ва ҳангоми хато `ApiException` мепартояд.
+  static http.Response _ok(http.Response r) {
+    if (r.statusCode >= 400) throw ApiException(r.statusCode, r.body);
+    return r;
+  }
+
+  Future<http.Response> getOk(String path, {Map<String, String>? query}) async =>
+      _ok(await get(path, query: query));
+
+  Future<http.Response> postOk(String path, {Map<String, dynamic>? body}) async =>
+      _ok(await post(path, body: body));
+
+  Future<http.Response> putOk(String path, {Map<String, dynamic>? body}) async =>
+      _ok(await put(path, body: body));
+
+  Future<http.Response> patchOk(String path, {Map<String, dynamic>? body}) async =>
+      _ok(await patch(path, body: body));
+
+  Future<http.Response> deleteOk(String path) async => _ok(await delete(path));
 
   static final http.Client _client = http.Client();
 

@@ -252,19 +252,26 @@ class _ProfileScreenState extends State<ProfileScreen>
             Navigator.pop(context);
             final result = await ReportDialog.showWithDescription(context);
             if (result == null) return;
+            // Пеш «Шикоят фиристода шуд» БЕРУН аз `try` буд: ҳатто
+            // вақте сервер рад мекард, корбар «фиристода шуд»
+            // мехонд ва шикоят ба ҳеҷ ҷо намерафт.
             try {
-              await ApiClient.instance.post('/users/${u.id}/report',
+              await ApiClient.instance.postOk('/users/${u.id}/report',
                   body: {'reason': result.reason, 'description': result.description});
-            } catch (_) {}
-            _snack('Шикоят фиристода шуд');
+              _snack('Шикоят фиристода шуд');
+            } catch (_) {
+              _snack('Нашуд. Дубора кӯшиш кунед');
+            }
           }),
       _tile(AppIcons.do_not_disturb_on_outlined, 'Маҳдуд кун',
           () async {
             Navigator.pop(context);
             try {
-              await ApiClient.instance.post('/users/${u.id}/restrict');
-            } catch (_) {}
-            _snack('Корбар маҳдуд карда шуд');
+              await ApiClient.instance.postOk('/users/${u.id}/restrict');
+              _snack('Корбар маҳдуд карда шуд');
+            } catch (_) {
+              _snack('Нашуд. Дубора кӯшиш кунед');
+            }
           }),
       _tile(AppIcons.link_rounded, 'Линкро нусха кун', () {
         Navigator.pop(context);
