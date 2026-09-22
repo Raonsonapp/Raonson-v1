@@ -57,6 +57,11 @@ func AddComment(c *gin.Context) {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT user_id FROM posts WHERE id=$1`, postID).Scan(&postOwner)
 
+	// Басташуда дар зери пости ман шарҳ навишта наметавонад.
+	if denyIfBlocked(c, myID, postOwner) {
+		return
+	}
+
 	// ⚠️ Калимаҳои пинҳони СОҲИБИ ПОСТ, на нависанда.
 	//
 	// Шарҳ РАД НАМЕШАВАД — он пинҳон мешавад. Агар рад мешуд,
@@ -307,6 +312,10 @@ func FollowUser(c *gin.Context) {
 	myID := mw.UID(c)
 	if targetID == myID {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Cannot follow yourself"})
+		return
+	}
+	// Басташуда обуна шуда наметавонад — на ба ман, на ман ба ӯ.
+	if denyIfBlocked(c, myID, targetID) {
 		return
 	}
 	var isPrivate bool

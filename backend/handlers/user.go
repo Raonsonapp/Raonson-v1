@@ -178,6 +178,17 @@ func GetUserPosts(c *gin.Context) {
 	id     := c.Param("id")
 	myID   := mw.UID(c)
 	if id == "me" { id = myID }
+
+	// ⚠️ Ин санҷиш НАБУД.
+	//
+	// Постҳои ҳисоби ПӮШИДА ба ҳар бегона дода мешуданд — қулфи
+	// дар профил ҳеҷ маъно надошт. Ва корбари БАСТАШУДА ҳам
+	// ҳамаашро медид.
+	if ok, _ := CanSeeProfileContent(myID, id); !ok {
+		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}, "restricted": true})
+		return
+	}
+
 	page   := toInt(c.Query("page"), 1)
 	limit  := toInt(c.Query("limit"), 24)
 	offset := (page - 1) * limit

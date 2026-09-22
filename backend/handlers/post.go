@@ -426,6 +426,12 @@ func TogglePostLike(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
 
+	// Басташуда пости маро лайк карда наметавонад. Пеш метавонист —
+	// ва ман огоҳиномаи лайкро аз ҳамон касе мегирифтам, ки бастам.
+	if denyIfBlocked(c, myID, ownerOfPost(pid)) {
+		return
+	}
+
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
 		`SELECT EXISTS(SELECT 1 FROM post_likes WHERE post_id=$1::text AND user_id=$2::text)`,

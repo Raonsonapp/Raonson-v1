@@ -441,6 +441,9 @@ func scanStoryRows(rows interface {
 func GetOrCreateChat(c *gin.Context) {
 	myID   := mw.UID(c)
 	peerID := c.Param("userId")
+	if denyIfBlocked(c, myID, peerID) {
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"chatId": sortedChatID(myID, peerID)})
 }
 

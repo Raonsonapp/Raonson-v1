@@ -177,6 +177,12 @@ func SendMessageExt(c *gin.Context) {
 		return
 	}
 
+	// Басташуда паём фиристода наметавонад — на ба ман, на ман ба ӯ.
+	// Пеш паём мерасид ва ҳатто огоҳинома медод.
+	if denyIfBlocked(c, myID, receiver) {
+		return
+	}
+
 	// Эътибори медиа: танҳо URL-и https + навъи иҷозатдодашуда.
 	if body.MediaURL != "" {
 		if !strings.HasPrefix(body.MediaURL, "https://") {

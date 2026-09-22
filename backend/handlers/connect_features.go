@@ -29,6 +29,9 @@ func BlockUser(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO blocks(blocker_id, blocked_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 		myID, target)
+	// Ҳамон сабаб: вагарна басташуда то 3 сония постҳоро боз мебинад.
+	mw.InvalidateUserCache(myID)
+	mw.InvalidateUserCache(target)
 	// best-effort: мутақобилан unfollow. RETURNING лозим аст — то донем
 	// кадом робита вуҷуд дошт ва шумории дурустро кам кунем. Бе ин
 	// followers_count/following_count абадӣ нодуруст мемонад.
@@ -66,6 +69,19 @@ func UnblockUser(c *gin.Context) {
 	target := c.Param("id")
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM blocks WHERE blocker_id=$1 AND blocked_id=$2`, myID, target)
+
+	// ⚠️ Бе ин сатрҳо ҷавоби КЭШШУДА мемонад.
+	//
+	// `/users/:id/posts` 3 сония кэш мешавад. Ҳангоми бастан он
+	// рӯйхати ХОЛӢ бармегардонад — ва ҳамон холӣ дар кэш меафтад.
+	// Баъди кушодан корбар то 3 сония боз ҳеҷ чиз намедид ва
+	// гумон мекард, ки кушодан кор накард.
+	//
+	// Ҳарду тараф тоза мешаванд: кэш бо шиносаи БИНАНДА нигоҳ
+	// дошта мешавад, пас танҳо яктарафа тоза кардан басанда нест.
+	mw.InvalidateUserCache(myID)
+	mw.InvalidateUserCache(target)
+
 	c.JSON(http.StatusOK, gin.H{"unblocked": true})
 }
 
