@@ -1,3 +1,4 @@
+import '../../core/ads/feed_ad_card.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -29,6 +30,13 @@ import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
 import '../../shop/shop_screen.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
+
+/// Байни чанд пост як реклама.
+///
+/// Instagram тақрибан ҳар 4–6 постро як реклама мемонад. Камтар
+/// кардан лентаро ба реклама табдил медиҳад; зиёд кардан даромадро
+/// нест мекунад.
+const int kPostsPerAd = 5;
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -413,10 +421,28 @@ class _FeedBody extends StatelessWidget {
                 },
               ),
             ),
+          // ── Лента бо реклама, мисли Instagram ──
+          //
+          // Дар Instagram реклама дар ХУДИ лента, байни постҳо
+          // меояд — на ҳамчун равзанаи болопӯш.
+          //
+          // `FeedAdCard` кайҳо навишта шуда буд, вале аз ҲЕҶ ҶО
+          // истифода намешуд. Яъне реклама дар лента умуман набуд.
+          //
+          // Ҳар `kPostsPerAd` пост як карти реклама. Агар шиноса
+          // танзим нашуда бошад, карт худаш холӣ мемонад —
+          // `FeedAdCard` инро месанҷад.
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                if (index == state.posts.length) {
+                // Ҷои реклама: баъди ҳар `kPostsPerAd` пост.
+                if (index > 0 && index % (kPostsPerAd + 1) == kPostsPerAd) {
+                  return const FeedAdCard();
+                }
+                // Шумораи постҳо аз рӯи ҷойҳои гирифтаи реклама.
+                final postIndex = index - index ~/ (kPostsPerAd + 1);
+
+                if (postIndex >= state.posts.length) {
                   return state.hasMore
                       ? const Padding(padding: EdgeInsets.all(16),
                           child: Center(child: CircularProgressIndicator(
@@ -424,14 +450,16 @@ class _FeedBody extends StatelessWidget {
                       : const SizedBox(height: 40);
                 }
                 return PostCard(
-                  key: ValueKey(state.posts[index].id), // ҳар пост state-и худаш
-                  post: state.posts[index],
+                  key: ValueKey(state.posts[postIndex].id), // ҳар пост state-и худаш
+                  post: state.posts[postIndex],
                   isActive: isActive,
                   onDeleted: () => context.read<FeedController>()
-                      .removePost(state.posts[index].id),
+                      .removePost(state.posts[postIndex].id),
                 );
               },
-              childCount: state.posts.length + 1,
+              // Постҳо + картҳои реклама + як сатри поёнӣ.
+              childCount: state.posts.length +
+                  state.posts.length ~/ kPostsPerAd + 1,
             ),
           ),
         ],

@@ -461,8 +461,31 @@ class AdsManager extends ChangeNotifier {
   Future<void> onReelSwiped() async {
     _reelsSinceAd++;
     if (_reelsSinceAd >= _reelsBetweenAds) {
+      _reelsSinceAd = 0;
       await showInterstitialIfReady();
     }
+  }
+
+  // ── Реклама байни сторисҳо ──
+  //
+  // Ҳисобкунак ин ҷост, на дар экрани стори: корбар аз як гурӯҳ ба
+  // гурӯҳи дигар мегузарад ва ҳар гурӯҳ `State`-и НАВ месозад. Агар
+  // ҳисоб он ҷо мебуд, он ҳар дафъа аз сифр сар мешуд ва реклама
+  // ҳеҷ гоҳ ба нуқтаи худ намерасид.
+  int _storiesSinceAd = 0;
+  static const int _storiesBetweenAds = 5;
+
+  /// Баъди гузаштан ба стории навбатӣ даъват мешавад.
+  ///
+  /// `true` — реклама нишон дода шуд (экрани стори бояд интизор
+  /// шавад). Агар реклама омода набошад, ҳеҷ чиз намешавад ва
+  /// стори мисли пештара давом мекунад — интизори боркунӣ НЕСТ.
+  Future<bool> onStoryAdvanced() async {
+    _storiesSinceAd++;
+    if (_storiesSinceAd < _storiesBetweenAds) return false;
+    if (!_interstitialReady) return false; // интизор намекунем
+    _storiesSinceAd = 0;
+    return showInterstitialIfReady();
   }
 
   Future<bool> showInterstitialIfReady() async {
