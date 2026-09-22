@@ -80,12 +80,36 @@ android {
 
     // Ҳар ABI APK-и ҷудогона (барои тест берун аз Play хурдтар);
     // дар AAB Play худаш тақсим мекунад.
-    splits {
-        abi {
-            isEnable = (System.getenv("SPLIT_PER_ABI") == "true")
-            reset()
-            include("armeabi-v7a", "arm64-v8a")
-            isUniversalApk = false
+    //
+    // ⚠️ Агар `flutter build apk --split-per-abi` даъват шавад,
+    // ин блок ба он ДАСТ НАМЕРАСОНАД.
+    //
+    // Чаро: Flutter худаш `splits.abi`-ро фаъол мекунад. Баъд ин
+    // блок иҷро мешуд ва онро ХОМӮШ мекард (чун `SPLIT_PER_ABI`
+    // набуд). Дар натиҷа як output-и бе ABI мемонд, вале плагини
+    // Flutter ҳанӯз гумон мекард, ки тақсим фаъол аст:
+    //
+    //   flutter.groovy:1182
+    //   int abiVersionCode = ABI_VERSION.get(output.getFilter(ABI))
+    //
+    // `get(null)` → `null`, ва рехтани `null` ба `int` мепартояд:
+    //
+    //   GroovyCastException: Cannot cast object 'null' ... to int
+    //
+    // (Сатри навбатии худи Flutter `if (abiVersionCode != null)`
+    // аст — яъне он ин ҳолатро пешбинӣ кардааст, вале эълони `int`
+    // пеш аз он мепартояд. Ин камбудии худи плагин аст.)
+    val flutterHandlesSplit =
+        (project.findProperty("split-per-abi") as String?)?.toBoolean() ?: false
+
+    if (!flutterHandlesSplit) {
+        splits {
+            abi {
+                isEnable = (System.getenv("SPLIT_PER_ABI") == "true")
+                reset()
+                include("armeabi-v7a", "arm64-v8a")
+                isUniversalApk = false
+            }
         }
     }
 }

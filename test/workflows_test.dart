@@ -148,4 +148,23 @@ void main() {
               'артефакт холӣ мемонад');
     }
   });
+
+  test('блоки splits тақсими худи Flutter-ро хомӯш намекунад', () {
+    // Агар `flutter build apk --split-per-abi` даъват шавад, Flutter
+    // худаш `splits.abi`-ро фаъол мекунад. Агар баъд блоки лоиҳа
+    // онро хомӯш кунад, як output-и БЕ ABI мемонад ва плагини
+    // Flutter меафтад:
+    //
+    //   flutter.groovy:1182
+    //   int abiVersionCode = ABI_VERSION.get(output.getFilter(ABI))
+    //   → GroovyCastException: Cannot cast object 'null' ... to int
+    final f = File('android/app/build.gradle.kts');
+    if (!f.existsSync()) return;
+    final src = f.readAsStringSync();
+    if (!src.contains('splits')) return;
+    expect(src.contains('split-per-abi'), isTrue,
+        reason: 'блоки `splits` ҳаст, вале парчами худи Flutter '
+            '(`split-per-abi`) ба назар гирифта намешавад — '
+            'ду механизм ба ҳам мерасанд ва build меафтад');
+  });
 }
