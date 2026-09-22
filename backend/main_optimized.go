@@ -16,6 +16,7 @@ import (
 	"raonson/jobs"
 	mw "raonson/middleware"
 	"raonson/sockets"
+	"raonson/utils"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -107,6 +108,12 @@ func main() {
 				"storage": handlers.StorageReady(),
 				// Реклама (YANDEX_REWARDED_ID).
 				"rewardedAds": os.Getenv("YANDEX_REWARDED_ID") != "",
+				// Рамзи тасдиқ: кадом роҳҳо танзим шудаанд.
+				//
+				// «СМС намеояд» аксаран на хатои код, балки
+				// набудани TWILIO_* аст. Бе ин сатр инро танҳо аз
+				// log фаҳмидан мумкин буд.
+				"otp": utils.OTPChannelsReady(),
 			},
 		})
 	})

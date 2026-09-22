@@ -118,20 +118,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _sendPhoneOtp(String phone) async {
     setState(() { _loading = true; _error = null; });
     try {
-      await _authRepo.sendPhoneOtp(phone);
+      final res = await _authRepo.sendPhoneOtp(phone);
       if (!mounted) return;
       setState(() => _loading = false);
-      final verified = await _showOtpDialog(phone);
+      // Аз кадом роҳ рафт — SMS, Telegram ё WhatsApp. Бе ин корбар
+      // намедонист, ки куҷоро нигоҳ кунад.
+      final verified =
+          await _showOtpDialog(phone, (res['channel'] ?? '').toString());
       if (verified == true) {
         _phoneVerified = true;
         _goto(1);
+      }
+    } on ApiException catch (e) {
+      // Матни худи сервер — на «хато шуд». Пеш ин ҷо ҳеҷ гоҳ
+      // намерасид: `post` хато намепартофт ва равзанаи рамз
+      // кушода мешуд, гӯё паём рафта бошад.
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.message ?? 'Рамз фиристода нашуд';
+        });
       }
     } catch (_) {
       if (mounted) setState(() { _loading = false; _error = 'Рамз фиристода нашуд'; });
     }
   }
 
-  Future<bool?> _showOtpDialog(String phone) async {
+  Future<bool?> _showOtpDialog(String phone, String channel) async {
     final otpCtrl = TextEditingController();
     bool verifying = false;
     String? dlgError;
@@ -146,7 +159,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           title: Text(tr('ui.d0e79670ac'),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(tr('register.codeSentTo', {'phone': phone}),
+            Text(
+                channel == 'sms'
+                    ? tr('register.codeSentSms', {'phone': phone})
+                    : channel == 'telegram'
+                        ? tr('register.codeSentTelegram', {'phone': phone})
+                        : channel == 'whatsapp'
+                            ? tr('register.codeSentWhatsapp', {'phone': phone})
+                            : tr('register.codeSentTo', {'phone': phone}),
+                textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
             const SizedBox(height: 16),
             TextField(

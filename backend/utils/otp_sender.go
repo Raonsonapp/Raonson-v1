@@ -321,3 +321,83 @@ func MaskPhone(phone string) string {
 	}
 	return phone[:len(phone)-2] + "**"
 }
+
+// ══════════════════════════════════════════════════════════════════
+//  Фиристодани рамз ба ТЕЛЕФОН — бо якчанд канал
+//
+//  Камбудии аслӣ: `SendPhoneOTP` ТАНҲО Telegram-ро истифода мебурд.
+//  Telegram Gateway SMS ба сим-карта НАМЕФИРИСТАД — он паёмро дар
+//  барномаи Telegram мерасонад ва танҳо баъди тасдиқи ҳисоб дар
+//  gateway.telegram.org кор мекунад.
+//
+//  `SendSMSOTP` (Twilio — SMS-и ҳақиқӣ) навишта шуда буд, вале
+//  ҳеҷ гоҳ даъват намешуд. Барои ҳамин корбар мегуфт: «смс
+//  намеояд».
+//
+//  Акнун каналҳо бо навбат кӯшиш мешаванд ва маълум мешавад, ки
+//  рамз аз кадом роҳ рафт — ё чаро ҳеҷ кадом нарафт.
+// ══════════════════════════════════════════════════════════════════
+
+// OTPChannel — кадом роҳ кор кард.
+type OTPChannel string
+
+const (
+	ChannelSMS      OTPChannel = "sms"
+	ChannelTelegram OTPChannel = "telegram"
+	ChannelWhatsApp OTPChannel = "whatsapp"
+)
+
+// SendPhoneCode рамзро ба телефон мефиристад.
+//
+// Тартиб: SMS → Telegram → WhatsApp. SMS аввал аст, чунки он ба
+// ҲАР телефон мерасад — барномаи иловагӣ лозим нест.
+//
+// Бармегардонад: кадом канал кор кард ва хатоҳои ҳамаи каналҳо
+// (барои log; ба корбар нишон дода намешавад).
+func SendPhoneCode(phone, otp string) (OTPChannel, error) {
+	type attempt struct {
+		name OTPChannel
+		fn   func() error
+	}
+	attempts := []attempt{
+		{ChannelSMS, func() error { return SendSMSOTP(phone, otp) }},
+		{ChannelTelegram, func() error { return SendTelegramOTP(phone, otp) }},
+		{ChannelWhatsApp, func() error { return SendWhatsAppOTP(phone, otp) }},
+	}
+
+	var errs []string
+	for _, a := range attempts {
+		if err := a.fn(); err == nil {
+			return a.name, nil
+		} else {
+			errs = append(errs, string(a.name)+": "+err.Error())
+		}
+	}
+	return "", fmt.Errorf("ҳеҷ канал кор накард — %s", strings.Join(errs, "; "))
+}
+
+// OTPChannelsReady — кадом каналҳо ТАНЗИМ шудаанд.
+//
+// Ин ба `/health` меравад, то соҳиби барнома бидуни фиристодани
+// ягон калид бубинад, ки чаро SMS намеояд. Худи калидҳо ҳеҷ гоҳ
+// бармегарданд — танҳо «ҳаст ё нест».
+func OTPChannelsReady() map[string]bool {
+	twilio := os.Getenv("TWILIO_SID") != "" && os.Getenv("TWILIO_TOKEN") != ""
+	return map[string]bool{
+		"sms":      twilio && os.Getenv("TWILIO_FROM") != "",
+		"whatsapp": twilio && os.Getenv("TWILIO_WA_FROM") != "",
+		"telegram": os.Getenv("TELEGRAM_GATEWAY_TOKEN") != "",
+		"email": os.Getenv("BREVO_API_KEY") != "" ||
+			(os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != ""),
+	}
+}
+
+// OTPMissingHint — матни кӯтоҳ барои соҳиби барнома: чиро танзим кардан.
+func OTPMissingHint() string {
+	r := OTPChannelsReady()
+	if r["sms"] || r["telegram"] || r["whatsapp"] {
+		return ""
+	}
+	return "барои SMS: TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM; " +
+		"барои Telegram: TELEGRAM_GATEWAY_TOKEN"
+}

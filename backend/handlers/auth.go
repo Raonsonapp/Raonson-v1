@@ -403,13 +403,36 @@ func SendPhoneOTP(c *gin.Context) {
 	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
 	mw.CacheSet("otp:phone:"+phone, []byte(otp), 5*time.Minute)
 
-	sendErr := utils.SendTelegramOTP(phone, otp)
+	// Пеш ин ҷо ТАНҲО Telegram буд. Telegram Gateway ба сим-карта
+	// SMS НАМЕФИРИСТАД — барои ҳамин корбар мегуфт «смс намеояд».
+	// Акнун аввал SMS (Twilio), баъд Telegram, баъд WhatsApp.
+	channel, sendErr := utils.SendPhoneCode(phone, otp)
 
-	resp := gin.H{"message": "Рамз фиристода шуд", "to": utils.MaskPhone(phone)}
 	if sendErr != nil {
-		log.Printf("[SendPhoneOTP] telegram send failed: %v", sendErr)
-		resp["message"] = "Рамз фиристода нашуд. Telegram дар телефонатон бошад."
-		resp["error"] = true
+		// Барои корбар: рамз НАРАФТ — ва ин бояд хатои ҳақиқӣ бошад,
+		// вагарна барнома равзанаи «рамзро ворид кунед» мекушояд ва
+		// корбар паёмеро интизор мешавад, ки ҳеҷ гоҳ намеояд.
+		log.Printf("[SendPhoneOTP] %v", sendErr)
+		mw.CacheDel("otp:phone:" + phone)
+
+		body := gin.H{
+			"error":   true,
+			"message": "Рамз фиристода нашуд. Рақамро санҷед ё дертар кӯшиш кунед.",
+			"ready":   utils.OTPChannelsReady(),
+		}
+		// Барои СОҲИБИ барнома: чиро танзим кардан. Ин калид нест —
+		// танҳо номи танзимоти норасида.
+		if hint := utils.OTPMissingHint(); hint != "" {
+			body["setup"] = hint
+		}
+		c.JSON(http.StatusBadGateway, body)
+		return
+	}
+
+	resp := gin.H{
+		"message": "Рамз фиристода шуд",
+		"to":      utils.MaskPhone(phone),
+		"channel": string(channel), // sms | telegram | whatsapp
 	}
 	if os.Getenv("OTP_ECHO") == "1" && gin.Mode() != gin.ReleaseMode {
 		resp["otp"] = otp

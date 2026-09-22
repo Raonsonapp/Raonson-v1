@@ -88,17 +88,32 @@ func SendEmailVerify(c *gin.Context) {
 	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
 	mw.CacheSet(emailOTPKey(uid, email), []byte(otp), 10*time.Minute)
 
-	sendErr := utils.SendEmailOTP(email, otp)
+	if err := utils.SendEmailOTP(email, otp); err != nil {
+		// ⚠️ Пеш ин ҷо 200 бо `error: true` бармегашт — ҳамон
+		// камбудие, ки дар OTP-и телефон буд. Барнома 200-ро
+		// муваффақият мешумурд, экрани «рамзро ворид кунед»
+		// мекушод, ва корбар мактуберо интизор мешуд, ки ҳеҷ гоҳ
+		// нафиристода буд.
+		//
+		// Ин маҳз дар санҷиши ин файл ошкор шуд.
+		log.Printf("[SendEmailVerify] send failed: %v", err)
+		mw.CacheDel(emailOTPKey(uid, email))
+
+		body := gin.H{
+			"error":   true,
+			"message": "Рамз фиристода нашуд. Почтаро санҷед ё дертар кӯшиш кунед.",
+			"ready":   utils.OTPChannelsReady(),
+		}
+		if !utils.OTPChannelsReady()["email"] {
+			// Барои соҳиби барнома — номи танзимоти норасида, на калид.
+			body["setup"] = "BREVO_API_KEY ё SMTP_USER + SMTP_PASS"
+		}
+		c.JSON(http.StatusBadGateway, body)
+		return
+	}
 
 	resp := gin.H{"message": "Рамз ба почта фиристода шуд",
 		"to": utils.MaskEmail(email)}
-	if sendErr != nil {
-		// Сабаби аслиро ба корбар намегӯем, вале дар log мемонад —
-		// вагарна «мактуб намеояд» ҳеҷ гоҳ ташхис намешавад.
-		log.Printf("[SendEmailVerify] send failed: %v", sendErr)
-		resp["message"] = "Рамз фиристода нашуд. Почтаро санҷед."
-		resp["error"] = true
-	}
 	if os.Getenv("OTP_ECHO") == "1" && gin.Mode() != gin.ReleaseMode {
 		resp["otp"] = otp
 	}

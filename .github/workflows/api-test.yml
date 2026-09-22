@@ -1,0 +1,98 @@
+name: Санҷиши сервер бо базаи ҳақиқӣ
+
+# ═══════════════════════════════════════════════════════════════════
+#  Қабати сеюми санҷиш.
+#
+#    flutter test        — мантиқи барнома
+#    integration-test    — барнома дар эмулятори Android
+#    ИН ҶО              — сервер бо PostgreSQL-и ҳақиқӣ
+#
+#  Ин ҷо сервер воқеан партофта мешавад, ду корбар сохта мешавад ва
+#  ҳамаи ҷараёнҳо мегузаранд: пост бо музика, лайк, шарҳ, огоҳинома,
+#  чат, стори, explore, кашф.
+#
+#  Маҳз ин қабат камбудиҳоеро мегирад, ки дигарон намебинанд:
+#  музикаи пост сабт намешавад, паёми такрорӣ дукарата мешавад,
+#  сервер «фиристода шуд» мегӯяд, вале чизе нафиристодааст.
+# ═══════════════════════════════════════════════════════════════════
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/profile-settings-home-feed-N5ct0]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/api-test.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: raonson
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: backend/go.sum
+
+      - name: Тестҳои воҳиди Go
+        working-directory: backend
+        run: go test ./...
+
+      - name: Сохтани сервер
+        working-directory: backend
+        run: go build -o /tmp/raonson-server .
+
+      # Ҳеҷ калиди ҳақиқӣ ин ҷо нест ва лозим ҳам не: санҷиш
+      # мантиқи серверро мебинад, на FCM ё R2. Маҳз барои ҳамин
+      # интизор аст, ки рамзи телефон 502 диҳад.
+      - name: Партофтани сервер
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+          JWT_SECRET: ci-only-not-a-real-secret
+          JWT_REFRESH_SECRET: ci-only-not-a-real-secret-2
+          PORT: '8099'
+          GIN_MODE: debug
+        run: |
+          /tmp/raonson-server > /tmp/server.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8099/health > /dev/null 2>&1; then
+              echo "сервер тайёр"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::сервер дар 80 сония накушод"
+          tail -50 /tmp/server.log
+          exit 1
+
+      - name: Ҳолати сервер
+        run: curl -fsS http://127.0.0.1:8099/health
+
+      - name: Санҷиши ҳамаи бахшҳо
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_smoke.py
+
+      - name: Log-и сервер
+        if: always()
+        run: tail -120 /tmp/server.log

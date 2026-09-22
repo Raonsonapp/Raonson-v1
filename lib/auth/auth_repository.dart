@@ -82,13 +82,28 @@ class AuthRepository {
     return res.statusCode < 400;
   }
 
-  /// OTP-ро ба телефон тавассути Telegram мефиристад.
+  /// Рамзи 6-рақамаро ба телефон мефиристад.
+  ///
+  /// Сервер каналҳоро бо навбат кӯшиш мекунад: SMS → Telegram →
+  /// WhatsApp. Дар ҷавоб `channel` мегӯяд, ки рамз аз кадом роҳ
+  /// рафт — то дар экран навишта шавад «SMS фиристода шуд», на
+  /// «Telegram-ро кушоед».
+  ///
+  /// ⚠️ Агар ҳеҷ канал кор накунад, сервер 502 медиҳад ва ин ҷо
+  /// `ApiException` партофта мешавад. Пеш ҳар ҷавоб «муваффақ»
+  /// ҳисоб мешуд ва барнома равзанаи «рамзро ворид кунед»
+  /// мекушод — корбар паёмеро интизор мешуд, ки ҳеҷ гоҳ намеомад.
   Future<Map<String, dynamic>> sendPhoneOtp(String phone) async {
-    final res = await _api.post(
+    final res = await _api.postOk(
       ApiEndpoints.sendPhoneOtp,
       body: {'phone': phone},
     );
-    return jsonDecode(res.body) as Map<String, dynamic>;
+    final j = jsonDecode(res.body) as Map<String, dynamic>;
+    // Сервери кӯҳна метавонад 200 бо `error: true` диҳад.
+    if (j['error'] == true) {
+      throw ApiException(502, res.body);
+    }
+    return j;
   }
 
   /// OTP-ро тасдиқ мекунад.
