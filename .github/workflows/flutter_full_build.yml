@@ -149,11 +149,31 @@ jobs:
       # =============================
       # 8. BUILD APK (RELEASE)
       # =============================
-      - name: Build APK (release)
+      # ⚠️ APK-и ЯГОНА 177 МБ буд.
+      #
+      # Сабаб дар acc ё расм НЕСТ — ҳамаи assets 1.7 МБ аст. Вазн аз
+      # китобхонаҳои НАТИВӢ меояд (Agora RTC, video_compress,
+      # video_player), ва APK-и оддӣ онҳоро барои ҲАМАИ меъморӣ
+      # якбора дар бар мегирад.
+      #
+      # `android/app/build.gradle.kts` аллакай тақсимро дастгирӣ
+      # мекунад, вале он бо `SPLIT_PER_ABI` хомӯш буд.
+      #
+      # Акнун ду APK сохта мешавад — `arm64-v8a` (қариб ҳамаи
+      # телефонҳои нав) ва `armeabi-v7a` (кӯҳнаҳо). Ҳар яке хеле
+      # сабуктар аст.
+      #
+      # AAB даст намехӯрад: Google Play худаш барои ҳар телефон
+      # тақсим мекунад.
+      - name: Build APK (release, per-ABI)
         if: steps.signing.outputs.ready == 'true'
+        env:
+          SPLIT_PER_ABI: 'true'
         run: |
           flutter build apk --release --dart-define-from-file=.env \
             --dart-define-from-file=dart_defines/ad_units.json
+          echo "── ҳаҷми APK-ҳо ──"
+          ls -lh build/app/outputs/flutter-apk/*.apk | awk '{print $5, $9}'
 
       # =============================
       # 8.1 BUILD AAB (RELEASE)
@@ -172,7 +192,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: raonson-release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          # Бо тақсим ном `app-arm64-v8a-release.apk` ва
+          # `app-armeabi-v7a-release.apk` мешавад, на `app-release.apk`.
+          path: build/app/outputs/flutter-apk/*-release.apk
+          if-no-files-found: error
 
       # =============================
       # 9.1 UPLOAD AAB ARTIFACT
