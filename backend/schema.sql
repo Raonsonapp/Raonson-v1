@@ -245,6 +245,12 @@
 	-- ── Verification expiry (NULL = беохир) ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_until TIMESTAMPTZ;
 
+	-- ── Тасдиқи почта ──
+	--
+	-- ⚠️ Ин бо сутуни `verified` (аломати кабуд) ҲЕҶ АЛОҚА НАДОРАД.
+	-- Он ҷо «шахси машҳур», ин ҷо «почта воқеан аз они ӯст».
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
+
 	-- ── VIP (720p/1080p-и аниме) — admin медиҳад ──
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS is_vip BOOLEAN DEFAULT FALSE;
 

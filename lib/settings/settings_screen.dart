@@ -15,6 +15,7 @@ import '../app/app_state.dart';
 import '../app/app_settings.dart';
 import '../app/app_theme.dart';
 import 'hidden_words_screen.dart';
+import '../auth/verification/email_verify_screen.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/api/api_client.dart';
@@ -931,6 +932,19 @@ class SecurityScreen extends StatelessWidget {
           onTap: () => Navigator.push(context,
               MaterialPageRoute(
                   builder: (_) => const TwoFactorScreen())),
+        ),
+        const _ThinDiv(),
+        // Тасдиқи почта.
+        //
+        // Экрани он кайҳо навишта шуда буд, вале ба он на роҳ буд,
+        // на роҳи серверӣ — `/auth/verify-email` вуҷуд надошт. Ҳоло
+        // ҳарду ҳастанд ва даромадгоҳ маҳз ин ҷост, мисли Instagram.
+        _NavTile(
+          icon:  AppIcons.email_outlined,
+          title: tr('settings.verifyEmail'),
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(
+                  builder: (_) => const EmailVerifyScreen())),
         ),
         const _ThinDiv(),
         _NavTile(

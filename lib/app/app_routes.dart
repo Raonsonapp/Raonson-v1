@@ -3,6 +3,8 @@ abstract class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
 
+  // Тасдиқи почта: ном навиштан → рамз аз почта.
+  static const String verifyEmail = '/verify-email';
   static const String otpVerify = '/otp-verify';
   static const String forgotPassword = '/forgot-password';
   static const String resetPassword = '/reset-password';

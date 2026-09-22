@@ -16,6 +16,8 @@ import '../notifications/notifications_screen.dart';
 import '../auth/login/login_screen.dart';
 import '../auth/register/register_flow_screen.dart';
 import '../auth/password/forgot_password_screen.dart';
+import '../auth/verification/email_verify_screen.dart';
+import '../auth/verification/otp_verify_screen.dart';
 import '../auth/password/reset_password_screen.dart';
 import '../feed/hashtag/hashtag_screen.dart';
 import '../friends/friends_screen.dart'; // ✅ НАВ
@@ -41,7 +43,7 @@ class AppController {
         return _page(const RegisterScreen());
       case AppRoutes.home:
         return _page(const BottomNavScaffold());
-      case '/create-reel':
+      case AppRoutes.createReel: // '/create-reel'
         return _page(const GalleryPickerScreen(initialMode: CreateMode.reel));
       case AppRoutes.reels:
         return _page(const ReelsScreen());
@@ -98,6 +100,17 @@ class AppController {
 
       case '/create-story':
         return _page(const GalleryPickerScreen(initialMode: CreateMode.story));
+
+      // ── Тасдиқи почта ──
+      //
+      // Ин ду экран мавҷуд буданд, вале дар ин ҷо case надоштанд:
+      // ҳар кӣ ба `/otp-verify` мерафт, ба `default` меафтид ва
+      // экрани ВУРУД мегирифт. Ҳоло роҳ ҳаст.
+      case AppRoutes.verifyEmail:
+        return _page(const EmailVerifyScreen());
+      case AppRoutes.otpVerify:
+        return _page(OtpVerifyScreen(
+            email: settings.arguments as String? ?? ''));
 
       // ── Password recovery ──
       case AppRoutes.forgotPassword:

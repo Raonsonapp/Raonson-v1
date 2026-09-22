@@ -1,6 +1,21 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import '../../core/api/api_client.dart';
+
 import '../../app/app_theme.dart';
+import '../../core/api/api_client.dart';
+import '../../core/i18n/strings.dart';
+
+// Тасдиқи почта — қадами дуюм: рамзи аз почта омада.
+//
+// ⚠️ Ду камбудии ҷиддии пештара:
+//
+//  1. `ApiClient.post` ҳангоми 4xx хато намепартояд. Пас рамзи
+//     НОДУРУСТ ҳам «тасдиқ» мешуд — экран мегузашт, гӯё ҳама чиз
+//     дуруст бошад.
+//  2. Баъди муваффақият ба `/login` мегузашт. Ин экран аз
+//     «Танзимот → Амният» кушода мешавад, яъне корбар аллакай
+//     дохил шудааст — ӯро ба вуруд бурдан хато буд.
 
 class OtpVerifyScreen extends StatefulWidget {
   final String email;
@@ -26,7 +41,8 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   }
 
   Future<void> _verifyOtp() async {
-    if (_otpController.text.length < 4) return;
+    final otp = _otpController.text.trim();
+    if (otp.length < 4) return;
 
     setState(() {
       _isLoading = true;
@@ -34,45 +50,68 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
     });
 
     try {
-      await ApiClient.instance.post(
+      final res = await ApiClient.instance.post(
         '/auth/verify-otp',
-        body: {
-          'email': widget.email,
-          'otp': _otpController.text.trim(),
-        },
+        body: {'email': widget.email, 'otp': otp},
       );
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+      if (res.statusCode >= 400) {
+        if (mounted) {
+          setState(() => _error = _messageOf(res.body) ?? tr('verify.badCode'));
+        }
+        return;
       }
-    } catch (e) {
-      setState(() {
-        _error = 'Invalid verification code';
-      });
+
+      if (!mounted) return;
+      // Ба экрани пештара бармегардем (Танзимот → Амният), на ба вуруд.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(tr('verify.done'))),
+      );
+      Navigator.pop(context, true);
+    } catch (_) {
+      if (mounted) setState(() => _error = tr('verify.failed'));
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String? _messageOf(String body) {
+    try {
+      final m = jsonDecode(body);
+      final s = (m is Map ? m['message'] : null)?.toString();
+      return (s == null || s.isEmpty) ? null : s;
+    } catch (_) {
+      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('OTP Verification')),
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        title: Text(tr('verify.codeTitle'),
+            style: TextStyle(color: AppColors.textPrimary)),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Enter Verification Code',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            Text(
+              tr('verify.codeTitle'),
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 12),
             Text(
-              'Code sent to ${widget.email}',
+              tr('verify.codeSentTo', {'email': widget.email}),
               textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textTertiary),
             ),
             const SizedBox(height: 32),
 
@@ -81,8 +120,10 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               maxLength: 6,
-              decoration: const InputDecoration(
-                labelText: 'OTP Code',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 22),
+              decoration: InputDecoration(
+                labelText: tr('verify.codeHint'),
+                labelStyle: TextStyle(color: AppColors.textFaint),
                 counterText: '',
               ),
             ),
@@ -91,10 +132,9 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                child: Text(_error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.redAccent)),
               ),
 
             SizedBox(
@@ -106,7 +146,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                         strokeWidth: 2,
                         color: AppColors.textPrimary,
                       )
-                    : const Text('Verify'),
+                    : Text(tr('verify.confirm')),
               ),
             ),
           ],

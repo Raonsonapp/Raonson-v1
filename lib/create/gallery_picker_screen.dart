@@ -1,6 +1,6 @@
 // lib/create/gallery_picker_screen.dart
 // Интихоби медиа мисли Instagram — галереяи дохилӣ (на file picker-и система)
-// бо tab-ҳои поён: Публикатсия | Сторис | Reels.
+// бо tab-ҳои поён: Публикатсия | Сторис | Reels | Live.
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -10,6 +10,7 @@ import 'package:photo_manager/photo_manager.dart';
 import 'create_post/create_post_screen.dart';
 import 'create_reel/create_reel_screen.dart';
 import 'create_story/create_story_screen.dart';
+import '../live/live_screens.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
 
@@ -239,8 +240,40 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
             _modeTab('Публикатсия', CreateMode.post),
             _modeTab('Сторис', CreateMode.story),
             _modeTab('Reels', CreateMode.reel),
+
+            // Пахши зинда.
+            //
+            // Экрани Live (`lib/live/live_screens.dart`, 420 сатр,
+            // Agora + сервер) КАЙҲО тайёр буд, вале аз ҲЕҶ ҶОИ
+            // барнома кушода намешуд — на тугма, на роҳ. Яъне
+            // функсия ҳаст, корбар онро ҳеҷ гоҳ намебинад.
+            //
+            // Дар Instagram Live маҳз ҳамин ҷо, дар қатори
+            // Пост/Стори/Reels аст.
+            _liveTab(),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Live tab — на ҳолат, балки экрани ҷудогона мекушояд.
+  ///
+  /// Барои Live галерея лозим нест: камера фавран сар мешавад. Пас
+  /// онро ба `CreateMode` илова кардан хато мебуд — ҳар ҷо, ки
+  /// `_mode` санҷида мешавад, шохаи бемаънӣ пайдо мешуд.
+  Widget _liveTab() {
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const LiveListScreen())),
+      behavior: HitTestBehavior.opaque,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Text('Live',
+            style: TextStyle(
+                color: Colors.white38,
+                fontWeight: FontWeight.w500,
+                fontSize: 15)),
       ),
     );
   }

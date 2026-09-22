@@ -1,6 +1,23 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import '../../core/api/api_client.dart';
+
+import '../../app/app_routes.dart';
 import '../../app/app_theme.dart';
+import '../../core/api/api_client.dart';
+import '../../core/i18n/strings.dart';
+
+// Тасдиқи почта — қадами якум: почтаро менависед, рамз меояд.
+//
+// ⚠️ Ин экран пештар се камбудӣ дошт:
+//
+//  1. Ба `/auth/verify-email` муроҷиат мекард — чунин роҳ дар сервер
+//     ВУҶУД НАДОШТ. Ҳоло ҳаст.
+//  2. Ба `'/auth/otp'` мерафт — чунин роҳ дар барнома нест. Корбар
+//     ба ҷои рамз экрани ВУРУДро мегирифт.
+//  3. `ApiClient.post` ҳангоми 4xx хато НАМЕПАРТОЯД. Пас `try/catch`
+//     ҳеҷ гоҳ кор намекард ва ҳар ҷавоб — ҳатто хато — «муваффақ»
+//     ҳисоб мешуд.
 
 class EmailVerifyScreen extends StatefulWidget {
   const EmailVerifyScreen({super.key});
@@ -21,7 +38,8 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
   }
 
   Future<void> _sendVerification() async {
-    if (_emailController.text.isEmpty) return;
+    final email = _emailController.text.trim();
+    if (email.isEmpty) return;
 
     setState(() {
       _isLoading = true;
@@ -29,56 +47,74 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
     });
 
     try {
-      await ApiClient.instance.post(
-        '/auth/verify-email',
-        body: {
-          'email': _emailController.text.trim(),
-        },
-      );
+      final res = await ApiClient.instance
+          .post('/auth/verify-email', body: {'email': email});
 
-      if (mounted) {
-        Navigator.pushNamed(
-          context,
-          '/auth/otp',
-          arguments: _emailController.text.trim(),
-        );
+      // Маҳз ин санҷиш нарасида буд.
+      if (res.statusCode >= 400) {
+        if (mounted) {
+          setState(() => _error = _messageOf(res.body) ?? tr('verify.failed'));
+        }
+        return;
       }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to send verification email';
-      });
+
+      if (!mounted) return;
+      Navigator.pushNamed(context, AppRoutes.otpVerify, arguments: email);
+    } catch (_) {
+      if (mounted) setState(() => _error = tr('verify.failed'));
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Матни сервер — то корбар сабаби аслиро бинад, на «хато шуд».
+  String? _messageOf(String body) {
+    try {
+      final m = jsonDecode(body);
+      final s = (m is Map ? m['message'] : null)?.toString();
+      return (s == null || s.isEmpty) ? null : s;
+    } catch (_) {
+      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verify Email')),
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        title: Text(tr('verify.emailTitle'),
+            style: TextStyle(color: AppColors.textPrimary)),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Email Verification',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            Text(
+              tr('verify.emailTitle'),
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Enter your email to receive a verification code',
+            Text(
+              tr('verify.emailSubtitle'),
               textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textTertiary),
             ),
             const SizedBox(height: 32),
 
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
+              style: TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: tr('verify.emailHint'),
+                labelStyle: TextStyle(color: AppColors.textFaint),
               ),
             ),
             const SizedBox(height: 24),
@@ -86,10 +122,9 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                child: Text(_error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.redAccent)),
               ),
 
             SizedBox(
@@ -101,7 +136,7 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
                         strokeWidth: 2,
                         color: AppColors.textPrimary,
                       )
-                    : const Text('Send Code'),
+                    : Text(tr('verify.send')),
               ),
             ),
           ],
