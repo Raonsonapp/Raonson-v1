@@ -121,12 +121,51 @@ Future<bool> _login(WidgetTester t) async {
 
   final btn = find.textContaining(
       RegExp('Ворид шудан|Войти|Log in', caseSensitive: false));
-  if (btn.evaluate().isEmpty) return false;
-  await t.tap(btn.first, warnIfMissed: false);
+  if (btn.evaluate().isEmpty) {
+    _loginProblem = 'тугмаи вуруд ёфт нашуд';
+    return false;
+  }
+
+  // Матн дар дохили тугма аст. Зери худи матн метавонад ба ҷои
+  // холӣ афтад, пас аввал падари зершавандаро меҷӯем.
+  final tapTarget = find
+          .ancestor(
+              of: btn.first,
+              matching: find.byWidgetPredicate(
+                  (w) => w is GestureDetector || w is InkWell))
+          .evaluate()
+          .isNotEmpty
+      ? find.ancestor(
+          of: btn.first,
+          matching: find.byWidgetPredicate(
+              (w) => w is GestureDetector || w is InkWell))
+      : btn;
+  await t.tap(tapTarget.first, warnIfMissed: false);
 
   // Сервери HuggingFace метавонад хоб бошад — вақти васеъ.
-  return waitFor(t, find.byType(BottomNavScaffold),
+  final ok = await waitFor(t, find.byType(BottomNavScaffold),
       timeout: const Duration(seconds: 90));
+  if (!ok) _loginProblem = _visibleTexts(t);
+  return ok;
+}
+
+/// Сабаби нокомии вуруд — барои гузориш.
+///
+/// «Ворид нашуд» ҳеҷ чиз намегӯяд. Матни худи экран мегӯяд: пароли
+/// нодуруст, хатои шабака, ё чизи дигар.
+String _loginProblem = '';
+
+/// Ҳамаи матни намоёни экран.
+String _visibleTexts(WidgetTester t) {
+  final out = <String>[];
+  for (final e in find.byType(Text).evaluate()) {
+    final w = e.widget;
+    if (w is Text) {
+      final s = w.data;
+      if (s != null && s.trim().isNotEmpty && s.length < 120) out.add(s);
+    }
+  }
+  return out.isEmpty ? '(дар экран матн нест)' : out.join(' | ');
 }
 
 void main() {
@@ -139,8 +178,12 @@ void main() {
           'экранҳои дохилӣ санҷида НАШУД');
       return;
     }
-    expect(await _login(tester), isTrue,
-        reason: 'ворид шуда нашуд — ном/парол ё сервер');
+    final loggedIn = await _login(tester);
+    expect(loggedIn, isTrue,
+        reason: 'ворид шуда нашуд.\n'
+            'Дар экран: $_loginProblem\n'
+            'Санҷед: TEST_USERNAME ва TEST_PASSWORD дар GitHub '
+            'Secrets дуруст ҳастанд?');
     checkStep('вуруд');
 
     // ── 1. ЛЕНТА ────────────────────────────────────────────────
