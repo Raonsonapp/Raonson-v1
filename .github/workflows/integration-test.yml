@@ -95,7 +95,13 @@ jobs:
           script: |
             adb logcat -c || true
             adb logcat '*:E' > emulator-logcat.txt &
-            flutter test integration_test \
+            # Роҳи ПУРРАИ файл, на папка.
+            #
+            # `flutter test integration_test` (папка) бо хатои
+            # «Integration tests and unit tests cannot be run in a
+            # single invocation» меафтад: асбоб папкаро ҳамчун
+            # омехтаи ду навъи тест мешуморад.
+            flutter test integration_test/app_smoke_test.dart \
               --dart-define-from-file=.env \
               --dart-define-from-file=dart_defines/ad_units.json \
               --reporter expanded
