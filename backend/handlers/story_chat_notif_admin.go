@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"sort"
 	"strings"
@@ -587,7 +588,7 @@ func GetMessages(c *gin.Context) {
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
 		       is_deleted,read,created_at,username,avatar,verified,
 		       share_id,share_kind,share_thumb,share_user,
-		       view_once,viewed_once,delivered
+		       view_once,viewed_once,delivered,reactions
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
@@ -597,7 +598,20 @@ func GetMessages(c *gin.Context) {
 		         COALESCE(m.share_thumb,'') share_thumb, COALESCE(m.share_user,'') share_user,
 		         COALESCE(m.view_once,false) view_once,
 		         COALESCE(m.viewed_once,false) viewed_once,
-		         (m.delivered_at IS NOT NULL) delivered
+		         (m.delivered_at IS NOT NULL) delivered,
+		         -- Реаксияҳо ҲАМРОҲИ паём мераванд. Бе ин онҳо танҳо
+		         -- ҳамчун сигнали зиндаи socket медиданд ва баъди
+		         -- ҳар кушодани чат ГУМ мешуданд.
+		         --
+		         -- Зерпурсиши алоҳида (на JOIN) қасдан аст: JOIN
+		         -- сатрҳоро зарб мекард ва LIMIT-и паёмҳо вайрон
+		         -- мешуд.
+		         COALESCE((
+		           SELECT json_agg(json_build_object(
+		                    'emoji', mr.emoji, 'userId', mr.user_id)
+		                  ORDER BY mr.created_at)
+		           FROM message_reactions mr WHERE mr.message_id = m.id
+		         ), '[]'::json) reactions
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
@@ -617,10 +631,17 @@ func GetMessages(c *gin.Context) {
 		var verified bool
 		var shareID, shareKind, shareThumb, shareUser string
 		var viewOnce, viewedOnce, delivered bool
+		var reactionsRaw []byte
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
 			&read, &createdAt, &uname, &uavatar, &verified,
 			&shareID, &shareKind, &shareThumb, &shareUser,
-			&viewOnce, &viewedOnce, &delivered)
+			&viewOnce, &viewedOnce, &delivered, &reactionsRaw)
+		// Бе кушодани JSON гин онро ҳамчун байт → base64 мефиристод
+		// ва барнома рӯйхати холӣ мегирифт.
+		reactions := []map[string]interface{}{}
+		if len(reactionsRaw) > 0 {
+			_ = json.Unmarshal(reactionsRaw, &reactions)
+		}
 		// «Як бор дида мешавад»: баъд аз кушодан URL дигар фиристода
 		// намешавад — на ба гиранда, на ба фиристанда.
 		if viewOnce && viewedOnce {
@@ -633,7 +654,7 @@ func GetMessages(c *gin.Context) {
 			"shareId": shareID, "shareKind": shareKind,
 			"shareThumb": shareThumb, "shareUser": shareUser,
 			"viewOnce": viewOnce, "viewedOnce": viewedOnce,
-			"delivered": delivered,
+			"delivered": delivered, "reactions": reactions,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}

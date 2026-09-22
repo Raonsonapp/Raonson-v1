@@ -135,6 +135,17 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_flows.py
 
+      # Бахшҳое, ки ҳеҷ гоҳ даст нахӯрда буданд: иваз кардани парол,
+      # таърихи воридшавӣ, ҷавоб ба шарҳи Reel, реаксия ба паём,
+      # маҷмӯа, дӯстони наздик, ҷавоби худкор, промокод, гурӯҳ.
+      # Маҳз ин санҷиш ошкор кард, ки реаксия ба паём сабт мешуд,
+      # вале ҳеҷ гоҳ бармегашт.
+      - name: Санҷиши бахшҳои дастнорасида
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_user2.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log
