@@ -114,4 +114,38 @@ void main() {
               'ХОЛӢ мемонад ва имзо меафтад');
     }
   });
+
+  test('ду роҳи тақсими APK омехта намешаванд', () {
+    // Gradle-и лоиҳа блоки `splits` дорад, ки бо `SPLIT_PER_ABI`
+    // фаъол мешавад. Он файлҳоро месозад, вале ХУДИ FLUTTER аз он
+    // бехабар аст ва `app-release.apk`-ро меҷӯяд:
+    //
+    //   Gradle build failed to produce an .apk file
+    //
+    // Роҳи дуруст — парчами худи Flutter (`--split-per-abi`).
+    for (final f in _workflows()) {
+      final src = f.readAsStringSync();
+      final gradleWay = src.contains("SPLIT_PER_ABI: 'true'") ||
+          src.contains('SPLIT_PER_ABI: "true"');
+      if (!gradleWay) continue;
+      expect(src.contains('flutter build apk'), isFalse,
+          reason: '${f.path}: `SPLIT_PER_ABI` бо `flutter build apk` '
+              'кор намекунад — Flutter `app-release.apk`-ро меҷӯяд '
+              'ва намеёбад. Ба ҷои он `--split-per-abi` гиред');
+    }
+  });
+
+  test('ҳангоми тақсим роҳи артефакт ба ЯК файл нишон намедиҳад', () {
+    // Бо тақсим `app-release.apk` вуҷуд надорад — номҳо
+    // `app-arm64-v8a-release.apk` ва ғайра мешаванд. Агар роҳ
+    // собит монад, upload хомӯш ХОЛӢ мемонад.
+    for (final f in _workflows()) {
+      final src = f.readAsStringSync();
+      if (!src.contains('--split-per-abi')) continue;
+      expect(src.contains('path: build/app/outputs/flutter-apk/app-release.apk'),
+          isFalse,
+          reason: '${f.path}: бо тақсим ин файл вуҷуд надорад — '
+              'артефакт холӣ мемонад');
+    }
+  });
 }

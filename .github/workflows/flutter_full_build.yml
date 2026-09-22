@@ -165,12 +165,24 @@ jobs:
       #
       # AAB даст намехӯрад: Google Play худаш барои ҳар телефон
       # тақсим мекунад.
+      # ⚠️ Ду роҳи тақсим вуҷуд дорад ва онҳоро ОМЕХТАН МУМКИН НЕСТ.
+      #
+      #  1. Блоки `splits`-и Gradle (бо `SPLIT_PER_ABI`) — он
+      #     файлҳоро месозад, вале ХУДИ FLUTTER аз он бехабар аст ва
+      #     `app-release.apk`-ро меҷӯяд. Натиҷа:
+      #
+      #       Gradle build failed to produce an .apk file
+      #
+      #  2. Парчами худи Flutter — `--split-per-abi`. Flutter номи
+      #     файлҳоро медонад ва онҳоро дуруст меёбад.
+      #
+      # Роҳи дуюм гирифта шуд. `SPLIT_PER_ABI` ГУЗОШТА НАМЕШАВАД, то
+      # блоки Gradle хомӯш монад ва ду механизм ба ҳам нарасанд.
       - name: Build APK (release, per-ABI)
         if: steps.signing.outputs.ready == 'true'
-        env:
-          SPLIT_PER_ABI: 'true'
         run: |
-          flutter build apk --release --dart-define-from-file=.env \
+          flutter build apk --release --split-per-abi \
+            --dart-define-from-file=.env \
             --dart-define-from-file=dart_defines/ad_units.json
           echo "── ҳаҷми APK-ҳо ──"
           ls -lh build/app/outputs/flutter-apk/*.apk | awk '{print $5, $9}'
