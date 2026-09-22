@@ -1,0 +1,112 @@
+name: Тести барнома дар эмулятор
+
+# ═══════════════════════════════════════════════════════════════════
+#  Ин ҷавоб ба саволи шумост: «ягон барнома ё сайте ҳаст, ки
+#  тавассути он барномаро ба формати APK санҷӣ?»
+#
+#  Ҳа — ҳамин ҷо. GitHub Actions эмулятори воқеии Android мекушояд,
+#  барномаро ба он мемонад ва ба ҷои шумо онро месанҷад.
+#
+#  Фарқи он аз `flutter test`-и оддӣ:
+#
+#    flutter test          — мантиқро месанҷад. Барнома КУШОДА
+#                            НАМЕШАВАД. Экрани сиёҳро намебинад.
+#
+#    ин workflow           — барномаро дар Android мекушояд, мисли
+#                            телефон. Афтиданро, экрани сиёҳро,
+#                            тугмаи мурдаро мебинад.
+#
+#  Натиҷа дар Actions → ҳамин workflow. Агар сурх шавад — log ҷои
+#  дақиқи хаторо нишон медиҳад.
+#
+#  ⚠️ Он чи ин ҷо санҷида НАМЕШАВАД: огоҳиномаи FCM, занги Agora,
+#     камера. Онҳо телефони воқеӣ мехоҳанд. Ниг. эзоҳи
+#     integration_test/app_smoke_test.dart.
+# ═══════════════════════════════════════════════════════════════════
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/profile-settings-home-feed-N5ct0]
+    paths:
+      - 'lib/**'
+      - 'integration_test/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/integration-test.yml'
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'integration_test/**'
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # Бе KVM эмулятор дар runner чанд маротиба сусттар кор мекунад
+      # ва бо timeout меафтад — ин хато ба барнома дахл надорад.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Калидҳо: агар набошанд, тест ҳам мешавад — вале он гоҳ
+      # рӯирост мегӯем, ки кадом қисм санҷида нашуд.
+      - name: Create .env for dart-define
+        env:
+          AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+        run: |
+          printf 'AGORA_APP_ID=%s\nBASE_URL=https://mahmadmurodov-raonson.hf.space\n' \
+            "$AGORA_APP_ID" > .env
+          if [ -z "$AGORA_APP_ID" ]; then
+            echo "::warning::AGORA_APP_ID нест — қисми занг санҷида намешавад"
+          fi
+
+      - name: Run app on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          ram-size: 4096M
+          disable-animations: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            adb logcat -c || true
+            adb logcat '*:E' > emulator-logcat.txt &
+            flutter test integration_test \
+              --dart-define-from-file=.env \
+              --dart-define-from-file=dart_defines/ad_units.json \
+              --reporter expanded
+
+      # Агар тест афтад, log-и худи Android сабаби аслиро нишон
+      # медиҳад (масалан плагини гумшуда ё OutOfMemory).
+      - name: Upload logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-logcat
+          path: emulator-logcat.txt
+          if-no-files-found: ignore
+          retention-days: 7
