@@ -173,9 +173,24 @@ func GetComments(c *gin.Context) {
 func DeleteComment(c *gin.Context) {
 	cid := c.Param("id")
 	myID := mw.UID(c)
+	// Ду нафар шарҳро нест карда метавонанд:
+	//
+	//   1. муаллифи худи шарҳ;
+	//   2. СОҲИБИ ПОСТ — маҳз мисли Instagram.
+	//
+	// Пеш танҳо якум буд. Яъне корбар дар зери пости ХУДАШ шарҳи
+	// нохушро нест карда наметавонист — ягона роҳ шикоят ва
+	// интизорӣ буд. Барои ҳамин калимаҳои пинҳон сохта шуданд,
+	// вале онҳо танҳо шарҳи НАВро мегиранд, на онеро, ки аллакай
+	// навишта шудааст.
 	var postID string
 	err := db.Pool.QueryRow(context.Background(),
-		`DELETE FROM comments WHERE id=$1 AND user_id=$2::text RETURNING post_id`, cid, myID,
+		`DELETE FROM comments c
+		 WHERE c.id=$1
+		   AND (c.user_id=$2::text
+		        OR EXISTS (SELECT 1 FROM posts p
+		                   WHERE p.id=c.post_id AND p.user_id=$2::text))
+		 RETURNING c.post_id`, cid, myID,
 	).Scan(&postID)
 	if err == nil {
 		db.Pool.Exec(context.Background(),
@@ -187,7 +202,12 @@ func DeleteComment(c *gin.Context) {
 	// Дар ҷадвали пост нест — шояд шарҳи Reel бошад (ҷадвали ҷудогона).
 	var reelID string
 	err = db.Pool.QueryRow(context.Background(),
-		`DELETE FROM reel_comments WHERE id=$1 AND user_id=$2::text RETURNING reel_id`, cid, myID,
+		`DELETE FROM reel_comments rc
+		 WHERE rc.id=$1
+		   AND (rc.user_id=$2::text
+		        OR EXISTS (SELECT 1 FROM reels r
+		                   WHERE r.id=rc.reel_id AND r.user_id=$2::text))
+		 RETURNING rc.reel_id`, cid, myID,
 	).Scan(&reelID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Comment not found"})

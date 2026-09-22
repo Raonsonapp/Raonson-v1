@@ -145,9 +145,22 @@ func PinPost(c *gin.Context) {
 		Pin bool `json:"pin"`
 	}
 	c.ShouldBindJSON(&b)
-	db.Pool.Exec(context.Background(),
+
+	// ⚠️ Пеш натиҷаи UPDATE санҷида намешуд ва ҳамеша 200 бо
+	// `isPinned: b.Pin` бармегашт.
+	//
+	// Маълумот ҳимоя буд (`AND user_id=$3`), вале ҶАВОБ ДУРӮҒ
+	// мегуфт: барнома постро «санҷонида» нишон медод, ҳол он ки
+	// дар база ҳеҷ чиз нашуда буд. Баъди навсозӣ он бармегашт.
+	tag, err := db.Pool.Exec(context.Background(),
 		`UPDATE posts SET is_pinned=$1 WHERE id=$2 AND user_id=$3::text`,
 		b.Pin, pid, myID)
+	if err != nil || tag.RowsAffected() == 0 {
+		c.JSON(http.StatusForbidden,
+			gin.H{"message": "Ин пост аз они шумо нест"})
+		return
+	}
+
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"isPinned": b.Pin})
 }
