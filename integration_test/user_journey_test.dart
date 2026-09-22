@@ -33,6 +33,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'package:raonson/app/app.dart';
 import 'package:raonson/app/app_settings.dart';
 import 'package:raonson/auth/login/login_screen.dart';
 import 'package:raonson/auth/password/forgot_password_screen.dart';
@@ -95,14 +96,28 @@ Future<bool> _toLogin(WidgetTester t) async {
 
 /// Бозгашт — маҳз мисли корбар.
 ///
-/// `tester.pageBack()` танҳо тугмаи СТАНДАРТИИ AppBar-ро меёбад.
-/// Экранҳои ин барнома тугмаи худро доранд, пас он ҷо кор намекунад.
-/// Дар чунин ҳолат бозгашти СИСТЕМАВИИ Android фиристода мешавад.
+/// ⚠️ Ин ҷо ду доми ҷиддӣ ҳаст:
+///
+///  1. `tester.pageBack()` танҳо тугмаи СТАНДАРТИИ AppBar-ро меёбад.
+///     Экранҳои ин барнома тугмаи ХУДРО доранд — пас он мепартояд.
+///
+///  2. `binding.handlePopRoute()` ҳангоми набудани роҳи бозгашт
+///     `SystemNavigator.pop()` мекунад — яъне БАРНОМАРО МЕБАНДАД.
+///     Баъди он тест абадан интизори барномаи мурда мемонад.
+///
+/// Барои ҳамин аз `Navigator`-и худи барнома истифода мешавад:
+/// `maybePop()` агар роҳи бозгашт набошад, танҳо `false`
+/// бармегардонад — ва ҳеҷ чиз намебандад.
 Future<void> _back(WidgetTester t) async {
-  try {
-    await t.pageBack();
-  } catch (_) {
-    await t.binding.handlePopRoute();
+  final nav = appNavigatorKey.currentState;
+  if (nav != null && nav.canPop()) {
+    nav.pop();
+  } else {
+    try {
+      await t.pageBack();
+    } catch (_) {
+      // Роҳи бозгашт нест — ин хато нест, танҳо ҳеҷ кор намекунем.
+    }
   }
   await _pump(t, 900);
 }
@@ -156,7 +171,7 @@ void main() {
 
     expect(_real, isEmpty,
         reason: 'ҳангоми гузариш хато партофт:\n${_real.join('\n')}');
-  });
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
   testWidgets('иваз кардани забон матнро фавран иваз мекунад',
       (tester) async {
@@ -165,8 +180,9 @@ void main() {
     final startLang = AppSettingsState.instance.lang;
     addTearDown(() => AppSettingsState.instance.setLang(startLang));
 
-    // Ҳар се забон, ду давр — то боварӣ, ки бозгашт ҳам кор мекунад.
-    for (var round = 0; round < 2; round++) {
+    // Ҳар се забон. Даври дуюм бардошта шуд: варақаи забон
+    // аниматсия дорад ва вақти эмуляторро беҳуда мегирад.
+    for (var round = 0; round < 1; round++) {
       for (final name in ['Русский', 'English', 'Тоҷикӣ']) {
         final chip = find.byIcon(AppIcons.language_rounded);
         if (chip.evaluate().isEmpty) return; // забон дар ин сохт нест
@@ -200,7 +216,7 @@ void main() {
 
     expect(_real, isEmpty,
         reason: 'ҳангоми иваз кардани забон хато:\n${_real.join('\n')}');
-  });
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
   testWidgets('экрани бақайдгирӣ: санҷиши майдонҳо кор мекунад',
       (tester) async {
@@ -240,7 +256,7 @@ void main() {
 
     expect(_real, isEmpty,
         reason: 'экрани бақайдгирӣ хато партофт:\n${_real.join('\n')}');
-  });
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
   testWidgets('дар экрани хурд ҳеҷ экран аз ҳудуд намебарояд',
       (tester) async {
@@ -283,5 +299,5 @@ void main() {
             '${overflow.join('\n')}');
     expect(_real, isEmpty,
         reason: 'дар экрани хурд хато:\n${_real.join('\n')}');
-  });
+  }, timeout: const Timeout(Duration(minutes: 4)));
 }

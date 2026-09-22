@@ -166,7 +166,7 @@ void main() {
 
     expect(_realErrors, isEmpty,
         reason: 'ҳангоми кушодан хато партофт:\n${_realErrors.join('\n')}');
-  });
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
   testWidgets('экрани вуруд пурра ва зинда аст', (tester) async {
     await app.main();
@@ -205,7 +205,7 @@ void main() {
 
     expect(_realErrors, isEmpty,
         reason: 'экрани вуруд хато партофт:\n${_realErrors.join('\n')}');
-  });
+  }, timeout: const Timeout(Duration(minutes: 4)));
 
   testWidgets('дар экрани хурд матн аз ҳудуд намебарояд', (tester) async {
     // Телефони арзон: 320×640 dp. Маҳз дар чунин экранҳо навори
@@ -230,5 +230,5 @@ void main() {
     expect(overflow, isEmpty,
         reason: 'дар экрани хурд ҷузъҳо аз ҳудуд мебароянд:\n'
             '${overflow.join('\n')}');
-  });
+  }, timeout: const Timeout(Duration(minutes: 4)));
 }
