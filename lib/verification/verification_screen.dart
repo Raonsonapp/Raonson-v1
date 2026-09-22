@@ -120,6 +120,25 @@ class _VerificationScreenState extends State<VerificationScreen> {
   void initState() {
     super.initState();
     _load();
+
+    // Рекламаро ПЕШАКӢ тайёр мекунем — то вақте корбар тугмаро
+    // мезанад, он аллакай омода бошад.
+    //
+    // Бехатар аст: агар аллакай омода ё дар парвоз бошад, ҳеҷ кор
+    // намекунад. Агар кӯшишҳо тамом шуда бошанд — аз сар оғоз
+    // мекунад. Маҳз ин тугмаи «навсозӣ»-ро нолозим мекунад.
+    AdsManager.instance.ensureRewardedReady();
+    AdsManager.instance.addListener(_onAdsChanged);
+  }
+
+  void _onAdsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AdsManager.instance.removeListener(_onAdsChanged);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -405,19 +424,58 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 : tr('vf.readySoon'),
             style: TextStyle(color: AppColors.textTertiary, fontSize: 12.5)),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: (_watching || capped) ? null : _watch,
-            icon: _watching
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : Icon(AppIcons.play_arrow_rounded, size: 20),
-            label: Text(capped ? tr('vf.dailyLimit') : tr('vf.watchAd')),
-          ),
-        ),
+        // ── Тугма: се ҳолати возеҳ ──
+        //
+        // ОМОДА        → зер кунед, фавран нишон дода мешавад
+        // БОР МЕШАВАД  → интизор шавед, дархости дуюм НАМЕСОЗАД
+        // ДАСТРАС НЕСТ → барнома худаш дубора месанҷад
+        //
+        // Тугмаи «навсозӣ» лозим нест: `ensureRewardedReady()`
+        // ҳангоми кушодани экран, баргаштан ба барнома ва
+        // баргаштани интернет худкор кор мекунад.
+        Builder(builder: (_) {
+          final st = AdsManager.instance.rewardedState;
+          final busy = _watching ||
+              st == RewardedAdState.loading ||
+              st == RewardedAdState.cooldown;
+          final gone = st == RewardedAdState.unavailable;
+
+          final label = capped
+              ? tr('vf.dailyLimit')
+              : _watching
+                  ? tr('vf.watchAd')
+                  : st == RewardedAdState.loading ||
+                          st == RewardedAdState.cooldown
+                      ? tr('ads.rewardPreparing')
+                      : gone
+                          ? tr('ads.rewardRetrying')
+                          : tr('vf.watchAd');
+
+          return Column(children: [
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: (_watching || capped || busy || gone)
+                    ? null
+                    : _watch,
+                icon: (busy)
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(AppIcons.play_arrow_rounded, size: 20),
+                label: Text(label),
+              ),
+            ),
+            if (gone) ...[
+              const SizedBox(height: 6),
+              Text(tr('ads.rewardAutoRetry'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: AppColors.textFaint, fontSize: 11.5)),
+            ],
+          ]);
+        }),
         const SizedBox(height: 8),
         Text(tr('vf.todayCount', {'n': p.today, 'cap': p.dailyCap}),
             style: TextStyle(color: AppColors.textFaint, fontSize: 11.5)),

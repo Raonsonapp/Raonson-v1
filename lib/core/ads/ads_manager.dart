@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 
+import '../services/network_service.dart';
 import 'ad_config.dart';
 import 'reward_backend.dart';
 
@@ -34,6 +36,34 @@ class AdSlotStatus {
     this.loadFailures = 0,
     this.shows = 0,
   });
+}
+
+/// Ҳолати рекламаи мукофотӣ.
+///
+/// Бе ин, UI танҳо ду бит медид (`loading`, `ready`) ва фарқи
+/// «ҳозир нишон дода мешавад» аз «интизори кӯшиши навбатӣ»-ро
+/// намедонист. Маҳз аз ҳамин тугмаи «навсозӣ» лозим мешуд.
+enum RewardedAdState {
+  /// Ҳанӯз ҳеҷ кор нашудааст.
+  idle,
+
+  /// Дархост дар парвоз аст.
+  loading,
+
+  /// Реклама омода аст — зер кардан фавран нишон медиҳад.
+  ready,
+
+  /// Ҳозир дар экран аст.
+  showing,
+
+  /// Хато шуд, таймери интизорӣ кор мекунад.
+  cooldown,
+
+  /// Yandex реклама надод ва кӯшишҳо тамом шуданд.
+  ///
+  /// Ин ниҳоӣ НЕСТ: кушодани экран, баргаштан ба барнома ё
+  /// баргаштани интернет кӯшиши навро оғоз мекунад.
+  unavailable,
 }
 
 class AdsManager extends ChangeNotifier {
@@ -125,6 +155,23 @@ class AdsManager extends ChangeNotifier {
   // ноустуворро.
   InterstitialAdLoader? _interstitialLoader;
   RewardedAdLoader?     _rewardedLoader;
+
+  /// Ҳолати ҷорӣ — сарчашмаи ягона барои UI.
+  RewardedAdState _rewardedState = RewardedAdState.idle;
+  RewardedAdState get rewardedState => _rewardedState;
+
+  void _setRewardedState(RewardedAdState next) {
+    if (_rewardedState == next) return;
+    _rewardedState = next;
+    _log(next.name);
+    notifyListeners();
+  }
+
+  /// Log-и кӯтоҳи хондашаванда.
+  ///
+  /// Ҳеҷ гоҳ токен, парол ё маълумоти шахсӣ намебарорад — танҳо
+  /// ҳолат ва рақами хато.
+  void _log(String msg) => debugPrint('[Rewarded] $msg');
   bool _interstitialLoading = false;
   bool _rewardedLoading     = false;
   bool _interstitialReady   = false;
@@ -165,6 +212,7 @@ class AdsManager extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    _attachAutoPreload();
     _preloadInterstitial();
     _preloadRewarded();
     notifyListeners();
@@ -441,14 +489,25 @@ class AdsManager extends ChangeNotifier {
   DateTime? _rewardedLoadStartedAt;
 
   void _preloadRewarded() {
+    // ── Муҳофизат аз дархостҳои параллелӣ ──
+    //
+    // Се шарт, ва ҳар се лозим:
+    //   • дархост дар парвоз бошад — дуюмашро оғоз накун;
+    //   • реклама аллакай омода бошад — аз нав бор накун;
+    //   • реклама ҲОЗИР дар экран бошад — болои он чизе бор накун.
     if (_rewardedLoading && !_stale(_rewardedLoadStartedAt)) return;
     if (_rewardedReady) return;
+    if (_rewardedState == RewardedAdState.showing) return;
+
     final unitId = _rewardedId;
     if (unitId == null) {
       _rewardedError = _notConfigured;
+      _setRewardedState(RewardedAdState.unavailable);
       notifyListeners();
       return;
     }
+    _log('preload started');
+    _setRewardedState(RewardedAdState.loading);
     _rewardedLoading = true;
     _rewardedLoadStartedAt = DateTime.now();
     _rewardedAttempts++;
@@ -472,12 +531,15 @@ class AdsManager extends ChangeNotifier {
       _rewardedError = '';
       _rewardedLoadedAt = DateTime.now();
       _rewardedFailures = 0;
+      _log('loaded');
+      _setRewardedState(RewardedAdState.ready);
       notifyListeners();
     }).catchError((Object error) {
       _rewardedLoading = false;
       _rewardedFailures++;
       _rewardedError = _describe(error);
       _recordFailure('Rewarded', error);
+      _log('load failed ${_codeOf(error)}');
       notifyListeners();
       _retryRewarded();
     });
@@ -490,12 +552,21 @@ class AdsManager extends ChangeNotifier {
     }
     final wait = backoffFor(_rewardedFailures);
     if (wait == null) {
+      // Кӯшишҳо тамом шуданд. Ин НИҲОӢ нест: кушодани экран,
+      // баргаштан ба барнома ё баргаштани интернет ҳисобро аз сар
+      // оғоз мекунад (`ensureRewardedReady`). Пештар маҳз ин ҷо
+      // барнома «мемурд» ва танҳо тугмаи дастӣ ёрӣ мекард.
       _trace('RETRY_GIVE_UP',
           slot: 'Rewarded', extra: 'failures=$_rewardedFailures');
+      _log('no ads after $_rewardedFailures tries — waiting for '
+          'resume / network / screen open');
       _rewardedRetry = null;
+      _setRewardedState(RewardedAdState.unavailable);
       return;
     }
     _trace('TIMER_CREATE', slot: 'Rewarded', extra: 'in=${wait.inSeconds}s');
+    _log('retry in ${wait.inSeconds} seconds');
+    _setRewardedState(RewardedAdState.cooldown);
     _rewardedRetry = Timer(wait, () {
       _trace('TIMER_FIRE', slot: 'Rewarded');
       _rewardedRetry = null;
@@ -503,20 +574,36 @@ class AdsManager extends ChangeNotifier {
     });
   }
 
-  /// Интизории афзоянда: 30с, 1д, 2д, 4д, 8д, баъд 15д.
+  /// Интизории афзоянда: 2с → 5с → 10с → 20с → 30с → 60с …
   ///
-  /// Пештар ҳар 30 сония як дархост мерафт — БЕОХИР. Ин на танҳо
-  /// батареяро мехӯрд, балки метавонист боиси маҳдудкунии худи
-  /// Yandex шавад: барномае, ки ҳар ним дақиқа дархост мефиристад
-  /// ва ҳеҷ гоҳ реклама намегирад, мисли трафики бад менамояд.
+  /// ⚠️ Пештар аввалин интизорӣ 30 СОНИЯ буд.
   ///
-  /// null = дигар кӯшиш накун (то reload-и дастӣ).
+  /// Барои Yandex ин хуб буд, вале барои корбар не: `NoAdsAvailable`
+  /// аксаран гузарост ва кӯшиши дуюм баъди ду сония аллакай
+  /// реклама медиҳад. Бо 30 сония корбар фикр мекард, ки барнома
+  /// вайрон аст, ва тугмаи «навсозӣ»-ро мезад.
+  ///
+  /// Акнун аввал зуд, баъд сусттар — ва ҳеҷ гоҳ зудтар аз 2 сония,
+  /// то дархостҳои беҳуда ба Yandey нараванд.
+  ///
+  /// null = ҳисоб тамом шуд. Ин ниҳоӣ НЕСТ — `ensureRewardedReady()`
+  /// онро аз сар оғоз мекунад.
   @visibleForTesting
   static Duration? backoffFor(int failures) {
-    if (failures <= 0) return const Duration(seconds: 30);
+    const steps = <int>[2, 5, 10, 20, 30, 60, 120, 300];
+    if (failures <= 0) return const Duration(seconds: 2);
     if (failures > 12) return null;
-    final seconds = 30 * (1 << (failures - 1).clamp(0, 5));
-    return Duration(seconds: seconds.clamp(30, 900));
+    final i = (failures - 1).clamp(0, steps.length - 1);
+    return Duration(seconds: steps[i]);
+  }
+
+  /// Рақами хатои Yandex, агар бошад — барои log.
+  ///
+  /// `code=4` (NoAdsAvailable) маъмултарин аст ва камбудӣ НЕСТ:
+  /// он маънои «ҳозир реклама нест»-ро дорад.
+  static String _codeOf(Object error) {
+    final m = RegExp(r'code[ =:]+(\d+)').firstMatch(error.toString());
+    return m != null ? 'code=${m.group(1)}' : 'code=?';
   }
 
   /// Сарҳади сервер — тест онро иваз мекунад.
@@ -537,6 +624,15 @@ class AdsManager extends ChangeNotifier {
   Future<RewardOutcome> showRewarded() async {
     final unitId = _rewardedId;
     if (unitId == null || !_rewardedReady || _rewardedAd == null) {
+      // Омода нест — вале ҳамин ҷо кӯшиши навро оғоз мекунем, то
+      // корбар дафъаи дигар интизор нашавад.
+      _log('show requested but not ready');
+      ensureRewardedReady();
+      return RewardOutcome.notShown;
+    }
+    // Ду намоиши ҳамзамон мумкин нест.
+    if (_rewardedState == RewardedAdState.showing) {
+      _log('show ignored — already showing');
       return RewardOutcome.notShown;
     }
 
@@ -547,11 +643,13 @@ class AdsManager extends ChangeNotifier {
     }
 
     final completer = Completer<bool>();
+    _setRewardedState(RewardedAdState.showing);
 
     _rewardedAd!.setAdEventListener(
       eventListener: RewardedAdEventListener(
-        onAdShown:        ()       {},
+        onAdShown:        ()       { _log('show started'); },
         onAdFailedToShow: (e)      {
+          _log('failed to show');
           if (!completer.isCompleted) completer.complete(false);
           _resetRewarded();
         },
@@ -563,6 +661,11 @@ class AdsManager extends ChangeNotifier {
         onAdClicked:      ()       {},
         onAdImpression:   (d)      {},
         onRewarded:       (reward) {
+          // ⚠️ ЯГОНА сарчашмаи «дида шуд» дар тарафи барнома.
+          //
+          // `loaded`, `shown` ё `dismissed` маънои мукофотро
+          // НАДОРАНД. Қарори ниҳоӣ ба ҳар ҳол аз они сервер аст.
+          _log('onRewarded');
           _rewardedShows++;
           _rewardedShownAt = DateTime.now();
           notifyListeners();
@@ -582,6 +685,7 @@ class AdsManager extends ChangeNotifier {
     if (!watched) return RewardOutcome.notShown;
 
     final status = await rewardBackend.claim(sessionId, unitId);
+    _log('claim ${status.name}');
     if (status == RewardStatus.offline) {
       // Сеанс дар сервер ҲАНӮЗ кушода аст — кӯшиш баъдтар такрор
       // мешавад. Бе ин, реклама ҳангоми қатъи шабака гум мешуд.
@@ -641,10 +745,92 @@ class AdsManager extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Рекламаи истифодашударо мепартояд ва НАВБАТИРО тайёр мекунад.
+  ///
+  /// ⚠️ Пештар `destroy()` даъват намешуд — объекти нативӣ дар
+  /// хотира мемонд. Баъди даҳ намоиш даҳ реклама ҷамъ мешуд.
   void _resetRewarded() {
+    _log('dismissed');
+    try {
+      _rewardedAd?.destroy();
+    } catch (_) {
+      // Плагин метавонад аллакай онро нест карда бошад.
+    }
     _rewardedAd    = null;
     _rewardedReady = false;
-    Future.delayed(const Duration(seconds: 3), _preloadRewarded);
+    _rewardedFailures = 0; // намоиши муваффақ — ҳисоб аз сар
+    _setRewardedState(RewardedAdState.idle);
+
+    // Preload-и ХУДКОР. Маҳз ин тугмаи «навсозӣ»-ро нолозим мекунад.
+    //
+    // Таъхири кӯтоҳ лозим аст: SDK баъди пӯшидан як лаҳза банд аст.
+    Future.delayed(const Duration(seconds: 2), () {
+      _log('preload after dismiss');
+      _preloadRewarded();
+    });
+  }
+
+  /// Кафолат медиҳад, ки реклама омода аст ё ҳадди ақал бор шуда
+  /// истодааст.
+  ///
+  /// Ин ягона усулест, ки экранҳо даъват мекунанд. Он бехатар аст:
+  ///
+  ///   • омода бошад — ҳеҷ кор намекунад;
+  ///   • дар парвоз бошад — дархости дуюм намесозад;
+  ///   • ҳозир дар экран бошад — даст намерасонад;
+  ///   • кӯшишҳо тамом шуда бошанд — ҳисобро АЗ САР оғоз мекунад.
+  ///
+  /// Маҳз банди охирин тугмаи дастиро нолозим мекунад.
+  void ensureRewardedReady() {
+    if (!_initialized) {
+      unawaited(init());
+      return;
+    }
+    switch (_rewardedState) {
+      case RewardedAdState.ready:
+      case RewardedAdState.loading:
+      case RewardedAdState.showing:
+        return;
+      case RewardedAdState.cooldown:
+        // Таймер аллакай кор мекунад — интизор мешавем.
+        return;
+      case RewardedAdState.unavailable:
+      case RewardedAdState.idle:
+        _log('ensureReady → restart');
+        _rewardedRetry?.cancel();
+        _rewardedRetry = null;
+        _rewardedFailures = 0;
+        _preloadRewarded();
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  Оғози худкор: баргаштан ба барнома ва баргаштани интернет
+  //
+  //  Бе инҳо, агар Yandex дар лаҳзаи кушодани барнома реклама
+  //  надода бошад, он то навсозии ДАСТӢ хомӯш мемонд.
+  // ══════════════════════════════════════════════════════════════
+  _AdsLifecycleHook? _lifecycleHook;
+  VoidCallback? _networkListener;
+
+  void _attachAutoPreload() {
+    if (_lifecycleHook == null) {
+      _lifecycleHook = _AdsLifecycleHook(onResumed: () {
+        _log('app resumed');
+        ensureRewardedReady();
+      });
+      WidgetsBinding.instance.addObserver(_lifecycleHook!);
+    }
+    if (_networkListener == null) {
+      final n = NetworkService.instance.isOnlineNotifier;
+      _networkListener = () {
+        if (n.value) {
+          _log('network restored');
+          ensureRewardedReady();
+        }
+      };
+      n.addListener(_networkListener!);
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -911,5 +1097,20 @@ class AdsManager extends ChangeNotifier {
     _interstitialAd?.destroy();
     _rewardedAd?.destroy();
     super.dispose();
+  }
+}
+
+/// Нозири ҳолати барнома.
+///
+/// Синфи алоҳида, на `AdsManager with WidgetsBindingObserver`:
+/// `AdsManager` singleton аст ва ҳеҷ гоҳ нест намешавад, пас
+/// омехтани нақшҳо хониш ва санҷишро душвор мекард.
+class _AdsLifecycleHook extends WidgetsBindingObserver {
+  final VoidCallback onResumed;
+  _AdsLifecycleHook({required this.onResumed});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) onResumed();
   }
 }

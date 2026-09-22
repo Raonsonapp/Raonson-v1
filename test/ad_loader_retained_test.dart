@@ -190,23 +190,40 @@ void main() {
 // Фосила дақиқан 30 сония ва як дархост ба ҳар шакл — яъне таймери
 // такрории худи мо, на схемаи пинҳонӣ. Вале беохир такрор кардан
 // батареяро мехӯрад ва метавонад боиси маҳдудкунии Yandex шавад.
+//
+// ⚠️ ҚИМАТҲО ҚАСДАН ИВАЗ ШУДАНД (2026-09).
+//
+// Пештар аввалин интизорӣ 30 сония буд. Ин барои Yandex хуб буд,
+// вале корбар мегуфт: «баъди як реклама навбатиаш омода нест, ҳар
+// бор навсозиро мезанам».
+//
+// Сабаб: `NoAdsAvailable` (code=4) аксаран ГУЗАРОСТ — кӯшиши дуюм
+// баъди ду сония аллакай реклама медиҳад. Бо 30 сония корбар фикр
+// мекард, ки барнома вайрон аст.
+//
+// Акнун: 2с → 5с → 10с → 20с → 30с → 60с → 120с → 300с.
+// Аввал зуд (то корбар интизор нашавад), баъд сусттар (то
+// дархостҳои беҳуда ба Yandex нараванд). Ҳеҷ гоҳ зудтар аз 2
+// сония.
 void _backoffTests() {
   group('интизории афзоянда', () {
-    test('аввалин кӯшиш зуд такрор мешавад', () {
-      expect(AdsManager.backoffFor(1), const Duration(seconds: 30));
+    test('аввалин кӯшиш ЗУД такрор мешавад', () {
+      // Маҳз ин камбудии «ҳар бор навсозиро мезанам» буд.
+      expect(AdsManager.backoffFor(1), const Duration(seconds: 2));
     });
 
-    test('фосила дучанд мешавад', () {
-      expect(AdsManager.backoffFor(2), const Duration(seconds: 60));
-      expect(AdsManager.backoffFor(3), const Duration(seconds: 120));
-      expect(AdsManager.backoffFor(4), const Duration(seconds: 240));
+    test('фосила пайдарпай меафзояд', () {
+      expect(AdsManager.backoffFor(2), const Duration(seconds: 5));
+      expect(AdsManager.backoffFor(3), const Duration(seconds: 10));
+      expect(AdsManager.backoffFor(4), const Duration(seconds: 20));
+      expect(AdsManager.backoffFor(5), const Duration(seconds: 30));
     });
 
-    test('фосила аз 15 дақиқа зиёд намешавад', () {
-      for (var f = 5; f <= 12; f++) {
+    test('фосила ҳадди боло дорад ва ҳеҷ гоҳ зудтар аз 2с нест', () {
+      for (var f = 1; f <= 12; f++) {
         final d = AdsManager.backoffFor(f)!;
-        expect(d.inSeconds, lessThanOrEqualTo(900), reason: 'failures=$f');
-        expect(d.inSeconds, greaterThanOrEqualTo(30), reason: 'failures=$f');
+        expect(d.inSeconds, lessThanOrEqualTo(300), reason: 'failures=$f');
+        expect(d.inSeconds, greaterThanOrEqualTo(2), reason: 'failures=$f');
       }
     });
 
