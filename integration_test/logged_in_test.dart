@@ -37,6 +37,7 @@ import 'package:integration_test/integration_test.dart';
 import 'harness.dart';
 
 import 'package:raonson/auth/login/login_screen.dart';
+import 'package:raonson/auth/widgets/auth_kit.dart';
 import 'package:raonson/chat/inbox/chat_list_screen.dart';
 import 'package:raonson/core/ui/app_icons.dart';
 import 'package:raonson/feed/timeline/feed_screen.dart';
@@ -99,6 +100,7 @@ Future<bool> _openThenBack(WidgetTester t, Finder tapTarget,
 }
 
 Future<bool> _login(WidgetTester t) async {
+  _loginProblem = '';
   // ⚠️ Тартиб муҳим аст: handler-и ТЕСТ бояд ПЕШ аз `app.main()`
   // нигоҳ дошта шавад — баъд барнома онро иваз мекунад.
   beginCapture();
@@ -119,33 +121,44 @@ Future<bool> _login(WidgetTester t) async {
   await t.enterText(fields.at(1), _pass);
   await pumpFor(t, 400);
 
-  final btn = find.textContaining(
-      RegExp('Ворид шудан|Войти|Log in', caseSensitive: false));
+  // ⚠️ Run #15: тест 90 сония интизор шуд ва экран ҲЕҶ тағйир
+  // наёфт — на спиннер, на хато. Яъне зарба ба `_submit` НАРАСИД.
+  //
+  // Сабаб: баъди навиштан клавиатураи экранӣ боз аст ва тугма дар
+  // `SingleChildScrollView` ЗЕРИ он мемонад. Зарба ба ҷои холӣ
+  // меафтод, ва `warnIfMissed: false` инро пинҳон мекард.
+  //
+  // Ҳоло ҳамон кори одам: клавиатураро мепӯшем, тугмаро ба экран
+  // меорем ва баъд мезанем.
+  FocusManager.instance.primaryFocus?.unfocus();
+  await pumpFor(t, 600);
+
+  final btn = find.byType(AuthButton);
   if (btn.evaluate().isEmpty) {
     _loginProblem = 'тугмаи вуруд ёфт нашуд';
     return false;
   }
+  await t.ensureVisible(btn.first);
+  await pumpFor(t, 400);
+  await t.tap(btn.first);
 
-  // Матн дар дохили тугма аст. Зери худи матн метавонад ба ҷои
-  // холӣ афтад, пас аввал падари зершавандаро меҷӯем.
-  final tapTarget = find
-          .ancestor(
-              of: btn.first,
-              matching: find.byWidgetPredicate(
-                  (w) => w is GestureDetector || w is InkWell))
-          .evaluate()
-          .isNotEmpty
-      ? find.ancestor(
-          of: btn.first,
-          matching: find.byWidgetPredicate(
-              (w) => w is GestureDetector || w is InkWell))
-      : btn;
-  await t.tap(tapTarget.first, warnIfMissed: false);
+  // Агар зарба боз ҳам нарасида бошад, инро ОШКОРО мегӯем, на
+  // «ворид нашуд»-и хомӯш.
+  await pumpFor(t, 1500);
+  final started = find.byType(CircularProgressIndicator).evaluate().isNotEmpty ||
+      find.byType(BottomNavScaffold).evaluate().isNotEmpty ||
+      find.textContaining(RegExp('нодуруст|Invalid|хато|error',
+              caseSensitive: false)).evaluate().isNotEmpty;
+  if (!started) {
+    _loginProblem = 'зарба ба тугма нарасид; ';
+    // Бо вуҷуди ин вурудро месанҷем — мақсад экранҳои дохилист.
+    t.widget<AuthButton>(btn.first).onTap?.call();
+  }
 
   // Сервери HuggingFace метавонад хоб бошад — вақти васеъ.
   final ok = await waitFor(t, find.byType(BottomNavScaffold),
       timeout: const Duration(seconds: 90));
-  if (!ok) _loginProblem = _visibleTexts(t);
+  if (!ok) _loginProblem += _visibleTexts(t);
   return ok;
 }
 
