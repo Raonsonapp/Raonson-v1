@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"raonson/ai"
 	mw "raonson/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -17,14 +18,18 @@ import (
 
 func openaiKey() string { return os.Getenv("OPENAI_API_KEY") }
 
+// chatAIEnabled — оё барои hashtag/caption LLM дастрас аст (AI_API_KEY ва ғ.).
+func chatAIEnabled() bool { return ai.Enabled(ai.TaskFast) }
+
 func callOpenAI(system, user string, maxTokens int) (string, error) {
-	key := openaiKey()
+	cfg := ai.ConfigFor(ai.TaskFast)
+	key := cfg.APIKey
 	if key == "" {
 		return "", nil
 	}
 
 	payload, _ := json.Marshal(map[string]interface{}{
-		"model": "gpt-4o-mini",
+		"model": cfg.Model,
 		"messages": []map[string]string{
 			{"role": "system", "content": system},
 			{"role": "user", "content": user},
@@ -36,7 +41,7 @@ func callOpenAI(system, user string, maxTokens int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost,
-		"https://api.openai.com/v1/chat/completions", bytes.NewReader(payload))
+		cfg.APIURL, bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+key)
 
@@ -142,7 +147,7 @@ func AIHashtags(c *gin.Context) {
 		return
 	}
 
-	if openaiKey() == "" {
+	if !chatAIEnabled() {
 		c.JSON(http.StatusOK, gin.H{"hashtags": []string{}, "configured": false})
 		return
 	}
@@ -185,7 +190,7 @@ func AITranslate(c *gin.Context) {
 		return
 	}
 
-	if openaiKey() == "" {
+	if !chatAIEnabled() {
 		c.JSON(http.StatusOK, gin.H{"translation": "", "configured": false})
 		return
 	}

@@ -5,23 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"os"
 	"time"
 
+	"raonson/ai"
 	mw "raonson/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 // AI-муаллими коднависӣ — proxy ба LLM-и open-source (Groq/Llama ва ғ.).
-// Калид дар env: TUTOR_API_KEY, TUTOR_API_URL, TUTOR_MODEL — ҳеҷ гоҳ дар апп нест.
-
-func tutorEnv(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
+// Калид дар env (AI_API_KEY ё TUTOR_API_KEY-и кӯҳна) — ҳеҷ гоҳ дар апп нест.
 
 // Роҳнамои омӯзиш барои ҳар соҳа.
 var tutorTracks = map[string]string{
@@ -73,17 +66,19 @@ func TutorChat(c *gin.Context) {
 		return
 	}
 
-	apiKey := os.Getenv("TUTOR_API_KEY")
+	// Калид аз занҷири ягона: AI_CHAT_API_KEY → AI_API_KEY → TUTOR_API_KEY → OPENAI_API_KEY.
+	cfg := ai.ConfigFor(ai.TaskChat)
+	apiKey := cfg.APIKey
 	if apiKey == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"reply": "⚙️ Муаллими AI ҳанӯз танзим нашудааст. Соҳиби барнома бояд " +
-				"калиди ройгони LLM-ро (масалан Groq) дар TUTOR_API_KEY гузорад.",
+				"калиди ройгони LLM-ро (масалан Groq) дар AI_API_KEY гузорад.",
 			"configured": false,
 		})
 		return
 	}
-	apiURL := tutorEnv("TUTOR_API_URL", "https://api.groq.com/openai/v1/chat/completions")
-	model := tutorEnv("TUTOR_MODEL", "llama-3.3-70b-versatile")
+	apiURL := cfg.APIURL
+	model := cfg.Model
 
 	// Паёмҳо: system + таърих (охирин 12-то).
 	msgs := []map[string]string{

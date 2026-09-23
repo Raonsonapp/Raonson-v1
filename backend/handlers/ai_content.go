@@ -5,10 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
+	"raonson/ai"
 	mw "raonson/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -63,17 +63,18 @@ func AIText(c *gin.Context) {
 		b.Task = "improve"
 	}
 
-	apiKey := os.Getenv("TUTOR_API_KEY")
+	cfg := ai.ConfigFor(ai.TaskFast)
+	apiKey := cfg.APIKey
 	if apiKey == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"result":     "",
 			"configured": false,
-			"message": "AI ҳанӯз танзим нашудааст. Калиди ройгони LLM (TUTOR_API_KEY) лозим.",
+			"message": "AI ҳанӯз танзим нашудааст. Калиди ройгони LLM (AI_API_KEY) лозим.",
 		})
 		return
 	}
-	apiURL := tutorEnv("TUTOR_API_URL", "https://api.groq.com/openai/v1/chat/completions")
-	model := tutorEnv("TUTOR_MODEL", "llama-3.3-70b-versatile")
+	apiURL := cfg.APIURL
+	model := cfg.Model
 
 	userMsg := b.Text
 	if strings.TrimSpace(userMsg) == "" && b.Task == "caption" {
