@@ -270,6 +270,11 @@ func ViewStory(c *gin.Context) {
 	var owner string
 	db.Pool.QueryRow(context.Background(),
 		`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
+	// «Дидам» — барои ҳалқа, ҳам барои соҳиб.
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO story_seen(story_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
+		sid, myID)
+	mw.InvalidateUserCache(myID)
 	if owner == myID {
 		c.JSON(http.StatusOK, gin.H{"viewed": true})
 		return
@@ -446,6 +451,16 @@ func scanStoryRows(rows interface {
 		}
 		attachPoll(sid, viewerID, item)
 		attachSticker(sid, viewerID, uid, item)
+		// ⚠️ Ин майдон НАБУД. Ҳалқаи сторис дар Reels ба он такя
+		// мекард ва ҳеҷ гоҳ хокистарӣ намешуд — ҳатто стории ХУДАМ
+		// баъди дидан. Лентаи асосӣ инро бо хотираи маҳаллӣ пинҳон
+		// мекард, ки баъди насби нав гум мешуд.
+		var seen bool
+		db.Pool.QueryRow(context.Background(),
+			`SELECT EXISTS(SELECT 1 FROM story_seen WHERE story_id=$1 AND user_id=$2)
+			     OR EXISTS(SELECT 1 FROM story_views WHERE story_id=$1 AND user_id=$2)`,
+			sid, viewerID).Scan(&seen)
+		item["viewed"] = seen
 		stories = append(stories, item)
 	}
 	return stories

@@ -912,6 +912,16 @@ func migrate() {
 		PRIMARY KEY (user_id, peer_id)
 	);
 
+	-- «Ман ин сториро дидам» — барои ҳалқаи сторис (ранга ↔ хокистарӣ).
+	-- Алоҳида аз story_views: соҳиб ҳамчун БИНАНДА ҳисоб намешавад
+	-- (мисли Instagram), вале ҳалқаи ХУДАШ ҳам бояд хокистарӣ шавад.
+	CREATE TABLE IF NOT EXISTS story_seen (
+		story_id TEXT NOT NULL,
+		user_id  TEXT NOT NULL,
+		seen_at  TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (story_id, user_id)
+	);
+
 	-- Alt text — тавсифи расм барои нобиноён.
 	ALTER TABLE post_media ADD COLUMN IF NOT EXISTS alt_text TEXT DEFAULT '';
 

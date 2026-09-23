@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../models/story_model.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -633,7 +634,10 @@ class _ReelItemState extends State<_ReelItem> {
     FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
     _hasStory = widget.reel.user.hasStory ? true : null;
     _initVideo();
-    if (_hasStory == null) _loadStoryStatus();
+    // ҲАМЕША бор мекунем — на танҳо вақте `hasStory` маълум нест.
+    // Пеш агар Reel бо `hasStory: true` меомад, ҳолати «дида шуд»
+    // ҳеҷ гоҳ бор намешуд ва ҳалқа то абад ранга мемонд.
+    _loadStoryStatus();
   }
 
   static final Map<String, ({bool has, bool viewed})> _storyCache = {};
@@ -866,6 +870,38 @@ class _ReelItemState extends State<_ReelItem> {
   void _openProfile() => Navigator.pushNamed(
       context, '/user-profile',
       arguments: widget.reel.user.id);
+
+  /// Мисли Instagram: аватари дорои ҳалқа → СТОРИС, на профил.
+  Future<void> _openAvatar() async {
+    if (_hasStory != true) { _openProfile(); return; }
+    final uid = widget.reel.user.id;
+    List<StoryModel> stories = [];
+    try {
+      final res = await ApiClient.instance
+          .get('/stories', query: {'userId': uid})
+          .timeout(const Duration(seconds: 6));
+      if (res.statusCode < 400) {
+        final body = jsonDecode(res.body);
+        final List list =
+            body is List ? body : (body['stories'] ?? body['data'] ?? []);
+        stories = list
+            .map((e) => StoryModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    if (stories.isEmpty) { _openProfile(); return; }
+    _ctrl?.pause();
+    await Navigator.pushNamed(context, '/story-group-viewer', arguments: {
+      'groups': <List<StoryModel>>[stories],
+      'initialGroupIndex': 0,
+    });
+    if (!mounted) return;
+    // Дида шуд → ҳалқа хокистарӣ, ва дар ҳамаи Reels-и ҳамин муаллиф.
+    _storyCache[uid] = (has: true, viewed: true);
+    setState(() => _storyViewed = true);
+    if (!_paused && widget.isActive) _ctrl?.play();
+  }
 
   // ── АД: Download handler ─────────────────────────────────────────────────
   Future<void> _handleDownload() async {
@@ -1756,7 +1792,9 @@ class _ReelItemState extends State<_ReelItem> {
 
         Positioned(
             right: 10,
-            bottom: bottom + size.height * 0.10,
+            // Каме поёнтар — мисли Instagram (пеш ба миёнаи экран
+            // хеле наздик буд).
+            bottom: bottom + size.height * 0.055,
             child:
                 Column(mainAxisSize: MainAxisSize.min, children: [
               _LikeBtn(
@@ -1812,14 +1850,14 @@ class _ReelItemState extends State<_ReelItem> {
         Positioned(
             left: 14,
             right: 90,
-            bottom: bottom + 24,
+            bottom: bottom + 14,
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(children: [
                     GestureDetector(
-                        onTap: _openProfile,
+                        onTap: _openAvatar,
                         child: _AvatarWithStoryRing(
                             avatarUrl: reel.user.avatar,
                             hasStory: _hasStory,
