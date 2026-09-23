@@ -622,6 +622,12 @@ func GetMessages(c *gin.Context) {
 		limit = 100
 	}
 	offset := (page - 1) * limit
+	// Vanish: паёмҳое, ки гиранда пеш аз ин ДИДА буд, вале «бастан» ба
+	// сервер нарасид (барнома кушта шуд) — баъди як соат ба ҳар ҳол
+	// нопадид мешаванд.
+	db.Pool.Exec(context.Background(), `
+		DELETE FROM messages WHERE chat_id=$1 AND COALESCE(vanish,false)
+		  AND read AND read_at < NOW() - INTERVAL '1 hour'`, chatID)
 	// Паёмҳои ОХИРИНро (page) мегирем (на аввалин), вале бо тартиби афзоянда
 	// бармегардонем — то дар чатҳои дароз ҳам зуд ва дуруст бошад.
 	// Иштироккунанда: танҳо паёмҳое, ки корбар фиристода ё гирифтааст. Шарти
@@ -631,7 +637,7 @@ func GetMessages(c *gin.Context) {
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
 		       is_deleted,read,created_at,username,avatar,verified,
 		       share_id,share_kind,share_thumb,share_user,
-		       view_once,viewed_once,delivered,reactions,edited_at,forwarded
+		       view_once,viewed_once,delivered,reactions,edited_at,forwarded,vanish
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
@@ -655,7 +661,8 @@ func GetMessages(c *gin.Context) {
 		                  ORDER BY mr.created_at)
 		           FROM message_reactions mr WHERE mr.message_id = m.id
 		         ), '[]'::json) reactions,
-		         m.edited_at, COALESCE(m.forwarded,false) forwarded
+		         m.edited_at, COALESCE(m.forwarded,false) forwarded,
+		         COALESCE(m.vanish,false) vanish
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
@@ -677,11 +684,11 @@ func GetMessages(c *gin.Context) {
 		var viewOnce, viewedOnce, delivered bool
 		var reactionsRaw []byte
 		var editedAt *time.Time
-		var forwarded bool
+		var forwarded, vanish bool
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
 			&read, &createdAt, &uname, &uavatar, &verified,
 			&shareID, &shareKind, &shareThumb, &shareUser,
-			&viewOnce, &viewedOnce, &delivered, &reactionsRaw, &editedAt, &forwarded)
+			&viewOnce, &viewedOnce, &delivered, &reactionsRaw, &editedAt, &forwarded, &vanish)
 		// Бе кушодани JSON гин онро ҳамчун байт → base64 мефиристод
 		// ва барнома рӯйхати холӣ мегирифт.
 		reactions := []map[string]interface{}{}
@@ -701,7 +708,7 @@ func GetMessages(c *gin.Context) {
 			"shareThumb": shareThumb, "shareUser": shareUser,
 			"viewOnce": viewOnce, "viewedOnce": viewedOnce,
 			"delivered": delivered, "reactions": reactions,
-			"editedAt": editedAt, "forwarded": forwarded,
+			"editedAt": editedAt, "forwarded": forwarded, "vanish": vanish,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}
@@ -810,7 +817,8 @@ func MarkChatRead(c *gin.Context) {
 	chatID := c.Param("chatId")
 	myID   := mw.UID(c)
 	db.Pool.Exec(context.Background(),
-		`UPDATE messages SET read=TRUE WHERE chat_id=$1::text AND receiver_id=$2::text`, chatID, myID)
+		`UPDATE messages SET read=TRUE, read_at=COALESCE(read_at, NOW())
+		 WHERE chat_id=$1::text AND receiver_id=$2::text`, chatID, myID)
 	// Ба ҳамсӯҳбат хабар медиҳем, то ду тик фавран пайдо шавад
 	// (пештар танҳо баъд аз refresh дида мешуд).
 	if a, b, ok := strings.Cut(chatID, "_"); ok {

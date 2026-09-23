@@ -43,6 +43,18 @@ void main() {
     });
   });
 
+  test('vanish аз сервер хонда мешавад ва тавассути REST меравад', () {
+    final m = MessageModel.fromRoomJson({
+      '_id': 'v', 'chatId': 'a_b', 'text': 'x', 'vanish': true,
+      'createdAt': '2026-09-23T01:00:00Z', 'sender': {'_id': 'a'},
+    }, 'b');
+    expect(m.vanish, isTrue);
+    final r = File('lib/chat/room/chat_room_screen.dart').readAsStringSync();
+    expect(r, contains('replyTo == null && !_vanish'),
+        reason: 'vanish тавассути socket мерафт ва парчам гум мешуд');
+    expect(r, contains("'/chat/\$_chatId/vanish-close'"));
+  });
+
   group('экранҳо', () {
     test('менюи паём «Таҳрир» ва «Фиристодан» дорад', () {
       final b = _read('lib/chat/room/message_bubble.dart');

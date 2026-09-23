@@ -168,3 +168,26 @@ func chatMuted(receiver, sender string) bool {
 		receiver, sender).Scan(&m)
 	return m
 }
+
+// POST /chat/:chatId/vanish-close — гиранда чатро баст.
+//
+// Мисли Instagram: паёмҳои vanish, ки ман ДИДАМ, ҳоло нопадид
+// мешаванд — барои ҳарду тараф. Паёмҳои ҳанӯз надида мемонанд.
+func CloseVanishChat(c *gin.Context) {
+	chatID := c.Param("chatId")
+	myID := mw.UID(c)
+	tag, _ := db.Pool.Exec(context.Background(), `
+		DELETE FROM messages
+		WHERE chat_id=$1 AND receiver_id=$2 AND COALESCE(vanish,false) AND read`,
+		chatID, myID)
+	if n := tag.RowsAffected(); n > 0 {
+		if a, b, ok := strings.Cut(chatID, "_"); ok {
+			peer := a
+			if myID == a {
+				peer = b
+			}
+			emitChat("chat:vanished", map[string]interface{}{"chatId": chatID}, peer, myID)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"removed": tag.RowsAffected()})
+}

@@ -136,6 +136,8 @@ type SendMessageExtRequest struct {
 	ViewOnce   bool `json:"viewOnce"`
 	// Аз чати дигар фиристода шуд (Forward) — гиранда «Фиристода шуд» мебинад.
 	Forwarded  bool `json:"forwarded"`
+	// Vanish mode — баъди дидан ва бастани чат нест мешавад.
+	Vanish     bool `json:"vanish"`
 	// Шиносаи маҳаллии телефон — барои такрорнашавӣ ҳангоми
 	// фиристодани дубора аз навбати офлайн.
 	ClientID   string `json:"clientId"`
@@ -230,14 +232,14 @@ func SendMessageExt(c *gin.Context) {
 		INSERT INTO messages
 		  (chat_id, sender_id, receiver_id, text, type, media_url, reply_to_id,
 		   share_id, share_kind, share_thumb, share_user, view_once,
-		   client_id, forwarded, created_at, updated_at)
+		   client_id, forwarded, vanish, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,
 		        NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),$12,
-		        $13,$14,NOW(),NOW())
+		        $13,$14,$15,NOW(),NOW())
 		RETURNING id
 	`, chatID, myID, receiver, body.Text, msgType, nullString(body.MediaURL), replyToPtr,
 		body.ShareID, body.ShareKind, body.ShareThumb, body.ShareUser,
-		body.ViewOnce, clientID, body.Forwarded).Scan(&msgID)
+		body.ViewOnce, clientID, body.Forwarded, body.Vanish).Scan(&msgID)
 	if err != nil {
 		log.Printf("[Chat] send message failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
@@ -289,7 +291,8 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 		SELECT m.id, m.chat_id, m.text, m.type, m.media_url, m.reply_to_id,
 		       m.is_deleted, m.created_at,
 		       u.id, u.username, u.avatar, u.verified,
-		       m.sender_id, m.edited_at, COALESCE(m.forwarded,false)
+		       m.sender_id, m.edited_at, COALESCE(m.forwarded,false),
+		       COALESCE(m.vanish,false)
 		FROM messages m
 		JOIN users u ON u.id = m.sender_id
 		WHERE m.id = $1
@@ -304,12 +307,13 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 		verified               bool
 		editedAt               *time.Time
 		forwarded              bool
+		vanish                 bool
 	)
 	if err := row.Scan(
 		&id, &chatID, &text, &mType, &mediaURL, &replyToID,
 		&isDeleted, &createdAt,
 		&senderID, &username, &avatar, &verified,
-		&senderID, &editedAt, &forwarded,
+		&senderID, &editedAt, &forwarded, &vanish,
 	); err != nil {
 		return nil, err
 	}
@@ -323,6 +327,7 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 		"createdAt": createdAt,
 		"isMine":    senderID == myID,
 		"forwarded": forwarded,
+		"vanish":    vanish,
 		"sender": map[string]interface{}{
 			"_id":      senderID,
 			"username": username,

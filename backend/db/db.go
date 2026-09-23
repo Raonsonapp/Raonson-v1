@@ -961,6 +961,9 @@ func migrate() {
 	-- Паёми таҳриршуда ва фиристодашуда аз чати дигар.
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS forwarded BOOLEAN DEFAULT FALSE;
+	-- Vanish mode: паём баъди дидан ва бастани чат нопадид мешавад.
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS vanish  BOOLEAN DEFAULT FALSE;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
 
 	-- ── Analytics events (batch-inserted from client) ──
 	CREATE TABLE IF NOT EXISTS events (

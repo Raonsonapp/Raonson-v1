@@ -1025,9 +1025,11 @@ class _StatusRow extends StatelessWidget {
         children: [
           Text(
             // «таҳрир шуд» — то ҳамсӯҳбат донад, ки матн иваз шудааст.
-            m.editedAt != null && !m.isDeleted
-                ? '${m.timeLabel} · таҳрир шуд'
-                : m.timeLabel,
+            [
+              if (m.vanish) '👻',
+              m.timeLabel,
+              if (m.editedAt != null && !m.isDeleted) 'таҳрир шуд',
+            ].join(' · '),
             style: TextStyle(color: AppColors.textFaint, fontSize: 10),
           ),
           if (m.isMine) ...[

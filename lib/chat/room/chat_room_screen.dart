@@ -74,6 +74,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   // Reply state
   MessageModel? _replyTo;
 
+  /// Vanish mode (мисли Instagram): паёмҳои нав баъди дидан ва бастани
+  /// чат нопадид мешаванд.
+  bool _vanish = false;
+
   // Дархости паём
   late bool _isRequest = widget.isRequest;
 
@@ -105,6 +109,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     }
     _subs.clear();
     if (_chatId.isNotEmpty) _socket.leaveChat(_chatId);
+    // Паёмҳои vanish, ки ман ДИДАМ, ҳоло нопадид мешаванд.
+    if (_chatId.isNotEmpty) {
+      ApiClient.instance
+          .post('/chat/$_chatId/vanish-close')
+          .then((_) {}, onError: (_) {});
+    }
     _typingResetTimer?.cancel();
     _pollTimer?.cancel();
     _connectSub.cancel();
@@ -403,6 +413,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
     });
 
+    // Ҳамсӯҳбат чатро баст — паёмҳои vanish-и дидашуда нопадид шуданд.
+    _listen('chat:vanished', (data) {
+      if (!mounted) return;
+      setState(() => _messages.removeWhere(
+          (m) => m.vanish && m.status == MessageStatus.read));
+    });
+
     _listen('chat:delete', (data) {
       if (data is! Map<String, dynamic> || !mounted) return;
       final msgId = data['messageId']?.toString() ?? '';
@@ -454,7 +471,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       return;
     }
 
-    if (_socket.isConnected && _chatId.isNotEmpty && replyTo == null) {
+    // Vanish тавассути REST меравад — он парчамро дар база сабт мекунад.
+    if (_socket.isConnected && _chatId.isNotEmpty && replyTo == null && !_vanish) {
       _socket.emit('chat:send', {
         'chatId': _chatId,
         'text': text,
@@ -467,6 +485,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           text:      text,
           replyToId: replyTo?.id,
           chatId:    _chatId,
+          vanish:    _vanish,
         );
         if (!mounted) return;
         setState(() {
@@ -989,6 +1008,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         ]),
       ),
       actions: [
+        // Vanish mode — мисли Instagram.
+        _AppBarBtn(
+            icon: _vanish ? Icons.visibility_off_rounded : Icons.visibility_off_outlined,
+            onTap: () {
+              setState(() => _vanish = !_vanish);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(_vanish
+                      ? '👻 Vanish mode: паёмҳои нав баъди дидан ва бастани чат нопадид мешаванд'
+                      : 'Vanish mode хомӯш шуд'),
+                  duration: const Duration(seconds: 3)));
+            }),
         _AppBarBtn(
             icon: AppIcons.videocam_rounded,
             onTap: () => _startCall(CallType.video)),

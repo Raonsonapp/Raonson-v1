@@ -74,6 +74,8 @@ class MessageModel {
   final DateTime?               editedAt;
   /// Аз чати дигар фиристода шуд (Forward).
   final bool                    forwarded;
+  /// Vanish mode — баъди дидан ва бастани чат нопадид мешавад.
+  final bool                    vanish;
   // Танзимоти шахсии чат (танҳо дар рӯйхат).
   final bool                    pinned;
   final bool                    muted;
@@ -98,6 +100,7 @@ class MessageModel {
     this.viewedOnce = false,
     this.editedAt,
     this.forwarded  = false,
+    this.vanish     = false,
     this.pinned     = false,
     this.muted      = false,
     this.reactions    = const [],
@@ -127,6 +130,7 @@ class MessageModel {
     bool?                 viewedOnce,
     DateTime?             editedAt,
     bool?                 forwarded,
+    bool?                 vanish,
     bool?                 pinned,
     bool?                 muted,
     bool?                 isRequest,
@@ -152,6 +156,7 @@ class MessageModel {
     viewedOnce:   viewedOnce    ?? this.viewedOnce,
     editedAt:     editedAt      ?? this.editedAt,
     forwarded:    forwarded     ?? this.forwarded,
+    vanish:       vanish        ?? this.vanish,
     pinned:       pinned        ?? this.pinned,
     muted:        muted         ?? this.muted,
     isRequest:    isRequest     ?? this.isRequest,
@@ -261,6 +266,7 @@ class MessageModel {
       viewedOnce: json['viewedOnce'] == true,
       editedAt:  parseServerTime(json['editedAt']),
       forwarded: json['forwarded'] == true,
+      vanish:    json['vanish'] == true,
       reactions: reactions,
     );
   }

@@ -216,6 +216,8 @@ class ChatRepository {
     /// Агар дархост ба сервер расида бошад, вале ҷавоб гум шуда
     /// бошад, такрор бе ин паёми ДУЮМ месохт.
     String? clientId,
+    /// Vanish mode — баъди дидан ва бастани чат нопадид мешавад.
+    bool vanish = false,
   }) async {
     final myId = await _myId();
     var cid = chatId;
@@ -237,6 +239,7 @@ class ChatRepository {
         if (mediaType != null && mediaType.isNotEmpty) 'type': mediaType,
         if (viewOnce) 'viewOnce': true,
         if (clientId != null && clientId.isNotEmpty) 'clientId': clientId,
+        if (vanish) 'vanish': true,
       },
     ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 400) throw Exception('Send error');
