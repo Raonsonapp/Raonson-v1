@@ -583,6 +583,23 @@ class _ReelItem extends StatefulWidget {
 class _ReelItemState extends State<_ReelItem> {
   VideoPlayerController? _ctrl;
   bool _initialized = false;
+
+  /// Видео кушода нашуд.
+  ///
+  /// ⚠️ Пеш `initialize()` ҳеҷ `catchError` надошт: Reel-и вайрон
+  /// то абад дар спиннер мемонд ва корбар намедонист чаро.
+  bool _videoFailed = false;
+
+  void _onVideoError(Object e, VideoPlayerController c) {
+    debugPrint('[Reel] видео кушода нашуд: $e');
+    if (!mounted || _ctrl != c) return;
+    setState(() => _videoFailed = true);
+    // Сервер худаш анборро месанҷад; агар файл воқеан нест бошад,
+    // Reel барои ҳама пинҳон мешавад (ниг. media_check.go).
+    ApiClient.instance
+        .post('/reels/${widget.reel.id}/media-check')
+        .then((_) {}, onError: (_) {});
+  }
   bool _paused = false;
   bool _showHeart = false;
   bool _saved = false;
@@ -673,8 +690,9 @@ class _ReelItemState extends State<_ReelItem> {
         setState(() => _initialized = true);
         _addBufferListener();
       } else {
-        _ctrl!.initialize().then((_) {
-          if (!mounted) return;
+        final pc = _ctrl!;
+        pc.initialize().then((_) {
+          if (!mounted || _ctrl != pc) return;
           _ctrl!.setLooping(true);
           _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
           if (widget.isActive) {
@@ -683,14 +701,15 @@ class _ReelItemState extends State<_ReelItem> {
           }
           if (mounted) setState(() => _initialized = true);
           _addBufferListener();
-        });
+        }).catchError((Object e) { _onVideoError(e, pc); });
       }
       return;
     }
-    _ctrl = VideoPlayerController.networkUrl(Uri.parse(
-        NetworkQuality.pick(widget.reel.videoUrl, widget.reel.videoUrlLow)))
-      ..initialize().then((_) {
-        if (!mounted) return;
+    final c = VideoPlayerController.networkUrl(Uri.parse(
+        NetworkQuality.pick(widget.reel.videoUrl, widget.reel.videoUrlLow)));
+    _ctrl = c;
+    c.initialize().then((_) {
+        if (!mounted || _ctrl != c) return;
         _ctrl!.setLooping(true);
         _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
         if (widget.isActive) {
@@ -699,7 +718,7 @@ class _ReelItemState extends State<_ReelItem> {
         }
         if (mounted) setState(() => _initialized = true);
         _addBufferListener();
-      });
+      }).catchError((Object e) { _onVideoError(e, c); });
   }
 
   void _addBufferListener() {
@@ -1608,7 +1627,20 @@ class _ReelItemState extends State<_ReelItem> {
               1
             ]))),
 
-        if (_isBuffering && !_paused)
+        if (_videoFailed)
+          const Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.videocam_off_rounded, color: Colors.white54, size: 44),
+              SizedBox(height: 10),
+              Text('Видео кушода нашуд',
+                  style: TextStyle(color: Colors.white70, fontSize: 14)),
+              SizedBox(height: 4),
+              Text('Ба Reel-и навбатӣ гузаред',
+                  style: TextStyle(color: Colors.white38, fontSize: 12)),
+            ]),
+          ),
+
+        if (_isBuffering && !_paused && !_videoFailed)
           const Center(
               child: CircularProgressIndicator(
                   strokeWidth: 2.5,

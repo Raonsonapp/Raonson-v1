@@ -43,7 +43,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   @override
   void dispose() {
-    SocketService.instance.off('group:new');
+    // Танҳо шунавандаи ХУДИ ин экран — вагарна гурӯҳи дигари кушода
+    // паёмҳои навро гум мекард.
+    SocketService.instance.off('group:new', _onSocket);
     super.dispose();
   }
 

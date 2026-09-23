@@ -168,15 +168,36 @@ class SocketService {
   void on(String event, void Function(dynamic) cb) =>
       _listeners.putIfAbsent(event, () => []).add(cb);
 
-  void off(String event) => _listeners.remove(event);
+  /// Шунавандаро хориҷ мекунад.
+  ///
+  /// Бо [cb] — ТАНҲО ҳамонро. Бе он — ҳамаи шунавандаҳои ҳодисаро.
+  ///
+  /// ⚠️ Пеш танҳо варианти дуюм буд. Чат A → ақиб → фавран чат B:
+  /// `dispose`-и A баъди аниматсияи бозгашт (~300ms) меояд, яъне
+  /// БАЪДИ он ки B шунавандаҳои худро гузошт — ва онҳоро ҳам пок
+  /// мекард. Дар чат B паёмҳои нав дигар фавран намеомаданд.
+  void off(String event, [void Function(dynamic)? cb]) {
+    if (cb == null) {
+      _listeners.remove(event);
+      return;
+    }
+    final list = _listeners[event];
+    if (list == null) return;
+    list.remove(cb);
+    if (list.isEmpty) _listeners.remove(event);
+  }
+
+  /// Шумораи шунавандаҳо — танҳо барои тестҳо.
+  @visibleForTesting
+  int listenerCount(String event) => _listeners[event]?.length ?? 0;
 
   void joinChat(String chatId) =>
       emit('chat:join', {'chatId': chatId});
 
-  void leaveChat(String chatId) {
-    off('chat:new');
-    off('chat:typing');
-  }
+  /// Ба шунавандаҳо даст НАМЕРАСОНАД — ҳар экран худаш шунавандаи
+  /// ХУДАШРО хориҷ мекунад. Пеш ин ҷо `off('chat:new')` буд, ки
+  /// шунавандаи чати ДИГАР-ро низ пок мекард.
+  void leaveChat(String chatId) {}
 
   void sendTyping(String chatId, String userId, {bool isTyping = true}) =>
       emit('chat:typing',

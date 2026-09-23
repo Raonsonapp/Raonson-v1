@@ -44,6 +44,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _presence = PresenceService();
   final _socket   = SocketService.instance;
 
+  /// Шунавандаҳое, ки ҲАМИН экран гузошт — то танҳо онҳо хориҷ шаванд.
+  final List<MapEntry<String, void Function(dynamic)>> _subs = [];
+
+  void _listen(String event, void Function(dynamic) cb) {
+    _subs.add(MapEntry(event, cb));
+    _socket.on(event, cb);
+  }
+
   List<MessageModel> _messages = [];
   ChatTheme _theme = ChatThemes.all.first;
   bool   _loading     = true;
@@ -88,12 +96,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // onIncomingCall ба таври глобалӣ дар BottomNavScaffold идора мешавад —
     // ин ҷо null намекунем, вагарна занг берун аз чат қабул намешавад.
     _presence.removeListener(_onPresence);
-    _socket.off('chat:new');
-    _socket.off('chat:typing');
-    _socket.off('chat:read');
-    _socket.off('chat:delivered');
-    _socket.off('chat:reaction');
-    _socket.off('chat:delete');
+    // Танҳо шунавандаҳои ХУДИ ҲАМИН экран — ниг. `SocketService.off`.
+    for (final e in _subs) {
+      _socket.off(e.key, e.value);
+    }
+    _subs.clear();
     if (_chatId.isNotEmpty) _socket.leaveChat(_chatId);
     _typingResetTimer?.cancel();
     _pollTimer?.cancel();
@@ -272,16 +279,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (!_socket.isConnected) _socket.autoConnect();
     if (_chatId.isNotEmpty) _socket.joinChat(_chatId);
 
-    // Listener-ҳои кӯҳнаро тоза мекунем, то ҳангоми бозкушоиш ҷамъ нашаванд.
-    _socket.off('chat:new');
-    _socket.off('chat:typing');
-    _socket.off('chat:read');
-    _socket.off('chat:delivered');
-    _socket.off('chat:reaction');
-    _socket.off('chat:delete');
+    // Шунавандаҳои пешинаи ХУДИ ҳамин экран (агар бори дуюм гузошта
+    // шаванд). Шунавандаҳои чати дигар даст нахӯранд.
+    for (final e in _subs) {
+      _socket.off(e.key, e.value);
+    }
+    _subs.clear();
 
     // New message
-    _socket.on('chat:new', (data) {
+    _listen('chat:new', (data) {
       if (data is! Map<String, dynamic>) return;
       final msg = MessageModel.fromRoomJson(data, _myId);
       if (!mounted) return;
@@ -309,7 +315,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
 
     // Typing
-    _socket.on('chat:typing', (data) {
+    _listen('chat:typing', (data) {
       if (!mounted) return;
       // Агар "stop typing" омада бошад (isTyping=false), фавран пинҳон мекунем.
       final isTyping = data is Map && data['isTyping'] == false ? false : true;
@@ -326,7 +332,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
 
     // Read receipt
-    _socket.on('chat:read', (data) {
+    _listen('chat:read', (data) {
       if (!mounted) return;
       setState(() {
         _messages = _messages.map((m) {
@@ -342,7 +348,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     //
     // Ин аз «хонда шуд» фарқ мекунад ва фарқ муҳим аст: паём
     // метавонад ба телефони хомӯш нарасида бошад.
-    _socket.on('chat:delivered', (data) {
+    _listen('chat:delivered', (data) {
       if (data is! Map || !mounted) return;
       final ids = (data['messageIds'] as List?)
               ?.map((e) => e.toString())
@@ -363,7 +369,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
 
     // Reaction
-    _socket.on('chat:reaction', (data) {
+    _listen('chat:reaction', (data) {
       if (data is! Map<String, dynamic> || !mounted) return;
       final msgId   = data['messageId']?.toString() ?? '';
       final emoji   = data['emoji']?.toString()     ?? '';
@@ -380,7 +386,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
 
     // Delete
-    _socket.on('chat:delete', (data) {
+    _listen('chat:delete', (data) {
       if (data is! Map<String, dynamic> || !mounted) return;
       final msgId = data['messageId']?.toString() ?? '';
       setState(() {

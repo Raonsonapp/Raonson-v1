@@ -262,8 +262,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ])),
         // Feature groups
         SliverList(delegate: SliverChildBuilderDelegate(
-          (ctx, i) => _groupCard(_groups[i]),
-          childCount: _groups.length,
+          (ctx, i) => _groupCard(_liveGroups[i]),
+          childCount: _liveGroups.length,
         )),
         const SliverToBoxAdapter(child: SizedBox(height: 110)),
       ]),
@@ -309,6 +309,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     ));
   }
 
+  /// Танҳо гурӯҳҳое, ки ақаллан ЯК функсияи воқеан коркунанда доранд.
+  ///
+  /// Пеш ин экран ~120 функсияро бо нишони «скоро» таблиғ мекард —
+  /// Official Store, Visa/Mastercard, 2FA-и бизнес, Team Management …
+  /// Ҳеҷ кадоме вуҷуд надошт. Корбар гуфт: «намехоҳам ягон қисме дар
+  /// экран танҳо барои намоиш бошад». Акнун танҳо он чи КОР МЕКУНАД.
+  List<_Group> get _liveGroups => _groups
+      .map((g) => _Group(g.emoji, g.title,
+          g.items.where(_kAvailable.contains).toList()))
+      .where((g) => g.items.isNotEmpty)
+      .toList();
+
   Widget _groupCard(_Group g) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -324,27 +336,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ]),
         const SizedBox(height: 8),
         ...g.items.map((f) {
-          final on = _kAvailable.contains(f);
+          // `_liveGroups` танҳо функсияҳои фаъолро медиҳад.
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(on ? AppIcons.check_circle_rounded : AppIcons.schedule_rounded,
-                  color: on ? const Color(0xFF00C853) : AppColors.textFaint,
-                  size: 17),
+              const Icon(AppIcons.check_circle_rounded,
+                  color: Color(0xFF00C853), size: 17),
               const SizedBox(width: 8),
               Expanded(child: Text(f,
                   style: TextStyle(
-                      color: on ? AppColors.textSecondary : AppColors.textFaint,
+                      color: AppColors.textSecondary,
                       fontSize: 13.5, height: 1.3))),
-              if (!on)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(5)),
-                  child: Text(tr('ui.0ba9823f99'),
-                      style: TextStyle(color: AppColors.textFaint, fontSize: 9)),
-                ),
-            ]),
+          ]),
           );
         }),
       ]),
@@ -374,7 +377,7 @@ const Set<String> _kAvailable = {
   'Returned', 'Refunded', 'Cancelled',
   'Live Chat', 'Auto Reply',
   'Ба нақша гирифтани постҳо',
-  'Broadcast Message', 'Push Notification', 'Loyalty Program',
+  'Broadcast Message', 'Push Notification',
   'Live Stream',
   'Featured Products',
   'Базаи муштариён', 'Таърихи харид',

@@ -178,6 +178,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     _videoCtrl?.dispose();
     _videoCtrl = null;
     _videoReady = false;
+    _videoFailed = false;
     _liked = _current.isLiked;
     _poll  = _current.poll;
 
@@ -188,15 +189,37 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     }
   }
 
+  bool _videoFailed = false;
+
   void _initVideo() {
-    _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(_current.mediaUrl))
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() => _videoReady = true);
-        _videoCtrl!.play();
-        final dur = _videoCtrl!.value.duration;
-        _startProgress(dur.inSeconds > 0 ? dur : const Duration(seconds: 15));
-      });
+    _videoFailed = false;
+    // Контроллер ДАР ИН ҶО нигоҳ дошта мешавад.
+    //
+    // ⚠️ Пеш дар `then` `_videoCtrl!` истифода мешуд. Агар корбар зуд
+    // ба стории навбатӣ мегузашт, `_videoCtrl` аллакай ДИГАР буд, ва
+    // ҷавоби видеои кӯҳна видеои навро пеш аз омода шудан «тайёр»
+    // эълон мекард ва таймерашро бо вақти нодуруст сар мекард.
+    final c = VideoPlayerController.networkUrl(Uri.parse(_current.mediaUrl));
+    _videoCtrl = c;
+    c.initialize().then((_) {
+      if (!mounted || _videoCtrl != c) return;
+      setState(() => _videoReady = true);
+      if (!_paused) c.play();
+      final dur = c.value.duration;
+      _startProgress(dur.inSeconds > 0 ? dur : const Duration(seconds: 15));
+      if (_paused) {
+        _progressCtrl.stop();
+        _timer?.cancel();
+      }
+    }).catchError((Object e) {
+      // ⚠️ Пеш хато гирифта намешуд: таймер ҳеҷ гоҳ сар намешуд ва
+      // стори АБАДАН дар экрани сиёҳ меистод. Instagram чунин
+      // стори-ро мегузарад — мо ҳам: 3 сония паём, баъд навбатӣ.
+      debugPrint('[Story] видео кушода нашуд: $e');
+      if (!mounted || _videoCtrl != c) return;
+      setState(() => _videoFailed = true);
+      _startProgress(const Duration(seconds: 3));
+    });
   }
 
   void _startProgress(Duration dur) {
@@ -976,6 +999,16 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   Widget _buildVideo() {
+    if (_videoFailed) {
+      return const Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.videocam_off_rounded, color: Colors.white54, size: 40),
+          SizedBox(height: 10),
+          Text('Видео кушода нашуд',
+              style: TextStyle(color: Colors.white70, fontSize: 14)),
+        ]),
+      );
+    }
     if (!_videoReady) { return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white30)); }
     return FittedBox(
       fit: BoxFit.cover,
