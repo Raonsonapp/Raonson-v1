@@ -1064,7 +1064,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     if (_videoFailed) {
       return const Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.videocam_off_rounded, color: Colors.white54, size: 40),
+          Icon(AppIcons.videocam_off_rounded, color: Colors.white54, size: 40),
           SizedBox(height: 10),
           Text('Видео кушода нашуд',
               style: TextStyle(color: Colors.white70, fontSize: 14)),

@@ -2,6 +2,7 @@ import '../../core/ads/feed_ad_card.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
@@ -137,21 +138,21 @@ class _FeedShellState extends State<_FeedShell> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 10),
           for (final m in const [
-            ['', 'Барои шумо', Icons.auto_awesome_outlined],
-            ['following', 'Обунаҳо', Icons.people_outline],
-            ['favorites', 'Дӯстдоштаҳо', Icons.star_outline_rounded],
+            ['', 'Барои шумо', FeatherIcons.zap],
+            ['following', 'Обунаҳо', FeatherIcons.users],
+            ['favorites', 'Дӯстдоштаҳо', FeatherIcons.star],
           ])
             ListTile(
               leading: Icon(m[2] as IconData, color: AppColors.textPrimary),
               title: Text(m[1] as String,
                   style: TextStyle(color: AppColors.textPrimary)),
               trailing: ctrl.mode == m[0]
-                  ? Icon(Icons.check_rounded, color: AppColors.neonBlue)
+                  ? Icon(FeatherIcons.check, color: AppColors.neonBlue)
                   : null,
               onTap: () => Navigator.pop(sheet, m[0] as String),
             ),
           ListTile(
-            leading: Icon(Icons.edit_outlined, color: AppColors.textSecondary),
+            leading: Icon(FeatherIcons.edit2, color: AppColors.textSecondary),
             title: Text('Идораи дӯстдоштаҳо',
                 style: TextStyle(color: AppColors.textSecondary)),
             onTap: () => Navigator.pop(sheet, '__manage'),
@@ -232,7 +233,7 @@ class _FeedShellState extends State<_FeedShell> {
                       : TextStyle(
                           fontSize: 20, fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary)),
-                Icon(Icons.keyboard_arrow_down_rounded,
+                Icon(FeatherIcons.chevronDown,
                     color: AppColors.textPrimary, size: 22),
               ]),
             ),

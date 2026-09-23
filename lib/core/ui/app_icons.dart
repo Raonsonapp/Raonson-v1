@@ -1,12 +1,12 @@
 // ignore_for_file: constant_identifier_names
 // lib/core/ui/app_icons.dart
 // Иконҳо аз Feather (react-icons/fi) — тоза ва мисли Instagram.
-// Like/comment/share/save/verified/eye ҳамчун Material Symbols мемонанд
-// (шаклашон бояд иваз нашавад / fill дошта бошанд).
+// Like/comment/share/save/verified ҳамчун Material Symbols мемонанд
+// (шаклашон ягона шудааст, fill доранд). push_pin дар Feather нест.
+// Ҳамаи дигарон — Feather outline.
 import 'package:flutter/widgets.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_feather_icons/flutter_feather_icons.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class AppIcons {
   AppIcons._();
@@ -18,9 +18,9 @@ class AppIcons {
   static const IconData add_circle_outline_rounded = FeatherIcons.plusCircle;
   static const IconData add_rounded = FeatherIcons.plus;
   static const IconData add_a_photo_rounded = FeatherIcons.camera;
-  static const IconData storefront_rounded = FontAwesomeIcons.shop;
+  static const IconData storefront_rounded = FeatherIcons.shoppingBag;
   static const IconData admin_panel_settings_outlined = FeatherIcons.shield;
-  static const IconData all_inclusive_rounded = Symbols.all_inclusive_rounded;
+  static const IconData all_inclusive_rounded = FeatherIcons.repeat;
   static const IconData alternate_email = FeatherIcons.atSign;
   static const IconData alternate_email_rounded = FeatherIcons.atSign;
   static const IconData archive_outlined = FeatherIcons.archive;
@@ -37,8 +37,8 @@ class AppIcons {
   static const IconData bolt_rounded = FeatherIcons.zap;
   static const IconData bookmark = Symbols.bookmark_rounded;
   static const IconData bookmark_border_rounded = Symbols.bookmark_rounded;
-  static const IconData broken_image_outlined = Symbols.broken_image_rounded;
-  static const IconData broken_image_rounded = Symbols.broken_image_rounded;
+  static const IconData broken_image_outlined = FeatherIcons.image;
+  static const IconData broken_image_rounded = FeatherIcons.image;
   static const IconData brush = FeatherIcons.penTool;
   static const IconData calendar_today_rounded = FeatherIcons.calendar;
   static const IconData call_end_rounded = FeatherIcons.phoneOff;
@@ -46,7 +46,7 @@ class AppIcons {
   static const IconData phone_missed_rounded = FeatherIcons.phoneMissed;
   static const IconData camera_alt_outlined = FeatherIcons.camera;
   static const IconData camera_alt_rounded = FeatherIcons.camera;
-  static const IconData campaign_outlined = Symbols.campaign_rounded;
+  static const IconData campaign_outlined = FeatherIcons.volume2;
   static const IconData cancel_rounded = FeatherIcons.xCircle;
   static const IconData card_giftcard_rounded = FeatherIcons.gift;
   static const IconData chat_bubble = Symbols.chat_bubble_rounded;
@@ -67,7 +67,7 @@ class AppIcons {
   static const IconData code_rounded = FeatherIcons.code;
   static const IconData collections_rounded = FeatherIcons.copy;
   static const IconData computer_rounded = FeatherIcons.monitor;
-  static const IconData construction_rounded = Symbols.construction_rounded;
+  static const IconData construction_rounded = FeatherIcons.settings;
   static const IconData contacts_outlined = FeatherIcons.users;
   static const IconData contacts_rounded = FeatherIcons.users;
   static const IconData copy_rounded = FeatherIcons.copy;
@@ -95,22 +95,22 @@ class AppIcons {
   static const IconData favorite_border_rounded = Symbols.favorite_rounded;
   static const IconData favorite_rounded = Symbols.favorite_rounded;
   static const IconData flag_outlined = FeatherIcons.flag;
-  static const IconData flip_camera_ios_rounded = Symbols.flip_camera_ios_rounded;
-  static const IconData forward_10_rounded = Symbols.forward_10_rounded;
+  static const IconData flip_camera_ios_rounded = FeatherIcons.refreshCw;
+  static const IconData forward_10_rounded = FeatherIcons.rotateCw;
   static const IconData fullscreen_exit_rounded = FeatherIcons.minimize2;
-  static const IconData grid_off_rounded = Symbols.grid_off_rounded;
+  static const IconData grid_off_rounded = FeatherIcons.grid;
   static const IconData grid_on_rounded = FeatherIcons.grid;
   static const IconData group_add_outlined = FeatherIcons.userPlus;
   static const IconData group_add_rounded = FeatherIcons.userPlus;
   static const IconData group_rounded = FeatherIcons.users;
-  static const IconData hd_outlined = Symbols.hd_rounded;
+  static const IconData hd_outlined = FeatherIcons.monitor;
   static const IconData hide_image_outlined = FeatherIcons.eyeOff;
-  static const IconData high_quality_rounded = Symbols.high_quality_rounded;
+  static const IconData high_quality_rounded = FeatherIcons.monitor;
   static const IconData history_rounded = FeatherIcons.clock;
   static const IconData home = FeatherIcons.home;
   static const IconData home_outlined = FeatherIcons.home;
   static const IconData home_rounded = FeatherIcons.home;
-  static const IconData hourglass_bottom_rounded = Symbols.hourglass_bottom_rounded;
+  static const IconData hourglass_bottom_rounded = FeatherIcons.clock;
   static const IconData image_outlined = FeatherIcons.image;
   static const IconData info_outline_rounded = FeatherIcons.info;
   static const IconData keyboard_arrow_down_rounded = FeatherIcons.chevronDown;
@@ -144,7 +144,7 @@ class AppIcons {
   static const IconData accessibility_new_rounded = IconData(0xe062, fontFamily: 'MaterialIcons');
   static const IconData open_in_new_rounded = FeatherIcons.externalLink;
   static const IconData open_in_full_rounded = FeatherIcons.maximize2;
-  static const IconData palette_outlined = Symbols.palette_rounded;
+  static const IconData palette_outlined = FeatherIcons.droplet;
   static const IconData pause_circle_filled_rounded = FeatherIcons.pauseCircle;
   static const IconData pause_rounded = FeatherIcons.pause;
   static const IconData payments_outlined = FeatherIcons.creditCard;
@@ -162,7 +162,7 @@ class AppIcons {
   static const IconData photo_camera_rounded = FeatherIcons.camera;
   static const IconData photo_library_outlined = FeatherIcons.image;
   static const IconData photo_library_rounded = FeatherIcons.image;
-  static const IconData play_arrow_rounded = FontAwesomeIcons.play;
+  static const IconData play_arrow_rounded = FeatherIcons.play;
   static const IconData play_circle_fill = FeatherIcons.playCircle;
   static const IconData play_circle_fill_rounded = FeatherIcons.playCircle;
   static const IconData play_circle_filled_rounded = FeatherIcons.playCircle;
@@ -176,14 +176,14 @@ class AppIcons {
   static const IconData radio_button_unchecked = FeatherIcons.circle;
   static const IconData record_voice_over_rounded = FeatherIcons.mic;
   static const IconData refresh_rounded = FeatherIcons.refreshCw;
-  static const IconData remove_red_eye_outlined = Symbols.visibility_rounded;
-  static const IconData remove_red_eye_rounded = Symbols.visibility_rounded;
-  static const IconData replay_10_rounded = Symbols.replay_10_rounded;
+  static const IconData remove_red_eye_outlined = FeatherIcons.eye;
+  static const IconData remove_red_eye_rounded = FeatherIcons.eye;
+  static const IconData replay_10_rounded = FeatherIcons.rotateCcw;
   static const IconData reply_rounded = FeatherIcons.cornerUpLeft;
   static const IconData schedule_rounded = FeatherIcons.clock;
-  static const IconData screen_rotation_rounded = Symbols.screen_rotation_rounded;
+  static const IconData screen_rotation_rounded = FeatherIcons.rotateCw;
   static const IconData search = FeatherIcons.search;
-  static const IconData search_off_rounded = Symbols.search_off_rounded;
+  static const IconData search_off_rounded = FeatherIcons.search;
   static const IconData search_rounded = FeatherIcons.search;
   static const IconData security_outlined = FeatherIcons.shield;
   static const IconData send = FeatherIcons.send;
@@ -191,8 +191,8 @@ class AppIcons {
   static const IconData send_rounded = FeatherIcons.send;
   static const IconData share_outlined = Symbols.share_rounded;
   static const IconData share_rounded = Symbols.share_rounded;
-  static const IconData slow_motion_video_rounded = Symbols.slow_motion_video_rounded;
-  static const IconData smart_display_outlined = Symbols.smart_display_rounded;
+  static const IconData slow_motion_video_rounded = FeatherIcons.film;
+  static const IconData smart_display_outlined = FeatherIcons.playCircle;
   static const IconData star = FeatherIcons.star;
   static const IconData star_outline_rounded = FeatherIcons.star;
   static const IconData star_rounded = FeatherIcons.star;
@@ -215,10 +215,10 @@ class AppIcons {
   static const IconData videocam_off_rounded = FeatherIcons.videoOff;
   static const IconData videocam_outlined = FeatherIcons.video;
   static const IconData videocam_rounded = FeatherIcons.video;
-  static const IconData visibility_off_outlined = Symbols.visibility_off_rounded;
-  static const IconData visibility_off_rounded = Symbols.visibility_off_rounded;
-  static const IconData visibility_outlined = Symbols.visibility_rounded;
-  static const IconData visibility_rounded = Symbols.visibility_rounded;
+  static const IconData visibility_off_outlined = FeatherIcons.eyeOff;
+  static const IconData visibility_off_rounded = FeatherIcons.eyeOff;
+  static const IconData visibility_outlined = FeatherIcons.eye;
+  static const IconData visibility_rounded = FeatherIcons.eye;
   static const IconData volume_down_rounded = FeatherIcons.volume1;
   static const IconData volume_off_rounded = FeatherIcons.volumeX;
   static const IconData volume_up_rounded = FeatherIcons.volume2;

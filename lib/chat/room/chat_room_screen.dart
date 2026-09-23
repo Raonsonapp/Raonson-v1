@@ -1068,7 +1068,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       actions: [
         // Vanish mode — мисли Instagram.
         _AppBarBtn(
-            icon: _vanish ? Icons.visibility_off_rounded : Icons.visibility_off_outlined,
+            icon: AppIcons.visibility_off_rounded,
             onTap: () {
               setState(() => _vanish = !_vanish);
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(

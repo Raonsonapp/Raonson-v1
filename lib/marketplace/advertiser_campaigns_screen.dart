@@ -62,7 +62,7 @@ class _AdvertiserCampaignsScreenState extends State<AdvertiserCampaignsScreen> {
             context,
             MaterialPageRoute(builder: (_) => const CreateCampaignScreen()),
           ).then((_) => _load()),
-          icon: const Icon(Icons.add, color: Colors.white),
+          icon: const Icon(AppIcons.add, color: Colors.white),
           label: Text(tr('mp.newCampaign'),
               style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.w700)),

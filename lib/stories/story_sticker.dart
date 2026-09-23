@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:raonson/core/ui/app_icons.dart';
+import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:flutter/services.dart';
 
 import '../core/api/api_client.dart';
@@ -386,9 +388,9 @@ class _StoryStickerViewState extends State<StoryStickerView> {
                         fontWeight: FontWeight.w600)),
               ),
               if (isCorrect)
-                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const Icon(AppIcons.check_circle, color: Colors.white, size: 18),
               if (isMineWrong)
-                const Icon(Icons.cancel, color: Colors.white, size: 18),
+                const Icon(AppIcons.cancel_rounded, color: Colors.white, size: 18),
               if (answered && !isCorrect && !isMineWrong)
                 Text('${(pct * 100).round()}%',
                     style: const TextStyle(color: Colors.black54, fontSize: 12)),
@@ -535,7 +537,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
                 color: Colors.black.withOpacity(0.25), blurRadius: 12)],
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.link_rounded, color: Color(0xFF0095F6), size: 20),
+            const Icon(FeatherIcons.link, color: Color(0xFF0095F6), size: 20),
             const SizedBox(width: 6),
             Flexible(
               child: Text(_s.prompt.isEmpty ? (uri?.host ?? '') : _s.prompt,

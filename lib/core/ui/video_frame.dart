@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_feather_icons/flutter_feather_icons.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../app/app_theme.dart';
@@ -176,7 +177,7 @@ class _Blank extends StatelessWidget {
         color: AppColors.card,
         child: Center(
           child: Icon(
-            failed ? Icons.videocam_off_rounded : Icons.play_circle_outline,
+            failed ? FeatherIcons.videoOff : FeatherIcons.playCircle,
             color: AppColors.textFaint,
             size: 26,
           ),

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:raonson/core/ui/app_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raonson/models/story_model.dart';
 import 'package:raonson/stories/story_sticker.dart';
@@ -83,7 +84,7 @@ void main() {
           kind: 'quiz', prompt: 'Пойтахт?', options: ['Хуҷанд', 'Душанбе'])));
       expect(find.text('Пойтахт?'), findsOneWidget);
       expect(find.text('Душанбе'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsNothing);
+      expect(find.byIcon(AppIcons.check_circle), findsNothing);
       expect(find.textContaining('%'), findsNothing);
     });
 
@@ -91,8 +92,8 @@ void main() {
       await t.pumpWidget(_host(const StorySticker(
           kind: 'quiz', prompt: '?', options: ['a', 'b', 'c'],
           myChoice: 0, correct: 1, counts: [1, 3, 0])));
-      expect(find.byIcon(Icons.check_circle), findsOneWidget); // дуруст
-      expect(find.byIcon(Icons.cancel), findsOneWidget);       // ман хато
+      expect(find.byIcon(AppIcons.check_circle), findsOneWidget); // дуруст
+      expect(find.byIcon(AppIcons.cancel_rounded), findsOneWidget);       // ман хато
       expect(find.text('4 ҷавоб'), findsOneWidget);
     });
 

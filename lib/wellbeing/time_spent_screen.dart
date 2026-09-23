@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:raonson/core/ui/app_icons.dart';
 
 import '../app/app_theme.dart';
 import 'usage_tracker.dart';
@@ -29,7 +30,7 @@ class _TimeSpentScreenState extends State<TimeSpentScreen> {
             ListTile(
               title: Text(o == 0 ? 'Хомӯш' : (o >= 60 && o % 60 == 0 ? '${o ~/ 60} соат' : '$o дақиқа'),
                   style: TextStyle(color: AppColors.textPrimary)),
-              trailing: o == current ? Icon(Icons.check, color: AppColors.neonBlue) : null,
+              trailing: o == current ? Icon(AppIcons.check_rounded, color: AppColors.neonBlue) : null,
               onTap: () => Navigator.pop(ctx, o),
             ),
         ]),
