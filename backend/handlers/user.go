@@ -236,7 +236,7 @@ func GetUserReels(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$4),
 		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$4 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$4 AND hf.following_id=s.user_id)) AND (s.user_id=$4 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$4)))
 		FROM reels r JOIN users u ON u.id=r.user_id
-		WHERE r.user_id=$1
+		WHERE r.user_id=$1 AND COALESCE(r.media_missing,false)=FALSE
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
 		id, limit, offset, myID)
 	if err != nil {

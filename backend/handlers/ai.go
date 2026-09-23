@@ -275,7 +275,7 @@ func AiSearch(c *gin.Context) {
 			       r.views_count, r.likes_count, r.created_at,
 			       u.id, u.username, u.avatar, u.verified
 			FROM reels r JOIN users u ON u.id=r.user_id
-			WHERE %s %s AND COALESCE(u.banned,false)=FALSE
+			WHERE %s %s AND COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
 			ORDER BY r.created_at DESC LIMIT 24`, whereKw, sinceClause)
 		rows, qerr := db.Pool.Query(context.Background(), query, args...)
 		if qerr == nil {

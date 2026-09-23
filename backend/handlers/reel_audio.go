@@ -121,7 +121,7 @@ func GetReelAudio(c *gin.Context) {
 		       r.views_count, r.likes_count, u.id, u.username, u.avatar
 		FROM reels r
 		JOIN users u ON u.id = r.user_id
-		WHERE r.audio_id=$1 AND u.banned=FALSE
+		WHERE r.audio_id=$1 AND u.banned=FALSE AND COALESCE(r.media_missing,false)=FALSE
 		  AND NOT EXISTS (
 		    SELECT 1 FROM blocks b
 		    WHERE (b.blocker_id=$2 AND b.blocked_id=r.user_id)

@@ -315,6 +315,10 @@ func migrate() {
 	-- Тасвири аввалин кадри видео (thumbnail) — мисли Instagram дар grid-ҳо
 	-- (profile/search/explore) нишон дода мешавад, ба ҷои placeholder.
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS thumbnail_url TEXT DEFAULT '';
+	-- Файли видео дар анбор НЕСТ (сервер худаш тасдиқ кард).
+	-- Сатр нест карда намешавад — танҳо пинҳон: агар анбор муваққатан
+	-- хато дода бошад, баргардонидан мумкин аст.
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS media_missing BOOLEAN DEFAULT FALSE;
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,

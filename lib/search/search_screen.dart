@@ -146,6 +146,31 @@ class _SearchScreenState extends State<SearchScreen>
     if (mounted) setState(() { _history = h; _accounts = a; });
   }
 
+  /// Плиткае, ки видеояш кушода нашуд, аз грид бароварда мешавад.
+  ///
+  /// Пеш он бо нишони «видео кушода нашуд» ва шумораи тамошо то
+  /// абад мемонд. Корбар: «видеоҳое ки удалит кардагӣ … аз барнома
+  /// наистад — удалит шавад хубтар аст».
+  ///
+  /// Сервер ба ин ишора БОВАР НАМЕКУНАД — худаш анборро месанҷад
+  /// ва танҳо агар файл воқеан нест бошад, reel-ро барои ҲАМА пинҳон
+  /// мекунад. Ин ҷо танҳо дар ҳамин экран хориҷ мекунем: интернети
+  /// суст низ метавонад видеоро накушояд.
+  void _dropBroken(String id) {
+    if (!mounted || id.isEmpty) return;
+    final i = _exploreItems.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final item = _exploreItems[i];
+    setState(() {
+      _exploreItems = List.of(_exploreItems)..removeAt(i);
+    });
+    if (item.type == _ItemType.reel) {
+      ApiClient.instance
+          .post('/reels/$id/media-check')
+          .then((_) {}, onError: (_) {});
+    }
+  }
+
   Future<void> _loadExplore() async {
     setState(() => _exploreLoading = true);
     try {
@@ -526,6 +551,7 @@ class _SearchScreenState extends State<SearchScreen>
                     items:   _exploreItems,
                     onTap:   _openExploreAt,
                     onLongPress: _showExplorePreview,
+                    onBroken: _dropBroken,
                   ),
                 ),
         ),
@@ -939,7 +965,10 @@ class _ExploreGrid extends StatelessWidget {
   final List<_ExploreItem> items;
   final void Function(int index) onTap;
   final void Function(int index)? onLongPress;
-  const _ExploreGrid({required this.items, required this.onTap, this.onLongPress});
+  /// Видеои плитка кушода нашуд.
+  final void Function(String id)? onBroken;
+  const _ExploreGrid({required this.items, required this.onTap,
+      this.onLongPress, this.onBroken});
 
   @override
   Widget build(BuildContext context) {
@@ -978,6 +1007,7 @@ class _ExploreGrid extends StatelessWidget {
           // даромадан. Танҳо плиткаҳои аввал — ҳар видео як декодери
           // системаро мегирад ва онҳо маҳдуданд.
           autoPlay: i < 4,
+          onBroken: onBroken == null ? null : () => onBroken!(items[i].id),
           onTap: () => onTap(i),
           onLongPress: onLongPress == null ? null : () => onLongPress!(i),
         ),
@@ -992,8 +1022,9 @@ class _ExploreCell extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool autoPlay;
+  final VoidCallback? onBroken;
   const _ExploreCell({required this.item, required this.onTap,
-      this.onLongPress, this.autoPlay = false});
+      this.onLongPress, this.autoPlay = false, this.onBroken});
 
   @override
   Widget build(BuildContext context) {
@@ -1011,6 +1042,7 @@ class _ExploreCell extends StatelessWidget {
           videoUrl: item.videoUrl,
           fit: BoxFit.cover,
           autoPlay: autoPlay,
+          onFailed: onBroken,
         ),
         // Reel icon (top-right)
         if (item.type == _ItemType.reel)

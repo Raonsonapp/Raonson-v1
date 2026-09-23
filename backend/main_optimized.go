@@ -361,6 +361,7 @@ func main() {
 		re.POST("/",             handlers.CreateReel)
 		re.DELETE("/:id",        handlers.DeleteReel)
 		re.POST("/:id/view",     handlers.TrackReelView)   // view dedup tracking
+	re.POST("/:id/media-check", handlers.CheckReelMedia) // файли видео нест? → пинҳон
 		re.POST("/:id/watch",    handlers.TrackReelWatch)  // watch-time tracking
 		re.POST("/:id/like",     handlers.ToggleReelLike)
 		re.POST("/:id/save",     handlers.ToggleReelSave)

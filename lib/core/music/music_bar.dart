@@ -36,20 +36,33 @@ int previewOffsetMs(SongInfo song) {
   return ((song.startMs / trackMs) * kPreviewMs).round().clamp(0, maxSeek);
 }
 
+/// Намуди сатри музика.
+enum MusicBarStyle {
+  /// Ҳаб бо тугмаи play — стори ва ҷойҳои дигар.
+  pill,
+
+  /// Як сатри борик зери номи корбар: «♫ Хонанда · Ном».
+  ///
+  /// Маҳз ҳамин тавр Instagram нишон медиҳад. Пеш дар Raonson сатри
+  /// музика дар ЗЕРИ пост буд — корбар гуфт: «номи музика дар болои
+  /// пост мисли инстаграм бошад, на дар таги пост».
+  header,
+}
+
 class MusicBar extends StatefulWidget {
   final SongInfo song;
 
-  /// Дарҳол сар кунад (стори) ё интизори зарба шавад (пост дар лента).
-  ///
-  /// Дар лента худкор хондан МУМКИН НЕСТ: даҳ пост дар экран =
-  /// даҳ суруд якбора.
+  /// Дарҳол сар кунад (стори, ё пости дар экран буда).
   final bool autoPlay;
 
-  /// Ҳангоми аз экран рафтани стори садоро бас мекунад.
+  /// Садоро бас мекунад: стори аз экран рафт, ё корбар лентаро
+  /// хомӯш кард.
   final bool paused;
 
   /// Сабки фишурда барои лента; васеъ барои стори.
   final bool compact;
+
+  final MusicBarStyle style;
 
   const MusicBar({
     super.key,
@@ -57,6 +70,7 @@ class MusicBar extends StatefulWidget {
     this.autoPlay = false,
     this.paused = false,
     this.compact = true,
+    this.style = MusicBarStyle.pill,
   });
 
   @override
@@ -87,13 +101,24 @@ class _MusicBarState extends State<MusicBar> {
   /// Оё хондан имконпазир аст — ҳозир ё баъди ҷустуҷӯ?
   bool get _canPlay => _song.playable || _song.title.isNotEmpty;
 
+  /// Ҳоло бояд садо диҳад?
+  ///
+  /// Як шарти ЯГОНА ба ҷои ду парчами алоҳида. Пеш мантиқ танҳо
+  /// тағйири `paused`-ро мегирифт: агар пост ҳангоми сохта шудан
+  /// ҳанӯз дар экран набуд ва БАЪД намоён шуд, `autoPlay` аз
+  /// `false` ба `true` мегузашт — ва ҳеҷ чиз намешуд. Маҳз аз ин
+  /// «музика худаш сар намешуд».
+  bool get _shouldPlay => widget.autoPlay && !widget.paused;
+
   @override
   void initState() {
     super.initState();
-    if (widget.autoPlay && _song.playable && !widget.paused) {
+    if (_shouldPlay) {
       // Баъди аввалин кашидани экран — вагарна `setState` дар
       // `initState` огоҳинома медиҳад.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _shouldPlay) _start();
+      });
     }
   }
 
@@ -101,16 +126,24 @@ class _MusicBarState extends State<MusicBar> {
   void didUpdateWidget(MusicBar old) {
     super.didUpdateWidget(old);
 
-    // Суруд иваз шуд (стори-и дигар) → аз нав.
-    if (old.song.previewUrl != widget.song.previewUrl) {
+    // Суруд иваз шуд (стори-и дигар, ё пости дигар дар ҳамон ҷой) →
+    // аз нав.
+    if (old.song.previewUrl != widget.song.previewUrl ||
+        old.song.label != widget.song.label) {
+      _resolved = null;
       _dispose();
-      if (widget.autoPlay && _song.playable && !widget.paused) _start();
+      if (_shouldPlay) _start();
       return;
     }
-    if (widget.paused && _playing) {
-      _player?.pause();
-    } else if (!widget.paused && old.paused && widget.autoPlay) {
+
+    final was = old.autoPlay && !old.paused;
+    if (was == _shouldPlay) return;
+
+    if (_shouldPlay) {
       _player == null ? _start() : _player!.resume();
+    } else {
+      _player?.pause();
+      if (mounted && _playing) setState(() => _playing = false);
     }
   }
 
@@ -227,6 +260,31 @@ class _MusicBarState extends State<MusicBar> {
     }
   }
 
+  /// Сатри зери номи корбар — ҳамон тавре ки Instagram медиҳад.
+  ///
+  /// Ҳеҷ тугмаи play нест ва лозим ҳам не: садо ҳангоми ба экран
+  /// даромадани пост худаш сар мешавад, ва баландгӯяк дар тарафи
+  /// рости расм аст. Ин ҷо танҳо НОМ аст.
+  Widget _buildHeader(SongInfo song) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(AppIcons.music_note_rounded,
+              size: 12, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              song.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400),
+            ),
+          ),
+        ],
+      );
+
   /// 0..1 — то чӣ андоза порча хонда шуд.
   double get _progress {
     if (!_playing) return 0;
@@ -239,6 +297,8 @@ class _MusicBarState extends State<MusicBar> {
   Widget build(BuildContext context) {
     final song = _song;
     if (song.isEmpty) return const SizedBox.shrink();
+
+    if (widget.style == MusicBarStyle.header) return _buildHeader(song);
 
     final fg = widget.compact ? AppColors.textSecondary : AppColors.white;
     final bg = widget.compact

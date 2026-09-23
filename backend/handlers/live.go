@@ -48,9 +48,17 @@ func StartLive(c *gin.Context) {
 func EndLive(c *gin.Context) {
 	myID := mw.UID(c)
 	id := c.Param("id")
-	db.Pool.Exec(context.Background(),
+	// Натиҷа САНҶИДА мешавад. Маълумот ҳимоя буд (`AND host_id=$2`),
+	// вале ҷавоб ҳамеша 200 буд — яъне бегона тугмаро мезад, барнома
+	// «эфир хотима ёфт» нишон медод, ҳол он ки эфир давом дошт.
+	// Ҳамон камбудии `pin`, дар ҷои дигар.
+	tag, err := db.Pool.Exec(context.Background(),
 		`UPDATE live_streams SET active=FALSE, ended_at=NOW()
 		 WHERE id=$1 AND host_id=$2`, id, myID)
+	if err != nil || tag.RowsAffected() == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиби эфир"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 

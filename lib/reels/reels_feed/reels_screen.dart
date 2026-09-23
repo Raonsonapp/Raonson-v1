@@ -773,12 +773,54 @@ class _ReelItemState extends State<_ReelItem> {
 
   @override
   void dispose() {
+    _flashTimer?.cancel();
     _sendWatchTime();
     _ctrl?.removeListener(_onVideoUpdate);
     if (widget.preloadCtrl == null || widget.preloadCtrl != _ctrl) {
       _ctrl?.dispose();
     }
     super.dispose();
+  }
+
+  // ── Ишораҳо — айнан мисли Instagram ─────────────────────────
+  //
+  //   як зарба          → садо фаъол / хомӯш (нишони баландгӯяк
+  //                       як лаҳза дар марказ медурахшад);
+  //   пахш карда нигоҳ  → видео меистад, то ангушт бардошта шавад;
+  //   ду зарба          → лайк.
+  //
+  // Пеш як зарба видеоро МЕИСТОНД, ва тугмаи садо ТАНҲО дар ҳолати
+  // истода намоён мешуд. Яъне барои фаъол кардани садо корбар бояд
+  // аввал видеоро бас мекард, садоро мезад, баъд боз play мекард —
+  // маҳз он «play-ро зер кун, stop кун»-е, ки корбар шикоят кард.
+  bool _holding = false;
+  bool _flashMute = false;
+  Timer? _flashTimer;
+
+  void _tapToggleMute() {
+    HapticFeedback.selectionClick();
+    widget.onMuteToggle();
+    _flashTimer?.cancel();
+    setState(() => _flashMute = true);
+    _flashTimer = Timer(const Duration(milliseconds: 750), () {
+      if (mounted) setState(() => _flashMute = false);
+    });
+  }
+
+  void _holdStart() {
+    if (_ctrl == null || _paused) return;
+    setState(() => _holding = true);
+    _ctrl!.pause();
+    _stopWatchTimer();
+  }
+
+  void _holdEnd() {
+    if (!_holding) return;
+    setState(() => _holding = false);
+    if (!_paused && widget.isActive) {
+      _ctrl?.play();
+      _startWatchTimer();
+    }
   }
 
   void _togglePause() {
@@ -1518,8 +1560,11 @@ class _ReelItemState extends State<_ReelItem> {
     final top = MediaQuery.of(context).padding.top;
 
     return GestureDetector(
-      onTap: _togglePause,
+      onTap: _paused ? _togglePause : _tapToggleMute,
       onDoubleTap: _doubleTapLike,
+      onLongPressStart: (_) => _holdStart(),
+      onLongPressEnd: (_) => _holdEnd(),
+      onLongPressCancel: _holdEnd,
       child: Stack(fit: StackFit.expand, children: [
         // Фони сиёҳ — кафолат, ки ягон навори хокистарӣ намонад (мисли Instagram)
         const ColoredBox(color: Colors.black),
@@ -1596,6 +1641,26 @@ class _ReelItemState extends State<_ReelItem> {
                 child: const Icon(AppIcons.play_arrow_rounded,
                     color: Colors.white, size: 48)),
             ])),
+
+        // Нишони садо — баъди зарба як лаҳза, мисли Instagram.
+        IgnorePointer(
+          child: Center(
+            child: AnimatedOpacity(
+              opacity: _flashMute ? 1 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: Container(
+                width: 64, height: 64,
+                decoration: const BoxDecoration(
+                    color: Colors.black54, shape: BoxShape.circle),
+                child: Icon(
+                    widget.isMuted
+                        ? AppIcons.volume_off_rounded
+                        : AppIcons.volume_up_rounded,
+                    color: Colors.white, size: 30),
+              ),
+            ),
+          ),
+        ),
 
         if (_showHeart) const Center(child: _HeartBurst()),
 

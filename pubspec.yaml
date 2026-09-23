@@ -69,6 +69,12 @@ dependencies:
 
   yandex_mobileads: ^8.4.0
 
+  # «Ин пост ҲОЗИР дар экран аст?»
+  #
+  # Бе он музика ва видеои пост намедонистанд, кай сар кунанд ва кай
+  # бас кунанд: ё ҳама якбора мехонданд, ё ҳеҷ кадом.
+  visibility_detector: ^0.4.0+2
+
 # record_linux 0.7.2 startStream-и interface 1.3.0-ро надорад → build шикаст
 # мехӯрад. Тамоми оила ба версияи пеш-аз-startStream маҳкам мешавад.
 dependency_overrides:

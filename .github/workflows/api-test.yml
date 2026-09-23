@@ -146,6 +146,15 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_user2.py
 
+      # Ҷустуҷӯ, explore, Live, танзимоти лента, студияи муаллиф.
+      # Ин санҷиш ошкор кард, ки бегона метавонист «эфирро хотима
+      # диҳад» — сервер 200 мегуфт, ҳол он ки эфир давом дошт.
+      - name: Санҷиши кашф, Live ва лента
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_user3.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

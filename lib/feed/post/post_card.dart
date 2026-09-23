@@ -8,9 +8,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/content_events.dart';
 import '../../create/share_to_story.dart';
+import '../../core/music/feed_audio.dart';
 import '../../core/music/music_bar.dart';
 import '../../core/music/song_info.dart';
 import '../../core/music/music_picker.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -80,6 +82,44 @@ class _PostCardState extends State<PostCard>
   Timer? _viewTimer;
   bool   _viewTracked = false;
 
+  // ── «Ин пост ҲОЗИР дар экран аст?» ───────────────────────────
+  //
+  // Бе ин музика намедонист, кай сар кунад. Пеш худкор хондан
+  // умуман хомӯш буд, чунки ҳамаи постҳои сохташуда якбора
+  // мехонданд.
+  //
+  // 0.6 — на камтар: агар пост НИМ-НИМА намоён бошад, ҳанӯз навбати
+  // ӯ нест. Вагарна ҳангоми варақ задан садо ҳар лаҳза мепарид.
+  bool _onScreen = false;
+
+  /// Садои ин пост бояд ҳозир равад?
+  ///
+  /// Се шарт ва ҳар се ҳатмист: пост дар экран, ленталаи худаш
+  /// кушода (`isActive` — на ин ки корбар ба Reels рафтааст), ва
+  /// худи пост «соҳиби садо» аст. Шарти сеюм ду сурудро ҳамзамон
+  /// намемонад.
+  bool get _audioOn =>
+      _onScreen &&
+      widget.isActive &&
+      FeedAudio.instance.foreground.value &&
+      FeedAudio.instance.isOwner(widget.post.id);
+
+  void _onAudioChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onVisibility(VisibilityInfo info) {
+    if (!mounted) return;
+    final visible = info.visibleFraction >= 0.6;
+    if (visible == _onScreen) return;
+    setState(() => _onScreen = visible);
+    if (visible) {
+      if (_song.isNotEmpty) FeedAudio.instance.claim(widget.post.id);
+    } else {
+      FeedAudio.instance.release(widget.post.id);
+    }
+  }
+
   // ── Like bounce ──────────────────────────────────────────────
   late AnimationController _likeCtrl;
   late Animation<double>   _likeScale;
@@ -123,6 +163,13 @@ class _PostCardState extends State<PostCard>
     _commentsDisabled = widget.post.commentsDisabled;
     _caption      = widget.post.caption;
     _song         = widget.post.song;
+
+    // Ҳар тағйири «соҳиби садо» ё «хомӯш» — корт аз нав кашида
+    // мешавад, то MusicBar фармони нав гирад.
+    FeedAudio.instance.load();
+    FeedAudio.instance.owner.addListener(_onAudioChanged);
+    FeedAudio.instance.muted.addListener(_onAudioChanged);
+    FeedAudio.instance.foreground.addListener(_onAudioChanged);
 
     // Зарбаи фаврӣ, баъд каме "фурӯ" ва нишастани фаврӣ — ҳисси
     // тугмаи дили Instagram. Пештар танҳо як scale-и ҳамвор буд.
@@ -180,6 +227,12 @@ class _PostCardState extends State<PostCard>
 
   @override
   void dispose() {
+    FeedAudio.instance.owner.removeListener(_onAudioChanged);
+    FeedAudio.instance.muted.removeListener(_onAudioChanged);
+    FeedAudio.instance.foreground.removeListener(_onAudioChanged);
+    // Корт нест шуд (пост ҳазф шуд, ё рӯйхат аз нав сохта шуд) —
+    // садо бояд бо он равад, вагарна суруд бе пост мехонад.
+    FeedAudio.instance.release(widget.post.id);
     _viewTimer?.cancel();
     _likeDebounce?.cancel();
     // Flush pending like to server before widget is destroyed —
@@ -1196,6 +1249,14 @@ class _PostCardState extends State<PostCard>
   @override
   Widget build(BuildContext context) {
     if (_hidden) return const SizedBox.shrink();
+    return VisibilityDetector(
+      key: ValueKey('post-vis-${widget.post.id}'),
+      onVisibilityChanged: _onVisibility,
+      child: _buildCard(context),
+    );
+  }
+
+  Widget _buildCard(BuildContext context) {
     final post = widget.post;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1238,6 +1299,22 @@ class _PostCardState extends State<PostCard>
                 ],
               ]),
               const SizedBox(height: 2),
+              // ── Музика — ЗЕРИ НОМ, мисли Instagram ──
+              //
+              // Пеш сатри музика дар ЗЕРИ пост буд ва бо тугмаи play.
+              // Ҳоло ин ҷо танҳо ном аст; садо худаш сар мешавад, вақте
+              // пост ба экран медарояд, ва баландгӯяк дар тарафи рости
+              // расм аст.
+              if (_song.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 1),
+                  child: MusicBar(
+                    song: _song,
+                    style: MusicBarStyle.header,
+                    autoPlay: _audioOn,
+                    paused: FeedAudio.instance.muted.value,
+                  ),
+                ),
               // Локация — агар бошад
               if (post.location.isNotEmpty)
                 Padding(
@@ -1299,6 +1376,34 @@ class _PostCardState extends State<PostCard>
                       : '${post.taggedUsers.length}',
                   onTap: () => _showTaggedUsers(post.taggedUsers)),
               ]),
+            ),
+          // ── Баландгӯяк — ТАРАФИ РОСТ, мисли Instagram ─────────
+          //
+          // Садоро барои ТАМОМИ лента хомӯш/фаъол мекунад. Танҳо
+          // дар постҳое, ки музика доранд — дар дигарон он ҳеҷ кор
+          // намекард ва корбарро гумроҳ мекард.
+          if (_song.isNotEmpty)
+            Positioned(
+              right: 10, bottom: 10,
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  FeedAudio.instance.toggleMuted();
+                  // Агар корбар садоро фаъол кард, ин пост бояд
+                  // соҳиби садо бошад — ҳатто агар ҳанӯз нашуда бошад.
+                  if (_onScreen) FeedAudio.instance.claim(post.id);
+                },
+                child: Container(
+                  width: 30, height: 30,
+                  decoration: const BoxDecoration(
+                    color: Color(0x99000000), shape: BoxShape.circle),
+                  child: Icon(
+                    FeedAudio.instance.muted.value
+                        ? AppIcons.volume_off_rounded
+                        : AppIcons.volume_up_rounded,
+                    color: Colors.white, size: 16),
+                ),
+              ),
             ),
           if (_showHeart)
             AnimatedBuilder(animation: _heartCtrl,
@@ -1419,21 +1524,8 @@ class _PostCardState extends State<PostCard>
 
       // ── "Намоиш ҳама N шарх" ──────────────────────────────────
 
-      // ── MUSIC BAR — мисли Instagram ──────────────────────────
-      //
-      // Пеш ин танҳо МАТН буд — ҳеҷ гоҳ ҳеҷ чиз намехонд. Акнун
-      // занед → аз ҳамон ҷое, ки муаллиф интихоб кард, мехонад ва
-      // хат пеш меравад.
-      //
-      // Худкор намехонад: даҳ пост дар экран = даҳ суруд якбора.
-      if (_song.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: MusicBar(song: _song),
-          ),
-        ),
+      // Сатри музика ин ҷо БУД (зери пост, бо тугмаи play). Ба
+      // сарлавҳа гузаронда шуд — ниг. «Музика — ЗЕРИ НОМ».
       if (_commentsDisabled)
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),

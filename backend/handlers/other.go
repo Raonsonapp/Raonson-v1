@@ -650,7 +650,7 @@ func GetReels(c *gin.Context) {
 		       COALESCE(r.audio_id,''), COALESCE(r.audio_title,''),
 		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,'')
 		FROM reels r JOIN users u ON u.id=r.user_id
-		WHERE ($4 = FALSE OR EXISTS (
+		WHERE COALESCE(r.media_missing,false)=FALSE AND ($4 = FALSE OR EXISTS (
 		    SELECT 1 FROM follows f2
 		    WHERE f2.follower_id=$1::text AND f2.following_id=r.user_id))
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,

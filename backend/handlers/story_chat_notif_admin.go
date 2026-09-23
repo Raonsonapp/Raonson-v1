@@ -941,7 +941,7 @@ func ExploreGrid(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
 		       (SELECT COUNT(*) FROM reel_shares sh WHERE sh.reel_id=r.id)
 		FROM reels r JOIN users u ON u.id=r.user_id
-		WHERE COALESCE(u.banned,false)=FALSE
+		WHERE COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
 		ORDER BY r.likes_count DESC LIMIT 20`, myID)
 	reels := []gin.H{}
 	if rRows != nil {

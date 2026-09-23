@@ -47,12 +47,19 @@ class VideoFrame extends StatefulWidget {
   /// плиткаи намоён додан лозим аст, на ба ҳама.
   final bool autoPlay;
 
+  /// Видео кушода нашуд — масалан файл дар анбор нест.
+  ///
+  /// Плиткаи explore бо ин худро пинҳон мекунад ва серверро огоҳ
+  /// мекунад, вагарна «видео кушода нашуд» то абад мемонд.
+  final VoidCallback? onFailed;
+
   const VideoFrame({
     super.key,
     required this.thumbUrl,
     required this.videoUrl,
     this.fit = BoxFit.cover,
     this.autoPlay = false,
+    this.onFailed,
   });
 
   @override
@@ -116,6 +123,7 @@ class _VideoFrameState extends State<VideoFrame> {
       debugPrint('[VideoFrame] $e');
       _releaseSlot();
       if (mounted) setState(() => _failed = true);
+      widget.onFailed?.call();
     }
   }
 

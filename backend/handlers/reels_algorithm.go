@@ -134,6 +134,7 @@ func GetSmartReels(c *gin.Context) {
 		  LEFT JOIN feed_prefs fp ON fp.user_id = $1
 		  WHERE
 		    u.banned = FALSE
+		    AND COALESCE(r.media_missing,false) = FALSE
 		    AND r.created_at > NOW() - INTERVAL '30 days'
 		    -- Нишондашударо нишон намедиҳем
 		    AND NOT EXISTS (
