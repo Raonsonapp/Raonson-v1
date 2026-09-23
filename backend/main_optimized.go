@@ -312,7 +312,11 @@ func main() {
 		lg.POST("/:id/comment", handlers.LiveComment)
 		lg.GET("/:id/comments", handlers.LiveComments)
 		lg.POST("/:id/like",    handlers.LiveLike)
+		lg.POST("/:id/token",   handlers.LiveToken)
 	}
+
+	// Token ва номи канали Agora барои занги аудио/видео.
+	r.POST("/calls/token", auth, rl100, handlers.CallToken)
 
 	// ── Effects marketplace ────────────────────────────────────────
 	ef := r.Group("/effects", auth, rl100)

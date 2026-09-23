@@ -205,6 +205,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_story_seen.py
 
+      # Занг: канал < 64 байт, ҳарду тараф як канал, бастагон занг намезананд.
+      - name: Санҷиши занг ва Live token
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_calls.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

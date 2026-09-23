@@ -8,7 +8,6 @@ import '../../models/user_model.dart';
 import '../../widgets/avatar.dart';
 import '../../core/agora_service.dart';
 import '../../core/webrtc_service.dart';
-import '../../core/storage/token_storage.dart';
 import '../../core/ui/app_icons.dart';
 import '../chat_repository.dart';
 import '../../core/i18n/strings.dart';
@@ -104,6 +103,10 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   void _onAgoraChange() {
     if (_agora.remoteJoined) _everConnected = true;
     if (!mounted) return;
+    if (_agora.error != null) {
+      _failAndClose('Занг пайваст нашуд (${_agora.error}).');
+      return;
+    }
     if (_agora.remoteJoined && _timer == null) {
       _stopRing().then((_) => _playConnectSound());
       _startTimer();
@@ -121,10 +124,34 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       }
       return;
     }
-    final myId    = await TokenStorage.getUserId() ?? '';
-    final channel = AgoraService.channelName(myId, widget.peer.id);
-    await _agora.joinCall(channelName: channel, isVideo: widget.callType == CallType.video);
+    final cred = await AgoraService.callCredentials(widget.peer.id);
+    if (!mounted) return;
+    if (cred == null) {
+      _failAndClose('Занг пайваст нашуд. Интернетро санҷед.');
+      return;
+    }
+    await _agora.joinCall(channelName: cred.channel, token: cred.token,
+        isVideo: widget.callType == CallType.video);
     if (widget.isIncoming) _signal.sendAnswered(widget.peer.id);
+    // Агар дар 60 сония касе ҷавоб надиҳад — мисли Instagram қатъ мешавад.
+    _noAnswer = Timer(const Duration(seconds: 60), () {
+      if (mounted && !_connected) _endCall();
+    });
+  }
+
+  Timer? _noAnswer;
+  bool _failed = false;
+
+  void _failAndClose(String msg) {
+    if (_failed || !mounted) return;
+    _failed = true;
+    _stopRing();
+    _signal.sendEnd(widget.peer.id);
+    _agora.leaveCall();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg), backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3)));
+    Navigator.pop(context);
   }
 
   void _startTimer() {
@@ -197,6 +224,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     _signal.onCallDeclined = null;
     _player.dispose();
     _timer?.cancel();
+    _noAnswer?.cancel();
     _pulseCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();

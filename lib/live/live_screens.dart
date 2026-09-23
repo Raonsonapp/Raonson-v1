@@ -202,7 +202,8 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
         final b = jsonDecode(r.body) as Map<String, dynamic>;
         _id = (b['id'] ?? '').toString();
         _channel = (b['channel'] ?? '').toString();
-        await _agora.joinLive(channelName: _channel, asHost: true);
+        await _agora.joinLive(channelName: _channel, asHost: true,
+            token: await AgoraService.liveToken(_id));
         _agora.addListener(_onAgora);
         _poll = Timer.periodic(const Duration(seconds: 5), (_) => _refreshViewers());
       }
@@ -349,7 +350,8 @@ class _LiveViewerState extends State<LiveViewerScreen> {
   Future<void> _join() async {
     try {
       ApiClient.instance.post('/live/$_id/join');
-      await _agora.joinLive(channelName: _channel, asHost: false);
+      await _agora.joinLive(channelName: _channel, asHost: false,
+          token: await AgoraService.liveToken(_id));
       _agora.addListener(_onAgora);
     } catch (_) {}
     if (mounted) setState(() => _joining = false);

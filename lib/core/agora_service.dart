@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+import 'api/api_client.dart';
 
 const String kAgoraAppId = String.fromEnvironment('AGORA_APP_ID',
     defaultValue: '');
@@ -32,12 +36,21 @@ class AgoraService extends ChangeNotifier {
   String     get channelId    => _channelId;
 
   // ─── JOIN ───
+  /// Хатои охирини Agora (масалан token нодуруст) — экран онро нишон медиҳад,
+  /// то корбар то абад «Пайваст мешавад…» набинад.
+  String? _error;
+  String? get error => _error;
+
   Future<void> joinCall({
     required String channelName,
     required bool   isVideo,
+    String          token = '',
   }) async {
+    _error = null;
     if (kAgoraAppId.isEmpty) {
       debugPrint('[Agora] ERROR: AGORA_APP_ID is not set. Build with --dart-define=AGORA_APP_ID=your_id');
+      _error = 'AGORA_APP_ID';
+      notifyListeners();
       return;
     }
     await _requestPermissions(isVideo);
@@ -67,7 +80,21 @@ class AgoraService extends ChangeNotifier {
         _remoteJoined = false;
         notifyListeners();
       },
-      onError: (err, msg) => debugPrint('[Agora] Error $err: $msg'),
+      onError: (err, msg) {
+        debugPrint('[Agora] Error $err: $msg');
+        if (_fatal(err)) { _error = err.name; notifyListeners(); }
+      },
+      onConnectionStateChanged: (connection, state, reason) {
+        if (state == ConnectionStateType.connectionStateFailed ||
+            reason == ConnectionChangedReasonType.connectionChangedInvalidToken ||
+            reason == ConnectionChangedReasonType.connectionChangedTokenExpired ||
+            reason == ConnectionChangedReasonType.connectionChangedInvalidAppId ||
+            reason == ConnectionChangedReasonType.connectionChangedInvalidChannelName ||
+            reason == ConnectionChangedReasonType.connectionChangedBannedByServer) {
+          _error = reason.name;
+          notifyListeners();
+        }
+      },
     ));
 
     if (isVideo) {
@@ -82,7 +109,7 @@ class AgoraService extends ChangeNotifier {
 
     _channelId = channelName;
     await _engine!.joinChannel(
-      token:     '',
+      token:     token,
       channelId: channelName,
       uid:       0,
       options: ChannelMediaOptions(
@@ -100,7 +127,9 @@ class AgoraService extends ChangeNotifier {
   Future<void> joinLive({
     required String channelName,
     required bool   asHost,
+    String          token = '',
   }) async {
+    _error = null;
     if (asHost) await _requestPermissions(true); // host: камера+микрофон
 
     if (_engine != null) {
@@ -135,7 +164,7 @@ class AgoraService extends ChangeNotifier {
 
     _channelId = channelName;
     await _engine!.joinChannel(
-      token:     '',
+      token:     token,
       channelId: channelName,
       uid:       0,
       options: ChannelMediaOptions(
@@ -190,13 +219,48 @@ class AgoraService extends ChangeNotifier {
   }
 
   // ─── HELPERS ───
+  static bool _fatal(ErrorCodeType e) =>
+      e == ErrorCodeType.errInvalidToken ||
+      e == ErrorCodeType.errTokenExpired ||
+      e == ErrorCodeType.errInvalidAppId ||
+      e == ErrorCodeType.errInvalidChannelName ||
+      e == ErrorCodeType.errJoinChannelRejected;
+
   static Future<void> _requestPermissions(bool isVideo) async {
     final perms = [Permission.microphone];
     if (isVideo) perms.add(Permission.camera);
     await perms.request();
   }
 
-  /// Channel = sorted user IDs joined by "_" (same as chatId)
-  static String channelName(String uid1, String uid2) =>
-      ([uid1, uid2]..sort()).join('_');
+  /// Канал ва token-и занг аз сервер (POST /calls/token).
+  ///
+  /// Пештар канал "uuid_uuid" (73 аломат) буд — Agora танҳо то 64 байт
+  /// қабул мекунад, бинобар ин занг ҳеҷ гоҳ пайваст намешуд. Номи
+  /// кӯтоҳ ва token-ро (агар App Certificate фаъол бошад) сервер медиҳад.
+  static Future<({String channel, String token})?> callCredentials(
+      String peerId) async {
+    try {
+      final r = await ApiClient.instance.post('/calls/token',
+          body: {'peerId': peerId});
+      if (r.statusCode >= 400) return null;
+      final b = jsonDecode(r.body) as Map<String, dynamic>;
+      final ch = (b['channel'] ?? '').toString();
+      if (ch.isEmpty) return null;
+      return (channel: ch, token: (b['token'] ?? '').toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Token-и Live (ҳост — publisher, дигарон — тамошобин).
+  static Future<String> liveToken(String streamId) async {
+    try {
+      final r = await ApiClient.instance.post('/live/$streamId/token');
+      if (r.statusCode >= 400) return '';
+      final b = jsonDecode(r.body) as Map<String, dynamic>;
+      return (b['token'] ?? '').toString();
+    } catch (_) {
+      return '';
+    }
+  }
 }

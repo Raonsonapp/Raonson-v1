@@ -357,6 +357,16 @@ func dispatch(cl *client, raw []byte) {
 			FromAvatar   string      `json:"fromAvatar"`
 		}
 		json.Unmarshal(msg.Data, &p)
+		// Зангзананда ҲАМЕША худи соҳиби сокет аст — номаш аз базаи
+		// маълумот, на аз муштарӣ (вагарна касе метавонист бо номи
+		// шахси дигар занг занад). Бастагон занг зада наметавонанд.
+		p.From = cl.userID
+		if p.To == "" || p.To == p.From || !callAllowed(p.From, p.To) {
+			break
+		}
+		db.Pool.QueryRow(context.Background(),
+			`SELECT username, COALESCE(avatar,'') FROM users WHERE id=$1`,
+			p.From).Scan(&p.FromUsername, &p.FromAvatar)
 		emit(p.To, "call:incoming", map[string]interface{}{
 			"from": p.From, "fromUsername": p.FromUsername,
 			"fromAvatar": p.FromAvatar, "offer": p.Offer, "callType": p.CallType,
@@ -514,4 +524,14 @@ func BroadcastNewStory(authorID string, story interface{}) {
 	}
 	// Худ ҳам мебинад
 	emit(authorID, "story:new", story)
+}
+
+// callAllowed — занг байни ду нафар, агар ҳеҷ кадом дигареро набаста бошад.
+func callAllowed(a, b string) bool {
+	var blocked bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM blocks
+		  WHERE (blocker_id=$1 AND blocked_id=$2)
+		     OR (blocker_id=$2 AND blocked_id=$1))`, a, b).Scan(&blocked)
+	return !blocked
 }
