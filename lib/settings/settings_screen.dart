@@ -50,6 +50,7 @@ import '../collab/collab_invites_screen.dart';
 import '../verification/verification_screen.dart';
 import '../core/ads/ads_debug_screen.dart';
 import '../discover/discover_screen.dart';
+import '../wellbeing/time_spent_screen.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -140,6 +141,13 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('stats.title'),
                 sub:   tr('stats.sub'),
                 onTap: () => _go(ctx, const InsightsScreen()),
+              ),
+              // «Вақти шумо» — мисли Instagram (Your activity).
+              _NavTile(
+                icon:  AppIcons.schedule_rounded,
+                title: 'Вақти шумо',
+                sub:   'Вақт дар барнома, ҳадди рӯзона, танаффус',
+                onTap: () => _go(ctx, const TimeSpentScreen()),
               ),
 
               // ── TAJIKSHOP ────────────────────────────────────────

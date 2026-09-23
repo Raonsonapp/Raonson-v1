@@ -19,6 +19,7 @@ import 'core/ads/ads_manager.dart';
 import 'core/services/ad_consent_service.dart';
 import 'core/services/server_wakeup_service.dart';
 import 'core/firebase_init.dart';
+import 'wellbeing/usage_tracker.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -101,6 +102,23 @@ Future<void> main() async {
   // Навбати паёмҳои нафиристода: ҳангоми баргаштани интернет
   // худаш мефиристад. Бе ин паёми офлайн абадан гум мешуд.
   Outbox.instance.start();
+
+  // «Вақти шумо» — ҳадди рӯзона ва «Танаффус гиред» (мисли Instagram).
+  UsageTracker.instance.onReminder = (title, body) {
+    final ctx = appNavigatorKey.currentContext;
+    if (ctx == null) return;
+    showDialog(
+      context: ctx,
+      builder: (d) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(d), child: const Text('Фаҳмо')),
+        ],
+      ),
+    );
+  };
+  UsageTracker.instance.start();
 
   // `AppRestartScope` — ҳангоми гузариш ба аккаунти дигар тамоми
   // дарахти виҷет аз нав сохта мешавад. Бе ин экранҳои аллакай
