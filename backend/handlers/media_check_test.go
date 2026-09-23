@@ -62,3 +62,20 @@ func TestMediaCheckThrottled(t *testing.T) {
 		t.Error("баъди фосила санҷиш бояд боз иҷозат дошта бошад")
 	}
 }
+
+// Вуруд бо «@ном» — ҳамон тавре ки ном дар барнома нишон дода мешавад.
+func TestNormalizeLoginID(t *testing.T) {
+	cases := map[string]string{
+		"@tajikshop":       "tajikshop",
+		"  @TajikShop  ":   "tajikshop",
+		"tajikshop":        "tajikshop",
+		"User@Example.com": "user@example.com",
+		"+992900000000":    "+992900000000",
+		"@":                "",
+	}
+	for in, want := range cases {
+		if got := normalizeLoginID(in); got != want {
+			t.Errorf("normalizeLoginID(%q) = %q, мебоист %q", in, got, want)
+		}
+	}
+}

@@ -146,7 +146,7 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing fields"})
 		return
 	}
-	b.Email = strings.ToLower(strings.TrimSpace(b.Email))
+	b.Email = normalizeLoginID(b.Email)
 
 	// Логин бо почта Ё номи корбар Ё рақами телефон
 	var id, username, email, hash, avatar, fullName string
@@ -257,9 +257,9 @@ func ForgotPassword(c *gin.Context) {
 		Channel    string `json:"channel"`    // email | sms | whatsapp
 	}
 	c.ShouldBindJSON(&b)
-	ident := strings.ToLower(strings.TrimSpace(b.Identifier))
+	ident := normalizeLoginID(b.Identifier)
 	if ident == "" {
-		ident = strings.ToLower(strings.TrimSpace(b.Email))
+		ident = normalizeLoginID(b.Email)
 	}
 	if ident == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Email ё телефон лозим аст"})
@@ -350,9 +350,9 @@ func ResetPassword(c *gin.Context) {
 		NewPassword string `json:"newPassword"`
 	}
 	c.ShouldBindJSON(&b)
-	ident := strings.ToLower(strings.TrimSpace(b.Identifier))
+	ident := normalizeLoginID(b.Identifier)
 	if ident == "" {
-		ident = strings.ToLower(strings.TrimSpace(b.Email))
+		ident = normalizeLoginID(b.Email)
 	}
 	if ident == "" || b.OTP == "" || len(b.NewPassword) < 8 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Майдонҳо нопурра (парол ≥6)"})
@@ -466,3 +466,17 @@ func VerifyPhoneOTP(c *gin.Context) {
 }
 
 var _ = os.Getenv
+
+// normalizeLoginID майдони «почта / номи корбар / телефон»-ро ба як
+// шакл меорад.
+//
+// ⚠️ `@`-и аввал бардошта мешавад. Дар тамоми барнома ном ҳамчун
+// «@tajikshop» нишон дода мешавад, пас корбарон маҳз ҳамин тавр
+// менависанд. Сервер `@tajikshop`-ро ҳарфан меҷуст, ёфта наметавонист
+// ва «Invalid email or password» мегуфт — гарчанде ки парол дуруст
+// буд. Номи корбар `@` дошта наметавонад (`^[a-z0-9_.]{3,30}$`) ва
+// почта бо `@` оғоз намешавад, пас ин бехатар аст.
+func normalizeLoginID(raw string) string {
+	s := strings.ToLower(strings.TrimSpace(raw))
+	return strings.TrimSpace(strings.TrimPrefix(s, "@"))
+}
