@@ -889,6 +889,20 @@ func migrate() {
 		PRIMARY KEY (user_id, peer_id)
 	);
 
+	-- Танзимоти ШАХСИИ чат: пин ва хомӯш (мисли Instagram). Ҳар корбар
+	-- барои худ — ҳамсӯҳбат инро намебинад.
+	CREATE TABLE IF NOT EXISTS chat_prefs (
+		user_id   TEXT NOT NULL,
+		peer_id   TEXT NOT NULL,
+		pinned    BOOLEAN DEFAULT FALSE,
+		pinned_at TIMESTAMPTZ,
+		muted     BOOLEAN DEFAULT FALSE,
+		PRIMARY KEY (user_id, peer_id)
+	);
+	-- Паёми таҳриршуда ва фиристодашуда аз чати дигар.
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS forwarded BOOLEAN DEFAULT FALSE;
+
 	-- ── Analytics events (batch-inserted from client) ──
 	CREATE TABLE IF NOT EXISTS events (
 		id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

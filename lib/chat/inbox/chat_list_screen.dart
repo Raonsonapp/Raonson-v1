@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import '../../core/api/api_client.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -904,6 +907,62 @@ class _ChatTile extends StatelessWidget {
   final MessageModel chat;
   const _ChatTile({required this.chat});
 
+  /// Пахши дароз — пин / хомӯш, мисли Instagram.
+  Future<void> _showActions(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+    final ctrl = context.read<ChatListController>();
+    final messenger = ScaffoldMessenger.of(context);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 40, height: 4,
+              decoration: BoxDecoration(color: AppColors.textFaint,
+                  borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: Icon(AppIcons.push_pin_outlined, color: AppColors.textPrimary),
+            title: Text(chat.pinned ? 'Аз пин баровардан' : 'Пин кардан',
+                style: TextStyle(color: AppColors.textPrimary)),
+            onTap: () => Navigator.pop(ctx, 'pin'),
+          ),
+          ListTile(
+            leading: Icon(chat.muted
+                    ? AppIcons.notifications_rounded
+                    : AppIcons.notifications_off_outlined,
+                color: AppColors.textPrimary),
+            title: Text(chat.muted ? 'Садоро фаъол кардан' : 'Хомӯш кардан',
+                style: TextStyle(color: AppColors.textPrimary)),
+            onTap: () => Navigator.pop(ctx, 'mute'),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (action == null) return;
+    final peer = chat.peer.id;
+    try {
+      final res = action == 'pin'
+          ? await ApiClient.instance.post('/chat/pin/$peer',
+              body: {'pinned': !chat.pinned})
+          : await ApiClient.instance.post('/chat/mute/$peer',
+              body: {'muted': !chat.muted});
+      if (res.statusCode >= 400) {
+        String why = 'Нашуд';
+        try { why = (jsonDecode(res.body) as Map)['message']?.toString() ?? why; } catch (_) {}
+        messenger.showSnackBar(SnackBar(content: Text(why)));
+        return;
+      }
+      ctrl.loadChats();
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Хатои шабака')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final presence = context.watch<PresenceService>();
@@ -915,6 +974,7 @@ class _ChatTile extends StatelessWidget {
     final unread = unreadCount > 0;
 
     return InkWell(
+      onLongPress: chat.isRequest ? null : () => _showActions(context),
       onTap: () {
         // Бейҷро фавран пок кун (мисли Instagram) — мунтазири refresh намешавем.
         context.read<ChatListController>().clearUnread(chat.chatId);
@@ -959,14 +1019,28 @@ class _ChatTile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(chat.peer.username,
-                          style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: unread
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                              fontSize: 15),
-                          overflow: TextOverflow.ellipsis),
+                      child: Row(children: [
+                        Flexible(
+                          child: Text(chat.peer.username,
+                              style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: unread
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  fontSize: 15),
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        if (chat.muted) ...[
+                          const SizedBox(width: 4),
+                          Icon(AppIcons.notifications_off_outlined,
+                              size: 13, color: AppColors.textFaint),
+                        ],
+                        if (chat.pinned) ...[
+                          const SizedBox(width: 4),
+                          Icon(AppIcons.push_pin_outlined,
+                              size: 13, color: AppColors.textFaint),
+                        ],
+                      ]),
                     ),
                     Text(chat.timeLabel,
                         style: TextStyle(

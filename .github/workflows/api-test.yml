@@ -155,6 +155,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_user3.py
 
+      # Функсияҳои нави чат: таҳрир, forward, пин (то 3), хомӯш.
+      - name: Санҷиши чат
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_chat.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

@@ -70,6 +70,13 @@ class MessageModel {
   /// Расм танҳо як бор дида мешавад (мисли Instagram).
   final bool                    viewOnce;
   final bool                    viewedOnce;
+  /// Паём таҳрир шуд (мисли Instagram — «таҳрир шуд» дар зери он).
+  final DateTime?               editedAt;
+  /// Аз чати дигар фиристода шуд (Forward).
+  final bool                    forwarded;
+  // Танзимоти шахсии чат (танҳо дар рӯйхат).
+  final bool                    pinned;
+  final bool                    muted;
 
   const MessageModel({
     required this.id,
@@ -89,6 +96,10 @@ class MessageModel {
     this.share,
     this.viewOnce   = false,
     this.viewedOnce = false,
+    this.editedAt,
+    this.forwarded  = false,
+    this.pinned     = false,
+    this.muted      = false,
     this.reactions    = const [],
     this.isRequest    = false,
     this.unreadCount  = 0,
@@ -114,6 +125,10 @@ class MessageModel {
     SharedRef?            share,
     bool?                 viewOnce,
     bool?                 viewedOnce,
+    DateTime?             editedAt,
+    bool?                 forwarded,
+    bool?                 pinned,
+    bool?                 muted,
     bool?                 isRequest,
     int?                  unreadCount,
   }) => MessageModel(
@@ -135,6 +150,10 @@ class MessageModel {
     share:        share         ?? this.share,
     viewOnce:     viewOnce      ?? this.viewOnce,
     viewedOnce:   viewedOnce    ?? this.viewedOnce,
+    editedAt:     editedAt      ?? this.editedAt,
+    forwarded:    forwarded     ?? this.forwarded,
+    pinned:       pinned        ?? this.pinned,
+    muted:        muted         ?? this.muted,
     isRequest:    isRequest     ?? this.isRequest,
     unreadCount:  unreadCount   ?? this.unreadCount,
   );
@@ -192,6 +211,8 @@ class MessageModel {
       viewedOnce: json['viewedOnce'] == true,
       isRequest: json['isRequest'] == true,
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+      pinned:    json['pinned'] == true,
+      muted:     json['muted'] == true,
     );
   }
 
@@ -238,6 +259,8 @@ class MessageModel {
       share:     SharedRef.fromJson(json),
       viewOnce:   json['viewOnce'] == true,
       viewedOnce: json['viewedOnce'] == true,
+      editedAt:  parseServerTime(json['editedAt']),
+      forwarded: json['forwarded'] == true,
       reactions: reactions,
     );
   }

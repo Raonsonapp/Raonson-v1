@@ -24,6 +24,10 @@ class ShareToChatRow extends StatefulWidget {
   /// нусхаҳои кӯҳнаи барнома, ки корти пешнамоишро намефаҳманд).
   final String shareUrl;
 
+  /// Паёми тайёр барои фиристодан (Forward). Агар дода шавад, ба ҷои
+  /// корти пост маҳз ҳамин фиристода мешавад.
+  final Map<String, dynamic>? payload;
+
   const ShareToChatRow({
     super.key,
     required this.kind,
@@ -31,7 +35,35 @@ class ShareToChatRow extends StatefulWidget {
     required this.shareUrl,
     this.thumbUrl = '',
     this.authorUsername = '',
+    this.payload,
   });
+
+  /// Варақа барои «Фиристодан» (Forward) — мисли Instagram.
+  static Future<void> forward(BuildContext context, Map<String, dynamic> payload) {
+    return showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 40, height: 4,
+              decoration: BoxDecoration(color: AppColors.textFaint,
+                  borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 12),
+          Text('Фиристодан ба…',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 16, fontWeight: FontWeight.w700)),
+          ShareToChatRow(
+            kind: '', contentId: '', shareUrl: '',
+            payload: {...payload, 'forwarded': true},
+          ),
+          const SizedBox(height: 12),
+        ]),
+      ),
+    );
+  }
 
   @override
   State<ShareToChatRow> createState() => _ShareToChatRowState();
@@ -83,14 +115,16 @@ class _ShareToChatRowState extends State<ShareToChatRow> {
       if (chatId.isNotEmpty) {
         final res = await ApiClient.instance.post(
           '/chat/$chatId/messages',
-          body: {
-            'receiverId':  peerId,
-            'text':        widget.shareUrl,
-            'shareId':     widget.contentId,
-            'shareKind':   widget.kind,
-            'shareThumb':  widget.thumbUrl,
-            'shareUser':   widget.authorUsername,
-          },
+          body: widget.payload != null
+              ? {...widget.payload!, 'receiverId': peerId}
+              : {
+                  'receiverId':  peerId,
+                  'text':        widget.shareUrl,
+                  'shareId':     widget.contentId,
+                  'shareKind':   widget.kind,
+                  'shareThumb':  widget.thumbUrl,
+                  'shareUser':   widget.authorUsername,
+                },
         );
         ok = res.statusCode < 400;
       }

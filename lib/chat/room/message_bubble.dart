@@ -31,6 +31,10 @@ class MessageBubble extends StatefulWidget {
   final VoidCallback?                    onSwipeEnd;
   final VoidCallback?                    onCallBack; // боззанг (занги аздастрафта)
   final VoidCallback?                    onReport;
+  /// Таҳрири паём (танҳо паёми матнии худам, 15 дақиқа).
+  final VoidCallback?                    onEdit;
+  /// Фиристодани паём ба чати дигар.
+  final VoidCallback?                    onForward;
   final String?                          senderName; // номи фиристанда (гурӯҳ)
   final Color?                           myBubbleColor; // мавзӯи чат
 
@@ -44,6 +48,8 @@ class MessageBubble extends StatefulWidget {
     this.onSwipeEnd,
     this.onCallBack,
     this.onReport,
+    this.onEdit,
+    this.onForward,
     this.senderName,
     this.myBubbleColor,
   });
@@ -112,6 +118,8 @@ class _MessageBubbleState extends State<MessageBubble>
         onReply:  widget.onReply,
         onDelete: widget.onDelete,
         onReport: widget.onReport,
+        onEdit:   widget.onEdit,
+        onForward: widget.onForward,
       ),
     );
   }
@@ -152,6 +160,23 @@ class _MessageBubbleState extends State<MessageBubble>
                       style: TextStyle(
                           color: AppColors.neonBlue, fontSize: 11,
                           fontWeight: FontWeight.w600)),
+                ),
+
+              // «Фиристода шуд» — мисли Instagram, болои паём.
+              if (m.forwarded && !m.isDeleted)
+                Padding(
+                  padding: EdgeInsets.only(
+                      left: isMine ? 0 : 40, right: isMine ? 4 : 0, bottom: 2),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(AppIcons.reply_rounded,
+                        size: 11, color: AppColors.textFaint),
+                    const SizedBox(width: 3),
+                    Text('Фиристода шуд',
+                        style: TextStyle(
+                            color: AppColors.textFaint,
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic)),
+                  ]),
                 ),
 
               // Reply preview if replying to something
@@ -999,7 +1024,10 @@ class _StatusRow extends StatelessWidget {
             m.isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           Text(
-            m.timeLabel,
+            // «таҳрир шуд» — то ҳамсӯҳбат донад, ки матн иваз шудааст.
+            m.editedAt != null && !m.isDeleted
+                ? '${m.timeLabel} · таҳрир шуд'
+                : m.timeLabel,
             style: TextStyle(color: AppColors.textFaint, fontSize: 10),
           ),
           if (m.isMine) ...[
@@ -1065,6 +1093,8 @@ class _MessageContextMenu extends StatelessWidget {
   final VoidCallback?             onReply;
   final VoidCallback?             onDelete;
   final VoidCallback?             onReport;
+  final VoidCallback?             onEdit;
+  final VoidCallback?             onForward;
 
   const _MessageContextMenu({
     required this.message,
@@ -1072,7 +1102,19 @@ class _MessageContextMenu extends StatelessWidget {
     this.onReply,
     this.onDelete,
     this.onReport,
+    this.onEdit,
+    this.onForward,
   });
+
+  /// Мисли Instagram: танҳо паёми матнии ХУДАМ, дар 15 дақиқаи аввал.
+  /// Сервер ҳамин қоидаро худаш низ месанҷад.
+  bool get _canEdit =>
+      message.isMine &&
+      !message.isDeleted &&
+      message.type == MessageType.text &&
+      message.share == null &&
+      DateTime.now().difference(message.createdAt) <=
+          const Duration(minutes: 15);
 
   static const _emojis = ['❤️', '😂', '😮', '😢', '😡', '👍'];
 
@@ -1128,6 +1170,18 @@ class _MessageContextMenu extends StatelessWidget {
               Navigator.pop(context);
             },
           ),
+          if (onForward != null && !message.isDeleted && !message.viewOnce)
+            _MenuItem(
+              icon:  AppIcons.send_rounded,
+              label: 'Фиристодан',
+              onTap: () { Navigator.pop(context); onForward?.call(); },
+            ),
+          if (onEdit != null && _canEdit)
+            _MenuItem(
+              icon:  AppIcons.edit_outlined,
+              label: 'Таҳрир',
+              onTap: () { Navigator.pop(context); onEdit?.call(); },
+            ),
           if (message.isMine && !message.isDeleted)
             _MenuItem(
               icon:  AppIcons.delete_outline_rounded,

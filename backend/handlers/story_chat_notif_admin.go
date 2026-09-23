@@ -476,7 +476,9 @@ func GetChats(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM chat_hidden ch WHERE ch.user_id=$1
 		              AND ch.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS hidden,
 		       (SELECT COUNT(*) FROM messages mu WHERE mu.chat_id=sub.chat_id
-		              AND mu.receiver_id=$1 AND mu.read=false) AS unread_count
+		              AND mu.receiver_id=$1 AND mu.read=false) AS unread_count,
+		       COALESCE(cp.pinned,false) AS pinned,
+		       COALESCE(cp.muted,false)  AS muted
 		FROM (
 			SELECT DISTINCT ON (m.chat_id)
 			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,
@@ -489,7 +491,11 @@ func GetChats(c *gin.Context) {
 			WHERE (m.sender_id=$1 OR m.receiver_id=$1)
 			ORDER BY m.chat_id, m.created_at DESC
 		) sub
-		ORDER BY sub.created_at DESC
+		LEFT JOIN chat_prefs cp ON cp.user_id=$1
+		     AND cp.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END
+		-- Чатҳои пиншуда ҳамеша дар боло, мисли Instagram.
+		ORDER BY COALESCE(cp.pinned,false) DESC, cp.pinned_at DESC NULLS LAST,
+		         sub.created_at DESC
 		LIMIT $2 OFFSET $3`, myID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get chats failed"})
@@ -505,8 +511,10 @@ func GetChats(c *gin.Context) {
 		var sUname, sAvatar, rUname, rAvatar string
 		var sVer, rVer, iFollow, iSent, accepted, hidden bool
 		var unreadCount int
+		var pinned, muted bool
 		rows.Scan(&msgID, &chatID, &senderID, &receiverID, &text, &msgType, &read, &createdAt,
-			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent, &accepted, &hidden, &unreadCount)
+			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent, &accepted, &hidden, &unreadCount,
+			&pinned, &muted)
 
 		if hidden {
 			continue // корбар ин дархостро нест/пинҳон кардааст
@@ -527,6 +535,7 @@ func GetChats(c *gin.Context) {
 			"_id": msgID, "chatId": chatID,
 			"isMine": isMine, "text": text, "type": msgType, "read": read, "createdAt": createdAt,
 			"peer": peer, "isRequest": isRequest, "unreadCount": unreadCount,
+			"pinned": pinned, "muted": muted,
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"chats": result, "page": page, "limit": limit})
@@ -588,7 +597,7 @@ func GetMessages(c *gin.Context) {
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
 		       is_deleted,read,created_at,username,avatar,verified,
 		       share_id,share_kind,share_thumb,share_user,
-		       view_once,viewed_once,delivered,reactions
+		       view_once,viewed_once,delivered,reactions,edited_at,forwarded
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
@@ -611,7 +620,8 @@ func GetMessages(c *gin.Context) {
 		                    'emoji', mr.emoji, 'userId', mr.user_id)
 		                  ORDER BY mr.created_at)
 		           FROM message_reactions mr WHERE mr.message_id = m.id
-		         ), '[]'::json) reactions
+		         ), '[]'::json) reactions,
+		         m.edited_at, COALESCE(m.forwarded,false) forwarded
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
@@ -632,10 +642,12 @@ func GetMessages(c *gin.Context) {
 		var shareID, shareKind, shareThumb, shareUser string
 		var viewOnce, viewedOnce, delivered bool
 		var reactionsRaw []byte
+		var editedAt *time.Time
+		var forwarded bool
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
 			&read, &createdAt, &uname, &uavatar, &verified,
 			&shareID, &shareKind, &shareThumb, &shareUser,
-			&viewOnce, &viewedOnce, &delivered, &reactionsRaw)
+			&viewOnce, &viewedOnce, &delivered, &reactionsRaw, &editedAt, &forwarded)
 		// Бе кушодани JSON гин онро ҳамчун байт → base64 мефиристод
 		// ва барнома рӯйхати холӣ мегирифт.
 		reactions := []map[string]interface{}{}
@@ -655,6 +667,7 @@ func GetMessages(c *gin.Context) {
 			"shareThumb": shareThumb, "shareUser": shareUser,
 			"viewOnce": viewOnce, "viewedOnce": viewedOnce,
 			"delivered": delivered, "reactions": reactions,
+			"editedAt": editedAt, "forwarded": forwarded,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}

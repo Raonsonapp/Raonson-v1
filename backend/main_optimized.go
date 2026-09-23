@@ -413,6 +413,9 @@ func main() {
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)
 		ch.DELETE("/messages/:id",   handlers.DeleteMessage)
 		ch.POST("/messages/:id/react", handlers.ReactToMessage)
+		ch.PUT("/messages/:id",        handlers.EditMessage) // таҳрир (15 дақ)
+		ch.POST("/pin/:peerId",        handlers.PinChat)     // пин (то 3)
+		ch.POST("/mute/:peerId",       handlers.MuteChat)    // бе огоҳинома
 		ch.POST("/messages/:id/opened", handlers.MarkViewOnceOpened)
 		ch.POST("/messages/:id/report", handlers.ReportMessage)
 		ch.POST("/requests/:peerId/accept", handlers.AcceptChatRequest)

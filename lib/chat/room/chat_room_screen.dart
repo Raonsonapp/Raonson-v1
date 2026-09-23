@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import '../outbox.dart';
 import 'dart:io';
@@ -24,6 +25,8 @@ import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
+import '../share/share_to_chat_row.dart';
+import '../../core/utils/server_time.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -386,6 +389,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
 
     // Delete
+    // Ҳамсӯҳбат паёмро таҳрир кард — фавран, бе навсозӣ.
+    _listen('chat:edit', (data) {
+      if (data is! Map || !mounted) return;
+      final id = data['messageId']?.toString() ?? '';
+      final text = data['text']?.toString();
+      if (id.isEmpty || text == null) return;
+      setState(() {
+        _messages = _messages.map((m) => m.id == id
+            ? m.copyWith(text: text,
+                editedAt: parseServerTime(data['editedAt']) ?? DateTime.now())
+            : m).toList();
+      });
+    });
+
     _listen('chat:delete', (data) {
       if (data is! Map<String, dynamic> || !mounted) return;
       final msgId = data['messageId']?.toString() ?? '';
@@ -643,6 +660,83 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         }).toList();
       });
     } catch (_) {}
+  }
+
+  /// Таҳрири паём — мисли Instagram.
+  Future<void> _onEdit(MessageModel msg) async {
+    final ctrl = TextEditingController(text: msg.text);
+    final text = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Таҳрири паём',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLines: 5,
+          minLines: 1,
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Бекор')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: const Text('Нигоҳ доштан')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (text == null || text.isEmpty || text == msg.text || !mounted) return;
+
+    final before = msg;
+    // Фавран нишон медиҳем; агар сервер рад кунад — бармегардонем.
+    setState(() {
+      _messages = _messages.map((m) => m.id == msg.id
+          ? m.copyWith(text: text, editedAt: DateTime.now())
+          : m).toList();
+    });
+    try {
+      final res = await ApiClient.instance
+          .put('/chat/messages/${msg.id}', body: {'text': text});
+      if (res.statusCode >= 400) {
+        String why = 'Таҳрир нашуд';
+        try { why = (jsonDecode(res.body) as Map)['message']?.toString() ?? why; } catch (_) {}
+        throw Exception(why);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages.map((m) => m.id == msg.id ? before : m).toList();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', ''))));
+    }
+  }
+
+  /// Фиристодани паём ба чати дигар (Forward).
+  void _onForward(MessageModel msg) {
+    final payload = <String, dynamic>{
+      'text': msg.text,
+      if (msg.mediaUrl != null && msg.mediaUrl!.isNotEmpty) ...{
+        'mediaUrl': msg.mediaUrl,
+        'type': switch (msg.type) {
+          MessageType.image => 'image',
+          MessageType.video => 'video',
+          MessageType.audio => 'audio',
+          _ => 'file',
+        },
+      },
+      if (msg.share != null) ...{
+        'shareId': msg.share!.id,
+        'shareKind': msg.share!.kind,
+        'shareThumb': msg.share!.thumb,
+        'shareUser': msg.share!.username,
+      },
+    };
+    ShareToChatRow.forward(context, payload);
   }
 
   Future<void> _onReportMessage(MessageModel msg) async {
@@ -992,6 +1086,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               onReact:  (emoji) => _onReact(msg, emoji),
               onDelete: () => _onDelete(msg),
               onReport: () => _onReportMessage(msg),
+              onEdit:   () => _onEdit(msg),
+              onForward: () => _onForward(msg),
               onCallBack: () {
                 final p = msg.text.split(':');
                 final isVid = p.length > 1 && p[1] == 'video';
