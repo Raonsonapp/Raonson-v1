@@ -21,6 +21,7 @@ import '../../core/ui/report_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/utils/time_ago.dart';
+import '../../core/ui/r_icon.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -448,8 +449,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             : _comments.isEmpty
                 ? Center(child: Column(mainAxisSize: MainAxisSize.min,
                     children: [
-                    Icon(AppIcons.chat_bubble_outline,
-                        color: AppColors.textFaint, size: 48),
+                    RIcon.comment(color: AppColors.textFaint, size: 48),
                     const SizedBox(height: 12),
                     Text(tr('ui.82db245061'),
                         style: TextStyle(color: AppColors.textFaint, fontSize: 15)),
@@ -949,10 +949,10 @@ class _CommentItemState extends State<_CommentItem> {
               // Stable icon — ҷой иваз намекунад
               SizedBox(
                 width: 20, height: 20,
-                child: Icon(
-                  _liked ? AppIcons.favorite : AppIcons.favorite_border,
+                child: RIcon.like(
+                  filled: _liked,
                   size: 18,
-                  color: _liked ? Colors.red : AppColors.textFaint,
+                  color: _liked ? const Color(0xFFFF3040) : AppColors.textFaint,
                 ),
               ),
               if (_likeCount > 0) ...[

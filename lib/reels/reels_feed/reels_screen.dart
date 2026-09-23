@@ -33,6 +33,7 @@ import '../../core/ads/ads_manager.dart';
 import '../../core/ads/rewarded_ad_flow.dart';
 import '../../core/ui/app_icons.dart';
 import '../audio/audio_page_screen.dart';
+import '../../core/ui/r_icon.dart';
 
 class ReelsScreen extends StatelessWidget {
   final bool isActive;
@@ -2413,12 +2414,9 @@ class _HeartBurstState extends State<_HeartBurst>
           opacity: _opacity.value,
           child: Transform.scale(
               scale: _scale.value,
-              child: const Icon(AppIcons.favorite,
+              child: RIcon.like(filled: true,
                   color: Colors.white,
-                  size: 120,
-                  shadows: [
-                    Shadow(blurRadius: 30, color: Colors.black54)
-                  ]))));
+                  size: 120))));
 }
 
 

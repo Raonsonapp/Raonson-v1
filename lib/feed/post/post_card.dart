@@ -41,6 +41,7 @@ import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/utils/time_ago.dart';
 import '../../feed_ai/why_this_sheet.dart';
+import '../../core/ui/r_icon.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -1414,11 +1415,7 @@ class _PostCardState extends State<PostCard>
                   child: Opacity(
                     opacity: _heartOpacity.value,
                     child: Transform.scale(scale: _heartScale.value,
-                      child: Icon(AppIcons.favorite, color: _heartColor, size: 100,
-                        shadows: [
-                          Shadow(color: _heartColor.withOpacity(0.5), blurRadius: 20),
-                          const Shadow(color: Colors.black45, blurRadius: 8),
-                        ])))))),
+                      child: RIcon.like(filled: true, color: _heartColor, size: 100)))))),
         ]),
 
       // ── ACTIONS ───────────────────────────────────────────────
@@ -1534,8 +1531,7 @@ class _PostCardState extends State<PostCard>
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(AppIcons.mode_comment_outlined,
-                size: 13, color: AppColors.grey),
+            RIcon.comment(size: 13, color: AppColors.grey),
             const SizedBox(width: 5),
             Text(tr('ui.27b054989c'),
                 style: TextStyle(

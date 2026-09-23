@@ -4,6 +4,7 @@ import '../widgets/avatar.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/r_icon.dart';
 
 class NotificationItem extends StatefulWidget {
   final NotificationModel notification;
@@ -44,6 +45,22 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'effect_sale': return const Color(0xFFFFB300);
       case 'order': return const Color(0xFF9C27B0);
       default: return AppColors.textTertiary;
+    }
+  }
+
+  Widget _badgeIcon() {
+    switch (notification.type) {
+      case 'like':
+      case 'reel_like':
+      case 'story_like':
+        return RIcon.like(filled: true, size: 11, color: AppColors.textPrimary);
+      case 'comment':
+      case 'reel_comment':
+      case 'reply':
+      case 'story_answer':
+        return RIcon.comment(size: 11, color: AppColors.textPrimary);
+      default:
+        return Icon(_typeIcon, size: 11, color: AppColors.textPrimary);
     }
   }
 
@@ -150,7 +167,9 @@ class _NotificationItemState extends State<NotificationItem> {
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.bg, width: 1.5),
                 ),
-                child: Icon(_typeIcon, size: 11, color: AppColors.textPrimary),
+                // Лайк ва шарҳ — ҳамон нишонаҳои лента (RIcon), на
+                // нишонаҳои дигари шрифт.
+                child: _badgeIcon(),
               ),
             ),
           ]),

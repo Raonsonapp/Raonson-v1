@@ -8,6 +8,7 @@ import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
 import '../core/i18n/strings.dart';
+import '../core/ui/r_icon.dart';
 
 // Ранги брендии Live — кабуду сабз (на пушти Instagram).
 const List<Color> kLiveGradient = [Color(0xFF00C6FF), Color(0xFF00E87A)];
@@ -224,7 +225,7 @@ class _LiveInteractionOverlayState extends State<LiveInteractionOverlay> {
             GestureDetector(
               onTap: _like,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(AppIcons.favorite, color: Color(0xFFFF3040), size: 32),
+                RIcon.like(filled: true, size: 32),
                 if (_likes > 0)
                   Text('$_likes', style: const TextStyle(color: Colors.white,
                       fontSize: 10, fontWeight: FontWeight.w600)),
@@ -281,7 +282,7 @@ class _FloatingHeartState extends State<_FloatingHeart>
             opacity: (1 - t).clamp(0.0, 1.0),
             child: Transform.scale(
               scale: 0.6 + (t < 0.2 ? t * 2 : 1.0),
-              child: Icon(AppIcons.favorite, color: color, size: 26),
+              child: RIcon.like(filled: true, color: color, size: 26),
             ),
           ),
         );

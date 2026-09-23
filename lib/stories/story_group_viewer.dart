@@ -31,6 +31,7 @@ import '../core/i18n/strings.dart';
 import '../chat/share/share_to_chat_row.dart';
 import '../core/utils/time_ago.dart';
 import 'story_sticker.dart';
+import '../core/ui/r_icon.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -1104,7 +1105,7 @@ class _ActivityBtn extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         if (avatars.isEmpty)
-          const Icon(AppIcons.favorite_border_rounded, color: Colors.white, size: 27)
+          RIcon.like(color: Colors.white, size: 27)
         else
           SizedBox(
             height: 30,
@@ -1211,10 +1212,7 @@ class _HeartOverlayState extends State<_HeartOverlay>
                   opacity: opacity,
                   child: Transform.scale(
                     scale: scale,
-                    child: Icon(AppIcons.favorite, color: h.color, size: h.size,
-                        shadows: const [
-                          Shadow(blurRadius: 8, color: Colors.black45)
-                        ]),
+                    child: RIcon.like(filled: true, color: h.color, size: h.size),
                   ),
                 ),
               );
@@ -1437,7 +1435,7 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
                                       border: Border.all(
                                           color: const Color(0xFF1A1A1A), width: 2),
                                     ),
-                                    child: const Icon(AppIcons.favorite,
+                                    child: RIcon.like(filled: true,
                                         color: Colors.white, size: 11),
                                   ),
                                 ),
@@ -1560,9 +1558,9 @@ class _StoryLikeButtonState extends State<_StoryLikeButton>
               ),
             Transform.scale(
               scale: widget.liked ? _scale.value : 1.0,
-              child: Icon(
-                widget.liked ? AppIcons.favorite : AppIcons.favorite_border,
-                color: widget.liked ? Colors.red : Colors.white,
+              child: RIcon.like(
+                filled: widget.liked,
+                color: widget.liked ? const Color(0xFFFF3040) : Colors.white,
                 size: 28,
               ),
             ),
