@@ -66,7 +66,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final nav = context.read<BottomNavController>();
+    // ⚠️ Экрани чат на танҳо аз навбари поёнӣ, балки аз «Мубодила →
+    // Ба чат фиристодан» ҳам кушода мешавад — ва он ҷо
+    // BottomNavController НЕСТ. Пеш `read` хато мепартофт ва корбар
+    // ЭКРАНИ СИЁҲ медид. Ҳоло: набошад — ҳеҷ чиз.
+    final nav = context.read<BottomNavController?>();
+    if (nav == null) return;
     if (_scrollToTopNotifier != nav.scrollToTopNotifier) {
       _scrollToTopNotifier?.removeListener(_onScrollToTop);
       _scrollToTopNotifier = nav.scrollToTopNotifier;
@@ -75,7 +80,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   void _onScrollToTop() {
-    if (context.read<BottomNavController>().currentIndex != 2) return;
+    if (context.read<BottomNavController?>()?.currentIndex != 2) return;
     if (_scroll.hasClients) {
       _scroll.animateTo(0,
           duration: const Duration(milliseconds: 300),
