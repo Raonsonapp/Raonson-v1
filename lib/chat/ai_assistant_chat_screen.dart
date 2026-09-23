@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AiAssistantChatScreen extends StatefulWidget {
   const AiAssistantChatScreen({super.key});
@@ -20,10 +21,19 @@ class _AiAssistantChatScreenState extends State<AiAssistantChatScreen> {
   final List<Map<String, String>> _messages = [
     {
       'role': 'assistant',
-      'content': 'Салом! Ман ёрдамчии AI-и Raonson ҳастам 👋\n'
-          'Дар бораи барнома (пост, Reels, story, чат ва ғайра) ё '
-          'мӯҳтавои видеоҳо чизе бипурсед.',
+      'content': 'Салом! Ман ёрдамчии Raonson ҳастам 👋\n'
+          'Дар бораи барнома пурсед — ё «Имрӯз чӣ хабар?» — хабарҳои '
+          'навро аз манбаъҳо меорам.',
     },
+  ];
+  /// Манбаъҳои ҳар ҷавоб (индекси паём → рӯйхат).
+  final Map<int, List<Map<String, String>>> _sources = {};
+
+  static const _suggestions = [
+    'Имрӯз чӣ хабар?',
+    'Чӣ тавр лайкҳоро пинҳон кунам?',
+    'Стори бо викторина чӣ тавр?',
+    'Ҳисоби пӯшида чӣ медиҳад?',
   ];
   bool _sending = false;
 
@@ -50,12 +60,24 @@ class _AiAssistantChatScreenState extends State<AiAssistantChatScreen> {
         'messages': history,
       }).timeout(const Duration(seconds: 40));
       String reply = 'Узр, ҷавоб нашуд. Дубора кӯшиш кун 🙏';
+      List<Map<String, String>> src = [];
       if (r.statusCode < 400) {
         final b = jsonDecode(r.body);
         reply = (b['reply'] ?? reply).toString();
+        src = ((b['sources'] as List?) ?? [])
+            .whereType<Map>()
+            .map((e) => {
+                  'title': (e['title'] ?? '').toString(),
+                  'url': (e['url'] ?? '').toString(),
+                })
+            .where((e) => e['url']!.startsWith('https://'))
+            .toList();
       }
       if (mounted) {
-        setState(() => _messages.add({'role': 'assistant', 'content': reply}));
+        setState(() {
+          _messages.add({'role': 'assistant', 'content': reply});
+          if (src.isNotEmpty) _sources[_messages.length - 1] = src;
+        });
       }
     } catch (_) {
       if (mounted) {
@@ -111,10 +133,36 @@ class _AiAssistantChatScreenState extends State<AiAssistantChatScreen> {
             itemBuilder: (_, i) {
               if (i >= _messages.length) return _typing();
               final m = _messages[i];
-              return _bubble(m['role'] == 'user', m['content'] ?? '');
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _bubble(m['role'] == 'user', m['content'] ?? ''),
+                  if (_sources[i] != null) _sourcesView(_sources[i]!),
+                ],
+              );
             },
           ),
         ),
+        // Саволҳои тайёр — то корбар бидонад, чӣ пурсида метавонад.
+        if (_messages.length == 1)
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                for (final q in _suggestions)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      label: Text(q, style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                      backgroundColor: AppColors.surface,
+                      onPressed: () => _send(q),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         _inputBar(),
       ]),
     );
@@ -128,6 +176,30 @@ class _AiAssistantChatScreenState extends State<AiAssistantChatScreen> {
           Text(tr('ui.f7a42633ff'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
         ]),
+      );
+
+  /// Манбаъҳо — зада кушода мешаванд. Ёрдамчӣ хабарро аз худ намесозад.
+  Widget _sourcesView(List<Map<String, String>> src) => Padding(
+        padding: const EdgeInsets.only(left: 6, bottom: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Манбаъҳо:',
+                style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+            for (final s in src.take(8))
+              InkWell(
+                onTap: () => launchUrl(Uri.parse(s['url']!),
+                    mode: LaunchMode.externalApplication),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Text('🔗 ${s['title']}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.neonBlue, fontSize: 12)),
+                ),
+              ),
+          ],
+        ),
       );
 
   Widget _bubble(bool mine, String content) {

@@ -108,6 +108,9 @@ func main() {
 				"storage": handlers.StorageReady(),
 				// Реклама (YANDEX_REWARDED_ID).
 				"rewardedAds": os.Getenv("YANDEX_REWARDED_ID") != "",
+				// Ёрдамчӣ бе модел ҳам кор мекунад (хабарҳо, Википедия,
+				// дониши барнома); бо модел — ҷавоби табиӣ.
+				"aiModel": utils.OpenAIEnabled(),
 				// Рамзи тасдиқ: кадом роҳҳо танзим шудаанд.
 				//
 				// «СМС намеояд» аксаран на хатои код, балки
