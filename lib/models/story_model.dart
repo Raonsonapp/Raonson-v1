@@ -1,6 +1,7 @@
 import '../core/utils/server_time.dart';
 import '../core/music/song_info.dart';
 import 'user_model.dart';
+import '../stories/story_sticker.dart';
 
 /// Стикери пурсиш дар сторис (мисли Instagram).
 class StoryPoll {
@@ -65,6 +66,9 @@ class StoryModel {
   final DateTime expiresAt;
   final StoryPoll? poll;
 
+  /// Савол, викторина, слайдер ё ҳисоби баръакс.
+  final StorySticker? sticker;
+
   /// Музикаи стори. Пеш стори ҳеҷ майдони музика надошт — ҳангоми
   /// нашр танҳо «🎵 ном» ба матн меафтод ва ҳангоми тамошо ҳеҷ чиз
   /// намехонд.
@@ -92,6 +96,7 @@ class StoryModel {
     this.audience = 'all',
     required this.expiresAt,
     this.poll,
+    this.sticker,
     this.song = SongInfo.none,
     this.sharedPostId = '',
     this.sharedReelId = '',
@@ -121,6 +126,7 @@ class StoryModel {
       audience: (json['audience'] ?? 'all').toString(),
       expiresAt: parseServerTime(json['expiresAt']) ?? DateTime.now().add(const Duration(hours: 24)),
       poll: StoryPoll.fromJson(json['poll']),
+      sticker: StorySticker.fromJson(json['sticker']),
       song: SongInfo.fromJson(json['song'] as Map<String, dynamic>?),
       sharedPostId: (json['sharedPostId'] ?? '').toString(),
       sharedReelId: (json['sharedReelId'] ?? '').toString(),

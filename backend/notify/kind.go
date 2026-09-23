@@ -32,9 +32,11 @@ const (
 	StoryLike  Kind = "story_like"
 	StoryReply Kind = "story_reply"
 	// Касе дар пурсиши стори овоз дод.
-	StoryPoll  Kind = "story_poll"
-	ReelLike   Kind = "reel_like"
-	ReelReply  Kind = "reel_comment"
+	StoryPoll   Kind = "story_poll"
+	StoryAnswer Kind = "story_answer" // ҷавоб ба стикери «савол»
+	StoryQuiz   Kind = "story_quiz"   // ҷавоб ба викторина
+	ReelLike    Kind = "reel_like"
+	ReelReply   Kind = "reel_comment"
 
 	// Эҷодкор.
 	CreatorMilestone Kind = "creator_milestone"
@@ -119,12 +121,14 @@ var rules = map[Kind]Rule{
 	// он умуман бефоида мешавад.
 	IncomingCall: {High, ChannelMessages, "messages", false},
 
-	StoryLike:  {Normal, ChannelSocial, "likes", true},
+	StoryLike: {Normal, ChannelSocial, "likes", true},
 	// Овозҳо ҷамъ мешаванд: даҳ овоз як огоҳинома, на даҳто.
-	StoryPoll:  {Normal, ChannelSocial, "likes", true},
-	StoryReply: {Normal, ChannelSocial, "messages", false},
-	ReelLike:   {Normal, ChannelSocial, "likes", true},
-	ReelReply:  {Normal, ChannelSocial, "comments", true},
+	StoryPoll:   {Normal, ChannelSocial, "likes", true},
+	StoryAnswer: {Normal, ChannelSocial, "messages", false},
+	StoryQuiz:   {Normal, ChannelSocial, "likes", true},
+	StoryReply:  {Normal, ChannelSocial, "messages", false},
+	ReelLike:    {Normal, ChannelSocial, "likes", true},
+	ReelReply:   {Normal, ChannelSocial, "comments", true},
 
 	CreatorMilestone: {Low, ChannelCreator, "creator", false},
 	CreatorRecap:     {Low, ChannelCreator, "creator", false},

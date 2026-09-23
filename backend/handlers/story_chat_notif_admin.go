@@ -117,6 +117,8 @@ func CreateStory(c *gin.Context) {
 		// Музика (ихтиёрӣ). Пеш он ҳамчун «🎵 ном» ба `caption`
 		// андохта мешуд — хонанда, суроға ва ҷои оғоз гум мешуданд.
 		Song *songInfo `json:"song"`
+		// Стикерҳои дигар: савол, викторина, слайдер, ҳисоби баръакс.
+		Sticker *stickerInput `json:"sticker"`
 		// Пост ё Reel, ки дар ин стори паҳн мешавад.
 		SharedPostID string `json:"sharedPostId"`
 		SharedReelID string `json:"sharedReelId"`
@@ -132,6 +134,17 @@ func CreateStory(c *gin.Context) {
 	}
 	if b.Audience != "close" {
 		b.Audience = "all"
+	}
+	// Стикер ПЕШ аз сохтани стори санҷида мешавад — стикери нодуруст
+	// бояд 400 диҳад, на стори бе стикер созад.
+	var sticker *stickerClean
+	if b.Sticker != nil {
+		st, err := validateSticker(*b.Sticker, time.Now())
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Стикер нодуруст аст"})
+			return
+		}
+		sticker = st
 	}
 	song := b.Song
 	if song == nil || !song.clean() {
@@ -156,6 +169,7 @@ func CreateStory(c *gin.Context) {
 		song.TrackMs, song.StartMs, song.EndMs,
 		sharedPost, sharedReel).Scan(&sid)
 
+	saveSticker(sid, sticker)
 	if b.Poll != nil && strings.TrimSpace(b.Poll.Question) != "" {
 		qa := strings.TrimSpace(b.Poll.OptionA)
 		qb := strings.TrimSpace(b.Poll.OptionB)
@@ -431,6 +445,7 @@ func scanStoryRows(rows interface {
 			item["sharedReelId"] = sharedReel
 		}
 		attachPoll(sid, viewerID, item)
+		attachSticker(sid, viewerID, uid, item)
 		stories = append(stories, item)
 	}
 	return stories

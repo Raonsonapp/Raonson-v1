@@ -162,6 +162,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_chat.py
 
+      # Стикерҳои сторис: савол, викторина, слайдер, ҳисоби баръакс.
+      - name: Санҷиши стикерҳо
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_stickers.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

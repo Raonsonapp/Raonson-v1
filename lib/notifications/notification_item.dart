@@ -37,6 +37,9 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'follow':
       case 'follow_request': return const Color(0xFF00D084);
       case 'story_view':
+      case 'story_poll':
+      case 'story_answer':
+      case 'story_quiz':
       case 'story_reply': return const Color(0xFFFF8C00);
       case 'effect_sale': return const Color(0xFFFFB300);
       case 'order': return const Color(0xFF9C27B0);
@@ -56,6 +59,9 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'follow':
       case 'follow_request': return AppIcons.person_add_rounded;
       case 'story_view': return AppIcons.remove_red_eye_rounded;
+      case 'story_poll':
+      case 'story_quiz': return AppIcons.bar_chart_rounded;
+      case 'story_answer': return AppIcons.mode_comment_outlined;
       case 'story_reply':
       case 'message': return AppIcons.send_rounded;
       case 'effect_sale': return AppIcons.bolt_rounded;

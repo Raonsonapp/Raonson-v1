@@ -34,6 +34,10 @@ class NotificationModel {
       case 'story_like': return 'Сторисататро писанд кард';
       case 'story_reply': return 'ба Сторисат ҷавоб дод';
       case 'story_view': return 'Сторисататро дид';
+      // Пеш ин се ба «бо шумо амал кард»-и умумӣ меафтоданд.
+      case 'story_poll': return 'дар пурсиши сторисат овоз дод';
+      case 'story_answer': return 'ба саволи сторисат ҷавоб дод';
+      case 'story_quiz': return 'ба викторинаи сторисат ҷавоб дод';
       case 'message': return 'паём фиристод';
       case 'effect_sale': return 'эффекти шуморо харид';
       case 'order': return 'маҳсули шуморо фармоиш дод';

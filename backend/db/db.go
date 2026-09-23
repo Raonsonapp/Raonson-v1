@@ -288,6 +288,29 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_story_poll_votes_story
 	  ON story_poll_votes(story_id);
 
+	-- ── Стикерҳои дигари сторис: савол, викторина, слайдер, ҳисоби баръакс ──
+	CREATE TABLE IF NOT EXISTS story_stickers (
+		story_id  TEXT PRIMARY KEY,
+		kind      TEXT NOT NULL,            -- question|quiz|slider|countdown
+		prompt    TEXT DEFAULT '',
+		options   JSONB DEFAULT '[]'::jsonb, -- викторина: 2–4 вариант
+		correct   SMALLINT DEFAULT -1,       -- викторина: ҷавоби дуруст
+		emoji     TEXT DEFAULT '',           -- слайдер
+		ends_at   TIMESTAMPTZ,               -- ҳисоби баръакс
+		pos_x     REAL DEFAULT 0.5,
+		pos_y     REAL DEFAULT 0.5,
+		created_at TIMESTAMPTZ DEFAULT NOW()
+	);
+	CREATE TABLE IF NOT EXISTS story_sticker_answers (
+		story_id   TEXT NOT NULL,
+		user_id    TEXT NOT NULL,
+		choice     SMALLINT,                -- викторина
+		value      SMALLINT,                -- слайдер 0..100
+		answer     TEXT,                    -- савол
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (story_id, user_id)
+	);
+
 	CREATE TABLE IF NOT EXISTS story_likes (
 		user_id TEXT NOT NULL,
 		story_id TEXT NOT NULL,

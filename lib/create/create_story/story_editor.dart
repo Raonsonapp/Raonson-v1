@@ -44,7 +44,8 @@ class StoryEditor extends StatefulWidget {
   final File media;
   final bool isVideo, isUploading;
   final void Function(File, String, String,
-      [Map<String, dynamic>? poll, SongInfo? song]) onPublish;
+      [Map<String, dynamic>? poll, SongInfo? song,
+       Map<String, dynamic>? sticker]) onPublish;
   final VoidCallback onCancel;
   final String? errorMessage;
 
@@ -142,6 +143,175 @@ class _StoryEditorState extends State<StoryEditor> {
   // Стикери пурсиш (агар корбар илова карда бошад).
   Map<String, dynamic>? _poll;
 
+  // Савол / викторина / слайдер / ҳисоби баръакс — мисли Instagram.
+  Map<String, dynamic>? _sticker;
+
+  String get _stickerLabel => switch (_sticker?['kind']) {
+        'question'  => 'Савол ✓',
+        'quiz'      => 'Викторина ✓',
+        'slider'    => 'Слайдер ✓',
+        'countdown' => 'Ҳисоб ✓',
+        _           => 'Интерактив',
+      };
+
+  Future<void> _pickInteractive() async {
+    final kind = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          for (final e in const [
+            ['question', '❓', 'Савол — «Аз ман пурсед»'],
+            ['quiz', '🧠', 'Викторина'],
+            ['slider', '😍', 'Слайдери эмодзи'],
+            ['countdown', '⏳', 'Ҳисоби баръакс'],
+          ])
+            ListTile(
+              leading: Text(e[1], style: const TextStyle(fontSize: 24)),
+              title: Text(e[2], style: TextStyle(color: AppColors.textPrimary)),
+              onTap: () => Navigator.pop(ctx, e[0]),
+            ),
+          if (_sticker != null)
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Color(0xFFFF3B30)),
+              title: const Text('Стикерро хориҷ кардан',
+                  style: TextStyle(color: Color(0xFFFF3B30))),
+              onTap: () => Navigator.pop(ctx, 'remove'),
+            ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (kind == null || !mounted) return;
+    if (kind == 'remove') { setState(() => _sticker = null); return; }
+    final s = await _stickerDialog(kind);
+    if (s != null && mounted) setState(() => _sticker = s);
+  }
+
+  /// Муколама барои ҳар намуд. Қоидаҳо ҳамон қоидаҳои сервер:
+  /// викторина 2–4 вариант ва як дуруст; ҳисоби баръакс ба оянда.
+  Future<Map<String, dynamic>?> _stickerDialog(String kind) async {
+    final prompt = TextEditingController(
+        text: kind == 'question' ? 'Аз ман пурсед' : '');
+    final opts = List.generate(4, (_) => TextEditingController());
+    final emoji = TextEditingController(text: '😍');
+    int correct = 0;
+    DateTime end = DateTime.now().add(const Duration(days: 1));
+    String? err;
+    try {
+      return await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(builder: (ctx, setD) {
+          InputDecoration dec(String h) => InputDecoration(
+              counterText: '', hintText: h,
+              hintStyle: TextStyle(color: AppColors.textFaint));
+          final ts = TextStyle(color: AppColors.textPrimary);
+          return AlertDialog(
+            backgroundColor: AppColors.card,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextField(controller: prompt, maxLength: 80, style: ts,
+                    autofocus: kind != 'question',
+                    decoration: dec(kind == 'countdown'
+                        ? 'Номи рӯйдод' : kind == 'slider'
+                        ? 'Савол (ихтиёрӣ)' : 'Савол')),
+                if (kind == 'quiz') ...[
+                  const SizedBox(height: 6),
+                  for (var i = 0; i < 4; i++)
+                    Row(children: [
+                      Radio<int>(
+                        value: i, groupValue: correct,
+                        activeColor: const Color(0xFF2ECC71),
+                        onChanged: (v) => setD(() => correct = v ?? 0)),
+                      Expanded(child: TextField(controller: opts[i],
+                          maxLength: 30, style: ts,
+                          decoration: dec(i < 2
+                              ? 'Варианти ${i + 1}'
+                              : 'Варианти ${i + 1} (ихтиёрӣ)'))),
+                    ]),
+                  Text('Доираи сабз — ҷавоби дуруст',
+                      style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+                ],
+                if (kind == 'slider')
+                  TextField(controller: emoji, maxLength: 4,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 28),
+                      decoration: dec('Эмодзи')),
+                if (kind == 'countdown') ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    icon: const Icon(Icons.event),
+                    label: Text(
+                        '${end.day}.${end.month.toString().padLeft(2, '0')}.${end.year}  '
+                        '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}'),
+                    onPressed: () async {
+                      final d = await showDatePicker(context: ctx,
+                          initialDate: end,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)));
+                      if (d == null || !ctx.mounted) return;
+                      final t = await showTimePicker(context: ctx,
+                          initialTime: TimeOfDay.fromDateTime(end));
+                      if (t == null) return;
+                      setD(() => end = DateTime(d.year, d.month, d.day, t.hour, t.minute));
+                    },
+                  ),
+                ],
+                if (err != null)
+                  Padding(padding: const EdgeInsets.only(top: 6),
+                      child: Text(err!, style: const TextStyle(
+                          color: Color(0xFFFF3B30), fontSize: 12))),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx),
+                  child: Text(tr('common.cancel'),
+                      style: TextStyle(color: AppColors.textTertiary))),
+              TextButton(
+                onPressed: () {
+                  final p = prompt.text.trim();
+                  final m = <String, dynamic>{'kind': kind, 'prompt': p,
+                      'x': 0.5, 'y': 0.62};
+                  if (kind == 'quiz') {
+                    final list = <String>[];
+                    var ci = -1;
+                    for (var i = 0; i < 4; i++) {
+                      final t = opts[i].text.trim();
+                      if (t.isEmpty) continue;
+                      if (i == correct) ci = list.length;
+                      list.add(t);
+                    }
+                    if (p.isEmpty) { setD(() => err = 'Саволро нависед'); return; }
+                    if (list.length < 2) { setD(() => err = 'Ақаллан 2 вариант лозим'); return; }
+                    if (ci < 0) { setD(() => err = 'Ҷавоби дурустро интихоб кунед'); return; }
+                    m['options'] = list; m['correct'] = ci;
+                  } else if (kind == 'slider') {
+                    m['emoji'] = emoji.text.trim().isEmpty ? '😍' : emoji.text.trim();
+                  } else if (kind == 'countdown') {
+                    if (p.isEmpty) { setD(() => err = 'Номи рӯйдодро нависед'); return; }
+                    if (!end.isAfter(DateTime.now())) {
+                      setD(() => err = 'Вақт бояд дар оянда бошад'); return;
+                    }
+                    m['endsAt'] = end.toUtc().toIso8601String();
+                  }
+                  Navigator.pop(ctx, m);
+                },
+                child: Text(tr('common.done'), style: TextStyle(
+                    color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
+            ],
+          );
+        }),
+      );
+    } finally {
+      prompt.dispose(); emoji.dispose();
+      for (final c in opts) { c.dispose(); }
+    }
+  }
+
   Future<void> _addPoll() async {
     final qCtrl = TextEditingController();
     final aCtrl = TextEditingController(text: 'Ҳа');
@@ -218,11 +388,11 @@ class _StoryEditorState extends State<StoryEditor> {
     // Пештар маҳз ҳамин боиси гум шудани номи хонанда, суроға ва
     // ҷои оғоз мешуд.
     if (widget.isVideo) {
-      widget.onPublish(widget.media, '', audience, _poll, _song);
+      widget.onPublish(widget.media, '', audience, _poll, _song, _sticker);
     } else {
       final captured = await _captureCanvas();
       if (!mounted) return;
-      widget.onPublish(captured, '', audience, _poll, _song);
+      widget.onPublish(captured, '', audience, _poll, _song, _sticker);
     }
   }
 
@@ -491,6 +661,9 @@ class _StoryEditorState extends State<StoryEditor> {
               _SideBtn(icon: AppIcons.bar_chart_rounded,
                 label: _poll == null ? 'Пурсиш' : 'Пурсиш ✓',
                 onTap: () { setState(() => _tool = _Tool.none); _addPoll(); }),
+              const SizedBox(height: 2),
+              _SideBtn(icon: AppIcons.emoji_emotions_outlined, label: _stickerLabel,
+                onTap: () { setState(() => _tool = _Tool.none); _pickInteractive(); }),
               const SizedBox(height: 2),
               _SideBtn(svgPath: 'assets/icons/music.svg', label: tr('ui.d4583b94ee'),
                 onTap: () { setState(() => _tool = _Tool.none); _showMusicPanel(); }),

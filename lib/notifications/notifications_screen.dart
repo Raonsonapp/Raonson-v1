@@ -122,6 +122,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'follow_request':
       case 'story_like':
       case 'story_reply':
+      case 'story_poll':
+      case 'story_answer':
+      case 'story_quiz':
         _openProfile(n.fromUser?.id);
         break;
       case 'order':

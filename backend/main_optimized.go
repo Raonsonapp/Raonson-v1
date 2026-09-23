@@ -392,6 +392,8 @@ func main() {
 		st.POST("/:id/toggle-replies", handlers.ToggleStoryReplies)
 		st.GET("/:id/viewers", handlers.GetStoryViewers)
 		st.POST("/:id/poll/vote", handlers.VoteStoryPoll) // овоз ба пурсиш
+		st.POST("/:id/sticker/respond", handlers.RespondStorySticker) // савол/викторина/слайдер
+		st.GET("/:id/sticker/answers",   handlers.GetStickerAnswers)   // танҳо соҳиб
 		st.POST("/:id/report", handlers.ReportStory)
 	}
 

@@ -30,6 +30,7 @@ import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
 import '../chat/share/share_to_chat_row.dart';
 import '../core/utils/time_ago.dart';
+import 'story_sticker.dart';
 
 class StoryGroupViewer extends StatefulWidget {
   final List<List<StoryModel>> groups;
@@ -725,6 +726,29 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
               ));
             })),
           ),
+
+          // ── Савол / викторина / слайдер / ҳисоби баръакс ────────
+          if (_current.sticker != null)
+            Builder(builder: (ctx) {
+              final sz = MediaQuery.of(ctx).size;
+              final st = _current.sticker!;
+              return Positioned(
+                left: (st.x * sz.width - 140).clamp(12.0, sz.width - 292),
+                top:  (st.y * sz.height - 60).clamp(90.0, sz.height - 260),
+                child: StoryStickerView(
+                  key: ValueKey('sticker_${_current.id}'),
+                  storyId: _current.id,
+                  sticker: st,
+                  onPause: _pause,
+                  onResume: _resume,
+                  onOpenAnswers: () async {
+                    _pause();
+                    await showStickerAnswers(context, _current.id);
+                    if (mounted) _resume();
+                  },
+                ),
+              );
+            }),
 
           // ── Стикери пурсиш ─────────────────────────────────────
           if (_poll != null)
