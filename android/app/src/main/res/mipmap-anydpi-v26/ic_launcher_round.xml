@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Иконаи «adaptive» (Android 8+). Launcher онро ба шакли худ (доира,
+  квадрати мудаввар, …) мебурад.
+
+  Пеш ин набуд: як расми 1254×1254 (1.4 МБ) бе тағйир дар ҳамаи
+  зичиҳо меистод, ва launcher-ҳои нав онро хурд карда дар дохили
+  қуттии ранга мегузоштанд — «логои безеб».
+
+  Тамоми расм дар қабати ЗАМИНА аст: ҳарфи R дар 31–74% -и он аст,
+  яъне пурра дар минтақаи бехатари 66%. Қабати пеш шаффоф аст.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>
