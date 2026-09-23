@@ -245,12 +245,18 @@ func GetUserReels(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''),
 		       COALESCE(r.thumbnail_url,''), r.caption,
-		       COALESCE(r.views_count,0), COALESCE(r.likes_count,0),
+		       COALESCE(r.views_count,0),
+		       -- «Лайкҳо пинҳон»: ба бегона -1, ба соҳиб рақами воқеӣ.
+		       -- Пеш таби Reels-и профил ин танзимро умуман нодида
+		       -- мегирифт ва шумораро ба ҳама нишон медод.
+		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $4
+		            THEN -1 ELSE COALESCE(r.likes_count,0) END,
 		       COALESCE(r.comments_count,0), r.created_at,
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$4),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$4),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$4 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$4 AND hf.following_id=s.user_id)) AND (s.user_id=$4 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$4)))
+		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$4 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$4 AND hf.following_id=s.user_id)) AND (s.user_id=$4 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$4))),
+		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false)
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE r.user_id=$1 AND COALESCE(r.media_missing,false)=FALSE
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
@@ -266,15 +272,18 @@ func GetUserReels(c *gin.Context) {
 		var rid, vurl, vurlLow, thumb, cap, uid, uname, uavatar string
 		var views, likes, comments int
 		var verified, liked, saved, hasStory bool
+		var hideLikes, commentsOff bool
 		var createdAt interface{}
 		rows.Scan(&rid, &vurl, &vurlLow, &thumb, &cap, &views, &likes, &comments, &createdAt,
-			&uid, &uname, &uavatar, &verified, &liked, &saved, &hasStory)
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &hasStory,
+			&hideLikes, &commentsOff)
 		out = append(out, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 			"thumbnailUrl": thumb, "caption": cap,
 			"views": views, "viewsCount": views,
 			"likesCount": likes, "commentsCount": comments,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
+			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 			"user": gin.H{
 				"_id": uid, "id": uid, "username": uname, "avatar": uavatar,
 				"verified": verified, "hasStory": hasStory,

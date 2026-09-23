@@ -1452,11 +1452,15 @@ class _PostCardState extends State<PostCard>
 
           const SizedBox(width: 4),
 
-          _StableBtn(onTap: _openComments,
-              svgPath: 'assets/icons/comment.svg', size: 25,
-              count: _commentCount, fmt: _fmt),
-
-          const SizedBox(width: 4),
+          // Шарҳҳо хомӯш → тугма нопадид мешавад (мисли Instagram, ва
+          // мисли Reels дар ҳамин барнома). Пеш он мемонд ва ба экране
+          // мебурд, ки майдони навиштанаш ҳамеша кушода буд.
+          if (!_commentsDisabled) ...[
+            _StableBtn(onTap: _openComments,
+                svgPath: 'assets/icons/comment.svg', size: 25,
+                count: _commentCount, fmt: _fmt),
+            const SizedBox(width: 4),
+          ],
 
           _StableBtn(onTap: _showShare,
               svgPath: 'assets/icons/share.svg', size: 25,

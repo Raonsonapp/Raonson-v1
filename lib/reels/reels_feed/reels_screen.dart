@@ -1379,6 +1379,7 @@ class _ReelItemState extends State<_ReelItem> {
       liked:         reel.isLiked,
       saved:         reel.isSaved,
       createdAt:     reel.createdAt ?? DateTime.now(),
+      commentsDisabled: _commentsOff,
     );
     showModalBottomSheet(
       context: context,

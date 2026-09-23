@@ -191,6 +191,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_profile_a11y.py
 
+      # «Лайкҳо пинҳон» ва «шарҳҳо хомӯш» дар ҲАР экран.
+      - name: Санҷиши пинҳон кардан
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_hide.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

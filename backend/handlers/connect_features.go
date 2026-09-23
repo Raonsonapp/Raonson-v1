@@ -246,6 +246,10 @@ func HashtagPosts(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
 		WHERE p.caption ILIKE $2 AND COALESCE(p.hidden,false)=false
+		  AND COALESCE(p.archived,false)=false
+		  -- Ҳаштаг — кашф аст: танҳо ҳисобҳои кушода (мисли Instagram).
+		  -- Пеш постҳои ҳисоби пӯшида дар саҳифаи ҳаштаг ба ҳама буданд.
+		  AND `+publicAuthorSQL("p.user_id", "u", "$1")+`
 		ORDER BY p.created_at DESC LIMIT $3 OFFSET $4`,
 		myID, pattern, limit, offset)
 	if err != nil {

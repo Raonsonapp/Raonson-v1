@@ -480,6 +480,24 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   }),
       ),
 
+      // ── Шарҳҳо хомӯш ─────────────────────────────────────────
+      //
+      // Пеш майдони навиштан ҳамеша буд: корбар менавишт, сервер рад
+      // мекард — ва ба назар «хомӯш кардан кор намекунад».
+      if (widget.post.commentsDisabled)
+        SafeArea(
+          top: false,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.dividerFaint))),
+            child: Text('Шарҳҳо барои ин публикатсия хомӯш карда шудаанд',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
+          ),
+        )
+      else
       // ── Input ────────────────────────────────────────────────
       Container(
         decoration: BoxDecoration(

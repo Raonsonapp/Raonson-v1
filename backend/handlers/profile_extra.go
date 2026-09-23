@@ -32,17 +32,23 @@ func scanFeedPosts(rows interface {
 		var tagged []string
 		var collaborators []string
 		var hasStory bool
+		var hideLikes, commentsOff bool
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
 			&musicTitle, &musicArtist,
 			&musicURL, &musicArt, &musicTrackMs, &musicStartMs, &musicEndMs,
-			&location, &tagged, &collaborators, &hasStory); err != nil {
+			&location, &tagged, &collaborators, &hasStory,
+			&hideLikes, &commentsOff); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes, "commentsCount": comms,
 			"createdAt": createdAt, "media": nilToEmpty(media),
 			"liked": liked, "saved": saved, "isPinned": pinned,
+			// ⚠️ Ин ду НАБУДАНД. Пост дар профил, ҳаштаг ва
+			// захирашудаҳо «лайкҳо пинҳон» ва «шарҳҳо хомӯш»-ро гум
+			// мекард: корбар дар профил ҳамоно майдони шарҳро медид.
+			"hideLikes": hideLikes, "commentsOff": commentsOff,
 			"musicTitle": musicTitle, "musicArtist": musicArtist,
 			"song": songJSON(musicTitle, musicArtist, musicArt, musicURL,
 				musicTrackMs, musicStartMs, musicEndMs),
@@ -74,7 +80,8 @@ const feedPostCols = `
 	       COALESCE(p.music_end_ms,0),
 	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 	       COALESCE(p.collaborators,'{}'),
-	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text)))
+	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text))),
+	       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false)
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)
@@ -97,11 +104,13 @@ func GetSavedPosts(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
 		JOIN post_saves s ON s.post_id=p.id AND s.user_id=$1::text
-		WHERE $4::text = '' OR EXISTS (
+		WHERE ($4::text = '' OR EXISTS (
 		  SELECT 1 FROM saved_collection_items i
 		   JOIN saved_collections sc ON sc.id = i.collection_id
 		  WHERE i.collection_id = $4::text AND i.post_id = p.id
-		    AND sc.user_id = $1::text)
+		    AND sc.user_id = $1::text))
+		  -- Муаллиф баъдтар ҳисобро пӯшид ё маро баст — пост пинҳон.
+		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
 		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset, coll)
 	if err != nil {
@@ -135,6 +144,9 @@ func GetTaggedPosts(c *gin.Context) {
 		WHERE p.caption ILIKE '%@' || $2 || '%'
 		  AND NOT EXISTS (SELECT 1 FROM post_tag_removals tr
 		                  WHERE tr.post_id = p.id AND tr.user_id = $3::text)
+		  -- Постҳои қайдшуда аз ДИГАР муаллифон ҳастанд — ҳисоби
+		  -- пӯшидаи онҳо ҳам бояд риоя шавад.
+		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
 		ORDER BY p.created_at DESC LIMIT 60`, myID, uname, target)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
