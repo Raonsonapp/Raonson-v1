@@ -91,6 +91,11 @@ var bodies = map[Kind]map[Lang]string{
 		RU: "ответил(а) на вопрос в вашей истории",
 		EN: "answered your story question",
 	},
+	StoryMention: {
+		TJ: "шуморо дар сторис зикр кард",
+		RU: "упомянул(а) вас в истории",
+		EN: "mentioned you in their story",
+	},
 	StoryQuiz: {
 		TJ: "ба викторинаи сторисатон ҷавоб дод",
 		RU: "ответил(а) на вашу викторину",
@@ -304,7 +309,7 @@ func Link(k Kind, targetID, actorName string) string {
 		if targetID != "" {
 			return "/post/" + targetID
 		}
-	case StoryLike, StoryReply, StoryPoll, StoryAnswer, StoryQuiz:
+	case StoryLike, StoryReply, StoryPoll, StoryAnswer, StoryQuiz, StoryMention:
 		// Стори баъди 24 соат нест мешавад; профили муаллиф
 		// ҷои боэътимодтар аст.
 		if actorName != "" {

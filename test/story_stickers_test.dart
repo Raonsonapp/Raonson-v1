@@ -48,6 +48,35 @@ void main() {
     });
   });
 
+  group('линк ва упоминание', () {
+    test('стикери линк хонда мешавад', () {
+      final s = StorySticker.fromJson(
+          {'kind': 'link', 'prompt': 'Ёрдам', 'url': 'https://raonson.app/help'});
+      expect(s?.kind, 'link');
+      expect(s?.url, 'https://raonson.app/help');
+    });
+
+    test('упоминаниеҳо бо ҷойгиршавӣ хонда мешаванд', () {
+      final st = StoryModel.fromJson({
+        '_id': 's', 'mediaUrl': 'https://x/y.jpg', 'mediaType': 'image',
+        'expiresAt': '2099-01-01T00:00:00Z', 'user': {'_id': 'u', 'username': 'u'},
+        'mentions': [
+          {'userId': 'b', 'username': 'bob', 'x': 0.3, 'y': 0.4},
+          {'userId': '', 'username': 'бе-id'},
+        ],
+      });
+      expect(st.mentions.length, 1, reason: 'упоминание бе userId зада намешавад');
+      expect(st.mentions.first.username, 'bob');
+      expect(st.mentions.first.x, closeTo(0.3, 0.001));
+    });
+
+    testWidgets('линк нишон дода мешавад', (t) async {
+      await t.pumpWidget(_host(const StorySticker(
+          kind: 'link', prompt: 'Ёрдам', url: 'https://raonson.app/help')));
+      expect(find.text('Ёрдам'), findsOneWidget);
+    });
+  });
+
   group('намоиш', () {
     testWidgets('викторина: пеш аз ҷавоб фоиз ва дуруст нест', (t) async {
       await t.pumpWidget(_host(const StorySticker(

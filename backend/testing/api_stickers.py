@@ -97,6 +97,26 @@ past = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=
 st, r = story({"kind": "countdown", "prompt": "x", "endsAt": past})
 ok("ҳисоби баръакс ба гузашта рад мешавад", st == 400, f"HTTP {st}")
 
+# ── ЛИНК ──
+st, r = story({"kind": "link", "url": "https://raonson.app/help", "prompt": "Ёрдам"})
+lk = sid_of(r); ok("стори бо стикери линк", st in (200, 201) and lk, r)
+v = view(lk, tB).get("sticker", {})
+ok("линк ба тамошобин мерасад", v.get("kind") == "link" and v.get("url") == "https://raonson.app/help", v)
+for bad in ["http://raonson.app", "javascript:alert(1)", "https://localhost", "не-линк"]:
+    st, r = story({"kind": "link", "url": bad})
+    ok(f"линки нодуруст рад мешавад: {bad}", st == 400, f"HTTP {st}")
+
+# ── УПОМИНАНИЕ ──
+st, r = call("POST", "/stories/", {"mediaUrl": "https://example.com/m.jpg", "mediaType": "image",
+    "mentions": [{"username": f"@sb{S}", "x": 0.3, "y": 0.4}, {"username": "hech_kas_nest_999"},
+                 {"username": f"sa{S}"}]}, tA)
+mn = sid_of(r); ok("стори бо упоминание", mn, r)
+ms = view(mn, tC).get("mentions", [])
+ok("танҳо корбари ВОҚЕӢ зикр шуд (на нобуд, на худам)", [m.get("username") for m in ms] == [f"sb{S}"], ms)
+ok("ҷойгиршавӣ нигоҳ дошта шуд", ms and abs(ms[0].get("x", 0) - 0.3) < 0.01, ms)
+st, r = call("GET", "/notifications/", tok=tB)
+ok("шахси зикршуда огоҳинома гирифт", "story_mention" in json.dumps(r), str(r)[:200])
+
 # ── Ҳимоя ──
 st, r = story({"kind": "quiz", "prompt": "?", "options": ["танҳо"], "correct": 0})
 ok("викторинаи нодуруст — 400, стори сохта НАМЕШАВАД", st == 400, f"HTTP {st}")

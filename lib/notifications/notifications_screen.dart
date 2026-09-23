@@ -125,6 +125,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'story_poll':
       case 'story_answer':
       case 'story_quiz':
+      case 'story_mention':
         _openProfile(n.fromUser?.id);
         break;
       case 'order':

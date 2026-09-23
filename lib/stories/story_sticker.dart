@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../core/api/api_client.dart';
 import '../core/utils/server_time.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ══════════════════════════════════════════════════════════════════
 //  Стикерҳои сторис — мисли Instagram.
@@ -44,6 +45,9 @@ class StorySticker {
   // ҳисоби баръакс
   final DateTime? endsAt;
 
+  // линк
+  final String url;
+
   const StorySticker({
     required this.kind,
     this.prompt = '',
@@ -61,12 +65,13 @@ class StorySticker {
     this.answered = false,
     this.answersCount = 0,
     this.endsAt,
+    this.url = '',
   });
 
   static StorySticker? fromJson(dynamic j) {
     if (j is! Map) return null;
     final kind = (j['kind'] ?? '').toString();
-    if (!const {'question', 'quiz', 'slider', 'countdown'}.contains(kind)) {
+    if (!const {'question', 'quiz', 'slider', 'countdown', 'link'}.contains(kind)) {
       return null;
     }
     double d(dynamic v) => v is num ? v.toDouble() : 0.5;
@@ -92,6 +97,7 @@ class StorySticker {
       answered: j['answered'] == true,
       answersCount: i(j['answersCount']) ?? 0,
       endsAt: parseServerTime(j['endsAt']),
+      url: (j['url'] ?? '').toString(),
     );
   }
 
@@ -100,7 +106,7 @@ class StorySticker {
     int? myValue, int? average, int? responses, bool? answered,
   }) => StorySticker(
         kind: kind, prompt: prompt, x: x, y: y, isOwner: isOwner,
-        options: options, emoji: emoji, endsAt: endsAt,
+        options: options, emoji: emoji, endsAt: endsAt, url: url,
         answersCount: answersCount,
         correct: correct ?? this.correct,
         myChoice: myChoice ?? this.myChoice,
@@ -305,6 +311,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
         'quiz' => _quiz(card),
         'slider' => _slider(card),
         'question' => _question(card),
+        'link' => _link(),
         _ => _countdown(card),
       },
     );
@@ -486,6 +493,61 @@ class _StoryStickerViewState extends State<StoryStickerView> {
             ),
           ),
         ]),
+      ),
+    );
+  }
+
+  /// Стикери линк — мисли Instagram: пеш аз кушодан мепурсад, то
+  /// корбар бидонад, ки ба куҷо меравад.
+  Widget _link() {
+    final uri = Uri.tryParse(_s.url);
+    final ok = uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
+    return Center(
+      child: GestureDetector(
+        onTap: !ok
+            ? null
+            : () async {
+                widget.onPause();
+                final go = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Кушодани линк'),
+                    content: Text(uri.toString()),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Бекор')),
+                      TextButton(onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Кушодан')),
+                    ],
+                  ),
+                );
+                if (go == true) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+                widget.onResume();
+              },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(
+                color: Colors.black.withOpacity(0.25), blurRadius: 12)],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.link_rounded, color: Color(0xFF0095F6), size: 20),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(_s.prompt.isEmpty ? (uri?.host ?? '') : _s.prompt,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Color(0xFF0095F6),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700)),
+            ),
+          ]),
+        ),
       ),
     );
   }

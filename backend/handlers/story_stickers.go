@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ type stickerInput struct {
 	Correct int      `json:"correct"`
 	Emoji   string   `json:"emoji"`
 	EndsAt  string   `json:"endsAt"`
+	URL     string   `json:"url"`
 	X       float64  `json:"x"`
 	Y       float64  `json:"y"`
 }
@@ -49,6 +51,7 @@ type stickerClean struct {
 	Correct int
 	Emoji   string
 	EndsAt  *time.Time
+	URL     string
 	X, Y    float64
 }
 
@@ -114,6 +117,17 @@ func validateSticker(in stickerInput, now time.Time) (*stickerClean, error) {
 			return nil, errBadSticker
 		}
 		out.EndsAt = &t
+	case "link":
+		// Стикери линк — танҳо https ва суроғаи воқеӣ.
+		u, err := url.Parse(strings.TrimSpace(in.URL))
+		if err != nil || u.Scheme != "https" || u.Host == "" ||
+			!strings.Contains(u.Host, ".") || len(in.URL) > 500 {
+			return nil, errBadSticker
+		}
+		out.URL = u.String()
+		if out.Prompt == "" {
+			out.Prompt = u.Host
+		}
 	default:
 		return nil, errBadSticker
 	}
@@ -130,10 +144,10 @@ func saveSticker(storyID string, s *stickerClean) {
 		opts = []byte("[]")
 	}
 	db.Pool.Exec(context.Background(), `
-		INSERT INTO story_stickers(story_id,kind,prompt,options,correct,emoji,ends_at,pos_x,pos_y)
-		VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9)
+		INSERT INTO story_stickers(story_id,kind,prompt,options,correct,emoji,ends_at,pos_x,pos_y,link_url)
+		VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9,$10)
 		ON CONFLICT (story_id) DO NOTHING`,
-		storyID, s.Kind, s.Prompt, string(opts), s.Correct, s.Emoji, s.EndsAt, s.X, s.Y)
+		storyID, s.Kind, s.Prompt, string(opts), s.Correct, s.Emoji, s.EndsAt, s.X, s.Y, s.URL)
 }
 
 // attachSticker — стикерро ба ҷавоби сторис илова мекунад.
@@ -142,15 +156,16 @@ func saveSticker(storyID string, s *stickerClean) {
 // соҳиб) фиристода мешавад — вагарна ҳар кас онро дар ҷавоби сервер
 // медид.
 func attachSticker(storyID, viewerID, ownerID string, out gin.H) {
-	var kind, prompt, emoji string
+	var kind, prompt, emoji, linkURL string
 	var optsRaw []byte
 	var correct int
 	var endsAt *time.Time
 	var x, y float64
 	err := db.Pool.QueryRow(context.Background(), `
-		SELECT kind, prompt, options, correct, emoji, ends_at, pos_x, pos_y
+		SELECT kind, prompt, options, correct, emoji, ends_at, pos_x, pos_y,
+		       COALESCE(link_url,'')
 		FROM story_stickers WHERE story_id=$1`, storyID).
-		Scan(&kind, &prompt, &optsRaw, &correct, &emoji, &endsAt, &x, &y)
+		Scan(&kind, &prompt, &optsRaw, &correct, &emoji, &endsAt, &x, &y, &linkURL)
 	if err != nil {
 		return
 	}
@@ -198,6 +213,8 @@ func attachSticker(storyID, viewerID, ownerID string, out gin.H) {
 		}
 	case "countdown":
 		st["endsAt"] = endsAt
+	case "link":
+		st["url"] = linkURL
 	}
 	out["sticker"] = st
 }
@@ -376,4 +393,69 @@ func GetStickerAnswers(c *gin.Context) {
 		list = append(list, item)
 	}
 	c.JSON(http.StatusOK, gin.H{"answers": list})
+}
+
+// ── Упоминание (@) ────────────────────────────────────────────────
+
+type mentionInput struct {
+	Username string  `json:"username"`
+	X        float64 `json:"x"`
+	Y        float64 `json:"y"`
+}
+
+// saveStoryMentions — номҳоро ба корбарони воқеӣ табдил медиҳад, сабт
+// мекунад ва ба ҳар кадом хабар мефиристад.
+//
+// Пеш «@ном» танҳо ба расм часпонида мешуд: на зада мешуд, на ба он
+// шахс хабар мерафт, ва дар стори видеоӣ умуман гум мешуд.
+func saveStoryMentions(storyID, authorID string, in []mentionInput) {
+	if storyID == "" || len(in) == 0 {
+		return
+	}
+	if len(in) > 10 {
+		in = in[:10]
+	}
+	ctx := context.Background()
+	seen := map[string]bool{}
+	for _, m := range in {
+		uname := normalizeLoginID(m.Username)
+		if uname == "" || seen[uname] {
+			continue
+		}
+		seen[uname] = true
+		var uid, real string
+		if db.Pool.QueryRow(ctx,
+			`SELECT id, username FROM users WHERE lower(username)=$1 AND COALESCE(banned,false)=FALSE`,
+			uname).Scan(&uid, &real) != nil || uid == authorID {
+			continue
+		}
+		if IsBlockedBetween(authorID, uid) {
+			continue
+		}
+		db.Pool.Exec(ctx, `INSERT INTO story_mentions(story_id,user_id,username,pos_x,pos_y)
+			VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+			storyID, uid, real, clamp01(m.X), clamp01(m.Y))
+		notify(uid, authorID, "story_mention", storyID)
+		pushNotify(uid, authorID, "story_mention", storyID, "")
+	}
+}
+
+// attachMentions — рӯйхати упоминаниеҳо барои тамошобин.
+func attachMentions(storyID string, out gin.H) {
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT user_id, username, pos_x, pos_y FROM story_mentions WHERE story_id=$1`, storyID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	list := []gin.H{}
+	for rows.Next() {
+		var uid, un string
+		var x, y float64
+		rows.Scan(&uid, &un, &x, &y)
+		list = append(list, gin.H{"userId": uid, "username": un, "x": x, "y": y})
+	}
+	if len(list) > 0 {
+		out["mentions"] = list
+	}
 }

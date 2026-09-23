@@ -141,10 +141,10 @@ func TestLinksUseKnownPrefixes(t *testing.T) {
 
 func TestLinkTargets(t *testing.T) {
 	cases := map[Kind]string{
-		Like:          "/post/obj1",
-		Comment:       "/post/obj1",
-		ReelLike:      "/reel/obj1",
-		Follow:        "/profile/ali",
+		Like:     "/post/obj1",
+		Comment:  "/post/obj1",
+		ReelLike: "/reel/obj1",
+		Follow:   "/profile/ali",
 		// Ба ҷои ҚАБУЛ мебарад, на ба пост: гиранда ҳанӯз ҳамкор
 		// нест ва дар пост ҳеҷ тугмаи қабул намебинад.
 		CollabInvite:  "/collab-invites",

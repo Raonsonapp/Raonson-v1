@@ -912,6 +912,18 @@ func migrate() {
 		PRIMARY KEY (user_id, peer_id)
 	);
 
+	-- Упоминание (@) дар сторис — зада мешавад ва ба шахс хабар меравад.
+	CREATE TABLE IF NOT EXISTS story_mentions (
+		story_id TEXT NOT NULL,
+		user_id  TEXT NOT NULL,
+		username TEXT NOT NULL,
+		pos_x    REAL DEFAULT 0.5,
+		pos_y    REAL DEFAULT 0.5,
+		PRIMARY KEY (story_id, user_id)
+	);
+	-- Стикери линк.
+	ALTER TABLE story_stickers ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
+
 	-- «Ман ин сториро дидам» — барои ҳалқаи сторис (ранга ↔ хокистарӣ).
 	-- Алоҳида аз story_views: соҳиб ҳамчун БИНАНДА ҳисоб намешавад
 	-- (мисли Instagram), вале ҳалқаи ХУДАШ ҳам бояд хокистарӣ шавад.

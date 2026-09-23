@@ -69,6 +69,9 @@ class StoryModel {
   /// Савол, викторина, слайдер ё ҳисоби баръакс.
   final StorySticker? sticker;
 
+  /// Упоминаниеҳо (@) — зада мешаванд ва профилро мекушоянд.
+  final List<StoryMention> mentions;
+
   /// Музикаи стори. Пеш стори ҳеҷ майдони музика надошт — ҳангоми
   /// нашр танҳо «🎵 ном» ба матн меафтод ва ҳангоми тамошо ҳеҷ чиз
   /// намехонд.
@@ -97,6 +100,7 @@ class StoryModel {
     required this.expiresAt,
     this.poll,
     this.sticker,
+    this.mentions = const [],
     this.song = SongInfo.none,
     this.sharedPostId = '',
     this.sharedReelId = '',
@@ -127,9 +131,27 @@ class StoryModel {
       expiresAt: parseServerTime(json['expiresAt']) ?? DateTime.now().add(const Duration(hours: 24)),
       poll: StoryPoll.fromJson(json['poll']),
       sticker: StorySticker.fromJson(json['sticker']),
+      mentions: ((json['mentions'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((m) => StoryMention(
+                userId: (m['userId'] ?? '').toString(),
+                username: (m['username'] ?? '').toString(),
+                x: (m['x'] as num?)?.toDouble() ?? 0.5,
+                y: (m['y'] as num?)?.toDouble() ?? 0.5,
+              ))
+          .where((m) => m.userId.isNotEmpty)
+          .toList(),
       song: SongInfo.fromJson(json['song'] as Map<String, dynamic>?),
       sharedPostId: (json['sharedPostId'] ?? '').toString(),
       sharedReelId: (json['sharedReelId'] ?? '').toString(),
     );
   }
+}
+
+/// Упоминание (@) дар сторис.
+class StoryMention {
+  final String userId, username;
+  final double x, y;
+  const StoryMention({
+    required this.userId, required this.username, this.x = 0.5, this.y = 0.5});
 }

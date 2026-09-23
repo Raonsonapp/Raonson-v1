@@ -728,6 +728,43 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             })),
           ),
 
+          // ── Упоминаниеҳо (@) — зада мешаванд ─────────────────
+          //
+          // Дар стори-расм ном аллакай ба расм кашида шудааст — ин ҷо
+          // танҳо минтақаи зарба (шаффоф). Дар видео ном кашида
+          // намешуд — пас ин ҷо намоён аст.
+          for (final m in _current.mentions)
+            Builder(builder: (ctx) {
+              final sz = MediaQuery.of(ctx).size;
+              final visible = _isVideo;
+              return Positioned(
+                left: (m.x * sz.width - 70).clamp(4.0, sz.width - 144),
+                top: (m.y * sz.height - 20).clamp(80.0, sz.height - 120),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    _pause();
+                    Navigator.of(context).pop();
+                    Navigator.of(context).pushNamed('/profile', arguments: m.userId);
+                  },
+                  child: Container(
+                    width: 140, height: 40,
+                    alignment: Alignment.center,
+                    decoration: visible
+                        ? BoxDecoration(color: Colors.white,
+                            borderRadius: BorderRadius.circular(8))
+                        : null,
+                    child: visible
+                        ? Text('@${m.username}',
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black,
+                                fontWeight: FontWeight.w700, fontSize: 15))
+                        : null,
+                  ),
+                ),
+              );
+            }),
+
           // ── Савол / викторина / слайдер / ҳисоби баръакс ────────
           if (_current.sticker != null)
             Builder(builder: (ctx) {

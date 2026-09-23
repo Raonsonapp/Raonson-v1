@@ -45,7 +45,8 @@ class StoryEditor extends StatefulWidget {
   final bool isVideo, isUploading;
   final void Function(File, String, String,
       [Map<String, dynamic>? poll, SongInfo? song,
-       Map<String, dynamic>? sticker]) onPublish;
+       Map<String, dynamic>? sticker,
+       List<Map<String, dynamic>>? mentions]) onPublish;
   final VoidCallback onCancel;
   final String? errorMessage;
 
@@ -151,6 +152,7 @@ class _StoryEditorState extends State<StoryEditor> {
         'quiz'      => 'Викторина ✓',
         'slider'    => 'Слайдер ✓',
         'countdown' => 'Ҳисоб ✓',
+        'link'      => 'Линк ✓',
         _           => 'Интерактив',
       };
 
@@ -168,6 +170,7 @@ class _StoryEditorState extends State<StoryEditor> {
             ['quiz', '🧠', 'Викторина'],
             ['slider', '😍', 'Слайдери эмодзи'],
             ['countdown', '⏳', 'Ҳисоби баръакс'],
+            ['link', '🔗', 'Линк'],
           ])
             ListTile(
               leading: Text(e[1], style: const TextStyle(fontSize: 24)),
@@ -196,6 +199,7 @@ class _StoryEditorState extends State<StoryEditor> {
   Future<Map<String, dynamic>?> _stickerDialog(String kind) async {
     final prompt = TextEditingController(
         text: kind == 'question' ? 'Аз ман пурсед' : '');
+    final linkCtrl = TextEditingController(text: 'https://');
     final opts = List.generate(4, (_) => TextEditingController());
     final emoji = TextEditingController(text: '😍');
     int correct = 0;
@@ -216,9 +220,12 @@ class _StoryEditorState extends State<StoryEditor> {
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 TextField(controller: prompt, maxLength: 80, style: ts,
                     autofocus: kind != 'question',
-                    decoration: dec(kind == 'countdown'
-                        ? 'Номи рӯйдод' : kind == 'slider'
-                        ? 'Савол (ихтиёрӣ)' : 'Савол')),
+                    decoration: dec(switch (kind) {
+                      'countdown' => 'Номи рӯйдод',
+                      'slider' => 'Савол (ихтиёрӣ)',
+                      'link' => 'Матни линк (ихтиёрӣ)',
+                      _ => 'Савол',
+                    })),
                 if (kind == 'quiz') ...[
                   const SizedBox(height: 6),
                   for (var i = 0; i < 4; i++)
@@ -236,6 +243,10 @@ class _StoryEditorState extends State<StoryEditor> {
                   Text('Доираи сабз — ҷавоби дуруст',
                       style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
                 ],
+                if (kind == 'link')
+                  TextField(controller: linkCtrl, maxLength: 500, style: ts,
+                      keyboardType: TextInputType.url,
+                      decoration: dec('https://…')),
                 if (kind == 'slider')
                   TextField(controller: emoji, maxLength: 4,
                       textAlign: TextAlign.center,
@@ -289,6 +300,12 @@ class _StoryEditorState extends State<StoryEditor> {
                     if (list.length < 2) { setD(() => err = 'Ақаллан 2 вариант лозим'); return; }
                     if (ci < 0) { setD(() => err = 'Ҷавоби дурустро интихоб кунед'); return; }
                     m['options'] = list; m['correct'] = ci;
+                  } else if (kind == 'link') {
+                    final u = Uri.tryParse(linkCtrl.text.trim());
+                    if (u == null || u.scheme != 'https' || !u.host.contains('.')) {
+                      setD(() => err = 'Линк бояд бо https:// сар шавад'); return;
+                    }
+                    m['url'] = u.toString();
                   } else if (kind == 'slider') {
                     m['emoji'] = emoji.text.trim().isEmpty ? '😍' : emoji.text.trim();
                   } else if (kind == 'countdown') {
@@ -307,7 +324,7 @@ class _StoryEditorState extends State<StoryEditor> {
         }),
       );
     } finally {
-      prompt.dispose(); emoji.dispose();
+      prompt.dispose(); emoji.dispose(); linkCtrl.dispose();
       for (final c in opts) { c.dispose(); }
     }
   }
@@ -383,16 +400,27 @@ class _StoryEditorState extends State<StoryEditor> {
     }
   }
 
+  /// Упоминаниеҳо бо ҷойи нисбӣ (0..1) — то дар тамошобин зада шаванд
+  /// ва ба он шахс хабар равад. Пеш танҳо ба расм часпонида мешуданд.
+  List<Map<String, dynamic>> _mentionPayload() {
+    final sz = MediaQuery.of(context).size;
+    return _mentions.map((m) => <String, dynamic>{
+          'username': m.username.replaceAll('@', '').trim(),
+          'x': ((m.position.dx + 60) / sz.width).clamp(0.0, 1.0),
+          'y': ((m.position.dy + 16) / sz.height).clamp(0.0, 1.0),
+        }).where((m) => (m['username'] as String).isNotEmpty).toList();
+  }
+
   Future<void> _onPublish({String audience = 'all'}) async {
     // Суруд акнун ҳамчун МАЪЛУМОТ меравад, на ҳамчун матни «🎵 ном».
     // Пештар маҳз ҳамин боиси гум шудани номи хонанда, суроға ва
     // ҷои оғоз мешуд.
     if (widget.isVideo) {
-      widget.onPublish(widget.media, '', audience, _poll, _song, _sticker);
+      widget.onPublish(widget.media, '', audience, _poll, _song, _sticker, _mentionPayload());
     } else {
       final captured = await _captureCanvas();
       if (!mounted) return;
-      widget.onPublish(captured, '', audience, _poll, _song, _sticker);
+      widget.onPublish(captured, '', audience, _poll, _song, _sticker, _mentionPayload());
     }
   }
 

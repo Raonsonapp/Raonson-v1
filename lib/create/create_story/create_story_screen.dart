@@ -60,7 +60,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
 
   Future<void> _publish(File capturedFile, String caption, String audience,
       [Map<String, dynamic>? poll, SongInfo? song,
-       Map<String, dynamic>? sticker]) async {
+       Map<String, dynamic>? sticker,
+       List<Map<String, dynamic>>? mentions]) async {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });
@@ -104,6 +105,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         if (poll != null) 'poll': poll,
         // Савол / викторина / слайдер / ҳисоби баръакс.
         if (sticker != null) 'sticker': sticker,
+        if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
         // Суруд пурра меравад: ном, ХОНАНДА, суроға ва ҷои оғоз.
         // Пештар танҳо «🎵 ном» дар `caption` мерафт.
         if (song != null && song.isNotEmpty) 'song': song.toJson(),

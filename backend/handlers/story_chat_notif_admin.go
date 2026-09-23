@@ -119,6 +119,8 @@ func CreateStory(c *gin.Context) {
 		Song *songInfo `json:"song"`
 		// Стикерҳои дигар: савол, викторина, слайдер, ҳисоби баръакс.
 		Sticker *stickerInput `json:"sticker"`
+		// Упоминаниеҳо (@) — бо ҷойгиршавӣ, то зада шаванд.
+		Mentions []mentionInput `json:"mentions"`
 		// Пост ё Reel, ки дар ин стори паҳн мешавад.
 		SharedPostID string `json:"sharedPostId"`
 		SharedReelID string `json:"sharedReelId"`
@@ -170,6 +172,7 @@ func CreateStory(c *gin.Context) {
 		sharedPost, sharedReel).Scan(&sid)
 
 	saveSticker(sid, sticker)
+	saveStoryMentions(sid, myID, b.Mentions)
 	if b.Poll != nil && strings.TrimSpace(b.Poll.Question) != "" {
 		qa := strings.TrimSpace(b.Poll.OptionA)
 		qb := strings.TrimSpace(b.Poll.OptionB)
@@ -451,6 +454,7 @@ func scanStoryRows(rows interface {
 		}
 		attachPoll(sid, viewerID, item)
 		attachSticker(sid, viewerID, uid, item)
+		attachMentions(sid, item)
 		// ⚠️ Ин майдон НАБУД. Ҳалқаи сторис дар Reels ба он такя
 		// мекард ва ҳеҷ гоҳ хокистарӣ намешуд — ҳатто стории ХУДАМ
 		// баъди дидан. Лентаи асосӣ инро бо хотираи маҳаллӣ пинҳон

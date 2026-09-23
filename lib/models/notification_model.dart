@@ -38,6 +38,7 @@ class NotificationModel {
       case 'story_poll': return 'дар пурсиши сторисат овоз дод';
       case 'story_answer': return 'ба саволи сторисат ҷавоб дод';
       case 'story_quiz': return 'ба викторинаи сторисат ҷавоб дод';
+      case 'story_mention': return 'шуморо дар сторис зикр кард';
       case 'message': return 'паём фиристод';
       case 'effect_sale': return 'эффекти шуморо харид';
       case 'order': return 'маҳсули шуморо фармоиш дод';
