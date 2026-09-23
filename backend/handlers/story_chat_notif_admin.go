@@ -510,7 +510,8 @@ func GetChats(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM chat_hidden ch WHERE ch.user_id=$1
 		              AND ch.peer_id = CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END) AS hidden,
 		       (SELECT COUNT(*) FROM messages mu WHERE mu.chat_id=sub.chat_id
-		              AND mu.receiver_id=$1 AND mu.read=false) AS unread_count,
+		              AND mu.receiver_id=$1 AND mu.read=false
+		              AND (mu.scheduled_at IS NULL OR mu.scheduled_at <= NOW())) AS unread_count,
 		       COALESCE(cp.pinned,false) AS pinned,
 		       COALESCE(cp.muted,false)  AS muted
 		FROM (
@@ -523,6 +524,7 @@ func GetChats(c *gin.Context) {
 			JOIN users s ON s.id=m.sender_id
 			JOIN users r ON r.id=m.receiver_id
 			WHERE (m.sender_id=$1 OR m.receiver_id=$1)
+			  AND (m.scheduled_at IS NULL OR m.scheduled_at <= NOW())
 			ORDER BY m.chat_id, m.created_at DESC
 		) sub
 		LEFT JOIN chat_prefs cp ON cp.user_id=$1
@@ -637,7 +639,7 @@ func GetMessages(c *gin.Context) {
 		SELECT id,chat_id,sender_id,text,media_url,type,reply_to_id,
 		       is_deleted,read,created_at,username,avatar,verified,
 		       share_id,share_kind,share_thumb,share_user,
-		       view_once,viewed_once,delivered,reactions,edited_at,forwarded,vanish
+		       view_once,viewed_once,delivered,reactions,edited_at,forwarded,vanish,scheduled_at
 		FROM (
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,COALESCE(m.media_url,'') media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
@@ -662,9 +664,12 @@ func GetMessages(c *gin.Context) {
 		           FROM message_reactions mr WHERE mr.message_id = m.id
 		         ), '[]'::json) reactions,
 		         m.edited_at, COALESCE(m.forwarded,false) forwarded,
-		         COALESCE(m.vanish,false) vanish
+		         COALESCE(m.vanish,false) vanish,
+		         m.scheduled_at
 		  FROM messages m JOIN users u ON u.id=m.sender_id
 		  WHERE m.chat_id=$1 AND (m.sender_id=$4 OR m.receiver_id=$4)
+		    -- Паёми вақтбандишуда то вақташ ба гиранда дида намешавад.
+		    AND (m.scheduled_at IS NULL OR m.scheduled_at <= NOW() OR m.sender_id=$4)
 		  ORDER BY m.created_at DESC LIMIT $2 OFFSET $3
 		) sub ORDER BY created_at ASC`, chatID, limit, offset, myID)
 	if err != nil {
@@ -685,10 +690,11 @@ func GetMessages(c *gin.Context) {
 		var reactionsRaw []byte
 		var editedAt *time.Time
 		var forwarded, vanish bool
+		var scheduledAt *time.Time
 		rows.Scan(&mid, &cid, &sid, &text, &murl, &mtype, &replyTo, &isDeleted,
 			&read, &createdAt, &uname, &uavatar, &verified,
 			&shareID, &shareKind, &shareThumb, &shareUser,
-			&viewOnce, &viewedOnce, &delivered, &reactionsRaw, &editedAt, &forwarded, &vanish)
+			&viewOnce, &viewedOnce, &delivered, &reactionsRaw, &editedAt, &forwarded, &vanish, &scheduledAt)
 		// Бе кушодани JSON гин онро ҳамчун байт → base64 мефиристод
 		// ва барнома рӯйхати холӣ мегирифт.
 		reactions := []map[string]interface{}{}
@@ -709,6 +715,7 @@ func GetMessages(c *gin.Context) {
 			"viewOnce": viewOnce, "viewedOnce": viewedOnce,
 			"delivered": delivered, "reactions": reactions,
 			"editedAt": editedAt, "forwarded": forwarded, "vanish": vanish,
+			"scheduledAt": scheduledAt,
 			"sender": gin.H{"_id": sid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}

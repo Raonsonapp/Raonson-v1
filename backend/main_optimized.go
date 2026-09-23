@@ -46,6 +46,7 @@ func main() {
 	db.Init()
 	mw.InitRedis()
 	jobs.StartJobs()
+	handlers.StartScheduledMessages() // паёмҳои вақтбандишуда
 
 	port := os.Getenv("PORT")
 	if port == "" {

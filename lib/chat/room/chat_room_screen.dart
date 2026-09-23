@@ -27,6 +27,7 @@ import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
 import '../share/share_to_chat_row.dart';
 import '../../core/utils/server_time.dart';
+import '../../app/app_settings.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -681,6 +682,62 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     } catch (_) {}
   }
 
+  /// Тарҷумаи паём ба забони барнома.
+  Future<void> _onTranslate(MessageModel msg) async {
+    final lang = AppSettingsState.instance.lang;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Тарҷума', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        content: FutureBuilder(
+          future: ApiClient.instance.post('/ai/translate',
+              body: {'text': msg.text, 'targetLang': lang}),
+          builder: (_, snap) {
+            if (!snap.hasData && !snap.hasError) {
+              return const SizedBox(height: 60,
+                  child: Center(child: CircularProgressIndicator()));
+            }
+            String out = 'Тарҷума ҳоло дастрас нест';
+            try {
+              final r = snap.data!;
+              final b = jsonDecode(r.body) as Map;
+              if (r.statusCode < 400 && (b['translated'] ?? '').toString().isNotEmpty) {
+                out = b['translated'].toString();
+              }
+            } catch (_) {}
+            return Column(mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(msg.text, style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
+              const SizedBox(height: 10),
+              SelectableText(out, style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+            ]);
+          },
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Пӯшидан'))],
+      ),
+    );
+  }
+
+  /// Паёми вақтбандишуда — Instagram надорад.
+  Future<void> _onSchedule(String text, DateTime at) async {
+    try {
+      final msg = await _repo.sendMessage(
+        toUserId: widget.peer.id, text: text, chatId: _chatId, sendAt: at);
+      if (!mounted) return;
+      setState(() => _messages.add(msg));
+      _scrollBottom();
+      final l = at;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+          '🕒 Паём дар ${l.day}.${l.month.toString().padLeft(2, '0')} '
+          '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')} фиристода мешавад')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Вақтбандӣ нашуд')));
+    }
+  }
+
   /// Таҳрири паём — мисли Instagram.
   Future<void> _onEdit(MessageModel msg) async {
     final ctrl = TextEditingController(text: msg.text);
@@ -852,6 +909,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           else
             MessageInput(
               onSend:         _onSend,
+              onSchedule:     _onSchedule,
               onSendMedia:    _onSendMedia,
               onSendVoice:    _onSendVoice,
               onSendLocation: _sendLocation,
@@ -1118,6 +1176,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               onReport: () => _onReportMessage(msg),
               onEdit:   () => _onEdit(msg),
               onForward: () => _onForward(msg),
+              onTranslate: () => _onTranslate(msg),
               onCallBack: () {
                 final p = msg.text.split(':');
                 final isVid = p.length > 1 && p[1] == 'video';

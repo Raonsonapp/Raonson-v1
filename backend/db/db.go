@@ -964,6 +964,11 @@ func migrate() {
 	-- Vanish mode: паём баъди дидан ва бастани чат нопадид мешавад.
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS vanish  BOOLEAN DEFAULT FALSE;
 	ALTER TABLE messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
+	-- Паёми вақтбандишуда (Instagram надорад): то ин вақт ба гиранда
+	-- НАМЕРАСАД ва дар рӯйхати ӯ дида намешавад.
+	ALTER TABLE messages ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;
+	CREATE INDEX IF NOT EXISTS idx_messages_scheduled ON messages(scheduled_at)
+	  WHERE scheduled_at IS NOT NULL;
 
 	-- ── Analytics events (batch-inserted from client) ──
 	CREATE TABLE IF NOT EXISTS events (

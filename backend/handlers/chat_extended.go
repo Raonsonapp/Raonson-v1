@@ -138,6 +138,8 @@ type SendMessageExtRequest struct {
 	Forwarded  bool `json:"forwarded"`
 	// Vanish mode — баъди дидан ва бастани чат нест мешавад.
 	Vanish     bool `json:"vanish"`
+	// Вақти фиристодан (RFC3339). Холӣ — фавран.
+	SendAt     string `json:"sendAt"`
 	// Шиносаи маҳаллии телефон — барои такрорнашавӣ ҳангоми
 	// фиристодани дубора аз навбати офлайн.
 	ClientID   string `json:"clientId"`
@@ -208,6 +210,18 @@ func SendMessageExt(c *gin.Context) {
 
 	clientID := clampRunes(strings.TrimSpace(body.ClientID), 64)
 
+	// Вақтбандӣ: танҳо дар оянда ва на дуртар аз 30 рӯз.
+	var sendAt *time.Time
+	if strings.TrimSpace(body.SendAt) != "" {
+		t, err := time.Parse(time.RFC3339, body.SendAt)
+		if err != nil || !t.After(time.Now().Add(30*time.Second)) ||
+			t.After(time.Now().Add(30*24*time.Hour)) {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Вақт бояд дар оянда бошад (то 30 рӯз)"})
+			return
+		}
+		sendAt = &t
+	}
+
 	// ⚠️ Такрор набояд паёми дуюм созад.
 	//
 	// Телефон паёмро дар навбат нигоҳ медорад ва ҳангоми баргаштани
@@ -232,14 +246,14 @@ func SendMessageExt(c *gin.Context) {
 		INSERT INTO messages
 		  (chat_id, sender_id, receiver_id, text, type, media_url, reply_to_id,
 		   share_id, share_kind, share_thumb, share_user, view_once,
-		   client_id, forwarded, vanish, created_at, updated_at)
+		   client_id, forwarded, vanish, scheduled_at, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,
 		        NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),$12,
-		        $13,$14,$15,NOW(),NOW())
+		        $13,$14,$15,$16,COALESCE($16,NOW()),NOW())
 		RETURNING id
 	`, chatID, myID, receiver, body.Text, msgType, nullString(body.MediaURL), replyToPtr,
 		body.ShareID, body.ShareKind, body.ShareThumb, body.ShareUser,
-		body.ViewOnce, clientID, body.Forwarded, body.Vanish).Scan(&msgID)
+		body.ViewOnce, clientID, body.Forwarded, body.Vanish, sendAt).Scan(&msgID)
 	if err != nil {
 		log.Printf("[Chat] send message failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
@@ -250,6 +264,14 @@ func SendMessageExt(c *gin.Context) {
 	msg, err := fetchMessageByID(msgID, myID)
 	if err != nil {
 		c.JSON(http.StatusCreated, gin.H{"_id": msgID})
+		return
+	}
+
+	// Вақтбандишуда: ҳозир ба гиранда ҲЕҶ чиз намеравад — на socket,
+	// на огоҳинома. `DeliverScheduledMessages` дар вақташ мефиристад.
+	if sendAt != nil {
+		msg["scheduledAt"] = *sendAt
+		c.JSON(http.StatusCreated, msg)
 		return
 	}
 

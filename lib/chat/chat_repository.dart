@@ -218,6 +218,8 @@ class ChatRepository {
     String? clientId,
     /// Vanish mode — баъди дидан ва бастани чат нопадид мешавад.
     bool vanish = false,
+    /// Вақти фиристодан — паём то ин вақт ба гиранда намерасад.
+    DateTime? sendAt,
   }) async {
     final myId = await _myId();
     var cid = chatId;
@@ -240,6 +242,7 @@ class ChatRepository {
         if (viewOnce) 'viewOnce': true,
         if (clientId != null && clientId.isNotEmpty) 'clientId': clientId,
         if (vanish) 'vanish': true,
+        if (sendAt != null) 'sendAt': sendAt.toUtc().toIso8601String(),
       },
     ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 400) throw Exception('Send error');

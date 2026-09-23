@@ -14,6 +14,8 @@ import '../../core/i18n/strings.dart';
 // ─────────────────────────────────────────────────────────────────
 class MessageInput extends StatefulWidget {
   final void Function(String text)  onSend;
+  /// Пахши дароз дар тугма → «баъдтар фиристодан» (Instagram надорад).
+  final void Function(String text, DateTime at)? onSchedule;
   final void Function(File file, {bool viewOnce})? onSendMedia;
   final void Function(File file)?   onSendVoice;
   final VoidCallback?               onSendLocation;
@@ -24,6 +26,7 @@ class MessageInput extends StatefulWidget {
   const MessageInput({
     super.key,
     required this.onSend,
+    this.onSchedule,
     this.onSendMedia,
     this.onSendVoice,
     this.onSendLocation,
@@ -90,6 +93,29 @@ class _MessageInputState extends State<MessageInput>
   }
 
   void _sendTyping(bool isTyping) => widget.onTyping?.call(isTyping);
+
+  Future<void> _schedule() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || widget.onSchedule == null) return;
+    final now = DateTime.now();
+    final d = await showDatePicker(context: context,
+        initialDate: now, firstDate: now,
+        lastDate: now.add(const Duration(days: 30)),
+        helpText: 'Кай фиристода шавад?');
+    if (d == null || !mounted) return;
+    final t = await showTimePicker(context: context,
+        initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))));
+    if (t == null || !mounted) return;
+    final at = DateTime(d.year, d.month, d.day, t.hour, t.minute);
+    if (!at.isAfter(now.add(const Duration(minutes: 1)))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Вақт бояд дар оянда бошад')));
+      return;
+    }
+    widget.onSchedule!(text, at);
+    _ctrl.clear();
+    _sendTyping(false);
+  }
 
   void _send() {
     final text = _ctrl.text.trim();
@@ -386,6 +412,7 @@ class _MessageInputState extends State<MessageInput>
         _hasText
             ? GestureDetector(
                 onTap: _send,
+                onLongPress: widget.onSchedule == null ? null : _schedule,
                 child: Container(
                   width: 44, height: 44,
                   decoration: const BoxDecoration(

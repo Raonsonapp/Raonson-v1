@@ -140,6 +140,25 @@ ok("паёмҳои оддӣ боқӣ монданд", any("дуруст нави
 st, r = call("POST", f"/chat/{ab}/vanish-close", tok=tC)
 ok("шахси сеюм паёми бегонаро нест карда НАМЕТАВОНАД", r.get("removed") == 0, r)
 
+# ── ПАЁМИ ВАҚТБАНДИШУДА (Instagram надорад) ──
+import datetime as _dt
+soon = (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(seconds=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
+st, sm = call("POST", f"/chat/{ab}/messages", {"text": "табрик дар вақташ", "sendAt": soon}, tA)
+smid = sm.get("_id") or sm.get("id")
+ok("паём вақтбандӣ шуд", st in (200, 201) and sm.get("scheduledAt"), sm)
+st, lst = call("GET", f"/chat/{ab}/messages", tok=tB)
+ok("гиранда то вақташ НАМЕБИНАД", not any(m.get("_id") == smid for m in lst.get("messages", [])), "")
+st, lst = call("GET", f"/chat/{ab}/messages", tok=tA)
+mine = next((m for m in lst.get("messages", []) if m.get("_id") == smid), {})
+ok("фиристанда онро бо вақташ мебинад", mine.get("scheduledAt"), mine)
+past = (_dt.datetime.now(_dt.timezone.utc) - _dt.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+st, r = call("POST", f"/chat/{ab}/messages", {"text": "x", "sendAt": past}, tA)
+ok("вақти гузашта рад мешавад", st == 400, f"HTTP {st}")
+time.sleep(70)
+st, lst = call("GET", f"/chat/{ab}/messages", tok=tB)
+got = next((m for m in lst.get("messages", []) if m.get("_id") == smid), None)
+ok("дар вақташ ба гиранда расид", got is not None and not got.get("scheduledAt"), got)
+
 bad = [x for x in res if not x[0]]
 print()
 for g, n, d in res: print(("  ✅ " if g else "  ❌ ") + n + ("" if g else f"\n       → {d}"))

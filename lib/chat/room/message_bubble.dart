@@ -35,6 +35,8 @@ class MessageBubble extends StatefulWidget {
   final VoidCallback?                    onEdit;
   /// Фиристодани паём ба чати дигар.
   final VoidCallback?                    onForward;
+  /// Тарҷумаи паём (Instagram дар DM надорад).
+  final VoidCallback?                    onTranslate;
   final String?                          senderName; // номи фиристанда (гурӯҳ)
   final Color?                           myBubbleColor; // мавзӯи чат
 
@@ -50,6 +52,7 @@ class MessageBubble extends StatefulWidget {
     this.onReport,
     this.onEdit,
     this.onForward,
+    this.onTranslate,
     this.senderName,
     this.myBubbleColor,
   });
@@ -120,6 +123,7 @@ class _MessageBubbleState extends State<MessageBubble>
         onReport: widget.onReport,
         onEdit:   widget.onEdit,
         onForward: widget.onForward,
+        onTranslate: widget.onTranslate,
       ),
     );
   }
@@ -1027,6 +1031,9 @@ class _StatusRow extends StatelessWidget {
             // «таҳрир шуд» — то ҳамсӯҳбат донад, ки матн иваз шудааст.
             [
               if (m.vanish) '👻',
+              if (m.scheduledAt != null)
+                '🕒 ${m.scheduledAt!.toLocal().day}.${m.scheduledAt!.toLocal().month.toString().padLeft(2, '0')} '
+                '${m.scheduledAt!.toLocal().hour.toString().padLeft(2, '0')}:${m.scheduledAt!.toLocal().minute.toString().padLeft(2, '0')}',
               m.timeLabel,
               if (m.editedAt != null && !m.isDeleted) 'таҳрир шуд',
             ].join(' · '),
@@ -1097,6 +1104,7 @@ class _MessageContextMenu extends StatelessWidget {
   final VoidCallback?             onReport;
   final VoidCallback?             onEdit;
   final VoidCallback?             onForward;
+  final VoidCallback?             onTranslate;
 
   const _MessageContextMenu({
     required this.message,
@@ -1106,6 +1114,7 @@ class _MessageContextMenu extends StatelessWidget {
     this.onReport,
     this.onEdit,
     this.onForward,
+    this.onTranslate,
   });
 
   /// Мисли Instagram: танҳо паёми матнии ХУДАМ, дар 15 дақиқаи аввал.
@@ -1177,6 +1186,13 @@ class _MessageContextMenu extends StatelessWidget {
               icon:  AppIcons.send_rounded,
               label: 'Фиристодан',
               onTap: () { Navigator.pop(context); onForward?.call(); },
+            ),
+          if (onTranslate != null && !message.isDeleted &&
+              message.text.trim().isNotEmpty && message.share == null)
+            _MenuItem(
+              icon:  AppIcons.language_rounded,
+              label: 'Тарҷума',
+              onTap: () { Navigator.pop(context); onTranslate?.call(); },
             ),
           if (onEdit != null && _canEdit)
             _MenuItem(

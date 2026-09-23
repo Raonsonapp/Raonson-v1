@@ -191,3 +191,48 @@ func CloseVanishChat(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"removed": tag.RowsAffected()})
 }
+
+// ── Паёми вақтбандишуда ───────────────────────────────────────────
+
+// DeliverScheduledMessages — паёмҳое, ки вақташон расид, ба гиранда
+// мефиристад (socket + огоҳинома). Ҳар 20 сония аз main.
+func DeliverScheduledMessages() {
+	rows, err := db.Pool.Query(context.Background(), `
+		UPDATE messages SET scheduled_at = NULL, created_at = NOW(), updated_at = NOW()
+		WHERE scheduled_at IS NOT NULL AND scheduled_at <= NOW()
+		  AND COALESCE(is_deleted,false) = FALSE
+		RETURNING id, sender_id, receiver_id, chat_id`)
+	if err != nil {
+		return
+	}
+	type due struct{ id, from, to, chat string }
+	list := []due{}
+	for rows.Next() {
+		var d due
+		rows.Scan(&d.id, &d.from, &d.to, &d.chat)
+		list = append(list, d)
+	}
+	rows.Close()
+	for _, d := range list {
+		if msg, err := fetchMessageByID(d.id, d.to); err == nil {
+			emitChat("chat:new", msg, d.to)
+		}
+		if msg, err := fetchMessageByID(d.id, d.from); err == nil {
+			emitChat("chat:scheduled-sent", msg, d.from)
+		}
+		if !chatMuted(d.to, d.from) {
+			pushNotify(d.to, d.from, "message", d.chat, "")
+		}
+	}
+}
+
+// StartScheduledMessages — давраи фиристодан.
+func StartScheduledMessages() {
+	go func() {
+		t := time.NewTicker(20 * time.Second)
+		defer t.Stop()
+		for range t.C {
+			DeliverScheduledMessages()
+		}
+	}()
+}

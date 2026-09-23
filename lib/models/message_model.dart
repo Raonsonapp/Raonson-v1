@@ -76,6 +76,8 @@ class MessageModel {
   final bool                    forwarded;
   /// Vanish mode — баъди дидан ва бастани чат нопадид мешавад.
   final bool                    vanish;
+  /// Вақтбандишуда — ҳанӯз ба гиранда нарафтааст.
+  final DateTime?               scheduledAt;
   // Танзимоти шахсии чат (танҳо дар рӯйхат).
   final bool                    pinned;
   final bool                    muted;
@@ -101,6 +103,7 @@ class MessageModel {
     this.editedAt,
     this.forwarded  = false,
     this.vanish     = false,
+    this.scheduledAt,
     this.pinned     = false,
     this.muted      = false,
     this.reactions    = const [],
@@ -267,6 +270,7 @@ class MessageModel {
       editedAt:  parseServerTime(json['editedAt']),
       forwarded: json['forwarded'] == true,
       vanish:    json['vanish'] == true,
+      scheduledAt: parseServerTime(json['scheduledAt']),
       reactions: reactions,
     );
   }
