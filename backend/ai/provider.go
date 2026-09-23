@@ -113,6 +113,18 @@ func envOr(keys []string, def string) string {
 // кӯҳна (TUTOR_*, OPENAI_*), то танзимоти мавҷуда бешикаст монад.
 func ConfigFor(t Task) Config {
 	up := strings.ToUpper(string(t))
+	// Танҳо OPENAI_API_KEY гузошта шуда бошад — калиди OpenAI ба Groq
+	// намеравад: URL ва модел низ аз OpenAI.
+	if envOr([]string{"AI_" + up + "_API_KEY", "AI_API_KEY", "TUTOR_API_KEY"}, "") == "" &&
+		envOr([]string{"AI_" + up + "_API_URL", "AI_API_URL", "TUTOR_API_URL"}, "") == "" {
+		if k := strings.TrimSpace(os.Getenv("OPENAI_API_KEY")); k != "" {
+			return Config{
+				APIKey: k,
+				APIURL: "https://api.openai.com/v1/chat/completions",
+				Model:  envOr([]string{"AI_" + up + "_MODEL", "AI_MODEL", "OPENAI_MODEL"}, "gpt-4o-mini"),
+			}
+		}
+	}
 	return Config{
 		APIKey: envOr([]string{
 			"AI_" + up + "_API_KEY",

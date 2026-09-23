@@ -201,15 +201,24 @@ func GenerateHashtags(ctx context.Context, caption, imageURL string) ([]string, 
 		})
 	}
 
-	var out chatResp
-	err := openAIRequest(ctx, "/chat/completions", chatReq{
-		Model: openAIModel(),
-		Messages: []chatMsg{
-			{Role: "system", Content: "You are a hashtag generator for a social media app. Always reply with a raw JSON array of hashtag strings only, no markdown, no explanation."},
-			{Role: "user", Content: content},
-		},
-		Temperature: 0.7,
-	}, &out)
+	ask := func(content []map[string]any) (chatResp, error) {
+		var out chatResp
+		err := openAIRequest(ctx, "/chat/completions", chatReq{
+			Model: openAIModel(),
+			Messages: []chatMsg{
+				{Role: "system", Content: "You are a hashtag generator for a social media app. Always reply with a raw JSON array of hashtag strings only, no markdown, no explanation."},
+				{Role: "user", Content: content},
+			},
+			Temperature: 0.7,
+		}, &out)
+		return out, err
+	}
+	out, err := ask(content)
+	// Модели ройгони матнӣ (масалан Llama дар Groq) расмро қабул
+	// намекунад — он гоҳ танҳо аз рӯи тавсиф.
+	if err != nil && len(content) > 1 {
+		out, err = ask(content[:1])
+	}
 	if err != nil {
 		return nil, err
 	}
