@@ -131,6 +131,9 @@ class PostModel {
         'type': (map['type'] ?? 'image').toString(),
         if ((map['aspectRatio'] ?? '').toString().isNotEmpty)
           'aspectRatio': map['aspectRatio'].toString(),
+        // Тавсифи расм барои нобиноён (Alt text).
+        if ((map['alt'] ?? '').toString().isNotEmpty)
+          'alt': map['alt'].toString(),
       };
     }).toList();
 

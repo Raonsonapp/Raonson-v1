@@ -74,6 +74,7 @@ class PostUploadService {
     List<String> taggedUsers = const [],
     List<String> collaborators = const [],
     String scheduledAt = '', // ISO-8601 — агар холӣ набошад, ба нақша гирифта мешавад
+    String altText = '',     // тавсифи расм барои нобиноён
   }) async {
     state.value = UploadState(thumb: file, progress: 0.08);
     try {
@@ -96,7 +97,8 @@ class PostUploadService {
         'caption': caption,
         'media': [
           {'url': url, 'type': isVideo ? 'video' : 'image',
-           if (ar > 0) 'aspectRatio': ar}
+           if (ar > 0) 'aspectRatio': ar,
+           if (altText.isNotEmpty) 'alt': altText}
         ],
         // Майдонҳои кӯҳна барои мутобиқати сервери насбшуда.
         'musicTitle': song?.title ?? '',

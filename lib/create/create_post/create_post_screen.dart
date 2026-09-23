@@ -129,7 +129,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       {SongInfo? song,
       String location = '',
       List<String> taggedUsers = const [],
-      List<String> collaborators = const []}) async {
+      List<String> collaborators = const [],
+      String altText = ''}) async {
     if (_publishing) return; // ду бор зеркунӣ → ду пости якхела
     _publishing = true;
     // Интихоб: ҳозир ё ба нақша (Pro).
@@ -147,6 +148,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       taggedUsers: taggedUsers,
       collaborators: collaborators,
       scheduledAt: scheduledAt,
+      altText: altText,
     );
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -218,7 +220,8 @@ class _PostEditor extends StatefulWidget {
   final File media; final bool isVideo, isUploading;
   final void Function(File, String,
       {SongInfo? song, String location,
-       List<String> taggedUsers, List<String> collaborators}) onPublish;
+       List<String> taggedUsers, List<String> collaborators,
+       String altText}) onPublish;
   final VoidCallback onCancel; final String? errorMessage;
   const _PostEditor({required this.media, required this.isVideo,
     required this.isUploading, required this.onPublish,
@@ -250,6 +253,46 @@ class _PostEditorState extends State<_PostEditor> {
 
   SongInfo? _song;
   String _location = '';
+  /// Тавсифи расм барои нобиноён (TalkBack), мисли Instagram.
+  String _altText = '';
+
+  void _showAltTextDialog() {
+    final ctrl = TextEditingController(text: _altText);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text('Alt text',
+            style: TextStyle(color: Colors.white, fontSize: 17)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text(
+              'Тавсифи расм барои одамоне, ки намебинанд. Хонандаи экран '
+              '(TalkBack) онро баланд мехонад.',
+              style: TextStyle(color: Colors.white60, fontSize: 12)),
+          const SizedBox(height: 10),
+          TextField(
+            controller: ctrl, autofocus: true, maxLength: 100, maxLines: 3,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+                hintText: 'масалан: Ду дӯст дар боғ, шом',
+                hintStyle: TextStyle(color: Colors.white38)),
+          ),
+        ]),
+        actions: [
+          TextButton(
+              onPressed: () { Navigator.pop(context); ctrl.dispose(); },
+              child: const Text('Бекор')),
+          TextButton(
+              onPressed: () {
+                setState(() => _altText = ctrl.text.trim());
+                Navigator.pop(context);
+                ctrl.dispose();
+              },
+              child: const Text('Тайёр')),
+        ],
+      ),
+    );
+  }
   final List<String> _collaborators = [];
   VideoPlayerController? _videoCtrl;
   bool _videoReady = false;
@@ -419,7 +462,8 @@ class _PostEditorState extends State<_PostEditor> {
     if (widget.isVideo) {
       widget.onPublish(widget.media, caption,
           song: _song, location: _location,
-          taggedUsers: tagged, collaborators: _collaborators);
+          taggedUsers: tagged, collaborators: _collaborators,
+          altText: _altText);
     } else {
       // Агар ягон overlay (матн/стикер/зикр/расм) НЕСТ → расми аслиро мегузорем,
       // то формат/нисбати тарафҳо нигоҳ дошта шавад (бе хатти ранга дар боло/поён).
@@ -428,7 +472,8 @@ class _PostEditorState extends State<_PostEditor> {
       final fileToPost = hasOverlays ? await _captureCanvas() : widget.media;
       widget.onPublish(fileToPost, caption,
           song: _song, location: _location,
-          taggedUsers: tagged, collaborators: _collaborators);
+          taggedUsers: tagged, collaborators: _collaborators,
+          altText: _altText);
     }
   }
 
@@ -883,6 +928,10 @@ class _PostEditorState extends State<_PostEditor> {
                 _ToolBtn(icon: AppIcons.location_on_outlined, label: tr('ui.be7de29b97'),
                   isActive: _location.isNotEmpty,
                   onTap: () { setState(() => _tool = _Tool.none); _showLocationDialog(); }),
+                if (!widget.isVideo)
+                  _ToolBtn(icon: AppIcons.accessibility_new_rounded, label: 'Alt text',
+                    isActive: _altText.isNotEmpty,
+                    onTap: () { setState(() => _tool = _Tool.none); _showAltTextDialog(); }),
                 _ToolBtn(icon: AppIcons.edit_note,           label: tr('ui.13c977b6ae'),
                   isActive: _showCaption,
                   onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),

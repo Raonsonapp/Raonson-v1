@@ -553,11 +553,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ])),
 
               // ── FULL NAME ───────────────────────────────────────────
-              if ((user.fullName ?? '').isNotEmpty)
+              if ((user.fullName ?? '').isNotEmpty || user.pronouns.isNotEmpty)
                 Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Text(user.fullName!, style: TextStyle(
-                      color: AppColors.textPrimary, fontSize: 14,
-                      fontWeight: FontWeight.bold))),
+                  child: Text.rich(TextSpan(children: [
+                    TextSpan(text: user.fullName ?? '', style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 14,
+                        fontWeight: FontWeight.bold)),
+                    // Ҷонишинҳо хокистарӣ дар паҳлӯи ном — мисли Instagram.
+                    if (user.pronouns.isNotEmpty)
+                      TextSpan(
+                        text: '${(user.fullName ?? '').isNotEmpty ? '  ' : ''}${user.pronouns}',
+                        style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
+                  ]))),
 
               // ── BIO ─────────────────────────────────────────────────
               if ((user.bio ?? '').isNotEmpty)

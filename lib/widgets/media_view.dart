@@ -140,7 +140,13 @@ class MediaView extends StatelessWidget {
     // — хотираро якчанд маротиба кам мекунад, бе талафи сифат.
     final mq = MediaQuery.of(context);
     final cacheW = (mq.size.width * mq.devicePixelRatio).round();
-    return GestureDetector(
+    // Alt text → хонандаи экран (TalkBack) онро мехонад, мисли Instagram.
+    final alt = media['alt'] ?? '';
+    return Semantics(
+      image: true,
+      label: alt.isNotEmpty ? alt : 'Расм',
+      excludeSemantics: true,
+      child: GestureDetector(
       // Тапи расм → намоиши тамоми экран бо zoom (сифати аслӣ).
       onTap: () => Navigator.push(context, MaterialPageRoute(
           builder: (_) => FullscreenImage(url: url))),
@@ -157,7 +163,7 @@ class MediaView extends StatelessWidget {
             child: Center(child: Icon(AppIcons.broken_image_outlined,
                 color: AppColors.textFaint, size: 48))),
       ),
-    );
+    ));
   }
 }
 

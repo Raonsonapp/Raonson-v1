@@ -33,7 +33,8 @@ const userSelectSQL = `
 	       COALESCE(is_vip,false),
 	       COALESCE(cover_url,''), COALESCE(bio_links,''),
 	       COALESCE(activity_status,true), COALESCE(allow_comments,true),
-	       COALESCE(allow_mentions,true), COALESCE(two_factor,false)
+	       COALESCE(allow_mentions,true), COALESCE(two_factor,false),
+	       COALESCE(pronouns,'')
 	FROM users`
 
 func scanFullUser(row pgx.Row) (gin.H, error) {
@@ -52,6 +53,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		coverUrl, bioLinks              string
 		activityStatus, allowComments   bool
 		allowMentions, twoFactor        bool
+		pronouns                        string
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -63,6 +65,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&isVip,
 		&coverUrl, &bioLinks,
 		&activityStatus, &allowComments, &allowMentions, &twoFactor,
+		&pronouns,
 	)
 	if err != nil {
 		log.Printf("[scanFullUser] error: %v", err)
@@ -92,7 +95,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"isFollowing": false,
 		"website": website, "location": location,
 		"fullName": fullName, "phone": phone,
-		"coverUrl": coverUrl, "links": links,
+		"coverUrl": coverUrl, "links": links, "pronouns": pronouns,
 		"activityStatus": activityStatus, "allowComments": allowComments,
 		"allowMentions": allowMentions, "twoFactor": twoFactor,
 		"note": note, "noteExpiresAt": noteExpiresAt,
@@ -159,7 +162,7 @@ func postsForUser(userID string, limit int) []gin.H {
 		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
 		       COALESCE(p.music_end_ms,0),
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
+		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position), '[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p WHERE p.user_id=$1 AND COALESCE(p.archived,false)=FALSE

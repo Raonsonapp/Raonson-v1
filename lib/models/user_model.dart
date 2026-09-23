@@ -12,6 +12,8 @@ class UserModel {
   final String? bio;
   final String? fullName;
   final String? website;
+  /// Ҷонишинҳо — «she/her», «ӯ» (мисли Instagram).
+  final String  pronouns;
   final bool    isFollowing;
   final bool    isBlocked;
   /// Дар «Дӯстдоштаҳо»-и ман аст (мисли Instagram Favorites).
@@ -35,6 +37,7 @@ class UserModel {
     this.bio,
     this.fullName,
     this.website,
+    this.pronouns          = '',
     this.isFollowing       = false,
     this.isBlocked         = false,
     this.isFavorite        = false,
@@ -71,6 +74,7 @@ class UserModel {
     bio:              j['bio']?.toString(),
     fullName:         j['fullName']?.toString(),
     website:          j['website']?.toString(),
+    pronouns:         j['pronouns']?.toString() ?? '',
     isFollowing:      j['isFollowing']       == true,
     isBlocked:        j['isBlocked']         == true,
     isFavorite:       j['isFavorite']        == true,
@@ -122,6 +126,7 @@ class UserModel {
     avatar:          avatar          ?? this.avatar,
     fullName:        fullName        ?? this.fullName,
     website:         website         ?? this.website,
+    pronouns:        pronouns,
     verified:        verified        ?? this.verified,
     isPrivate:       isPrivate       ?? this.isPrivate,
     postsCount:      postsCount      ?? this.postsCount,

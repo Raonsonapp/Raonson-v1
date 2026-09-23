@@ -9,6 +9,7 @@ class EditProfileController extends ChangeNotifier {
 
   final usernameController = TextEditingController();
   final bioController = TextEditingController();
+  final pronounsController = TextEditingController();
 
   bool isPrivate = false;
   bool isLoading = false;
@@ -30,6 +31,7 @@ class EditProfileController extends ChangeNotifier {
       _original = await _repo.getProfile(userId);
       usernameController.text = _original.username;
       bioController.text = _original.bio ?? '';
+      pronounsController.text = _original.pronouns;
       isPrivate = _original.isPrivate;
       coverUrl = _original.coverUrl;
       links = _original.links.map((e) => Map<String, String>.from(e)).toList();
@@ -62,6 +64,7 @@ class EditProfileController extends ChangeNotifier {
             : null,
         coverUrl:  coverUrl,
         links:     links,
+        pronouns:  pronounsController.text.trim(),
       );
       return true;
     } catch (e) {
@@ -77,6 +80,7 @@ class EditProfileController extends ChangeNotifier {
   void dispose() {
     usernameController.dispose();
     bioController.dispose();
+    pronounsController.dispose();
     super.dispose();
   }
 }

@@ -184,6 +184,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_favorites.py
 
+      # Ҷонишинҳо дар профил ва Alt text-и расм.
+      - name: Санҷиши ҷонишин ва alt
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_profile_a11y.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

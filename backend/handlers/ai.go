@@ -234,7 +234,7 @@ func AiSearch(c *gin.Context) {
 			       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
 			       COALESCE(p.music_end_ms,0),
 			       (SELECT COALESCE(json_agg(
-			                json_build_object('url',m.url,'type',m.type)
+			                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''))
 			                ORDER BY m.position),'[]'::json)
 			        FROM post_media m WHERE m.post_id=p.id)
 			FROM posts p JOIN users u ON u.id=p.user_id

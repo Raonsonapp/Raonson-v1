@@ -406,6 +406,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               counterStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.2), fontSize: 11)))),
         const SizedBox(height: 20),
 
+        // Ҷонишинҳо — мисли Instagram (то 4, бо «/»)
+        _label('Ҷонишинҳо'), const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.textPrimary.withOpacity(0.08))),
+          child: TextField(controller: _ctrl.pronounsController, maxLength: 40,
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'масалан: she/her, ӯ',
+              hintStyle: TextStyle(color: AppColors.textPrimary.withOpacity(0.3)),
+              border: InputBorder.none, contentPadding: const EdgeInsets.fromLTRB(12,12,12,0),
+              counterText: ''))),
+        const SizedBox(height: 20),
+
         // Music
         _label('Мусиқии профил'), const SizedBox(height: 6),
         _bioSong == null || _bioSong!.isEmpty

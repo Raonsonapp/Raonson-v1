@@ -141,6 +141,7 @@ class AppIcons {
   static const IconData notifications_outlined = FeatherIcons.bell;
   static const IconData notifications_rounded = FeatherIcons.bell;
   static const IconData notifications_off_outlined = FeatherIcons.bellOff;
+  static const IconData accessibility_new_rounded = IconData(0xe062, fontFamily: 'MaterialIcons');
   static const IconData open_in_new_rounded = FeatherIcons.externalLink;
   static const IconData open_in_full_rounded = FeatherIcons.maximize2;
   static const IconData palette_outlined = Symbols.palette_rounded;

@@ -912,6 +912,12 @@ func migrate() {
 		PRIMARY KEY (user_id, peer_id)
 	);
 
+	-- Alt text — тавсифи расм барои нобиноён.
+	ALTER TABLE post_media ADD COLUMN IF NOT EXISTS alt_text TEXT DEFAULT '';
+
+	-- Ҷонишинҳо дар профил (мисли Instagram: «ӯ», «she/her» …).
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS pronouns TEXT DEFAULT '';
+
 	-- «Дӯстдоштаҳо» — лентаи алоҳида, мисли Instagram Favorites.
 	CREATE TABLE IF NOT EXISTS favorites (
 		user_id    TEXT NOT NULL,

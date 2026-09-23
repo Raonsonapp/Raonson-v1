@@ -165,6 +165,8 @@ func UpdateProfile(c *gin.Context) {
 		AllowComments  *bool `json:"allowComments"`
 		AllowMentions  *bool `json:"allowMentions"`
 		TwoFactor      *bool `json:"twoFactor"`
+		// Ҷонишинҳо — то 4 адад, ҳар кадом то 12 ҳарф (қоидаи Instagram).
+		Pronouns       *string `json:"pronouns"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
@@ -181,6 +183,10 @@ func UpdateProfile(c *gin.Context) {
 			"retryAfter": 14 * 24 * 3600,
 		})
 		return
+	}
+	if b.Pronouns != nil {
+		p := normalizePronouns(*b.Pronouns)
+		b.Pronouns = &p
 	}
 	var bioSongStr *string
 	if b.BioSong != nil {
@@ -216,13 +222,15 @@ func UpdateProfile(c *gin.Context) {
 		  allow_comments  = COALESCE($15, allow_comments),
 		  allow_mentions  = COALESCE($16, allow_mentions),
 		  two_factor      = COALESCE($17, two_factor),
+		  pronouns        = COALESCE($18, pronouns),
 		  username_changed_at = CASE WHEN $11 THEN NOW() ELSE username_changed_at END,
 		  updated_at = NOW()
 		WHERE id=$9`,
 		b.Bio, b.Avatar, b.IsPrivate, b.Username,
 		b.Website, b.Location, b.FullName, b.Phone, myID, bioSongStr, changingUsername,
 		b.CoverUrl, bioLinksStr,
-		b.ActivityStatus, b.AllowComments, b.AllowMentions, b.TwoFactor)
+		b.ActivityStatus, b.AllowComments, b.AllowMentions, b.TwoFactor,
+		b.Pronouns)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
@@ -403,4 +411,27 @@ func ChangeEmail(c *gin.Context) {
 	mw.CacheDel("profile:me:" + myID)
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"email": email})
+}
+
+// normalizePronouns — «ӯ / вай, she/her» → то 4 ҷонишини тоза.
+//
+// Instagram то 4 ҷонишин иҷозат медиҳад. Ҷудокунанда — «/», «,» ё
+// фосила; ҳар кадом то 12 ҳарф; такрорҳо хориҷ.
+func normalizePronouns(raw string) string {
+	f := func(r rune) bool { return r == '/' || r == ',' || r == ' ' || r == '|' }
+	seen := map[string]bool{}
+	out := []string{}
+	for _, part := range strings.FieldsFunc(raw, f) {
+		part = clampRunes(strings.TrimSpace(part), 12)
+		k := strings.ToLower(part)
+		if part == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, part)
+		if len(out) == 4 {
+			break
+		}
+	}
+	return strings.Join(out, "/")
 }

@@ -111,9 +111,14 @@ func CreatePost(c *gin.Context) {
 		t, _   := m["type"].(string)
 		if t == "" { t = "image" }
 		ar, _  := m["aspectRatio"].(float64) // JSON number → float64, default 0
+		// Alt text — тавсифи расм барои нобиноён (TalkBack), мисли
+		// Instagram. То 100 ҳарф.
+		alt, _ := m["alt"].(string)
+		alt = clampRunes(strings.TrimSpace(alt), 100)
 		tx.Exec(context.Background(),
-			`INSERT INTO post_media(post_id,url,type,position,aspect_ratio) VALUES($1,$2,$3,$4,$5)`,
-			postID, url, t, i, ar)
+			`INSERT INTO post_media(post_id,url,type,position,aspect_ratio,alt_text)
+			 VALUES($1,$2,$3,$4,$5,$6)`,
+			postID, url, t, i, ar, alt)
 	}
 	tx.Exec(context.Background(),
 		`UPDATE users SET posts_count=posts_count+1 WHERE id=$1`, myID)
@@ -247,7 +252,7 @@ func GetFeed(c *gin.Context) {
 		       p.comments_count, p.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
+		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1::text),
@@ -334,7 +339,7 @@ func GetPost(c *gin.Context) {
 		       p.comments_count, p.created_at,
 		       u.id, u.username, u.avatar, u.verified,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
+		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$2::text),
@@ -390,7 +395,7 @@ func GetScheduledPosts(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT p.id, p.caption, p.scheduled_at,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'aspectRatio',COALESCE(m.aspect_ratio,0))
+		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p
