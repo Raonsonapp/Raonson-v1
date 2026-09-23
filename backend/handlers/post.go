@@ -225,7 +225,13 @@ func GetFeed(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	// Cache key per user+page (30 sec TTL — fresh but fast)
-	cacheKey := "feed:" + myID + ":" + c.Query("page")
+	// ?mode=following — танҳо обунаҳо; ?mode=favorites — танҳо
+	// дӯстдоштаҳо. Ҳарду бо тартиби ВАҚТ, мисли Instagram.
+	mode := c.Query("mode")
+	if mode != "following" && mode != "favorites" {
+		mode = ""
+	}
+	cacheKey := "feed:" + myID + ":" + mode + ":" + c.Query("page")
 	if page == 1 {
 		if cached, ok := mw.CacheGet(cacheKey); ok {
 			c.Header("X-Cache", "HIT")
@@ -256,8 +262,13 @@ func GetFeed(c *gin.Context) {
 		  AND COALESCE(p.hidden,false) = FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
+		  AND ($4 = '' OR p.user_id = $1::text AND $4 = 'following'
+		       OR ($4 = 'following' AND EXISTS (SELECT 1 FROM follows ff
+		             WHERE ff.follower_id=$1::text AND ff.following_id=p.user_id))
+		       OR ($4 = 'favorites' AND EXISTS (SELECT 1 FROM favorites fv
+		             WHERE fv.user_id=$1::text AND fv.fav_id=p.user_id)))
 		ORDER BY p.created_at DESC
-		LIMIT $2 OFFSET $3`, myID, limit, offset)
+		LIMIT $2 OFFSET $3`, myID, limit, offset, mode)
 	if err != nil {
 		log.Printf("[GetFeed] query error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get feed failed"})

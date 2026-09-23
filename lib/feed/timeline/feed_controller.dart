@@ -93,7 +93,7 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _silentCheck() async {
     try {
       final posts = await _repository.fetchFeed(
-        limit: 5, page: 1, forceRefresh: true);
+        limit: 5, page: 1, forceRefresh: true, mode: _mode);
       if (posts.isEmpty) return;
       final newPosts = posts.where((p) =>
         !_state.posts.any((e) => e.id == p.id) &&
@@ -118,6 +118,17 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
   // ✅ МУШКИЛИ АСОСӢ ИСЛОҲ ШУД:
   // loadInitialFeed → ФАВРАН кэш нишон медиҳад
   // Корбар blank screen намебинад!
+  // ── Режими лента: '' (барои шумо) / following / favorites ────
+  String _mode = '';
+  String get mode => _mode;
+
+  /// Мисли Instagram: логоро мезанед → «Обунаҳо» ё «Дӯстдоштаҳо».
+  Future<void> setMode(String m) async {
+    if (m == _mode) return;
+    _mode = m;
+    await refresh();
+  }
+
   Future<void> loadInitialFeed() async {
     _page = 1;
     _pending.clear();
@@ -127,7 +138,7 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
     try {
       // FeedRepository аввал кэш медиҳад → ФАВРАН
       final posts = await _repository.fetchFeed(
-        limit: _limit, page: _page);
+        limit: _limit, page: _page, mode: _mode);
       _isOffline = false;
       _state = _state.copyWith(
         isLoading: false,
@@ -159,7 +170,7 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     try {
       _page++;
-      final posts = await _repository.fetchFeed(limit: _limit, page: _page);
+      final posts = await _repository.fetchFeed(limit: _limit, page: _page, mode: _mode);
       _state = _state.copyWith(
         isLoading: false,
         posts: List<PostModel>.from(_state.posts)..addAll(posts),
@@ -179,7 +190,7 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     try {
       final posts = await _repository.fetchFeed(
-        limit: _limit, page: _page, forceRefresh: true);
+        limit: _limit, page: _page, forceRefresh: true, mode: _mode);
       _isOffline = false;
       _state = _state.copyWith(
         isRefreshing: false, posts: posts,

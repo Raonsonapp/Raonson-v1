@@ -315,6 +315,7 @@ func EditComment(c *gin.Context) {
 func FollowUser(c *gin.Context) {
 	targetID := c.Param("id")
 	myID := mw.UID(c)
+	defer invalidateFeedCache(myID) // лентаи «Обунаҳо» фавран нав шавад
 	if targetID == myID {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Cannot follow yourself"})
 		return
@@ -380,6 +381,7 @@ func FollowUser(c *gin.Context) {
 func UnfollowUser(c *gin.Context) {
 	targetID := c.Param("id")
 	myID := mw.UID(c)
+	defer invalidateFeedCache(myID) // лентаи «Обунаҳо» фавран нав шавад
 	// RETURNING — шумориш танҳо вақте кам мешавад, ки сатр воқеан нест
 	// шуда бошад. Бе ин такрори дархост шуморишро поин мебарад.
 	var deleted int

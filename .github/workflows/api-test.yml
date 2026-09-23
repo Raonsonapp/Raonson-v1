@@ -177,6 +177,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_privacy2.py
 
+      # Лентаи «Обунаҳо» ва «Дӯстдоштаҳо».
+      - name: Санҷиши дӯстдоштаҳо
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_favorites.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

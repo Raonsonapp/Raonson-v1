@@ -28,6 +28,7 @@ import '../../widgets/avatar.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
+import '../favorites/favorites_screen.dart';
 import '../../shop/shop_screen.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 
@@ -125,6 +126,50 @@ class _FeedShellState extends State<_FeedShell> {
     super.dispose();
   }
 
+  Future<void> _pickFeedMode(BuildContext ctx) async {
+    final ctrl = ctx.read<FeedController>();
+    final picked = await showModalBottomSheet<String>(
+      context: ctx,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheet) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          for (final m in const [
+            ['', 'Барои шумо', Icons.auto_awesome_outlined],
+            ['following', 'Обунаҳо', Icons.people_outline],
+            ['favorites', 'Дӯстдоштаҳо', Icons.star_outline_rounded],
+          ])
+            ListTile(
+              leading: Icon(m[2] as IconData, color: AppColors.textPrimary),
+              title: Text(m[1] as String,
+                  style: TextStyle(color: AppColors.textPrimary)),
+              trailing: ctrl.mode == m[0]
+                  ? Icon(Icons.check_rounded, color: AppColors.neonBlue)
+                  : null,
+              onTap: () => Navigator.pop(sheet, m[0] as String),
+            ),
+          ListTile(
+            leading: Icon(Icons.edit_outlined, color: AppColors.textSecondary),
+            title: Text('Идораи дӯстдоштаҳо',
+                style: TextStyle(color: AppColors.textSecondary)),
+            onTap: () => Navigator.pop(sheet, '__manage'),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (picked == null || !ctx.mounted) return;
+    if (picked == '__manage') {
+      Navigator.push(ctx,
+          MaterialPageRoute(builder: (_) => const FavoritesScreen()));
+      return;
+    }
+    await ctrl.setMode(picked);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -168,10 +213,29 @@ class _FeedShellState extends State<_FeedShell> {
               ),
               const SizedBox(width: 4),
             ]),
-            title: Text('Raonson', style: TextStyle(
-              fontSize: 30, fontWeight: FontWeight.w400, color: AppColors.textPrimary,
-              fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1,
-            )),
+            // Логоро занед → «Барои шумо / Обунаҳо / Дӯстдоштаҳо»,
+            // айнан мисли Instagram.
+            title: GestureDetector(
+              onTap: () => _pickFeedMode(ctx),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(
+                  switch (ctx.watch<FeedController>().mode) {
+                    'following' => 'Обунаҳо',
+                    'favorites' => 'Дӯстдоштаҳо',
+                    _ => 'Raonson',
+                  },
+                  style: ctx.watch<FeedController>().mode.isEmpty
+                      ? TextStyle(
+                          fontSize: 30, fontWeight: FontWeight.w400,
+                          color: AppColors.textPrimary,
+                          fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1)
+                      : TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary)),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textPrimary, size: 22),
+              ]),
+            ),
             centerTitle: true, // лого дар марказ — мисли скриншоти Instagram
             actions: [
               IconButton(

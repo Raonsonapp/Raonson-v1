@@ -177,6 +177,8 @@ func main() {
 		u.GET("/suggestions",           cache5m, handlers.GetSuggestions)
 		u.GET("/suggested",             handlers.GetSuggestedUsers)
 		u.GET("/blocked",               handlers.GetBlockedUsers)
+		u.GET("/favorites",             handlers.GetFavorites)
+		u.POST("/:id/favorite",         handlers.ToggleFavorite)
 		u.POST("/:id/block",            handlers.BlockUser)
 		u.POST("/:id/unblock",          handlers.UnblockUser)
 		u.POST("/:id/mute",             handlers.MuteUser)

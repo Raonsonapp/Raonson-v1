@@ -47,6 +47,14 @@ func GetUserByID(c *gin.Context) {
 		return
 	}
 	setIsFollowing(u, myID, id)
+	// «Дӯстдоштаҳо» — то профил тугмаи дурустро нишон диҳад.
+	if myID != "" && myID != id {
+		var fav bool
+		db.Pool.QueryRow(context.Background(),
+			`SELECT EXISTS(SELECT 1 FROM favorites WHERE user_id=$1 AND fav_id=$2)`,
+			myID, id).Scan(&fav)
+		u["isFavorite"] = fav
+	}
 	c.JSON(http.StatusOK, u)
 }
 

@@ -155,6 +155,12 @@ class ProfileController extends ChangeNotifier {
     }
   }
 
+  /// Профилро бе боркунии нав иваз мекунад (масалан «Ба дӯстдоштаҳо»).
+  void patchProfile(UserModel u) {
+    profile = u;
+    notifyListeners();
+  }
+
   Future<void> togglePinPost(PostModel post) async {
     final idx = posts.indexWhere((p) => p.id == post.id);
     if (idx < 0) return;

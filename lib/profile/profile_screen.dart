@@ -1,6 +1,7 @@
 // lib/profile/profile_screen.dart — Part 1 FIXED
 
 // NO qr_flutter. Share via share_plus.
+import 'dart:convert';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -243,6 +244,29 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _otherMenu() {
     final u = _ctrl.profile; if (u == null) return;
     _sheet([
+      // «Дӯстдоштаҳо» — мисли Instagram; ӯ огоҳ намешавад.
+      _tile(u.isFavorite ? Icons.star_rounded : AppIcons.star_outline_rounded,
+          u.isFavorite ? 'Аз дӯстдоштаҳо хориҷ кардан' : 'Ба дӯстдоштаҳо',
+          () async {
+            Navigator.pop(context);
+            final messenger = ScaffoldMessenger.of(context);
+            try {
+              final res = await ApiClient.instance.post(
+                  '/users/${u.id}/favorite', body: {'favorite': !u.isFavorite});
+              if (res.statusCode >= 400) {
+                String why = 'Нашуд';
+                try { why = (jsonDecode(res.body) as Map)['message']?.toString() ?? why; } catch (_) {}
+                messenger.showSnackBar(SnackBar(content: Text(why)));
+                return;
+              }
+              _ctrl.patchProfile(u.copyWith(isFavorite: !u.isFavorite));
+              messenger.showSnackBar(SnackBar(content: Text(!u.isFavorite
+                  ? 'Ба дӯстдоштаҳо илова шуд'
+                  : 'Аз дӯстдоштаҳо хориҷ шуд')));
+            } catch (_) {
+              messenger.showSnackBar(const SnackBar(content: Text('Хатои шабака')));
+            }
+          }),
       _tile(u.isBlocked ? AppIcons.lock_open_rounded : AppIcons.block_rounded,
           u.isBlocked ? tr('profile.unblock') : tr('profile.blockUser', {'user': u.username}),
           () { Navigator.pop(context); _confirmBlock(u.isBlocked); },

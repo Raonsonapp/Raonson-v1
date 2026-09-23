@@ -56,7 +56,28 @@ class FeedRepository {
     int page = 1,
     bool forceRefresh = false,
     bool smartFeed = true,
+    String mode = '',
   }) async {
+    // «Обунаҳо» / «Дӯстдоштаҳо» — лентаҳои алоҳида бо тартиби вақт,
+    // мисли Instagram. Кэши лентаи асосӣ ба онҳо даст намерасонад,
+    // вагарна ҳангоми гузаштан постҳои режими дигар мебаромаданд.
+    if (mode.isNotEmpty) {
+      final response = await _api.getRequest(ApiEndpoints.posts, query: {
+        'limit': '$limit', 'page': '$page', 'mode': mode,
+        if (forceRefresh) 't': '${DateTime.now().millisecondsSinceEpoch}',
+      }).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 401) throw const UnauthorizedException();
+      if (response.statusCode >= 400) {
+        throw Exception('Server ${response.statusCode}');
+      }
+      final body = jsonDecode(response.body);
+      final List list = body is List
+          ? body
+          : (body is Map ? (body['posts'] ?? body['data'] ?? []) : []);
+      return list
+          .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
     // ── Page 1: аввал cache ──────────────────────────────────────
     if (page == 1 && !forceRefresh) {
       // 1. Memory cache (тезтарин)

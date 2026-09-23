@@ -912,6 +912,14 @@ func migrate() {
 		PRIMARY KEY (user_id, peer_id)
 	);
 
+	-- «Дӯстдоштаҳо» — лентаи алоҳида, мисли Instagram Favorites.
+	CREATE TABLE IF NOT EXISTS favorites (
+		user_id    TEXT NOT NULL,
+		fav_id     TEXT NOT NULL,
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, fav_id)
+	);
+
 	-- Танзимоти ШАХСИИ чат: пин ва хомӯш (мисли Instagram). Ҳар корбар
 	-- барои худ — ҳамсӯҳбат инро намебинад.
 	CREATE TABLE IF NOT EXISTS chat_prefs (

@@ -14,6 +14,8 @@ class UserModel {
   final String? website;
   final bool    isFollowing;
   final bool    isBlocked;
+  /// Дар «Дӯстдоштаҳо»-и ман аст (мисли Instagram Favorites).
+  final bool    isFavorite;
   final bool    followRequestSent;
   final int     mutualCount;
   final List<String> mutualNames;
@@ -35,6 +37,7 @@ class UserModel {
     this.website,
     this.isFollowing       = false,
     this.isBlocked         = false,
+    this.isFavorite        = false,
     this.followRequestSent = false,
     this.mutualCount       = 0,
     this.mutualNames       = const [],
@@ -70,6 +73,7 @@ class UserModel {
     website:          j['website']?.toString(),
     isFollowing:      j['isFollowing']       == true,
     isBlocked:        j['isBlocked']         == true,
+    isFavorite:       j['isFavorite']        == true,
     followRequestSent:j['followRequestSent'] == true,
     mutualCount:      _int(j['mutualCount']),
     mutualNames:      (j['mutualNames'] as List? ?? [])
@@ -110,7 +114,7 @@ class UserModel {
     String? avatar, String? fullName, String? website,
     bool? verified, bool? isPrivate,
     int? postsCount, int? followersCount, int? followingCount,
-    String? bio, bool? isFollowing, bool? isBlocked,
+    String? bio, bool? isFollowing, bool? isBlocked, bool? isFavorite,
     bool? followRequestSent, int? mutualCount, List<String>? mutualNames,
     bool? hasStory, String? coverUrl, List<Map<String, String>>? links,
   }) => UserModel(
@@ -126,6 +130,7 @@ class UserModel {
     bio:             bio             ?? this.bio,
     isFollowing:     isFollowing     ?? this.isFollowing,
     isBlocked:       isBlocked       ?? this.isBlocked,
+    isFavorite:      isFavorite      ?? this.isFavorite,
     followRequestSent: followRequestSent ?? this.followRequestSent,
     mutualCount:     mutualCount     ?? this.mutualCount,
     mutualNames:     mutualNames     ?? this.mutualNames,

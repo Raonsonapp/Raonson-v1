@@ -229,11 +229,25 @@ func GetFeedExplanation(c *gin.Context) {
 //
 // Бе ин, «монанди ин камтар» то анҷоми TTL ҳеҷ таъсир намекард ва
 // корбар фикр мекард, ки тугма кор намекунад.
+//
+// Инчунин лентаи оддӣ бо ҳар се режим (умумӣ / «Обунаҳо» /
+// «Дӯстдоштаҳо»): бе ин баъди бекор кардани обуна ё хориҷ аз
+// дӯстдоштаҳо постҳои ҳамон шахс то 30 сония мемонданд.
 func invalidateFeedCache(userID string) {
-	mw.CacheDel(
-		"smartfeed:"+userID+":1", "smartfeed:"+userID+":2",
-		"smartreels:"+userID+":1", "smartreels:"+userID+":2",
-	)
+	if userID == "" {
+		return
+	}
+	keys := []string{
+		"smartfeed:" + userID + ":1", "smartfeed:" + userID + ":2",
+		"smartreels:" + userID + ":1", "smartreels:" + userID + ":2",
+	}
+	for _, mode := range []string{"", "following", "favorites"} {
+		for _, page := range []string{"", "1"} {
+			keys = append(keys, "feed:"+userID+":"+mode+":"+page)
+		}
+	}
+	mw.CacheDel(keys...)
+	mw.InvalidateUserCache(userID)
 }
 
 // POST /feed/find-people — «Одамони ман».
