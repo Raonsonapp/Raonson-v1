@@ -2,7 +2,7 @@ import '../../core/ads/feed_ad_card.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
@@ -138,21 +138,21 @@ class _FeedShellState extends State<_FeedShell> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 10),
           for (final m in const [
-            ['', 'Барои шумо', FeatherIcons.zap],
-            ['following', 'Обунаҳо', FeatherIcons.users],
-            ['favorites', 'Дӯстдоштаҳо', FeatherIcons.star],
+            ['', 'Барои шумо', HeroiconsOutline.sparkles],
+            ['following', 'Обунаҳо', HeroiconsOutline.users],
+            ['favorites', 'Дӯстдоштаҳо', HeroiconsOutline.star],
           ])
             ListTile(
               leading: Icon(m[2] as IconData, color: AppColors.textPrimary),
               title: Text(m[1] as String,
                   style: TextStyle(color: AppColors.textPrimary)),
               trailing: ctrl.mode == m[0]
-                  ? Icon(FeatherIcons.check, color: AppColors.neonBlue)
+                  ? Icon(HeroiconsOutline.check, color: AppColors.neonBlue)
                   : null,
               onTap: () => Navigator.pop(sheet, m[0] as String),
             ),
           ListTile(
-            leading: Icon(FeatherIcons.edit2, color: AppColors.textSecondary),
+            leading: Icon(HeroiconsOutline.pencil, color: AppColors.textSecondary),
             title: Text('Идораи дӯстдоштаҳо',
                 style: TextStyle(color: AppColors.textSecondary)),
             onTap: () => Navigator.pop(sheet, '__manage'),
@@ -233,7 +233,7 @@ class _FeedShellState extends State<_FeedShell> {
                       : TextStyle(
                           fontSize: 20, fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary)),
-                Icon(FeatherIcons.chevronDown,
+                Icon(HeroiconsOutline.chevronDown,
                     color: AppColors.textPrimary, size: 22),
               ]),
             ),

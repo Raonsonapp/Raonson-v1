@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:raonson/core/ui/app_icons.dart';
-import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:flutter/services.dart';
 
 import '../core/api/api_client.dart';
@@ -537,7 +537,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
                 color: Colors.black.withOpacity(0.25), blurRadius: 12)],
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(FeatherIcons.link, color: Color(0xFF0095F6), size: 20),
+            const Icon(HeroiconsOutline.link, color: Color(0xFF0095F6), size: 20),
             const SizedBox(width: 6),
             Flexible(
               child: Text(_s.prompt.isEmpty ? (uri?.host ?? '') : _s.prompt,

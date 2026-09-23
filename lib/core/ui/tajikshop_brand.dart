@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
 
 class TajikshopBrand {
   TajikshopBrand._();
@@ -21,7 +22,7 @@ class TajikshopBrand {
 
   static Widget logo({double size = 22, Color? color}) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.storefront_rounded, size: size, color: color ?? primary),
+      Icon(HeroiconsOutline.buildingStorefront, size: size, color: color ?? primary),
       const SizedBox(width: 6),
       Text('Tajikshop',
           style: TextStyle(

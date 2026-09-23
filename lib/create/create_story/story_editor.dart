@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
@@ -180,7 +180,7 @@ class _StoryEditorState extends State<StoryEditor> {
             ),
           if (_sticker != null)
             ListTile(
-              leading: const Icon(FeatherIcons.trash2, color: Color(0xFFFF3B30)),
+              leading: const Icon(HeroiconsOutline.trash, color: Color(0xFFFF3B30)),
               title: const Text('Стикерро хориҷ кардан',
                   style: TextStyle(color: Color(0xFFFF3B30))),
               onTap: () => Navigator.pop(ctx, 'remove'),
@@ -256,7 +256,7 @@ class _StoryEditorState extends State<StoryEditor> {
                 if (kind == 'countdown') ...[
                   const SizedBox(height: 8),
                   TextButton.icon(
-                    icon: const Icon(FeatherIcons.calendar),
+                    icon: const Icon(HeroiconsOutline.calendar),
                     label: Text(
                         '${end.day}.${end.month.toString().padLeft(2, '0')}.${end.year}  '
                         '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}'),

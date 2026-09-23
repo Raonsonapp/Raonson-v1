@@ -4,7 +4,7 @@ import '../../core/analytics/analytics_events.dart';
 import 'dart:async';
 import 'dart:math' show Random;
 import 'package:flutter/material.dart';
-import 'package:flutter_feather_icons/flutter_feather_icons.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/content_events.dart';
@@ -563,7 +563,7 @@ class _PostCardState extends State<PostCard>
             _MenuItem(icon: AppIcons.person_off_rounded,
                 label: tr('ui.fc18bb515b'),
                 onTap: () { Navigator.pop(context); _removeMyTag(); }),
-          _MenuItem(icon: FeatherIcons.volumeX,
+          _MenuItem(icon: HeroiconsOutline.speakerXMark,
               label: tr('post.hidePostsOf', {'user': widget.post.user.username}),
               onTap: () { Navigator.pop(context); _muteUser(); }),
           _MenuItem(icon: AppIcons.flag_outlined, iconColor: Colors.redAccent,
