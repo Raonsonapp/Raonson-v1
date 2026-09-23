@@ -258,6 +258,11 @@ func HashtagPosts(c *gin.Context) {
 // GET /posts/:id/likes — рӯйхати лайк кардагон
 func GetPostLikers(c *gin.Context) {
 	pid := c.Param("id")
+	// Ҳисоби пӯшида / бастан — ҳамон қоидаи профил.
+	if ok, _ := CanSeeProfileContent(mw.UID(c), ownerOfPost(pid)); !ok {
+		c.JSON(http.StatusOK, gin.H{"users": []gin.H{}})
+		return
+	}
 	rows, err := db.Pool.Query(context.Background(),
 		`SELECT u.id, u.username, COALESCE(u.avatar,''),
 		        COALESCE(u.verified,false), COALESCE(u.bio,'')

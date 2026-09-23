@@ -222,6 +222,14 @@ func GetUserReels(c *gin.Context) {
 	id     := c.Param("id")
 	if id == "me" { id = mw.UID(c) }
 	myID   := mw.UID(c)
+	// Ҳамон қулфи профил, ки барои постҳо ҳаст (GetUserPosts). Пеш
+	// таби Reels-и ҳисоби пӯшида ба ҳар кас кушода буд.
+	//
+	// Шакли ҷавоб ҳамон рӯйхат аст (холӣ) — барнома рӯйхат интизор аст.
+	if ok, _ := CanSeeProfileContent(myID, id); !ok {
+		c.JSON(http.StatusOK, []gin.H{})
+		return
+	}
 	page   := toInt(c.Query("page"), 1)
 	limit  := toInt(c.Query("limit"), 24)
 	offset := (page - 1) * limit
@@ -275,6 +283,11 @@ func GetFollowers(c *gin.Context) {
 	if id == "me" {
 		id = myID
 	}
+	// Instagram рӯйхати обунаҳои ҳисоби пӯшидаро низ пинҳон мекунад.
+	if ok, _ := CanSeeProfileContent(myID, id); !ok {
+		c.JSON(http.StatusOK, []gin.H{})
+		return
+	}
 	limit, offset := followPage(c)
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id,u.username,u.avatar,u.verified,u.bio,
@@ -297,6 +310,11 @@ func GetFollowing(c *gin.Context) {
 	myID := mw.UID(c)
 	if id == "me" {
 		id = myID
+	}
+	// Instagram рӯйхати обунаҳои ҳисоби пӯшидаро низ пинҳон мекунад.
+	if ok, _ := CanSeeProfileContent(myID, id); !ok {
+		c.JSON(http.StatusOK, []gin.H{})
+		return
 	}
 	limit, offset := followPage(c)
 	rows, err := db.Pool.Query(context.Background(), `

@@ -118,6 +118,11 @@ func GetTaggedPosts(c *gin.Context) {
 	if target == "me" {
 		target = myID
 	}
+	// Ҳисоби пӯшида / бастан — ҳамон қоидаи профил.
+	if ok, _ := CanSeeProfileContent(myID, target); !ok {
+		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
+		return
+	}
 	var uname string
 	db.Pool.QueryRow(context.Background(),
 		`SELECT username FROM users WHERE id=$1`, target).Scan(&uname)
@@ -173,6 +178,11 @@ func GetHighlights(c *gin.Context) {
 	uid := c.Param("id")
 	if uid == "me" {
 		uid = mw.UID(c)
+	}
+	// Ҳисоби пӯшида / бастан — ҳамон қоидаи профил.
+	if ok, _ := CanSeeProfileContent(mw.UID(c), uid); !ok {
+		c.JSON(http.StatusOK, gin.H{"highlights": []gin.H{}})
+		return
 	}
 	rows, err := db.Pool.Query(context.Background(),
 		`SELECT id, title, COALESCE(cover_url,''), COALESCE(story_ids,'{}'),

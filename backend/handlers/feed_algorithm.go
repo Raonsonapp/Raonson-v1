@@ -147,6 +147,10 @@ func GetSmartFeed(c *gin.Context) {
 		        WHERE mu.user_id=$1 AND mu.muted_id=p.user_id)
 		  AND NOT EXISTS (SELECT 1 FROM post_not_interested pni
 		        WHERE pni.post_id=p.id AND pni.user_id=$1)
+		  -- Ҳисоби пӯшида: танҳо худам ва обунашудагон. Пеш пости
+		  -- пӯшида бо ≥3 лайк ба ҲАМА дар лента мерасид.
+		  AND (p.user_id=$1 OR COALESCE(u.is_private,false)=FALSE
+		       OR f.following_id IS NOT NULL)
 		  AND (
 		    (f.following_id IS NOT NULL AND p.created_at > NOW() - INTERVAL '7 days')
 		    OR

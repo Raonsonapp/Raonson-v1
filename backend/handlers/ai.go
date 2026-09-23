@@ -239,6 +239,7 @@ func AiSearch(c *gin.Context) {
 			        FROM post_media m WHERE m.post_id=p.id)
 			FROM posts p JOIN users u ON u.id=p.user_id
 			WHERE %s %s AND COALESCE(p.hidden,false)=FALSE AND COALESCE(u.banned,false)=FALSE
+			  AND COALESCE(u.is_private,false)=FALSE AND COALESCE(p.archived,false)=FALSE
 			ORDER BY p.created_at DESC LIMIT 24`, whereKw, sinceClause)
 		rows, qerr := db.Pool.Query(context.Background(), query, args...)
 		if qerr == nil {
@@ -276,6 +277,7 @@ func AiSearch(c *gin.Context) {
 			       u.id, u.username, u.avatar, u.verified
 			FROM reels r JOIN users u ON u.id=r.user_id
 			WHERE %s %s AND COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
+			  AND COALESCE(u.is_private,false)=FALSE
 			ORDER BY r.created_at DESC LIMIT 24`, whereKw, sinceClause)
 		rows, qerr := db.Pool.Query(context.Background(), query, args...)
 		if qerr == nil {

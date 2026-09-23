@@ -133,6 +133,11 @@ func AddComment(c *gin.Context) {
 func GetComments(c *gin.Context) {
 	postID := c.Param("id")
 	myID := mw.UID(c)
+	// Ҳисоби пӯшида / бастан — ҳамон қоидаи профил.
+	if ok, _ := CanSeeProfileContent(myID, ownerOfPost(postID)); !ok {
+		c.JSON(http.StatusOK, gin.H{"comments": []gin.H{}, "page": 1, "limit": 0})
+		return
+	}
 	page := toInt(c.Query("page"), 1)
 	limit := toInt(c.Query("limit"), 20)
 	offset := (page - 1) * limit
@@ -476,6 +481,11 @@ func Search(c *gin.Context) {
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE p.caption ILIKE $1
+		  -- Ҷустуҷӯ — кашф аст: танҳо ҳисобҳои кушода, мисли Instagram.
+		  AND COALESCE(u.is_private,false)=FALSE
+		  AND COALESCE(u.banned,false)=FALSE
+		  AND COALESCE(p.hidden,false)=FALSE
+		  AND COALESCE(p.archived,false)=FALSE
 		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 20`, like)
 	posts := []gin.H{}
 	if pRows != nil {
@@ -529,8 +539,10 @@ func Search(c *gin.Context) {
 		hRows, _ := db.Pool.Query(context.Background(), `
 			SELECT tag, COUNT(*) AS cnt FROM (
 			  SELECT lower(m[1]) AS tag
-			  FROM posts p, regexp_matches(p.caption, '#(\w+)', 'g') AS m
+			  FROM posts p JOIN users hu ON hu.id=p.user_id,
+			       regexp_matches(p.caption, '#(\w+)', 'g') AS m
 			  WHERE p.caption ILIKE $1
+			    AND COALESCE(hu.is_private,false)=FALSE
 			) t
 			WHERE tag LIKE $2
 			GROUP BY tag ORDER BY cnt DESC LIMIT 15`,
@@ -650,7 +662,9 @@ func GetReels(c *gin.Context) {
 		       COALESCE(r.audio_id,''), COALESCE(r.audio_title,''),
 		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,'')
 		FROM reels r JOIN users u ON u.id=r.user_id
-		WHERE COALESCE(r.media_missing,false)=FALSE AND ($4 = FALSE OR EXISTS (
+		WHERE COALESCE(r.media_missing,false)=FALSE
+		  AND `+visibleAuthorSQL("r.user_id", "u", "$1")+`
+		  AND ($4 = FALSE OR EXISTS (
 		    SELECT 1 FROM follows f2
 		    WHERE f2.follower_id=$1::text AND f2.following_id=r.user_id))
 		ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
@@ -787,6 +801,11 @@ func DeleteReel(c *gin.Context) {
 func GetReelComments(c *gin.Context) {
 	rid := c.Param("id")
 	myID := mw.UID(c)
+	// Ҳисоби пӯшида / бастан — ҳамон қоидаи профил.
+	if ok, _ := CanSeeProfileContent(myID, ownerOfReel(rid)); !ok {
+		c.JSON(http.StatusOK, gin.H{"comments": []gin.H{}})
+		return
+	}
 	page := toInt(c.Query("page"), 1)
 	limit := toInt(c.Query("limit"), 20)
 	offset := (page - 1) * limit
@@ -892,6 +911,11 @@ func GetReelByID(c *gin.Context) {
 			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
 			&hideLikes, &commentsOff, &hasStory)
 	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
+		return
+	}
+	// Ҳисоби пӯшида / бастан — ниг. GetPost.
+	if ok, _ := CanSeeProfileContent(myID, uid); !ok {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
 		return
 	}

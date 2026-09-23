@@ -118,3 +118,48 @@ func ownerOfPost(postID string) string {
 		`SELECT user_id::text FROM posts WHERE id=$1`, postID).Scan(&uid)
 	return uid
 }
+
+// visibleAuthorSQL — ЯК шарти SQL, ки дар ҳар рӯйхати пост/Reel
+// истифода мешавад: муаллиф барои тамошобин намоён аст?
+//
+// ⚠️ Чаро ин лозим шуд. Санҷиши систематикии 26 дархост нишон дод,
+// ки ТАНҲО профил (GetUserPosts) ҳисоби пӯшидаро ҳимоя мекард.
+// Лента, лентаи ҳушманд, explore, ҷустуҷӯ, Reels, AI-ҷустуҷӯ ва
+// ҳатто кушодани пост аз рӯи ID — ҳама постҳои ҳисоби пӯшидаро ба
+// ҳар кас нишон медоданд. Лентаи оддӣ ҳатто бастшуда ва манъшударо
+// филтр намекард. Қулфи «ҳисоби пӯшида» танҳо дар як экран кор мекард.
+//
+// Қоида (мисли Instagram): худам — ҳамеша; дигарон — танҳо агар
+// манъ нашуда, байни мо бастан набошад, ва ҳисоб кушода бошад ё ман
+// обуна бошам.
+//
+// authorCol — сутуни муаллиф (масалан "p.user_id"), userAlias —
+// номи ҷадвали users дар дархост ("u"), viewer — параметри
+// тамошобин ("$1").
+func visibleAuthorSQL(authorCol, userAlias, viewer string) string {
+	return `(` + authorCol + ` = ` + viewer + `::text OR (
+	    COALESCE(` + userAlias + `.banned,false) = FALSE
+	    AND NOT EXISTS (SELECT 1 FROM blocks vb
+	         WHERE (vb.blocker_id = ` + viewer + `::text AND vb.blocked_id = ` + authorCol + `)
+	            OR (vb.blocker_id = ` + authorCol + ` AND vb.blocked_id = ` + viewer + `::text))
+	    AND (COALESCE(` + userAlias + `.is_private,false) = FALSE
+	         OR EXISTS (SELECT 1 FROM follows vf
+	              WHERE vf.follower_id = ` + viewer + `::text AND vf.following_id = ` + authorCol + `))))`
+}
+
+// publicAuthorSQL — барои кашф (explore, ҷустуҷӯ): мисли Instagram,
+// дар кашф ТАНҲО ҳисобҳои кушода, ҳатто агар ман обуна бошам.
+func publicAuthorSQL(authorCol, userAlias, viewer string) string {
+	return `(COALESCE(` + userAlias + `.banned,false) = FALSE
+	    AND COALESCE(` + userAlias + `.is_private,false) = FALSE
+	    AND NOT EXISTS (SELECT 1 FROM blocks vb
+	         WHERE (vb.blocker_id = ` + viewer + `::text AND vb.blocked_id = ` + authorCol + `)
+	            OR (vb.blocker_id = ` + authorCol + ` AND vb.blocked_id = ` + viewer + `::text)))`
+}
+
+func ownerOfReel(reelID string) string {
+	var uid string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id::text FROM reels WHERE id=$1`, reelID).Scan(&uid)
+	return uid
+}

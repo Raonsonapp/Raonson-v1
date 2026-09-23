@@ -253,7 +253,9 @@ func GetFeed(c *gin.Context) {
 		       COALESCE(p.shop_phone,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.archived,false) = FALSE
+		  AND COALESCE(p.hidden,false) = FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
+		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
 		ORDER BY p.created_at DESC
 		LIMIT $2 OFFSET $3`, myID, limit, offset)
 	if err != nil {
@@ -346,6 +348,13 @@ func GetPost(c *gin.Context) {
 		&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs,
 		&mShares)
 	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
+		return
+	}
+	// Ҳисоби пӯшида / бастан. Пеш пости пӯшида аз рӯи ID (линк,
+	// огоҳинома, паём) ба ҳар кас кушода мешуд. Ҳамон 404 — то
+	// мавҷудияти пост ошкор нашавад.
+	if ok, _ := CanSeeProfileContent(myID, uid); !ok {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
 	}

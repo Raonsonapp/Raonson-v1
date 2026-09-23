@@ -106,7 +106,9 @@ func GetReelAudio(c *gin.Context) {
 	var count int
 	db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM reels r JOIN users u ON u.id=r.user_id
-		WHERE r.audio_id=$1 AND u.banned=FALSE`, audioID).Scan(&count)
+		WHERE r.audio_id=$1 AND u.banned=FALSE
+		  AND COALESCE(u.is_private,false)=FALSE
+		  AND COALESCE(r.media_missing,false)=FALSE`, audioID).Scan(&count)
 
 	var saved bool
 	if myID != "" {
@@ -122,6 +124,7 @@ func GetReelAudio(c *gin.Context) {
 		FROM reels r
 		JOIN users u ON u.id = r.user_id
 		WHERE r.audio_id=$1 AND u.banned=FALSE AND COALESCE(r.media_missing,false)=FALSE
+		  AND COALESCE(u.is_private,false)=FALSE
 		  AND NOT EXISTS (
 		    SELECT 1 FROM blocks b
 		    WHERE (b.blocker_id=$2 AND b.blocked_id=r.user_id)

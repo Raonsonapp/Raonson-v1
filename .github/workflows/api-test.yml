@@ -169,6 +169,14 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_stickers.py
 
+      # Ҳисоби пӯшида дар ҲАМАИ ҷойҳо. Пеш аз ислоҳ: 12/27 —
+      # 15 рахна, аз ҷумла пешнамоиши линк БЕ ВУРУД.
+      - name: Санҷиши ҳисоби пӯшида
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_privacy2.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

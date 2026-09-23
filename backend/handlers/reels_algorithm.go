@@ -135,6 +135,9 @@ func GetSmartReels(c *gin.Context) {
 		  WHERE
 		    u.banned = FALSE
 		    AND COALESCE(r.media_missing,false) = FALSE
+		    -- Ҳисоби пӯшида: танҳо обунашудагон.
+		    AND (r.user_id=$1 OR COALESCE(u.is_private,false)=FALSE
+		         OR f.following_id IS NOT NULL)
 		    AND r.created_at > NOW() - INTERVAL '30 days'
 		    -- Нишондашударо нишон намедиҳем
 		    AND NOT EXISTS (

@@ -81,7 +81,12 @@ func loadPostPreview(ctx context.Context, id string) (previewData, bool) {
 		FROM posts p
 		JOIN users u ON u.id = p.user_id
 		LEFT JOIN post_media m ON m.post_id=p.id AND m.position=0
-		WHERE p.id=$1 AND COALESCE(p.archived,false)=FALSE`, id).
+		WHERE p.id=$1 AND COALESCE(p.archived,false)=FALSE
+		  -- Ин саҳифа БЕ ВУРУД кушода мешавад. Пеш расм ва матни
+		  -- пости ҳисоби ПӮШИДА ба ҳар касе, ки линк дошт, дода мешуд.
+		  AND COALESCE(p.hidden,false)=FALSE
+		  AND COALESCE(u.is_private,false)=FALSE
+		  AND COALESCE(u.banned,false)=FALSE`, id).
 		Scan(&d.Caption, &d.Username, &d.Avatar, &d.MediaURL, &d.MediaType,
 			&d.Likes, &d.Comments)
 	if err != nil {
@@ -98,7 +103,10 @@ func loadReelPreview(ctx context.Context, id string) (previewData, bool) {
 		       COALESCE(r.likes_count,0), COALESCE(r.comments_count,0)
 		FROM reels r
 		JOIN users u ON u.id = r.user_id
-		WHERE r.id=$1`, id).
+		WHERE r.id=$1
+		  AND COALESCE(u.is_private,false)=FALSE
+		  AND COALESCE(u.banned,false)=FALSE
+		  AND COALESCE(r.media_missing,false)=FALSE`, id).
 		Scan(&d.Caption, &d.Username, &d.Avatar, &d.MediaURL, &d.Thumbnail,
 			&d.Likes, &d.Comments)
 	if err != nil {

@@ -913,6 +913,8 @@ func ExploreGrid(c *gin.Context) {
 		  AND COALESCE(p.archived,false)=FALSE
 		  AND COALESCE(u.banned,false)=FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
+		  -- Мисли Instagram: дар explore ТАНҲО ҳисобҳои кушода.
+		  AND `+publicAuthorSQL("p.user_id", "u", "$1")+`
 		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`, myID)
 	posts := []gin.H{}
 	if pRows != nil {
@@ -970,6 +972,7 @@ func ExploreGrid(c *gin.Context) {
 		       (SELECT COUNT(*) FROM reel_shares sh WHERE sh.reel_id=r.id)
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
+		  AND `+publicAuthorSQL("r.user_id", "u", "$1")+`
 		ORDER BY r.likes_count DESC LIMIT 20`, myID)
 	reels := []gin.H{}
 	if rRows != nil {
