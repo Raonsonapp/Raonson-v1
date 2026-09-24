@@ -50,8 +50,12 @@ void main() {
     }, 'b');
     expect(m.vanish, isTrue);
     final r = File('lib/chat/room/chat_room_screen.dart').readAsStringSync();
-    expect(r, contains('replyTo == null && !_vanish'),
-        reason: 'vanish тавассути socket мерафт ва парчам гум мешуд');
+    // Ҳамаи паёмҳо (аз ҷумла vanish) тавассути REST мераванд: роҳи
+    // сокет парчами vanish, блок, огоҳинома ва ҷавоби худкорро гум мекард
+    // ва баъди иловаи аккаунт аз номи аккаунти кӯҳна менавишт.
+    expect(r.contains("_socket.emit('chat:send'"), isFalse,
+        reason: 'паём набояд тавассути socket равад');
+    expect(r, contains('vanish:    _vanish'));
     expect(r, contains("'/chat/\$_chatId/vanish-close'"));
   });
 

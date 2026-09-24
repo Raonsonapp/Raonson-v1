@@ -941,7 +941,13 @@ func ExploreGrid(c *gin.Context) {
 		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		       EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id=p.id AND pl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM post_saves ps WHERE ps.post_id=p.id AND ps.user_id=$1::text),
-		       (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id)
+		       (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id),
+		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+		       COALESCE(p.music_end_ms,0), COALESCE(p.location,''),
+		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false),
+		       p.user_id = $1::text
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
@@ -962,10 +968,18 @@ func ExploreGrid(c *gin.Context) {
 			var price float64
 			var currency, productName string
 			var shares int
+			// Музика: бе ин пости кушодашуда аз explore суруд намехонд.
+			var mTitle, mArtist, mURL, mArt, location string
+			var mTrack, mStart, mEnd int
+			var hideLikes, commentsOff, mine bool
 			pRows.Scan(&pid, &likes, &comments, &createdAt, &caption, &media,
 				&uid, &uname, &uavatar, &verified, &views,
 				&isProduct, &price, &currency, &productName, &liked, &saved,
-				&shares)
+				&shares, &mTitle, &mArtist, &mURL, &mArt, &mTrack, &mStart, &mEnd,
+				&location, &hideLikes, &commentsOff, &mine)
+			if hideLikes && !mine {
+				likes = -1
+			}
 			posts = append(posts, gin.H{
 				"_id": pid, "likesCount": likes, "commentsCount": comments,
 				"viewsCount": views, "createdAt": createdAt,
@@ -974,6 +988,9 @@ func ExploreGrid(c *gin.Context) {
 				"isProduct": isProduct, "price": price,
 				"currency": currency, "productName": productName,
 				"liked": liked, "saved": saved, "sharesCount": shares,
+				"musicTitle": mTitle, "musicArtist": mArtist, "location": location,
+				"song": songJSON(mTitle, mArtist, mArt, mURL, mTrack, mStart, mEnd),
+				"hideLikes": hideLikes, "commentsOff": commentsOff,
 				"user": gin.H{"_id": uid, "id": uid, "username": uname,
 					"avatar": uavatar, "verified": verified},
 			})

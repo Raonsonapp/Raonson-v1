@@ -289,6 +289,10 @@ func buildPayload(m Message) map[string]any {
 		"priority": prio,
 		"notification": map[string]any{
 			"channel_id": m.ChannelID,
+			// Икони хурди сафед (res/drawable/ic_notification) ва ранги
+			// логотип — бе ин Android чоркунҷаи сафед нишон медод.
+			"icon":  "ic_notification",
+			"color": "#2F6BFF",
 			// default_sound-ро худи канал ҳал мекунад.
 			"default_sound": true,
 		},

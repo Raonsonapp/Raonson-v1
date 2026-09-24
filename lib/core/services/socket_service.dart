@@ -9,7 +9,9 @@ import '../api/api_client.dart';
 import '../storage/token_storage.dart';
 
 class SocketService {
-  SocketService._();
+  SocketService._() {
+    TokenStorage.onUserChanged = (uid) { _onUserChanged(uid); };
+  }
   static final SocketService instance = SocketService._();
 
   WebSocketChannel?            _channel;
@@ -36,6 +38,18 @@ class SocketService {
   final Map<String, List<void Function(dynamic)>> _listeners = {};
 
   bool get isConnected => _connected;
+
+  /// Корбаре, ки СЕРВЕР ин сокетро ба ӯ тааллуқ медонад (аз `socket:ready`).
+  ///
+  /// ⚠️ Пеш аз ин маълум набуд. Баъди иловаи аккаунти дуюм сокет бо
+  /// token-и аккаунти КӮҲНА пайваст мемонд — паёме, ки корбар аз
+  /// «tajikshop» ба «raonson» менавишт, дар сервер ҳамчун паёми
+  /// «raonson → tajikshop» сабт мешуд ва дар экран аз тарафи чап меомад.
+  String? _userId;
+  String? get userId => _userId;
+
+  /// Сокет ба ҳамин корбар тааллуқ дорад? (агар ҳанӯз маълум набошад — не)
+  bool isFor(String uid) => _connected && _userId != null && _userId == uid;
 
   Future<void> connect(String token) async {
     if (_connected || _connecting) return;
@@ -70,7 +84,10 @@ class SocketService {
             final msg   = jsonDecode(raw as String) as Map<String, dynamic>;
             final event = msg['event'] as String? ?? '';
             final data  = msg['data'];
-            if (event == 'socket:ready') return; // танҳо тасдиқ
+            if (event == 'socket:ready') {
+              if (data is Map) _userId = data['userId']?.toString();
+              return;
+            }
             _dispatch(event, data);
           } catch (e) {
             debugPrint('[Socket] parse: $e');
@@ -91,6 +108,7 @@ class SocketService {
 
   // Пайваст канда шуд (onDone/onError) — агар дастӣ набошад, дубора пайваст шав.
   void _onClosed() {
+    _userId     = null;
     _connected  = false;
     _connecting = false;
     // Пайваст канда шуд, вале ҳеҷ фрейм наомада буд → эҳтимол 401.
@@ -148,12 +166,31 @@ class SocketService {
   // Пас аз иваз кардани аккаунт: socket-и корбари куҳнаро мебандем ва
   // бо токени нав аз нав пайваст мешавем, то presence/online status/
   // зангҳо ба аккаунти нав дуруст рафтор кунанд.
+  //
+  // Шунавандаҳо НИГОҲ дошта мешаванд: `WebRTCService` онҳоро як бор
+  // мегузорад — пок кардан зангҳои воридшавандаро то бозоғозии барнома
+  // мекушт.
   Future<void> reconnectAs(String newToken) async {
     if (newToken.isEmpty) return;
-    disconnect();
+    _closeChannel();
     _manualClose = false;
-    _listeners.clear();
     await connect(newToken);
+  }
+
+  void _closeChannel() {
+    _manualClose = true;
+    _reconnectTimer?.cancel();
+    _sub?.cancel();
+    _channel?.sink.close();
+    _channel = null; _connected = false; _connecting = false;
+    _userId = null;
+  }
+
+  Future<void> _onUserChanged(String uid) async {
+    if (_userId == uid) return;
+    if (!_connected && !_connecting) return; // пайваст нест — баъдтар бо token-и нав
+    final token = await TokenStorage.getAccessToken();
+    if (token != null && token.isNotEmpty) await reconnectAs(token);
   }
 
   void emit(String event, dynamic data) {
@@ -215,13 +252,14 @@ class SocketService {
   void offTyping()     => off('chat:typing');
 
   void disconnect() {
-    _manualClose = true;
-    _reconnectTimer?.cancel();
-    _sub?.cancel();
-    _channel?.sink.close();
-    _channel = null; _connected = false; _connecting = false;
+    _closeChannel();
     _listeners.clear();
   }
+
+  /// Баромадан аз ҳисоб: пайвастро мебандад, то телефон паём ва зангҳои
+  /// корбари баромада-ро нагирад. Шунавандаҳо мемонанд — барои корбари
+  /// навбатӣ (занг ва ғ.) боз лозиманд.
+  void closeForLogout() => _closeChannel();
 
   // ── Test hooks ──
   @visibleForTesting

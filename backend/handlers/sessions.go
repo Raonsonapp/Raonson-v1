@@ -110,8 +110,8 @@ func GetAutoReply(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"autoReply": text})
 }
 
-// maybeAutoReply — вақте ин аввалин паёми фиристанда дар чат бошад ва
-// қабулкунанда ҷавоби худкор дошта бошад, як ҷавоби худкор мефиристад.
+// maybeAutoReply — агар қабулкунанда ҷавоби худкор дошта бошад ва дар
+// 24 соати охир дар ин чат ҷавоб надода бошад, як ҷавоби худкор мефиристад.
 func maybeAutoReply(chatID, senderID, receiverID string) {
 	if senderID == receiverID { // ба худ ҷавоби худкор намеравад
 		return
@@ -124,11 +124,18 @@ func maybeAutoReply(chatID, senderID, receiverID string) {
 		if strings.TrimSpace(reply) == "" {
 			return
 		}
-		var cnt int
+		// Мисли «ҷавобҳои фаврӣ»-и Instagram: агар соҳиб дар 24 соати
+		// охир дар ин чат ҳеҷ чиз нанавишта бошад. Пеш танҳо ба
+		// АВВАЛИН паёми тамоми таърихи чат ҷавоб медод — яъне барои
+		// ҳар касе, ки ягон бор навишта буд, ҳеҷ гоҳ кор намекард.
+		// Худи ҷавоби худкор паёми соҳиб аст, бинобар ин спам намешавад.
+		var recent bool
 		db.Pool.QueryRow(context.Background(),
-			`SELECT COUNT(*) FROM messages WHERE chat_id=$1 AND sender_id=$2`,
-			chatID, senderID).Scan(&cnt)
-		if cnt != 1 { // на аввалин паём
+			`SELECT EXISTS(SELECT 1 FROM messages
+			  WHERE chat_id=$1 AND sender_id=$2
+			    AND created_at > NOW() - INTERVAL '24 hours')`,
+			chatID, receiverID).Scan(&recent)
+		if recent {
 			return
 		}
 		var msgID string

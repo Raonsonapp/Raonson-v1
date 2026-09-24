@@ -1,3 +1,4 @@
+import '../core/services/socket_service.dart';
 import '../core/api/api_client.dart';
 import '../core/firebase_init.dart';
 import '../core/storage/token_storage.dart';
@@ -90,6 +91,9 @@ class AuthService {
     // ин корбар ба ҳамон телефон мерафтанд, ки касе дигар онро
     // истифода мебарад.
     await FirebaseInit.clearToken();
+    // Сокет бо token-и корбари баромада пайваст мемонд — паёмҳо ва
+    // зангҳои ӯ ба ин телефон меомаданд.
+    SocketService.instance.closeForLogout();
     await _repository.logout();
     await _tokenStorage.clear();
     ApiClient.instance.setAuthToken(null);

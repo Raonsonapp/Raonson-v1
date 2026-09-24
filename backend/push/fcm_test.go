@@ -162,3 +162,12 @@ func TestErrorsCarryNoSecret(t *testing.T) {
 		t.Errorf("хато сирро ошкор кард: %q", got)
 	}
 }
+
+// Икони хурди огоҳинома: бе он Android чоркунҷаи сафед нишон медод.
+func TestPayloadHasNotificationIcon(t *testing.T) {
+	p := buildPayload(Message{ChannelID: "social"})
+	n := p["message"].(map[string]any)["android"].(map[string]any)["notification"].(map[string]any)
+	if n["icon"] != "ic_notification" || n["color"] == nil {
+		t.Fatalf("android notification icon missing: %v", n)
+	}
+}

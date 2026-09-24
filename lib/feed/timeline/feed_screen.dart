@@ -29,7 +29,7 @@ import '../../widgets/avatar.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
-import '../favorites/favorites_screen.dart';
+import 'mode_feed_screen.dart';
 import '../../shop/shop_screen.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 
@@ -127,48 +127,45 @@ class _FeedShellState extends State<_FeedShell> {
     super.dispose();
   }
 
+  /// Менюи зери «Raonson ⌄» — мисли Instagram: «Обунаҳо» ва
+  /// «Дӯстдоштаҳо» экрани АЛОҲИДА мекушоянд; сарлавҳа ҳамеша
+  /// «Raonson» мемонад.
   Future<void> _pickFeedMode(BuildContext ctx) async {
-    final ctrl = ctx.read<FeedController>();
-    final picked = await showModalBottomSheet<String>(
+    final box = ctx.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(ctx).context.findRenderObject() as RenderBox?;
+    RelativeRect pos = const RelativeRect.fromLTRB(80, 90, 80, 0);
+    if (box != null && overlay != null) {
+      final topLeft = box.localToGlobal(Offset.zero, ancestor: overlay);
+      final w = overlay.size.width;
+      pos = RelativeRect.fromLTRB(w / 2 - 110, topLeft.dy + kToolbarHeight,
+          w / 2 - 110, 0);
+    }
+    final picked = await showMenu<String>(
       context: ctx,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheet) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 10),
-          for (final m in const [
-            ['', 'Барои шумо', HeroiconsOutline.sparkles],
-            ['following', 'Обунаҳо', HeroiconsOutline.users],
-            ['favorites', 'Дӯстдоштаҳо', HeroiconsOutline.star],
-          ])
-            ListTile(
-              leading: Icon(m[2] as IconData, color: AppColors.textPrimary),
-              title: Text(m[1] as String,
-                  style: TextStyle(color: AppColors.textPrimary)),
-              trailing: ctrl.mode == m[0]
-                  ? Icon(HeroiconsOutline.check, color: AppColors.neonBlue)
-                  : null,
-              onTap: () => Navigator.pop(sheet, m[0] as String),
-            ),
-          ListTile(
-            leading: Icon(HeroiconsOutline.pencil, color: AppColors.textSecondary),
-            title: Text('Идораи дӯстдоштаҳо',
-                style: TextStyle(color: AppColors.textSecondary)),
-            onTap: () => Navigator.pop(sheet, '__manage'),
+      position: pos,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      items: [
+        for (final m in const [
+          ['following', 'Обунаҳо', HeroiconsOutline.users],
+          ['favorites', 'Дӯстдоштаҳо', HeroiconsOutline.star],
+        ])
+          PopupMenuItem<String>(
+            value: m[0] as String,
+            height: 52,
+            child: Row(children: [
+              Icon(m[2] as IconData, color: AppColors.textPrimary, size: 24),
+              const SizedBox(width: 14),
+              Text(m[1] as String,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+            ]),
           ),
-          const SizedBox(height: 8),
-        ]),
-      ),
+      ],
     );
     if (picked == null || !ctx.mounted) return;
-    if (picked == '__manage') {
-      Navigator.push(ctx,
-          MaterialPageRoute(builder: (_) => const FavoritesScreen()));
-      return;
-    }
-    await ctrl.setMode(picked);
-    if (_scroll.hasClients) _scroll.jumpTo(0);
+    Navigator.push(ctx,
+        MaterialPageRoute(builder: (_) => ModeFeedScreen(mode: picked)));
   }
 
   @override
@@ -219,20 +216,12 @@ class _FeedShellState extends State<_FeedShell> {
             title: GestureDetector(
               onTap: () => _pickFeedMode(ctx),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(
-                  switch (ctx.watch<FeedController>().mode) {
-                    'following' => 'Обунаҳо',
-                    'favorites' => 'Дӯстдоштаҳо',
-                    _ => 'Raonson',
-                  },
-                  style: ctx.watch<FeedController>().mode.isEmpty
-                      ? TextStyle(
-                          fontSize: 30, fontWeight: FontWeight.w400,
-                          color: AppColors.textPrimary,
-                          fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1)
-                      : TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary)),
+                // Номи Raonson ҲЕҶ ГОҲ иваз намешавад.
+                Text('Raonson',
+                    style: TextStyle(
+                        fontSize: 30, fontWeight: FontWeight.w400,
+                        color: AppColors.textPrimary,
+                        fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1)),
                 Icon(HeroiconsOutline.chevronDown,
                     color: AppColors.textPrimary, size: 22),
               ]),

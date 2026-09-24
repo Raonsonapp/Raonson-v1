@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Икони огоҳинома танҳо аз сервер (FCM) номбар мешавад. Бе ин
+     shrinkResources онро дар сохтани release нест мекард. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notification,@color/notification_color" />

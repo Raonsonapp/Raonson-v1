@@ -38,8 +38,14 @@ class TokenStorage {
 
   static const String _userIdKey = 'user_id';
 
-  static Future<void> saveUserId(String id) {
-    return SecureStorage.write(_userIdKey, id);
+  /// Вақте корбари воридшуда иваз мешавад (вуруд, иловаи аккаунт,
+  /// гузариш). Сокет ба он гӯш медиҳад, то бо token-и НАВ пайваст шавад.
+  static void Function(String userId)? onUserChanged;
+
+  static Future<void> saveUserId(String id) async {
+    final old = await SecureStorage.read(_userIdKey);
+    await SecureStorage.write(_userIdKey, id);
+    if (old != id) onUserChanged?.call(id);
   }
 
   static Future<String?> getUserId() {

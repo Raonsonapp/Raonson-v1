@@ -55,7 +55,7 @@ class FirebaseInit {
     try {
       await _localNotif.initialize(
         const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings('@drawable/ic_notification'),
           iOS: DarwinInitializationSettings(),
         ),
         // Пахши banner-и маҳаллӣ низ бояд ба ҳамон ҷо барад.
@@ -135,7 +135,8 @@ class FirebaseInit {
           channel,
           importance: NotificationChannels.importanceOf(channel),
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_notification',
+          color: const Color(0xFF2F6BFF),
         ),
         iOS: const DarwinNotificationDetails(),
       ),

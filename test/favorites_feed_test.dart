@@ -13,12 +13,18 @@ void main() {
     expect(u.copyWith(isFavorite: false).isFavorite, isFalse);
   });
 
-  test('логоро зада режим интихоб мешавад', () {
+  test('сарлавҳа ҳамеша Raonson; режимҳо экрани алоҳида мекушоянд', () {
     final s = _read('lib/feed/timeline/feed_screen.dart');
     expect(s, contains('_pickFeedMode(ctx)'));
-    for (final m in ["'following'", "'favorites'", "'Барои шумо'"]) {
+    expect(s, contains("Text('Raonson'"));
+    expect(s.contains("'following' => 'Обунаҳо'"), isFalse,
+        reason: 'номи Raonson дар сарлавҳа набояд иваз шавад');
+    expect(s, contains('ModeFeedScreen(mode: picked)'));
+    for (final m in ["'following'", "'favorites'"]) {
       expect(s, contains(m));
     }
+    final m = _read('lib/feed/timeline/mode_feed_screen.dart');
+    expect(m, contains('mode: widget.mode'));
   });
 
   test('режим ба сервер меравад ва кэши лентаи асосиро намеомезад', () {

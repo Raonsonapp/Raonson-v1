@@ -472,14 +472,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       return;
     }
 
-    // Vanish тавассути REST меравад — он парчамро дар база сабт мекунад.
-    if (_socket.isConnected && _chatId.isNotEmpty && replyTo == null && !_vanish) {
-      _socket.emit('chat:send', {
-        'chatId': _chatId,
-        'text': text,
-        'receiver': widget.peer.id,
-      });
-    } else {
+    // Ҳамеша тавассути REST. Роҳи сокет (`chat:send`) на блокро
+    // месанҷид, на огоҳиномаи телефон мефиристод, на ҷавоби худкорро —
+    // ва баъди иловаи аккаунт аз номи аккаунти КӮҲНА менавишт.
+    {
       try {
         final msg = await _repo.sendMessage(
           toUserId:  widget.peer.id,

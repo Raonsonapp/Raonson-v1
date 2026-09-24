@@ -34,6 +34,7 @@ import 'search_history.dart';
 import '../core/i18n/strings.dart';
 import '../core/links/deep_links.dart';
 import '../core/ui/app_icons.dart';
+import '../core/music/music_bar.dart';
 import '../shop/buy_sheet.dart';
 import '../live/live_rail.dart';
 
@@ -1326,6 +1327,8 @@ class _FeedCardState extends State<_FeedCard> {
   bool get _isVideo =>
       widget.item.type == _ItemType.video || widget.item.type == _ItemType.reel;
   bool get _isReel => widget.item.type == _ItemType.reel;
+  bool get _hasSong =>
+      !_isVideo && (widget.item.postData?.song.isNotEmpty ?? false);
   String get _id => widget.item.id;
 
   @override
@@ -1691,7 +1694,7 @@ class _FeedCardState extends State<_FeedCard> {
                   ? 'assets/icons/save_filled.svg'
                   : 'assets/icons/save.svg',
               onTap: _toggleSave),
-          if (_isVideo) ...[
+          if (_isVideo || _hasSong) ...[
             const SizedBox(height: 18),
             GestureDetector(
               onTap: _toggleMute,
@@ -1726,6 +1729,15 @@ class _FeedCardState extends State<_FeedCard> {
                 const SizedBox(width: 10),
                 _FollowChip(userId: widget.item.postData!.user.id),
               ]),
+              // Суруди пост — пеш аз explore ҳеҷ гоҳ намехонд.
+              if (_hasSong) ...[
+                const SizedBox(height: 8),
+                MusicBar(
+                  song: widget.item.postData!.song,
+                  autoPlay: widget.isActive,
+                  paused: _muted || !widget.isActive,
+                ),
+              ],
               if (widget.item.postData!.caption.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(widget.item.postData!.caption,

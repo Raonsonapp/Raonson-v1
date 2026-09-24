@@ -261,7 +261,11 @@ func GetFeed(c *gin.Context) {
 		       COALESCE(p.is_product,false), COALESCE(p.price,0),
 		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
-		       COALESCE(p.shop_phone,'')
+		       COALESCE(p.shop_phone,''),
+		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
+		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
+		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
+		       COALESCE(p.music_end_ms,0), COALESCE(p.location,'')
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.archived,false) = FALSE
 		  AND COALESCE(p.hidden,false) = FALSE
@@ -290,11 +294,16 @@ func GetFeed(c *gin.Context) {
 		var isProduct, contactRaonson bool
 		var price float64
 		var currency, productName, shopWhatsapp, shopPhone string
+		// Музика — пеш ин ҷо НАБУД: лентаи асосӣ суруди постро
+		// намефиристод, бинобар ин он танҳо дар профил мехонд.
+		var mTitle, mArtist, mURL, mArt, location string
+		var mTrack, mStart, mEnd int
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 			&hideLikes, &commentsOff,
 			&isProduct, &price, &currency, &productName,
-			&contactRaonson, &shopWhatsapp, &shopPhone)
+			&contactRaonson, &shopWhatsapp, &shopPhone,
+			&mTitle, &mArtist, &mURL, &mArt, &mTrack, &mStart, &mEnd, &location)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes, "commentsCount": comms,
 			"createdAt": createdAt, "media": nilToEmpty(media),
@@ -303,6 +312,8 @@ func GetFeed(c *gin.Context) {
 			"isProduct": isProduct, "price": price, "currency": currency,
 			"productName": productName, "contactRaonson": contactRaonson,
 			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
+			"musicTitle": mTitle, "musicArtist": mArtist, "location": location,
+			"song": songJSON(mTitle, mArtist, mArt, mURL, mTrack, mStart, mEnd),
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 		})
 	}

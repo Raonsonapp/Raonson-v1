@@ -275,15 +275,19 @@ func dispatch(cl *client, raw []byte) {
 		}
 		// Гирандаро аз chatID мегирем (он "idA_idB"-и мураттабшуда аст),
 		// то client натавонад паёмро ба каси дигар нависад.
-		if a, b, ok := strings.Cut(p.ChatID, "_"); ok {
-			switch cl.userID {
-			case a:
-				p.Receiver = b
-			case b:
-				p.Receiver = a
-			}
+		// Фиристанда бояд аъзои ҳамин чат бошад. Пеш, агар ӯ аъзо
+		// набуд, гиранда аз муштарӣ гирифта мешуд ва паём ба чати
+		// бегона навишта мешуд.
+		a, b, ok := strings.Cut(p.ChatID, "_")
+		switch {
+		case ok && cl.userID == a:
+			p.Receiver = b
+		case ok && cl.userID == b:
+			p.Receiver = a
+		default:
+			return
 		}
-		if p.Receiver == "" {
+		if p.Receiver == "" || p.Receiver == cl.userID {
 			return
 		}
 		if len([]rune(p.Text)) > 1000 {

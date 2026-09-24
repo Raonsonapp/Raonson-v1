@@ -86,6 +86,17 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Икони хурди огоҳинома (дар сатри болои телефон). Android онро
+             ҳамчун ниқоб мекашад: ҳар пиксели ношаффоф — сафед. Икони
+             рангаи барнома ба ҳамин сабаб «чоркунҷаи сафед» мешуд. Ин —
+             ҳарфи R-и логотип, сафед дар заминаи шаффоф. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+
         <!-- ✅ YANDEX ADS - ИН 2 ХАТРО ИЛОВА КУН -->
         <activity
             android:name="com.yandex.mobile.ads.interstitial.InterstitialAdActivity"

@@ -212,6 +212,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_calls.py
 
+      # Ҷавоби худкор: ба чати дорои таърих ҳам, як бор дар 24 соат.
+      - name: Санҷиши ҷавоби худкор
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_autoreply.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log
