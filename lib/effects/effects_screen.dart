@@ -34,7 +34,15 @@ class _EffectsScreenState extends State<EffectsScreen> {
   }
 
   Future<void> _use(EffectItem e) async {
-    await _repo.useEffect(e.id);
+    // Эффект танҳо баъди тасдиқи сервер (2xx) илова мешавад — пеш
+    // «Харидорӣ шуд ✓» ҳатто ҳангоми нарасидани ситора нишон дода мешуд.
+    final err = await _repo.useEffect(e.id);
+    if (!mounted) return;
+    if (err != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(err)));
+      return;
+    }
     await _repo.saveLocally(e.name, e.matrix);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -160,7 +168,7 @@ class _EffectsScreenState extends State<EffectsScreen> {
                 onPressed: () => _use(e),
                 child: Text(
                     e.isPremium
-                        ? 'Харидан ${e.price.toStringAsFixed(0)}'
+                        ? 'Харидан ${e.price.ceil()} ⭐'
                         : 'Истифода',
                     style: TextStyle(
                         color: e.isPremium ? Colors.black : AppColors.textPrimary,

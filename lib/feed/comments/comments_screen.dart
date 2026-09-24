@@ -14,8 +14,6 @@ import '../../widgets/verified_badge.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../gifts/gift_sheet.dart';
 import '../../ai/ai_tools.dart';
-import '../../core/services/subscription_service.dart';
-import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -292,37 +290,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
     return out;
   }
 
-  // AI ҷамъбасти шарҳҳо (Pro).
+  // AI ҷамъбасти шарҳҳо.
   Future<void> _summarize() async {
-    if (!SubscriptionService.instance.isPro) {
-      showModalBottomSheet(
-        context: context, backgroundColor: AppColors.surface,
-        shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        builder: (_) => SafeArea(child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 38),
-            const SizedBox(height: 10),
-            Text(tr('ui.58a616c99d'),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textPrimary,
-                    fontSize: 15, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 14),
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE100FF)),
-              onPressed: () { Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const SubscriptionScreen())); },
-              child: Text(tr('ui.a26ac78e3e'),
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            )),
-          ]),
-        )),
-      );
-      return;
-    }
+    // Барои ҳама кушода — обунаи пулакӣ ҳоло вуҷуд надорад.
     final text = _comments.take(40).map((c) => c.text).join('\n');
     if (text.trim().isEmpty) return;
     // Loader бо context-и худи диалог — то дар ҳар ҳолат дуруст пӯшида шавад

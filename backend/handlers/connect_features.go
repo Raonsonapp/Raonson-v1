@@ -5,13 +5,14 @@ package handlers
 //  reel report/not-interest/stats/comment-like/reply, story reply, notif prefs)
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"raonson/db"
 	mw "raonson/middleware"
-	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -347,13 +348,14 @@ func GetReelStats(c *gin.Context) {
 		return
 	}
 
-	var likes, comments, views, saves int
+	var likes, comments, views, saves, shares int
 	db.Pool.QueryRow(context.Background(),
 		`SELECT COALESCE(likes_count,0), COALESCE(comments_count,0),
 		        COALESCE(views_count,0),
-		        (SELECT COUNT(*) FROM reel_saves WHERE reel_id=$1)
+		        (SELECT COUNT(*) FROM reel_saves WHERE reel_id=$1),
+		        (SELECT COUNT(*) FROM reel_shares WHERE reel_id=$1)
 		 FROM reels WHERE id=$1`, rid).
-		Scan(&likes, &comments, &views, &saves)
+		Scan(&likes, &comments, &views, &saves, &shares)
 
 	// Миёнаи тамошо (ms) аз reel_watch.
 	var avgWatchMs int
@@ -361,13 +363,12 @@ func GetReelStats(c *gin.Context) {
 		`SELECT COALESCE(ROUND(AVG(watch_ms)),0)::int
 		 FROM reel_watch WHERE reel_id=$1`, rid).Scan(&avgWatchMs)
 
-	// shares — ҳоло ҷадвали shares нест → 0.
 	c.JSON(http.StatusOK, gin.H{
 		"views":      views,
 		"likes":      likes,
 		"comments":   comments,
 		"saves":      saves,
-		"shares":     0,
+		"shares":     shares, // пеш сахткод 0 буд, гарчанде reel_shares ҳаст
 		"avgWatchMs": avgWatchMs,
 	})
 }
@@ -397,30 +398,20 @@ func TrackReelWatch(c *gin.Context) {
 }
 
 // POST /reels/:id/comments/:commentId/like — toggle
+//
+// ⚠️ Пеш ба ҷадвали `reel_comment_likes` менавишт, вале шарҳҳо аз
+// `comment_likes` хонда мешуданд ва `likes_count` нав намешуд — лайк
+// ҳеҷ гоҳ дида намешуд. Акнун ҳамон роҳи лайки шарҳи пост.
 func LikeReelComment(c *gin.Context) {
-	myID := mw.UID(c)
-	cid := c.Param("commentId")
-	var exists bool
-	db.Pool.QueryRow(context.Background(),
-		`SELECT EXISTS(SELECT 1 FROM reel_comment_likes WHERE comment_id=$1 AND user_id=$2)`,
-		cid, myID).Scan(&exists)
-	if exists {
-		db.Pool.Exec(context.Background(),
-			`DELETE FROM reel_comment_likes WHERE comment_id=$1 AND user_id=$2`, cid, myID)
-		c.JSON(http.StatusOK, gin.H{"liked": false})
-		return
-	}
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO reel_comment_likes(comment_id, user_id)
-		 VALUES($1,$2) ON CONFLICT DO NOTHING`, cid, myID)
-	c.JSON(http.StatusOK, gin.H{"liked": true})
+	toggleCommentLike(c, c.Param("commentId"))
 }
 
 // POST /reels/:id/comments/:commentId/reply
+//
+// Ҳамон AddReelComment бо parentId. Пеш ин роҳи ҷудо на блок, на ҳисоби
+// пӯшида, на калимаҳои пинҳонро месанҷид, шумораи шарҳҳоро зиёд
+// намекард ва ба ҳеҷ кас хабар намедод.
 func ReplyReelComment(c *gin.Context) {
-	myID := mw.UID(c)
-	rid := c.Param("id")
-	parent := c.Param("commentId")
 	var b struct {
 		Text string `json:"text"`
 	}
@@ -428,24 +419,10 @@ func ReplyReelComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
 	}
-	b.Text = clampRunes(b.Text, 1000)
-	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Матн қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
-		return
-	}
-	var commentsOff bool
-	db.Pool.QueryRow(context.Background(),
-		`SELECT COALESCE(comments_off,false) FROM reels WHERE id=$1`, rid).Scan(&commentsOff)
-	if commentsOff {
-		c.JSON(http.StatusForbidden, gin.H{"message": "Шарҳҳо барои ин Reel хомӯш карда шудаанд"})
-		return
-	}
-	var newID string
-	db.Pool.QueryRow(context.Background(),
-		`INSERT INTO reel_comments(reel_id, user_id, text, parent_id)
-		 VALUES($1,$2,$3,$4) RETURNING id`, rid, myID, b.Text, parent).Scan(&newID)
-	c.JSON(http.StatusCreated, gin.H{"_id": newID, "text": b.Text, "parentId": parent})
+	buf, _ := json.Marshal(map[string]string{
+		"text": b.Text, "parentId": c.Param("commentId")})
+	c.Request.Body = io.NopCloser(bytes.NewReader(buf))
+	AddReelComment(c)
 }
 
 // PUT /reels/:id/caption — соҳиб caption-ро иваз мекунад
@@ -482,11 +459,18 @@ func ReplyStory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text required"})
 		return
 	}
-	var ownerID string
+	// Пеш ҳатто мавҷудияти сторис санҷида намешуд — ҷавоб ба сторияи
+	// нестбуда ё бегона ҳам сабт мешуд.
+	ownerID := canSeeStory(myID, sid)
+	if ownerID == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Сторис ёфт нашуд"})
+		return
+	}
 	var repliesOff bool
 	db.Pool.QueryRow(context.Background(),
-		`SELECT user_id, COALESCE(replies_off,false) FROM stories WHERE id=$1`,
-		sid).Scan(&ownerID, &repliesOff)
+		`SELECT COALESCE(replies_off,false) FROM stories WHERE id=$1`,
+		sid).Scan(&repliesOff)
+	b.Text = clampRunes(b.Text, 1000)
 	if repliesOff {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Ҷавобҳо хомӯш карда шудаанд"})
 		return
@@ -495,9 +479,7 @@ func ReplyStory(c *gin.Context) {
 		`INSERT INTO story_replies(story_id, from_user_id, text) VALUES($1,$2,$3)`,
 		sid, myID, b.Text)
 	if ownerID != "" && ownerID != myID {
-		db.Pool.Exec(context.Background(),
-			`INSERT INTO notifications(user_id, from_user_id, type, target_id)
-			 VALUES($1,$2,'story_reply',$3)`, ownerID, myID, sid)
+		notify(ownerID, myID, "story_reply", sid)
 		// Мисли Instagram: ҷавоби сторис ба DM-и соҳиб меравад (realtime).
 		chatID := sortedChatID(myID, ownerID)
 		var msgID string

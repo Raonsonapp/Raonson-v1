@@ -46,3 +46,18 @@ func TestStickerPositionClamped(t *testing.T) {
 		t.Errorf("ҷойгиршавӣ берун аз экран: %v,%v", s.X, s.Y)
 	}
 }
+
+func TestValidateAddYours(t *testing.T) {
+	now := time.Now()
+	if _, err := validateSticker(stickerInput{Kind: "addyours"}, now); err == nil {
+		t.Fatal("addyours without prompt and joinOf must fail")
+	}
+	s, err := validateSticker(stickerInput{Kind: "addyours", Prompt: "Акси аввал"}, now)
+	if err != nil || s.Prompt != "Акси аввал" {
+		t.Fatalf("new chain: %v %+v", err, s)
+	}
+	s, err = validateSticker(stickerInput{Kind: "addyours", JoinOf: "story-1"}, now)
+	if err != nil || s.JoinOf != "story-1" {
+		t.Fatalf("join: %v %+v", err, s)
+	}
+}

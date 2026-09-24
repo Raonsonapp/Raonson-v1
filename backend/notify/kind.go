@@ -36,6 +36,8 @@ const (
 	StoryAnswer  Kind = "story_answer"  // ҷавоб ба стикери «савол»
 	StoryQuiz    Kind = "story_quiz"    // ҷавоб ба викторина
 	StoryMention Kind = "story_mention" // шуморо дар сторис зикр кард
+	StoryAddYours Kind = "story_addyours" // ба занҷири «Навбати ту»-и шумо ҳамроҳ шуд
+	Gift          Kind = "gift"           // ба шумо ситора тӯҳфа кард
 	ReelLike     Kind = "reel_like"
 	ReelReply    Kind = "reel_comment"
 
@@ -128,6 +130,10 @@ var rules = map[Kind]Rule{
 	StoryAnswer:  {Normal, ChannelSocial, "messages", false},
 	StoryQuiz:    {Normal, ChannelSocial, "likes", true},
 	StoryMention: {High, ChannelSocial, "mentions", false},
+	// Ҳамроҳшавиҳо ҷамъ мешаванд — даҳ нафар як огоҳинома.
+	StoryAddYours: {Normal, ChannelSocial, "mentions", true},
+	// Тӯҳфа — пул аст; корбар бояд фавран бидонад.
+	Gift: {High, ChannelSocial, "likes", false},
 	StoryReply:   {Normal, ChannelSocial, "messages", false},
 	ReelLike:     {Normal, ChannelSocial, "likes", true},
 	ReelReply:    {Normal, ChannelSocial, "comments", true},

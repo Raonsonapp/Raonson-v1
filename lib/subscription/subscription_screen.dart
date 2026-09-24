@@ -1,10 +1,9 @@
 // lib/subscription/subscription_screen.dart
-// Raonson Pro (29.90 сом) ва Raonson Business (99.90 сом) — саҳифаи обуна.
-// Ҳамаи хусусиятҳо аз рӯи категория нишон дода мешаванд.
+// Саҳифаи обуна. Пардохт ҳоло вуҷуд надорад, бинобар ин экран рост
+// мегӯяд, ки обунаҳои пулакӣ дастрас нестанд ва функсияҳо ройгонанд.
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
-import '../core/i18n/strings.dart';
 
 class _Group {
   final String emoji, title;
@@ -14,7 +13,7 @@ class _Group {
 
 const List<_Group> _proGroups = [
   _Group('👤', 'Профил', [
-    'Badge «PRO»', 'Cover Profile (баннер)', 'Аниматсияи махсуси профил',
+    'Cover Profile (баннер)', 'Аниматсияи махсуси профил',
     'Бештар аз 5 линк дар био', 'Highlights бемаҳдуд',
   ]),
   _Group('📊', 'Аналитика', [
@@ -152,52 +151,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   late bool _biz = widget.business;
 
   List<_Group> get _groups => _biz ? _bizGroups : _proGroups;
-  String get _price => _biz ? '99.90' : '29.90';
-  String get _name  => _biz ? 'Raonson Business' : 'Raonson Pro';
-  List<Color> get _grad => _biz
-      ? const [Color(0xFFF7971E), Color(0xFFFFD200)]
-      : const [Color(0xFF7F00FF), Color(0xFFE100FF)];
-
-  void _subscribe() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 14),
-          Text('Фаъол кардани $_name',
-              style: TextStyle(color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold, fontSize: 16)),
-          Text(tr('subscription.perMonth', {'n': _price}),
-              style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Icon(AppIcons.star_rounded,
-                size: 48, color: AppColors.neonBlue),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-                'Пардохт тавассути Google Play ба зудӣ фаъол мешавад. '
-                'Мо дар ҳоли ҳамкорӣ бо Google Play Billing ҳастем.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
-          ),
-          const SizedBox(height: 20),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(tr('ui.871f022a8e'),
-                style: TextStyle(color: AppColors.neonBlue, fontSize: 15)),
-          ),
-          const SizedBox(height: 12),
-        ])),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -211,82 +164,53 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               icon: Icon(AppIcons.arrow_back_ios_new_rounded,
                   color: AppColors.textPrimary, size: 20),
               onPressed: () => Navigator.pop(context)),
-          title: Text(_name,
+          title: Text('Обуна',
               style: TextStyle(color: AppColors.textPrimary,
                   fontSize: 16, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         SliverToBoxAdapter(child: Column(children: [
-          // Hero
+          // Рост мегӯем: пардохт ҳоло нест, пас нарх ва тугмаи «Обуна
+          // шудан» нишон дода намешаванд — функсияҳо ройгон кушодаанд.
           Container(
+            width: double.infinity,
             margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: _grad,
-                  begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(20),
-            ),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: AppColors.card,
+                borderRadius: BorderRadius.circular(18)),
             child: Column(children: [
-              Icon(_biz ? AppIcons.business_center_rounded : AppIcons.star_rounded,
-                  color: Colors.white, size: 44),
+              Icon(AppIcons.star_rounded, color: AppColors.neonBlue, size: 40),
               const SizedBox(height: 10),
-              Text(_name,
-                  style: const TextStyle(color: Colors.white,
-                      fontSize: 24, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(_biz
-                  ? 'Барои бизнес ва брендҳо — фурӯш, реклама, CRM'
-                  : 'Барои creator-ҳо — аналитика, AI, дизайн, амният',
+              Text('Обунаҳои пулакӣ ҳоло дастрас нестанд',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13)),
-              const SizedBox(height: 12),
-              Text(tr('subscription.price', {'n': _price}),
-                  style: const TextStyle(color: Colors.white,
-                      fontSize: 28, fontWeight: FontWeight.w900)),
-              Text(tr('ui.bc3b3c9c55'),
-                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: AppColors.textPrimary,
+                      fontSize: 17, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text('Ҳамаи функсияҳои зерин ҳозир барои ҳама ройгон '
+                  'кушодаанд. Ягон пардохт талаб карда намешавад.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textFaint,
+                      fontSize: 13, height: 1.35)),
             ]),
           ),
-          // Plan toggle
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(color: AppColors.card,
                 borderRadius: BorderRadius.circular(12)),
             child: Row(children: [
-              _toggle('Pro', !_biz, () => setState(() => _biz = false)),
-              _toggle('Business', _biz, () => setState(() => _biz = true)),
+              _toggle('Creator', !_biz, () => setState(() => _biz = false)),
+              _toggle('Бизнес', _biz, () => setState(() => _biz = true)),
             ]),
           ),
           const SizedBox(height: 16),
         ])),
-        // Feature groups
         SliverList(delegate: SliverChildBuilderDelegate(
           (ctx, i) => _groupCard(_liveGroups[i]),
           childCount: _liveGroups.length,
         )),
-        const SliverToBoxAdapter(child: SizedBox(height: 110)),
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
       ]),
-      bottomSheet: SafeArea(
-        child: Container(
-          color: AppColors.bg,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _grad.last,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-              ),
-              onPressed: _subscribe,
-              child: Text(tr('ui.342b7f567d'),
-                  style: TextStyle(color: Colors.white,
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -297,7 +221,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: active ? _grad.last : Colors.transparent,
+          color: active ? AppColors.neonBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
         ),
         alignment: Alignment.center,
@@ -355,10 +279,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 }
 
-// Функсияҳое ки ҲОЗИР воқеан фаъоланд (сабз ✓); дигарон «ба зудӣ».
+// Функсияҳое ки ҲОЗИР воқеан фаъоланд; дигарон умуман нишон дода намешаванд.
+// «PRO»-badge ва Priority Support нестанд — онҳо вуҷуд надоранд.
 const Set<String> _kAvailable = {
   // Pro
-  'Badge «PRO»', 'Cover Profile (баннер)', 'Бештар аз 5 линк дар био',
+  'Cover Profile (баннер)', 'Бештар аз 5 линк дар био',
   'Highlights бемаҳдуд',
   'Боздидҳои профил', 'Беҳтарин постҳо', 'Афзоиши пайравон',
   'AI барои навиштани Caption', 'AI барои интихоби Hashtag',
@@ -366,7 +291,6 @@ const Set<String> _kAvailable = {
   'AI барои ҷамъбасти шарҳҳо',
   'Schedule кардани пост', 'Insights-и касбӣ',
   'Login History', 'Дастгоҳҳои фаъол', 'PIN барои Chat',
-  'Нишони Pro дар профил', 'Priority Support',
   // Business
   'Анбор (Inventory)', 'Каталоги бемаҳдуд', 'Категорияҳои маҳсулот',
   'Фурӯш аз рӯи рӯз/ҳафта/моҳ', 'Даромад', 'Top Products',

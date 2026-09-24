@@ -15,8 +15,6 @@ import '../../models/note_model.dart';
 import '../../core/music/music_picker.dart';
 import '../profile_repository.dart';
 import 'edit_profile_controller.dart';
-import '../../core/services/subscription_service.dart';
-import '../../subscription/subscription_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
 
@@ -164,19 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  bool _requirePro() {
-    if (SubscriptionService.instance.isPro) return true;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(tr('ui.868ba187c7')),
-      action: SnackBarAction(label: tr('ui.538572f3c1'),
-          onPressed: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => const SubscriptionScreen()))),
-    ));
-    return false;
-  }
-
   Future<void> _pickCover() async {
-    if (!_requirePro()) return;
     final file = await MediaPicker.pickImageOnly();
     if (file == null || !mounted) return;
     setState(() => _uploadingCover = true);
@@ -191,7 +177,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _addLink() async {
-    if (!_requirePro()) return;
     if (_ctrl.links.length >= 20) return;
     final titleCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
@@ -309,13 +294,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Text(tr('ui.3bc61528ac'), style: TextStyle(color: Color(0xFF0095F6), fontSize: 13)),
         const SizedBox(height: 24),
 
-        // Cover banner (Pro)
+        // Cover banner
         Row(children: [
           Text(tr('ui.365a019539'), style: TextStyle(
               color: AppColors.textPrimary.withOpacity(0.5),
               fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 6),
-          const _ProChip(),
         ]),
         const SizedBox(height: 6),
         GestureDetector(
@@ -427,13 +410,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             : _MusicCard(song: _bioSong!, onChange: _openMusicPicker, onRemove: () => setState(() => _bioSong = null)),
         const SizedBox(height: 20),
 
-        // Bio links (Pro)
+        // Bio links
         Row(children: [
           Text(tr('ui.7e447a9347'), style: TextStyle(
               color: AppColors.textPrimary.withOpacity(0.5),
               fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 6),
-          const _ProChip(),
           const Spacer(),
           Text('${_ctrl.links.length}/20',
               style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
@@ -542,21 +523,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Widget _label(String t) => Align(alignment: Alignment.centerLeft,
     child: Text(t, style: TextStyle(color: AppColors.textPrimary.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w600)));
-}
-
-class _ProChip extends StatelessWidget {
-  const _ProChip();
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-          colors: [Color(0xFF7F00FF), Color(0xFFE100FF)]),
-      borderRadius: BorderRadius.circular(5),
-    ),
-    child: const Text('PRO', style: TextStyle(color: Colors.white,
-        fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
-  );
 }
 
 class _AddMusicTile extends StatelessWidget {

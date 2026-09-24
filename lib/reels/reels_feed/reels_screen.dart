@@ -23,6 +23,8 @@ import '../../core/analytics/analytics_service.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/links/deep_links.dart';
 import '../../chat/share/share_to_chat_row.dart';
+import '../../core/services/media_saver.dart';
+import '../../feed_ai/why_this_sheet.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
@@ -909,7 +911,18 @@ class _ReelItemState extends State<_ReelItem> {
     setState(() => _downloading = true);
     _ctrl?.pause();
     try {
-      await widget.onDownload();
+      // Реклама танҳо иҷозат медиҳад; худи файлро баъд воқеан захира
+      // мекунем — пеш баъди реклама ҳеҷ чиз зеркашӣ намешуд.
+      final allowed = await widget.onDownload();
+      if (allowed && mounted) {
+        if (_isEmbed) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Видеои беруна (YouTube ва ғ.) зеркашӣ намешавад')));
+        } else {
+          await saveMediaWithFeedback(context, widget.reel.videoUrl,
+              name: widget.reel.user.username);
+        }
+      }
     } finally {
       if (mounted) {
         setState(() => _downloading = false);
@@ -1038,9 +1051,9 @@ class _ReelItemState extends State<_ReelItem> {
         }),
         _menuItem(AppIcons.info_outline_rounded, tr('reels.whyThisReel'), () {
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(tr('reels.shownByInterest')),
-              duration: Duration(seconds: 3)));
+          // Сабаби воқеӣ аз сервер, мисли постҳо — на матни доимӣ.
+          showWhyThisSheet(context,
+              contentType: 'reel', contentId: widget.reel.id);
         }),
         _menuItem(AppIcons.flag_outlined, tr('reels.reportContent'), () {
           Navigator.pop(context);
@@ -1382,13 +1395,21 @@ class _ReelItemState extends State<_ReelItem> {
       if (!_paused) _ctrl?.play();
       return;
     }
-    await ApiClient.instance
-        .post('/reels/${widget.reel.id}/report', body: {'reason': reason});
+    // «Фиристода шуд» танҳо вақте ки сервер воқеан қабул кард.
+    var ok = false;
+    try {
+      final r = await ApiClient.instance
+          .post('/reels/${widget.reel.id}/report', body: {'reason': reason});
+      ok = r.statusCode >= 200 && r.statusCode < 300;
+    } catch (_) {}
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(tr('ui.0741b6783e')),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2)));
+      ScaffoldMessenger.of(context).showSnackBar(ok
+          ? SnackBar(
+              content: Text(tr('ui.0741b6783e')),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2))
+          : const SnackBar(
+              content: Text('Шикоят фиристода нашуд. Боз кӯшиш кунед.')));
     }
     if (!_paused) _ctrl?.play();
   }
@@ -1543,10 +1564,15 @@ class _ReelItemState extends State<_ReelItem> {
     });
   }
 
-  Future<void> _sendToDM(String url) async {
-    Navigator.pushNamed(context, '/messages',
-        arguments: {'shareUrl': url});
-  }
+  // Рилсро воқеан ба чат мефиристад. Пеш рӯйхати чатҳо кушода мешуд
+  // ва `shareUrl` дар роҳ гум мешуд — ҳеҷ чиз фиристода намешуд.
+  Future<void> _sendToDM(String url) => ShareToChatRow.show(context,
+        kind: 'reel',
+        contentId: widget.reel.id,
+        shareUrl: url,
+        thumbUrl: widget.reel.thumbnailUrl,
+        authorUsername: widget.reel.user.username,
+      );
 
   String _fmt(int n) {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';

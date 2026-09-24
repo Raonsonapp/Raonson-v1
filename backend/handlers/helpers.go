@@ -107,6 +107,31 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 	}, nil
 }
 
+// viewAs — профил, чунон ки ШАХСИ ДИГАР мебинад.
+//
+// Пеш ҳар кас рақами телефон, ҳолати 2FA ва «охирин бор онлайн»-и
+// корбари дигарро медид — ҳатто агар ӯ «Ҳолати фаъолият»-ро хомӯш
+// карда бошад.
+func viewAs(u gin.H, viewerID string) gin.H {
+	id, _ := u["id"].(string)
+	if id == "" || id == viewerID {
+		return u
+	}
+	delete(u, "phone")
+	delete(u, "twoFactor")
+	if vis, _ := u["activityStatus"].(bool); !vis || !viewerShowsActivity(viewerID) {
+		u["lastSeen"] = nil
+	}
+	return u
+}
+
+func viewerShowsActivity(uid string) bool {
+	vis := true
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(activity_status,true) FROM users WHERE id=$1`, uid).Scan(&vis)
+	return vis
+}
+
 func getUserByID(id string) (gin.H, error) {
 	row := db.Pool.QueryRow(context.Background(),
 		userSelectSQL+" WHERE id=$1", id)

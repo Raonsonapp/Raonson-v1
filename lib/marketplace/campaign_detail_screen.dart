@@ -1,6 +1,7 @@
 // lib/marketplace/campaign_detail_screen.dart
 // Тафсили кампания: пардохт, интихоби эҷодкорон, тасдиқ, натиҷа.
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app/app_theme.dart';
 import '../core/i18n/strings.dart';
@@ -66,14 +67,27 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       final intent = await _repo.startPayment(widget.campaignId);
       await _load();
       if (!mounted) return;
-      // Агар provider саҳифаи пардохт дошта бошад, корбар ба он
-      // мегузарад. Ҳоло provider-и воқеӣ пайваст нашудааст, бинобар ин
-      // танҳо ҳолати воқеӣ нишон дода мешавад — ҳеҷ «пардохт шуд»-и сохта.
-      showMarketplaceToast(
-          context,
-          intent.redirectUrl.isEmpty
-              ? tr('mp.paymentPending')
-              : tr('mp.paymentStarted'));
+      // Агар provider саҳифаи пардохт дошта бошад, корбарро воқеан ба он
+      // мебарем — вагарна «пардохт оғоз шуд» мегуфтем ва ҳеҷ чиз намекушод.
+      // Бе redirectUrl танҳо ҳолати воқеӣ — ҳеҷ «пардохт шуд»-и сохта.
+      if (intent.redirectUrl.isEmpty) {
+        showMarketplaceToast(context, tr('mp.paymentPending'));
+        return;
+      }
+      final uri = Uri.tryParse(intent.redirectUrl);
+      var opened = false;
+      if (uri != null) {
+        try {
+          opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      if (opened) {
+        showMarketplaceToast(context, tr('mp.paymentStarted'));
+      } else {
+        showMarketplaceToast(context, 'Саҳифаи пардохт кушода нашуд',
+            error: true);
+      }
     } catch (e) {
       if (!mounted) return;
       showMarketplaceToast(context, e.toString(), error: true);

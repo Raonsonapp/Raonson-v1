@@ -8,6 +8,7 @@ import '../core/ui/app_icons.dart';
 import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
 class PromoCodesScreen extends StatefulWidget {
   const PromoCodesScreen({super.key});
@@ -18,13 +19,16 @@ class PromoCodesScreen extends StatefulWidget {
 class _PromoCodesState extends State<PromoCodesScreen> {
   List<Map<String, dynamic>> _promos = [];
   bool _loading = true;
+  // Хатои шабака ≠ рӯйхати холӣ: бе ин корбар «ҳеҷ чиз нест» медид.
+  bool _error = false;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
     if (!mounted) return;
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
+    var failed = true;
     try {
       final r = await ApiClient.instance.get('/shop/promos')
           .timeout(const Duration(seconds: 15));
@@ -32,14 +36,27 @@ class _PromoCodesState extends State<PromoCodesScreen> {
         final b = jsonDecode(r.body);
         final list = (b['promos'] ?? []) as List;
         _promos = list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+        failed = false;
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() { _loading = false; _error = failed; });
   }
 
   Future<void> _delete(String id) async {
-    setState(() => _promos.removeWhere((p) => p['id'] == id));
-    try { await ApiClient.instance.delete('/shop/promos/$id'); } catch (_) {}
+    // Фавран нест мекунем; агар сервер рад кунад, промокод бармегардад —
+    // вагарна он дар сервер фаъол мемонд, вале дар экран набуд.
+    final idx = _promos.indexWhere((p) => p['id'] == id);
+    if (idx < 0) return;
+    final removed = _promos[idx];
+    setState(() => _promos.removeAt(idx));
+    try {
+      await ApiClient.instance.deleteOk('/shop/promos/$id');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _promos.insert(idx.clamp(0, _promos.length), removed));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Промокод нест нашуд. Боз кӯшиш кунед.')));
+    }
   }
 
   Future<void> _create() async {
@@ -119,6 +136,8 @@ class _PromoCodesState extends State<PromoCodesScreen> {
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _error
+              ? ErrorState(message: 'Промокодҳо бор нашуданд', onRetry: _load)
           : _promos.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.tag_rounded, color: AppColors.textFaint, size: 44),

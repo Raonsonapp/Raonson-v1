@@ -42,11 +42,12 @@ func GetUserByID(c *gin.Context) {
 	}
 
 	u, err := getUserByID(id)
-	if err != nil {
+	if err != nil || IsBlockedBetween(myID, id) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
 		return
 	}
 	setIsFollowing(u, myID, id)
+	viewAs(u, myID)
 	// «Дӯстдоштаҳо» — то профил тугмаи дурустро нишон диҳад.
 	if myID != "" && myID != id {
 		var fav bool

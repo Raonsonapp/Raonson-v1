@@ -130,10 +130,21 @@ func GetProfile(c *gin.Context) {
 	}
 
 	uid := u["id"].(string)
+	// Бастагон профилро умуман намебинанд (мисли Instagram).
+	if IsBlockedBetween(myID, uid) {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Profile not found"})
+		return
+	}
 	clearExpiredNote(uid, u)
 	setIsFollowing(u, myID, uid)
+	viewAs(u, myID)
 
-	posts := postsForUser(uid, 30)
+	// Ҳисоби пӯшида: постҳо танҳо ба обунаҳо. Пеш ин ҷо 30 пост ба
+	// ҳар кас бармегашт, ҳол он ки GetUserPosts онро месанҷид.
+	posts := []gin.H{}
+	if ok, _ := CanSeeProfileContent(myID, uid); ok {
+		posts = postsForUser(uid, 30)
+	}
 	result := gin.H{"user": u, "posts": posts}
 
 	if b, err := json.Marshal(result); err == nil {

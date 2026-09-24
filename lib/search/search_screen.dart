@@ -1509,15 +1509,19 @@ class _FeedCardState extends State<_FeedCard> {
   Future<void> _report() async {
     final r = await ReportDialog.showWithDescription(context);
     if (r == null || !mounted) return;
+    // «Фиристода шуд» танҳо ҳангоми 2xx — вагарна хато нишон медиҳем.
+    var ok = false;
     try {
-      await ApiClient.instance.post(
+      final res = await ApiClient.instance.post(
           _isReel ? '/reels/$_id/report' : '/posts/$_id/report',
           body: {'reason': r.reason, 'description': r.description});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Шикоят фиристода шуд')));
-      }
+      ok = res.statusCode >= 200 && res.statusCode < 300;
     } catch (_) {}
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Шикоят фиристода шуд'
+            : 'Шикоят фиристода нашуд. Боз кӯшиш кунед.')));
   }
 
   Future<void> _deleteMine() async {

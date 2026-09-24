@@ -8,6 +8,7 @@ import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
 class MyPromotionsScreen extends StatefulWidget {
   const MyPromotionsScreen({super.key});
@@ -17,6 +18,8 @@ class MyPromotionsScreen extends StatefulWidget {
 
 class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
   bool _loading = true;
+  // Хатои шабака ≠ «ҳеҷ реклама нест» — корбар бояд фарқро бубинад.
+  bool _error = false;
   List<Map<String, dynamic>> _items = [];
 
   @override
@@ -26,23 +29,34 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
+    var failed = true;
     try {
       final res = await ApiClient.instance.get('/promotions/');
       if (res.statusCode < 400) {
         final body = jsonDecode(res.body);
         final list = (body['promotions'] as List?) ?? [];
         _items = list.cast<Map<String, dynamic>>();
+        failed = false;
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() { _loading = false; _error = failed; });
   }
 
   Future<void> _delete(String id) async {
+    // Фавран аз рӯйхат мегирем; агар сервер нест накунад, бармегардонем.
+    final idx = _items.indexWhere((e) => e['id'] == id);
+    if (idx < 0) return;
+    final removed = _items[idx];
+    setState(() => _items.removeAt(idx));
     try {
-      await ApiClient.instance.delete('/promotions/$id');
-      setState(() => _items.removeWhere((e) => e['id'] == id));
-    } catch (_) {}
+      await ApiClient.instance.deleteOk('/promotions/$id');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _items.insert(idx.clamp(0, _items.length), removed));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Нест нашуд. Боз кӯшиш кунед.')));
+    }
   }
 
   ({String label, Color color}) _status(String s) {
@@ -67,6 +81,8 @@ class _MyPromotionsScreenState extends State<MyPromotionsScreen> {
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.storyEnd))
+          : _error
+              ? ErrorState(message: 'Рекламаҳо бор нашуданд', onRetry: _load)
           : _items.isEmpty
               ? Center(
                   child: Padding(

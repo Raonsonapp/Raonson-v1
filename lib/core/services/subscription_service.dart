@@ -1,6 +1,8 @@
 // lib/core/services/subscription_service.dart
-// Ҳолати обунаи Raonson Pro / Business. Ҳозир парчами маҳаллӣ;
-// баъдан ба пардохти воқеӣ (Alif, Душанбе Сити, корт) васл мешавад.
+// Ҳолати обунаи Raonson Pro / Business.
+// Пардохт ҳоло вуҷуд надорад, бинобар ин ҳеҷ функсия бо ин санҷиш қулф
+// карда намешавад (ҳама ройгон) ва нишони PRO нишон дода намешавад.
+// setTier танҳо баъди пайдо шудани пардохти воқеӣ даъват шавад.
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

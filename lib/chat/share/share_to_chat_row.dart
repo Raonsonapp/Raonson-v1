@@ -65,6 +65,44 @@ class ShareToChatRow extends StatefulWidget {
     );
   }
 
+  /// Варақаи «Фиристодан дар Direct» барои пост/рилс/сторис.
+  ///
+  /// Пеш тугма рӯйхати чатҳоро мекушод ва линк дар роҳ гум мешуд —
+  /// ҳеҷ чиз фиристода намешуд. Ин ҳамон сатри корти пешнамоисро
+  /// нишон медиҳад, ки мӯҳтаворо воқеан ба чат мефиристад.
+  static Future<void> show(
+    BuildContext context, {
+    required String kind,
+    required String contentId,
+    required String shareUrl,
+    String thumbUrl = '',
+    String authorUsername = '',
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 10),
+          Container(width: 40, height: 4,
+              decoration: BoxDecoration(color: AppColors.textFaint,
+                  borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 12),
+          Text('Фиристодан ба…',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 16, fontWeight: FontWeight.w700)),
+          ShareToChatRow(
+            kind: kind, contentId: contentId, shareUrl: shareUrl,
+            thumbUrl: thumbUrl, authorUsername: authorUsername,
+          ),
+          const SizedBox(height: 12),
+        ]),
+      ),
+    );
+  }
+
   @override
   State<ShareToChatRow> createState() => _ShareToChatRowState();
 }

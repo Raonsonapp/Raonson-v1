@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"time"
 	"context"
 	"net/http"
 	"strings"
@@ -82,7 +83,14 @@ func RevokeAllSessions(c *gin.Context) {
 	myID := mw.UID(c)
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM login_sessions WHERE user_id=$1`, myID)
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	// ⚠️ Пеш танҳо таърих пок мешуд — ҳамаи дастгоҳҳо дар ҳисоб
+	// мемонданд. Акнун token-ҳо бекор мешаванд; ин дастгоҳ token-и нав
+	// мегирад.
+	mw.RevokeTokens(myID)
+	c.JSON(http.StatusOK, gin.H{"ok": true,
+		"accessToken":  makeJWT(myID, mw.JWTSecret(), 1*time.Hour),
+		"refreshToken": makeJWT(myID, mw.RefreshSecret(), 30*24*time.Hour),
+	})
 }
 
 // PUT /profile/auto-reply {text} → танзими ҷавоби худкор

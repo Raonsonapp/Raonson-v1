@@ -8,6 +8,7 @@ import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -23,6 +24,10 @@ class _FriendsScreenState extends State<FriendsScreen>
   List<_UserItem> _requests    = [];
   List<_UserItem> _suggestions = [];
   bool _loading = true;
+  // Хатои шабака ≠ «дархост/пешниҳод нест». Ҳар таб алоҳида,
+  // чунки ду дархости ҷудо ҳастанд.
+  bool _reqError = false;
+  bool _sugError = false;
   List<_UserItem> _contactUsers = [];
   bool _loadingContacts = false;
 
@@ -40,7 +45,7 @@ class _FriendsScreenState extends State<FriendsScreen>
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _reqError = false; _sugError = false; });
     try {
       final reqRes = await ApiClient.instance
           .get('/follow/requests').timeout(const Duration(seconds: 8));
@@ -58,6 +63,8 @@ class _FriendsScreenState extends State<FriendsScreen>
         }
       }
 
+      final reqFailed = reqRes.statusCode != 200;
+      var sugFailed = false;
       final sugs = <_UserItem>[];
       if (sugRes.statusCode == 200) {
         final body = jsonDecode(sugRes.body);
@@ -65,10 +72,12 @@ class _FriendsScreenState extends State<FriendsScreen>
         for (final e in list) { sugs.add(_UserItem.fromJson(e as Map<String, dynamic>)); }
       } else {
         // ── Fallback: аз explore корбаронро мегирем ─────────────
+        sugFailed = true;
         try {
           final expRes = await ApiClient.instance
               .get('/explore').timeout(const Duration(seconds: 8));
           if (expRes.statusCode == 200) {
+            sugFailed = false;
             final body = jsonDecode(expRes.body) as Map<String, dynamic>;
             // explore posts → unique users
             final posts = (body['posts'] ?? body['data'] ?? []) as List;
@@ -99,10 +108,14 @@ class _FriendsScreenState extends State<FriendsScreen>
           _requests    = reqs;
           _suggestions = sugs;
           _loading     = false;
+          _reqError    = reqFailed;
+          _sugError    = sugFailed;
         });
       }
     } catch (_) {
-      if (mounted) { setState(() => _loading = false); }
+      if (mounted) {
+        setState(() { _loading = false; _reqError = true; _sugError = true; });
+      }
     }
   }
 
@@ -274,7 +287,9 @@ class _FriendsScreenState extends State<FriendsScreen>
               controller: _tabs,
               children: [
                 // ── Дархостҳо ────────────────────────────────
-                _requests.isEmpty
+                _reqError
+                    ? ErrorState(message: 'Дархостҳо бор нашуданд', onRetry: _load)
+                    : _requests.isEmpty
                     ? _empty('Дархости пайравӣ нест')
                     : RefreshIndicator(
                         onRefresh: _load,
@@ -291,7 +306,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                       ),
 
                 // ── Пешниҳодҳо ──────────────────────────────
-                _suggestions.isEmpty
+                _sugError
+                    ? ErrorState(message: 'Пешниҳодҳо бор нашуданд', onRetry: _load)
+                    : _suggestions.isEmpty
                     ? _empty('Пешниҳоди нав нест')
                     : RefreshIndicator(
                         onRefresh: _load,

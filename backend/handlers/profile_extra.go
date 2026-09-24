@@ -304,7 +304,7 @@ func UpdateHighlight(c *gin.Context) {
 		str := string(raw)
 		itemsJSON = &str
 	}
-	_, err := db.Pool.Exec(context.Background(), `
+	tag, err := db.Pool.Exec(context.Background(), `
 		UPDATE highlights SET
 		  title     = COALESCE($1, title),
 		  cover_url = COALESCE($2, cover_url),
@@ -316,6 +316,11 @@ func UpdateHighlight(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
+	// Бегона ё нест — пеш ҳам 200 «тағйир ёфт» бармегашт.
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Ёфт нашуд"})
+		return
+	}
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"updated": true})
 }
@@ -323,9 +328,13 @@ func UpdateHighlight(c *gin.Context) {
 // DELETE /highlights/:id
 func DeleteHighlight(c *gin.Context) {
 	myID := mw.UID(c)
-	db.Pool.Exec(context.Background(),
+	tag, err := db.Pool.Exec(context.Background(),
 		`DELETE FROM highlights WHERE id=$1 AND user_id=$2::text`,
 		c.Param("id"), myID)
+	if err != nil || tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Ёфт нашуд"})
+		return
+	}
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"deleted": true})
 }

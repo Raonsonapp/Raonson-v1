@@ -13,7 +13,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/music/music_bar.dart';
 import '../models/post_model.dart';
@@ -29,8 +28,11 @@ import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
 import '../chat/share/share_to_chat_row.dart';
+import '../core/services/media_saver.dart';
 import '../core/utils/time_ago.dart';
 import 'story_sticker.dart';
+import 'add_yours.dart';
+import '../create/create_story/create_story_screen.dart';
 import '../core/ui/r_icon.dart';
 
 class StoryGroupViewer extends StatefulWidget {
@@ -391,27 +393,24 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
             onTap: () { Navigator.pop(context); _resume(); _saveMedia(); }),
         _menuRow(tr('story.shareAction'),
             onTap: () { Navigator.pop(context); _shareStory(); }),
-        _menuRow(tr('story.settings'), onTap: () async {
+        // Як тугмаи ягона бо ҳолати ҷорӣ. Пеш «Танзимот» ва «Ҷавобҳоро
+        // хомӯш кун» ҳарду ҳамон як toggle-ро мезаданд ва ҳолатро намегуфтанд.
+        _menuRow(_repliesOffNow
+                ? tr('story.enableReplies')
+                : tr('story.disableComments'),
+            onTap: () async {
             Navigator.pop(context);
+            final id = _current.id;
             try {
               final res = await ApiClient.instance
-                  .post('/stories/${_current.id}/toggle-replies');
+                  .post('/stories/$id/toggle-replies');
               if (res.statusCode >= 400) throw Exception();
               final b = jsonDecode(res.body) as Map<String, dynamic>;
-              _toast(b['repliesOff'] == true
-                  ? tr('story.repliesOff')
-                  : tr('story.repliesOn'));
+              final off = b['repliesOff'] == true;
+              if (mounted) setState(() => _repliesOffById[id] = off);
+              _toast(off ? tr('story.repliesOff') : tr('story.repliesOn'));
             } catch (_) { _toast(tr('common.error')); }
             if (mounted) _resume();
-          }),
-        _menuRow(tr('story.disableComments'), onTap: () async {
-            Navigator.pop(context);
-            try {
-              final okRes = await ApiClient.instance.post('/stories/${_current.id}/toggle-replies');
-              if (okRes.statusCode >= 400) throw Exception();
-              _toast(tr('story.repliesUpdated'));
-            } catch (_) { _toast(tr('common.error')); }
-            _resume();
           }),
         const SizedBox(height: 8),
       ])),
@@ -511,17 +510,22 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
         '/stories/${_current.id}/report',
         body: {'reason': result.reason, 'description': result.description});
       if (okRes.statusCode >= 400) throw Exception();
-    } catch (_) {}
-    if (mounted) _toast('Шикоят фиристода шуд');
+      _toast('Шикоят фиристода шуд');
+    } catch (_) {
+      // Танҳо вақте «фиристода шуд», ки сервер воқеан қабул кард.
+      _toast('Шикоят фиристода нашуд. Боз кӯшиш кунед.');
+    }
     _resume();
   }
 
-  void _saveMedia() {
-    final u = _current.mediaUrl;
-    if (u.isNotEmpty) {
-      launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication);
-    }
-  }
+  // Воқеан ба дастгоҳ захира мекунад — пеш танҳо браузер кушода мешуд.
+  Future<void> _saveMedia() => saveMediaWithFeedback(context, _current.mediaUrl,
+      name: _current.user.username);
+
+  /// Ҳолати ҷавобҳо баъди toggle дар ҳамин сессия (модел final аст).
+  final Map<String, bool> _repliesOffById = {};
+  bool get _repliesOffNow =>
+      _repliesOffById[_current.id] ?? _current.repliesOff;
 
   void _toast(String msg) {
     if (!mounted) return;
@@ -782,6 +786,26 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                   onOpenAnswers: () async {
                     _pause();
                     await showStickerAnswers(context, _current.id);
+                    if (mounted) _resume();
+                  },
+                  onOpenChain: () async {
+                    _pause();
+                    await showAddYoursChain(context,
+                        st.chainId.isEmpty ? _current.id : st.chainId);
+                    if (mounted) _resume();
+                  },
+                  onAddYours: () async {
+                    // «Навбати ман»: сторияи нав бо ҳамон стикер — сервер
+                    // мавзӯъ ва занҷирро аз `joinOf` мегирад.
+                    _pause();
+                    await Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => CreateStoryScreen(initialSticker: {
+                        'kind': 'addyours',
+                        'prompt': st.prompt,
+                        'joinOf': _current.id,
+                        'x': 0.5, 'y': 0.62,
+                      }),
+                    ));
                     if (mounted) _resume();
                   },
                 ),

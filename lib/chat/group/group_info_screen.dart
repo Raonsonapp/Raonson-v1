@@ -13,6 +13,7 @@ import '../../widgets/avatar.dart';
 import 'group_model.dart';
 import 'group_repository.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/links/deep_links.dart';
 
 class GroupInfoScreen extends StatefulWidget {
   final GroupModel group;
@@ -29,7 +30,7 @@ class _GroupInfoScreenState extends State<GroupInfoScreen> {
 
   String get _gid => widget.group.id;
   String get _myId => UserSession.userId ?? '';
-  String get _inviteLink => 'https://raonson.app/g/$_inviteToken';
+  String get _inviteLink => DeepLinks.groupInvite(_inviteToken);
 
   @override
   void initState() {

@@ -46,6 +46,12 @@ func GetStories(c *gin.Context) {
 		        OR (COALESCE(s.audience,'all') = 'close' AND EXISTS (
 		              SELECT 1 FROM close_friends cf
 		              WHERE cf.user_id = s.user_id AND cf.friend_id = $1::text)) )
+		  -- Бастагон ва «хомӯшшудагон» дар ҳалқаи сторис нестанд.
+		  AND ( s.user_id = $1::text OR NOT EXISTS (SELECT 1 FROM blocks b
+		        WHERE (b.blocker_id = $1::text AND b.blocked_id = s.user_id)
+		           OR (b.blocker_id = s.user_id AND b.blocked_id = $1::text)) )
+		  AND ( s.user_id = $1::text OR NOT EXISTS (SELECT 1 FROM muted_users mu
+		        WHERE mu.user_id = $1::text AND mu.muted_id = s.user_id) )
 		ORDER BY s.created_at DESC`, myID, targetID)
 	c.JSON(http.StatusOK, scanStoryRows(rows, myID))
 }
@@ -202,6 +208,7 @@ func CreateStory(c *gin.Context) {
 	wsStory := gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
 		"expiresAt": exp, "caption": b.Caption, "viewed": false,
+		"audience": b.Audience,
 		"user": gin.H{
 			"_id": myID, "id": myID, "username": uname,
 			"avatar": uavatar, "verified": verified,
@@ -211,22 +218,19 @@ func CreateStory(c *gin.Context) {
 	if songOut != nil {
 		wsStory["song"] = songOut
 	}
-	go func() {
-		sockets.BroadcastNewStory(myID, wsStory)
-		// Cache-и followers-ро низ пок мекунем.
-		rows, err := db.Pool.Query(context.Background(),
-			`SELECT follower_id FROM follows WHERE following_id=$1`, myID)
-		if err != nil {
-			return
-		}
-		defer rows.Close()
+	// Кэши обунаҳо ПЕШ аз ҷавоб пок мешавад: вагарна обуна метавонист
+	// то 3 сония рӯйхати кӯҳнаро бигирад, ҳатто баъди сигнали сокет.
+	if rows, err := db.Pool.Query(context.Background(),
+		`SELECT follower_id FROM follows WHERE following_id=$1`, myID); err == nil {
 		for rows.Next() {
 			var fid string
 			if rows.Scan(&fid) == nil {
 				mw.InvalidateUserCache(fid)
 			}
 		}
-	}()
+		rows.Close()
+	}
+	go sockets.BroadcastNewStory(myID, map[string]interface{}(wsStory))
 
 	out := gin.H{
 		"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
@@ -270,9 +274,12 @@ func ViewStory(c *gin.Context) {
 	sid  := c.Param("id")
 	myID := mw.UID(c)
 	// Бинандаи худи соҳибро ҳисоб намекунем (мисли Instagram).
-	var owner string
-	db.Pool.QueryRow(context.Background(),
-		`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
+	// Касе, ки сторияро дида наметавонад, «бинанда» ҳисоб намешавад.
+	owner := canSeeStory(myID, sid)
+	if owner == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Story not found"})
+		return
+	}
 	// «Дидам» — барои ҳалқа, ҳам барои соҳиб.
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO story_seen(story_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
@@ -291,6 +298,10 @@ func ViewStory(c *gin.Context) {
 func LikeStory(c *gin.Context) {
 	sid  := c.Param("id")
 	myID := mw.UID(c)
+	if canSeeStory(myID, sid) == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Story not found"})
+		return
+	}
 	var liked bool
 	db.Pool.QueryRow(context.Background(),
 		`SELECT EXISTS(SELECT 1 FROM story_likes WHERE story_id=$1::text AND user_id=$2::text)`,
@@ -1074,15 +1085,26 @@ func AdminStats(c *gin.Context) {
 
 // POST /admin/ban/:id
 func BanUser(c *gin.Context) {
-	db.Pool.Exec(context.Background(),
+	tag, err := db.Pool.Exec(context.Background(),
 		`UPDATE users SET banned=TRUE WHERE id=$1`, c.Param("id"))
+	if err != nil || tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Корбар ёфт нашуд"})
+		return
+	}
+	// Бани воқеӣ: ҳамаи сессияҳо фавран қатъ мешаванд.
+	mw.RevokeTokens(c.Param("id"))
 	c.JSON(http.StatusOK, gin.H{"banned": true})
 }
 
 // POST /admin/unban/:id
 func UnbanUser(c *gin.Context) {
-	db.Pool.Exec(context.Background(),
+	tag, err := db.Pool.Exec(context.Background(),
 		`UPDATE users SET banned=FALSE WHERE id=$1`, c.Param("id"))
+	if err != nil || tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Корбар ёфт нашуд"})
+		return
+	}
+	mw.ForgetTokenState(c.Param("id"))
 	c.JSON(http.StatusOK, gin.H{"banned": false})
 }
 
@@ -1276,9 +1298,7 @@ func VoteStoryPoll(c *gin.Context) {
 	}
 
 	// Соҳиби сторис дар пурсиши худ овоз намедиҳад (мисли Instagram).
-	var owner string
-	db.Pool.QueryRow(context.Background(),
-		`SELECT user_id FROM stories WHERE id=$1`, sid).Scan(&owner)
+	owner := canSeeStory(myID, sid)
 	if owner == "" {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Сторис ёфт нашуд"})
 		return
@@ -1335,4 +1355,36 @@ func attachPoll(storyID, viewerID string, out gin.H) {
 		"x": x, "y": y,
 		"votesA": a, "votesB": b, "myVote": myVote,
 	}
+}
+
+// canSeeStory — оё viewer ин сторияро дидан метавонад: ҳанӯз фаъол,
+// бе блок, обуна (ё ҳисоби кушода) ва барои «Дӯстони наздик» — дар
+// рӯйхат. Бармегардонад соҳибро (холӣ — не).
+func canSeeStory(viewer, sid string) string {
+	var owner, audience string
+	var expires time.Time
+	if db.Pool.QueryRow(context.Background(),
+		`SELECT user_id, COALESCE(audience,'all'), expires_at FROM stories WHERE id=$1`,
+		sid).Scan(&owner, &audience, &expires) != nil {
+		return ""
+	}
+	if owner == viewer {
+		return owner
+	}
+	if time.Now().After(expires) || IsBlockedBetween(viewer, owner) {
+		return ""
+	}
+	if ok, _ := CanSeeProfileContent(viewer, owner); !ok {
+		return ""
+	}
+	if audience == "close" {
+		var in bool
+		db.Pool.QueryRow(context.Background(),
+			`SELECT EXISTS(SELECT 1 FROM close_friends WHERE user_id=$1 AND friend_id=$2)`,
+			owner, viewer).Scan(&in)
+		if !in {
+			return ""
+		}
+	}
+	return owner
 }

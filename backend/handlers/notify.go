@@ -40,13 +40,22 @@ func notifyMentions(fromID, ntype, targetID, text, bodyTmpl string) {
 		}
 		for _, uname := range unames {
 			var resolvedID string
+			allow := true
 			if err := db.Pool.QueryRow(context.Background(),
-				`SELECT id FROM users WHERE lower(username)=lower($1)`, uname).Scan(&resolvedID); err != nil {
+				`SELECT id, COALESCE(allow_mentions,true) FROM users WHERE lower(username)=lower($1)`,
+				uname).Scan(&resolvedID, &allow); err != nil {
 				continue
 			}
-			if resolvedID != "" && resolvedID != fromID {
-				pushNotify(resolvedID, fromID, ntype, targetID, bodyTmpl)
+			// «Иҷозати зикр» хомӯш ё блок — хабар намеравад. Пеш ин
+			// танзим сабт мешуд, вале ҳеҷ ҷо хонда намешуд.
+			if resolvedID == "" || resolvedID == fromID || !allow ||
+				IsBlockedBetween(fromID, resolvedID) {
+				continue
 			}
+			// Сатр дар рӯйхати огоҳиномаҳо ҳам — пеш танҳо push буд ва
+			// зикр дар экрани «Огоҳиномаҳо» умуман дида намешуд.
+			notify(resolvedID, fromID, ntype, targetID)
+			pushNotify(resolvedID, fromID, ntype, targetID, bodyTmpl)
 		}
 	}()
 }

@@ -1,5 +1,5 @@
 // lib/create/scheduled_posts_screen.dart
-// Постҳои ба нақша гирифташуда (Pro) — рӯйхат аз /posts/scheduled.
+// Постҳои ба нақша гирифташуда — рӯйхат аз /posts/scheduled.
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -8,6 +8,7 @@ import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
 class ScheduledPostsScreen extends StatefulWidget {
   const ScheduledPostsScreen({super.key});
@@ -18,12 +19,15 @@ class ScheduledPostsScreen extends StatefulWidget {
 class _ScheduledPostsState extends State<ScheduledPostsScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _loading = true;
+  // Хатои шабака набояд ҳамчун «пост нест» нишон дода шавад.
+  bool _error = false;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
+    var failed = true;
     try {
       final r = await ApiClient.instance.get('/posts/scheduled')
           .timeout(const Duration(seconds: 15));
@@ -31,9 +35,10 @@ class _ScheduledPostsState extends State<ScheduledPostsScreen> {
         final b = jsonDecode(r.body);
         final list = (b['posts'] ?? []) as List;
         _posts = list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+        failed = false;
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() { _loading = false; _error = failed; });
   }
 
   String _when(String iso) {
@@ -86,6 +91,8 @@ class _ScheduledPostsState extends State<ScheduledPostsScreen> {
                 ),
               ),
             )
+          : _error
+              ? ErrorState(message: 'Рӯйхат бор нашуд', onRetry: _load)
           : _posts.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.schedule_rounded,

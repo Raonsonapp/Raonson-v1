@@ -87,6 +87,41 @@ class AccountManager {
         _key, jsonEncode(accounts.value.map((a) => a.toJson()).toList()));
   }
 
+  /// Токенҳои НАВ-ро, ки сервер баъди «Ҳамаро бандед» ё иваз кардани
+  /// рамз медиҳад, ҳамон тавр нигоҳ медорад, ки логин мекунад.
+  ///
+  /// Чаро лозим: сервер ҳамаи токенҳои кӯҳнаро воқеан бекор мекунад.
+  /// Агар токени навро нигоҳ надорем, ҳамин дастгоҳ ҳам бо дархости
+  /// навбатӣ (ё баъди гузариши аккаунт) аз система берун мешавад.
+  ///
+  /// Бармегардонад: `true` агар access-токен дар [data] буд.
+  static Future<bool> saveFreshTokens(Map<String, dynamic> data) async {
+    final token = data['accessToken']?.toString() ?? '';
+    if (token.isEmpty) return false;
+    final refresh = data['refreshToken']?.toString() ?? '';
+
+    await TokenStorage.saveAccessToken(token);
+    ApiClient.instance.setAuthToken(token);
+    if (refresh.isNotEmpty) {
+      await TokenStorage.saveRefreshToken(refresh);
+      ApiClient.instance.setRefreshToken(refresh);
+    }
+
+    // Нусхаи аккаунт дар рӯйхати multi-account ҳам бояд нав шавад —
+    // вагарна гузариш ба ин аккаунт токени бекоршударо барқарор мекард.
+    final uid = activeUserId ?? UserSession.userId;
+    final list = List<StoredAccount>.from(accounts.value);
+    final idx = uid == null ? -1 : list.indexWhere((a) => a.userId == uid);
+    if (idx >= 0) {
+      list[idx] = list[idx].copyWith(
+          token: token,
+          refreshToken: refresh.isNotEmpty ? refresh : null);
+      accounts.value = list;
+      await _persist();
+    }
+    return true;
+  }
+
   /// Аккаунти ҷориро (баъди логин) илова/навсозӣ мекунад ва фаъол мегардонад.
   static Future<void> upsertCurrent({
     required String userId,

@@ -1,13 +1,11 @@
 // lib/ai/ai_tools.dart
-// AI-абзорҳо (Pro): Caption, Hashtag, Беҳтар кардан, Тарҷума.
+// AI-абзорҳо: Caption, Hashtag, Беҳтар кардан, Тарҷума.
 // Ба TextEditingController-и додашуда натиҷаро мегузорад.
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
-import '../core/services/subscription_service.dart';
-import '../subscription/subscription_screen.dart';
 import '../core/i18n/strings.dart';
 
 class AiService {
@@ -40,11 +38,8 @@ class _AiToolsButtonState extends State<AiToolsButton> {
   bool _busy = false;
 
   void _openMenu() {
-    // AI — хусусияти Pro.
-    if (!SubscriptionService.instance.isPro) {
-      _proGate();
-      return;
-    }
+    // AI барои ҳама кушода аст: пардохт ҳоло нест, пас қулф кардан
+    // маънои онро дошт, ки ҳеҷ кас онро истифода бурда наметавонад.
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -113,48 +108,6 @@ class _AiToolsButtonState extends State<AiToolsButton> {
     });
   }
 
-  void _proGate() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(AppIcons.bolt_rounded, color: const Color(0xFFE100FF), size: 40),
-          const SizedBox(height: 12),
-          Text(tr('ui.4c0742534e'),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textPrimary,
-                  fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(tr('ui.a81915825e'),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE100FF),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => const SubscriptionScreen()));
-              },
-              child: Text(tr('ui.a26ac78e3e'),
-                  style: TextStyle(color: Colors.white,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ]),
-      )),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

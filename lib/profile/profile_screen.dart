@@ -18,7 +18,6 @@ import 'saved_collections_screen.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
-import '../core/services/subscription_service.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
@@ -41,6 +40,7 @@ import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
 import '../core/links/deep_links.dart';
+import '../verification/verification_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -473,27 +473,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Icon(AppIcons.lock_outline_rounded,
                           color: AppColors.textPrimary, size: 15),
                     ],
-                    // Нишони PRO / BUSINESS (обунаи фаъол).
-                    if (_isMe && SubscriptionService.instance.isPro) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                              colors: SubscriptionService.instance.isBusiness
-                                  ? const [Color(0xFFF7971E), Color(0xFFFFD200)]
-                                  : const [Color(0xFF7F00FF), Color(0xFFE100FF)]),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                            SubscriptionService.instance.isBusiness
-                                ? 'BUSINESS' : 'PRO',
-                            style: const TextStyle(color: Colors.white,
-                                fontSize: 9, fontWeight: FontWeight.w800,
-                                letterSpacing: 0.5)),
-                      ),
-                    ],
+                    // Нишони PRO нест: пардохт вуҷуд надорад, пас ҳеҷ кас
+                    // обунаи воқеӣ надорад — нишон додани он дурӯғ мешуд.
                     if (_isMe) ...[
                       const SizedBox(width: 4),
                       Icon(AppIcons.keyboard_arrow_down_rounded,
@@ -1348,7 +1329,14 @@ class _VerifySheet extends StatelessWidget {
             textAlign: TextAlign.center),
         const SizedBox(height: 28),
         SizedBox(width: double.infinity, child: ElevatedButton(
-          onPressed: () => Navigator.pop(context),
+          // Варақаро мепӯшонем ва ба экрани воқеии дархост мебарем —
+          // пеш тугма танҳо варақаро мепӯшонд ва дархост намерафт.
+          onPressed: () {
+            final nav = Navigator.of(context);
+            nav.pop();
+            nav.push(MaterialPageRoute(
+                builder: (_) => const VerificationScreen()));
+          },
           style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00C853),
               padding: const EdgeInsets.symmetric(vertical: 15),

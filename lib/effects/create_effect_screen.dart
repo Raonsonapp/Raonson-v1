@@ -45,16 +45,22 @@ class _CreateEffectScreenState extends State<CreateEffectScreen> {
       _snack('Номи эффектро нависед');
       return;
     }
+    // Нарх дар ситора (⭐), бутун 0…1000 — ҳамон ҳадде, ки сервер месанҷад.
+    final raw = _price.text.trim();
+    final price = raw.isEmpty ? 0 : int.tryParse(raw);
+    if (price == null || price < 0 || price > 1000) {
+      _snack('Нарх бояд адади бутун аз 0 то 1000 ⭐ бошад');
+      return;
+    }
     setState(() => _saving = true);
-    final price = double.tryParse(_price.text.trim().replaceAll(',', '.')) ?? 0;
-    final ok = await _repo.createEffect(_name.text.trim(), _matrix(), price);
+    final err = await _repo.createEffect(_name.text.trim(), _matrix(), price);
     if (!mounted) return;
     setState(() => _saving = false);
-    if (ok) {
+    if (err == null) {
       _snack('Эффект нашр шуд ✓');
       Navigator.pop(context);
     } else {
-      _snack('Нашр нашуд — эҳтимол галочка надоред');
+      _snack(err);
     }
   }
 

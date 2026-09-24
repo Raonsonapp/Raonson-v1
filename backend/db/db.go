@@ -924,6 +924,27 @@ func migrate() {
 	-- Стикери линк.
 	ALTER TABLE story_stickers ADD COLUMN IF NOT EXISTS link_url TEXT DEFAULT '';
 
+	-- «Навбати ту» (Add Yours): ҳамаи сторисҳои як занҷир як chain_id
+	-- доранд — id-и сторие, ки занҷирро сар кард.
+	ALTER TABLE story_stickers ADD COLUMN IF NOT EXISTS chain_id TEXT DEFAULT '';
+	-- Cashback як бор ва танҳо баъди расонидан.
+	ALTER TABLE orders ADD COLUMN IF NOT EXISTS cashback_paid BOOLEAN DEFAULT FALSE;
+	-- Шарҳи Reel: калимаҳои пинҳон ва restrict (мисли шарҳи пост).
+	ALTER TABLE reel_comments ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT FALSE;
+	-- Версияи token: «Ҳамаро бандед», ивази рамз ва ban онро зиёд мекунанд.
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0;
+	-- Пости вақтбандишуда: зикрҳо дар вақти нашр мераванд.
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS announce_pending BOOLEAN DEFAULT FALSE;
+	-- Бинандагони Live: ҳар кас як бор; дилҳо то 300 аз як нафар.
+	CREATE TABLE IF NOT EXISTS live_viewers (
+		stream_id TEXT NOT NULL,
+		user_id   TEXT NOT NULL,
+		active    BOOLEAN DEFAULT TRUE,
+		likes     INTEGER DEFAULT 0,
+		PRIMARY KEY (stream_id, user_id)
+	);
+	CREATE INDEX IF NOT EXISTS idx_story_stickers_chain ON story_stickers(chain_id) WHERE chain_id <> '';
+
 	-- «Ман ин сториро дидам» — барои ҳалқаи сторис (ранга ↔ хокистарӣ).
 	-- Алоҳида аз story_views: соҳиб ҳамчун БИНАНДА ҳисоб намешавад
 	-- (мисли Instagram), вале ҳалқаи ХУДАШ ҳам бояд хокистарӣ шавад.

@@ -346,14 +346,11 @@ func PlaceOrder(c *gin.Context) {
 	notify(sellerID, myID, "order", postID)
 	pushNotify(sellerID, myID, "order", postID, "маҳсули шуморо фармоиш дод")
 
-	// Cashback — харидор 5% арзиши харидро ҳамчун ситора мегирад (ҳадди ақал 1).
-	cashback := int(price * 0.05)
-	if cashback < 1 {
-		cashback = 1
-	}
-	db.Pool.Exec(context.Background(),
-		`UPDATE users SET stars_balance = COALESCE(stars_balance,0) + $1 WHERE id=$2`,
-		cashback, myID)
+	// Cashback — 5% арзиш ҳамчун ситора, вале ТАНҲО баъди «расонида
+	// шуд» (ниг. UpdateOrderStatus). Пеш ҳангоми сохтани фармоиши
+	// пардохтнашуда дода мешуд — фармоиш сохтан ва бекор кардан ситораи
+	// бепул медод.
+	cashback := orderCashback(price)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": oid, "postId": postID, "price": price,
@@ -439,7 +436,33 @@ func UpdateOrderStatus(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "not your order"})
 		return
 	}
+	if b.Status == "delivered" {
+		payCashbackOnce(orderID)
+	}
 	c.JSON(http.StatusOK, gin.H{"status": b.Status})
+}
+
+func orderCashback(price float64) int {
+	cb := int(price * 0.05)
+	if cb < 1 {
+		cb = 1
+	}
+	return cb
+}
+
+// payCashbackOnce — ситораи cashback ба харидор, ЯК БОР барои ҳар фармоиш.
+func payCashbackOnce(orderID string) {
+	var buyer string
+	var price float64
+	if db.Pool.QueryRow(context.Background(), `
+		UPDATE orders SET cashback_paid=TRUE
+		WHERE id=$1 AND COALESCE(cashback_paid,false)=FALSE
+		RETURNING buyer_id, price`, orderID).Scan(&buyer, &price) != nil {
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET stars_balance = COALESCE(stars_balance,0) + $1 WHERE id=$2`,
+		orderCashback(price), buyer)
 }
 
 // ── GET /shop/customers → CRM: харидорони фурӯшанда ────────────────

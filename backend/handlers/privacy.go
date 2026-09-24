@@ -27,6 +27,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	mw "raonson/middleware"
 
 	"github.com/gin-gonic/gin"
 
@@ -67,9 +68,9 @@ func denyIfBlocked(c *gin.Context, me, other string) bool {
 //
 // Се ҳолат:
 //
-//	1. худи соҳиб — ҳа, ҳамеша;
-//	2. бастан (ҳар тараф) — не;
-//	3. ҳисоби пӯшида ва обуна нашудааст — не.
+//  1. худи соҳиб — ҳа, ҳамеша;
+//  2. бастан (ҳар тараф) — не;
+//  3. ҳисоби пӯшида ва обуна нашудааст — не.
 //
 // Бармегардонад: (иҷозат, сабаб).
 func CanSeeProfileContent(viewer, owner string) (bool, string) {
@@ -162,4 +163,64 @@ func ownerOfReel(reelID string) string {
 	db.Pool.QueryRow(context.Background(),
 		`SELECT user_id::text FROM reels WHERE id=$1`, reelID).Scan(&uid)
 	return uid
+}
+
+// commentGate — оё myID дар зери мундариҷаи owner шарҳ навишта метавонад.
+//
+// Пеш ҳар handler танҳо қисман месанҷид: шарҳи пост блокро месанҷид,
+// шарҳи Reel ҳеҷ чизро; танзими «Иҷозати шарҳ» умуман хонда намешуд ва
+// ба пости ҳисоби пӯшида бо id шарҳ навиштан мумкин буд.
+//
+// Бармегардонад: (иҷозат, пинҳон кардан?). «Пинҳон» — корбари маҳдудшуда
+// (restrict): шарҳ сабт мешавад, вале танҳо худаш онро мебинад.
+func commentGate(c *gin.Context, me, owner string) (bool, bool) {
+	if owner == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Ёфт нашуд"})
+		return false, false
+	}
+	if denyIfBlocked(c, me, owner) {
+		return false, false
+	}
+	if ok, _ := CanSeeProfileContent(me, owner); !ok {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Ёфт нашуд"})
+		return false, false
+	}
+	if me == owner {
+		return true, false
+	}
+	allow := true
+	var restricted bool
+	db.Pool.QueryRow(context.Background(), `
+		SELECT COALESCE(u.allow_comments,true),
+		       EXISTS(SELECT 1 FROM user_restricts r
+		              WHERE r.user_id=u.id AND r.restricted_id=$2)
+		FROM users u WHERE u.id=$1`, owner, me).Scan(&allow, &restricted)
+	if !allow {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Муаллиф шарҳҳоро хомӯш кардааст"})
+		return false, false
+	}
+	return true, restricted
+}
+
+// RequireVisible — middleware барои амалҳо бо пост ё Reel (лайк, сабт,
+// паҳн). Пеш ҳар кас бо донистани id метавонист ба пости ҳисоби пӯшида
+// ё бастакунанда лайк гузорад, онро сабт ва паҳн кунад.
+//
+// kind: "post" ё "reel". Ҷавоб барои «нест», «пӯшида» ва «баста» як
+// хел аст (404) — вуҷуди мундариҷа фош намешавад.
+func RequireVisible(kind string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		owner := ""
+		if kind == "reel" {
+			owner = ownerOfReel(id)
+		} else {
+			owner = ownerOfPost(id)
+		}
+		if ok, _ := CanSeeProfileContent(mw.UID(c), owner); !ok {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"message": "Ёфт нашуд"})
+			return
+		}
+		c.Next()
+	}
 }

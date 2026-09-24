@@ -22,9 +22,13 @@ import (
 )
 
 func makeJWT(userID, secret string, dur time.Duration) string {
+	tv, _ := mw.TokenState(userID)
 	t, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":  userID,
 		"exp": time.Now().Add(dur).Unix(),
+		// Версияи token — «Ҳамаро бандед», ивази рамз ва ban онро зиёд
+		// мекунанд ва ҳамаи token-ҳои кӯҳна бекор мешаванд.
+		"tv": tv,
 	}).SignedString([]byte(secret))
 	return t
 }
@@ -202,7 +206,13 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 	claims := tok.Claims.(jwt.MapClaims)
-	uid    := claims["id"].(string)
+	uid, _ := claims["id"].(string)
+	// Refresh-token-и бекоршуда (ивази рамз, «Ҳамаро бандед», ban) нав
+	// намекунад — пеш 30 рӯз кор мекард.
+	if uid == "" || !mw.TokenAllowed(uid, claims["tv"]) {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Session revoked"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken": makeJWT(uid, mw.JWTSecret(), 1*time.Hour),
 	})
@@ -246,7 +256,13 @@ func ChangePassword(c *gin.Context) {
 	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET password=$1 WHERE id=$2`, string(newHash), myID)
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	// Дигар дастгоҳҳо мебароянд (мисли Instagram); ин дастгоҳ token-и
+	// нав мегирад, то корбар худаш набарояд.
+	mw.RevokeTokens(myID)
+	c.JSON(http.StatusOK, gin.H{"ok": true,
+		"accessToken":  makeJWT(myID, mw.JWTSecret(), 1*time.Hour),
+		"refreshToken": makeJWT(myID, mw.RefreshSecret(), 30*24*time.Hour),
+	})
 }
 
 // POST /auth/forgot-password
@@ -380,6 +396,8 @@ func ResetPassword(c *gin.Context) {
 	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET password=$1, updated_at=NOW() WHERE id=$2`, string(hash), id)
+	// Рамз барқарор шуд — ҳамаи сессияҳои кӯҳна (шояд аз дузд) бекор.
+	mw.RevokeTokens(id)
 	mw.CacheDel("otp:reset:" + id)
 	c.JSON(http.StatusOK, gin.H{"message": "Парол бо муваффақият иваз шуд"})
 }

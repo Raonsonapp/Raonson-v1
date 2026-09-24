@@ -17,6 +17,7 @@ import 'package:url_launcher/url_launcher.dart';
 //    quiz      — викторина (2–4 вариант, як дуруст, ҷавоб як бор)
 //    slider    — слайдери эмодзи 0..100 (ҷавоб як бор, баъд миёна)
 //    countdown — ҳисоби баръакс
+//    addyours  — «Навбати ту» (Add Yours): занҷири сторисҳо бо як мавзӯъ
 //
 //  Сервер ҳамаи қоидаҳоро худаш месанҷад (ниг. story_stickers.go);
 //  ин ҷо танҳо намоиш ва фиристодан.
@@ -50,6 +51,12 @@ class StorySticker {
   // линк
   final String url;
 
+  // «Навбати ту»
+  final String chainId;
+  final int participants;
+  final bool joined;
+  final List<String> avatars;
+
   const StorySticker({
     required this.kind,
     this.prompt = '',
@@ -68,12 +75,16 @@ class StorySticker {
     this.answersCount = 0,
     this.endsAt,
     this.url = '',
+    this.chainId = '',
+    this.participants = 0,
+    this.joined = false,
+    this.avatars = const [],
   });
 
   static StorySticker? fromJson(dynamic j) {
     if (j is! Map) return null;
     final kind = (j['kind'] ?? '').toString();
-    if (!const {'question', 'quiz', 'slider', 'countdown', 'link'}.contains(kind)) {
+    if (!const {'question', 'quiz', 'slider', 'countdown', 'link', 'addyours'}.contains(kind)) {
       return null;
     }
     double d(dynamic v) => v is num ? v.toDouble() : 0.5;
@@ -100,6 +111,12 @@ class StorySticker {
       answersCount: i(j['answersCount']) ?? 0,
       endsAt: parseServerTime(j['endsAt']),
       url: (j['url'] ?? '').toString(),
+      chainId: (j['chainId'] ?? '').toString(),
+      participants: i(j['participants']) ?? 0,
+      joined: j['joined'] == true,
+      avatars: (j['avatars'] is List)
+          ? (j['avatars'] as List).map((e) => e.toString()).toList()
+          : const [],
     );
   }
 
@@ -109,7 +126,8 @@ class StorySticker {
   }) => StorySticker(
         kind: kind, prompt: prompt, x: x, y: y, isOwner: isOwner,
         options: options, emoji: emoji, endsAt: endsAt, url: url,
-        answersCount: answersCount,
+        answersCount: answersCount, chainId: chainId,
+        participants: participants, joined: joined, avatars: avatars,
         correct: correct ?? this.correct,
         myChoice: myChoice ?? this.myChoice,
         counts: counts ?? this.counts,
@@ -144,6 +162,12 @@ class StoryStickerView extends StatefulWidget {
   /// Соҳиб ҷавобҳоро мекушояд.
   final VoidCallback? onOpenAnswers;
 
+  /// «Навбати ту»: корбар мехоҳад сторияшро ба занҷир илова кунад.
+  final VoidCallback? onAddYours;
+
+  /// «Навбати ту»: рӯйхати иштирокчиёнро кушодан.
+  final VoidCallback? onOpenChain;
+
   const StoryStickerView({
     super.key,
     required this.storyId,
@@ -151,6 +175,8 @@ class StoryStickerView extends StatefulWidget {
     required this.onPause,
     required this.onResume,
     this.onOpenAnswers,
+    this.onAddYours,
+    this.onOpenChain,
   });
 
   @override
@@ -314,6 +340,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
         'slider' => _slider(card),
         'question' => _question(card),
         'link' => _link(),
+        'addyours' => _addYours(card),
         _ => _countdown(card),
       },
     );
@@ -551,6 +578,71 @@ class _StoryStickerViewState extends State<StoryStickerView> {
           ]),
         ),
       ),
+    );
+  }
+
+  /// «Навбати ту» — мавзӯъ, аватарҳои иштирокчиён ва тугмаи ҳамроҳшавӣ.
+  Widget _addYours(BoxDecoration card) {
+    final n = _s.participants;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: card,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text('НАВБАТИ ТУ',
+            style: TextStyle(color: Color(0xFF8E8E93), fontSize: 11,
+                fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+        const SizedBox(height: 6),
+        _title(_s.prompt),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: n > 0 ? widget.onOpenChain : null,
+          behavior: HitTestBehavior.opaque,
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            if (_s.avatars.isNotEmpty)
+              SizedBox(
+                width: 22.0 + 16.0 * (_s.avatars.length - 1),
+                height: 22,
+                child: Stack(children: [
+                  for (var i = 0; i < _s.avatars.length; i++)
+                    Positioned(
+                      left: 16.0 * i,
+                      child: CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.white,
+                        child: CircleAvatar(
+                            radius: 10,
+                            backgroundImage: NetworkImage(_s.avatars[i])),
+                      ),
+                    ),
+                ]),
+              ),
+            const SizedBox(width: 6),
+            Text(n == 1 ? '1 иштирокчӣ' : '$n иштирокчӣ',
+                style: const TextStyle(color: Color(0xFF3A3A3C),
+                    fontSize: 13, fontWeight: FontWeight.w600)),
+            if (n > 0)
+              const Icon(HeroiconsOutline.chevronRight,
+                  size: 14, color: Color(0xFF8E8E93)),
+          ]),
+        ),
+        if (!_s.isOwner) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: widget.onAddYours,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0095F6),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: Icon(_s.joined ? HeroiconsOutline.check : HeroiconsOutline.plus,
+                  size: 18),
+              label: Text(_s.joined ? 'Боз илова кардан' : 'Навбати ман'),
+            ),
+          ),
+        ],
+      ]),
     );
   }
 

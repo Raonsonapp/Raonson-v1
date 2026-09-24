@@ -30,6 +30,15 @@ func ReactToMessage(c *gin.Context) {
 		return
 	}
 
+	// Танҳо иштирокчиёни сӯҳбат. Пеш ҳар кас ба ҳар id-и паём реаксия
+	// гузошта метавонист.
+	if sender, receiver := participantsOf(msgID); myID == "" ||
+		(myID != sender && myID != receiver) {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Паём ёфт нашуд"})
+		return
+	}
+	body.Emoji = clampRunes(body.Emoji, 8)
+
 	// Upsert: remove old reaction by same user on same message, then insert
 	_, err := db.Pool.Exec(context.Background(), `
 		INSERT INTO message_reactions (message_id, user_id, emoji, created_at)
@@ -170,15 +179,20 @@ func SendMessageExt(c *gin.Context) {
 	if receiver == "" {
 		receiver = body.Receiver
 	}
-	if a, b, ok := strings.Cut(chatID, "_"); ok {
-		switch myID {
-		case a:
-			receiver = b
-		case b:
-			receiver = a
-		}
+	// ⚠️ Фиристанда БОЯД аъзои ҳамин чат бошад. Пеш, агар chatId
+	// ба ӯ тааллуқ надошт, гиранда аз body гирифта мешуд ва паём зери
+	// chatId-и ду нафари бегона сабт мешуд — дар сӯҳбати онҳо пайдо мешуд.
+	a, b, ok := strings.Cut(chatID, "_")
+	switch {
+	case ok && myID == a:
+		receiver = b
+	case ok && myID == b:
+		receiver = a
+	default:
+		c.JSON(http.StatusForbidden, gin.H{"message": "Шумо аъзои ин чат нестед"})
+		return
 	}
-	if receiver == "" {
+	if receiver == "" || receiver == myID || chatID != sortedChatID(myID, receiver) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Гирандаи паём муайян нашуд"})
 		return
 	}

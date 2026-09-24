@@ -32,34 +32,76 @@ func SendGift(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Ба худатон тӯҳфа фиристода намешавад"})
 		return
 	}
+	// ⚠️ Пеш ситора аз ҳеҷ чиз пайдо мешуд: фиристанда ҳеҷ чиз
+	// намепардохт ва миқдор ҳадде надошт — ҳар кас метавонист ба
+	// дӯсташ миллион ситора «тӯҳфа» кунад. Акнун аз баланси фиристанда
+	// кам мешавад, дар як транзаксия.
 	if b.Stars <= 0 {
 		b.Stars = 1
 	}
-	if b.TargetType == "" {
+	if b.Stars > 1000 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Ҳадди аксар 1000 ситора"})
+		return
+	}
+	if b.TargetType != "reel" && b.TargetType != "post" && b.TargetType != "live" {
 		b.TargetType = "reel"
 	}
+	b.Message = clampRunes(b.Message, 200)
+	var exists bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND COALESCE(banned,false)=FALSE)`,
+		b.ToUserID).Scan(&exists)
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Корбар ёфт нашуд"})
+		return
+	}
+	if denyIfBlocked(c, myID, b.ToUserID) {
+		return
+	}
 
-	var id string
-	err := db.Pool.QueryRow(context.Background(), `
-		INSERT INTO gifts(from_user_id,to_user_id,target_type,target_id,stars,message)
-		VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
-		myID, b.ToUserID, b.TargetType, b.TargetID, b.Stars, b.Message).Scan(&id)
+	ctx := context.Background()
+	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Фиристодан ноком шуд"})
 		return
 	}
-
-	// Баланси ситораи муаллифро зиёд кардан (best-effort).
-	db.Pool.Exec(context.Background(),
+	defer tx.Rollback(ctx)
+	var left int
+	if tx.QueryRow(ctx, `
+		UPDATE users SET stars_balance = stars_balance - $1
+		WHERE id=$2 AND COALESCE(stars_balance,0) >= $1
+		RETURNING stars_balance`, b.Stars, myID).Scan(&left) != nil {
+		var have int
+		db.Pool.QueryRow(ctx,
+			`SELECT COALESCE(stars_balance,0) FROM users WHERE id=$1`, myID).Scan(&have)
+		c.JSON(http.StatusPaymentRequired, gin.H{
+			"message": "Ситораҳо кофӣ нестанд", "balance": have, "need": b.Stars})
+		return
+	}
+	var id string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO gifts(from_user_id,to_user_id,target_type,target_id,stars,message)
+		VALUES($1,$2,$3,$4,$5,$6) RETURNING id`,
+		myID, b.ToUserID, b.TargetType, b.TargetID, b.Stars, b.Message).Scan(&id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Фиристодан ноком шуд"})
+		return
+	}
+	if _, err := tx.Exec(ctx,
 		`UPDATE users SET stars_balance = COALESCE(stars_balance,0) + $1 WHERE id=$2`,
-		b.Stars, b.ToUserID)
+		b.Stars, b.ToUserID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Фиристодан ноком шуд"})
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Фиристодан ноком шуд"})
+		return
+	}
 
-	// Нотификатсия (best-effort, агар ҷадвал мавҷуд бошад).
-	db.Pool.Exec(context.Background(), `
-		INSERT INTO notifications(user_id,from_user_id,type,target_id,created_at)
-		VALUES($1,$2,'gift',$3,NOW())`, b.ToUserID, myID, b.TargetID)
+	notify(b.ToUserID, myID, "gift", b.TargetID)
+	pushNotify(b.ToUserID, myID, "gift", b.TargetID, "")
 
-	c.JSON(http.StatusOK, gin.H{"id": id, "stars": b.Stars, "sent": true})
+	c.JSON(http.StatusOK, gin.H{"id": id, "stars": b.Stars, "sent": true, "balance": left})
+	return
 }
 
 // GET /gifts/received  — тӯҳфаҳои гирифташуда (омор)
@@ -91,4 +133,15 @@ func GetReceivedGifts(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"totalStars": total, "gifts": out})
+}
+
+// GET /gifts/balance — баланси ситораҳои ман (барои фиристодани тӯҳфа).
+func GetStarsBalance(c *gin.Context) {
+	myID := mw.UID(c)
+	var bal, received int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(stars_balance,0) FROM users WHERE id=$1`, myID).Scan(&bal)
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(SUM(stars),0) FROM gifts WHERE to_user_id=$1`, myID).Scan(&received)
+	c.JSON(http.StatusOK, gin.H{"balance": bal, "received": received})
 }

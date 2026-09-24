@@ -12,6 +12,7 @@ import '../core/services/user_session.dart';
 import '../widgets/avatar.dart';
 import 'live_overlay.dart';
 import '../core/i18n/strings.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
 // ════════════════════════════════════════════════════════════════════
 //  РӮЙХАТИ LIVE + Go Live
@@ -25,12 +26,15 @@ class LiveListScreen extends StatefulWidget {
 class _LiveListState extends State<LiveListScreen> {
   List<Map<String, dynamic>> _streams = [];
   bool _loading = true;
+  // Хатои шабака набояд ҳамчун «ҳоло Live нест» нишон дода шавад.
+  bool _error = false;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
+    var failed = true;
     try {
       final r = await ApiClient.instance.get('/live/')
           .timeout(const Duration(seconds: 12));
@@ -38,9 +42,10 @@ class _LiveListState extends State<LiveListScreen> {
         final b = jsonDecode(r.body);
         final list = (b['streams'] ?? []) as List;
         _streams = list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+        failed = false;
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() { _loading = false; _error = failed; });
   }
 
   Future<void> _goLive() async {
@@ -91,6 +96,8 @@ class _LiveListState extends State<LiveListScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _error
+              ? ErrorState(message: 'Рӯйхати Live бор нашуд', onRetry: _load)
           : _streams.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.videocam_rounded,

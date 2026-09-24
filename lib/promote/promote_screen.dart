@@ -43,9 +43,6 @@ class _PromoteScreenState extends State<PromoteScreen> {
     super.dispose();
   }
 
-  int get _estReachLow  => (_budget * _days * 90).round();
-  int get _estReachHigh => (_budget * _days * 240).round();
-
   Future<void> _submit() async {
     if (_goal == 1 && _urlCtrl.text.trim().isEmpty) {
       _toast('URL-и вебсайтро ворид кунед');
@@ -110,8 +107,9 @@ class _PromoteScreenState extends State<PromoteScreen> {
                     fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              'Одатан баррасӣ то 60 дақиқа давом мекунад. Баъди тасдиқ '
-              'реклама фаъол мешавад ва оморро дар «Рекламаҳои ман» мебинед.',
+              // Мӯҳлат ваъда намедиҳем: баррасиро админ дастӣ мекунад.
+              'Дархост нигоҳ дошта шуд ва аз ҷониби админ баррасӣ мешавад. '
+              'Ҳолат ва оморро дар «Рекламаҳои ман» мебинед.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textTertiary, fontSize: 13, height: 1.4),
             ),
@@ -237,21 +235,18 @@ class _PromoteScreenState extends State<PromoteScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.dividerFaint),
             ),
+            // Рақамҳои «фарогирии тахминӣ» аз буҷет×рӯз×90..240 сохта
+            // мешуданд — ҳеҷ асос надоштанд. Танҳо ҳамон чӣ ки маълум аст.
             child: Row(children: [
-              Icon(AppIcons.visibility_outlined,
+              Icon(AppIcons.info_outline_rounded,
                   color: AppColors.textTertiary, size: 20),
               const SizedBox(width: 10),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tr('ui.a30d7b7a41'),
-                        style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                    Text(tr('promote.estReach',
-                        {'low': _estReachLow, 'high': _estReachHigh}),
-                        style: TextStyle(color: AppColors.textPrimary,
-                            fontSize: 15, fontWeight: FontWeight.w600)),
-                  ],
-                ),
+                child: Text(
+                    'Омори воқеӣ (намоиш, клик) баъди тасдиқ '
+                    'дар «Рекламаҳои ман» пайдо мешавад.',
+                    style: TextStyle(color: AppColors.textTertiary,
+                        fontSize: 12, height: 1.35)),
               ),
               Text('Ҳамагӣ \$${(_budget * _days).toStringAsFixed(0)}',
                   style: TextStyle(color: AppColors.textPrimary,

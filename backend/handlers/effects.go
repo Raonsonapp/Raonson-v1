@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"math"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -65,6 +66,12 @@ func CreateEffect(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid effect (matrix must be 20)"})
 		return
 	}
+	// Нарх — дар ситора (⭐), бутун, 0…1000. Пеш нархи манфӣ ҳам қабул мешуд.
+	if b.Price < 0 || b.Price > 1000 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Нарх бояд аз 0 то 1000 ⭐ бошад"})
+		return
+	}
+	b.Price = math.Round(b.Price)
 	b.Name = clampRunes(b.Name, 40)
 	if b.Name == "" {
 		b.Name = "Эффект"
@@ -95,18 +102,45 @@ func UseEffect(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "effect not found"})
 		return
 	}
-	// Премиум ва аз они ман нест → харид + комиссия (як бор).
+	// Премиум ва аз они ман нест → харид бо ситора (як бор).
+	//
+	// ⚠️ Пеш «харид» бе ҳеҷ пардохт сабт мешуд, комиссия ҳисоб мешуд ва
+	// ба муаллиф «эффекти шуморо харид» мерафт — ҳамааш қалбакӣ. Акнун
+	// ситора аз харидор кам ва ба муаллиф (бе комиссия) илова мешавад.
 	if price > 0 && creatorID != myID {
-		var already bool
-		db.Pool.QueryRow(context.Background(),
-			`SELECT EXISTS(SELECT 1 FROM effect_purchases WHERE effect_id=$1 AND buyer_id=$2)`,
-			eid, myID).Scan(&already)
-		if !already {
-			commission := price * commissionRate
-			db.Pool.Exec(context.Background(),
-				`INSERT INTO effect_purchases(effect_id,buyer_id,creator_id,price,commission)
-				 VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
-				eid, myID, creatorID, price, commission)
+		stars := int(math.Ceil(price))
+		ctx := context.Background()
+		tx, err := db.Pool.Begin(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Хато"})
+			return
+		}
+		defer tx.Rollback(ctx)
+		tag, err := tx.Exec(ctx,
+			`INSERT INTO effect_purchases(effect_id,buyer_id,creator_id,price,commission)
+			 VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+			eid, myID, creatorID, price, price*commissionRate)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Хато"})
+			return
+		}
+		if tag.RowsAffected() > 0 { // харидани нав (на такрор)
+			var left int
+			if tx.QueryRow(ctx, `
+				UPDATE users SET stars_balance = stars_balance - $1
+				WHERE id=$2 AND COALESCE(stars_balance,0) >= $1
+				RETURNING stars_balance`, stars, myID).Scan(&left) != nil {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"message": "Ситораҳо кофӣ нестанд", "need": stars})
+				return
+			}
+			earn := stars - int(math.Ceil(float64(stars)*commissionRate))
+			tx.Exec(ctx, `UPDATE users SET stars_balance = COALESCE(stars_balance,0) + $1
+				WHERE id=$2`, earn, creatorID)
+			if tx.Commit(ctx) != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Хато"})
+				return
+			}
 			notify(creatorID, myID, "effect_sale", eid)
 			pushNotify(creatorID, myID, "effect_sale", eid, "эффекти шуморо харид")
 		}

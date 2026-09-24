@@ -47,6 +47,7 @@ func main() {
 	mw.InitRedis()
 	jobs.StartJobs()
 	handlers.StartScheduledMessages() // паёмҳои вақтбандишуда
+	handlers.StartScheduledPosts()    // постҳои вақтбандишуда: зикрҳо дар вақти нашр
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -260,9 +261,9 @@ func main() {
 		po.POST("/:id/collab/accept",  handlers.AcceptCollab)
 		po.POST("/:id/collab/decline", handlers.DeclineCollab)
 		po.DELETE("/:id",            handlers.DeletePost)
-		po.POST("/:id/like",         handlers.TogglePostLike)
-		po.POST("/:id/save",         handlers.TogglePostSave)
-		po.POST("/:id/share",        handlers.SharePost) // мубодилаи беназир
+		po.POST("/:id/like",         handlers.RequireVisible("post"), handlers.TogglePostLike)
+		po.POST("/:id/save",         handlers.RequireVisible("post"), handlers.TogglePostSave)
+		po.POST("/:id/share",        handlers.RequireVisible("post"), handlers.SharePost) // мубодилаи беназир
 		po.POST("/:id/report",       handlers.ReportPost)
 		po.POST("/:id/hide-likes",   handlers.TogglePostHideLikes)
 		po.POST("/:id/toggle-comments", handlers.TogglePostComments)
@@ -373,9 +374,9 @@ func main() {
 		re.POST("/:id/view",     handlers.TrackReelView)   // view dedup tracking
 	re.POST("/:id/media-check", handlers.CheckReelMedia) // файли видео нест? → пинҳон
 		re.POST("/:id/watch",    handlers.TrackReelWatch)  // watch-time tracking
-		re.POST("/:id/like",     handlers.ToggleReelLike)
-		re.POST("/:id/save",     handlers.ToggleReelSave)
-		re.POST("/:id/share",    handlers.ShareReel)
+		re.POST("/:id/like",     handlers.RequireVisible("reel"), handlers.ToggleReelLike)
+		re.POST("/:id/save",     handlers.RequireVisible("reel"), handlers.ToggleReelSave)
+		re.POST("/:id/share",    handlers.RequireVisible("reel"), handlers.ShareReel)
 		re.GET("/:id/comments",  cache3s, handlers.GetReelComments)
 		re.POST("/:id/comments", handlers.AddReelComment)
 		re.POST("/:id/report",       handlers.ReportReel)
@@ -404,6 +405,7 @@ func main() {
 		st.POST("/:id/poll/vote", handlers.VoteStoryPoll) // овоз ба пурсиш
 		st.POST("/:id/sticker/respond", handlers.RespondStorySticker) // савол/викторина/слайдер
 		st.GET("/:id/sticker/answers",   handlers.GetStickerAnswers)   // танҳо соҳиб
+		st.GET("/addyours/:chainId",     handlers.GetAddYoursChain)    // занҷири «Навбати ту»
 		st.POST("/:id/report", handlers.ReportStory)
 	}
 
@@ -461,6 +463,7 @@ func main() {
 	{
 		gf.POST("/",         handlers.SendGift)
 		gf.GET("/received",  handlers.GetReceivedGifts)
+		gf.GET("/balance",   handlers.GetStarsBalance)
 	}
 
 	no := r.Group("/notifications", auth, rl100)
@@ -641,6 +644,8 @@ func main() {
 		mp.GET("/campaigns/:id/candidates",      handlers.GetCampaignCandidates)
 		mp.GET("/campaigns/:id/metrics",         handlers.GetCampaignMetrics)
 		mp.POST("/campaigns/:id/invite",         handlers.InviteCreator)
+		// Барнома ин роҳро мезад, вале он танҳо дар /api/v1/advertiser буд.
+		mp.POST("/campaigns/:id/match",          handlers.MatchCampaign)
 
 		mp.GET("/creator/me", handlers.GetCreatorMarketplaceProfile)
 		mp.PUT("/creator/me", handlers.UpdateCreatorMarketplaceProfile)

@@ -63,6 +63,14 @@ func GetCloseFriendIDs(c *gin.Context) {
 func AddCloseFriend(c *gin.Context) {
 	myID := mw.UID(c)
 	friendID := c.Param("id")
+	// Танҳо корбари воқеӣ, на худам, на бастагон.
+	var exists bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE id=$1)`, friendID).Scan(&exists)
+	if !exists || friendID == myID || IsBlockedBetween(myID, friendID) {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Корбар ёфт нашуд"})
+		return
+	}
 	if _, err := db.Pool.Exec(context.Background(),
 		`INSERT INTO close_friends(user_id, friend_id) VALUES($1,$2)
 		 ON CONFLICT DO NOTHING`, myID, friendID); err != nil {

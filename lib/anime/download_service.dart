@@ -44,6 +44,34 @@ class DownloadService {
     return path;
   }
 
+  /// Акс ё видеои пост/рилс/сторисро дар дастгоҳ захира мекунад.
+  ///
+  /// Ҷудо аз `anime_downloads` нигоҳ дошта мешавад, то дар рӯйхати
+  /// аниме-и офлайн пайдо нашавад. Пасванд аз URL гирифта мешавад —
+  /// акс набояд ҳамчун `.mp4` захира шавад.
+  /// Бармегардонад: масири файл.
+  static Future<String> saveMedia(String url, {String name = 'raonson'}) async {
+    Directory? base;
+    try {
+      // Android: Android/data/<app>/files/Download — бо файл-менеҷер дида мешавад.
+      base = await getDownloadsDirectory();
+    } catch (_) {}
+    base ??= await getApplicationDocumentsDirectory();
+    final dir = Directory('${base.path}/Raonson');
+    if (!await dir.exists()) await dir.create(recursive: true);
+
+    final seg = Uri.tryParse(url)?.pathSegments;
+    final last = (seg == null || seg.isEmpty) ? '' : seg.last;
+    final dot = last.lastIndexOf('.');
+    var ext = dot > 0 ? last.substring(dot + 1).toLowerCase() : '';
+    if (ext.isEmpty || ext.length > 5) ext = 'jpg';
+
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final path = '${dir.path}/${_safe(name)}_$stamp.$ext';
+    await _dio.download(url, path);
+    return path;
+  }
+
   /// Рӯйхати файлҳои зеркашшуда.
   static Future<List<File>> list() async {
     final dir = await _dir();

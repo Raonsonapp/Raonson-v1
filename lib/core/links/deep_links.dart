@@ -88,6 +88,14 @@ class DeepLinks {
     return '$webBase/$path/${Uri.encodeComponent(id)}';
   }
 
+  /// Линки даъват ба гурӯҳ.
+  ///
+  /// Дар ҳамон домени воқеии [webBase] — пеш `raonson.app` буд, ки
+  /// вуҷуд надорад. Экрани «Ҳамроҳ шудан бо линк» охирин сегментро
+  /// ҳамчун токен мегирад, пас ин шакл он ҷо низ кор мекунад.
+  static String groupInvite(String token) =>
+      '$webBase/g/${Uri.encodeComponent(token)}';
+
   /// Линки дохилии барнома (барои тест ва QR).
   static String appLink(DeepLinkKind kind, String id) {
     final path = _paths[kind];

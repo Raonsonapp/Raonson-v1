@@ -96,7 +96,9 @@ class _ShareState extends State<ShareProfileSheet> {
                       ],
                     ]),
                     const SizedBox(height: 2),
-                    Text('raonson.app/${widget.user.username}',
+                    // Ҳамон линки воқеӣ, ки QR дорад — `raonson.app` вуҷуд надорад.
+                    Text(_url.replaceFirst(RegExp(r'^https?://'), ''),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             color: _dark ? AppColors.textFaint : Colors.black38,
                             fontSize: 11.5)),
@@ -135,7 +137,7 @@ class _ShareState extends State<ShareProfileSheet> {
                     child: CustomPaint(painter: _RLogoPainter(
                         color: _dark ? AppColors.neonBlue : AppColors.neonBlueDim))),
                 const SizedBox(width: 7),
-                Text('raonson.app', style: TextStyle(
+                Text('Raonson', style: TextStyle(
                     color: _dark ? AppColors.textFaint : Colors.black38,
                     fontSize: 12, letterSpacing: 0.5)),
               ]),

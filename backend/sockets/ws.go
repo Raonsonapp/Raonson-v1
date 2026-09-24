@@ -82,6 +82,11 @@ func emit(userID, event string, data interface{}) {
 // emitToOnlineFollowers — рӯйдодро танҳо ба пайравоне мефиристад, ки
 // ҳозир online ҳастанд. Барои миқёс (presence) ба ҷои broadcast ба ҳама.
 func emitToOnlineFollowers(userID, event string, data interface{}) {
+	// «Ҳолати фаъолият» хомӯш — ҳеҷ кас намебинад, ки ӯ онлайн аст.
+	// Пеш ин танзим сабт мешуд, вале ҳеҷ ҷо хонда намешуд.
+	if event == "presence:update" && !activityVisible(userID) {
+		return
+	}
 	// Аввал рӯйхати userID-и пайравони онлайнро мегирем (бе блоки дароз).
 	mu.RLock()
 	online := make(map[string]bool, len(clients))
@@ -92,8 +97,14 @@ func emitToOnlineFollowers(userID, event string, data interface{}) {
 	if len(online) == 0 {
 		return
 	}
+	// Бастагон ва онҳое, ки худашон ҳолатро пинҳон кардаанд, намегиранд
+	// (мисли Instagram: пинҳон кунӣ — худат ҳам намебинӣ).
 	rows, err := db.Pool.Query(context.Background(),
-		`SELECT follower_id FROM follows WHERE following_id=$1`, userID)
+		`SELECT f.follower_id FROM follows f JOIN users u ON u.id=f.follower_id
+		 WHERE f.following_id=$1 AND COALESCE(u.activity_status,true)
+		   AND NOT EXISTS (SELECT 1 FROM blocks b
+		     WHERE (b.blocker_id=$1 AND b.blocked_id=f.follower_id)
+		        OR (b.blocker_id=f.follower_id AND b.blocked_id=$1))`, userID)
 	if err != nil {
 		return
 	}
@@ -240,10 +251,9 @@ func dispatch(cl *client, raw []byte) {
 
 	// ── Presence ──────────────────────────────────────────────
 	case "presence:online":
-		var p struct{ UserID string `json:"userId"` }
-		json.Unmarshal(msg.Data, &p)
-		uid := p.UserID
-		if uid == "" { uid = cl.userID }
+		// ⚠️ Ҳамеша худи соҳиби сокет. Пеш `userId` аз муштарӣ гирифта
+		// мешуд — ҳар кас ҳар корбарро «онлайн» эълон карда метавонист.
+		uid := cl.userID
 		db.Pool.Exec(context.Background(), `UPDATE users SET last_seen=NULL WHERE id=$1`, uid)
 		go emitToOnlineFollowers(uid, "presence:update", map[string]interface{}{
 			"userId": uid, "status": "online", "lastSeen": nil})
@@ -255,7 +265,10 @@ func dispatch(cl *client, raw []byte) {
 		_, online := clients[p.UserID]
 		mu.RUnlock()
 		var lastSeen interface{}
-		if !online {
+		if !activityVisible(p.UserID) || !activityVisible(cl.userID) ||
+			!callAllowed(cl.userID, p.UserID) {
+			online = false // ҳолат пинҳон аст — на онлайн, на «охирин бор»
+		} else if !online {
 			db.Pool.QueryRow(context.Background(),
 				`SELECT last_seen FROM users WHERE id=$1`, p.UserID).Scan(&lastSeen)
 		}
@@ -287,7 +300,7 @@ func dispatch(cl *client, raw []byte) {
 		default:
 			return
 		}
-		if p.Receiver == "" || p.Receiver == cl.userID {
+		if p.Receiver == "" || p.Receiver == cl.userID || !callAllowed(cl.userID, p.Receiver) {
 			return
 		}
 		if len([]rune(p.Text)) > 1000 {
@@ -328,6 +341,12 @@ func dispatch(cl *client, raw []byte) {
 		isTyping := true
 		if p.IsTyping != nil {
 			isTyping = *p.IsTyping
+		}
+		// Танҳо ба ҳамсӯҳбати ҳамин чат ва на ба касе, ки блок кардааст.
+		if a, b, ok := strings.Cut(p.ChatID, "_"); !ok ||
+			!((a == cl.userID && b == p.Receiver) || (b == cl.userID && a == p.Receiver)) ||
+			!callAllowed(cl.userID, p.Receiver) {
+			break
 		}
 		emit(p.Receiver, "chat:typing", map[string]interface{}{
 			"userId": cl.userID, "chatId": p.ChatID, "isTyping": isTyping})
@@ -386,6 +405,9 @@ func dispatch(cl *client, raw []byte) {
 			Answer interface{} `json:"answer"`
 		}
 		json.Unmarshal(msg.Data, &p)
+		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) {
+			break
+		}
 		emit(p.To, "call:answered", map[string]interface{}{"answer": p.Answer})
 
 	case "call:ice-candidate":
@@ -394,11 +416,17 @@ func dispatch(cl *client, raw []byte) {
 			Candidate interface{} `json:"candidate"`
 		}
 		json.Unmarshal(msg.Data, &p)
+		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) {
+			break
+		}
 		emit(p.To, "call:ice-candidate", map[string]interface{}{"candidate": p.Candidate})
 
 	case "call:end":
 		var p struct{ To string `json:"to"` }
 		json.Unmarshal(msg.Data, &p)
+		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) {
+			break
+		}
 		emit(p.To, "call:ended", map[string]interface{}{})
 
 	// ── Notifications ──────────────────────────────────────
@@ -409,25 +437,9 @@ func dispatch(cl *client, raw []byte) {
 		// Already handled by userID-based emit — no-op needed
 
 	case "notification:push":
-		var p struct {
-			To       string `json:"to"`
-			Type     string `json:"type"`
-			EntityID string `json:"entityId"`
-		}
-		json.Unmarshal(msg.Data, &p)
-		if p.To == "" || p.Type == "" { return }
-		// "From"-и аз ҷониби клиент дода нашударо қабул намекунем — фиристанда
-		// ҳамеша худи корбари пайвастшуда аст (cl.userID). Вагарна касе паёмро
-		// аз номи каси дигар фиристода метавонист.
-		var nid string
-		db.Pool.QueryRow(context.Background(),
-			`INSERT INTO notifications(user_id,from_user_id,type,target_id)
-			 VALUES($1,$2,$3,$4) RETURNING id`,
-			p.To, cl.userID, p.Type, nullIfEmpty(p.EntityID)).Scan(&nid)
-		emit(p.To, "notification:new", map[string]interface{}{
-			"_id": nid, "type": p.Type,
-			"fromUser": map[string]interface{}{"_id": cl.userID},
-		})
+		// ⚠️ Хомӯш карда шуд. Ҳар корбари пайваст метавонист ба ҳар кас
+		// огоҳиномаи дилхоҳ (ҳар навъ, ҳар ҳадаф) нависад — бе санҷиши
+		// блок. Огоҳиномаҳо танҳо аз сервер (notify) сохта мешаванд.
 
 	case "notification:read":
 		var p struct{ NotificationID string `json:"notificationId"` }
@@ -440,6 +452,9 @@ func dispatch(cl *client, raw []byte) {
 	case "call:decline":
 		var p struct{ To string `json:"to"` }
 		json.Unmarshal(msg.Data, &p)
+		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) {
+			break
+		}
 		emit(p.To, "call:declined", map[string]interface{}{})
 	}
 }
@@ -459,6 +474,10 @@ func parseToken(s string) string {
 	claims, ok := tok.Claims.(jwt.MapClaims)
 	if !ok { return "" }
 	id, _ := claims["id"].(string)
+	// Token-и бекоршуда (ивази рамз, «Ҳамаро бандед», ban) — сокет не.
+	if id == "" || !mw.TokenAllowed(id, claims["tv"]) {
+		return ""
+	}
 	return id
 }
 
@@ -512,9 +531,24 @@ func BroadcastNewPost(authorID string, post interface{}) {
 // BroadcastNewStory — вақте story сохта мешавад, ба followers мефиристад
 // Дар handlers/story_chat_notif_admin.go, баъди INSERT чунин:
 //   go sockets.BroadcastNewStory(myID, storyPayload)
+//
+// ⚠️ Сторияи «Дӯстони наздик» пеш ба ҲАМАИ обунаҳо мерафт — дар экран
+// то навсозӣ пайдо мешуд. Акнун танҳо ба дӯстони наздик; бастагон
+// намегиранд.
 func BroadcastNewStory(authorID string, story interface{}) {
+	closeOnly := false
+	if m, ok := story.(map[string]interface{}); ok {
+		closeOnly = m["audience"] == "close"
+	}
 	rows, err := db.Pool.Query(context.Background(),
-		`SELECT follower_id FROM follows WHERE following_id=$1`, authorID)
+		`SELECT f.follower_id FROM follows f
+		 WHERE f.following_id=$1
+		   AND ($2 = FALSE OR EXISTS (SELECT 1 FROM close_friends cf
+		        WHERE cf.user_id=$1 AND cf.friend_id=f.follower_id))
+		   AND NOT EXISTS (SELECT 1 FROM blocks b
+		        WHERE (b.blocker_id=$1 AND b.blocked_id=f.follower_id)
+		           OR (b.blocker_id=f.follower_id AND b.blocked_id=$1))`,
+		authorID, closeOnly)
 	if err != nil {
 		return
 	}
@@ -538,4 +572,12 @@ func callAllowed(a, b string) bool {
 		  WHERE (blocker_id=$1 AND blocked_id=$2)
 		     OR (blocker_id=$2 AND blocked_id=$1))`, a, b).Scan(&blocked)
 	return !blocked
+}
+
+// activityVisible — оё корбар «Ҳолати фаъолият»-ро фаъол нигоҳ доштааст.
+func activityVisible(uid string) bool {
+	vis := true
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(activity_status,true) FROM users WHERE id=$1`, uid).Scan(&vis)
+	return vis
 }

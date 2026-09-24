@@ -8,6 +8,7 @@ import '../core/ui/tajikshop_brand.dart';
 import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
 import '../core/i18n/strings.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
 class CrmScreen extends StatefulWidget {
   const CrmScreen({super.key});
@@ -18,12 +19,15 @@ class CrmScreen extends StatefulWidget {
 class _CrmScreenState extends State<CrmScreen> {
   List<Map<String, dynamic>> _customers = [];
   bool _loading = true;
+  // Хатои шабака ≠ рӯйхати холӣ: бе ин корбар «ҳеҷ чиз нест» медид.
+  bool _error = false;
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
+    var failed = true;
     try {
       final r = await ApiClient.instance.get('/shop/customers')
           .timeout(const Duration(seconds: 15));
@@ -31,9 +35,10 @@ class _CrmScreenState extends State<CrmScreen> {
         final b = jsonDecode(r.body);
         final list = (b['customers'] ?? []) as List;
         _customers = list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+        failed = false;
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() { _loading = false; _error = failed; });
   }
 
   String _money(double v) =>
@@ -104,6 +109,8 @@ class _CrmScreenState extends State<CrmScreen> {
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _error
+              ? ErrorState(message: 'Муштариён бор нашуданд', onRetry: _load)
           : _customers.isEmpty
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(AppIcons.people_outline_rounded,

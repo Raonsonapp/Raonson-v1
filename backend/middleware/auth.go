@@ -54,7 +54,13 @@ func Auth() gin.HandlerFunc {
 			return
 		}
 		claims := tok.Claims.(jwt.MapClaims)
-		c.Set("userID", claims["id"].(string))
+		uid, _ := claims["id"].(string)
+		if uid == "" || !TokenAllowed(uid, claims["tv"]) {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Session expired"})
+			c.Abort()
+			return
+		}
+		c.Set("userID", uid)
 		if role, ok := claims["role"].(string); ok {
 			c.Set("role", role)
 		} else {

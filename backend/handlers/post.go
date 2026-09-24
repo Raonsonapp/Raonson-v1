@@ -139,13 +139,31 @@ func CreatePost(c *gin.Context) {
 			b.ContactRaonson, clampRunes(b.ShopWhatsApp, 30),
 			clampRunes(b.ShopPhone, 30))
 	}
-	tx.Commit(context.Background())
+	if scheduledAt != nil {
+		// Огоҳиномаҳо дар вақти нашр мераванд (ниг. announceScheduledPosts).
+		tx.Exec(context.Background(),
+			`UPDATE posts SET announce_pending=TRUE WHERE id=$1`, postID)
+	}
+	if err := tx.Commit(context.Background()); err != nil {
+		// Пеш хатои commit нодида гирифта мешуд ва 201 бармегашт.
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
+		return
+	}
 
 	// Invalidate feed cache for this user
 	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2", "smartfeed:"+myID+":1", "smartfeed:"+myID+":2")
 	// ва cache-и middleware-и корбар (то пости нав фавран дар profile/feed
 	// худи ӯ намоён шавад).
 	mw.InvalidateUserCache(myID)
+
+	// ⚠️ Пости вақтбандишуда: пеш зикрҳо ва паёми сокет ФАВРАН мерафтанд —
+	// одамон пеш аз нашр мефаҳмиданд ва постро медиданд.
+	if scheduledAt != nil {
+		inviteCollaborators(postID, myID, b.Collaborators)
+		c.JSON(http.StatusCreated, gin.H{"_id": postID, "caption": b.Caption,
+			"scheduledAt": scheduledAt, "scheduled": true})
+		return
+	}
 
 	// @зикр дар тавсиф — ҳар корбари зикршударо огоҳ кун
 	notifyMentions(myID, "mention", postID, b.Caption, "шуморо дар публикатсия зикр кард")
@@ -156,18 +174,7 @@ func CreatePost(c *gin.Context) {
 	//
 	// `notifyMentions` матнро таҳлил мекунад, пас номҳоро ҳамчун
 	// матни «@ном» медиҳем ва ҳамон роҳ кор мекунад.
-	if len(b.TaggedUsers) > 0 {
-		var sb strings.Builder
-		for _, u := range b.TaggedUsers {
-			u = strings.TrimPrefix(strings.TrimSpace(u), "@")
-			if u == "" {
-				continue
-			}
-			sb.WriteString("@" + u + " ")
-		}
-		notifyMentions(myID, "mention", postID, sb.String(),
-			"шуморо дар акс нишон дод")
-	}
+	notifyTagged(myID, postID, b.TaggedUsers)
 	// Даъвати ҳамкорӣ: то розигӣ ном ба пост баста намешавад.
 	inviteCollaborators(postID, myID, b.Collaborators)
 
@@ -537,4 +544,61 @@ func TogglePostSave(c *gin.Context) {
 	}
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusOK, gin.H{"saved": !saved})
+}
+
+// notifyTagged — касони дар акс нишондодашуда.
+func notifyTagged(authorID, postID string, tagged []string) {
+	if len(tagged) == 0 {
+		return
+	}
+	var sb strings.Builder
+	for _, u := range tagged {
+		u = strings.TrimPrefix(strings.TrimSpace(u), "@")
+		if u == "" {
+			continue
+		}
+		sb.WriteString("@" + u + " ")
+	}
+	notifyMentions(authorID, "mention", postID, sb.String(), "шуморо дар акс нишон дод")
+}
+
+// announceScheduledPosts — постҳое, ки вақти нашрашон расид: зикрҳо ва
+// нишонҳо ҳоло огоҳ мешаванд, кэши лентаи обунаҳо пок мешавад.
+func announceScheduledPosts() {
+	rows, err := db.Pool.Query(context.Background(), `
+		UPDATE posts SET announce_pending=FALSE
+		WHERE announce_pending AND scheduled_at <= NOW()
+		RETURNING id, user_id, COALESCE(caption,''), COALESCE(tagged_users,'{}')`)
+	if err != nil {
+		return
+	}
+	type due struct {
+		id, user, caption string
+		tagged            []string
+	}
+	list := []due{}
+	for rows.Next() {
+		var d due
+		if rows.Scan(&d.id, &d.user, &d.caption, &d.tagged) == nil {
+			list = append(list, d)
+		}
+	}
+	rows.Close()
+	for _, d := range list {
+		notifyMentions(d.user, "mention", d.id, d.caption, "шуморо дар публикатсия зикр кард")
+		notifyTagged(d.user, d.id, d.tagged)
+		mw.InvalidateUserCache(d.user)
+		mw.BumpContentEpoch()
+	}
+}
+
+// StartScheduledPosts — ҳар дақиқа постҳои расидаро эълон мекунад.
+func StartScheduledPosts() {
+	go func() {
+		t := time.NewTicker(time.Minute)
+		defer t.Stop()
+		for range t.C {
+			announceScheduledPosts()
+		}
+	}()
 }

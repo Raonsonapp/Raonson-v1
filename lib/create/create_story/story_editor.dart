@@ -50,10 +50,11 @@ class StoryEditor extends StatefulWidget {
        List<Map<String, dynamic>>? mentions]) onPublish;
   final VoidCallback onCancel;
   final String? errorMessage;
+  final Map<String, dynamic>? initialSticker;
 
   const StoryEditor({super.key, required this.media, this.isVideo = false,
     required this.isUploading, required this.onPublish, required this.onCancel,
-    this.errorMessage});
+    this.errorMessage, this.initialSticker});
 
   @override
   State<StoryEditor> createState() => _StoryEditorState();
@@ -146,7 +147,7 @@ class _StoryEditorState extends State<StoryEditor> {
   Map<String, dynamic>? _poll;
 
   // Савол / викторина / слайдер / ҳисоби баръакс — мисли Instagram.
-  Map<String, dynamic>? _sticker;
+  late Map<String, dynamic>? _sticker = widget.initialSticker;
 
   String get _stickerLabel => switch (_sticker?['kind']) {
         'question'  => 'Савол ✓',
@@ -154,6 +155,7 @@ class _StoryEditorState extends State<StoryEditor> {
         'slider'    => 'Слайдер ✓',
         'countdown' => 'Ҳисоб ✓',
         'link'      => 'Линк ✓',
+        'addyours'  => 'Навбати ту ✓',
         _           => 'Интерактив',
       };
 
@@ -172,6 +174,7 @@ class _StoryEditorState extends State<StoryEditor> {
             ['slider', '😍', 'Слайдери эмодзи'],
             ['countdown', '⏳', 'Ҳисоби баръакс'],
             ['link', '🔗', 'Линк'],
+            ['addyours', '📸', 'Навбати ту — занҷири сторис'],
           ])
             ListTile(
               leading: Text(e[1], style: const TextStyle(fontSize: 24)),
@@ -225,6 +228,7 @@ class _StoryEditorState extends State<StoryEditor> {
                       'countdown' => 'Номи рӯйдод',
                       'slider' => 'Савол (ихтиёрӣ)',
                       'link' => 'Матни линк (ихтиёрӣ)',
+                      'addyours' => 'Мавзӯъ: «Акси аввали телефонат»',
                       _ => 'Савол',
                     })),
                 if (kind == 'quiz') ...[
@@ -309,6 +313,8 @@ class _StoryEditorState extends State<StoryEditor> {
                     m['url'] = u.toString();
                   } else if (kind == 'slider') {
                     m['emoji'] = emoji.text.trim().isEmpty ? '😍' : emoji.text.trim();
+                  } else if (kind == 'addyours') {
+                    if (p.isEmpty) { setD(() => err = 'Мавзӯъро нависед'); return; }
                   } else if (kind == 'countdown') {
                     if (p.isEmpty) { setD(() => err = 'Номи рӯйдодро нависед'); return; }
                     if (!end.isAfter(DateTime.now())) {

@@ -26,6 +26,9 @@ import (
 //    slider    — слайдери эмодзи 0..100. Ҷавоб як бор; баъд миёна
 //                нишон дода мешавад.
 //    countdown — ҳисоби баръакс то вақти муайян.
+//    addyours  — «Навбати ту» (Add Yours): мавзӯъ («Акси аввали
+//                телефонат»); тамошобин тугмаро зада сторияшро бо ҳамон
+//                стикер мегузорад ва ба занҷир ҳамроҳ мешавад.
 //
 //  Пурсиш (poll) дар ҷои худ монд — ниг. VoteStoryPoll.
 //  Соҳиби сторис ба стикери худ ҷавоб намедиҳад.
@@ -39,6 +42,8 @@ type stickerInput struct {
 	Emoji   string   `json:"emoji"`
 	EndsAt  string   `json:"endsAt"`
 	URL     string   `json:"url"`
+	// addyours: сторие, ки корбар ба занҷираш ҳамроҳ мешавад.
+	JoinOf  string   `json:"joinOf"`
 	X       float64  `json:"x"`
 	Y       float64  `json:"y"`
 }
@@ -52,6 +57,7 @@ type stickerClean struct {
 	Emoji   string
 	EndsAt  *time.Time
 	URL     string
+	JoinOf  string
 	X, Y    float64
 }
 
@@ -128,6 +134,13 @@ func validateSticker(in stickerInput, now time.Time) (*stickerClean, error) {
 		if out.Prompt == "" {
 			out.Prompt = u.Host
 		}
+	case "addyours":
+		// Мавзӯъ аз худи занҷир гирифта мешавад (saveSticker), агар
+		// корбар ҳамроҳ шавад; барои занҷири нав — ҳатмист.
+		out.JoinOf = strings.TrimSpace(in.JoinOf)
+		if out.Prompt == "" && out.JoinOf == "" {
+			return nil, errBadSticker
+		}
 	default:
 		return nil, errBadSticker
 	}
@@ -143,11 +156,123 @@ func saveSticker(storyID string, s *stickerClean) {
 	if s.Options == nil {
 		opts = []byte("[]")
 	}
+	chain := ""
+	if s.Kind == "addyours" {
+		chain = storyID
+		if s.JoinOf != "" {
+			// Ҳамроҳшавӣ: мавзӯъ ва chain_id аз стикери асл. Агар он
+			// ёфт нашавад (нест шуд) — занҷири нав бо мавзӯи худ.
+			var root, prompt string
+			if db.Pool.QueryRow(context.Background(), `
+				SELECT COALESCE(NULLIF(chain_id,''), story_id), prompt
+				FROM story_stickers WHERE story_id=$1 AND kind='addyours'`,
+				s.JoinOf).Scan(&root, &prompt) == nil && root != "" {
+				chain, s.Prompt = root, prompt
+			}
+		}
+		if s.Prompt == "" {
+			s.Prompt = "Навбати ту"
+		}
+	}
 	db.Pool.Exec(context.Background(), `
-		INSERT INTO story_stickers(story_id,kind,prompt,options,correct,emoji,ends_at,pos_x,pos_y,link_url)
-		VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9,$10)
+		INSERT INTO story_stickers(story_id,kind,prompt,options,correct,emoji,ends_at,pos_x,pos_y,link_url,chain_id)
+		VALUES($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9,$10,$11)
 		ON CONFLICT (story_id) DO NOTHING`,
-		storyID, s.Kind, s.Prompt, string(opts), s.Correct, s.Emoji, s.EndsAt, s.X, s.Y, s.URL)
+		storyID, s.Kind, s.Prompt, string(opts), s.Correct, s.Emoji, s.EndsAt, s.X, s.Y, s.URL, chain)
+	if chain != "" && chain != storyID {
+		notifyChainStarter(chain, storyID)
+	}
+}
+
+// notifyChainStarter — ба касе, ки занҷирро сар кард, хабар медиҳад.
+func notifyChainStarter(chainID, storyID string) {
+	var starter, joiner string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM stories WHERE id=$1`, chainID).Scan(&starter)
+	db.Pool.QueryRow(context.Background(),
+		`SELECT user_id FROM stories WHERE id=$1`, storyID).Scan(&joiner)
+	if starter == "" || joiner == "" || starter == joiner || IsBlockedBetween(starter, joiner) {
+		return
+	}
+	notify(starter, joiner, "story_addyours", storyID)
+	pushNotify(starter, joiner, "story_addyours", storyID, "")
+}
+
+// addYoursInfo — шумораи иштирокчиён, 3 аватари охирин ва оё
+// тамошобин аллакай ҳамроҳ шудааст. Бастагон ҳисоб намешаванд.
+func addYoursInfo(chainID, viewerID string) gin.H {
+	ctx := context.Background()
+	var total int
+	var joined bool
+	db.Pool.QueryRow(ctx, `
+		SELECT COUNT(DISTINCT s.user_id),
+		       COALESCE(BOOL_OR(s.user_id=$2::text), false)
+		FROM story_stickers st JOIN stories s ON s.id=st.story_id
+		WHERE st.chain_id=$1`, chainID, viewerID).Scan(&total, &joined)
+	avatars := []string{}
+	rows, err := db.Pool.Query(ctx, `
+		SELECT u.avatar FROM (
+		  SELECT DISTINCT ON (s.user_id) s.user_id, s.created_at
+		  FROM story_stickers st JOIN stories s ON s.id=st.story_id
+		  WHERE st.chain_id=$1 ORDER BY s.user_id, s.created_at DESC) x
+		JOIN users u ON u.id=x.user_id
+		WHERE COALESCE(u.avatar,'') <> ''
+		ORDER BY x.created_at DESC LIMIT 3`, chainID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var a string
+			rows.Scan(&a)
+			avatars = append(avatars, a)
+		}
+	}
+	return gin.H{"chainId": chainID, "participants": total,
+		"joined": joined, "avatars": avatars}
+}
+
+// GET /stories/addyours/:chainId — сторисҳои ФАЪОЛИ занҷир, ки
+// тамошобин дидан метавонад (ҳисоби пӯшида ва бастагон — не).
+func GetAddYoursChain(c *gin.Context) {
+	chain := c.Param("chainId")
+	myID := mw.UID(c)
+	var prompt string
+	if db.Pool.QueryRow(context.Background(), `
+		SELECT prompt FROM story_stickers WHERE story_id=$1 AND kind='addyours'`,
+		chain).Scan(&prompt) != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Ёфт нашуд"})
+		return
+	}
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT s.id, s.media_url, s.media_type, s.created_at, s.expires_at,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
+		FROM story_stickers st
+		JOIN stories s ON s.id=st.story_id
+		JOIN users u ON u.id=s.user_id
+		WHERE st.chain_id=$1 AND s.expires_at > NOW()
+		  AND (s.audience IS NULL OR s.audience <> 'close' OR s.user_id=$2::text)
+		  AND `+visibleAuthorSQL("s.user_id", "u", "$2")+`
+		ORDER BY s.created_at DESC LIMIT 100`, chain, myID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Хато"})
+		return
+	}
+	defer rows.Close()
+	list := []gin.H{}
+	for rows.Next() {
+		var sid, murl, mtype, uid, uname, avatar string
+		var created, expires time.Time
+		var ver bool
+		rows.Scan(&sid, &murl, &mtype, &created, &expires, &uid, &uname, &avatar, &ver)
+		list = append(list, gin.H{
+			"_id": sid, "mediaUrl": murl, "mediaType": mtype,
+			"createdAt": created, "expiresAt": expires,
+			"user": gin.H{"_id": uid, "username": uname, "avatar": avatar, "verified": ver},
+		})
+	}
+	info := addYoursInfo(chain, myID)
+	info["prompt"] = prompt
+	info["stories"] = list
+	c.JSON(http.StatusOK, info)
 }
 
 // attachSticker — стикерро ба ҷавоби сторис илова мекунад.
@@ -156,16 +281,16 @@ func saveSticker(storyID string, s *stickerClean) {
 // соҳиб) фиристода мешавад — вагарна ҳар кас онро дар ҷавоби сервер
 // медид.
 func attachSticker(storyID, viewerID, ownerID string, out gin.H) {
-	var kind, prompt, emoji, linkURL string
+	var kind, prompt, emoji, linkURL, chainID string
 	var optsRaw []byte
 	var correct int
 	var endsAt *time.Time
 	var x, y float64
 	err := db.Pool.QueryRow(context.Background(), `
 		SELECT kind, prompt, options, correct, emoji, ends_at, pos_x, pos_y,
-		       COALESCE(link_url,'')
+		       COALESCE(link_url,''), COALESCE(chain_id,'')
 		FROM story_stickers WHERE story_id=$1`, storyID).
-		Scan(&kind, &prompt, &optsRaw, &correct, &emoji, &endsAt, &x, &y, &linkURL)
+		Scan(&kind, &prompt, &optsRaw, &correct, &emoji, &endsAt, &x, &y, &linkURL, &chainID)
 	if err != nil {
 		return
 	}
@@ -215,6 +340,13 @@ func attachSticker(storyID, viewerID, ownerID string, out gin.H) {
 		st["endsAt"] = endsAt
 	case "link":
 		st["url"] = linkURL
+	case "addyours":
+		if chainID == "" {
+			chainID = storyID
+		}
+		for k, v := range addYoursInfo(chainID, viewerID) {
+			st[k] = v
+		}
 	}
 	out["sticker"] = st
 }
@@ -268,7 +400,7 @@ func RespondStorySticker(c *gin.Context) {
 		SELECT s.user_id, st.kind, st.options::text, st.correct, s.expires_at
 		FROM stories s JOIN story_stickers st ON st.story_id=s.id
 		WHERE s.id=$1`, sid).Scan(&owner, &kind, &optsRaw, &correct, &expires)
-	if err != nil || time.Now().After(expires) {
+	if err != nil || time.Now().After(expires) || canSeeStory(myID, sid) == "" {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Стикер ёфт нашуд"})
 		return
 	}
@@ -424,9 +556,11 @@ func saveStoryMentions(storyID, authorID string, in []mentionInput) {
 		}
 		seen[uname] = true
 		var uid, real string
+		allow := true
 		if db.Pool.QueryRow(ctx,
-			`SELECT id, username FROM users WHERE lower(username)=$1 AND COALESCE(banned,false)=FALSE`,
-			uname).Scan(&uid, &real) != nil || uid == authorID {
+			`SELECT id, username, COALESCE(allow_mentions,true) FROM users
+			 WHERE lower(username)=$1 AND COALESCE(banned,false)=FALSE`,
+			uname).Scan(&uid, &real, &allow) != nil || uid == authorID || !allow {
 			continue
 		}
 		if IsBlockedBetween(authorID, uid) {

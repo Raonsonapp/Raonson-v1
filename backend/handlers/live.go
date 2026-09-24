@@ -7,6 +7,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -62,21 +63,54 @@ func EndLive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// POST /live/:id/join → шумораи бинандаро +1 (best-effort)
-func JoinLive(c *gin.Context) {
-	id := c.Param("id")
-	db.Pool.Exec(context.Background(),
-		`UPDATE live_streams SET viewers=viewers+1 WHERE id=$1 AND active=TRUE`, id)
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+// liveHost — ҳости эфири ФАЪОЛ, агар тамошобин онро дида тавонад.
+func liveHost(streamID, viewer string) string {
+	var host string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT host_id FROM live_streams WHERE id=$1 AND active=TRUE`, streamID).Scan(&host)
+	if host == "" {
+		return ""
+	}
+	if ok, _ := CanSeeProfileContent(viewer, host); !ok {
+		return ""
+	}
+	return host
 }
 
-// POST /live/:id/leave → шумораи бинандаро -1 (то счётчик воқеӣ бошад)
+// refreshViewers — шумораи бинандагон аз рӯи одамони ВОҚЕӢ.
+func refreshViewers(streamID string) int {
+	var n int
+	db.Pool.QueryRow(context.Background(), `
+		UPDATE live_streams SET viewers =
+		  (SELECT COUNT(*) FROM live_viewers WHERE stream_id=$1 AND active)
+		WHERE id=$1 RETURNING viewers`, streamID).Scan(&n)
+	return n
+}
+
+// POST /live/:id/join
+//
+// ⚠️ Пеш ҳар дархост +1 мекард — бо такрор ҳазорҳо «бинанда» сохтан
+// мумкин буд. Акнун ҳар корбар як бор ҳисоб мешавад.
+func JoinLive(c *gin.Context) {
+	id := c.Param("id")
+	me := mw.UID(c)
+	if liveHost(id, me) == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Эфир ёфт нашуд"})
+		return
+	}
+	db.Pool.Exec(context.Background(), `
+		INSERT INTO live_viewers(stream_id,user_id,active) VALUES($1,$2,TRUE)
+		ON CONFLICT (stream_id,user_id) DO UPDATE SET active=TRUE`, id, me)
+	c.JSON(http.StatusOK, gin.H{"ok": true, "viewers": refreshViewers(id)})
+}
+
+// POST /live/:id/leave
 func LeaveLive(c *gin.Context) {
 	id := c.Param("id")
 	db.Pool.Exec(context.Background(),
-		`UPDATE live_streams SET viewers=GREATEST(viewers-1,0)
-		 WHERE id=$1 AND active=TRUE`, id)
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+		`UPDATE live_viewers SET active=FALSE WHERE stream_id=$1 AND user_id=$2`,
+		id, mw.UID(c))
+	c.JSON(http.StatusOK, gin.H{"ok": true, "viewers": refreshViewers(id)})
 }
 
 // GET /live → стримҳои фаъол
@@ -85,7 +119,10 @@ func ListLive(c *gin.Context) {
 		SELECT l.id, l.channel, l.title, l.viewers, COALESCE(l.likes,0),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
 		FROM live_streams l JOIN users u ON u.id=l.host_id
-		WHERE l.active=TRUE ORDER BY l.started_at DESC LIMIT 50`)
+		WHERE l.active=TRUE
+		  -- Бастагон ва ҳисобҳои пӯшидаи бегона дар рӯйхат нестанд.
+		  AND `+visibleAuthorSQL("l.host_id", "u", "$1")+`
+		ORDER BY l.started_at DESC LIMIT 50`, mw.UID(c))
 	out := []gin.H{}
 	if err == nil {
 		defer rows.Close()
@@ -121,12 +158,22 @@ func LiveComment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "холӣ"})
 		return
 	}
-	if len(text) > 300 {
-		text = text[:300]
+	text = clampRunes(text, 300) // пеш байт мебурид — ҳарфи кириллӣ нимта мешуд
+	// Танҳо ба эфири фаъол ва на аз бастагон.
+	if liveHost(id, myID) == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Эфир ёфт нашуд"})
+		return
 	}
-	db.Pool.Exec(context.Background(),
+	if flagged, _ := utils.ModerateText(context.Background(), text); flagged {
+		c.JSON(http.StatusForbidden, gin.H{"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад"})
+		return
+	}
+	if _, err := db.Pool.Exec(context.Background(),
 		`INSERT INTO live_comments(stream_id, user_id, text) VALUES($1,$2,$3)`,
-		id, myID, text)
+		id, myID, text); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Шарҳ сабт нашуд"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -156,9 +203,25 @@ func LiveComments(c *gin.Context) {
 }
 
 // POST /live/:id/like → +1 дил
+//
+// Мисли Instagram дилҳоро борҳо зада мешавад, вале аз як нафар то 300 —
+// пеш бо такрори дархост шумораро беохир баланд кардан мумкин буд.
 func LiveLike(c *gin.Context) {
 	id := c.Param("id")
-	db.Pool.Exec(context.Background(),
-		`UPDATE live_streams SET likes=COALESCE(likes,0)+1 WHERE id=$1 AND active=TRUE`, id)
+	me := mw.UID(c)
+	if liveHost(id, me) == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Эфир ёфт нашуд"})
+		return
+	}
+	var counted bool
+	db.Pool.QueryRow(context.Background(), `
+		INSERT INTO live_viewers(stream_id,user_id,active,likes) VALUES($1,$2,TRUE,1)
+		ON CONFLICT (stream_id,user_id) DO UPDATE SET likes = live_viewers.likes + 1
+		WHERE live_viewers.likes < 300
+		RETURNING TRUE`, id, me).Scan(&counted)
+	if counted {
+		db.Pool.Exec(context.Background(),
+			`UPDATE live_streams SET likes=COALESCE(likes,0)+1 WHERE id=$1 AND active=TRUE`, id)
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

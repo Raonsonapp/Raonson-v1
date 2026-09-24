@@ -1,6 +1,8 @@
 // lib/gifts/gift_sheet.dart
 // Тӯҳфаҳо (Gifts / звёзды) — мисли «Подарки»-и Instagram.
 // Аз менюи шарҳҳо ва reels кушода мешавад: интро → интихоби ситора → фиристодан.
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -50,7 +52,43 @@ class _GiftSheetState extends State<_GiftSheet> {
   bool _sending = false;
   int  _selected = 1;
 
+  /// Баланси ситораҳои ФИРИСТАНДА. Сервер тӯҳфаро аз ҳамин баланс
+  /// мегирад, пас бе донистани он корбар тугмаро пахш мекард ва
+  /// танҳо хато мегирифт. null — ҳанӯз бор нашуд ё хато шуд.
+  int? _balance;
+  bool _balanceError = false;
+
   static const _packs = [1, 5, 10, 25, 50, 100];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalance();
+  }
+
+  Future<void> _loadBalance() async {
+    setState(() => _balanceError = false);
+    try {
+      final r = await ApiClient.instance.getOk('/gifts/balance');
+      final m = jsonDecode(r.body) as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _balance = (m['balance'] as num?)?.toInt() ?? 0;
+        // Агар интихоби ҷорӣ аз баланс зиёд бошад, онро паст мекунем.
+        if (_selected > _balance!) {
+          _selected = _packs.lastWhere((p) => p <= _balance!,
+              orElse: () => _packs.first);
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => _balanceError = true);
+    }
+  }
+
+  bool _affordable(int stars) => _balance != null && stars <= _balance!;
+
+  void _snack(String text) => ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _send() async {
     setState(() => _sending = true);
@@ -62,7 +100,13 @@ class _GiftSheetState extends State<_GiftSheet> {
         'stars':      _selected,
       });
       if (!mounted) return;
-      if (res.statusCode < 400) {
+      Map<String, dynamic> body = const {};
+      try {
+        final d = jsonDecode(res.body);
+        if (d is Map<String, dynamic>) body = d;
+      } catch (_) {}
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(tr('gift.sent',
@@ -70,16 +114,27 @@ class _GiftSheetState extends State<_GiftSheet> {
           backgroundColor: AppColors.divider,
           duration: const Duration(seconds: 2),
         ));
+        return;
+      }
+      setState(() => _sending = false);
+      if (res.statusCode == 402) {
+        // Сервер баланси воқеиро бармегардонад — онро нишон медиҳем,
+        // то корбар бубинад, чаро рад шуд.
+        final have = (body['balance'] as num?)?.toInt() ?? _balance ?? 0;
+        final need = (body['need'] as num?)?.toInt() ?? _selected;
+        setState(() => _balance = have);
+        _snack('Ситораҳо кофӣ нестанд: шумо $have ⭐ доред, '
+            'барои ин тӯҳфа $need ⭐ лозим аст.');
+      } else if (res.statusCode == 400) {
+        _snack(body['message']?.toString() ??
+            'Дар як тӯҳфа зиёда аз 1000 ⭐ фиристодан мумкин нест.');
       } else {
-        setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr('ui.803ad32c3a'))));
+        _snack(body['message']?.toString() ?? tr('ui.803ad32c3a'));
       }
     } catch (_) {
       if (mounted) {
         setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(tr('ui.70c0ecf304'))));
+        _snack(tr('ui.70c0ecf304'));
       }
     }
   }
@@ -119,8 +174,11 @@ class _GiftSheetState extends State<_GiftSheet> {
         const SizedBox(height: 20),
         _bullet(AppIcons.favorite_border_rounded, 'Бештар аз «Лайк»',
             'Миннатдории худро бо тӯҳфа барои видеоҳо ифода кунед.'),
-        _bullet(AppIcons.payments_outlined, 'Муаллифон пул кор карда метавонанд',
-            'Баъзе муаллифон аз тӯҳфаҳои гирифта даромад мегиранд.'),
+        // Пул ба муаллиф пардохт намешавад — танҳо ситораҳо. Рост
+        // мегӯем, ки ситора аз куҷо пайдо мешавад.
+        _bullet(AppIcons.star_rounded, 'Ситораҳо аз куҷо меоянд',
+            '5% кэшбэк баъди расонидани фармоиш аз Shop ва '
+            'тӯҳфаҳое, ки ба шумо мефиристанд.'),
         _bullet(AppIcons.card_giftcard_rounded, 'Шуморо қайд карда метавонанд',
             'Муаллифон метавонанд ба тӯҳфаи шумо ҷавоб диҳанд.'),
         const SizedBox(height: 20),
@@ -169,6 +227,8 @@ class _GiftSheetState extends State<_GiftSheet> {
         Text('Тӯҳфа ба @${widget.authorName}',
             style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        _balanceLine(),
         const SizedBox(height: 16),
         GridView.count(
           shrinkWrap: true,
@@ -179,25 +239,29 @@ class _GiftSheetState extends State<_GiftSheet> {
           childAspectRatio: 1,
           children: _packs.map((s) {
             final sel = _selected == s;
+            final can = _affordable(s);
             return GestureDetector(
-              onTap: () => setState(() => _selected = s),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.divider,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: sel ? AppColors.storyEnd : AppColors.dividerFaint,
-                      width: sel ? 2 : 1),
-                ),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('⭐', style: TextStyle(fontSize: s >= 50 ? 30 : 24)),
-                    const SizedBox(height: 6),
-                    Text('$s', style: TextStyle(color: AppColors.textPrimary,
-                        fontSize: 16, fontWeight: FontWeight.w700)),
-                    Text(tr('ui.2a3e1f259f'), style: TextStyle(
-                        color: AppColors.textFaint, fontSize: 11)),
-                  ],
+              onTap: can ? () => setState(() => _selected = s) : null,
+              child: Opacity(
+                opacity: can ? 1 : 0.35,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: sel ? AppColors.storyEnd : AppColors.dividerFaint,
+                        width: sel ? 2 : 1),
+                  ),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('⭐', style: TextStyle(fontSize: s >= 50 ? 30 : 24)),
+                      const SizedBox(height: 6),
+                      Text('$s', style: TextStyle(color: AppColors.textPrimary,
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                      Text(tr('ui.2a3e1f259f'), style: TextStyle(
+                          color: AppColors.textFaint, fontSize: 11)),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -210,11 +274,28 @@ class _GiftSheetState extends State<_GiftSheet> {
                 ? 'Фиристода истодааст…'
                 : 'Фиристодани $_selected ⭐',
             loading: _sending,
-            onTap: _sending ? null : _send,
+            onTap: (_sending || !_affordable(_selected)) ? null : _send,
           ),
         ),
       ]),
     );
+  }
+
+  Widget _balanceLine() {
+    final style = TextStyle(color: AppColors.textFaint, fontSize: 13);
+    if (_balanceError) {
+      return GestureDetector(
+        onTap: _loadBalance,
+        child: Text('Баланс бор нашуд — такрор кунед', style: style),
+      );
+    }
+    if (_balance == null) return Text('Баланс…', style: style);
+    if (_balance == 0) {
+      return Text('Баланси шумо: 0 ⭐\nСитораҳо ҳамчун 5% кэшбэк баъди '
+          'расонидани фармоиш аз Shop ва аз тӯҳфаҳои гирифта меоянд.',
+          textAlign: TextAlign.center, style: style);
+    }
+    return Text('Баланси шумо: $_balance ⭐', style: style);
   }
 }
 

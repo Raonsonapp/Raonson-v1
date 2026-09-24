@@ -32,6 +32,7 @@ import '../../shop/buy_sheet.dart';
 import '../../ai/ai_tools.dart';
 import '../../widgets/media_view.dart';
 import '../../chat/share/share_to_chat_row.dart';
+import '../../core/services/media_saver.dart';
 import '../../profile/saved_collections_screen.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
@@ -404,9 +405,6 @@ class _PostCardState extends State<PostCard>
           _SvgMenuTile(assetPath: 'assets/icons/edit.svg',
               label: tr('post.edit'),
               onTap: () { Navigator.pop(context); _editCaption(); }),
-          _SvgMenuTile(assetPath: 'assets/icons/mention.svg',
-              label: tr('post.mentionAction'),
-              onTap: () { Navigator.pop(context); _mentionFriends(); }),
           // Пост → стори. Ин хусусият ТАМОМАН набуд.
           _MenuItem(icon: AppIcons.add_circle_outline,
               label: 'Ба стори гузоштан',
@@ -509,7 +507,16 @@ class _PostCardState extends State<PostCard>
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2)));
       }
-    } catch (_) {}
+    } catch (_) {
+      // Сервер рад кард ё интернет нест — пинҳон намемонем.
+      _showError('Бойгонӣ нашуд. Боз кӯшиш кунед.');
+    }
+  }
+
+  void _showError(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(text)));
   }
 
   void _promotePost() {
@@ -750,49 +757,6 @@ class _PostCardState extends State<PostCard>
     setState(() => _song = song);
   }
 
-  Future<void> _mentionFriends() async {
-    final ctrl = TextEditingController();
-    await showModalBottomSheet(
-      context: context, isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-            left: 16, right: 16, top: 8),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(color: AppColors.textFaint,
-                borderRadius: BorderRadius.circular(2))),
-          Text(tr('ui.e20a8c5462'), style: TextStyle(
-              color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
-          const SizedBox(height: 12),
-          TextField(controller: ctrl, autofocus: true,
-            style: TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              hintText: '@username', hintStyle: TextStyle(color: AppColors.textFaint),
-              filled: true, fillColor: AppColors.card,
-              border: OutlineInputBorder(borderSide: BorderSide.none))),
-          const SizedBox(height: 12),
-          SizedBox(width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.neonBlue,
-                  foregroundColor: AppColors.textPrimary),
-              onPressed: () async {
-                final m = ctrl.text.trim();
-                Navigator.pop(ctx);
-                if (m.isEmpty) return;
-                await ApiClient.instance.post(
-                  '/posts/${widget.post.id}/mention',
-                  body: {'username': m.replaceAll('@', '')});
-              },
-              child: Text(tr('ui.4ed1632448')))),
-        ])));
-    ctrl.dispose();
-  }
   Future<void> _showStats() async {
     final res = await ApiClient.instance.get('/posts/${widget.post.id}/stats');
     if (!mounted) return;
@@ -885,7 +849,9 @@ class _PostCardState extends State<PostCard>
           content: Text(tr('ui.3d42af2ead')),
           backgroundColor: Colors.green, duration: Duration(seconds: 2)));
       }
-    } catch (_) {}
+    } catch (_) {
+      _showError('Шикоят фиристода нашуд. Боз кӯшиш кунед.');
+    }
   }
 
   Future<void> _muteUser() async {
@@ -995,8 +961,8 @@ class _PostCardState extends State<PostCard>
           child: Row(children: [
             _ShareActionBtn(svgPath: 'assets/icons/add_story.svg',
               color: const Color(0xFF833AB4), label: tr('ui.7a1a87cda7'),
-              onTap: () { Navigator.pop(sheetCtx);
-                Navigator.pushNamed(context, '/create-story'); }),
+              // Худи постро ба стори мегузорад, на экрани холӣ.
+              onTap: () { Navigator.pop(sheetCtx); _shareToStory(); }),
             _ShareActionBtn(icon: FontAwesomeIcons.whatsapp,
               color: const Color(0xFF25D366), label: 'WhatsApp',
               onTap: () {
@@ -1044,10 +1010,9 @@ class _PostCardState extends State<PostCard>
                 final media = widget.post.media.isNotEmpty
                     ? (widget.post.media.first['url']?.toString() ?? '')
                     : '';
-                if (media.isNotEmpty) {
-                  launchUrl(Uri.parse(media),
-                      mode: LaunchMode.externalApplication);
-                }
+                // Воқеан ба дастгоҳ захира мекунад, на браузерро мекушояд.
+                saveMediaWithFeedback(context, media,
+                    name: widget.post.user.username);
               }),
             _ShareActionBtn(svgPath: 'assets/icons/share.svg',
               color: AppColors.divider, label: tr('ui.9d3992d048'),
@@ -1066,7 +1031,14 @@ class _PostCardState extends State<PostCard>
           subtitle: Text(tr('ui.4e7e7184bc'),
               style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
           onTap: () { Navigator.pop(sheetCtx);
-            Navigator.pushNamed(context, '/chat'); }),
+            ShareToChatRow.show(context,
+              kind: 'post',
+              contentId: widget.post.id,
+              shareUrl: url,
+              thumbUrl: widget.post.media.isNotEmpty
+                  ? (widget.post.media.first['url'] ?? '').toString() : '',
+              authorUsername: widget.post.user.username,
+            ); }),
         const SizedBox(height: 12),
       ])));
   }

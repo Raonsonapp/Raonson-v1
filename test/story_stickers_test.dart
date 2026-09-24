@@ -78,6 +78,44 @@ void main() {
     });
   });
 
+  group('навбати ту', () {
+    test('стикер хонда мешавад', () {
+      final s = StorySticker.fromJson({
+        'kind': 'addyours', 'prompt': 'Акси аввали телефонат',
+        'chainId': 'c1', 'participants': 3, 'joined': true,
+        'avatars': ['https://x/a.jpg'],
+      });
+      expect(s?.kind, 'addyours');
+      expect(s?.chainId, 'c1');
+      expect(s?.participants, 3);
+      expect(s?.joined, isTrue);
+    });
+
+    testWidgets('тамошобин тугмаи «Навбати ман»-ро мебинад ва мезанад', (t) async {
+      var tapped = false;
+      await t.pumpWidget(MaterialApp(home: Scaffold(body: Center(
+        child: StoryStickerView(
+          storyId: 's1',
+          sticker: const StorySticker(kind: 'addyours', prompt: 'Мавзӯъ',
+              participants: 2),
+          onPause: () {}, onResume: () {},
+          onAddYours: () => tapped = true,
+        ),
+      ))));
+      expect(find.text('Мавзӯъ'), findsOneWidget);
+      expect(find.text('2 иштирокчӣ'), findsOneWidget);
+      await t.tap(find.text('Навбати ман'));
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('соҳиб тугмаи ҳамроҳшавиро намебинад', (t) async {
+      await t.pumpWidget(_host(const StorySticker(
+          kind: 'addyours', prompt: 'Мавзӯъ', isOwner: true, participants: 1)));
+      expect(find.text('Навбати ман'), findsNothing);
+      expect(find.text('1 иштирокчӣ'), findsOneWidget);
+    });
+  });
+
   group('намоиш', () {
     testWidgets('викторина: пеш аз ҷавоб фоиз ва дуруст нест', (t) async {
       await t.pumpWidget(_host(const StorySticker(

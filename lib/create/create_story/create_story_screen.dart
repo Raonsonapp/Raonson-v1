@@ -14,7 +14,10 @@ import '../../core/i18n/strings.dart';
 class CreateStoryScreen extends StatefulWidget {
   final File? initialFile;
   final bool  initialIsVideo;
-  const CreateStoryScreen({super.key, this.initialFile, this.initialIsVideo = false});
+  /// Стикери аз пеш гузошта (масалан «Навбати ту» аз сторияи дигар).
+  final Map<String, dynamic>? initialSticker;
+  const CreateStoryScreen({super.key, this.initialFile,
+      this.initialIsVideo = false, this.initialSticker});
   @override
   State<CreateStoryScreen> createState() => _CreateStoryScreenState();
 }
@@ -129,6 +132,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         body: Center(child: CircularProgressIndicator(color: Colors.white30, strokeWidth: 2)));
     }
     return StoryEditor(media: _file!, isVideo: _isVideo, isUploading: _isUploading,
+      initialSticker: widget.initialSticker,
       onPublish: _publish, onCancel: () => Navigator.pop(context), errorMessage: _error);
   }
 }

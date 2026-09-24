@@ -10,6 +10,7 @@ import '../core/api/api_client.dart';
 import '../widgets/avatar.dart';
 import 'receipt_screen.dart';
 import '../core/i18n/strings.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
 // Не const: tr() ҳангоми иҷро кор мекунад ва ҳамчунин ҳангоми
 // иваз кардани забон матни нав бармегардонад.
@@ -33,13 +34,16 @@ class OrderManagementScreen extends StatefulWidget {
 class _OrderManagementState extends State<OrderManagementScreen> {
   List<Map<String, dynamic>> _orders = [];
   bool _loading = true;
+  // Хатои шабака ≠ рӯйхати холӣ: бе ин корбар «ҳеҷ чиз нест» медид.
+  bool _error = false;
   String _filter = 'all';
 
   @override
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _error = false; });
+    var failed = true;
     try {
       final r = await ApiClient.instance.get('/orders/selling')
           .timeout(const Duration(seconds: 15));
@@ -47,9 +51,10 @@ class _OrderManagementState extends State<OrderManagementScreen> {
         final b = jsonDecode(r.body);
         final list = (b['orders'] ?? []) as List;
         _orders = list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+        failed = false;
       }
     } catch (_) {}
-    if (mounted) setState(() => _loading = false);
+    if (mounted) setState(() { _loading = false; _error = failed; });
   }
 
   Future<void> _setStatus(Map<String, dynamic> o, String status) async {
@@ -121,6 +126,8 @@ class _OrderManagementState extends State<OrderManagementScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _error
+          ? ErrorState(message: 'Фармоишҳо бор нашуданд', onRetry: _load)
           : RefreshIndicator(
               onRefresh: _load,
               child: _filtered.isEmpty

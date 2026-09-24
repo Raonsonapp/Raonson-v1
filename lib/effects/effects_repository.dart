@@ -58,23 +58,39 @@ class EffectsRepository {
     }
   }
 
-  Future<bool> createEffect(
-      String name, List<double> matrix, double price) async {
+  /// Нарх — дар ситора (⭐), бутун 0…1000. Бармегардонад: `null` агар
+  /// нашр шуд, вагарна матни хато (аз сервер, агар бошад).
+  Future<String?> createEffect(
+      String name, List<double> matrix, int priceStars) async {
     try {
       final r = await _api.post('/effects/',
-          body: {'name': name, 'matrix': matrix, 'price': price});
-      return r.statusCode < 400;
+          body: {'name': name, 'matrix': matrix, 'price': priceStars});
+      if (r.statusCode >= 200 && r.statusCode < 300) return null;
+      return ApiException(r.statusCode, r.body).message ?? 'Нашр нашуд';
     } catch (_) {
-      return false;
+      return 'Интернет нест — нашр нашуд';
     }
   }
 
-  Future<bool> useEffect(String id) async {
+  /// Истифода ё харид. Бармегардонад: `null` агар муваффақ бошад,
+  /// вагарна матни хато — то экран «Харидорӣ шуд» надурӯғ нагӯяд.
+  Future<String?> useEffect(String id) async {
     try {
       final r = await _api.post('/effects/$id/use');
-      return r.statusCode < 400;
+      if (r.statusCode >= 200 && r.statusCode < 300) return null;
+      final msg = ApiException(r.statusCode, r.body).message;
+      if (r.statusCode == 402) {
+        // Сервер {"message","need"} медиҳад — чанд ситора лозим аст.
+        int? need;
+        try {
+          need = ((jsonDecode(r.body) as Map)['need'] as num?)?.toInt();
+        } catch (_) {}
+        return [msg ?? 'Ситораҳо кофӣ нестанд',
+          if (need != null) 'Лозим: $need ⭐'].join('. ');
+      }
+      return msg ?? 'Хато (${r.statusCode})';
     } catch (_) {
-      return false;
+      return 'Интернет нест — боз кӯшиш кунед';
     }
   }
 

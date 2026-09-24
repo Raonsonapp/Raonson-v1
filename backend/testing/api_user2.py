@@ -380,7 +380,13 @@ if gid:
 # Охирин аст: баъди он токен эътибор надорад.
 st, r = call("POST", "/auth/revoke-all", tok=tB)
 ok("баромадан аз ҳамаи дастгоҳҳо", st in (200, 201, 204), f"HTTP {st}: {r}")
-st, r = call("POST", "/auth/logout", tok=tB)
+newB = r.get("accessToken") if isinstance(r, dict) else None
+ok("ин дастгоҳ token-и нав мегирад", bool(newB), r)
+st, r = call("GET", "/profile/me", tok=tB)
+ok("token-и КӮҲНА дигар кор намекунад (воқеан баромад)", st == 401, f"HTTP {st}")
+st, r = call("GET", "/profile/me", tok=newB)
+ok("token-и нав кор мекунад", st == 200, f"HTTP {st}")
+st, r = call("POST", "/auth/logout", tok=newB)
 ok("баромадан", st in (200, 201, 204), f"HTTP {st}: {r}")
 
 # ═══ ҲИСОБОТ ═════════════════════════════════════════════════════

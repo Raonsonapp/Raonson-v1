@@ -9,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../admin/admin_panel_screen.dart';
 import '../app/app_state.dart';
@@ -22,6 +23,7 @@ import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/tajikshop_brand.dart';
 import '../core/services/user_session.dart';
+import '../core/services/account_manager.dart';
 import '../core/services/region_service.dart';
 import '../core/services/vip_service.dart';
 import '../anime/anime_screen.dart';
@@ -35,12 +37,12 @@ import 'insights_screen.dart';
 import 'seller_dashboard_screen.dart';
 import '../shop/auto_reply_screen.dart';
 import '../chat/chat_pin_screen.dart';
-import '../subscription/subscription_screen.dart';
 import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
 import 'child_safety_screen.dart';
 import 'community_guidelines_screen.dart';
 import '../marketplace/creator_marketplace_screen.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 import '../marketplace/advertiser_campaigns_screen.dart';
 import '../feed_ai/ai_feed_screen.dart';
 import '../creator_studio/creator_studio_screen.dart';
@@ -78,28 +80,9 @@ class SettingsScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 50),
             children: [
 
-              // ── RAONSON PRO / BUSINESS (мисли Meta Verified) ──────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                child: Row(children: [
-                  Expanded(child: _PlanBanner(
-                    title: 'Raonson Pro',
-                    subtitle: tr('plan.proPrice'),
-                    icon: AppIcons.star_rounded,
-                    colors: const [Color(0xFF7F00FF), Color(0xFFE100FF)],
-                    onTap: () => _go(ctx, const SubscriptionScreen()),
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(child: _PlanBanner(
-                    title: 'Business',
-                    subtitle: tr('plan.businessPrice'),
-                    icon: AppIcons.business_center_rounded,
-                    colors: const [Color(0xFFF7971E), Color(0xFFFFD200)],
-                    onTap: () => _go(ctx,
-                        const SubscriptionScreen(business: true)),
-                  )),
-                ]),
-              ),
+              // Банерҳои Pro/Business пинҳон: пардохт ҳоло вуҷуд надорад
+              // ва ҳамаи функсияҳо барои ҳама ройгонанд — нарх нишон
+              // додан корбарро фиреб медод.
 
               // ── ACCOUNT ───────────────────────────────────────────
               _Hdr(tr('section.account')),
@@ -393,10 +376,23 @@ class SettingsScreen extends StatelessWidget {
                 icon:  AppIcons.email_outlined,
                 title: tr('ui.c84504d1af'),
                 sub:   'ehsonmahmadmurodov@gmail.com',
-                onTap: () {
-                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                    content: Text(tr('ui.55e3b3bfa5')),
-                    duration: Duration(seconds: 3)));
+                // Барномаи почтаро воқеан мекушояд, на танҳо паём.
+                onTap: () async {
+                  final uri = Uri(
+                      scheme: 'mailto',
+                      path: 'ehsonmahmadmurodov@gmail.com',
+                      queryParameters: {'subject': 'Raonson — дастгирӣ'});
+                  var opened = false;
+                  try {
+                    opened = await launchUrl(uri,
+                        mode: LaunchMode.externalApplication);
+                  } catch (_) {}
+                  if (!opened && ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                      content: Text('Барномаи почта ёфт нашуд. Ба '
+                          'ehsonmahmadmurodov@gmail.com нависед.'),
+                      duration: Duration(seconds: 4)));
+                  }
                 },
               ),
 
@@ -447,10 +443,20 @@ class SettingsScreen extends StatelessWidget {
         actionLabel: tr('delete.action'),
         onAction: () async {
           Navigator.pop(ctx);
+          // Танҳо баъди 2xx баромад мекунем — вагарна аккаунт боқӣ
+          // мемонд, вале корбар гумон мекард, ки нест шуд.
+          var ok = false;
           try {
-            await ApiClient.instance.delete('/profile/me');
-            if (ctx.mounted) ctx.read<AppState>().logout();
+            final r = await ApiClient.instance.delete('/profile/me');
+            ok = r.statusCode >= 200 && r.statusCode < 300;
           } catch (_) {}
+          if (!ctx.mounted) return;
+          if (ok) {
+            ctx.read<AppState>().logout();
+          } else {
+            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                content: Text('Аккаунт нест нашуд. Боз кӯшиш кунед.')));
+          }
         },
       ),
     );
@@ -589,6 +595,9 @@ class _PrivacyState extends State<PrivacyScreen> {
   bool _allowComments  = true;
   bool _allowMentions  = true;
   bool _loading        = true;
+  // Бе ин, ҳангоми хатои бор кардан пешфарзҳо ҳамчун танзимоти
+  // воқеӣ нишон дода мешуданд (масалан «аккаунт кушода»).
+  bool _loadError      = false;
 
   @override
   void initState() {
@@ -597,6 +606,7 @@ class _PrivacyState extends State<PrivacyScreen> {
   }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _loadError = false; });
     try {
       final res = await ApiClient.instance.get('/profile/me');
       if (res.statusCode == 200 && mounted) {
@@ -610,15 +620,27 @@ class _PrivacyState extends State<PrivacyScreen> {
           _loading        = false;
         });
       } else {
-        if (mounted) setState(() => _loading = false);
+        if (mounted) setState(() { _loading = false; _loadError = true; });
       }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
-  void _sync(String key, bool val) =>
-      ApiClient.instance.put('/profile/', body: {key: val});
+  /// Калидро фавран иваз мекунад ва ба сервер мефиристад. Агар сервер
+  /// рад кунад, калид ба ҳолати пешина бармегардад — вагарна экран
+  /// «хомӯш» нишон медод, ҳол он ки дар сервер ҳанӯз фаъол буд.
+  Future<void> _sync(String key, bool val, void Function(bool) apply) async {
+    setState(() => apply(val));
+    try {
+      await ApiClient.instance.putOk('/profile/', body: {key: val});
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => apply(!val));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Танзимот нигоҳ дошта нашуд. Боз кӯшиш кунед.')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -627,6 +649,8 @@ class _PrivacyState extends State<PrivacyScreen> {
       appBar: _appBar(context, 'Махфият'),
       body: _loading
           ? const _SettingsSkeleton()
+          : _loadError
+          ? ErrorState(message: 'Танзимот бор нашуд', onRetry: _load)
           : ListView(children: [
               _SwTile(
                 icon:  AppIcons.lock_outline_rounded,
@@ -634,8 +658,7 @@ class _PrivacyState extends State<PrivacyScreen> {
                 sub:   'Танҳо пайравони тасдиқшуда мӯҳтаворо мебинанд',
                 value: _private,
                 onChanged: (v) {
-                  setState(() => _private = v);
-                  _sync('isPrivate', v);
+                  _sync('isPrivate', v, (x) => _private = x);
                   AnalyticsService.instance.logEvent(
                       AnalyticsEvents.changePrivacy,
                       params: {'isPrivate': v});
@@ -673,8 +696,7 @@ class _PrivacyState extends State<PrivacyScreen> {
                 sub:   'Ба дигарон нишон деҳ, ки шумо онлайн ҳастед',
                 value: _activityStatus,
                 onChanged: (v) {
-                  setState(() => _activityStatus = v);
-                  _sync('activityStatus', v);
+                  _sync('activityStatus', v, (x) => _activityStatus = x);
                 },
               ),
               const _ThinDiv(),
@@ -684,8 +706,7 @@ class _PrivacyState extends State<PrivacyScreen> {
                 sub:   'Ба ҳама иҷозати шарҳ диҳ',
                 value: _allowComments,
                 onChanged: (v) {
-                  setState(() => _allowComments = v);
-                  _sync('allowComments', v);
+                  _sync('allowComments', v, (x) => _allowComments = x);
                 },
               ),
               const _ThinDiv(),
@@ -695,8 +716,7 @@ class _PrivacyState extends State<PrivacyScreen> {
                 sub:   'Кӣ метавонад шуморо зикр кунад',
                 value: _allowMentions,
                 onChanged: (v) {
-                  setState(() => _allowMentions = v);
-                  _sync('allowMentions', v);
+                  _sync('allowMentions', v, (x) => _allowMentions = x);
                 },
               ),
             ]),
@@ -721,6 +741,7 @@ class _NotifState extends State<NotificationsScreen> {
   bool _reels     = true;
   bool _push      = true;
   bool _loading   = true;
+  bool _loadError = false;
 
   // ── Соатҳои ором ──
   // Хомӯш аст, то ки барнома худсарона хабарро нигоҳ надорад.
@@ -742,6 +763,7 @@ class _NotifState extends State<NotificationsScreen> {
   }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _loadError = false; });
     try {
       final res = await ApiClient.instance.get('/profile/notifications');
       if (res.statusCode == 200 && mounted) {
@@ -766,17 +788,31 @@ class _NotifState extends State<NotificationsScreen> {
           _loading   = false;
         });
       } else {
-        if (mounted) setState(() => _loading = false);
+        if (mounted) setState(() { _loading = false; _loadError = true; });
       }
     } catch (_) {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() { _loading = false; _loadError = true; });
     }
   }
 
   // Ҳама танзимот дар як объект нигоҳ дошта мешавад, бинобар ин
   // соатҳои ором ҳам бояд ҳар бор фиристода шаванд — вагарна
   // тағйири ягон тугма онҳоро нест мекард.
-  void _save() => ApiClient.instance.put('/profile/notifications', body: {
+  //
+  // [revert] ҳолати пешинаро бармегардонад, агар сервер рад кунад —
+  // то калид дурӯғ нагӯяд.
+  Future<void> _save(VoidCallback revert) async {
+    try {
+      await ApiClient.instance.putOk('/profile/notifications', body: _body());
+    } catch (_) {
+      if (!mounted) return;
+      setState(revert);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Танзимот нигоҳ дошта нашуд. Боз кӯшиш кунед.')));
+    }
+  }
+
+  Map<String, dynamic> _body() => {
         'likes': _likes, 'comments': _comments,
         'followers': _followers, 'messages': _messages,
         'reels': _reels, 'push': _push,
@@ -792,7 +828,7 @@ class _NotifState extends State<NotificationsScreen> {
           // ором татбиқ намешаванд.
           'tzOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
         },
-      });
+      };
 
   Future<void> _pickHour(bool start) async {
     final picked = await showTimePicker(
@@ -800,6 +836,7 @@ class _NotifState extends State<NotificationsScreen> {
       initialTime: TimeOfDay(hour: start ? _quietStart : _quietEnd, minute: 0),
     );
     if (picked == null) return;
+    final prevStart = _quietStart, prevEnd = _quietEnd;
     setState(() {
       if (start) {
         _quietStart = picked.hour;
@@ -807,7 +844,7 @@ class _NotifState extends State<NotificationsScreen> {
         _quietEnd = picked.hour;
       }
     });
-    _save();
+    _save(() { _quietStart = prevStart; _quietEnd = prevEnd; });
   }
 
   String _hh(int h) => '${h.toString().padLeft(2, '0')}:00';
@@ -841,60 +878,62 @@ class _NotifState extends State<NotificationsScreen> {
       appBar: _appBar(context, 'Огоҳиҳо'),
       body: _loading
           ? const _SettingsSkeleton()
+          : _loadError
+          ? ErrorState(message: 'Танзимот бор нашуд', onRetry: _load)
           : ListView(children: [
               _SwTile(icon: AppIcons.favorite_rounded,
                   title: tr('ui.a12587206f'), value: _likes,
-                  onChanged: (v) { setState(() => _likes = v); _save(); }),
+                  onChanged: (v) { setState(() => _likes = v); _save(() => _likes = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.chat_bubble_rounded,
                   title: tr('ui.8be35deea4'), value: _comments,
-                  onChanged: (v) { setState(() => _comments = v); _save(); }),
+                  onChanged: (v) { setState(() => _comments = v); _save(() => _comments = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.person_add_rounded,
                   title: tr('ui.2e89750b4b'), value: _followers,
-                  onChanged: (v) { setState(() => _followers = v); _save(); }),
+                  onChanged: (v) { setState(() => _followers = v); _save(() => _followers = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.send_rounded,
                   title: tr('ui.6bc5c7f511'), value: _messages,
-                  onChanged: (v) { setState(() => _messages = v); _save(); }),
+                  onChanged: (v) { setState(() => _messages = v); _save(() => _messages = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.slow_motion_video_rounded,
                   title: tr('ui.d2d780f54a'), value: _reels,
-                  onChanged: (v) { setState(() => _reels = v); _save(); }),
+                  onChanged: (v) { setState(() => _reels = v); _save(() => _reels = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.alternate_email_rounded,
                   title: tr('nset.mentions'), value: _mentions,
-                  onChanged: (v) { setState(() => _mentions = v); _save(); }),
+                  onChanged: (v) { setState(() => _mentions = v); _save(() => _mentions = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.search,
                   title: tr('nset.recommendations'),
                   sub: tr('nset.recommendationsSub'),
                   value: _recommendations,
                   onChanged: (v) {
-                    setState(() => _recommendations = v); _save();
+                    setState(() => _recommendations = v); _save(() => _recommendations = !v);
                   }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.auto_awesome_rounded,
                   title: tr('nset.creator'), sub: tr('nset.creatorSub'),
                   value: _creator,
-                  onChanged: (v) { setState(() => _creator = v); _save(); }),
+                  onChanged: (v) { setState(() => _creator = v); _save(() => _creator = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.star_rounded,
                   title: tr('nset.achievements'), value: _achievements,
                   onChanged: (v) {
-                    setState(() => _achievements = v); _save();
+                    setState(() => _achievements = v); _save(() => _achievements = !v);
                   }),
               Divider(color: AppColors.dividerFaint, height: 28, indent: 16, endIndent: 16),
               _SwTile(icon: AppIcons.notifications_rounded,
                   title: tr('ui.f694047b90'), sub: 'Огоҳиҳои телефонӣ',
                   value: _push,
-                  onChanged: (v) { setState(() => _push = v); _save(); }),
+                  onChanged: (v) { setState(() => _push = v); _save(() => _push = !v); }),
               const _ThinDiv(),
               _SwTile(icon: AppIcons.dark_mode_rounded,
                   title: tr('notif.quietHours'),
                   sub: tr('notif.quietHoursSub'),
                   value: _quiet,
-                  onChanged: (v) { setState(() => _quiet = v); _save(); }),
+                  onChanged: (v) { setState(() => _quiet = v); _save(() => _quiet = !v); }),
               if (_quiet)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(56, 0, 16, 12),
@@ -934,14 +973,8 @@ class SecurityScreen extends StatelessWidget {
                   builder: (_) => const ChangePasswordScreen())),
         ),
         const _ThinDiv(),
-        _NavTile(
-          icon:  AppIcons.verified_user_outlined,
-          title: tr('ui.8b9612dafd'),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(
-                  builder: (_) => const TwoFactorScreen())),
-        ),
-        const _ThinDiv(),
+        // «Тасдиқи дутарафа» пинҳон: сервер 2FA-ро ҳангоми воридшавӣ
+        // талаб намекунад, пас калид танҳо ҳимояи дурӯғин нишон медод.
         // Тасдиқи почта.
         //
         // Экрани он кайҳо навишта шуда буд, вале ба он на роҳ буд,
@@ -1016,7 +1049,16 @@ class _CPState extends State<ChangePasswordScreen> {
           '/auth/change-password',
           body: {'oldPassword': old, 'newPassword': nw});
       if (!mounted) return;
-      if (res.statusCode == 200) {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        // Сервер ҳамаи токенҳои кӯҳнаро бекор мекунад ва ҷуфти нав
+        // медиҳад — бе нигоҳ доштани он ҳамин дастгоҳ ҳам берун мешуд.
+        try {
+          final b = jsonDecode(res.body);
+          if (b is Map<String, dynamic>) {
+            await AccountManager.saveFreshTokens(b);
+          }
+        } catch (_) {}
+        if (!mounted) return;
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(tr('ui.55a3055c2f'))));
@@ -1107,85 +1149,6 @@ class _CPState extends State<ChangePasswordScreen> {
 }
 
 // ════════════════════════════════════════════════════════════════════
-//  TWO FACTOR SCREEN
-// ════════════════════════════════════════════════════════════════════
-class TwoFactorScreen extends StatefulWidget {
-  const TwoFactorScreen({super.key});
-  @override
-  State<TwoFactorScreen> createState() => TwoFAState();
-}
-
-class TwoFAState extends State<TwoFactorScreen> {
-  bool _enabled = false;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final res = await ApiClient.instance.get('/profile/me');
-      if (res.statusCode == 200 && mounted) {
-        final body = jsonDecode(res.body) as Map<String, dynamic>;
-        final u    = (body['user'] ?? body) as Map<String, dynamic>;
-        setState(() {
-          _enabled = u['twoFactor'] as bool? ?? false;
-          _loading = false;
-        });
-      } else {
-        if (mounted) setState(() => _loading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _toggle(bool v) async {
-    setState(() => _enabled = v);
-    try {
-      // `putOk` — вагарна рад кардани сервер хато ҳисоб намешуд ва
-      // дар экран «фаъол» мемонд, ҳол он ки 2FA хомӯш буд.
-      await ApiClient.instance.putOk('/profile/', body: {'twoFactor': v});
-    } catch (_) {
-      if (mounted) setState(() => _enabled = !v);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: _appBar(context, 'Тасдиқи дутарафа'),
-      body: _loading
-          ? const _SettingsSkeleton()
-          : ListView(children: [
-              _SwTile(
-                icon:  AppIcons.verified_user_outlined,
-                title: tr('ui.4a15d01741'),
-                sub:   'Ба аккаунти шумо ҳимояи иловагӣ',
-                value: _enabled,
-                onChanged: _toggle,
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Text(
-                  'Вақте ки 2FA фаъол аст, ҳар бор ки ворид мешавед, '
-                  'рамзи иловагӣ талаб карда мешавад.',
-                  style: TextStyle(
-                      color: AppColors.textPrimary.withOpacity(0.4),
-                      fontSize: 13, height: 1.5),
-                ),
-              ),
-            ]),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════
 //  SESSIONS SCREEN
 // ════════════════════════════════════════════════════════════════════
 class SessionsScreen extends StatefulWidget {
@@ -1223,10 +1186,23 @@ class _SessState extends State<SessionsScreen> {
   }
 
   Future<void> _revokeAll() async {
+    var ok = false;
     try {
-      await ApiClient.instance.post('/auth/revoke-all');
-      if (mounted) _load();
+      final res = await ApiClient.instance.post('/auth/revoke-all');
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        ok = true;
+        // Сервер ҳамаи токенҳоро воқеан бекор мекунад; ин дастгоҳ бо
+        // ҷуфти нав дар система мемонад — онро ҳатман нигоҳ медорем.
+        final b = jsonDecode(res.body);
+        if (b is Map<String, dynamic>) await AccountManager.saveFreshTokens(b);
+      }
     } catch (_) {}
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Аз ҳамаи дастгоҳҳои ДИГАР баромад шуд. Ин дастгоҳ дар система мемонад.'
+            : 'Сессияҳо баста нашуданд. Боз кӯшиш кунед.')));
+    if (ok) _load();
   }
 
   @override
@@ -1246,7 +1222,8 @@ class _SessState extends State<SessionsScreen> {
         actions: [
           TextButton(
               onPressed: _revokeAll,
-              child: Text(tr('ui.b0b0c195c7'),
+              // Ин дастгоҳ бо токени нав мемонад — танҳо ДИГАРОН берун мешаванд.
+              child: Text('Дигаронро бандед',
                   style: TextStyle(
                       color: Colors.redAccent, fontSize: 13))),
         ],
@@ -1533,39 +1510,6 @@ class _AboutLinkTile extends StatelessWidget {
                 style: TextStyle(color: AppColors.neonBlue, fontSize: 14)),
           ),
           Icon(AppIcons.arrow_forward_rounded, color: AppColors.textFaint, size: 16),
-        ]),
-      ),
-    );
-  }
-}
-
-// ── Банери план (Pro / Business) ────────────────────────────────────
-class _PlanBanner extends StatelessWidget {
-  final String title, subtitle;
-  final IconData icon;
-  final List<Color> colors;
-  final VoidCallback onTap;
-  const _PlanBanner({required this.title, required this.subtitle,
-      required this.icon, required this.colors, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: colors,
-              begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: Colors.white, size: 24),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(color: Colors.white,
-              fontSize: 15, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 2),
-          Text(subtitle, style: const TextStyle(
-              color: Colors.white70, fontSize: 11.5)),
         ]),
       ),
     );
