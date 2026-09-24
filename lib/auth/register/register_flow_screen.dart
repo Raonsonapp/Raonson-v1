@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../settings/legal_screens.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +20,6 @@ import '../../core/api/api_endpoints.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/account_manager.dart';
 import '../../core/storage/token_storage.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../create/upload/upload_manager.dart';
 import '../widgets/auth_kit.dart';
 import '../../core/i18n/strings.dart';
@@ -546,8 +546,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     alignment: PlaceholderAlignment.baseline,
                     baseline: TextBaseline.alphabetic,
                     child: GestureDetector(
-                      onTap: () => launchUrl(Uri.parse('https://raonson.app/terms'),
-                          mode: LaunchMode.externalApplication),
+                      // Саҳифаи дохилӣ — домени raonson.app вуҷуд надорад.
+                      onTap: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => const TermsOfServicePage())),
                       child: Text(tr('ui.ff5f014e89'),
                           style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
                               decoration: TextDecoration.underline,
@@ -559,8 +560,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     alignment: PlaceholderAlignment.baseline,
                     baseline: TextBaseline.alphabetic,
                     child: GestureDetector(
-                      onTap: () => launchUrl(Uri.parse('https://raonson.app/privacy'),
-                          mode: LaunchMode.externalApplication),
+                      onTap: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => const PrivacyPolicyPage())),
                       child: Text(tr('ui.04b1f79cc0'),
                           style: TextStyle(color: AppColors.neonBlue, fontSize: 13,
                               decoration: TextDecoration.underline,

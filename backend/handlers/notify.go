@@ -70,6 +70,11 @@ func notify(userID, fromID, ntype, targetID string) {
 		return
 	}
 	go func() {
+		// Push аллакай блокро месанҷид, вале сатри огоҳинома не —
+		// басташуда дар рӯйхати «Огоҳиномаҳо» ҳамоно пайдо мешуд.
+		if IsBlockedBetween(userID, fromID) {
+			return
+		}
 		ct, err := db.Pool.Exec(context.Background(), `
 			UPDATE notifications
 			   SET created_at=NOW(), read=FALSE, is_read=FALSE
