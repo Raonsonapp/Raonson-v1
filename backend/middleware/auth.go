@@ -70,6 +70,28 @@ func Auth() gin.HandlerFunc {
 	}
 }
 
+// OptionalAuth — агар token-и дуруст бошад, userID-ро мегузорад; вагарна
+// дархост бе корбар идома меёбад (барои роҳҳое, ки ҳам бе вуруд ва ҳам
+// бо вуруд кор мекунанд, масалан тасдиқи телефон).
+func OptionalAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parts := strings.SplitN(c.GetHeader("Authorization"), " ", 2)
+		if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+			secret := jwtSecret()
+			tok, err := jwt.Parse(parts[1], func(t *jwt.Token) (interface{}, error) {
+				return []byte(secret), nil
+			}, jwt.WithValidMethods([]string{"HS256"}))
+			if err == nil && tok.Valid {
+				claims, _ := tok.Claims.(jwt.MapClaims)
+				if uid, _ := claims["id"].(string); uid != "" && TokenAllowed(uid, claims["tv"]) {
+					c.Set("userID", uid)
+				}
+			}
+		}
+		c.Next()
+	}
+}
+
 // AdminOnly — нақшро аз DB мегирад (JWT нақшро надорад), то соҳиби
 // барнома (@raonson) ва ҳар admin-и дигар ҳамеша дастрасӣ дошта бошад.
 func AdminOnly() gin.HandlerFunc {

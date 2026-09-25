@@ -72,6 +72,9 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
 		return
 	}
+	if !normalizeUsernameUpdate(c, myID, b.Username) {
+		return
+	}
 	changingUsername, allowed := usernameChangeAllowed(myID, b.Username)
 	if !allowed {
 		c.JSON(http.StatusTooManyRequests,
@@ -105,16 +108,60 @@ func UpdateUser(c *gin.Context) {
 // DELETE /users/
 func DeleteUser(c *gin.Context) {
 	myID := mw.UID(c)
-	ctx := context.Background()
+	if err := deleteAccount(myID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "deletion failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
 
+// deleteAccount — ҳисоб ва ҳамаи изҳояшро нест мекунад (корбар ё админ).
+func deleteAccount(uid string) error {
+	ctx := context.Background()
 	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "server error"})
-		return
+		return err
 	}
 	defer tx.Rollback(ctx)
 
 	queries := []string{
+		// Ҳисобкунакҳои дигарон пеш аз нест кардани робитаҳо — вагарна
+		// «обунашавандагон» ва «лайкҳо»-и дигарон абадан калон мемонданд.
+		`UPDATE users SET followers_count=GREATEST(followers_count-1,0)
+		  WHERE id IN (SELECT following_id FROM follows WHERE follower_id=$1)`,
+		`UPDATE users SET following_count=GREATEST(following_count-1,0)
+		  WHERE id IN (SELECT follower_id FROM follows WHERE following_id=$1)`,
+		`UPDATE posts SET likes_count=GREATEST(likes_count-1,0)
+		  WHERE id IN (SELECT post_id FROM post_likes WHERE user_id=$1)`,
+		`UPDATE posts SET comments_count=GREATEST(comments_count-x.n,0)
+		  FROM (SELECT post_id, COUNT(*) n FROM comments
+		        WHERE user_id=$1 AND COALESCE(hidden,false)=FALSE GROUP BY post_id) x
+		  WHERE posts.id=x.post_id`,
+		`UPDATE reels SET likes_count=GREATEST(likes_count-1,0)
+		  WHERE id IN (SELECT reel_id FROM reel_likes WHERE user_id=$1)`,
+		// Ҷадвалҳое, ки пеш фаромӯш шуда буданд.
+		`DELETE FROM device_tokens WHERE user_id=$1`,
+		`DELETE FROM favorites WHERE user_id=$1 OR fav_id=$1`,
+		`DELETE FROM post_collab_invites WHERE user_id=$1`,
+		`DELETE FROM story_poll_votes WHERE user_id=$1`,
+		`DELETE FROM story_sticker_answers WHERE user_id=$1`,
+		`DELETE FROM story_mentions WHERE user_id=$1`,
+		`DELETE FROM story_seen WHERE user_id=$1`,
+		`DELETE FROM saved_collection_items WHERE collection_id IN (SELECT id FROM saved_collections WHERE user_id=$1)`,
+		`DELETE FROM saved_collections WHERE user_id=$1`,
+		`DELETE FROM reel_comment_likes WHERE user_id=$1`,
+		`DELETE FROM reel_shares WHERE user_id=$1`,
+		`DELETE FROM live_viewers WHERE user_id=$1`,
+		`DELETE FROM hidden_words WHERE user_id=$1`,
+		`DELETE FROM chat_prefs WHERE user_id=$1 OR peer_id=$1`,
+		`DELETE FROM group_members WHERE group_id IN (SELECT id FROM group_chats WHERE owner_id=$1)`,
+		`DELETE FROM group_chats WHERE owner_id=$1`,
+		// Шарҳ ва лайкҳои ДИГАРОН дар постҳои ин корбар.
+		`DELETE FROM comments WHERE post_id IN (SELECT id FROM posts WHERE user_id=$1)`,
+		`DELETE FROM post_likes WHERE post_id IN (SELECT id FROM posts WHERE user_id=$1)`,
+		`DELETE FROM post_saves WHERE post_id IN (SELECT id FROM posts WHERE user_id=$1)`,
+		`DELETE FROM reel_comments WHERE reel_id IN (SELECT id FROM reels WHERE user_id=$1)`,
+		`DELETE FROM reel_likes WHERE reel_id IN (SELECT id FROM reels WHERE user_id=$1)`,
 		`DELETE FROM reel_comments WHERE user_id=$1`,
 		`DELETE FROM reel_likes WHERE user_id=$1`,
 		`DELETE FROM reel_saves WHERE user_id=$1`,
@@ -167,19 +214,31 @@ func DeleteUser(c *gin.Context) {
 		`DELETE FROM users WHERE id=$1`,
 	}
 
-	for _, q := range queries {
-		if _, err := tx.Exec(ctx, q, myID); err != nil {
+	// ⚠️ Пеш хато бо `continue` нодида гирифта мешуд. Дар Postgres як
+	// хато ТАМОМИ транзаксияро бекор мекунад: ҳамаи қадамҳои баъдӣ ва
+	// commit рад мешуданд ва ҳисоб ҳеҷ гоҳ нест намешуд (масалан агар
+	// ягон ҷадвал набошад). Акнун ҳар қадам дар SAVEPOINT-и худ аст:
+	// қадами ноком танҳо худаш бекор мешавад. Нест кардани худи корбар
+	// бояд муваффақ шавад.
+	for i, q := range queries {
+		tx.Exec(ctx, `SAVEPOINT del_step`)
+		if _, err := tx.Exec(ctx, q, uid); err != nil {
+			tx.Exec(ctx, `ROLLBACK TO SAVEPOINT del_step`)
+			if i == len(queries)-1 {
+				return err
+			}
 			continue
 		}
+		tx.Exec(ctx, `RELEASE SAVEPOINT del_step`)
 	}
-
 	if err := tx.Commit(ctx); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "deletion failed"})
-		return
+		return err
 	}
-
-	mw.InvalidateUserCache(myID)
-	c.JSON(http.StatusOK, gin.H{"success": true})
+	// Token-ҳо фавран бекор (TokenState барои ҳисоби нест «баста» медиҳад).
+	mw.ForgetTokenState(uid)
+	mw.InvalidateUserCache(uid)
+	mw.BumpContentEpoch()
+	return nil
 }
 
 // GET /users/:id/posts
@@ -198,8 +257,8 @@ func GetUserPosts(c *gin.Context) {
 		return
 	}
 
-	page   := toInt(c.Query("page"), 1)
-	limit  := toInt(c.Query("limit"), 24)
+	page   := clampPage(toInt(c.Query("page"), 1))
+	limit  := clampLimit(toInt(c.Query("limit"), 24))
 	offset := (page - 1) * limit
 
 	// Постҳои pinned аввал, баъд аз рӯи сана. Бо маълумоти корбар +
@@ -215,6 +274,8 @@ func GetUserPosts(c *gin.Context) {
 		-- пост ин фарқи 17 мс ва 0.1 мс буд.
 		WHERE (p.user_id=$2 OR p.collaborators @> ARRAY[$2]::text[])
 		  AND COALESCE(p.archived,false)=FALSE
+		  -- Пости пинҳоншудаи модератор танҳо ба муаллиф.
+		  AND (COALESCE(p.hidden,false)=FALSE OR p.user_id=$1::text)
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		ORDER BY COALESCE(p.is_pinned,false) DESC, p.created_at DESC
 		LIMIT $3 OFFSET $4`,
@@ -239,8 +300,8 @@ func GetUserReels(c *gin.Context) {
 		c.JSON(http.StatusOK, []gin.H{})
 		return
 	}
-	page   := toInt(c.Query("page"), 1)
-	limit  := toInt(c.Query("limit"), 24)
+	page   := clampPage(toInt(c.Query("page"), 1))
+	limit  := clampLimit(toInt(c.Query("limit"), 24))
 	offset := (page - 1) * limit
 
 	rows, err := db.Pool.Query(context.Background(), `
@@ -352,11 +413,11 @@ func GetFollowing(c *gin.Context) {
 
 // followPage — page/limit-и followers/following (default 50, max 100).
 func followPage(c *gin.Context) (limit, offset int) {
-	page := toInt(c.Query("page"), 1)
+	page := clampPage(toInt(c.Query("page"), 1))
 	if page < 1 {
 		page = 1
 	}
-	limit = toInt(c.Query("limit"), 50)
+	limit = clampLimit(toInt(c.Query("limit"), 50))
 	if limit < 1 {
 		limit = 50
 	}

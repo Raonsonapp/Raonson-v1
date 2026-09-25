@@ -51,9 +51,7 @@ func parseDevice(ua string) string {
 	case strings.Contains(l, "linux"):
 		os = "Linux"
 	}
-	if len(ua) > 60 {
-		ua = ua[:60]
-	}
+	ua = clampRunes(ua, 60) // ҳарф, на байт (кириллӣ нимта намешавад)
 	return os + " · " + ua
 }
 
@@ -101,9 +99,7 @@ func SetAutoReply(c *gin.Context) {
 	}
 	c.ShouldBindJSON(&b)
 	text := strings.TrimSpace(b.Text)
-	if len(text) > 500 {
-		text = text[:500]
-	}
+	text = clampRunes(text, 500) // ҳарф, на байт (кириллӣ нимта намешавад)
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET auto_reply=$1 WHERE id=$2`, text, myID)
 	c.JSON(http.StatusOK, gin.H{"autoReply": text})

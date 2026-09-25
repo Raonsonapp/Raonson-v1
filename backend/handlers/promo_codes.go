@@ -141,11 +141,20 @@ func BroadcastToCustomers(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Матн холӣ аст"})
 		return
 	}
-	if len(text) > 1000 {
-		text = text[:1000]
+	text = clampRunes(text, 1000) // ҳарф, на байт (кириллӣ нимта намешавад)
+	// Як бор дар шабонарӯз — пеш 20 бор дар дақиқа ба ҳамаи харидорон.
+	if !otpSendAllowed("broadcast:"+myID, 1, 24*time.Hour) {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"message": "Паёми оммавӣ як бор дар шабонарӯз фиристода мешавад"})
+		return
 	}
-	rows, err := db.Pool.Query(context.Background(),
-		`SELECT DISTINCT buyer_id FROM orders WHERE seller_id=$1`, myID)
+	// Танҳо харидорони воқеӣ (на фармоиши бекоршуда) ва на бастагон.
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT DISTINCT o.buyer_id FROM orders o
+		WHERE o.seller_id=$1 AND o.status NOT IN ('cancelled','pending')
+		  AND NOT EXISTS (SELECT 1 FROM blocks b
+		       WHERE (b.blocker_id=o.buyer_id AND b.blocked_id=$1)
+		          OR (b.blocker_id=$1 AND b.blocked_id=o.buyer_id))`, myID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "хатои база"})
 		return

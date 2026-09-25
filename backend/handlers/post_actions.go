@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"raonson/utils"
+	"strings"
 	"context"
 	"net/http"
 	"time"
@@ -21,6 +23,8 @@ func ReportPost(c *gin.Context) {
 		Description string `json:"description"`
 	}
 	c.ShouldBindJSON(&b)
+	b.Reason = clampRunes(strings.TrimSpace(b.Reason), 40)
+	b.Description = clampRunes(b.Description, 500)
 	if b.Reason == "" {
 		b.Reason = "spam"
 	}
@@ -30,13 +34,18 @@ func ReportPost(c *gin.Context) {
 		 VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
 		pid, myID, b.Reason, b.Description, time.Now())
 
-	// Агар > 10 жалоб → автоматӣ пинҳон кун
+	// Пинҳони худкор. ⚠️ Пеш 10 шикояти ҲАР ҳисоб (ҳатто 10 ҳисоби
+	// навсохта) ҳар постро абадан пинҳон мекард. Акнун танҳо шикоятҳои
+	// ҳисобҳои аз 3 рӯз кӯҳнатар ва на аз муаллиф ҳисоб мешаванд; пост
+	// ба баррасии админ меравад ва «рад» онро бармегардонад.
 	var count int
-	db.Pool.QueryRow(context.Background(),
-		`SELECT COUNT(*) FROM post_reports WHERE post_id=$1`, pid).Scan(&count)
+	db.Pool.QueryRow(context.Background(), `
+		SELECT COUNT(*) FROM post_reports r JOIN users u ON u.id=r.user_id
+		WHERE r.post_id=$1 AND u.created_at < NOW() - INTERVAL '3 days'
+		  AND r.user_id <> (SELECT user_id FROM posts WHERE id=$1)`, pid).Scan(&count)
 	if count >= 10 {
 		db.Pool.Exec(context.Background(),
-			`UPDATE posts SET hidden=TRUE WHERE id=$1`, pid)
+			`UPDATE posts SET hidden=TRUE, auto_hidden=TRUE WHERE id=$1`, pid)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"reported": true})
@@ -136,15 +145,7 @@ func MarkInterest(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
 
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO post_interests(post_id, user_id, interested, created_at)
-		 VALUES($1,$2,TRUE,$3)
-		 ON CONFLICT(post_id, user_id) DO UPDATE SET interested=TRUE`,
-		pid, myID, time.Now())
-
-	// Score-ро зиёд кун
-	db.Pool.Exec(context.Background(),
-		`UPDATE posts SET interest_score = COALESCE(interest_score,0) + 1 WHERE id=$1`, pid)
+	setInterest(pid, myID, true)
 
 	c.JSON(http.StatusOK, gin.H{"interested": true})
 }
@@ -155,15 +156,7 @@ func MarkNotInterest(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
 
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO post_interests(post_id, user_id, interested, created_at)
-		 VALUES($1,$2,FALSE,$3)
-		 ON CONFLICT(post_id, user_id) DO UPDATE SET interested=FALSE`,
-		pid, myID, time.Now())
-
-	// Score-ро кам кун
-	db.Pool.Exec(context.Background(),
-		`UPDATE posts SET interest_score = COALESCE(interest_score,0) - 1 WHERE id=$1`, pid)
+	setInterest(pid, myID, false)
 
 	c.JSON(http.StatusOK, gin.H{"not_interested": true, "hidden": true})
 }
@@ -197,11 +190,21 @@ func UpdatePostCaption(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "caption required"})
 		return
 	}
+	// Ҳамон қоидаҳои сохтани пост. Пеш таҳрир модератсияро давр мезад:
+	// матни бегуноҳ нашр мешуд ва баъд ба таҳқир иваз мешуд.
+	b.Caption = clampRunes(b.Caption, 2200)
+	if !captionAllowed(c, b.Caption) {
+		return
+	}
+	var oldCaption string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COALESCE(caption,'') FROM posts WHERE id=$1 AND user_id=$2`,
+		pid, myID).Scan(&oldCaption)
 
-	res, _ := db.Pool.Exec(context.Background(),
+	res, err := db.Pool.Exec(context.Background(),
 		`UPDATE posts SET caption=$1, updated_at=NOW() WHERE id=$2 AND user_id=$3`,
 		b.Caption, pid, myID)
-	if res.RowsAffected() == 0 {
+	if err != nil || res.RowsAffected() == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found or not owner"})
 		return
 	}
@@ -210,8 +213,10 @@ func UpdatePostCaption(c *gin.Context) {
 	mw.CacheDel("feed:"+myID+":1", "smartfeed:"+myID+":1")
 	mw.InvalidateUserCache(myID)
 
-	// @зикр дар тавсифи навшуда — ҳар корбари зикршударо огоҳ кун
-	notifyMentions(myID, "mention", pid, b.Caption, "шуморо дар публикатсия зикр кард")
+	// Танҳо зикрҳои НАВ огоҳ мешаванд — пеш ҳар таҳрир ба ҳамаи
+	// зикршудагон боз push мефиристод (спам бо таҳрири такрорӣ).
+	notifyMentions(myID, "mention", pid, newMentions(oldCaption, b.Caption),
+		"шуморо дар публикатсия зикр кард")
 	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption})
 }
 
@@ -311,4 +316,68 @@ func GetPostStats(c *gin.Context) {
 		"fromFollowers": fromFollowers,
 		"fromOthers":    fromOthers,
 	})
+}
+
+// setInterest — «Ҷолиб / Ҷолиб нест». Хол танҳо вақте тағйир меёбад, ки
+// ҳолати корбар ВОҚЕАН иваз шуд. Пеш ҳар дархост +1 ё −1 мекард — як
+// нафар метавонист постро (ё рақибро) беохир боло/поён барад.
+func setInterest(pid, uid string, want bool) {
+	var old *bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT interested FROM post_interests WHERE post_id=$1 AND user_id=$2`,
+		pid, uid).Scan(&old)
+	db.Pool.Exec(context.Background(),
+		`INSERT INTO post_interests(post_id, user_id, interested, created_at)
+		 VALUES($1,$2,$3,$4)
+		 ON CONFLICT(post_id, user_id) DO UPDATE SET interested=$3`,
+		pid, uid, want, time.Now())
+	delta := 0
+	switch {
+	case old == nil && want:
+		delta = 1
+	case old == nil && !want:
+		delta = -1
+	case *old != want && want:
+		delta = 2
+	case *old != want && !want:
+		delta = -2
+	}
+	if delta != 0 {
+		db.Pool.Exec(context.Background(),
+			`UPDATE posts SET interest_score = COALESCE(interest_score,0) + $2 WHERE id=$1`,
+			pid, delta)
+	}
+}
+
+// captionAllowed — модератсияи матн (ҳамон қоидаҳои сохтан).
+func captionAllowed(c *gin.Context, text string) bool {
+	if text == "" {
+		return true
+	}
+	if flagged, cats := utils.ModerateText(context.Background(), text); flagged {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Матн қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+		return false
+	}
+	if !moderateText(text) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Матн аз тарафи AI рад шуд. Лутфан онро тағйир диҳед."})
+		return false
+	}
+	return true
+}
+
+// newMentions — @номҳое, ки дар матни нав ҳастанд, вале дар кӯҳна набуданд.
+func newMentions(oldText, newText string) string {
+	had := map[string]bool{}
+	for _, m := range mentionRe.FindAllStringSubmatch(oldText, -1) {
+		had[strings.ToLower(m[1])] = true
+	}
+	var sb strings.Builder
+	for _, m := range mentionRe.FindAllStringSubmatch(newText, -1) {
+		if !had[strings.ToLower(m[1])] {
+			sb.WriteString("@" + m[1] + " ")
+		}
+	}
+	return sb.String()
 }

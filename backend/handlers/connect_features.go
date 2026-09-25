@@ -5,6 +5,8 @@ package handlers
 //  reel report/not-interest/stats/comment-like/reply, story reply, notif prefs)
 
 import (
+	"strings"
+	"regexp"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -123,7 +125,7 @@ func UnmuteUser(c *gin.Context) {
 // Корбароне, ки худамон нестем, пайравӣ накардаем ва блок нашудаанд.
 func GetSuggestedUsers(c *gin.Context) {
 	myID := mw.UID(c)
-	limit := toInt(c.Query("limit"), 10)
+	limit := clampLimit(toInt(c.Query("limit"), 10))
 	if limit < 1 {
 		limit = 10
 	}
@@ -240,14 +242,16 @@ func GetBlockedUsers(c *gin.Context) {
 func HashtagPosts(c *gin.Context) {
 	myID := mw.UID(c)
 	tag := c.Param("tag")
-	page := toInt(c.Query("page"), 1)
-	limit := toInt(c.Query("limit"), 24)
+	page := clampPage(toInt(c.Query("page"), 1))
+	limit := clampLimit(toInt(c.Query("limit"), 24))
 	offset := (page - 1) * limit
-	pattern := "%#" + tag + "%"
+	// Хэштеги пурра: «#сафар» бо «#сафарнома» омехта намешавад.
+	pattern := "#" + regexp.QuoteMeta(strings.TrimPrefix(tag, "#")) + `([^[:alnum:]_]|$)`
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
-		WHERE p.caption ILIKE $2 AND COALESCE(p.hidden,false)=false
+		WHERE p.caption ~* $2 AND COALESCE(p.hidden,false)=false
 		  AND COALESCE(p.archived,false)=false
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  -- Ҳаштаг — кашф аст: танҳо ҳисобҳои кушода (мисли Instagram).
 		  -- Пеш постҳои ҳисоби пӯшида дар саҳифаи ҳаштаг ба ҳама буданд.
 		  AND `+publicAuthorSQL("p.user_id", "u", "$1")+`
@@ -434,6 +438,10 @@ func UpdateReelCaption(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&b); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "caption required"})
+		return
+	}
+	b.Caption = clampRunes(b.Caption, 2200)
+	if !captionAllowed(c, b.Caption) {
 		return
 	}
 	res, err := db.Pool.Exec(context.Background(),

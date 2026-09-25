@@ -165,7 +165,9 @@ func main() {
 		a.POST("/reset-password",  rl20, handlers.ResetPassword)
 		a.POST("/change-password", auth, rl20, handlers.ChangePassword)
 		a.POST("/send-phone-otp",   rl20, handlers.SendPhoneOTP)      // Telegram OTP
-		a.POST("/verify-phone-otp", rl20, handlers.VerifyPhoneOTP)    // тасдиқи телефон
+		// OptionalAuth: корбари воридшуда рақамашро воқеан сабт мекунад.
+		// Пеш ин роҳ бе auth буд ва рақам ҳеҷ гоҳ сабт намешуд.
+		a.POST("/verify-phone-otp", mw.OptionalAuth(), rl20, handlers.VerifyPhoneOTP)    // тасдиқи телефон
 		// Экранҳои тасдиқи почта кайҳо дар барнома буданд, вале ин ду
 		// роҳ вуҷуд надоштанд — пас онҳо 404 мегирифтанд.
 		a.POST("/verify-email",     auth, rl20, handlers.SendEmailVerify)

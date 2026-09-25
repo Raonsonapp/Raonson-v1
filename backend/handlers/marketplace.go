@@ -309,8 +309,15 @@ func CheckoutCampaign(c *gin.Context) {
 		if err != nil {
 			return err
 		}
+		// Калид ба ҳамин рекламадиҳанда ва кампания баста мешавад — пеш
+		// бо калиди каси дигар (масалан «campaign:<id>») фармоиши ӮРО
+		// гирифтан мумкин буд.
+		key := advID + ":" + c.Param("id") + ":" + b.IdempotencyKey
 		order, err = store.CreatePaymentOrder(ctx, tx, c.Param("id"), advID,
-			prov.Name(), b.IdempotencyKey)
+			prov.Name(), key)
+		if err == nil && (order.AdvertiserID != advID || order.CampaignID != c.Param("id")) {
+			return errors.New("idempotency key conflict")
+		}
 		return err
 	})
 	if err != nil {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"time"
 	"context"
 	"net/http"
 
@@ -24,6 +25,16 @@ func FindUsersByContacts(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || len(body.Phones) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "phones array required"})
+		return
+	}
+	// То 1000 рақам дар як дархост ва 5 дархост дар соат. Пеш рӯйхат
+	// бе ҳадд буд — бо он тамоми базаи рақамҳо ба ҳисобҳо мувофиқ карда
+	// мешуд (ва ҳар дархост тамоми ҷадвалро мегашт).
+	if len(body.Phones) > 1000 {
+		body.Phones = body.Phones[:1000]
+	}
+	if !otpSendAllowed("contacts:"+myID, 5, time.Hour) {
+		c.JSON(http.StatusTooManyRequests, gin.H{"message": "Баъдтар боз кӯшиш кунед"})
 		return
 	}
 
@@ -60,6 +71,10 @@ func FindUsersByContacts(c *gin.Context) {
 		WHERE u.phone <> ''
 		  AND RIGHT(regexp_replace(u.phone,'[^0-9]','','g'), 9) = ANY($2::text[])
 		  AND u.id <> $1
+		  AND COALESCE(u.banned,false)=FALSE
+		  AND NOT EXISTS (SELECT 1 FROM blocks b
+		       WHERE (b.blocker_id=$1 AND b.blocked_id=u.id)
+		          OR (b.blocker_id=u.id AND b.blocked_id=$1))
 		ORDER BY u.username
 		LIMIT 100
 	`, myID, cleaned)

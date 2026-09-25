@@ -84,8 +84,8 @@ func DeleteMessage(c *gin.Context) {
 
 	// Soft-delete: mark as deleted, clear text
 	_, err = db.Pool.Exec(context.Background(), `
-		UPDATE messages SET is_deleted=true, text='', updated_at=NOW()
-		WHERE id=$1`, msgID)
+		UPDATE messages SET is_deleted=true, text='', media_url=NULL, updated_at=NOW()
+		WHERE id=$1`, msgID) // медиа ҳам — пеш акси «нестшуда» ҳамоно мерасид
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "db error"})
 		return

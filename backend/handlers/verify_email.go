@@ -19,9 +19,7 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"regexp"
@@ -85,8 +83,13 @@ func SendEmailVerify(c *gin.Context) {
 		return
 	}
 
-	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
-	mw.CacheSet(emailOTPKey(uid, email), []byte(otp), 10*time.Minute)
+	if !otpSendAllowed("email:"+uid, 5, time.Hour) {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"message": "Рамз аллакай фиристода шуд. Баъди чанд дақиқа боз кӯшиш кунед."})
+		return
+	}
+	otp := secureOTP()
+	storeOTP(emailOTPKey(uid, email), otp, 10*time.Minute)
 
 	if err := utils.SendEmailOTP(email, otp); err != nil {
 		// ⚠️ Пеш ин ҷо 200 бо `error: true` бармегашт — ҳамон
@@ -141,13 +144,17 @@ func VerifyEmailOTP(c *gin.Context) {
 	}
 
 	key := emailOTPKey(uid, email)
-	stored, ok := mw.CacheGet(key)
-	if !ok || string(stored) != otp {
+	// Як рамз — як бор; баъди 5 кӯшиши нодуруст нест мешавад.
+	good, locked := checkOTP(key, otp)
+	if locked {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"message": "Кӯшишҳо зиёд шуданд. Рамзи нав дархост кунед."})
+		return
+	}
+	if !good {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
 		return
 	}
-	// Як рамз — як бор. Бе ин ҳамон рамз то 10 дақиқа кор мекард.
-	mw.CacheDel(key)
 
 	if _, err := db.Pool.Exec(context.Background(),
 		`UPDATE users SET email=$1, email_verified=TRUE, updated_at=NOW()

@@ -90,7 +90,7 @@ func AdminGetReports(c *gin.Context) {
 
 	status := c.DefaultQuery("status", "pending")
 	rtype := c.DefaultQuery("type", "all")
-	page := toInt(c.Query("page"), 1)
+	page := clampPage(toInt(c.Query("page"), 1))
 	limit := 30
 	offset := (page - 1) * limit
 
@@ -307,7 +307,13 @@ func AdminResolveReport(c *gin.Context) {
 	case "post":
 		updateSQL("post_reports", "post_id")
 		if b.Action == "remove" {
-			db.Pool.Exec(ctx, `UPDATE posts SET hidden=TRUE WHERE id=$1`, b.TargetID)
+			db.Pool.Exec(ctx, `UPDATE posts SET hidden=TRUE, auto_hidden=FALSE WHERE id=$1`, b.TargetID)
+		}
+		// Шикоят рад шуд — пости худкор пинҳоншуда бармегардад. Пеш
+		// роҳи баргардонидан умуман набуд.
+		if b.Action == "dismiss" {
+			db.Pool.Exec(ctx, `UPDATE posts SET hidden=FALSE, auto_hidden=FALSE
+				WHERE id=$1 AND auto_hidden=TRUE`, b.TargetID)
 		}
 	case "reel":
 		updateSQL("reel_reports", "reel_id")
@@ -317,7 +323,10 @@ func AdminResolveReport(c *gin.Context) {
 	case "user":
 		updateSQL("user_reports", "reported_id")
 		if b.Action == "ban" {
-			db.Pool.Exec(ctx, `UPDATE users SET banned=TRUE WHERE id=$1`, b.TargetID)
+			// Соҳиб ва админҳо бан намешаванд; сессияҳо фавран қатъ.
+			db.Pool.Exec(ctx, `UPDATE users SET banned=TRUE
+				WHERE id=$1 AND username<>'raonson' AND COALESCE(role,'user')<>'admin'`, b.TargetID)
+			mw.RevokeTokens(b.TargetID)
 		}
 	case "comment":
 		updateSQL("comment_reports", "comment_id")

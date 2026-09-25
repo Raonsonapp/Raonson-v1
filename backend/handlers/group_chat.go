@@ -76,14 +76,7 @@ func CreateGroup(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO group_members(group_id,user_id,role) VALUES($1,$2,'admin')
 		 ON CONFLICT DO NOTHING`, gid, myID)
-	for _, uid := range b.MemberIDs {
-		if uid == "" || uid == myID {
-			continue
-		}
-		db.Pool.Exec(context.Background(),
-			`INSERT INTO group_members(group_id,user_id,role) VALUES($1,$2,'member')
-			 ON CONFLICT DO NOTHING`, gid, uid)
-	}
+	addGroupMembers(gid, myID, b.MemberIDs)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": gid, "name": b.Name, "avatar": b.Avatar,
@@ -176,15 +169,8 @@ func AddGroupMembers(c *gin.Context) {
 		UserIDs []string `json:"userIds"`
 	}
 	c.ShouldBindJSON(&b)
-	for _, uid := range b.UserIDs {
-		if uid == "" {
-			continue
-		}
-		db.Pool.Exec(context.Background(),
-			`INSERT INTO group_members(group_id,user_id,role) VALUES($1,$2,'member')
-			 ON CONFLICT DO NOTHING`, gid, uid)
-	}
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	added := addGroupMembers(gid, myID, b.UserIDs)
+	c.JSON(http.StatusOK, gin.H{"ok": true, "added": added})
 }
 
 // ── DELETE /groups/:id/members/:userId (админ) ────────────────────
@@ -204,8 +190,16 @@ func RemoveGroupMember(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "cannot remove owner"})
 		return
 	}
-	db.Pool.Exec(context.Background(),
+	tag, _ := db.Pool.Exec(context.Background(),
 		`DELETE FROM group_members WHERE group_id=$1 AND user_id=$2`, gid, target)
+	if tag.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Аъзо ёфт нашуд"})
+		return
+	}
+	// Линки даъват нав мешавад — пеш аъзои хориҷшуда бо ҳамон линк
+	// фавран бармегашт (линк ба ҳамаи аъзоён намоён аст).
+	db.Pool.Exec(context.Background(),
+		`UPDATE group_chats SET invite_token=substr(md5(random()::text),1,12) WHERE id=$1`, gid)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -215,6 +209,17 @@ func LeaveGroup(c *gin.Context) {
 	gid := c.Param("id")
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM group_members WHERE group_id=$1 AND user_id=$2`, gid, myID)
+	// Соҳиб рафт — соҳибиро ба аъзои аз ҳама кӯҳна медиҳем. Пеш гурӯҳ
+	// абадан бе админ мемонд.
+	db.Pool.Exec(context.Background(), `
+		WITH heir AS (
+		  SELECT user_id FROM group_members WHERE group_id=$1
+		  ORDER BY (role='admin') DESC, joined_at ASC LIMIT 1)
+		UPDATE group_chats SET owner_id=(SELECT user_id FROM heir)
+		WHERE id=$1 AND owner_id=$2 AND EXISTS (SELECT 1 FROM heir)`, gid, myID)
+	db.Pool.Exec(context.Background(), `
+		UPDATE group_members SET role='admin'
+		WHERE group_id=$1 AND user_id=(SELECT owner_id FROM group_chats WHERE id=$1)`, gid)
 	// Агар ягон аъзо намонад — гурӯҳро нест кун.
 	var cnt int
 	db.Pool.QueryRow(context.Background(),
@@ -233,14 +238,16 @@ func GetGroupMessages(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "not a member"})
 		return
 	}
-	page := toInt(c.Query("page"), 1)
-	limit := toInt(c.Query("limit"), 30)
+	page := clampPage(toInt(c.Query("page"), 1))
+	limit := clampLimit(toInt(c.Query("limit"), 30))
 	offset := (page - 1) * limit
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT m.id, m.text, COALESCE(m.type,'text'), COALESCE(m.media_url,''),
 		       m.created_at, u.id, u.username, COALESCE(u.avatar,''), u.verified
 		FROM messages m JOIN users u ON u.id=m.sender_id
 		WHERE m.group_id=$1
+		  -- Паёми нестшуда ва медиааш дигар ба аъзоён намерасад.
+		  AND COALESCE(m.is_deleted,false)=FALSE
 		ORDER BY m.created_at DESC LIMIT $2 OFFSET $3`, gid, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "get messages failed"})
@@ -337,4 +344,39 @@ func JoinGroupByToken(c *gin.Context) {
 		`INSERT INTO group_members(group_id,user_id,role) VALUES($1,$2,'member')
 		 ON CONFLICT DO NOTHING`, gid, myID)
 	c.JSON(http.StatusOK, gin.H{"_id": gid, "name": name})
+}
+
+// maxGroupMembers — ҳадди аъзоён.
+const maxGroupMembers = 250
+
+// addGroupMembers — танҳо корбарони воқеӣ, на бастагон ва на бештар аз
+// ҳадд. Пеш ҳар id (ҳатто касе, ки туро бастааст) илова мешуд — бастагон
+// тавассути гурӯҳ ба ту паём ва огоҳинома мефиристоданд.
+func addGroupMembers(gid, adder string, ids []string) int {
+	added := 0
+	var cnt int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM group_members WHERE group_id=$1`, gid).Scan(&cnt)
+	seen := map[string]bool{}
+	for _, uid := range ids {
+		if uid == "" || uid == adder || seen[uid] || cnt >= maxGroupMembers {
+			continue
+		}
+		seen[uid] = true
+		var exists bool
+		db.Pool.QueryRow(context.Background(),
+			`SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND COALESCE(banned,false)=FALSE)`,
+			uid).Scan(&exists)
+		if !exists || IsBlockedBetween(adder, uid) {
+			continue
+		}
+		tag, _ := db.Pool.Exec(context.Background(),
+			`INSERT INTO group_members(group_id,user_id,role) VALUES($1,$2,'member')
+			 ON CONFLICT DO NOTHING`, gid, uid)
+		if tag.RowsAffected() > 0 {
+			added++
+			cnt++
+		}
+	}
+	return added
 }

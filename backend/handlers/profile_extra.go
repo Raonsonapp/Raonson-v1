@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"regexp"
 	"log"
 	"context"
 	"strings"
@@ -87,11 +88,11 @@ const feedPostCols = `
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)
 func GetSavedPosts(c *gin.Context) {
 	myID := mw.UID(c)
-	page  := toInt(c.Query("page"), 1)
+	page  := clampPage(toInt(c.Query("page"), 1))
 	if page < 1 {
 		page = 1
 	}
-	limit := toInt(c.Query("limit"), 24)
+	limit := clampLimit(toInt(c.Query("limit"), 24))
 	if limit < 1 {
 		limit = 24
 	}
@@ -141,13 +142,17 @@ func GetTaggedPosts(c *gin.Context) {
 	}
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
-		WHERE p.caption ILIKE '%@' || $2 || '%'
+		-- Номи пурра, на пешванд: пеш «@ali» постҳои «@alisher»-ро ҳам
+		-- медод ва «_» ҳамчун ҳарфи дилхоҳ кор мекард.
+		WHERE p.caption ~* ('@' || $2 || '([^a-z0-9_.]|$)')
+		  AND COALESCE(p.hidden,false)=FALSE AND COALESCE(p.archived,false)=FALSE
+		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  AND NOT EXISTS (SELECT 1 FROM post_tag_removals tr
 		                  WHERE tr.post_id = p.id AND tr.user_id = $3::text)
 		  -- Постҳои қайдшуда аз ДИГАР муаллифон ҳастанд — ҳисоби
 		  -- пӯшидаи онҳо ҳам бояд риоя шавад.
 		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
-		ORDER BY p.created_at DESC LIMIT 60`, myID, uname, target)
+		ORDER BY p.created_at DESC LIMIT 60`, myID, regexp.QuoteMeta(uname), target)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
 		return
@@ -438,6 +443,12 @@ func AddPostToCollection(c *gin.Context) {
 	}
 	if !ownsCollection(cid, myID) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Папкаи шумо нест"})
+		return
+	}
+	// Танҳо пости дидашаванда — пеш ба папка ҳар id илова мешуд ва акси
+	// пости ҳисоби пӯшида ҳамчун муқоваи папка намоён мегашт.
+	if ok, _ := CanSeeProfileContent(myID, ownerOfPost(b.PostID)); !ok {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Пост ёфт нашуд"})
 		return
 	}
 	// Пост ба папка меафтад — пас ҳатман захирашуда бошад.

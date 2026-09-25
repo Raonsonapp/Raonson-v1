@@ -214,6 +214,12 @@ func DeliverScheduledMessages() {
 	}
 	rows.Close()
 	for _, d := range list {
+		// Агар дар ин муддат яке дигареро баста бошад — паём намеравад.
+		if IsBlockedBetween(d.from, d.to) {
+			db.Pool.Exec(context.Background(),
+				`UPDATE messages SET is_deleted=TRUE WHERE id=$1`, d.id)
+			continue
+		}
 		if msg, err := fetchMessageByID(d.id, d.to); err == nil {
 			emitChat("chat:new", msg, d.to)
 		}

@@ -14,6 +14,7 @@ import (
 	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // POST /posts
@@ -64,6 +65,16 @@ func CreatePost(c *gin.Context) {
 	if b.Caption != "" && !moderateText(b.Caption) {
 		c.JSON(http.StatusForbidden, gin.H{
 			"message": "Матни пост аз тарафи AI рад шуд. Лутфан мӯҳтаворо тағйир диҳед."})
+		return
+	}
+
+	if b.IsProduct && !validPrice(b.Price) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Нарх бояд аз 0 то 100000 бошад"})
+		return
+	}
+	// Ҳадди медиа ва номҳо — пеш маҳдуд набуд.
+	if len(b.Media) > 10 || len(b.TaggedUsers) > 20 || len(b.Collaborators) > 5 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Аз ҳад зиёд: то 10 медиа, 20 нишон, 5 ҳамкор"})
 		return
 	}
 
@@ -232,8 +243,8 @@ c.JSON(http.StatusCreated, wsPost)
 // GET /posts  GET /posts/feed
 func GetFeed(c *gin.Context) {
 	myID   := mw.UID(c)
-	page   := toInt(c.Query("page"), 1)
-	limit  := toInt(c.Query("limit"), 20)
+	page   := clampPage(toInt(c.Query("page"), 1))
+	limit  := clampLimit(toInt(c.Query("limit"), 20))
 	offset := (page - 1) * limit
 
 	// Cache key per user+page (30 sec TTL — fresh but fast)
@@ -373,6 +384,11 @@ func GetPost(c *gin.Context) {
 		       COALESCE(p.music_end_ms,0),
 		       (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id)
 		FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=$1
+		  -- Пинҳоншуда (модератор), бойгонӣ ва ҳанӯз нашрнашуда — танҳо
+		  -- ба муаллиф. Пеш бо id ба ҳама дастрас буданд.
+		  AND (p.user_id=$2::text OR (COALESCE(p.hidden,false)=FALSE
+		       AND COALESCE(p.archived,false)=FALSE
+		       AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())))
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now() OR p.user_id=$2::text)`,
 		pid, myID).Scan(&pid2, &cap, &likes, &comms, &createdAt,
 		&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
@@ -443,12 +459,44 @@ func GetScheduledPosts(c *gin.Context) {
 func DeletePost(c *gin.Context) {
 	pid  := c.Param("id")
 	myID := mw.UID(c)
-	res, _ := db.Pool.Exec(context.Background(),
-		`DELETE FROM posts WHERE id=$1 AND user_id=$2::text`, pid, myID)
+	ctx := context.Background()
+	// Маҳсулоте, ки фармоиш дорад, нест намешавад — пинҳон мешавад: вагарна
+	// таърихи фармоишҳои харидор (JOIN posts) нопадид мешуд.
+	var hasOrders bool
+	db.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM orders WHERE post_id=$1)`, pid).Scan(&hasOrders)
+	var res pgconn.CommandTag
+	if hasOrders {
+		res, _ = db.Pool.Exec(ctx, `UPDATE posts SET archived=TRUE, hidden=TRUE, in_stock=FALSE
+			WHERE id=$1 AND user_id=$2::text`, pid, myID)
+	} else {
+		res, _ = db.Pool.Exec(ctx,
+			`DELETE FROM posts WHERE id=$1 AND user_id=$2::text`, pid, myID)
+	}
 	if res.RowsAffected() == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
 	}
+	// Сатрҳои вобаста — пеш абадан мемонданд (огоҳиномаҳо ба пости нест
+	// ишора мекарданд, папкаҳо муқоваи холӣ нишон медоданд).
+	if !hasOrders {
+		for _, q := range []string{
+			`DELETE FROM post_media WHERE post_id=$1`,
+			`DELETE FROM comment_likes WHERE comment_id IN (SELECT id FROM comments WHERE post_id=$1)`,
+			`DELETE FROM comments WHERE post_id=$1`,
+			`DELETE FROM post_likes WHERE post_id=$1`,
+			`DELETE FROM post_saves WHERE post_id=$1`,
+			`DELETE FROM post_shares WHERE post_id=$1`,
+			`DELETE FROM post_views WHERE post_id=$1`,
+			`DELETE FROM post_interests WHERE post_id=$1`,
+			`DELETE FROM post_reports WHERE post_id=$1`,
+			`DELETE FROM post_collab_invites WHERE post_id=$1`,
+			`DELETE FROM saved_collection_items WHERE post_id=$1`,
+			`DELETE FROM product_reviews WHERE post_id=$1`,
+		} {
+			db.Pool.Exec(ctx, q, pid)
+		}
+	}
+	db.Pool.Exec(ctx, `DELETE FROM notifications WHERE target_id=$1`, pid)
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET posts_count=GREATEST(posts_count-1,0) WHERE id=$1`, myID)
 	// Cache-и корбарро пок мекунем, то пости ҳазфшуда фавран аз ҳама

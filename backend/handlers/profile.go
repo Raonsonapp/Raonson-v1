@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"net/url"
 	"context"
 	"encoding/json"
 	"log"
@@ -18,6 +19,53 @@ import (
 // username: 3–30 char, ҳарфҳои хурд/рақам/`_`/`.`
 var usernameRe = regexp.MustCompile(`^[a-z0-9_.]{3,30}$`)
 
+// reservedUsername — номҳое, ки танҳо соҳиби барнома дошта метавонад
+// (миграцияи оғоз ба «raonson» ҳуқуқи админ медиҳад).
+func reservedUsername(u string) bool {
+	switch u {
+	case "raonson", "admin", "administrator", "support", "moderator", "raonson.official", "raonson_official":
+		return true
+	}
+	return false
+}
+
+func isCurrentUsername(uid, u string) bool {
+	var cur string
+	db.Pool.QueryRow(context.Background(), `SELECT username FROM users WHERE id=$1`, uid).Scan(&cur)
+	return cur == u
+}
+
+// normalizeUsernameUpdate — номи нав аз PUT /profile ва PUT /users.
+//
+// ⚠️ Ин ду роҳ номро БЕ санҷиш менавиштанд. Postgres «RAONSON»-ро аз
+// «raonson» фарқ мекунад, пас корбар метавонист номашро «RAONSON»
+// гузорад — ва миграцияи оғоз (LOWER(username)='raonson') ӯро админ
+// мекард. Акнун ҳама ном хурд, бо ҳамон қоида ва беназир (бе фарқи ҳарф).
+func normalizeUsernameUpdate(c *gin.Context, myID string, u *string) bool {
+	if u == nil {
+		return true
+	}
+	uname := strings.ToLower(strings.TrimSpace(*u))
+	if !usernameRe.MatchString(uname) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Номи корбарӣ нодуруст аст"})
+		return false
+	}
+	if reservedUsername(uname) && !isCurrentUsername(myID, uname) {
+		c.JSON(http.StatusConflict, gin.H{"message": "Username taken"})
+		return false
+	}
+	var taken bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(username)=$1 AND id<>$2)`,
+		uname, myID).Scan(&taken)
+	if taken {
+		c.JSON(http.StatusConflict, gin.H{"message": "Username taken"})
+		return false
+	}
+	*u = uname
+	return true
+}
+
 // PUT /profile/username — тағйири номи корбарӣ
 func ChangeUsername(c *gin.Context) {
 	myID := mw.UID(c)
@@ -31,6 +79,10 @@ func ChangeUsername(c *gin.Context) {
 	uname := strings.ToLower(strings.TrimSpace(b.Username))
 	if !usernameRe.MatchString(uname) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Номи корбарӣ нодуруст аст"})
+		return
+	}
+	if reservedUsername(uname) && !isCurrentUsername(myID, uname) {
+		c.JSON(http.StatusConflict, gin.H{"message": "Ин ном банд аст"})
 		return
 	}
 	var exists bool
@@ -63,6 +115,10 @@ func ChangePhone(c *gin.Context) {
 	phone := strings.TrimSpace(b.Phone)
 	if phone != "" && !regexp.MustCompile(`^\+?[0-9]{7,15}$`).MatchString(phone) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Рақами телефон нодуруст аст"})
+		return
+	}
+	if phoneTaken(phone, myID) {
+		c.JSON(http.StatusConflict, gin.H{"message": "Ин рақам ба ҳисоби дигар тааллуқ дорад"})
 		return
 	}
 	if _, err := db.Pool.Exec(context.Background(),
@@ -187,6 +243,13 @@ func UpdateProfile(c *gin.Context) {
 		clamped := clampRunes(*b.Bio, 150)
 		b.Bio = &clamped
 	}
+	if !normalizeUsernameUpdate(c, myID, b.Username) {
+		return
+	}
+	if b.Phone != nil && phoneTaken(strings.TrimSpace(*b.Phone), myID) {
+		c.JSON(http.StatusConflict, gin.H{"message": "Ин рақам ба ҳисоби дигар тааллуқ дорад"})
+		return
+	}
 	changingUsername, allowed := usernameChangeAllowed(myID, b.Username)
 	if !allowed {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -204,6 +267,29 @@ func UpdateProfile(c *gin.Context) {
 		s := string(*b.BioSong)
 		bioSongStr = &s
 	}
+	// Майдонҳои матнӣ ва URL-ҳо. Пеш дарозӣ маҳдуд набуд ва линк бо ҳар
+	// нақша (javascript:, file:, intent:) қабул мешуд.
+	clampPtr := func(p *string, n int) {
+		if p != nil {
+			v := clampRunes(strings.TrimSpace(*p), n)
+			*p = v
+		}
+	}
+	clampPtr(b.Bio, 150)
+	clampPtr(b.FullName, 60)
+	clampPtr(b.Location, 60)
+	clampPtr(b.Website, 200)
+	// «raonson.tj» бе нақша — https:// илова мекунем (одамон ҳамин тавр менависанд).
+	if b.Website != nil && *b.Website != "" && !strings.Contains(*b.Website, "://") {
+		w := "https://" + *b.Website
+		b.Website = &w
+	}
+	for _, u := range []*string{b.Website, b.Avatar, b.CoverUrl} {
+		if u != nil && *u != "" && !isWebURL(*u) {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Линк бояд бо https:// сар шавад"})
+			return
+		}
+	}
 	// links → re-serialize to JSON string; cap at 20 links.
 	var bioLinksStr *string
 	if b.Links != nil {
@@ -211,6 +297,14 @@ func UpdateProfile(c *gin.Context) {
 		if len(links) > 20 {
 			links = links[:20]
 		}
+		clean := links[:0]
+		for _, l := range links {
+			if isWebURL(l.URL) {
+				l.Title = clampRunes(l.Title, 40)
+				clean = append(clean, l)
+			}
+		}
+		links = clean
 		if raw, err := json.Marshal(links); err == nil {
 			s := string(raw)
 			bioLinksStr = &s
@@ -415,7 +509,10 @@ func ChangeEmail(c *gin.Context) {
 		return
 	}
 	if _, err := db.Pool.Exec(context.Background(),
-		`UPDATE users SET email=$1, updated_at=NOW() WHERE id=$2`, email, myID); err != nil {
+		// Почтаи нав ҳанӯз тасдиқ нашудааст — пеш парчами «тасдиқшуда»
+		// аз почтаи кӯҳна мемонд.
+		`UPDATE users SET email=$1, email_verified=FALSE, updated_at=NOW()
+		 WHERE id=$2 AND LOWER(COALESCE(email,'')) <> $1`, email, myID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
@@ -445,4 +542,27 @@ func normalizePronouns(raw string) string {
 		}
 	}
 	return strings.Join(out, "/")
+}
+
+// phoneTaken — рақам аллакай дар ҳисоби дигар ҳаст?
+//
+// Пеш ҳар кас метавонист рақами каси дигарро ба ҳисоби худ гузорад:
+// воридшавӣ бо рақам ҳисоби НОДУРУСТро меёфт ва соҳиби аслӣ ворид
+// шуда наметавонист.
+func phoneTaken(phone, myID string) bool {
+	if phone == "" {
+		return false
+	}
+	var taken bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM users WHERE phone=$1 AND id<>$2::text)`,
+		phone, myID).Scan(&taken)
+	return taken
+}
+
+// isWebURL — танҳо http(s) бо ҳост.
+func isWebURL(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	return err == nil && (u.Scheme == "https" || u.Scheme == "http") &&
+		u.Host != "" && len(raw) <= 500
 }

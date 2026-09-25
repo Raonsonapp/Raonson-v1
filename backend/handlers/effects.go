@@ -14,8 +14,8 @@ import (
 
 // ── GET /effects → эффектҳои ҷамъиятӣ ─────────────────────────────
 func GetEffects(c *gin.Context) {
-	page := toInt(c.Query("page"), 1)
-	limit := toInt(c.Query("limit"), 40)
+	page := clampPage(toInt(c.Query("page"), 1))
+	limit := clampLimit(toInt(c.Query("limit"), 40))
 	offset := (page - 1) * limit
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT e.id, e.name, e.matrix, COALESCE(e.price,0), COALESCE(e.downloads,0),

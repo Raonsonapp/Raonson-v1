@@ -2,10 +2,13 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
 	"raonson/db"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ══════════════════════════════════════════════════════════════════
@@ -46,9 +49,18 @@ func TokenState(uid string) (version int, banned bool) {
 	if db.Pool == nil {
 		return 0, false
 	}
-	db.Pool.QueryRow(context.Background(),
+	err := db.Pool.QueryRow(context.Background(),
 		`SELECT COALESCE(token_version,0), COALESCE(banned,false) FROM users WHERE id=$1`,
 		uid).Scan(&version, &banned)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Ҳисоб нест карда шуд — token-ҳояш бояд фавран бекор шаванд.
+		// Пеш «версия 0, бан нест» бармегашт ва ҳисоби нестшуда то 30
+		// рӯз пост ва паём навишта метавонист.
+		banned = true
+	} else if err != nil {
+		// Хатои муваққатии база: корбаронро намебарорем ва кэш намекунем.
+		return 0, false
+	}
 	stateMu.Lock()
 	if len(stateCache) > 100000 {
 		stateCache = map[string]tokenState{}

@@ -79,7 +79,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		}
 	}
 	// Соҳиби барнома (@raonson) ҳамеша VIP аст.
-	if strings.EqualFold(username, "raonson") {
+	if username == "raonson" {
 		isVip = true
 	}
 	return gin.H{
@@ -234,6 +234,29 @@ func scanPostRows(rows pgx.Rows, myID string) []gin.H {
 func nilToEmpty(v interface{}) interface{} {
 	if v == nil { return []interface{}{} }
 	return v
+}
+
+// clampLimit / clampPage — ҳудуди саҳифабандӣ. Пеш `?limit=1000000`
+// як дархостро ба пурсиши азим (бо json_agg) табдил медод ва
+// `page`-и хеле калон offset-ро пур карда 500 медод.
+func clampLimit(n int) int {
+	if n < 1 {
+		return 1
+	}
+	if n > 100 {
+		return 100
+	}
+	return n
+}
+
+func clampPage(n int) int {
+	if n < 1 {
+		return 1
+	}
+	if n > 10000 {
+		return 10000
+	}
+	return n
 }
 
 func toInt(s string, def int) int {

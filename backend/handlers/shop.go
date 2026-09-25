@@ -15,10 +15,16 @@ import (
 // Комиссияи платформа аз ҳар фуруш (5%).
 const commissionRate = 0.05
 
+// maxProductPrice — ҳадди нарх. Пеш нарх маҳдуд набуд: 1e12 ё манфӣ
+// қабул мешуд ва cashback (5%) аз он ҳисоб мешуд.
+const maxProductPrice = 100000
+
+func validPrice(p float64) bool { return p > 0 && p <= maxProductPrice && p == p }
+
 // ── GET /shop → маҳсулотҳо (маркетплейс) ──────────────────────────
 func GetShop(c *gin.Context) {
-	page := toInt(c.Query("page"), 1)
-	limit := toInt(c.Query("limit"), 30)
+	page := clampPage(toInt(c.Query("page"), 1))
+	limit := clampLimit(toInt(c.Query("limit"), 30))
 	offset := (page - 1) * limit
 	category := strings.TrimSpace(c.Query("category"))
 	rows, err := db.Pool.Query(context.Background(), `
@@ -42,8 +48,11 @@ func GetShop(c *gin.Context) {
 		  AND COALESCE(p.archived,FALSE)=FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  AND ($3 = '' OR p.product_category = $3)
+		  -- Пеш маҳсулоти ҳисобҳои пӯшида (бо телефон, WhatsApp ва GPS),
+		  -- басташуда ва бастакунандагон ҳам дар мағоза меомад.
+		  AND `+publicAuthorSQL("p.user_id", "u", "$4")+`
 		ORDER BY p.featured DESC, p.created_at DESC LIMIT $1 OFFSET $2`,
-		limit, offset, category)
+		limit, offset, category, mw.UID(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "shop failed"})
 		return
@@ -96,15 +105,28 @@ func AddReview(c *gin.Context) {
 		b.Rating = 5
 	}
 	text := strings.TrimSpace(b.Text)
-	if len(text) > 500 {
-		text = text[:500]
+	text = clampRunes(text, 500) // ҳарф, на байт (кириллӣ нимта намешавад)
+	// Баҳо танҳо аз харидоре, ки молро ГИРИФТААСТ. Пеш ҳар кас (ва худи
+	// фурӯшанда) ба ҳар пост баҳо гузошта метавонист.
+	var bought bool
+	db.Pool.QueryRow(context.Background(), `
+		SELECT EXISTS(SELECT 1 FROM orders
+		  WHERE post_id=$1 AND buyer_id=$2 AND status='delivered')`,
+		postID, myID).Scan(&bought)
+	if !bought {
+		c.JSON(http.StatusForbidden, gin.H{
+			"message": "Баҳо танҳо баъди гирифтани маҳсул гузошта мешавад"})
+		return
 	}
-	db.Pool.Exec(context.Background(), `
+	if _, err := db.Pool.Exec(context.Background(), `
 		INSERT INTO product_reviews(post_id, user_id, rating, text)
 		VALUES($1,$2,$3,$4)
 		ON CONFLICT (post_id, user_id) DO UPDATE
 		  SET rating=EXCLUDED.rating, text=EXCLUDED.text, created_at=NOW()`,
-		postID, myID, b.Rating, text)
+		postID, myID, b.Rating, text); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Баҳо сабт нашуд"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -183,6 +205,10 @@ func UpdateProduct(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
 		return
 	}
+	if b.Price != nil && !validPrice(*b.Price) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Нарх бояд аз 0 то 100000 бошад"})
+		return
+	}
 	tag, err := db.Pool.Exec(context.Background(), `
 		UPDATE posts SET
 		  product_name = COALESCE($1, product_name),
@@ -237,9 +263,7 @@ func SetProductTranslations(c *gin.Context) {
 	}
 	for _, lang := range []string{"tj", "ru", "en"} {
 		name := strings.TrimSpace(b[lang])
-		if len(name) > 200 {
-			name = name[:200]
-		}
+		name = clampRunes(name, 200) // ҳарф, на байт (кириллӣ нимта намешавад)
 		db.Pool.Exec(context.Background(), `
 			INSERT INTO product_translations(post_id, lang, name)
 			VALUES($1,$2,$3)
@@ -286,10 +310,15 @@ func PlaceOrder(c *gin.Context) {
 		             THEN COALESCE(sale_pct,0) ELSE 0 END)/100.0),
 		       COALESCE(currency,'TJS'), COALESCE(is_product,FALSE),
 		       COALESCE(in_stock,TRUE)
-		FROM posts WHERE id=$1`,
+		FROM posts WHERE id=$1
+		  AND COALESCE(hidden,false)=FALSE AND COALESCE(archived,false)=FALSE`,
 		postID).Scan(&sellerID, &price, &currency, &isProduct, &inStock)
 	if err != nil || !isProduct {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "not a product"})
+		return
+	}
+	if ok, _ := CanSeeProfileContent(myID, sellerID); !ok {
+		c.JSON(http.StatusNotFound, gin.H{"message": "not a product"})
 		return
 	}
 	if sellerID == myID {
@@ -317,18 +346,29 @@ func PlaceOrder(c *gin.Context) {
 		return
 	}
 
-	// Промокод — атомӣ redeem: used_count++ танҳо агар лимит/муҳлат иҷозат
-	// диҳад; тахфифаш ба нарх татбиқ мешавад.
-	if code := strings.ToUpper(strings.TrimSpace(b.PromoCode)); code != "" {
-		var promoPct int
+	// Промокод: як харидор — як бор. Пеш як нафар як кодро то тамом
+	// шудани лимит такрор истифода мебурд, ва used_count ҳатто ҳангоми
+	// фармоиши ноком зиёд мешуд.
+	promoCode := strings.ToUpper(strings.TrimSpace(b.PromoCode))
+	promoPct := 0
+	if promoCode != "" {
+		var used bool
 		db.Pool.QueryRow(context.Background(), `
-			UPDATE promo_codes SET used_count = used_count + 1
-			WHERE seller_id=$1 AND code=$2
-			  AND (max_uses=0 OR used_count < max_uses)
-			  AND (expires_at IS NULL OR expires_at > now())
-			RETURNING discount_pct`, sellerID, code).Scan(&promoPct)
+			SELECT EXISTS(SELECT 1 FROM promo_redemptions
+			  WHERE seller_id=$1 AND code=$2 AND buyer_id=$3)`,
+			sellerID, promoCode, myID).Scan(&used)
+		if !used {
+			db.Pool.QueryRow(context.Background(), `
+				SELECT discount_pct FROM promo_codes
+				WHERE seller_id=$1 AND code=$2
+				  AND (max_uses=0 OR used_count < max_uses)
+				  AND (expires_at IS NULL OR expires_at > now())`,
+				sellerID, promoCode).Scan(&promoPct)
+		}
 		if promoPct > 0 && promoPct <= 90 {
 			price = price * (1 - float64(promoPct)/100.0)
+		} else {
+			promoPct = 0
 		}
 	}
 
@@ -342,6 +382,14 @@ func PlaceOrder(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "order failed"})
 		return
+	}
+	if promoPct > 0 {
+		db.Pool.Exec(context.Background(),
+			`UPDATE promo_codes SET used_count=used_count+1 WHERE seller_id=$1 AND code=$2`,
+			sellerID, promoCode)
+		db.Pool.Exec(context.Background(), `
+			INSERT INTO promo_redemptions(seller_id, code, buyer_id, order_id)
+			VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, sellerID, promoCode, myID, oid)
 	}
 	notify(sellerID, myID, "order", postID)
 	pushNotify(sellerID, myID, "order", postID, "маҳсули шуморо фармоиш дод")
@@ -425,29 +473,67 @@ func UpdateOrderStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid status"})
 		return
 	}
+	// Танҳо гузаришҳои мантиқӣ. Пеш «cancelled → delivered» ё «refunded»
+	// баъди cashback мумкин буд — ситора дубора ё бе пардохт пайдо мешуд.
+	from := orderTransitions[b.Status]
 	tag, err := db.Pool.Exec(context.Background(),
-		`UPDATE orders SET status=$1 WHERE id=$2 AND seller_id=$3`,
-		b.Status, orderID, myID)
+		`UPDATE orders SET status=$1 WHERE id=$2 AND seller_id=$3 AND status = ANY($4)`,
+		b.Status, orderID, myID, from)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "update failed"})
 		return
 	}
 	if tag.RowsAffected() == 0 {
-		c.JSON(http.StatusForbidden, gin.H{"message": "not your order"})
+		c.JSON(http.StatusConflict, gin.H{"message": "Ин тағйири ҳолат иҷозат нест"})
 		return
 	}
-	if b.Status == "delivered" {
+	switch b.Status {
+	case "delivered":
 		payCashbackOnce(orderID)
+	case "returned", "refunded":
+		reverseCashback(orderID)
 	}
 	c.JSON(http.StatusOK, gin.H{"status": b.Status})
 }
 
+// orderTransitions — ҳолати нав → аз кадом ҳолатҳо ба он гузаштан мумкин.
+var orderTransitions = map[string][]string{
+	"pending":   {},
+	"confirmed": {"pending"},
+	"packed":    {"confirmed"},
+	"shipping":  {"confirmed", "packed"},
+	"delivered": {"shipping", "packed", "confirmed"},
+	"cancelled": {"pending", "confirmed", "packed"},
+	"returned":  {"delivered", "shipping"},
+	"refunded":  {"returned", "cancelled"},
+}
+
+// orderCashback — 5%, на камтар аз 1 ва на зиёда аз 100 ситора дар як
+// фармоиш (то фурӯшанда ва харидори ҳамдаст ситора «насозанд»).
 func orderCashback(price float64) int {
 	cb := int(price * 0.05)
 	if cb < 1 {
 		cb = 1
 	}
+	if cb > 100 {
+		cb = 100
+	}
 	return cb
+}
+
+// reverseCashback — моли баргардонидашуда: ситораи додашуда гирифта мешавад.
+func reverseCashback(orderID string) {
+	var buyer string
+	var price float64
+	if db.Pool.QueryRow(context.Background(), `
+		UPDATE orders SET cashback_paid=FALSE
+		WHERE id=$1 AND cashback_paid=TRUE
+		RETURNING buyer_id, price`, orderID).Scan(&buyer, &price) != nil {
+		return
+	}
+	db.Pool.Exec(context.Background(),
+		`UPDATE users SET stars_balance = GREATEST(COALESCE(stars_balance,0) - $1, 0) WHERE id=$2`,
+		orderCashback(price), buyer)
 }
 
 // payCashbackOnce — ситораи cashback ба харидор, ЯК БОР барои ҳар фармоиш.

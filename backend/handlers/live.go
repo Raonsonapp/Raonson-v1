@@ -22,9 +22,7 @@ func StartLive(c *gin.Context) {
 	}
 	c.ShouldBindJSON(&b)
 	title := strings.TrimSpace(b.Title)
-	if len(title) > 100 {
-		title = title[:100]
-	}
+	title = clampRunes(title, 100) // ҳарф, на байт (кириллӣ нимта намешавад)
 	// Стримҳои қаблии ҳамин корбарро мебандем.
 	db.Pool.Exec(context.Background(),
 		`UPDATE live_streams SET active=FALSE, ended_at=NOW()

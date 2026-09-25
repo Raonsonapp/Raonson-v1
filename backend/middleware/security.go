@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"sync/atomic"
 	"hash/fnv"
 	"net/http"
 	"os"
@@ -230,12 +231,18 @@ func RateLimit(limit int, windowSec int) gin.HandlerFunc {
 		}
 	}
 	window := time.Duration(windowSec) * time.Second
+	// ⚠️ Ҳар маҳдудкунанда ҳисоби ХУДАШРО дорад. Пеш ҳамаи онҳо як
+	// харитаро бо як калид (userID) истифода мебурданд: корбаре, ки
+	// лентаро 20 бор варақ зад, дигар рамзашро иваз карда наметавонист
+	// (rl20 → 429), ва бор кардан баъди 60 дархости лента меафтод.
+	inst := atomic.AddInt64(&rlInstances, 1)
 	return func(c *gin.Context) {
 		// Калид: userID (агар login карда) ё IP
 		key := UID(c)
 		if key == "" {
 			key = "ip:" + clientIP(c)
 		}
+		key = strconv.FormatInt(inst, 10) + "|" + key
 
 		now := time.Now()
 		rlMu.Lock()
@@ -304,6 +311,8 @@ func init() {
 		}
 	}()
 }
+
+var rlInstances int64
 
 func clientIP(c *gin.Context) string {
 	if fwd := c.GetHeader("X-Forwarded-For"); fwd != "" {

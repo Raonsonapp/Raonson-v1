@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"regexp"
@@ -153,23 +152,44 @@ func Login(c *gin.Context) {
 	b.Email = normalizeLoginID(b.Email)
 
 	// Логин бо почта Ё номи корбар Ё рақами телефон
+	// ⚠️ Як идентификатор метавонад ба чанд ҳисоб мувофиқ ояд (масалан
+	// ҳисоби дигар рақами телефони шуморо гузошта буд). Пеш аввалин сатр
+	// гирифта мешуд — соҳиби аслӣ ворид шуда наметавонист. Акнун паролро
+	// бо ҳар кадом месанҷем; почта ва номи корбар бартарӣ доранд.
+	// Кӯшишҳои нодуруст ба як идентификатор маҳдуданд (на аз рӯи IP).
+	if bump("login:"+b.Email, 15*time.Minute) > 20 {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"message": "Кӯшишҳо зиёд шуданд. 15 дақиқа интизор шавед."})
+		return
+	}
 	var id, username, email, hash, avatar, fullName string
-	var banned bool
-	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id,username,email,password,COALESCE(avatar,''),COALESCE(full_name,''),
+	var banned, found bool
+	rows, err := db.Pool.Query(context.Background(),
+		`SELECT id,username,COALESCE(email,''),password,COALESCE(avatar,''),COALESCE(full_name,''),
 		        COALESCE(banned,false)
-		 FROM users WHERE email=$1 OR username=$1 OR phone=$1`,
-		b.Email).Scan(&id, &username, &email, &hash, &avatar, &fullName, &banned)
-	if err != nil {
-		log.Printf("[Login] User not found")
+		 FROM users WHERE email=$1 OR username=$1 OR phone=$1
+		 ORDER BY (email=$1 OR username=$1) DESC, created_at ASC LIMIT 5`, b.Email)
+	if err == nil {
+		for rows.Next() {
+			var cid, cu, ce, ch, ca, cf string
+			var cb bool
+			if rows.Scan(&cid, &cu, &ce, &ch, &ca, &cf, &cb) != nil {
+				continue
+			}
+			if bcrypt.CompareHashAndPassword([]byte(ch), []byte(b.Password)) == nil {
+				id, username, email, hash, avatar, fullName, banned = cid, cu, ce, ch, ca, cf, cb
+				found = true
+				break
+			}
+		}
+		rows.Close()
+	}
+	if !found {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
 		return
 	}
-	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.Password)) != nil {
-		log.Printf("[Login] Wrong password")
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid email or password"})
-		return
-	}
+	resetCounter("login:" + b.Email)
+	_ = hash
 	if banned {
 		c.JSON(http.StatusForbidden,
 			gin.H{"message": "Ҳисоби шумо баста шудааст"})
@@ -254,8 +274,11 @@ func ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "хатои дохилӣ"})
 		return
 	}
-	db.Pool.Exec(context.Background(),
-		`UPDATE users SET password=$1 WHERE id=$2`, string(newHash), myID)
+	if _, err := db.Pool.Exec(context.Background(),
+		`UPDATE users SET password=$1 WHERE id=$2`, string(newHash), myID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Рамз иваз нашуд"})
+		return
+	}
 	// Дигар дастгоҳҳо мебароянд (мисли Instagram); ин дастгоҳ token-и
 	// нав мегирад, то корбар худаш набарояд.
 	mw.RevokeTokens(myID)
@@ -296,9 +319,15 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
+	// То 3 рамз дар 15 дақиқа ба як ҳисоб — пеш почта ё телефони
+	// касро бо рамзҳо «бомбаборон» кардан мумкин буд.
+	if !otpSendAllowed("reset:"+id, 3, 15*time.Minute) {
+		c.JSON(http.StatusOK, gin.H{"message": "Агар ҳисоб мавҷуд бошад, рамз фиристода шуд"})
+		return
+	}
+	otp := secureOTP()
 	// Бо id нигоҳ медорем — то reset бо ҳар идентификатор кор кунад.
-	mw.CacheSet("otp:reset:"+id, []byte(otp), 10*time.Minute)
+	storeOTP("otp:reset:"+id, otp, 10*time.Minute)
 
 	// Тавассути канали интихобшуда мефиристем.
 	var sendErr error
@@ -375,16 +404,23 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
+	// Ҷавоби «ҳисоб нест» ва «рамз нодуруст» як хел — вагарна ин роҳ
+	// нишон медод, ки кадом почта/телефон дар Raonson ҳаст.
 	var id string
 	if err := db.Pool.QueryRow(context.Background(),
 		`SELECT id FROM users WHERE LOWER(email)=$1 OR phone=$1 OR LOWER(username)=$1`,
 		ident).Scan(&id); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Ҳисоб ёфт нашуд"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
 		return
 	}
 
-	stored, ok := mw.CacheGet("otp:reset:" + id)
-	if !ok || string(stored) != strings.TrimSpace(b.OTP) {
+	good, locked := checkOTP("otp:reset:"+id, b.OTP)
+	if locked {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"message": "Кӯшишҳо зиёд шуданд. Рамзи нав дархост кунед."})
+		return
+	}
+	if !good {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
 		return
 	}
@@ -394,11 +430,13 @@ func ResetPassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Барқарорсозӣ ноком шуд"})
 		return
 	}
-	db.Pool.Exec(context.Background(),
-		`UPDATE users SET password=$1, updated_at=NOW() WHERE id=$2`, string(hash), id)
+	if _, err := db.Pool.Exec(context.Background(),
+		`UPDATE users SET password=$1, updated_at=NOW() WHERE id=$2`, string(hash), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Барқарорсозӣ ноком шуд"})
+		return
+	}
 	// Рамз барқарор шуд — ҳамаи сессияҳои кӯҳна (шояд аз дузд) бекор.
 	mw.RevokeTokens(id)
-	mw.CacheDel("otp:reset:" + id)
 	c.JSON(http.StatusOK, gin.H{"message": "Парол бо муваффақият иваз шуд"})
 }
 
@@ -418,8 +456,15 @@ func SendPhoneOTP(c *gin.Context) {
 		return
 	}
 
-	otp := fmt.Sprintf("%06d", rand.Intn(1000000))
-	mw.CacheSet("otp:phone:"+phone, []byte(otp), 5*time.Minute)
+	// То 3 рамз дар соат ба як рақам — SMS пулакӣ аст ва бе ин ба
+	// ҳар рақам беохир фиристода мешуд.
+	if !otpSendAllowed("phone:"+phone, 3, time.Hour) {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"message": "Рамз аллакай фиристода шуд. Баъди чанд дақиқа боз кӯшиш кунед."})
+		return
+	}
+	otp := secureOTP()
+	storeOTP("otp:phone:"+phone, otp, 5*time.Minute)
 
 	// Пеш ин ҷо ТАНҲО Telegram буд. Telegram Gateway ба сим-карта
 	// SMS НАМЕФИРИСТАД — барои ҳамин корбар мегуфт «смс намеояд».
@@ -469,14 +514,22 @@ func VerifyPhoneOTP(c *gin.Context) {
 		return
 	}
 	phone := strings.TrimSpace(b.Phone)
-	stored, ok := mw.CacheGet("otp:phone:" + phone)
-	if !ok || string(stored) != strings.TrimSpace(b.OTP) {
+	good, locked := checkOTP("otp:phone:"+phone, b.OTP)
+	if locked {
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"message": "Кӯшишҳо зиёд шуданд. Рамзи нав дархост кунед."})
+		return
+	}
+	if !good {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
 		return
 	}
-	mw.CacheDel("otp:phone:" + phone)
 	// Агар корбар login карда бошад — телефони ӯро verified мекунем
 	if uid := mw.UID(c); uid != "" {
+		if phoneTaken(phone, uid) {
+			c.JSON(http.StatusConflict, gin.H{"message": "Ин рақам ба ҳисоби дигар тааллуқ дорад"})
+			return
+		}
 		db.Pool.Exec(context.Background(),
 			`UPDATE users SET phone=$1, updated_at=NOW() WHERE id=$2`, phone, uid)
 	}

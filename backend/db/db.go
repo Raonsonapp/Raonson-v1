@@ -933,6 +933,20 @@ func migrate() {
 	ALTER TABLE reel_comments ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT FALSE;
 	-- Версияи token: «Ҳамаро бандед», ивази рамз ва ban онро зиёд мекунанд.
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER DEFAULT 0;
+	-- ⚠️ Ин сутун танҳо дар schema.sql буд, ки сервер онро иҷро
+	-- намекунад — тасдиқи почта (VerifyEmailOTP) дар база хато медод.
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
+	-- Пости аз шикоятҳо худкор пинҳоншуда (админ метавонад баргардонад).
+	ALTER TABLE posts ADD COLUMN IF NOT EXISTS auto_hidden BOOLEAN DEFAULT FALSE;
+	-- Промокод: ҳар харидор як бор.
+	CREATE TABLE IF NOT EXISTS promo_redemptions (
+		seller_id TEXT NOT NULL,
+		code      TEXT NOT NULL,
+		buyer_id  TEXT NOT NULL,
+		order_id  TEXT DEFAULT '',
+		created_at TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (seller_id, code, buyer_id)
+	);
 	-- Пости вақтбандишуда: зикрҳо дар вақти нашр мераванд.
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS announce_pending BOOLEAN DEFAULT FALSE;
 	-- Бинандагони Live: ҳар кас як бор; дилҳо то 300 аз як нафар.
@@ -1112,8 +1126,20 @@ func migrate() {
 	ALTER TABLE message_reports ADD COLUMN IF NOT EXISTS moderator_id TEXT DEFAULT '';
 
 	-- ── App owner: @raonson ҳамеша admin + verified + VIP (ройгон, бе харид) ──
+	-- ⚠️ Танҳо номи АЙНАН 'raonson' (хурд). Пеш LOWER(username) буд ва
+	-- ҳар кас бо номи «RAONSON» баъди бозоғозӣ админ мешуд.
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
-	WHERE LOWER(username)='raonson';
+	WHERE username='raonson';
+	-- Номҳои «RAONSON»-монанд (агар кас ҳамин тавр гузошта бошад) —
+	-- ҳуқуқи админ гирифта мешавад.
+	UPDATE users SET role='user'
+	WHERE LOWER(username)='raonson' AND username<>'raonson' AND role='admin';
+	-- Номҳо беназир бе фарқи ҳарф. Агар дар база аллакай такрор бошад,
+	-- индекс сохта намешавад, вале сервер ҳамоно оғоз мешавад.
+	DO $$ BEGIN
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username));
+	EXCEPTION WHEN others THEN RAISE NOTICE 'username case duplicates: %', SQLERRM;
+	END $$;
 
 	-- Барои backfill-и якдафъаина (поёнтар).
 	CREATE TABLE IF NOT EXISTS schema_backfills (

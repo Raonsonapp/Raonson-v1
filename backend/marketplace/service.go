@@ -1,6 +1,7 @@
 package marketplace
 
 import (
+	"os"
 	"crypto/rand"
 	"encoding/hex"
 	"log"
@@ -56,6 +57,14 @@ func New(cfg Config) (*Service, error) {
 	// онро дастӣ иҷро кунад.
 	s.Payouts.Register(payouts.NewManualProvider())
 
+	// ⚠️ Provider-и mock дар production пешфарз буд: «пардохт» бе пули
+	// воқеӣ ва ҳолаташ танҳо дар хотира. Дар release танҳо бо иҷозати
+	// ошкоро (ALLOW_MOCK_PAYMENTS=1); вагарна пардохт ростқавлона 503 аст.
+	if cfg.PaymentProvider == "mock" && os.Getenv("GIN_MODE") == "release" &&
+		os.Getenv("ALLOW_MOCK_PAYMENTS") != "1" {
+		log.Println("⚠️  PAYMENT_PROVIDER=mock дар release хомӯш аст — пардохти кампания дастнорас")
+		return s, nil
+	}
 	switch cfg.PaymentProvider {
 	case "mock":
 		secret := cfg.PaymentWebhookSecret

@@ -21,8 +21,8 @@ import (
 // 4. Нав корбарони шабеҳ (interest graph)
 func GetSmartReels(c *gin.Context) {
 	myID := mw.UID(c)
-	page := toInt(c.Query("page"), 1)
-	limit := toInt(c.Query("limit"), 15) // Instagram 15 рил бор мекунад
+	page := clampPage(toInt(c.Query("page"), 1))
+	limit := clampLimit(toInt(c.Query("limit"), 15)) // Instagram 15 рил бор мекунад
 	offset := (page - 1) * limit
 
 	// Cache барои page 1 (30 сония)

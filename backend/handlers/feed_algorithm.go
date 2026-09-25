@@ -21,8 +21,8 @@ import (
 // 3. Ташрифи якхела — дубора намеояд
 func GetSmartFeed(c *gin.Context) {
 	myID := mw.UID(c)
-	page := toInt(c.Query("page"), 1)
-	limit := toInt(c.Query("limit"), 20)
+	page := clampPage(toInt(c.Query("page"), 1))
+	limit := clampLimit(toInt(c.Query("limit"), 20))
 	offset := (page - 1) * limit
 
 	// Калид аз саҳифаи ТАҶЗИЯШУДА сохта мешавад, на аз сатри хом.
