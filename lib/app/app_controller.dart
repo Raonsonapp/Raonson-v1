@@ -25,6 +25,7 @@ import '../core/links/deep_links.dart';
 import '../discover/discover_screen.dart';
 import '../core/links/pending_invite.dart';
 import '../core/links/deep_link_resolver_screen.dart';
+import '../chat/group/groups_list_screen.dart';
 
 class AppController {
   final AppState appState;
@@ -53,9 +54,11 @@ class AppController {
         return _page(const SearchScreen());
       case '/user-profile':
       case AppRoutes.profile: // '/profile'
-        final uid    = settings.arguments;
-        final userId = (uid is String && uid.isNotEmpty) ? uid : 'me';
-        return _page(ProfileScreen(userId: userId));
+        final uid = settings.arguments;
+        // Бе шиноса профили ХУДРО намекушоем — пеш ҳар аргументи гумшуда
+        // корбарро ба профили худаш мебурд. Барои худ 'me'-ро фиристед.
+        if (uid is! String || uid.isEmpty) return _page(const _DismissScreen());
+        return _page(ProfileScreen(userId: uid));
 
       // Даъвати ҳамкорӣ — ҷои қабул, на худи пост.
       case '/collab-invites':
@@ -147,10 +150,19 @@ class AppController {
               // Мавзӯъ дар «Кашфи имрӯз» зиндагӣ мекунад — экрани нав
               // сохта намешавад.
               return _page(const DiscoverScreen());
+            case DeepLinkKind.group:
+              // Ҳамон ҷараёни «Ҳамроҳ шудан бо линк»-и рӯйхати гурӯҳҳо.
+              if (appState.isAuthenticated) {
+                return _page(GroupsListScreen(inviteToken: link.id));
+              }
+              break;
             case DeepLinkKind.unknown:
               break;
           }
         }
+        // Корбари воридшуда набояд бо линки номаълум ё даъват ба экрани
+        // вуруд афтад — танҳо ба ҷои қаблӣ бармегардем.
+        if (appState.isAuthenticated) return _page(const _DismissScreen());
         return _page(const LoginScreen());
     }
   }
@@ -169,4 +181,32 @@ class AppController {
     ),
     transitionDuration: const Duration(milliseconds: 250),
   );
+}
+
+/// Роҳи «беозор»: худро дарҳол мепӯшад (ё ба хона мебарад, агар
+/// ақиб чизе набошад). Барои линк/аргументи нодуруст, то корбар ба
+/// экрани нодуруст (вуруд, профили худ) наафтад.
+class _DismissScreen extends StatefulWidget {
+  const _DismissScreen();
+  @override
+  State<_DismissScreen> createState() => _DismissScreenState();
+}
+
+class _DismissScreenState extends State<_DismissScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final nav = Navigator.of(context);
+      if (nav.canPop()) {
+        nav.pop();
+      } else {
+        nav.pushReplacementNamed(AppRoutes.home);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }

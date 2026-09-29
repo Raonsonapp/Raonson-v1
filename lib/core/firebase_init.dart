@@ -20,6 +20,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../chat/chat_repository.dart';
+import '../chat/room/chat_room_screen.dart';
+import '../models/message_model.dart';
 import 'api/api_client.dart';
 import 'links/deep_links.dart';
 import 'notifications/notification_channels.dart';
@@ -61,7 +64,7 @@ class FirebaseInit {
         // Пахши banner-и маҳаллӣ низ бояд ба ҳамон ҷо барад.
         onDidReceiveNotificationResponse: (r) {
           final payload = r.payload;
-          if (payload != null && payload.isNotEmpty) _openLink(payload);
+          if (payload != null && payload.isNotEmpty) _openPayload(payload);
         },
       );
       final android = _localNotif.resolvePlatformSpecificImplementation<
@@ -76,24 +79,91 @@ class FirebaseInit {
     final fm = FirebaseMessaging.instance;
     FirebaseMessaging.onBackgroundMessage(_fcmBgHandler);
 
-    await _sendToken(await fm.getToken());
-    fm.onTokenRefresh.listen(_sendToken);
+    // Шунавандаҳо АВВАЛ сабт мешаванд: getToken() бе интернет хато
+    // мепартояд ва пеш аз ин тамоми коркарди push дар сессия гум мешуд.
 
     // Foreground — система banner нишон намедиҳад, мо худамон.
     FirebaseMessaging.onMessage.listen(_showLocal);
 
     // Барнома дар паснамо буд ва корбар огоҳиномаро пахш кард.
-    FirebaseMessaging.onMessageOpenedApp.listen((m) {
-      _openLink(m.data['link']?.toString() ?? '');
-    });
+    FirebaseMessaging.onMessageOpenedApp.listen((m) => _openData(m.data));
 
     // Барнома ПӮШИДА буд: огоҳинома онро кушод.
-    final initial = await fm.getInitialMessage();
-    if (initial != null) {
-      // Каме таъхир, то Navigator тайёр шавад.
-      Future.delayed(const Duration(milliseconds: 400), () {
-        _openLink(initial.data['link']?.toString() ?? '');
-      });
+    try {
+      final initial = await fm.getInitialMessage();
+      if (initial != null) {
+        // Каме таъхир, то Navigator тайёр шавад.
+        Future.delayed(const Duration(milliseconds: 400),
+            () => _openData(initial.data));
+      }
+    } catch (_) {}
+
+    fm.onTokenRefresh.listen(_sendToken);
+    // Токен охир ва ҷудо: хатои шабака набояд чизи дигарро боздорад.
+    try {
+      await _sendToken(await fm.getToken());
+    } catch (_) {
+      // Ҳангоми onTokenRefresh ё оғози оянда дубора фиристода мешавад.
+    }
+  }
+
+  // Префикси payload-и banner барои паёми бе линк (танҳо chatId).
+  static const _chatPayload = 'chat:';
+
+  /// Payload-и огоҳиномаро ба линк ё чат табдил медиҳад.
+  ///
+  /// Паёмҳои чат аксар вақт 'link' надоранд — танҳо type=message ва
+  /// id (chatId). Бе ин пахш ба ҳеҷ ҷо намебурд.
+  static String _payloadOf(Map<String, dynamic> data) {
+    final link = data['link']?.toString() ?? '';
+    if (link.isNotEmpty) return link;
+    final id = data['id']?.toString() ?? '';
+    if (data['type']?.toString() == 'message' && id.isNotEmpty) {
+      return '$_chatPayload$id';
+    }
+    return '';
+  }
+
+  static void _openData(Map<String, dynamic> data) =>
+      _openPayload(_payloadOf(data));
+
+  /// Navigator ҳангоми cold start метавонад ҳанӯз сохта нашуда бошад —
+  /// якчанд бор бо таъхир кӯшиш мекунем, на ки огоҳиномаро партоем.
+  static void _openPayload(String payload, [int attempt = 0]) {
+    if (payload.isEmpty) return;
+    if (navigatorKey?.currentState == null) {
+      if (attempt < 5) {
+        Future.delayed(const Duration(milliseconds: 500),
+            () => _openPayload(payload, attempt + 1));
+      }
+      return;
+    }
+    if (payload.startsWith(_chatPayload)) {
+      _openChat(payload.substring(_chatPayload.length));
+    } else {
+      _openLink(payload);
+    }
+  }
+
+  /// Чатро аз рӯи chatId мекушояд.
+  ///
+  /// ChatRoomScreen ҳамсӯҳбатро мехоҳад, на chatId — ӯро аз inbox
+  /// меёбем. Агар ёфт нашавад, рӯйхати чатҳо кушода мешавад.
+  static Future<void> _openChat(String chatId) async {
+    MessageModel? hit;
+    try {
+      final chats = await ChatRepository().getInboxChats();
+      for (final c in chats) {
+        if (c.chatId == chatId) { hit = c; break; }
+      }
+    } catch (_) {}
+    final nav = navigatorKey?.currentState;
+    if (nav == null) return;
+    if (hit != null) {
+      final peer = hit.peer;
+      nav.push(MaterialPageRoute(builder: (_) => ChatRoomScreen(peer: peer)));
+    } else {
+      nav.pushNamed('/messages');
     }
   }
 
@@ -123,7 +193,7 @@ class FirebaseInit {
     final channel = NotificationChannels.resolve(
         msg.notification?.android?.channelId ??
             msg.data['channelId']?.toString());
-    final link = msg.data['link']?.toString() ?? '';
+    final link = _payloadOf(msg.data);
 
     _localNotif.show(
       msg.hashCode,

@@ -201,6 +201,19 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
   @override
   void initState() { super.initState(); _start(); }
 
+  // Host экранро ҳангоми /live/start ё joinLive тарк кард? — он гоҳ пахш
+  // набояд баъди dispose оғоз шавад (камера фаъол, poll абадӣ).
+  bool get _gone => !mounted || _ending;
+
+  void _abortStart({bool joined = false}) {
+    _poll?.cancel();
+    _agora.removeListener(_onAgora);
+    if (joined) _agora.leaveCall();
+    if (_id.isNotEmpty) {
+      ApiClient.instance.post('/live/$_id/end').then((_) {}, onError: (_) {});
+    }
+  }
+
   Future<void> _start() async {
     try {
       final r = await ApiClient.instance.post('/live/start',
@@ -209,12 +222,18 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
         final b = jsonDecode(r.body) as Map<String, dynamic>;
         _id = (b['id'] ?? '').toString();
         _channel = (b['channel'] ?? '').toString();
+        if (_gone) return _abortStart();
+        final token = await AgoraService.liveToken(_id);
+        if (_gone) return _abortStart();
         await _agora.joinLive(channelName: _channel, asHost: true,
-            token: await AgoraService.liveToken(_id));
+            token: token);
+        if (_gone) return _abortStart(joined: true);
         _agora.addListener(_onAgora);
         _poll = Timer.periodic(const Duration(seconds: 5), (_) => _refreshViewers());
       }
-    } catch (_) {}
+    } catch (_) {
+      if (_gone) return _abortStart(joined: true);
+    }
     if (mounted) setState(() => _starting = false);
   }
 
@@ -354,13 +373,31 @@ class _LiveViewerState extends State<LiveViewerScreen> {
   @override
   void initState() { super.initState(); _join(); }
 
+  // Бинанда ҳангоми пайвастшавӣ баромад — Agora-ро баъди dispose фаъол
+  // намегузорем ва ҳисобкунакро кам мекунем.
+  bool get _gone => !mounted || _leaving;
+
+  void _abortJoin({bool joined = false}) {
+    _agora.removeListener(_onAgora);
+    if (joined) _agora.leaveCall();
+    // _leave аллакай /leave фиристод — ду бор кам накунем.
+    if (!_leaving) {
+      ApiClient.instance.post('/live/$_id/leave').then((_) {}, onError: (_) {});
+    }
+  }
+
   Future<void> _join() async {
     try {
-      ApiClient.instance.post('/live/$_id/join');
+      ApiClient.instance.post('/live/$_id/join').then((_) {}, onError: (_) {});
+      final token = await AgoraService.liveToken(_id);
+      if (_gone) return _abortJoin();
       await _agora.joinLive(channelName: _channel, asHost: false,
-          token: await AgoraService.liveToken(_id));
+          token: token);
+      if (_gone) return _abortJoin(joined: true);
       _agora.addListener(_onAgora);
-    } catch (_) {}
+    } catch (_) {
+      if (_gone) return _abortJoin(joined: true);
+    }
     if (mounted) setState(() => _joining = false);
   }
 

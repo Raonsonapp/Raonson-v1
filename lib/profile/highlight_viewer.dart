@@ -71,19 +71,42 @@ class _HighlightViewerState extends State<HighlightViewer>
     super.dispose();
   }
 
+  bool _videoFailed = false;
+
   void _load() {
     _video?.dispose();
     _video = null;
     _videoReady = false;
+    _videoFailed = false;
     if (_isVideo) {
-      _video = VideoPlayerController.networkUrl(Uri.parse(_cur.url))
-        ..initialize().then((_) {
-          if (!mounted) return;
-          setState(() => _videoReady = true);
-          _video!..setLooping(false)..play();
-          final d = _video!.value.duration;
-          _start(d.inSeconds > 0 ? d : const Duration(seconds: 15));
-        });
+      // Контроллер дар тағйирёбандаи маҳаллӣ: агар корбар то омода шудан
+      // ба ҷузъи дигар гузарад, ҷавоби кӯҳна набояд `_video!`-и навро
+      // (ё null-ро) истифода барад. Ҳамон шакли story_group_viewer.
+      final c = VideoPlayerController.networkUrl(Uri.parse(_cur.url));
+      _video = c;
+      c.initialize().then((_) {
+        if (!mounted || _video != c) return;
+        setState(() => _videoReady = true);
+        c.setLooping(false);
+        if (!_paused) c.play();
+        final d = c.value.duration;
+        _start(d.inSeconds > 0 ? d : const Duration(seconds: 15));
+        if (_paused) {
+          _progress.stop();
+          _timer?.cancel();
+        }
+      }).catchError((Object e) {
+        // Видеои мурда экранро абадан дар спиннер нигоҳ медошт —
+        // паём нишон дода, баъди 3 сония мегузарем.
+        debugPrint('[Highlight] видео кушода нашуд: $e');
+        if (!mounted || _video != c) return;
+        setState(() => _videoFailed = true);
+        _start(const Duration(seconds: 3));
+        if (_paused) {
+          _progress.stop();
+          _timer?.cancel();
+        }
+      });
     } else {
       _start(_imageDur);
     }
@@ -108,9 +131,15 @@ class _HighlightViewerState extends State<HighlightViewer>
 
   void _resume() {
     if (!_paused) return;
-    final remaining = _progress.duration! * (1 - _progress.value);
-    _progress.forward();
-    _timer = Timer(remaining, _next);
+    // Агар видео ҳанӯз бор нашуда бошад, duration null аст — прогрессро
+    // худи initialize() баъдтар сар мекунад.
+    final total = _progress.duration;
+    if (total != null) {
+      final remaining = total * (1 - _progress.value);
+      _progress.forward();
+      _timer?.cancel();
+      _timer = Timer(remaining, _next);
+    }
     _video?.play();
     setState(() => _paused = false);
   }
@@ -295,7 +324,7 @@ class _HighlightViewerState extends State<HighlightViewer>
                 child: i < _idx
                     ? _bar(1.0)
                     : i == _idx
-                        ? (_isVideo && !_videoReady)
+                        ? (_isVideo && !_videoReady && !_videoFailed)
                             ? _bar(0)
                             : AnimatedBuilder(
                                 animation: _progress,
@@ -348,6 +377,16 @@ class _HighlightViewerState extends State<HighlightViewer>
   }
 
   Widget _buildVideo() {
+    if (_videoFailed) {
+      return const Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(AppIcons.videocam_off_rounded, color: Colors.white54, size: 40),
+          SizedBox(height: 10),
+          Text('Видео кушода нашуд',
+              style: TextStyle(color: Colors.white70, fontSize: 14)),
+        ]),
+      );
+    }
     if (!_videoReady) {
       return Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textFaint));

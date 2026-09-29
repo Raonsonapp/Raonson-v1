@@ -109,12 +109,20 @@ class _StoryEditorState extends State<StoryEditor> {
     } catch (_) {}
   }
 
+  bool _videoFailed = false;
+
   void _initVideo() {
-    _videoCtrl = VideoPlayerController.file(widget.media)
-      ..initialize().then((_) {
-        if (mounted) { setState(() => _videoReady = true);
-          _videoCtrl!..setLooping(true)..play(); }
-      });
+    final c = VideoPlayerController.file(widget.media);
+    _videoCtrl = c;
+    c.initialize().then((_) {
+      if (!mounted) return;
+      setState(() => _videoReady = true);
+      c..setLooping(true)..play();
+    }).catchError((Object e) {
+      // Кодеки дастгиринашаванда/файли вайрон — пеш спиннер абадӣ буд.
+      debugPrint('[Editor] видео кушода нашуд: $e');
+      if (mounted) setState(() => _videoFailed = true);
+    });
   }
 
   @override
@@ -793,7 +801,15 @@ class _StoryEditorState extends State<StoryEditor> {
           aspectRatio: _videoCtrl!.value.aspectRatio,
           child: VideoPlayer(_videoCtrl!));
       }
-      return CircularProgressIndicator(color: Colors.white30);
+      if (_videoFailed) {
+        return const Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(AppIcons.videocam_off_rounded, color: Colors.white54, size: 40),
+          SizedBox(height: 10),
+          Text('Видео кушода нашуд',
+              style: TextStyle(color: Colors.white70, fontSize: 14)),
+        ]);
+      }
+      return const CircularProgressIndicator(color: Colors.white30);
     }
     // Расм — contain, формат нигоҳ дорем, letterbox сиёҳ
     return Image.file(widget.media, fit: BoxFit.contain);

@@ -2256,7 +2256,6 @@ class _UserRowState extends State<_UserRow> {
 //  MUSIC ROW
 // ════════════════════════════════════════════════════════════════════
 final _audioPlayer = AudioPlayer();
-String? _playingUrl;
 
 class _MusicRow extends StatefulWidget {
   final dynamic m;
@@ -2266,7 +2265,15 @@ class _MusicRow extends StatefulWidget {
 }
 
 class _MusicRowState extends State<_MusicRow> {
-  bool _playing = false;
+  // Плеер умумист, пас ҳолати «кадом суруд месарояд» ҳам бояд умумӣ
+  // бошад — вагарна қатори дигар ҳанӯз «пауза» нишон медод.
+  static final ValueNotifier<String?> _nowPlaying = ValueNotifier(null);
+
+  // Як обуна барои ҳар State (пеш ҳар play шунавандаи нав илова мекард
+  // ва ҳеҷ гоҳ бекор намешуд).
+  StreamSubscription<void>? _completeSub;
+
+  bool get _playing => _nowPlaying.value == _previewUrl;
 
   String get _previewUrl => widget.m['previewUrl']?.toString() ?? '';
   String get _title      => widget.m['trackName']?.toString()  ?? '';
@@ -2279,28 +2286,46 @@ class _MusicRowState extends State<_MusicRow> {
     return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _nowPlaying.addListener(_onNowPlaying);
+    _completeSub = _audioPlayer.onPlayerComplete.listen((_) {
+      if (_playing) _nowPlaying.value = null;
+    });
+  }
+
+  void _onNowPlaying() { if (mounted) setState(() {}); }
+
   Future<void> _toggle() async {
+    if (_previewUrl.isEmpty) return;
     if (_playing) {
-      await _audioPlayer.pause();
-      setState(() { _playing = false; _playingUrl = null; });
-    } else {
-      if (_playingUrl != null && _playingUrl != _previewUrl) {
-        await _audioPlayer.stop();
-      }
-      _playingUrl = _previewUrl;
+      _nowPlaying.value = null;
+      try { await _audioPlayer.pause(); } catch (_) {}
+      return;
+    }
+    _nowPlaying.value = _previewUrl;
+    try {
+      await _audioPlayer.stop();
       await _audioPlayer.play(UrlSource(_previewUrl));
-      if (mounted) setState(() => _playing = true);
-      _audioPlayer.onPlayerComplete.listen((_) {
-        if (mounted) setState(() { _playing = false; _playingUrl = null; });
-      });
+    } catch (_) {
+      // Preview дастнорас — тугмаро дар ҳолати «бозӣ» намегузорем.
+      if (_nowPlaying.value == _previewUrl) _nowPlaying.value = null;
     }
   }
 
   @override
   void dispose() {
-    if (_playingUrl == _previewUrl) {
-      _audioPlayer.pause();
-      _playingUrl = null;
+    _completeSub?.cancel();
+    _nowPlaying.removeListener(_onNowPlaying);
+    if (_playing) {
+      _audioPlayer.pause().then((_) {}, onError: (_) {});
+      // Дар microtask: dispose ҳангоми қулфи дарахт меояд ва setState-и
+      // қаторҳои дигар дар ин лаҳза хато медод.
+      final url = _previewUrl;
+      Future.microtask(() {
+        if (_nowPlaying.value == url) _nowPlaying.value = null;
+      });
     }
     super.dispose();
   }

@@ -228,9 +228,20 @@ class _PostEditorState extends State<_PostEditor> {
     } catch (_) {}
   }
 
+  bool _videoFailed = false;
+
   void _initVideo() {
-    _videoCtrl = VideoPlayerController.file(widget.media)
-      ..initialize().then((_) { if (mounted) { setState(() => _videoReady = true); _videoCtrl!..setLooping(true)..play(); } });
+    final c = VideoPlayerController.file(widget.media);
+    _videoCtrl = c;
+    c.initialize().then((_) {
+      if (!mounted) return;
+      setState(() => _videoReady = true);
+      c..setLooping(true)..play();
+    }).catchError((Object e) {
+      // Кодеки дастгиринашаванда/файли вайрон — пеш спиннер абадӣ буд.
+      debugPrint('[Editor] видео кушода нашуд: $e');
+      if (mounted) setState(() => _videoFailed = true);
+    });
   }
 
   @override void dispose() { _videoCtrl?.dispose(); _captionCtrl.dispose(); super.dispose(); }
@@ -545,7 +556,15 @@ class _PostEditorState extends State<_PostEditor> {
         return AspectRatio(aspectRatio: _videoCtrl!.value.aspectRatio,
           child: VideoPlayer(_videoCtrl!));
       }
-      return CircularProgressIndicator(color: Colors.white30);
+      if (_videoFailed) {
+        return const Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(AppIcons.videocam_off_rounded, color: Colors.white54, size: 40),
+          SizedBox(height: 10),
+          Text('Видео кушода нашуд',
+              style: TextStyle(color: Colors.white70, fontSize: 14)),
+        ]);
+      }
+      return const CircularProgressIndicator(color: Colors.white30);
     }
     return Image.file(widget.media, fit: BoxFit.contain);
   }
@@ -611,8 +630,19 @@ class _MusicPanelState extends State<_MusicPanel> {
   @override void dispose() { _ctrl.dispose(); _player.dispose(); super.dispose(); }
 
   Future<void> _togglePlay(String url) async {
-    if (_playingUrl == url) { await _player.stop(); setState(() => _playingUrl = null); }
-    else { await _player.stop(); await _player.play(UrlSource(url)); setState(() => _playingUrl = url); }
+    // Панел метавонад ҳангоми await пӯшида шавад — setState баъди dispose хато медиҳад.
+    if (_playingUrl == url) {
+      await _player.stop();
+      if (mounted) setState(() => _playingUrl = null);
+    } else {
+      try {
+        await _player.stop();
+        await _player.play(UrlSource(url));
+        if (mounted) setState(() => _playingUrl = url);
+      } catch (_) {
+        if (mounted) setState(() => _playingUrl = null);
+      }
+    }
   }
 
   Future<void> _search(String q) async {
@@ -623,13 +653,17 @@ class _MusicPanelState extends State<_MusicPanel> {
         'https://itunes.apple.com/search?term=${Uri.encodeComponent(q)}&media=music&limit=20'))
         .timeout(const Duration(seconds: 10));
       final data = jsonDecode(res.body);
+      if (!mounted) return;
       setState(() {
         _tracks = (data['results'] as List)
           .where((r) => r['previewUrl'] != null)
           .map((r) => _MusicTrack.fromJson(r)).toList();
         _loading = false;
       });
-    } catch (e) { setState(() { _error = 'Хато: $e'; _loading = false; }); }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _error = 'Хато: $e'; _loading = false; });
+    }
   }
 
   @override

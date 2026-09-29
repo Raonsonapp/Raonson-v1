@@ -17,6 +17,8 @@ import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../feed/post/post_detail_screen.dart';
 import '../../models/post_model.dart';
+import '../../models/reel_model.dart';
+import '../../reels/single_reel_screen.dart';
 import '../api/api_client.dart';
 import '../i18n/strings.dart';
 import '../ui/app_icons.dart';
@@ -46,9 +48,9 @@ class _DeepLinkResolverScreenState extends State<DeepLinkResolverScreen> {
           await _openPost(widget.link.id);
           return;
         case DeepLinkKind.reel:
-          // Рилси ягона ҳамчун пост кушода мешавад: экрани рилс
-          // рӯйхат мехоҳад ва тағйир додани он хатари регрессия дорад.
-          await _openPost(widget.link.id, reel: true);
+          // /reels/<id> шакли РИЛС дорад, на пост — PostModel аз он
+          // пости холӣ месохт. Экрани рилси ягона вуҷуд дорад.
+          await _openReel(widget.link.id);
           return;
         default:
           setState(() => _error = tr('link.unavailable'));
@@ -58,8 +60,25 @@ class _DeepLinkResolverScreenState extends State<DeepLinkResolverScreen> {
     }
   }
 
-  Future<void> _openPost(String id, {bool reel = false}) async {
-    final res = await ApiClient.instance.get(reel ? '/reels/$id' : '/posts/$id');
+  Future<void> _openReel(String id) async {
+    final res = await ApiClient.instance.get('/reels/$id');
+    if (res.statusCode >= 400) {
+      if (mounted) setState(() => _error = tr('link.unavailable'));
+      return;
+    }
+    final body = jsonDecode(res.body);
+    final map = (body is Map && body['reel'] is Map)
+        ? (body['reel'] as Map).cast<String, dynamic>()
+        : (body as Map).cast<String, dynamic>();
+    final reel = ReelModel.fromJson(map);
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => SingleReelScreen(reel: reel),
+    ));
+  }
+
+  Future<void> _openPost(String id) async {
+    final res = await ApiClient.instance.get('/posts/$id');
     if (res.statusCode >= 400) {
       // Сервер дастрасиро рад кард — сабабро ихтироъ намекунем.
       if (mounted) setState(() => _error = tr('link.unavailable'));

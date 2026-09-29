@@ -42,6 +42,9 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   Timer? _timer;
   bool   _everConnected = false; // ягон бор пайваст шуд?
   bool   _logged        = false; // паёми занг сабт шуд?
+  // Занг аллакай қатъ шуд? — то sendEnd/leaveCall ду бор (аз _endCall ва
+  // dispose) фиристода нашавад.
+  bool   _hungUp        = false;
 
   late AnimationController _pulseCtrl;
   late Animation<double>   _pulseAnim;
@@ -132,6 +135,12 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     }
     await _agora.joinCall(channelName: cred.channel, token: cred.token,
         isVideo: widget.callType == CallType.video);
+    // Экран ҳангоми пайвастшавӣ пӯшида шуд — Agora-ро боз тарк мекунем,
+    // вагарна микрофон/камера дар замина кор мекунанд.
+    if (!mounted || _hungUp) {
+      _agora.leaveCall();
+      return;
+    }
     if (widget.isIncoming) _signal.sendAnswered(widget.peer.id);
     // Агар дар 60 сония касе ҷавоб надиҳад — мисли Instagram қатъ мешавад.
     _noAnswer = Timer(const Duration(seconds: 60), () {
@@ -146,8 +155,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     if (_failed || !mounted) return;
     _failed = true;
     _stopRing();
-    _signal.sendEnd(widget.peer.id);
-    _agora.leaveCall();
+    _hangUp();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(msg), backgroundColor: Colors.red,
         duration: const Duration(seconds: 3)));
@@ -188,25 +196,38 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     ).then((_) {}, onError: (_) {});
   }
 
-  Future<void> _endCall() async {
-    _logCall();
-    await _stopRing();
-    _signal.sendEnd(widget.peer.id);
+  // Як нуқтаи ягонаи қатъ: end-ро ба ҳамсӯҳбат мефиристад ва Agora-ро тарк
+  // мекунад. Бо _hungUp муҳофизат шудааст, то аз dispose такрор нашавад.
+  void _hangUp({bool notifyPeer = true}) {
+    if (_hungUp) return;
+    _hungUp = true;
+    if (notifyPeer) _signal.sendEnd(widget.peer.id);
     _agora.leaveCall();
+  }
+
+  bool _closing = false;
+
+  Future<void> _endCall() async {
+    if (_closing) return; // тугма + back ҳамзамон — як бор pop
+    _closing = true;
+    _logCall();
+    _hangUp();
+    await _stopRing();
     if (mounted) Navigator.pop(context);
   }
 
   void _onRemoteEnded() {
     _logCall();
     _stopRing();
-    _agora.leaveCall();
+    // Ҳамсӯҳбат худаш қатъ кард — end-ро баргардондан лозим нест.
+    _hangUp(notifyPeer: false);
     if (mounted) Navigator.pop(context);
   }
 
   void _onDeclined() {
     _logCall();
     _stopRing();
-    _agora.leaveCall();
+    _hangUp(notifyPeer: false);
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(tr('ui.30bcc62c44'))));
@@ -218,6 +239,8 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _logCall(); // safety net — агар бо роҳи дигар пӯшида шавад
+    // Агар экран бе _endCall пӯшида шавад, занг набояд дар замина боқӣ монад.
+    _hangUp();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _agora.removeListener(_onAgoraChange);
     _signal.onCallEnded    = null;
@@ -232,12 +255,17 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   // ══════════════════════════════ BUILD ══════════════════════════════
 
+  // Ишораи «back»-и система зангро дуруст қатъ мекунад (на танҳо экранро).
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.bg,
-    body: FadeTransition(
-      opacity: _fadeAnim,
-      child: widget.callType == CallType.video ? _buildVideo() : _buildVoice(),
+  Widget build(BuildContext context) => PopScope(
+    canPop: false,
+    onPopInvoked: (didPop) { if (!didPop) _endCall(); },
+    child: Scaffold(
+      backgroundColor: AppColors.bg,
+      body: FadeTransition(
+        opacity: _fadeAnim,
+        child: widget.callType == CallType.video ? _buildVideo() : _buildVoice(),
+      ),
     ),
   );
 

@@ -657,6 +657,8 @@ class _CommentItemState extends State<_CommentItem> {
     try {
       final res = await ApiClient.instance
           .post('/comments/${widget.comment.id}/like');
+      // Шарҳ метавонад ҳангоми дархост аз рӯйхат рафта бошад (scroll/нест).
+      if (!mounted) return;
       if (res.statusCode < 400) {
         final b = jsonDecode(res.body);
         setState(() {
@@ -667,6 +669,7 @@ class _CommentItemState extends State<_CommentItem> {
         setState(() { _liked = was; _likeCount += was ? 1 : -1; });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() { _liked = was; _likeCount += was ? 1 : -1; });
     }
   }

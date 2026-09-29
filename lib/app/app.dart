@@ -12,6 +12,7 @@ import 'app_splash.dart';
 import '../auth/login/login_screen.dart';
 import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
 import '../core/analytics/analytics_observer.dart';
+import '../core/ui/app_icons.dart';
 
 /// Navigator-и умумӣ.
 ///
@@ -28,7 +29,18 @@ class RaonsonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!kDebugMode) {
-      ErrorWidget.builder = (_) => const SizedBox.shrink();
+      // Қуттии хокистарии ором: хато намоён мемонад (на ҷои холии
+      // пурасрор), вале экрани сурхи debug корбарро наметарсонад.
+      // textDirection ошкоро — ErrorWidget метавонад берун аз
+      // Directionality сохта шавад.
+      ErrorWidget.builder = (_) => Container(
+            color: const Color(0x14808080),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(4),
+            child: const Icon(AppIcons.broken_image_outlined,
+                size: 20, color: Color(0x80808080),
+                textDirection: TextDirection.ltr),
+          );
     }
     return ChangeNotifierProvider(
       create: (_) => AppState()..initialize(),

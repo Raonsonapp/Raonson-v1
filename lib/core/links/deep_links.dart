@@ -12,7 +12,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 /// Навъи мӯҳтавои линк.
-enum DeepLinkKind { profile, post, reel, topic, referral, unknown }
+enum DeepLinkKind { profile, post, reel, topic, referral, group, unknown }
 
 /// Натиҷаи таҷзия.
 class DeepLink {
@@ -67,6 +67,8 @@ class DeepLinks {
     DeepLinkKind.reel: 'reel',
     DeepLinkKind.topic: 'topic',
     DeepLinkKind.referral: 'invite',
+    // Даъват ба гурӯҳ: `/l/g/<token>` (ниг. groupInvite).
+    DeepLinkKind.group: 'g',
   };
 
   /// Линки берунӣ барои мубодила.
@@ -175,6 +177,7 @@ class DeepLinks {
       case DeepLinkKind.topic:
         return '/topic';
       case DeepLinkKind.referral:
+      case DeepLinkKind.group:
       case DeepLinkKind.unknown:
         return null;
     }

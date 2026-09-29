@@ -11,7 +11,9 @@ import 'create_group_screen.dart';
 import '../../core/i18n/strings.dart';
 
 class GroupsListScreen extends StatefulWidget {
-  const GroupsListScreen({super.key});
+  /// Токени даъват аз линки `/l/g/<token>` — ҳамроҳшавӣ худкор оғоз мешавад.
+  final String? inviteToken;
+  const GroupsListScreen({super.key, this.inviteToken});
   @override
   State<GroupsListScreen> createState() => _GroupsListScreenState();
 }
@@ -25,6 +27,10 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
   void initState() {
     super.initState();
     _load();
+    final token = widget.inviteToken ?? '';
+    if (token.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _joinToken(token));
+    }
   }
 
   Future<void> _load() async {
@@ -83,7 +89,11 @@ class _GroupsListScreenState extends State<GroupsListScreen> {
     var token = ctrl.text.trim();
     if (token.contains('/')) token = token.split('/').last;
     token = token.split('?').first.trim();
-    if (token.isEmpty) return;
+    await _joinToken(token);
+  }
+
+  Future<void> _joinToken(String token) async {
+    if (token.isEmpty || !mounted) return;
     final group = await _repo.joinByToken(token);
     if (!mounted) return;
     if (group == null) {

@@ -14,6 +14,7 @@ import '../feed/post/post_detail_screen.dart';
 import '../reels/single_reel_screen.dart';
 import '../shop/orders_screen.dart';
 import '../effects/effects_screen.dart';
+import '../discover/discover_screen.dart';
 import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
 import '../core/analytics/analytics_service.dart';
@@ -114,12 +115,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'mention':
         await _openPost(n.targetId);
         break;
+      case 'collab_accepted':
+        await _openPost(n.targetId);
+        break;
       case 'reel_like':
       case 'reel_comment':
+      case 'reel_mention':
         await _openReel(n.targetId);
+        break;
+      case 'collab_invite':
+        // Даъват ба ҷои ҚАБУЛ мебарад, на ба худи пост (ҳоло ҳамкор нест).
+        Navigator.pushNamed(context, '/collab-invites');
+        break;
+      case 'trending_topic':
+        // Мавзӯъҳо дар «Кашфи имрӯз» ҳастанд — ҳамон ҷо, ки линки /topic.
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const DiscoverScreen()));
         break;
       case 'follow':
       case 'follow_request':
+      case 'follow_accepted':
+      case 'story_addyours':
+      case 'gift':
+      case 'recommended_creator':
+      case 'referral_joined':
       case 'story_like':
       case 'story_reply':
       case 'story_poll':
@@ -141,6 +160,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         } catch (_) {}
         break;
       default:
+        // Навъи нав/ношинос: ҳадди ақал профили иҷрокунанда — беҳтар аз
+        // пахше, ки ҳеҷ кор намекунад.
+        _openProfile(n.fromUser?.id);
         break;
     }
   }
@@ -162,23 +184,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _openReel(String? reelId) async {
     if (reelId == null || reelId.isEmpty) return;
     try {
-      // GET /reels/:id нест — реели худамонро аз рӯйхат меёбем.
-      final res = await ApiClient.instance.get('/users/me/reels');
+      // GET /reels/:id мавҷуд аст — пеш танҳо 24 рилси ХУДРО меҷустем,
+      // бинобар ин рилси каси дигар (зикр, шарҳ) ҳеҷ гоҳ кушода намешуд.
+      final res = await ApiClient.instance.get('/reels/$reelId');
       if (res.statusCode >= 400) return;
-      final body = jsonDecode(res.body);
-      final raw = body is List ? body : (body['reels'] ?? []) as List;
-      ReelModel? reel;
-      for (final e in raw) {
-        final r = ReelModel.fromJson(e as Map<String, dynamic>);
-        if (r.id == reelId) {
-          reel = r;
-          break;
-        }
-      }
-      if (reel == null || !mounted) return;
-      final target = reel;
+      final reel =
+          ReelModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+      if (!mounted) return;
       Navigator.push(context,
-          MaterialPageRoute(builder: (_) => SingleReelScreen(reel: target)));
+          MaterialPageRoute(builder: (_) => SingleReelScreen(reel: reel)));
     } catch (_) {}
   }
 

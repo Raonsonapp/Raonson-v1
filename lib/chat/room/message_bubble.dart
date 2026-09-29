@@ -897,14 +897,20 @@ class _ChatVideoScreen extends StatefulWidget {
 
 class _ChatVideoScreenState extends State<_ChatVideoScreen> {
   late final VideoPlayerController _c;
+  bool _failed = false;
   @override
   void initState() {
     super.initState();
-    _c = VideoPlayerController.networkUrl(Uri.parse(widget.url))
-      ..initialize().then((_) {
-        _c..setLooping(true)..play();
-        if (mounted) setState(() {});
-      });
+    _c = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _c.initialize().then((_) {
+      if (!mounted) return; // баъди dispose контроллер истифода намешавад
+      _c..setLooping(true)..play();
+      setState(() {});
+    }).catchError((Object e) {
+      // Файли ҳазфшуда/вайрон — спиннери абадӣ ба ҷои хато буд.
+      debugPrint('[ChatVideo] видео кушода нашуд: $e');
+      if (mounted) setState(() => _failed = true);
+    });
   }
   @override
   void dispose() { _c.dispose(); super.dispose(); }
@@ -916,9 +922,17 @@ class _ChatVideoScreenState extends State<_ChatVideoScreen> {
       iconTheme: IconThemeData(color: AppColors.textPrimary),
     ),
     body: Center(
-      child: _c.value.isInitialized
-          ? AspectRatio(aspectRatio: _c.value.aspectRatio, child: VideoPlayer(_c))
-          : CircularProgressIndicator(color: AppColors.textPrimary),
+      child: _failed
+          ? Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(AppIcons.videocam_off_rounded,
+                  color: AppColors.textFaint, size: 40),
+              const SizedBox(height: 10),
+              Text('Видео кушода нашуд',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+            ])
+          : _c.value.isInitialized
+              ? AspectRatio(aspectRatio: _c.value.aspectRatio, child: VideoPlayer(_c))
+              : CircularProgressIndicator(color: AppColors.textPrimary),
     ),
   );
 }

@@ -284,9 +284,15 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   void _resume() {
     if (!_paused) return;
-    final remaining = _progressCtrl.duration! * (1 - _progressCtrl.value);
-    _progressCtrl.forward();
-    _timer = Timer(remaining, _nextStory);
+    // Пеш аз бор шудани видеои аввал duration null аст (`!` хато мепартофт);
+    // он гоҳ прогрессро худи _initVideo сар мекунад.
+    final total = _progressCtrl.duration;
+    if (total != null) {
+      final remaining = total * (1 - _progressCtrl.value);
+      _progressCtrl.forward();
+      _timer?.cancel();
+      _timer = Timer(remaining, _nextStory);
+    }
     _videoCtrl?.play();
     setState(() => _paused = false);
   }
