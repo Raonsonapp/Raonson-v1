@@ -62,7 +62,7 @@ func FindUsersByContacts(c *gin.Context) {
 	// Корбаронеро меёбем, ки рақамашон (9 рақами охир) дар рӯйхат аст,
 	// худи ман не, ва ҳоло пайрав нашудаем.
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id, u.username, u.avatar, u.verified, u.bio,
+		SELECT u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false), u.bio,
 		       EXISTS(
 		           SELECT 1 FROM follows
 		           WHERE follower_id=$1 AND following_id=u.id
@@ -148,7 +148,7 @@ func GetSuggestions(c *gin.Context) {
 	myID := mw.UID(c)
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id, u.username, u.avatar, u.verified, u.bio,
+		SELECT u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false), u.bio,
 		       (SELECT COUNT(*) FROM follows f2
 		        WHERE f2.following_id=u.id) AS followers_count
 		FROM users u
@@ -192,7 +192,7 @@ func GetFollowRequests(c *gin.Context) {
 	myID := mw.UID(c)
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id, u.username, u.avatar, u.verified, u.bio
+		SELECT u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false), u.bio
 		FROM follow_requests fr
 		JOIN users u ON u.id = fr.requester_id
 		WHERE fr.target_id = $1

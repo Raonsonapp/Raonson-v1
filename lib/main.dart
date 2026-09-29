@@ -19,6 +19,7 @@ import 'core/ads/ads_manager.dart';
 import 'core/services/ad_consent_service.dart';
 import 'core/services/server_wakeup_service.dart';
 import 'core/firebase_init.dart';
+import 'core/error_reporter.dart';
 import 'wellbeing/usage_tracker.dart';
 
 Future<void> main() async {
@@ -27,6 +28,8 @@ Future<void> main() async {
   // ✅ 0. Global error handling — дар production экрани сурхи Flutter нишон намедиҳад
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
+    // Ба сервер — то хатои «экрани сурх»-и корбар дида шавад.
+    ErrorReporter.report(details.exception, details.stack);
     if (kDebugMode) return;
     debugPrint('[CRASH] ${details.exceptionAsString()}');
   };
@@ -36,6 +39,7 @@ Future<void> main() async {
   // true бармегардонем: сабт мекунем ва идома медиҳем, на crash.
   PlatformDispatcher.instance.onError = (error, stack) {
     debugPrint('[CRASH:async] $error');
+    ErrorReporter.report(error, stack);
     return true;
   };
 

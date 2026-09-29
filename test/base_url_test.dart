@@ -47,6 +47,9 @@ void main() {
     expect(
         holders,
         [
+          // Isolate-и паснамои занг (FCM дар барномаи пӯшида) AppConfig
+          // надорад — суроғаро аз ҳамон dart-define мегирад.
+          'lib/calls/callkit_bridge.dart',
           // Ҷои ягонаи ҳақиқӣ: аз ин ҷо ба AppConfig меравад.
           'lib/core/links/deep_links.dart',
           'lib/core/services/network_service.dart',

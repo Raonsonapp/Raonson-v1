@@ -36,7 +36,7 @@ func GetShop(c *gin.Context) {
 		       COALESCE(p.shop_phone,''),
 		       COALESCE((SELECT url FROM post_media pm WHERE pm.post_id=p.id
 		                 ORDER BY position LIMIT 1),'') AS image,
-		       u.id, u.username, COALESCE(u.avatar,''), u.verified,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       COALESCE(p.featured,FALSE),
 		       CASE WHEN COALESCE(p.sale_pct,0) > 0
 		             AND (p.sale_until IS NULL OR p.sale_until > now())
@@ -562,7 +562,7 @@ func GetCustomers(c *gin.Context) {
 		FROM orders o
 		JOIN users u ON u.id=o.buyer_id
 		WHERE o.seller_id=$1
-		GROUP BY o.buyer_id, u.username, u.avatar
+		GROUP BY o.buyer_id, u.username, COALESCE(u.avatar,'')
 		ORDER BY total_spent DESC LIMIT 200`, myID)
 	out := []gin.H{}
 	if err == nil {

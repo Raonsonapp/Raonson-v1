@@ -75,6 +75,10 @@ dependencies:
   visibility_detector: ^0.4.0+2
   heroicons_flutter: ^0.5.0
 
+  # Экрани пурраи занги воридотӣ (мисли WhatsApp) ҳангоми пӯшида будани
+  # барнома ё қулфи телефон: огоҳиномаи full-screen-intent + оҳанг.
+  flutter_callkit_incoming: ^3.1.6
+
 # record_linux 0.7.2 startStream-и interface 1.3.0-ро надорад → build шикаст
 # мехӯрад. Тамоми оила ба версияи пеш-аз-startStream маҳкам мешавад.
 dependency_overrides:
@@ -108,6 +112,9 @@ flutter:
   assets:
     - assets/icon.png
     - assets/icons/
+    # Оҳанги занг, «туут»-и зангзананда ва садои пайвастшавӣ (худсохт).
+    # Пештар код онҳоро мехонд, вале файлҳо набуданд — зангҳо бесадо буданд.
+    - assets/sounds/
 
   fonts:
     - family: RaonsonFont

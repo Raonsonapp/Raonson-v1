@@ -205,7 +205,7 @@ func TestMessagesAreNeverGrouped(t *testing.T) {
 func TestChannelsAreLimited(t *testing.T) {
 	valid := map[Channel]bool{
 		ChannelMessages: true, ChannelSocial: true, ChannelCreator: true,
-		ChannelDiscovery: true, ChannelMarketplace: true,
+		ChannelDiscovery: true, ChannelMarketplace: true, ChannelCalls: true,
 	}
 	for _, k := range AllKinds() {
 		if c := RuleFor(k).Channel; !valid[c] {

@@ -163,7 +163,7 @@ func GetComments(c *gin.Context) {
 
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT c.id, c.text, c.likes_count, c.created_at, COALESCE(c.parent_id,''),
-		       u.id, u.username, u.avatar, u.verified,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM comment_likes cl WHERE cl.comment_id=c.id AND cl.user_id=$2)
 		FROM comments c JOIN users u ON u.id=c.user_id
 		WHERE c.post_id=$1
@@ -555,8 +555,8 @@ func Search(c *gin.Context) {
 
 	// Posts
 	pRows, _ := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
-		       u.id, u.username, u.avatar, u.verified,
+		SELECT p.id, COALESCE(p.caption,''), p.likes_count, p.comments_count, p.created_at,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
 		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
@@ -752,7 +752,7 @@ func GetReels(c *gin.Context) {
 		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
 		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
-		       u.id, u.username, u.avatar, u.verified,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
@@ -927,7 +927,7 @@ func GetReelComments(c *gin.Context) {
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT rc.id, rc.text, COALESCE(rc.likes_count,0), rc.created_at,
 		       COALESCE(rc.parent_id,''),
-		       u.id, u.username, u.avatar, u.verified,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM comment_likes cl
 		              WHERE cl.comment_id=rc.id AND cl.user_id=$2)
 		FROM reel_comments rc JOIN users u ON u.id=rc.user_id
@@ -1040,7 +1040,7 @@ func GetReelByID(c *gin.Context) {
 		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $2::text
 		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
-		       u.id, u.username, u.avatar, u.verified,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$2::text),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$2::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$2::text AND f.following_id=r.user_id),

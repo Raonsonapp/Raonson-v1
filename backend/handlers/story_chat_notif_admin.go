@@ -27,7 +27,7 @@ func GetStories(c *gin.Context) {
 	// Сторисҳои «наздикон» танҳо ба дӯстони наздики соҳиб намоён мешаванд.
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
-		       u.id,u.username,u.avatar,u.verified,
+		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),
 		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false),
 		       COALESCE(s.music_title,''),COALESCE(s.music_artist,''),
 		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
@@ -91,7 +91,7 @@ func GetMyStories(c *gin.Context) {
 	myID := mw.UID(c)
 	rows, _ := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
-		       u.id,u.username,u.avatar,u.verified,
+		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),
 		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false),
 		       COALESCE(s.music_title,''),COALESCE(s.music_artist,''),
 		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
@@ -463,22 +463,72 @@ func scanStoryRows(rows interface {
 		if sharedReel != "" {
 			item["sharedReelId"] = sharedReel
 		}
-		attachPoll(sid, viewerID, item)
-		attachSticker(sid, viewerID, uid, item)
-		attachMentions(sid, item)
-		// ⚠️ Ин майдон НАБУД. Ҳалқаи сторис дар Reels ба он такя
-		// мекард ва ҳеҷ гоҳ хокистарӣ намешуд — ҳатто стории ХУДАМ
-		// баъди дидан. Лентаи асосӣ инро бо хотираи маҳаллӣ пинҳон
-		// мекард, ки баъди насби нав гум мешуд.
-		var seen bool
-		db.Pool.QueryRow(context.Background(),
-			`SELECT EXISTS(SELECT 1 FROM story_seen WHERE story_id=$1 AND user_id=$2)
-			     OR EXISTS(SELECT 1 FROM story_views WHERE story_id=$1 AND user_id=$2)`,
-			sid, viewerID).Scan(&seen)
-		item["viewed"] = seen
+		item["_owner"] = uid
 		stories = append(stories, item)
 	}
+	enrichStories(stories, viewerID)
 	return stories
+}
+
+// enrichStories — пурсиш, стикер, зикрҳо ва «дида шуд» барои ҲАМАИ
+// сторисҳо бо 4 дархост, на 4 дархост барои ҲАР сторис.
+//
+// ⚠️ Пеш ҳар сторис 4 дархости алоҳида мефиристод: 30 сторис — 120
+// дархост ба база. Бо базаи дурдаст ҳалқаи сторис чанд сония бор мешуд.
+func enrichStories(stories []gin.H, viewerID string) {
+	if len(stories) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(stories))
+	for _, st := range stories {
+		ids = append(ids, st["_id"].(string))
+	}
+	has := func(q string) map[string]bool {
+		out := map[string]bool{}
+		rows, err := db.Pool.Query(context.Background(), q, ids)
+		if err != nil {
+			return out
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			if rows.Scan(&id) == nil {
+				out[id] = true
+			}
+		}
+		return out
+	}
+	polls := has(`SELECT story_id FROM story_polls WHERE story_id = ANY($1)`)
+	stickers := has(`SELECT story_id FROM story_stickers WHERE story_id = ANY($1)`)
+	mentions := has(`SELECT DISTINCT story_id FROM story_mentions WHERE story_id = ANY($1)`)
+	seen := map[string]bool{}
+	if rows, err := db.Pool.Query(context.Background(), `
+		SELECT story_id FROM story_seen WHERE user_id=$2 AND story_id = ANY($1)
+		UNION SELECT story_id FROM story_views WHERE user_id=$2 AND story_id = ANY($1)`,
+		ids, viewerID); err == nil {
+		for rows.Next() {
+			var id string
+			if rows.Scan(&id) == nil {
+				seen[id] = true
+			}
+		}
+		rows.Close()
+	}
+	for _, item := range stories {
+		sid := item["_id"].(string)
+		owner, _ := item["_owner"].(string)
+		delete(item, "_owner")
+		if polls[sid] {
+			attachPoll(sid, viewerID, item)
+		}
+		if stickers[sid] {
+			attachSticker(sid, viewerID, owner, item)
+		}
+		if mentions[sid] {
+			attachMentions(sid, item)
+		}
+		item["viewed"] = seen[sid]
+	}
 }
 
 // ── CHAT ─────────────────────────────────────────────────────────
@@ -655,7 +705,7 @@ func GetMessages(c *gin.Context) {
 		  SELECT m.id,m.chat_id,m.sender_id,m.text,CASE WHEN COALESCE(m.is_deleted,false) THEN '' ELSE COALESCE(m.media_url,'') END media_url,
 		         COALESCE(m.type,'text') type,COALESCE(m.reply_to_id,'') reply_to_id,
 		         COALESCE(m.is_deleted,false) is_deleted,m.read,m.created_at,
-		         u.username,u.avatar,u.verified,
+		         u.username,COALESCE(u.avatar,'') AS avatar,COALESCE(u.verified,false) AS verified,
 		         COALESCE(m.share_id,'') share_id, COALESCE(m.share_kind,'') share_kind,
 		         COALESCE(m.share_thumb,'') share_thumb, COALESCE(m.share_user,'') share_user,
 		         COALESCE(m.view_once,false) view_once,
@@ -864,7 +914,7 @@ func GetNotifications(c *gin.Context) {
 
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT n.id,n.type,n.target_id,n.read,n.created_at,
-		       u.id,u.username,u.avatar,u.verified
+		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false)
 		FROM notifications n
 		LEFT JOIN users u ON u.id=n.from_user_id
 		WHERE n.user_id=$1
@@ -946,7 +996,7 @@ func ExploreGrid(c *gin.Context) {
 		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
-		       u.id, u.username, u.avatar, COALESCE(u.verified,false),
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
 		       COALESCE(p.is_product,false), COALESCE(p.price,0),
 		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
@@ -958,7 +1008,8 @@ func ExploreGrid(c *gin.Context) {
 		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
 		       COALESCE(p.music_end_ms,0), COALESCE(p.location,''),
 		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false),
-		       p.user_id = $1::text
+		       p.user_id = $1::text,
+		       EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1::text AND fo.following_id=u.id)
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
@@ -982,12 +1033,12 @@ func ExploreGrid(c *gin.Context) {
 			// Музика: бе ин пости кушодашуда аз explore суруд намехонд.
 			var mTitle, mArtist, mURL, mArt, location string
 			var mTrack, mStart, mEnd int
-			var hideLikes, commentsOff, mine bool
+			var hideLikes, commentsOff, mine, following bool
 			pRows.Scan(&pid, &likes, &comments, &createdAt, &caption, &media,
 				&uid, &uname, &uavatar, &verified, &views,
 				&isProduct, &price, &currency, &productName, &liked, &saved,
 				&shares, &mTitle, &mArtist, &mURL, &mArt, &mTrack, &mStart, &mEnd,
-				&location, &hideLikes, &commentsOff, &mine)
+				&location, &hideLikes, &commentsOff, &mine, &following)
 			if hideLikes && !mine {
 				likes = -1
 			}
@@ -1004,7 +1055,7 @@ func ExploreGrid(c *gin.Context) {
 				"hideLikes": hideLikes, "commentsOff": commentsOff,
 				"user": gin.H{"_id": uid, "id": uid, "username": uname,
 					"avatar": uavatar, "verified": verified,
-					"isFollowing": isFollowingSQLResult(myID, uid)},
+					"isFollowing": following},
 			})
 		}
 	}
@@ -1032,7 +1083,7 @@ func ExploreGrid(c *gin.Context) {
 		            THEN -1 ELSE r.likes_count END,
 		       COALESCE(r.comments_count,0), r.views_count,
 		       COALESCE(r.caption,''),
-		       u.id, u.username, u.avatar, COALESCE(u.verified,false),
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
 		       (SELECT COUNT(*) FROM reel_shares sh WHERE sh.reel_id=r.id),

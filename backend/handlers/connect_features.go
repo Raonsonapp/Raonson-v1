@@ -134,7 +134,7 @@ func GetSuggestedUsers(c *gin.Context) {
 	}
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id, u.username, u.avatar, u.verified, COALESCE(u.bio,''),
+		SELECT u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false), COALESCE(u.bio,''),
 		       u.followers_count
 		FROM users u
 		WHERE u.id <> $1

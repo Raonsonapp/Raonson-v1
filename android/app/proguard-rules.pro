@@ -67,3 +67,7 @@
 -dontwarn javax.annotation.**
 -dontwarn org.conscrypt.**
 -dontwarn kotlin.**
+
+# flutter_callkit_incoming (экрани пурраи занг) — Jackson калидҳои Data-ро
+# бо reflection мехонад; бе ин дар release занг бе ном/аватар меомад.
+-keep class com.hiennv.flutter_callkit_incoming.** { *; }

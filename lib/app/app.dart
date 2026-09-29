@@ -1,6 +1,7 @@
 // lib/app/app.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../core/error_reporter.dart';
 import 'package:provider/provider.dart';
 
 import 'app_state.dart';
@@ -73,7 +74,7 @@ class RaonsonApp extends StatelessWidget {
                 onGenerateRoute: controller.onGenerateRoute,
                 // Пахши огоҳинома бе он ҷое рафта наметавонад.
                 navigatorKey: appNavigatorKey,
-                navigatorObservers: [_analyticsObserver],
+                navigatorObservers: [_analyticsObserver, ErrorReporter.observer],
               );
             },
           );

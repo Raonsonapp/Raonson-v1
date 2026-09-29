@@ -377,7 +377,7 @@ func GetFollowers(c *gin.Context) {
 	}
 	limit, offset := followPage(c)
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id,u.username,u.avatar,u.verified,u.bio,
+		SELECT u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),u.bio,
 		       EXISTS(SELECT 1 FROM follows ff WHERE ff.follower_id=$2::text AND ff.following_id=u.id)
 		FROM follows f JOIN users u ON u.id=f.follower_id
 		WHERE f.following_id=$1
@@ -405,7 +405,7 @@ func GetFollowing(c *gin.Context) {
 	}
 	limit, offset := followPage(c)
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id,u.username,u.avatar,u.verified,u.bio,
+		SELECT u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),u.bio,
 		       EXISTS(SELECT 1 FROM follows ff WHERE ff.follower_id=$2::text AND ff.following_id=u.id)
 		FROM follows f JOIN users u ON u.id=f.following_id
 		WHERE f.follower_id=$1

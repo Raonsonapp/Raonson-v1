@@ -19,6 +19,16 @@
     <uses-permission android:name="android.permission.CAMERA"/>
      <!-- ✅ ОГОҲИҲО (push) — Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+     <!-- ✅ ЗАНГИ ВОРИДОТӢ дар тамоми экран (мисли WhatsApp), ҳатто вақте
+          телефон қулф ё барнома пӯшида аст. Бе USE_FULL_SCREEN_INTENT
+          Android занги воридотиро танҳо ҳамчун banner-и хурд нишон
+          медиҳад. Дар Android 14+ корбар бояд онро дар танзимот иҷозат
+          диҳад (барнома худаш мепурсад). Иҷозатҳои хизматрасонии
+          пешзамина (FOREGROUND_SERVICE_PHONE_CALL ва ғ.) аз манифести
+          flutter_callkit_incoming илова мешаванд. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
      <!-- ✅ ҶОЙГИРШАВӢ — мубодилаи ҷойгиршавӣ дар чат -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
@@ -96,6 +106,11 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_color" />
+        <!-- Payload бе channel_id (ё бо канали кӯҳнаи нестшуда) ба «Дигар»-и
+             бесадо намеафтад, балки ба канали иҷтимоӣ бо садои худаш. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="social_v2" />
 
         <!-- ✅ YANDEX ADS - ИН 2 ХАТРО ИЛОВА КУН -->
         <activity

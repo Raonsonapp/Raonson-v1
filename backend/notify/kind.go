@@ -91,12 +91,21 @@ const (
 // танзимоти система гум мекунад.
 type Channel string
 
+// ⚠️ Суффикси _v2: садои канали Android баъди сохта шудан ДИГАР
+// ТАҒЙИР НАМЕЁБАД. Барои он ки садоҳои нав (паём — «поп», иҷтимоӣ —
+// оҳанги нарм) дар телефонҳои аллакай насбшуда ҳам кор кунанд, шиноса
+// нав аст. Бояд бо lib/core/notifications/notification_channels.dart
+// мувофиқ бошад.
 const (
-	ChannelMessages    Channel = "messages"
-	ChannelSocial      Channel = "social"
+	ChannelMessages    Channel = "messages_v2"
+	ChannelSocial      Channel = "social_v2"
 	ChannelCreator     Channel = "creator"
 	ChannelDiscovery   Channel = "discovery"
 	ChannelMarketplace Channel = "marketplace"
+	// ChannelCalls — зангҳо (оҳанги занг). Дар Android занг data-only
+	// меояд ва экрани пурраро барнома мекашад; канал барои огоҳиномаи
+	// оддии iOS ва «занги аздастрафта» аст.
+	ChannelCalls Channel = "calls_v2"
 )
 
 // Rule — қоидаҳои як намуд.
@@ -125,7 +134,7 @@ var rules = map[Kind]Rule{
 	Message: {High, ChannelMessages, "messages", false},
 	// Занг аз паём ҳам таъхирнопазиртар аст: агар дер расад,
 	// он умуман бефоида мешавад.
-	IncomingCall: {High, ChannelMessages, "messages", false},
+	IncomingCall: {High, ChannelCalls, "messages", false},
 
 	StoryLike: {Normal, ChannelSocial, "likes", true},
 	// Овозҳо ҷамъ мешаванд: даҳ овоз як огоҳинома, на даҳто.

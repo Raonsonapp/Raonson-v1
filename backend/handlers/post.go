@@ -316,11 +316,11 @@ func GetPost(c *gin.Context) {
 	var mTrackMs, mStartMs, mEndMs, mShares int
 
 	err := db.Pool.QueryRow(context.Background(), `
-		SELECT p.id, p.caption,
+		SELECT p.id, COALESCE(p.caption,''),
 		       CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $2::text
 		            THEN -1 ELSE p.likes_count END,
 		       p.comments_count, p.created_at,
-		       u.id, u.username, u.avatar, u.verified,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
@@ -397,7 +397,7 @@ func GetPost(c *gin.Context) {
 func GetScheduledPosts(c *gin.Context) {
 	myID := mw.UID(c)
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.caption, p.scheduled_at,
+		SELECT p.id, COALESCE(p.caption,''), p.scheduled_at,
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)

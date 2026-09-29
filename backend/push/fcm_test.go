@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Шакли payload бе шабака санҷида мешавад: хатои сохтори он FCM-ро
@@ -169,5 +170,71 @@ func TestPayloadHasNotificationIcon(t *testing.T) {
 	n := p["message"].(map[string]any)["android"].(map[string]any)["notification"].(map[string]any)
 	if n["icon"] != "ic_notification" || n["color"] == nil {
 		t.Fatalf("android notification icon missing: %v", n)
+	}
+}
+
+// Занг: паёми DATA-ONLY. Агар ягон блоки notification монад, Android
+// худаш banner-и хурд мекашад ва барнома экрани пурраи зангро
+// нишон дода наметавонад (барнома пӯшида бошад, ҳатто бедор намешавад).
+func TestDataOnlyCallPayload(t *testing.T) {
+	b, err := json.Marshal(buildPayload(Message{
+		Token:        "TOK",
+		Title:        "бояд партофта шавад",
+		Body:         "бояд партофта шавад",
+		ChannelID:    "calls_v2",
+		HighPriority: true,
+		DataOnly:     true,
+		TTL:          30 * time.Second,
+		Data: map[string]string{
+			"type": "incoming_call", "callerId": "u1", "callerName": "ali",
+			"callerAvatar": "https://x/a.jpg", "callType": "video",
+			"callId": "c-1",
+		},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw map[string]map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		t.Fatal(err)
+	}
+	msg := raw["message"]
+	if _, ok := msg["notification"]; ok {
+		t.Error("data-only набояд блоки notification дошта бошад")
+	}
+	android, _ := msg["android"].(map[string]any)
+	if android == nil {
+		t.Fatal("блоки android нест")
+	}
+	if _, ok := android["notification"]; ok {
+		t.Error("android.notification набояд бошад — Android худаш banner мекашад")
+	}
+	if android["priority"] != "HIGH" {
+		t.Errorf("priority: %v, интизори HIGH", android["priority"])
+	}
+	if android["ttl"] != "30s" {
+		t.Errorf("ttl: %v, интизори 30s", android["ttl"])
+	}
+	data, _ := msg["data"].(map[string]any)
+	for _, k := range []string{"type", "callerId", "callerName", "callerAvatar", "callType", "callId"} {
+		if s, _ := data[k].(string); s == "" {
+			t.Errorf("майдони data[%q] нест", k)
+		}
+	}
+	if data["type"] != "incoming_call" {
+		t.Errorf("type: %v", data["type"])
+	}
+}
+
+// TTL ба огоҳиномаи оддӣ ҳам мерасад, вале бе он майдон намеояд.
+func TestTTLOnlyWhenSet(t *testing.T) {
+	android := func(m Message) map[string]any {
+		return buildPayload(m)["message"].(map[string]any)["android"].(map[string]any)
+	}
+	if _, ok := android(Message{Token: "T"})["ttl"]; ok {
+		t.Error("ttl бе арзиш набояд фиристода шавад")
+	}
+	if got := android(Message{Token: "T", TTL: 45 * time.Second})["ttl"]; got != "45s" {
+		t.Errorf("ttl: %v", got)
 	}
 }

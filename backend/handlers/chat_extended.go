@@ -326,7 +326,7 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 	row := db.Pool.QueryRow(context.Background(), `
 		SELECT m.id, m.chat_id, m.text, m.type, m.media_url, m.reply_to_id,
 		       m.is_deleted, m.created_at,
-		       u.id, u.username, u.avatar, u.verified,
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       m.sender_id, m.edited_at, COALESCE(m.forwarded,false),
 		       COALESCE(m.vanish,false)
 		FROM messages m

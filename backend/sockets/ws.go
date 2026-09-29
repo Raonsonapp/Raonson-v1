@@ -394,10 +394,12 @@ func dispatch(cl *client, raw []byte) {
 			"from": p.From, "fromUsername": p.FromUsername,
 			"fromAvatar": p.FromAvatar, "offer": p.Offer, "callType": p.CallType,
 		})
-		// Гиранда офлайн — сокет ҳеҷ ҷо намебарад. Огоҳиномаи
-		// телефон ягона роҳи расидан аст.
-		if p.To != "" && !isOnline(p.To) && OnMissedCall != nil {
-			go OnMissedCall(p.To, p.From)
+		// Push ҲАМЕША меравад, на танҳо ба офлайн: барномаи дар паснамо
+		// (ё телефони қулф) сокетро метавонад зинда дошта бошад, вале
+		// бе push экрани пурраи занг кашида намешуд. Агар сокет зангро
+		// аллакай нишон дода бошад, барнома push-ро худаш партояд.
+		if OnMissedCall != nil {
+			go OnMissedCall(p.To, p.From, p.CallType)
 		}
 	case "call:answer":
 		var p struct {
@@ -484,7 +486,7 @@ func parseToken(s string) string {
 // EmitToUser - for use from handlers
 func EmitToUser(userID, event string, data interface{}) { emit(userID, event, data) }
 
-// OnMissedCall ҳангоми занг ба корбари ОФЛАЙН ҷеғ зада мешавад.
+// OnMissedCall ҳангоми ҳар call:offer ҷеғ зада мешавад (push-и занг).
 //
 // ⚠️ Занг танҳо тавассути сокет мерафт. Агар гиранда барномаро
 // баста бошад — маҳз он вақте ки занг муҳим аст — ҳеҷ чиз намеомад.
@@ -492,7 +494,7 @@ func EmitToUser(userID, event string, data interface{}) { emit(userID, event, da
 // Ин ҷо callback аст, на даъвати мустақим: `handlers` аллакай
 // `sockets`-ро import мекунад, пас баръакс ҳалқаи вобастагӣ мешуд.
 // `main` онро васл мекунад.
-var OnMissedCall func(toUserID, fromUserID string)
+var OnMissedCall func(toUserID, fromUserID, callType string)
 
 // isOnline мегӯяд, ки оё корбар пайвасти зинда дорад.
 func isOnline(userID string) bool {

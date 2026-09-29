@@ -12,6 +12,9 @@
 //  вале барнома танҳо экрани асосиро нишон медод.
 //
 //  Routing-и дуюм сохта намешавад — ҳамон DeepLinks истифода мешавад.
+//
+//  Занг (type=incoming_call) data-only меояд ва огоҳинома НЕСТ: он ба
+//  экрани пурраи занг меравад (lib/calls), на ба banner.
 // ════════════════════════════════════════════════════════════════════
 import 'dart:io' show Platform;
 
@@ -20,16 +23,28 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../calls/call_coordinator.dart';
+import '../calls/call_payload.dart';
+import '../calls/callkit_bridge.dart';
 import '../chat/chat_repository.dart';
 import '../chat/room/chat_room_screen.dart';
 import '../models/message_model.dart';
 import 'api/api_client.dart';
 import 'links/deep_links.dart';
+import 'notifications/active_chat.dart';
 import 'notifications/notification_channels.dart';
 
-// Background/terminated — система худаш огоҳиро нишон медиҳад.
+// Background/terminated.
+//
+// Огоҳиномаи оддиро система худаш нишон медиҳад. Занг data-only аст —
+// ин ҷо экрани пурраи натиҳӣ (қабул/рад + оҳанг) кашида мешавад, ҳатто
+// вақте барнома пӯшида ё телефон қулф аст.
 @pragma('vm:entry-point')
-Future<void> _fcmBgHandler(RemoteMessage message) async {}
+Future<void> _fcmBgHandler(RemoteMessage message) async {
+  final call = IncomingCall.fromPush(message.data);
+  if (call == null) return;
+  await showCallFromBackgroundPush(call);
+}
 
 class FirebaseInit {
   static final FlutterLocalNotificationsPlugin _localNotif =
@@ -43,6 +58,9 @@ class FirebaseInit {
 
   static Future<void> init({GlobalKey<NavigatorState>? navigator}) async {
     navigatorKey = navigator;
+    // Зангҳо ба Firebase вобаста нестанд: сокет ва экрани натиҳӣ бе
+    // google-services.json ҳам кор мекунанд.
+    CallCoordinator.instance.init(navigator);
     // Ҳама дар try — агар Firebase танзим нашуда бошад
     // (google-services.json нест), барнома ҳаргиз crash намекунад.
     try {
@@ -71,6 +89,11 @@ class FirebaseInit {
           AndroidFlutterLocalNotificationsPlugin>();
       for (final ch in NotificationChannels.all()) {
         await android?.createNotificationChannel(ch);
+      }
+      // Каналҳои кӯҳна (садои пешина) — то дар танзимоти система ду
+      // «Паёмҳо» набошад.
+      for (final id in NotificationChannels.legacy) {
+        await android?.deleteNotificationChannel(id);
       }
     } catch (_) {}
   }
@@ -188,15 +211,32 @@ class FirebaseInit {
   /// Канал аз сервер меояд; канали номаълум огоҳиномаро дар Android
   /// хомӯшона нобуд мекунад, бинобар ин он тафтиш мешавад.
   static void _showLocal(RemoteMessage msg) {
+    // Занг — экрани пурра, на banner (сокет ҳам метавонад онро аллакай
+    // нишон дода бошад — CallCoordinator такрорро мепартояд).
+    final call = IncomingCall.fromPush(msg.data);
+    if (call != null) {
+      CallCoordinator.instance.onPushIncoming(call);
+      return;
+    }
     final n = msg.notification;
     if (n == null) return;
+    // Паём ба чате, ки ҲОЗИР кушода аст — на banner, на садо: одам онро
+    // аллакай мебинад (мисли Instagram/WhatsApp).
+    if (msg.data['type']?.toString() == 'message' &&
+        ActiveChat.isOpen(navigatorKey, msg.data['id']?.toString() ?? '')) {
+      return;
+    }
     final channel = NotificationChannels.resolve(
         msg.notification?.android?.channelId ??
             msg.data['channelId']?.toString());
     final link = _payloadOf(msg.data);
 
+    // Паёмҳои як чат як огоҳинома мешаванд (охирин), на рӯйхати дароз.
+    final chatId = msg.data['type']?.toString() == 'message'
+        ? (msg.data['id']?.toString() ?? '')
+        : '';
     _localNotif.show(
-      msg.hashCode,
+      chatId.isNotEmpty ? chatId.hashCode : msg.hashCode,
       n.title,
       n.body,
       NotificationDetails(
@@ -207,8 +247,10 @@ class FirebaseInit {
           priority: Priority.high,
           icon: '@drawable/ic_notification',
           color: const Color(0xFF2F6BFF),
+          // Android < 8 канал надорад — садо аз худи огоҳинома.
+          sound: NotificationChannels.soundOf(channel),
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(presentSound: true),
       ),
       payload: link,
     );
@@ -255,7 +297,11 @@ class FirebaseInit {
       final granted = settings.authorizationStatus ==
               AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
-      if (granted) await _sendToken(await fm.getToken());
+      if (granted) {
+        await _sendToken(await fm.getToken());
+        // Android 14+: бе ин занг дар экрани қулф танҳо banner мешавад.
+        await CallCoordinator.instance.maybeAskFullScreenPermission();
+      }
       return granted;
     } catch (_) {
       return false;

@@ -320,6 +320,9 @@ func main() {
 		lg.POST("/:id/token",   handlers.LiveToken)
 	}
 
+	// Хатоҳои барнома (бе вуруд ҳам — хато метавонад дар экрани вуруд бошад).
+	r.POST("/client-errors", mw.OptionalAuth(), rl20, handlers.ReportClientError)
+
 	// Token ва номи канали Agora барои занги аудио/видео.
 	r.POST("/calls/token", auth, rl100, handlers.CallToken)
 
@@ -617,6 +620,8 @@ func main() {
 		ad.GET("/reports",          handlers.AdminGetReports)
 		ad.POST("/reports/resolve", handlers.AdminResolveReport)
 		ad.GET("/reports/count",    handlers.AdminReportCount)
+		ad.GET("/client-errors",    handlers.AdminClientErrors)
+		ad.DELETE("/client-errors", handlers.AdminClearClientErrors)
 
 		// Creator Marketplace — интиқолҳои дастӣ ва омори молиявӣ.
 		// Тафтиши танзимоти AI — танҳо админ.

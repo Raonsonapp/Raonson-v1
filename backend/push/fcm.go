@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -71,6 +72,17 @@ type Message struct {
 	Badge int
 	// CollapseKey — огоҳиномаи кӯҳна бо нав иваз мешавад.
 	CollapseKey string
+	// DataOnly — бе блоки `notification`: система худаш ҳеҷ чиз нишон
+	// намедиҳад ва паём ба onBackgroundMessage-и барнома мерасад.
+	//
+	// Барои занг ҳатмист: бо блоки notification Android танҳо banner-и
+	// хурд нишон медод ва барнома ҳатто бедор намешуд, то экрани
+	// пурраи занг (мисли WhatsApp) кашад.
+	DataOnly bool
+	// TTL — пас аз ин муддат FCM паёмро партояд. Сифр = пешфарзи FCM
+	// (4 ҳафта). Занги 5-дақиқа-пешина набояд баъди фаъол шудани
+	// телефон «занг занад».
+	TTL time.Duration
 }
 
 // ── Аслнома ──────────────────────────────────────────────────────
@@ -285,6 +297,10 @@ func buildPayload(m Message) map[string]any {
 		apnsPrio = "10"
 	}
 
+	if m.DataOnly {
+		return buildDataOnlyPayload(m, prio)
+	}
+
 	android := map[string]any{
 		"priority": prio,
 		"notification": map[string]any{
@@ -299,6 +315,9 @@ func buildPayload(m Message) map[string]any {
 	}
 	if m.CollapseKey != "" {
 		android["collapse_key"] = m.CollapseKey
+	}
+	if ttl := ttlString(m.TTL); ttl != "" {
+		android["ttl"] = ttl
 	}
 
 	aps := map[string]any{
@@ -321,14 +340,61 @@ func buildPayload(m Message) map[string]any {
 		},
 	}
 	if len(m.Data) > 0 {
-		// FCM танҳо сатр қабул мекунад.
-		data := make(map[string]string, len(m.Data))
-		for k, v := range m.Data {
-			data[k] = v
-		}
-		msg["data"] = data
+		msg["data"] = copyData(m.Data)
 	}
 	return map[string]any{"message": msg}
+}
+
+// buildDataOnlyPayload паёми бе `notification`-ро месозад.
+//
+// Ҳеҷ блоки notification — на дар реша, на дар android: ҳатто яке
+// аз онҳо Android-ро водор мекунад, ки худаш banner кашад ва
+// onBackgroundMessage-и барномаро ҳангоми пӯшида будан даъват накунад.
+func buildDataOnlyPayload(m Message, prio string) map[string]any {
+	android := map[string]any{"priority": prio}
+	if m.CollapseKey != "" {
+		android["collapse_key"] = m.CollapseKey
+	}
+	if ttl := ttlString(m.TTL); ttl != "" {
+		android["ttl"] = ttl
+	}
+	msg := map[string]any{
+		"token":   m.Token,
+		"android": android,
+		// iOS: паёми хомӯш (content-available). Барои занги пурраи iOS
+		// VoIP/PushKit лозим аст — ин ҷо танҳо барномаро бедор мекунад.
+		"apns": map[string]any{
+			"headers": map[string]any{
+				"apns-priority":  "5",
+				"apns-push-type": "background",
+			},
+			"payload": map[string]any{
+				"aps": map[string]any{"content-available": 1},
+			},
+		},
+	}
+	if len(m.Data) > 0 {
+		msg["data"] = copyData(m.Data)
+	}
+	return map[string]any{"message": msg}
+}
+
+// FCM танҳо сатр қабул мекунад; нусха — то payload харитаи даъваткунандаро
+// тағйир надиҳад.
+func copyData(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+// ttlString муддатро ба шакли FCM v1 («30s») табдил медиҳад.
+func ttlString(d time.Duration) string {
+	if d <= 0 {
+		return ""
+	}
+	return strconv.FormatInt(int64(d/time.Second), 10) + "s"
 }
 
 // classify ҷавоби FCM-ро ба қарори амалӣ табдил медиҳад.

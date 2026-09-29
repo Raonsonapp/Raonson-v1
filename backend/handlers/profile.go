@@ -429,7 +429,7 @@ func GetFriendsNotes(c *gin.Context) {
 	log.Printf("[Profile] GetFriendsNotes userID=%s", myID)
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id,u.username,u.avatar,u.verified,
+		SELECT u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),
 		       u.note,u.note_expires_at,
 		       u.note_song_title,u.note_song_artist,u.note_song_art_url,
 		       u.note_song_preview_url,u.note_song_track_ms,

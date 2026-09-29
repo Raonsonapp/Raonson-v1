@@ -133,7 +133,7 @@ func GetGroupInfo(c *gin.Context) {
 		return
 	}
 	rows, _ := db.Pool.Query(context.Background(), `
-		SELECT u.id,u.username,COALESCE(u.avatar,''),u.verified,gm.role
+		SELECT u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),gm.role
 		FROM group_members gm JOIN users u ON u.id=gm.user_id
 		WHERE gm.group_id=$1
 		ORDER BY (gm.role='admin') DESC, gm.joined_at ASC`, gid)
@@ -243,7 +243,7 @@ func GetGroupMessages(c *gin.Context) {
 	offset := (page - 1) * limit
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT m.id, m.text, COALESCE(m.type,'text'), COALESCE(m.media_url,''),
-		       m.created_at, u.id, u.username, COALESCE(u.avatar,''), u.verified
+		       m.created_at, u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
 		FROM messages m JOIN users u ON u.id=m.sender_id
 		WHERE m.group_id=$1
 		  -- Паёми нестшуда ва медиааш дигар ба аъзоён намерасад.

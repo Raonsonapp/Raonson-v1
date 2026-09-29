@@ -69,10 +69,22 @@ func NotifyEvent(e ntf.Event) {
 	go ntf.Notify(context.Background(), notifyDeps(), e)
 }
 
-// NotifyIncomingCall огоҳиномаи занги воридотиро мефиристад.
+// NotifyIncomingCall занги воридотиро ба телефон мефиристад.
 //
 // Ин ба `sockets` вобаста нест ва аз он ҷо ҳамчун callback васл
 // мешавад (`main`), вагарна ҳалқаи вобастагӣ мешуд.
-func NotifyIncomingCall(toUserID, fromUserID string) {
-	pushNotify(toUserID, fromUserID, string(ntf.IncomingCall), "", "")
+//
+// pushNotify истифода НАМЕШАВАД: он огоҳиномаи оддӣ (banner) месохт ва
+// дедупликатсияи он (бе TargetID) занги дуюми ҳамон шахсро абадан
+// мепартофт. ntf.NotifyCall паёми data-only мефиристад, то барнома
+// экрани пурраи занг кашад.
+func NotifyIncomingCall(toUserID, fromUserID, callType string) {
+	if toUserID == "" || toUserID == fromUserID {
+		return
+	}
+	go ntf.NotifyCall(context.Background(), notifyDeps(), ntf.Call{
+		CalleeID: toUserID,
+		CallerID: fromUserID,
+		CallType: callType,
+	})
 }

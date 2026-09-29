@@ -938,6 +938,19 @@ func migrate() {
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE;
 	-- Пости аз шикоятҳо худкор пинҳоншуда (админ метавонад баргардонад).
 	ALTER TABLE posts ADD COLUMN IF NOT EXISTS auto_hidden BOOLEAN DEFAULT FALSE;
+	-- Хатоҳои барнома аз телефонҳо (ниг. handlers/client_errors.go).
+	CREATE TABLE IF NOT EXISTS client_errors (
+		hash        TEXT PRIMARY KEY,
+		message     TEXT NOT NULL,
+		stack       TEXT DEFAULT '',
+		screen      TEXT DEFAULT '',
+		app_version TEXT DEFAULT '',
+		platform    TEXT DEFAULT '',
+		user_id     TEXT,
+		count       INTEGER DEFAULT 1,
+		first_seen  TIMESTAMPTZ DEFAULT NOW(),
+		last_seen   TIMESTAMPTZ DEFAULT NOW()
+	);
 	-- Промокод: ҳар харидор як бор.
 	CREATE TABLE IF NOT EXISTS promo_redemptions (
 		seller_id TEXT NOT NULL,

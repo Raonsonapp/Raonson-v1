@@ -19,7 +19,7 @@ func GetEffects(c *gin.Context) {
 	offset := (page - 1) * limit
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT e.id, e.name, e.matrix, COALESCE(e.price,0), COALESCE(e.downloads,0),
-		       u.id, u.username, COALESCE(u.avatar,''), u.verified
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
 		FROM effects e JOIN users u ON u.id=e.creator_id
 		ORDER BY e.downloads DESC, e.created_at DESC LIMIT $1 OFFSET $2`,
 		limit, offset)

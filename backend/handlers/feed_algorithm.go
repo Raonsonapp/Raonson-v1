@@ -68,11 +68,11 @@ func GetSmartFeed(c *gin.Context) {
 		-- имконнопазир аст. DISTINCT танҳо Postgres-ро маҷбур мекард ҳар
 		-- сатрро бо блоки JSON-и media hash кунад — кори беҳуда.
 		SELECT
-		  p.id, p.caption,
+		  p.id, COALESCE(p.caption,''),
 		  CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $1
 		       THEN -1 ELSE p.likes_count END AS likes_count,
 		  p.comments_count, p.created_at,
-		  u.id, u.username, u.avatar, u.verified,
+		  u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		  (SELECT COALESCE(json_agg(
 		           json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		           ORDER BY m.position),'[]'::json)
@@ -87,6 +87,8 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.music_end_ms,0),
 		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 		  COALESCE(p.collaborators,'{}'),
+		  -- Обуна — дар худи дархост (пеш барои ҳар пост дархости алоҳида буд).
+		  (f.following_id IS NOT NULL),
 		  (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id),
 		  COALESCE(p.is_product,false), COALESCE(p.price,0),
 		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
@@ -186,12 +188,13 @@ func GetSmartFeed(c *gin.Context) {
 		var currency, productName, shopWhatsapp, shopPhone string
 		var collaborators []string
 		var shares int
+		var following bool
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 			&hideLikes, &commentsOff,
 			&musicTitle, &musicArtist,
 			&musicURL, &musicArt, &musicTrackMs, &musicStartMs, &musicEndMs,
-			&location, &tagged, &collaborators, &shares,
+			&location, &tagged, &collaborators, &following, &shares,
 			&isProduct, &price, &currency, &productName,
 			&contactRaonson, &shopWhatsapp, &shopPhone,
 			&hasStory, &score)
@@ -214,7 +217,7 @@ func GetSmartFeed(c *gin.Context) {
 			"user": gin.H{
 				"_id": uid, "username": uname,
 				"avatar": uavatar, "verified": verified, "hasStory": hasStory,
-				"isFollowing": isFollowingSQLResult(myID, uid),
+				"isFollowing": following,
 			},
 		})
 	}

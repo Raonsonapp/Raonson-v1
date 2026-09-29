@@ -20,9 +20,8 @@ import '../../core/firebase_init.dart';
 import '../../core/services/ad_consent_service.dart';
 import '../../core/ads/ads_manager.dart';
 import '../../core/webrtc_service.dart';
-import '../../chat/room/incoming_call_screen.dart';
-import '../../chat/room/call_screen.dart';
-import '../../models/user_model.dart';
+import '../../calls/call_coordinator.dart';
+import '../../calls/call_payload.dart';
 import '../../core/i18n/strings.dart';
 
 class BottomNavScaffold extends StatelessWidget {
@@ -138,22 +137,21 @@ class _BottomNavViewState extends State<_BottomNavView> {
   }
 
   // Зангҳои воридшаванда дар тамоми барнома қабул мешаванд (на танҳо дар чат).
+  //
+  // CallCoordinator қарор медиҳад: барнома дар экран → саҳифаи пурраи
+  // занг (на banner) бо оҳанг; дар паснамо → экрани натиҳии callkit.
+  // Он ҳамчунин push-и ҳамон зангро, ки дертар мерасад, мепартояд.
   Future<void> _setupGlobalCalls() async {
-    await _signal.connect();
     _signal.onIncomingCall = (from, fromUsername, fromAvatar, callType) {
-      if (!mounted) return;
-      final ct = callType == 'video' ? CallType.video : CallType.voice;
-      final caller = UserModel(
-        id: from,
-        username: fromUsername.isNotEmpty ? fromUsername : 'Корбар',
-        avatar: fromAvatar,
-        verified: false, isPrivate: false,
-        postsCount: 0, followersCount: 0, followingCount: 0,
-      );
-      Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
-        builder: (_) => IncomingCallScreen(caller: caller, callType: ct),
-      ));
+      final call = IncomingCall.fromSocket({
+        'from': from,
+        'fromUsername': fromUsername,
+        'fromAvatar': fromAvatar,
+        'callType': callType,
+      });
+      if (call != null) CallCoordinator.instance.onSocketIncoming(call);
     };
+    await _signal.connect();
   }
 
   @override

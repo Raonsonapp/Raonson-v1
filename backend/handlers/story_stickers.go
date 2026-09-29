@@ -211,7 +211,7 @@ func addYoursInfo(chainID, viewerID string) gin.H {
 		WHERE st.chain_id=$1`, chainID, viewerID).Scan(&total, &joined)
 	avatars := []string{}
 	rows, err := db.Pool.Query(ctx, `
-		SELECT u.avatar FROM (
+		SELECT COALESCE(u.avatar,'') FROM (
 		  SELECT DISTINCT ON (s.user_id) s.user_id, s.created_at
 		  FROM story_stickers st JOIN stories s ON s.id=st.story_id
 		  WHERE st.chain_id=$1 ORDER BY s.user_id, s.created_at DESC) x
@@ -492,7 +492,7 @@ func GetStickerAnswers(c *gin.Context) {
 		return
 	}
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id, u.username, u.avatar, COALESCE(u.verified,false),
+		SELECT u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       a.choice, a.value, a.answer, a.created_at
 		FROM story_sticker_answers a JOIN users u ON u.id=a.user_id
 		WHERE a.story_id=$1 ORDER BY a.created_at DESC LIMIT 500`, sid)

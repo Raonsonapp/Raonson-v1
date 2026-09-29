@@ -78,10 +78,11 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   Future<void> _playOutgoingRing() async {
     try {
-      // ringtone.wav = ringing sound (loop until answered/declined)
+      // ringback.wav — «туут… туут» барои зангзананда, на оҳанги занги
+      // воридотӣ: одам бояд фарқ кунад, ки ӯ занг мезанад ё ба ӯ.
       await _player.setReleaseMode(ReleaseMode.loop);
-      await _player.setVolume(1.0);
-      await _player.play(AssetSource('sounds/ringtone.wav'));
+      await _player.setVolume(0.7);
+      await _player.play(AssetSource('sounds/ringback.wav'));
     } catch (e) {
       debugPrint('[CallScreen] audio error: $e');
     }

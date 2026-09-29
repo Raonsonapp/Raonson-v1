@@ -14,7 +14,7 @@ import (
 func GetCloseFriends(c *gin.Context) {
 	myID := mw.UID(c)
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT u.id, u.username, u.avatar, u.verified
+		SELECT u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
 		FROM close_friends cf
 		JOIN users u ON u.id = cf.friend_id
 		WHERE cf.user_id = $1

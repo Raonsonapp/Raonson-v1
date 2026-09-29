@@ -7,9 +7,11 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
 
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import 'client_errors_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
 
@@ -233,6 +235,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 color: Colors.redAccent),
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AdminReportsScreen())),
+          ),
+          IconButton(
+            tooltip: 'Хатоҳои барнома',
+            icon: const Icon(HeroiconsOutline.bugAnt, color: Colors.orangeAccent),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ClientErrorsScreen())),
           ),
           IconButton(
             tooltip: tr('ui.161f18ca89'),

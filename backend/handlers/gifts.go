@@ -112,7 +112,7 @@ func GetReceivedGifts(c *gin.Context) {
 		`SELECT COALESCE(SUM(stars),0) FROM gifts WHERE to_user_id=$1`, myID).Scan(&total)
 
 	rows, err := db.Pool.Query(context.Background(), `
-		SELECT g.id,g.stars,g.message,g.created_at,u.username,u.avatar
+		SELECT g.id,g.stars,g.message,g.created_at,u.username,COALESCE(u.avatar,'')
 		FROM gifts g JOIN users u ON u.id=g.from_user_id
 		WHERE g.to_user_id=$1 ORDER BY g.created_at DESC LIMIT 100`, myID)
 	if err != nil {

@@ -197,8 +197,8 @@ func AiSearch(c *gin.Context) {
 			sinceClause = "AND p.created_at > " + since
 		}
 		query := fmt.Sprintf(`
-			SELECT p.id, p.caption, p.likes_count, p.comments_count, p.created_at,
-			       u.id, u.username, u.avatar, u.verified,
+			SELECT p.id, COALESCE(p.caption,''), p.likes_count, p.comments_count, p.created_at,
+			       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 			       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
 			       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
 			       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
@@ -244,7 +244,7 @@ func AiSearch(c *gin.Context) {
 		query := fmt.Sprintf(`
 			SELECT r.id, r.video_url, COALESCE(r.thumbnail_url,''), r.caption,
 			       r.views_count, r.likes_count, r.created_at,
-			       u.id, u.username, u.avatar, u.verified
+			       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
 			FROM reels r JOIN users u ON u.id=r.user_id
 			WHERE %s %s AND COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
 			  AND COALESCE(u.is_private,false)=FALSE

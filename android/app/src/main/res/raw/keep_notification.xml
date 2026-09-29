@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Икони огоҳинома танҳо аз сервер (FCM) номбар мешавад. Бе ин
-     shrinkResources онро дар сохтани release нест мекард. -->
+     shrinkResources онро дар сохтани release нест мекард.
+     Садоҳои raw низ танҳо аз рӯи НОМ (канал ва оҳанги занг тавассути
+     getIdentifier) истифода мешаванд — бе keep release онҳоро мебурд
+     ва огоҳинома бесадо ё бо садои пешфарз меомад. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_notification,@color/notification_color" />
+    tools:keep="@drawable/ic_notification,@color/notification_color,@raw/raonson_message,@raw/raonson_social,@raw/raonson_ringtone" />
