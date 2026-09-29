@@ -50,7 +50,8 @@ class DownloadService {
   /// аниме-и офлайн пайдо нашавад. Пасванд аз URL гирифта мешавад —
   /// акс набояд ҳамчун `.mp4` захира шавад.
   /// Бармегардонад: масири файл.
-  static Future<String> saveMedia(String url, {String name = 'raonson'}) async {
+  static Future<String> saveMedia(String url,
+      {String name = 'raonson', Map<String, String>? headers, String? ext}) async {
     Directory? base;
     try {
       // Android: Android/data/<app>/files/Download — бо файл-менеҷер дида мешавад.
@@ -63,12 +64,18 @@ class DownloadService {
     final seg = Uri.tryParse(url)?.pathSegments;
     final last = (seg == null || seg.isEmpty) ? '' : seg.last;
     final dot = last.lastIndexOf('.');
-    var ext = dot > 0 ? last.substring(dot + 1).toLowerCase() : '';
-    if (ext.isEmpty || ext.length > 5) ext = 'jpg';
+    var ext0 = ext ?? (dot > 0 ? last.substring(dot + 1).toLowerCase() : '');
+    if (ext0.isEmpty || ext0.length > 5) ext0 = 'jpg';
 
     final stamp = DateTime.now().millisecondsSinceEpoch;
-    final path = '${dir.path}/${_safe(name)}_$stamp.$ext';
-    await _dio.download(url, path);
+    final path = '${dir.path}/${_safe(name)}_$stamp.$ext0';
+    try {
+      await _dio.download(url, path, options: Options(headers: headers));
+    } catch (_) {
+      // Файли нимаи боргирифта намонад.
+      try { await File(path).delete(); } catch (_) {}
+      rethrow;
+    }
     return path;
   }
 

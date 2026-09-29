@@ -1109,12 +1109,14 @@ class _PostCardState extends State<PostCard>
               color: AppColors.divider, label: tr('ui.64b22cb779'),
               onTap: () {
                 Navigator.pop(sheetCtx);
-                final media = widget.post.media.isNotEmpty
-                    ? (widget.post.media.first['url']?.toString() ?? '')
-                    : '';
-                // Воқеан ба дастгоҳ захира мекунад, на браузерро мекушояд.
-                saveMediaWithFeedback(context, media,
-                    name: widget.post.user.username);
+                final first = widget.post.media.isNotEmpty
+                    ? widget.post.media.first : const <String, dynamic>{};
+                final media = first['url']?.toString() ?? '';
+                // Бо тамғаи Raonson ва @муаллиф (мисли TikTok/Instagram).
+                saveContentWithFeedback(context,
+                    kind: 'post', id: widget.post.id, index: 0,
+                    isVideo: first['type']?.toString() == 'video',
+                    fallbackUrl: media, name: widget.post.user.username);
               }),
             _ShareActionBtn(svgPath: 'assets/icons/share.svg',
               color: AppColors.divider, label: tr('ui.9d3992d048'),

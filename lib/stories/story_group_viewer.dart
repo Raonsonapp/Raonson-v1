@@ -525,8 +525,9 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   // Воқеан ба дастгоҳ захира мекунад — пеш танҳо браузер кушода мешуд.
-  Future<void> _saveMedia() => saveMediaWithFeedback(context, _current.mediaUrl,
-      name: _current.user.username);
+  Future<void> _saveMedia() => saveContentWithFeedback(context,
+      kind: 'story', id: _current.id, isVideo: _current.mediaType == 'video',
+      fallbackUrl: _current.mediaUrl, name: _current.user.username);
 
   /// Ҳолати ҷавобҳо баъди toggle дар ҳамин сессия (модел final аст).
   final Map<String, bool> _repliesOffById = {};

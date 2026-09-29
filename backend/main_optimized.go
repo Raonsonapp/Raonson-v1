@@ -320,6 +320,10 @@ func main() {
 		lg.POST("/:id/token",   handlers.LiveToken)
 	}
 
+	// Боргирӣ бо тамғаи Raonson (@муаллиф + логотип). Коркарди видео
+	// гарон аст — лимити қатъӣ.
+	r.GET("/media/download", auth, mw.RateLimit(10, 60), handlers.DownloadWithWatermark)
+
 	// Хатоҳои барнома (бе вуруд ҳам — хато метавонад дар экрани вуруд бошад).
 	r.POST("/client-errors", mw.OptionalAuth(), rl20, handlers.ReportClientError)
 

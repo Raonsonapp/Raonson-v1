@@ -947,7 +947,10 @@ class _ReelItemState extends State<_ReelItem> {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content: Text('Видеои беруна (YouTube ва ғ.) зеркашӣ намешавад')));
         } else {
-          await saveMediaWithFeedback(context, widget.reel.videoUrl,
+          // Бо тамғаи Raonson ва @муаллиф (мисли TikTok).
+          await saveContentWithFeedback(context,
+              kind: 'reel', id: widget.reel.id, isVideo: true,
+              fallbackUrl: widget.reel.videoUrl,
               name: widget.reel.user.username);
         }
       }

@@ -19,13 +19,15 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o raonson-api ./main_optimized.go
 # ── Run stage ────────────────────────────────────────────────────
 FROM alpine:3.19
 
-RUN apk add --no-cache ca-certificates tzdata
+# ffmpeg + шрифт — барои тамғаи Raonson дар видео/акси боргирифта.
+RUN apk add --no-cache ca-certificates tzdata ffmpeg font-dejavu
 
 RUN addgroup -S app && adduser -S app -G app
 
 WORKDIR /app
 
 COPY --from=builder /app/raonson-api .
+COPY --from=builder /app/assets ./assets
 
 RUN mkdir -p templates && echo '<html></html>' > templates/empty.html
 
