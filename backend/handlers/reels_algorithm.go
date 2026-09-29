@@ -30,7 +30,7 @@ func GetSmartReels(c *gin.Context) {
 	// Вақте client "page"-ро намефиристад, сатри хом холист ва калид
 	// "...:"-и бемаъно мешуд, ки ҳеҷ invalidate ба он намерасид —
 	// лента то анҷоми TTL кӯҳна мемонд.
-	cacheKey := "smartreels:" + myID + ":" + strconv.Itoa(page)
+	cacheKey := "smartreels:" + myID + ":" + strconv.Itoa(page) + mw.ContentEpoch()
 	if page == 1 {
 		if cached, ok := mw.CacheGet(cacheKey); ok {
 			c.Header("X-Cache", "HIT")

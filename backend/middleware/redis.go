@@ -5,6 +5,7 @@ package middleware
 // Redis (Upstash) используем только если UPSTASH_REDIS_REST_URL задан
 
 import (
+	"regexp"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -129,8 +130,39 @@ func InvalidateUserCache(userID string) {
 // бинобар ин ҳозир қасдан карда намешавад.
 var contentEpoch atomic.Int64
 
-// BumpContentEpoch — баъди ҳазфи пост, reel ё стори ҷеғ зада шавад.
+// BumpContentEpoch — баъди ҳар тағйири мундариҷа ҷеғ зада шавад.
 func BumpContentEpoch() { contentEpoch.Add(1) }
+
+// ContentEpoch — насли ҷорӣ; кэшҳои дохили handler онро дар калид доранд.
+func ContentEpoch() string { return ":e" + strconv.FormatInt(contentEpoch.Load(), 10) }
+
+// skipBumpRe — навиштанҳои зуд-зуд, ки дар экранҳои дигар рақам
+// иваз намекунанд (тамошо, «хонда шуд», реклама, аналитика, вуруд).
+// Онҳо кэшро нав намекунанд, вагарна кэш амалан кор намекард.
+var skipBumpRe = regexp.MustCompile(
+	`/(view|views|watch|seen|events|analytics|track|impression|typing|read|delivered|` +
+		`heartbeat|usage|device-token|push-token|token|refresh|login|register|logout|` +
+		`otp|verify|verify-otp|verify-email|send-phone-otp|verify-phone-otp|` +
+		`forgot-password|reset-password|media-check|feedback)(/|$)|^/ads/|^/auth/|^/calls/|^/ai/|^/tutor`)
+
+// ContentWriteBump — баъди амали муваффақ (лайк, шарҳ, «лайкҳо пинҳон»,
+// обуна, сабт, ҳазф…) насли кэшро зиёд мекунад.
+//
+// ⚠️ Пеш ҳар экран кэши худро дошт (3–60 сония) ва ин амалҳо онҳоро пок
+// намекарданд: як пост дар Reels 3 лайк, дар профил 2 ва дар лента 1
+// нишон медод; «лайкҳо пинҳон» ва обуна ҳам дер мерасиданд. Акнун як
+// тағйир — ҳамаи экранҳо рақами навро мегиранд.
+func ContentWriteBump() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		if c.Request.Method == http.MethodGet || c.Writer.Status() >= 400 {
+			return
+		}
+		if !skipBumpRe.MatchString(c.FullPath()) {
+			BumpContentEpoch()
+		}
+	}
+}
 
 // CacheMiddleware — cache GET responses.
 // КРИТИКӢ: калиди cache бояд userID-ро дар бар гирад, вагарна User A

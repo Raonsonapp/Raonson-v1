@@ -38,6 +38,7 @@ func scanFeedPosts(rows interface {
 		var isProduct, contactRaonson bool
 		var price float64
 		var currency, productName, shopWhatsapp, shopPhone string
+		var isFollowing bool
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
 			&musicTitle, &musicArtist,
@@ -45,7 +46,7 @@ func scanFeedPosts(rows interface {
 			&location, &tagged, &collaborators, &hasStory,
 			&hideLikes, &commentsOff, &shares,
 			&isProduct, &price, &currency, &productName,
-			&contactRaonson, &shopWhatsapp, &shopPhone); err != nil {
+			&contactRaonson, &shopWhatsapp, &shopPhone, &isFollowing); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
@@ -65,8 +66,9 @@ func scanFeedPosts(rows interface {
 			"isProduct": isProduct, "price": price, "currency": currency,
 			"productName": productName, "contactRaonson": contactRaonson,
 			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
+			// Ҳолати обуна — то тугмаи «Обуна» дар ҳар экран якхела бошад.
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
-				"verified": verified, "hasStory": hasStory},
+				"verified": verified, "hasStory": hasStory, "isFollowing": isFollowing},
 		})
 	}
 	return posts
@@ -97,7 +99,8 @@ const feedPostCols = `
 	       COALESCE(p.is_product,false), COALESCE(p.price,0),
 	       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 	       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
-	       COALESCE(p.shop_phone,'')
+	       COALESCE(p.shop_phone,''),
+	       EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1::text AND fo.following_id=u.id)
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)

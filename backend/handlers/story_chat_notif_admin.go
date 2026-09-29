@@ -1003,7 +1003,8 @@ func ExploreGrid(c *gin.Context) {
 				"song": songJSON(mTitle, mArtist, mArt, mURL, mTrack, mStart, mEnd),
 				"hideLikes": hideLikes, "commentsOff": commentsOff,
 				"user": gin.H{"_id": uid, "id": uid, "username": uname,
-					"avatar": uavatar, "verified": verified},
+					"avatar": uavatar, "verified": verified,
+					"isFollowing": isFollowingSQLResult(myID, uid)},
 			})
 		}
 	}

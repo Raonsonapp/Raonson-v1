@@ -257,7 +257,7 @@ func GetFeed(c *gin.Context) {
 	if mode != "following" && mode != "favorites" {
 		mode = ""
 	}
-	cacheKey := "feed:" + myID + ":" + mode + ":" + strconv.Itoa(page)
+	cacheKey := "feed:" + myID + ":" + mode + ":" + strconv.Itoa(page) + mw.ContentEpoch()
 	if page == 1 {
 		if cached, ok := mw.CacheGet(cacheKey); ok {
 			c.Header("X-Cache", "HIT")
@@ -374,6 +374,7 @@ func GetPost(c *gin.Context) {
 	userOut := gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified}
 	if u, ok := extra["user"].(gin.H); ok {
 		userOut["hasStory"] = u["hasStory"]
+		userOut["isFollowing"] = u["isFollowing"]
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"location": extra["location"], "taggedUsers": extra["taggedUsers"],

@@ -29,7 +29,7 @@ func GetSmartFeed(c *gin.Context) {
 	// Вақте client "page"-ро намефиристад, сатри хом холист ва калид
 	// "...:"-и бемаъно мешуд, ки ҳеҷ invalidate ба он намерасид —
 	// лента то анҷоми TTL кӯҳна мемонд.
-	cacheKey := "smartfeed:" + myID + ":" + strconv.Itoa(page)
+	cacheKey := "smartfeed:" + myID + ":" + strconv.Itoa(page) + mw.ContentEpoch()
 	if page <= 2 {
 		if cached, ok := mw.CacheGet(cacheKey); ok {
 			c.Header("X-Cache", "HIT")
@@ -214,6 +214,7 @@ func GetSmartFeed(c *gin.Context) {
 			"user": gin.H{
 				"_id": uid, "username": uname,
 				"avatar": uavatar, "verified": verified, "hasStory": hasStory,
+				"isFollowing": isFollowingSQLResult(myID, uid),
 			},
 		})
 	}
@@ -269,4 +270,15 @@ func TrackPostViewBatch(c *gin.Context) {
 	query += " ON CONFLICT DO NOTHING"
 	db.Pool.Exec(context.Background(), query, args...)
 	c.JSON(http.StatusOK, gin.H{"ok": true, "count": len(b.PostIDs)})
+}
+
+// isFollowingSQLResult — ман ба ӯ обунаам?
+func isFollowingSQLResult(me, uid string) bool {
+	if me == "" || me == uid {
+		return false
+	}
+	var f bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1 AND following_id=$2)`, me, uid).Scan(&f)
+	return f
 }

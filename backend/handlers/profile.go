@@ -135,7 +135,7 @@ func GetMyProfile(c *gin.Context) {
 	myID := mw.UID(c)
 
 	// Personal cache key
-	cacheKey := "profile:me:" + myID
+	cacheKey := "profile:me:" + myID + mw.ContentEpoch()
 	if cached, ok := mw.CacheGet(cacheKey); ok {
 		c.Header("X-Cache", "HIT")
 		c.Data(http.StatusOK, "application/json", cached)
@@ -170,7 +170,7 @@ func GetProfile(c *gin.Context) {
 	username := c.Param("username")
 	myID := mw.UID(c)
 
-	cacheKey := "profile:u:" + username + ":" + myID
+	cacheKey := "profile:u:" + username + ":" + myID + mw.ContentEpoch()
 	if cached, ok := mw.CacheGet(cacheKey); ok {
 		c.Header("X-Cache", "HIT")
 		c.Data(http.StatusOK, "application/json", cached)

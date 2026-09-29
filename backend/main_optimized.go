@@ -56,6 +56,8 @@ func main() {
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+	// Як мундариҷа — як рақам дар ҳамаи экранҳо (ниг. ContentWriteBump).
+	r.Use(mw.ContentWriteBump())
 
 	// ── Оптимизатсия: Logger танҳо хатоҳо ──────────────────────
 	r.Use(gin.Recovery())
