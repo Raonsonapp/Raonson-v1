@@ -66,6 +66,11 @@ var bodies = map[Kind]map[Lang]string{
 		RU: "принял(а) вашу заявку",
 		EN: "accepted your follow request",
 	},
+	ReelMention: {
+		TJ: "шуморо дар шарҳи Reel зикр кард",
+		RU: "упомянул(а) вас в комментарии к Reels",
+		EN: "mentioned you in a Reels comment",
+	},
 	Mention: {
 		TJ: "шуморо зикр кард",
 		RU: "упомянул(а) вас",
@@ -302,7 +307,7 @@ func Link(k Kind, targetID, actorName string) string {
 		if targetID != "" {
 			return "/post/" + targetID
 		}
-	case ReelLike, ReelReply:
+	case ReelLike, ReelReply, ReelMention:
 		if targetID != "" {
 			return "/reel/" + targetID
 		}

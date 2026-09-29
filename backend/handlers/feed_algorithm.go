@@ -86,6 +86,8 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
 		  COALESCE(p.music_end_ms,0),
 		  COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
+		  COALESCE(p.collaborators,'{}'),
+		  (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id),
 		  COALESCE(p.is_product,false), COALESCE(p.price,0),
 		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		  COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
@@ -182,12 +184,14 @@ func GetSmartFeed(c *gin.Context) {
 		var isProduct, contactRaonson bool
 		var price float64
 		var currency, productName, shopWhatsapp, shopPhone string
+		var collaborators []string
+		var shares int
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 			&hideLikes, &commentsOff,
 			&musicTitle, &musicArtist,
 			&musicURL, &musicArt, &musicTrackMs, &musicStartMs, &musicEndMs,
-			&location, &tagged,
+			&location, &tagged, &collaborators, &shares,
 			&isProduct, &price, &currency, &productName,
 			&contactRaonson, &shopWhatsapp, &shopPhone,
 			&hasStory, &score)
@@ -202,6 +206,8 @@ func GetSmartFeed(c *gin.Context) {
 			"song": songJSON(musicTitle, musicArtist, musicArt, musicURL,
 				musicTrackMs, musicStartMs, musicEndMs),
 			"location": location, "taggedUsers": tagged,
+			// Пеш ҳамкорон ва шумораи паҳн дар smart-feed набуданд.
+			"collaborators": collaborators, "sharesCount": shares,
 			"isProduct": isProduct, "price": price, "currency": currency,
 			"productName": productName, "contactRaonson": contactRaonson,
 			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,

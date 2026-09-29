@@ -35,6 +35,9 @@ type Prefs struct {
 	Recommendations *bool `json:"recommendations"`
 	Creator         *bool `json:"creator"`
 	Achievements    *bool `json:"achievements"`
+	// Reels — барнома ин калидро кайҳо сабт мекард, вале сервер онро
+	// намешинохт: огоҳиномаҳои Reels ҳамеша меомаданд.
+	Reels *bool `json:"reels"`
 	// Push — калиди умумӣ. Хомӯш = ҳеҷ push.
 	Push *bool `json:"push"`
 
@@ -55,6 +58,11 @@ func enabled(v *bool) bool { return v == nil || *v }
 // Allows мегӯяд, ки оё корбар ин намудро мехоҳад.
 func (p Prefs) Allows(k Kind) bool {
 	if !enabled(p.Push) {
+		return false
+	}
+	// Reels хомӯш — лайк ва шарҳи Reels намеояд (ҳарчанд лайк/шарҳи
+	// постҳо фаъол бошад).
+	if (k == ReelLike || k == ReelReply) && !enabled(p.Reels) {
 		return false
 	}
 	switch RuleFor(k).PrefKey {

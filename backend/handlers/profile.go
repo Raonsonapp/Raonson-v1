@@ -154,7 +154,7 @@ func GetMyProfile(c *gin.Context) {
 	u["isFollowing"] = false
 
 	// Постҳо ва маълумот якҷо — 1 trip to DB
-	posts := postsForUser(myID, 30)
+	posts := postsForUser(myID, myID, 30)
 	result := gin.H{"user": u, "posts": posts}
 
 	// Cache барои 30 сония
@@ -199,7 +199,7 @@ func GetProfile(c *gin.Context) {
 	// ҳар кас бармегашт, ҳол он ки GetUserPosts онро месанҷид.
 	posts := []gin.H{}
 	if ok, _ := CanSeeProfileContent(myID, uid); ok {
-		posts = postsForUser(uid, 30)
+		posts = postsForUser(myID, uid, 30)
 	}
 	result := gin.H{"user": u, "posts": posts}
 

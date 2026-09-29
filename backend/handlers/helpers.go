@@ -34,7 +34,7 @@ const userSelectSQL = `
 	       COALESCE(cover_url,''), COALESCE(bio_links,''),
 	       COALESCE(activity_status,true), COALESCE(allow_comments,true),
 	       COALESCE(allow_mentions,true), COALESCE(two_factor,false),
-	       COALESCE(pronouns,'')
+	       COALESCE(pronouns,''), COALESCE(bio_song::text,'')
 	FROM users`
 
 func scanFullUser(row pgx.Row) (gin.H, error) {
@@ -54,6 +54,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		activityStatus, allowComments   bool
 		allowMentions, twoFactor        bool
 		pronouns                        string
+		bioSong                         string
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -65,7 +66,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&isVip,
 		&coverUrl, &bioLinks,
 		&activityStatus, &allowComments, &allowMentions, &twoFactor,
-		&pronouns,
+		&pronouns, &bioSong,
 	)
 	if err != nil {
 		log.Printf("[scanFullUser] error: %v", err)
@@ -96,6 +97,8 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"website": website, "location": location,
 		"fullName": fullName, "phone": phone,
 		"coverUrl": coverUrl, "links": links, "pronouns": pronouns,
+		// Суруди профил сабт мешуд, вале ҳеҷ гоҳ бар намегашт.
+		"bioSong": jsonOrNil(bioSong),
 		"activityStatus": activityStatus, "allowComments": allowComments,
 		"allowMentions": allowMentions, "twoFactor": twoFactor,
 		"note": note, "noteExpiresAt": noteExpiresAt,
@@ -175,30 +178,57 @@ func setIsFollowing(u gin.H, myID, targetID string) {
 		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1::text AND following_id=$2::text)`,
 		myID, targetID).Scan(&isFollowing)
 	u["isFollowing"] = isFollowing
+	if myID == "" || myID == targetID {
+		return
+	}
+	// Барнома ин майдонҳоро мехонд, вале сервер ҳеҷ гоҳ намефиристод:
+	// «Дархост фиристода шуд» баъди аз нав кушодан гум мешуд ва сатри
+	// «Обунаи X ва Y» ҳеҷ гоҳ пайдо намешуд.
+	var requested bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text)`,
+		myID, targetID).Scan(&requested)
+	u["followRequestSent"] = requested
+	var mutual int
+	names := []string{}
+	if rows, err := db.Pool.Query(context.Background(), `
+		SELECT u.username, COUNT(*) OVER()
+		FROM follows a
+		JOIN follows b ON b.follower_id=a.following_id AND b.following_id=$2::text
+		JOIN users u ON u.id=a.following_id
+		WHERE a.follower_id=$1::text
+		ORDER BY u.followers_count DESC LIMIT 2`, myID, targetID); err == nil {
+		for rows.Next() {
+			var n string
+			if rows.Scan(&n, &mutual) == nil {
+				names = append(names, n)
+			}
+		}
+		rows.Close()
+	}
+	u["mutualCount"] = mutual
+	u["mutualNames"] = names
 }
 
-func postsForUser(userID string, limit int) []gin.H {
-	rows, err := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.caption,
-		       COALESCE(p.likes_count,0), COALESCE(p.comments_count,0),
-		       p.created_at,
-		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
-		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
-		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
-		       COALESCE(p.music_end_ms,0),
-		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
-		                ORDER BY m.position), '[]'::json)
-		        FROM post_media m WHERE m.post_id=p.id)
-		FROM posts p WHERE p.user_id=$1 AND COALESCE(p.archived,false)=FALSE
+// postsForUser — постҳои профил дар ҲАМОН шакли лента (feedPostCols).
+//
+// ⚠️ Пеш шакли кӯтоҳ буд: бе `user`, `liked`, `saved`, `isPinned`,
+// `hideLikes`… Пости худатонро аз профил кушоед — ном ва аватар холӣ,
+// лайк ва сабт ҳамеша хомӯш, пиншуда дар боло нест, ҳамкорӣ гум.
+func postsForUser(viewer, userID string, limit int) []gin.H {
+	rows, err := db.Pool.Query(context.Background(),
+		feedPostCols+`
+		WHERE (p.user_id=$2 OR p.collaborators @> ARRAY[$2]::text[])
+		  AND COALESCE(p.archived,false)=FALSE
+		  AND (COALESCE(p.hidden,false)=FALSE OR p.user_id=$1::text)
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
-		ORDER BY p.created_at DESC LIMIT $2`, userID, limit)
+		ORDER BY COALESCE(p.is_pinned,false) DESC, p.created_at DESC LIMIT $3`,
+		viewer, userID, limit)
 	if err != nil {
 		log.Printf("[postsForUser] error: %v", err)
 		return []gin.H{}
 	}
-	defer rows.Close()
-	return scanPostRows(rows, "")
+	return scanFeedPosts(rows)
 }
 
 func scanPostRows(rows pgx.Rows, myID string) []gin.H {
@@ -274,4 +304,11 @@ func isUnique(err error) bool {
 func sortedChatID(a, b string) string {
 	if a < b { return a + "_" + b }
 	return b + "_" + a
+}
+
+func jsonOrNil(raw string) interface{} {
+	if raw == "" || raw == "null" || raw == "{}" {
+		return nil
+	}
+	return json.RawMessage(raw)
 }

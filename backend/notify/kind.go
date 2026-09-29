@@ -22,6 +22,8 @@ const (
 	FollowRequest  Kind = "follow_request"
 	FollowAccepted Kind = "follow_accepted"
 	Mention        Kind = "mention"
+	// Зикр дар шарҳи Reel — линкаш /reel/, на /post/ (пеш «линк дастнорас»).
+	ReelMention Kind = "reel_mention"
 
 	// Чат.
 	Message Kind = "message"
@@ -117,6 +119,7 @@ var rules = map[Kind]Rule{
 	FollowRequest:  {Normal, ChannelSocial, "followers", false},
 	FollowAccepted: {Normal, ChannelSocial, "followers", false},
 	Mention:        {Normal, ChannelSocial, "mentions", false},
+	ReelMention:    {Normal, ChannelSocial, "mentions", false},
 
 	// Паём ҳеҷ гоҳ ҷамъ ё таъхир намешавад.
 	Message: {High, ChannelMessages, "messages", false},

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strconv"
 	"context"
 	"log"
 	"encoding/json"
@@ -162,7 +163,9 @@ func CreatePost(c *gin.Context) {
 	}
 
 	// Invalidate feed cache for this user
-	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2", "smartfeed:"+myID+":1", "smartfeed:"+myID+":2")
+	// Калидҳои воқеии кэши лента (feed:<id>:<mode>:<page>) — пеш
+	// калиди нодуруст пок мешуд ва пости нав то 30 сония дида намешуд.
+	invalidateFeedCache(myID)
 	// ва cache-и middleware-и корбар (то пости нав фавран дар profile/feed
 	// худи ӯ намоён шавад).
 	mw.InvalidateUserCache(myID)
@@ -254,7 +257,7 @@ func GetFeed(c *gin.Context) {
 	if mode != "following" && mode != "favorites" {
 		mode = ""
 	}
-	cacheKey := "feed:" + myID + ":" + mode + ":" + c.Query("page")
+	cacheKey := "feed:" + myID + ":" + mode + ":" + strconv.Itoa(page)
 	if page == 1 {
 		if cached, ok := mw.CacheGet(cacheKey); ok {
 			c.Header("X-Cache", "HIT")
@@ -263,28 +266,10 @@ func GetFeed(c *gin.Context) {
 		}
 	}
 
-	rows, err := db.Pool.Query(context.Background(), `
-		SELECT p.id, p.caption,
-		       CASE WHEN COALESCE(p.hide_likes,false) AND p.user_id <> $1::text
-		            THEN -1 ELSE p.likes_count END,
-		       p.comments_count, p.created_at,
-		       u.id, u.username, u.avatar, u.verified,
-		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
-		                ORDER BY m.position),'[]'::json)
-		        FROM post_media m WHERE m.post_id=p.id),
-		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$1::text),
-		       EXISTS(SELECT 1 FROM post_saves  WHERE post_id=p.id AND user_id=$1::text),
-		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false),
-		       COALESCE(p.is_product,false), COALESCE(p.price,0),
-		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
-		       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
-		       COALESCE(p.shop_phone,''),
-		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
-		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
-		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
-		       COALESCE(p.music_end_ms,0), COALESCE(p.location,'')
-		FROM posts p JOIN users u ON u.id=p.user_id
+	// Ҳамон шакли пост, ки профил ва ҳаштаг доранд (feedPostCols). Пеш
+	// лента шакли худашро дошт — бе нишонҳо, ҳамкорон, пин, ҳалқаи
+	// сторис ва шумораи паҳн (ҳамеша 0).
+	rows, err := db.Pool.Query(context.Background(), feedPostCols+`
 		WHERE COALESCE(p.archived,false) = FALSE
 		  AND COALESCE(p.hidden,false) = FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
@@ -303,38 +288,7 @@ func GetFeed(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	posts := []gin.H{}
-	for rows.Next() {
-		var pid, cap, uid, uname, uavatar string
-		var likes, comms int
-		var verified, liked, saved, hideLikes, commentsOff bool
-		var createdAt, media interface{}
-		var isProduct, contactRaonson bool
-		var price float64
-		var currency, productName, shopWhatsapp, shopPhone string
-		// Музика — пеш ин ҷо НАБУД: лентаи асосӣ суруди постро
-		// намефиристод, бинобар ин он танҳо дар профил мехонд.
-		var mTitle, mArtist, mURL, mArt, location string
-		var mTrack, mStart, mEnd int
-		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
-			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
-			&hideLikes, &commentsOff,
-			&isProduct, &price, &currency, &productName,
-			&contactRaonson, &shopWhatsapp, &shopPhone,
-			&mTitle, &mArtist, &mURL, &mArt, &mTrack, &mStart, &mEnd, &location)
-		posts = append(posts, gin.H{
-			"_id": pid, "caption": cap, "likesCount": likes, "commentsCount": comms,
-			"createdAt": createdAt, "media": nilToEmpty(media),
-			"liked": liked, "saved": saved,
-			"hideLikes": hideLikes, "commentsOff": commentsOff,
-			"isProduct": isProduct, "price": price, "currency": currency,
-			"productName": productName, "contactRaonson": contactRaonson,
-			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
-			"musicTitle": mTitle, "musicArtist": mArtist, "location": location,
-			"song": songJSON(mTitle, mArtist, mArt, mURL, mTrack, mStart, mEnd),
-			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
-		})
-	}
+	posts := scanFeedPosts(rows)
 	result := gin.H{"posts": posts, "page": page, "limit": limit}
 	if page == 1 {
 		if b, err := json.Marshal(result); err == nil {
@@ -408,7 +362,22 @@ func GetPost(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found"})
 		return
 	}
+	// Майдонҳои шакли умумӣ (ҷой, нишонҳо, ҳамкорон, пин, ҳалқаи сторис)
+	// аз feedPostCols — пеш пости аз огоҳинома кушодашуда онҳоро гум мекард.
+	extra := gin.H{}
+	if rows, err := db.Pool.Query(context.Background(),
+		feedPostCols+` WHERE p.id=$2`, myID, pid2); err == nil {
+		if list := scanFeedPosts(rows); len(list) == 1 {
+			extra = list[0]
+		}
+	}
+	userOut := gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified}
+	if u, ok := extra["user"].(gin.H); ok {
+		userOut["hasStory"] = u["hasStory"]
+	}
 	c.JSON(http.StatusOK, gin.H{
+		"location": extra["location"], "taggedUsers": extra["taggedUsers"],
+		"collaborators": extra["collaborators"], "isPinned": extra["isPinned"],
 		"_id": pid2, "caption": cap, "likesCount": likes, "commentsCount": comms,
 		"createdAt": createdAt, "media": nilToEmpty(media), "liked": liked, "saved": saved,
 		"hideLikes": hideLikes, "commentsOff": commentsOff,
@@ -419,7 +388,7 @@ func GetPost(c *gin.Context) {
 		"sharesCount": mShares,
 		"song": songJSON(mTitle, mArtist, mArt, mURL,
 			mTrackMs, mStartMs, mEndMs),
-		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
+		"user": userOut,
 	})
 }
 

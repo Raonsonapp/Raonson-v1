@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"time"
 	"context"
 	"log"
 	"net/http"
@@ -101,7 +102,7 @@ func AddComment(c *gin.Context) {
 		c.JSON(http.StatusCreated, gin.H{
 			"_id": cid, "text": b.Text, "createdAt": createdAt,
 			"likesCount": 0, "parentId": b.ParentID,
-			"user": gin.H{"_id": myID},
+			"user": commentAuthor(myID),
 		})
 		return
 	}
@@ -1008,16 +1009,18 @@ func AddReelComment(c *gin.Context) {
 		return
 	}
 	if hidden {
-		c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
+		c.JSON(http.StatusCreated, newCommentJSON(cid, b.Text, b.ParentID, myID))
 		return
 	}
 	db.Pool.Exec(context.Background(),
 		`UPDATE reels SET comments_count=comments_count+1 WHERE id=$1`, rid)
 	notify(owner, myID, "reel_comment", rid)
 	pushNotify(owner, myID, "reel_comment", rid, "ба Reel-и шумо шарҳ гузошт")
-	notifyMentions(myID, "mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
+	notifyMentions(myID, "reel_mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
 	mw.InvalidateUserCache(myID)
-	c.JSON(http.StatusCreated, gin.H{"_id": cid, "text": b.Text})
+	// Шакли пурра — пеш танҳо {_id, text}: шарҳи нав бе ном ва аватар
+	// меомад ва ҷавоб аз шохааш ҷудо мешуд.
+	c.JSON(http.StatusCreated, newCommentJSON(cid, b.Text, b.ParentID, myID))
 }
 
 // GET /reels/:id — як реели мушаххас.
@@ -1069,13 +1072,43 @@ func GetReelByID(c *gin.Context) {
 		return
 	}
 
+	// Садо ва шумораи паҳн — пеш Reel-и аз паём, сторис ё огоҳинома
+	// кушодашуда садояшро гум мекард («оригинал садо») ва паҳн 0 буд.
+	var audioID, audioTitle, audioArtist, audioCover string
+	var shares int
+	db.Pool.QueryRow(context.Background(), `
+		SELECT COALESCE(audio_id,''), COALESCE(audio_title,''), COALESCE(audio_artist,''),
+		       COALESCE(audio_cover,''),
+		       (SELECT COUNT(*) FROM reel_shares WHERE reel_id=$1)
+		FROM reels WHERE id=$1`, rid).Scan(&audioID, &audioTitle, &audioArtist, &audioCover, &shares)
 	c.JSON(http.StatusOK, gin.H{
 		"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 		"thumbnailUrl": thumb, "caption": capt,
 		"viewsCount": views, "likesCount": likes, "commentsCount": comms,
 		"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
 		"hideLikes": hideLikes, "commentsDisabled": commentsOff,
+		"sharesCount": shares,
+		"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
 		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 			"verified": verified, "isFollowing": following, "hasStory": hasStory},
 	})
+}
+
+// commentAuthor — муаллифи шарҳ барои ҷавоби фаврӣ.
+func commentAuthor(uid string) gin.H {
+	var uname, avatar string
+	var verified bool
+	db.Pool.QueryRow(context.Background(),
+		`SELECT username, COALESCE(avatar,''), COALESCE(verified,false) FROM users WHERE id=$1`,
+		uid).Scan(&uname, &avatar, &verified)
+	return gin.H{"_id": uid, "username": uname, "avatar": avatar, "verified": verified}
+}
+
+func newCommentJSON(cid, text, parentID, uid string) gin.H {
+	return gin.H{
+		"_id": cid, "text": text, "parentId": parentID,
+		"likesCount": 0, "liked": false,
+		"createdAt": time.Now().UTC().Format(time.RFC3339),
+		"user":      commentAuthor(uid),
+	}
 }

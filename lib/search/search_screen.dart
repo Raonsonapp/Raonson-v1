@@ -191,7 +191,9 @@ class _SearchScreenState extends State<SearchScreen>
               type:    post.mediaType == 'video' ? _ItemType.video : _ItemType.image,
               isMulti: post.media.length > 1,
               isProduct: post.isProduct,
-              views:   post.likesCount, // use likes as proxy; backend adds views later
+              // Сервер `viewsCount` мефиристад; пеш ҷои он лайкҳо нишон
+              // дода мешуданд (ва барои «лайкҳо пинҳон» 0).
+              views:   ((p as Map)['viewsCount'] as num?)?.toInt() ?? 0,
               postData: post,
             ));
           }

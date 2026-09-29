@@ -162,6 +162,8 @@ class _PostCardState extends State<PostCard>
     _saved        = widget.post.isSaved;
     _likeCount    = widget.post.likesCount;
     _commentCount = widget.post.commentsCount;
+    // Пеш ҳамеша 0 оғоз мешуд — шумораи воқеии паҳн нишон дода намешуд.
+    _shareCount   = widget.post.sharesCount;
     _hideLikes        = widget.post.hideLikes;
     _commentsDisabled = widget.post.commentsDisabled;
     _caption      = widget.post.caption;

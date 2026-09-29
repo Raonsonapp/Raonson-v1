@@ -173,8 +173,9 @@ func PostNotInterested(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO post_not_interested(post_id, user_id) VALUES($1,$2)
 		 ON CONFLICT DO NOTHING`, pid, myID)
-	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
-		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2")
+	// Калидҳои воқеии кэши лента (feed:<id>:<mode>:<page>) — пеш
+	// калиди нодуруст пок мешуд ва пости нав то 30 сония дида намешуд.
+	invalidateFeedCache(myID)
 	c.JSON(http.StatusOK, gin.H{"not_interested": true})
 }
 
@@ -210,7 +211,9 @@ func UpdatePostCaption(c *gin.Context) {
 	}
 
 	// Cache-ро тоза кун
-	mw.CacheDel("feed:"+myID+":1", "smartfeed:"+myID+":1")
+	// Калидҳои воқеии кэши лента (feed:<id>:<mode>:<page>) — пеш
+	// калиди нодуруст пок мешуд ва пости нав то 30 сония дида намешуд.
+	invalidateFeedCache(myID)
 	mw.InvalidateUserCache(myID)
 
 	// Танҳо зикрҳои НАВ огоҳ мешаванд — пеш ҳар таҳрир ба ҳамаи

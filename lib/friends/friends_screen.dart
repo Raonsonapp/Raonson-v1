@@ -92,7 +92,7 @@ class _FriendsScreenState extends State<FriendsScreen>
               sugs.add(_UserItem(
                 id:          id,
                 username:    (u['username'] ?? '').toString(),
-                fullName:    (u['name'] ?? u['displayName'] ?? '').toString(),
+                fullName:    (u['fullName'] ?? u['name'] ?? u['displayName'] ?? '').toString(),
                 avatar:      (u['avatar'] ?? '').toString(),
                 isFollowing: false,
                 mutualFriends: 0,

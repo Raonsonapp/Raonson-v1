@@ -1026,12 +1026,19 @@ func ExploreGrid(c *gin.Context) {
 		       -- Акнун холӣ бармегардад ва телефон худаш кадри
 		       -- аввали видеоро мекашад.
 		       COALESCE(r.thumbnail_url,''),
-		       r.likes_count, COALESCE(r.comments_count,0), r.views_count,
+		       -- «Лайкҳо пинҳон»: пеш дар Explore шумора ба ҳама намоён буд.
+		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
+		            THEN -1 ELSE r.likes_count END,
+		       COALESCE(r.comments_count,0), r.views_count,
 		       COALESCE(r.caption,''),
 		       u.id, u.username, u.avatar, COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
-		       (SELECT COUNT(*) FROM reel_shares sh WHERE sh.reel_id=r.id)
+		       (SELECT COUNT(*) FROM reel_shares sh WHERE sh.reel_id=r.id),
+		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
+		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
+		       COALESCE(r.audio_id,''), COALESCE(r.audio_title,''),
+		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,'')
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
 		  AND `+publicAuthorSQL("r.user_id", "u", "$1")+`
@@ -1044,8 +1051,11 @@ func ExploreGrid(c *gin.Context) {
 			var likes, comments, views int
 			var verified, liked, saved bool
 			var shares int
+			var hideLikes, commentsOff, following bool
+			var aID, aTitle, aArtist, aCover string
 			rRows.Scan(&rid, &vurl, &thumb, &likes, &comments, &views, &caption,
-				&uid, &uname, &uavatar, &verified, &liked, &saved, &shares)
+				&uid, &uname, &uavatar, &verified, &liked, &saved, &shares,
+				&hideLikes, &commentsOff, &following, &aID, &aTitle, &aArtist, &aCover)
 			reels = append(reels, gin.H{
 				"_id": rid, "videoUrl": vurl,
 				"thumbnailUrl": thumb,
@@ -1054,8 +1064,10 @@ func ExploreGrid(c *gin.Context) {
 				// Бе `isSaved` нишони захира ҳамеша холӣ менамуд,
 				// ҳатто агар корбар аллакай захира карда бошад.
 				"isLiked": liked, "isSaved": saved, "sharesCount": shares,
+				"hideLikes": hideLikes, "commentsDisabled": commentsOff,
+				"audio": reelAudioJSON(aID, aTitle, aArtist, aCover, uname),
 				"user": gin.H{"_id": uid, "id": uid, "username": uname,
-					"avatar": uavatar, "verified": verified},
+					"avatar": uavatar, "verified": verified, "isFollowing": following},
 			})
 		}
 	}

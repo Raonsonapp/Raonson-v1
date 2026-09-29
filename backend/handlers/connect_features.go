@@ -101,9 +101,9 @@ func MuteUser(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO muted_users(user_id, muted_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 		myID, target)
-	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
-		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2",
-		"smartreels:"+myID+":1", "smartreels:"+myID+":2")
+	// Калидҳои воқеии кэши лента (feed:<id>:<mode>:<page>) — пеш
+	// калиди нодуруст пок мешуд ва пости нав то 30 сония дида намешуд.
+	invalidateFeedCache(myID)
 	c.JSON(http.StatusOK, gin.H{"muted": true})
 }
 
@@ -113,9 +113,9 @@ func UnmuteUser(c *gin.Context) {
 	target := c.Param("id")
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM muted_users WHERE user_id=$1 AND muted_id=$2`, myID, target)
-	mw.CacheDel("feed:"+myID+":1", "feed:"+myID+":2",
-		"smartfeed:"+myID+":1", "smartfeed:"+myID+":2",
-		"smartreels:"+myID+":1", "smartreels:"+myID+":2")
+	// Калидҳои воқеии кэши лента (feed:<id>:<mode>:<page>) — пеш
+	// калиди нодуруст пок мешуд ва пости нав то 30 сония дида намешуд.
+	invalidateFeedCache(myID)
 	c.JSON(http.StatusOK, gin.H{"unmuted": true})
 }
 

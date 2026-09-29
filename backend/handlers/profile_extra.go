@@ -34,12 +34,18 @@ func scanFeedPosts(rows interface {
 		var collaborators []string
 		var hasStory bool
 		var hideLikes, commentsOff bool
+		var shares int
+		var isProduct, contactRaonson bool
+		var price float64
+		var currency, productName, shopWhatsapp, shopPhone string
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
 			&musicTitle, &musicArtist,
 			&musicURL, &musicArt, &musicTrackMs, &musicStartMs, &musicEndMs,
 			&location, &tagged, &collaborators, &hasStory,
-			&hideLikes, &commentsOff); err != nil {
+			&hideLikes, &commentsOff, &shares,
+			&isProduct, &price, &currency, &productName,
+			&contactRaonson, &shopWhatsapp, &shopPhone); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
@@ -55,6 +61,10 @@ func scanFeedPosts(rows interface {
 				musicTrackMs, musicStartMs, musicEndMs),
 			"location": location, "taggedUsers": tagged,
 			"collaborators": collaborators,
+			"sharesCount": shares,
+			"isProduct": isProduct, "price": price, "currency": currency,
+			"productName": productName, "contactRaonson": contactRaonson,
+			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 				"verified": verified, "hasStory": hasStory},
 		})
@@ -82,7 +92,12 @@ const feedPostCols = `
 	       COALESCE(p.location,''), COALESCE(p.tagged_users,'{}'),
 	       COALESCE(p.collaborators,'{}'),
 	       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text))),
-	       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false)
+	       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false),
+	       (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id),
+	       COALESCE(p.is_product,false), COALESCE(p.price,0),
+	       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
+	       COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
+	       COALESCE(p.shop_phone,'')
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)
