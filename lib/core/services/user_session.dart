@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../content_sync.dart';
+import 'follow_service.dart';
 
 class UserSession {
   UserSession._();
@@ -80,6 +82,10 @@ class UserSession {
 
   // ── Вақти logout — тозо кун ──────────────────────────────────
   static Future<void> clear() async {
+    // Баромадан: ҳолати лайк/захира/обунаи корбари куҳна набояд ба
+    // корбари навбатӣ дар ҳамин телефон намоён шавад.
+    ContentSync.instance.clear();
+    FollowService.instance.clear();
     userIdNotifier.value   = null;
     usernameNotifier.value = null;
     avatarNotifier.value   = null;

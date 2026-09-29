@@ -21,6 +21,7 @@ import '../../core/api/api_client.dart';
 import '../../app/app_routes.dart';
 import '../../app/app_theme.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/follow_service.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../notifications/notification_badge.dart';
@@ -585,6 +586,7 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
   @override
   void initState() {
     super.initState();
+    FollowService.instance.states.addListener(_onFollow);
     _load();
   }
 
@@ -601,6 +603,8 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
             username: (m['username'] ?? '').toString(),
             avatar:   (m['avatar'] ?? '').toString(),
             verified: m['verified'] == true,
+            following: FollowService.instance.resolve(
+                (m['_id'] ?? '').toString(), m['isFollowing'] == true),
           );
         }).where((u) => u.id.isNotEmpty).toList();
         if (mounted) setState(() { _users = users; _loading = false; });
@@ -610,13 +614,25 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
     if (mounted) setState(() => _loading = false);
   }
 
+  // FollowService: обуна аз ин ҷо дар reels/explore/профил ҳам намоён,
+  // ва баръакс. Пеш ин рӯйхат ҳолати худашро дошт.
   Future<void> _follow(_SuggestedUser u) async {
-    setState(() => u.following = true);
-    try {
-      await ApiClient.instance.post('/follow/${u.id}');
-    } catch (_) {
-      if (mounted) setState(() => u.following = false);
-    }
+    await FollowService.instance.toggle(u.id, false);
+  }
+
+  @override
+  void dispose() {
+    FollowService.instance.states.removeListener(_onFollow);
+    super.dispose();
+  }
+
+  void _onFollow() {
+    if (!mounted) return;
+    setState(() {
+      for (final u in _users) {
+        u.following = FollowService.instance.resolve(u.id, u.following);
+      }
+    });
   }
 
   @override

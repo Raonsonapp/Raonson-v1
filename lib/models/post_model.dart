@@ -1,3 +1,4 @@
+import '../core/content_sync.dart';
 import '../core/utils/server_time.dart';
 import '../core/music/song_info.dart';
 import 'user_model.dart';
@@ -41,6 +42,10 @@ class PostModel {
   final String       shopWhatsapp;
   final String       shopPhone;
 
+  /// Кай ин маълумот аз сервер гирифта шуд. ContentSync бо ин мефаҳмад,
+  /// ки рӯйхати куҳна амали навтари корбарро пахш накунад.
+  final DateTime?    fetchedAt;
+
   const PostModel({
     required this.id,
     required this.user,
@@ -68,6 +73,7 @@ class PostModel {
     this.contactRaonson = true,
     this.shopWhatsapp   = '',
     this.shopPhone      = '',
+    this.fetchedAt,
   });
 
   String get priceLabel =>
@@ -77,6 +83,20 @@ class PostModel {
   bool get isSaved  => saved;
   bool get isOwner  => false;
   List get comments => const [];
+
+  /// Ҳолати лайк/шарҳ/... -и ҳамин модел — барои ContentSync.view.
+  ContentState get syncState => ContentState(
+        liked: liked, likesCount: likesCount, saved: saved,
+        commentsCount: commentsCount, sharesCount: sharesCount,
+        hideLikes: hideLikes, commentsOff: commentsDisabled);
+
+  /// Маълумоти серверии ин постро ба ContentSync медиҳад. Рӯйхати
+  /// куҳна амали навтари корбарро пахш намекунад (ниг. ContentSync).
+  void primeSync() => ContentSync.instance.prime(id,
+        liked: liked, likesCount: likesCount, saved: saved,
+        commentsCount: commentsCount, sharesCount: sharesCount,
+        hideLikes: hideLikes, commentsOff: commentsDisabled,
+        fetchedAt: fetchedAt);
 
   String get mediaUrl  => media.isNotEmpty ? media.first['url']  ?? '' : '';
   String get mediaType => media.isNotEmpty ? media.first['type'] ?? 'image' : 'image';
@@ -93,6 +113,7 @@ class PostModel {
     bool? hideLikes, bool? commentsDisabled,
     bool? isProduct, double? price, String? currency, String? productName,
     bool? contactRaonson, String? shopWhatsapp, String? shopPhone,
+    DateTime? fetchedAt,
   }) => PostModel(
     id:            id            ?? this.id,
     user:          user          ?? this.user,
@@ -120,6 +141,7 @@ class PostModel {
     contactRaonson: contactRaonson ?? this.contactRaonson,
     shopWhatsapp:   shopWhatsapp   ?? this.shopWhatsapp,
     shopPhone:      shopPhone      ?? this.shopPhone,
+    fetchedAt:      fetchedAt      ?? this.fetchedAt,
   );
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
@@ -180,6 +202,8 @@ class PostModel {
       contactRaonson: json['contactRaonson'] != false,
       shopWhatsapp:   (json['shopWhatsapp'] ?? '').toString(),
       shopPhone:      (json['shopPhone'] ?? '').toString(),
+      // Кэши диск вақти аслиро нигоҳ медорад; ҷавоби нав — ҳозир.
+      fetchedAt:      ContentSync.fetchedAtOf(json) ?? DateTime.now(),
     );
   }
 
@@ -190,6 +214,12 @@ class PostModel {
     'createdAt': createdAt.toIso8601String(),
     'location': location, 'taggedUsers': taggedUsers,
     'collaborators': collaborators,
+    // Бе инҳо кэши диск пинҳонии лайкҳо / хомӯшии шарҳҳоро гум мекард.
+    'sharesCount': sharesCount,
+    'hideLikes': hideLikes,
+    'commentsOff': commentsDisabled,
+    if (fetchedAt != null)
+      ContentSync.fetchedAtKey: fetchedAt!.millisecondsSinceEpoch,
     'user': {'_id':user.id,'username':user.username,'avatar':user.avatar,
       'verified':user.verified,'isPrivate':user.isPrivate,
       'postsCount':user.postsCount,'followersCount':user.followersCount,

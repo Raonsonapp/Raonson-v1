@@ -3,11 +3,13 @@ import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import 'dart:async';
 import 'dart:math' show Random;
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/content_events.dart';
+import '../../core/content_sync.dart';
 import '../../create/share_to_story.dart';
 import '../../core/music/feed_audio.dart';
 import '../../core/music/music_bar.dart';
@@ -166,6 +168,12 @@ class _PostCardState extends State<PostCard>
     _shareCount   = widget.post.sharesCount;
     _hideLikes        = widget.post.hideLikes;
     _commentsDisabled = widget.post.commentsDisabled;
+    // Ҳамин пост шояд аллакай дар Reels/Explore/профил лайк ё захира
+    // шуда бошад — ҳолати навтаринро аз ContentSync мегирем.
+    _applySync(ContentSync.instance.get(widget.post.id), initial: true);
+    ContentSync.primeSoon(widget.post.primeSync);
+    _syncNote = ContentSync.instance.watch(widget.post.id)
+      ..addListener(_onSync);
     _caption      = widget.post.caption;
     _song         = widget.post.song;
 
@@ -220,6 +228,77 @@ class _PostCardState extends State<PostCard>
     _viewTimer = Timer(const Duration(seconds: 1), _trackView);
   }
 
+  // ── ContentSync: як пост = як ҳолат дар ҳамаи экранҳо ─────────
+  late ValueListenable<ContentState?> _syncNote;
+
+  void _onSync() {
+    if (!mounted) return;
+    _applySync(_syncNote.value);
+  }
+
+  /// Ҳолати умумиро ба майдонҳои маҳаллӣ мегузорад. Амали худи ҳамин
+  /// корт аввал маҳаллӣ иваз мешавад, пас ин ҷо фарқ намеёбад.
+  void _applySync(ContentState? s, {bool initial = false}) {
+    if (s == null) return;
+    var changed = false;
+    if (s.liked != null && s.liked != _liked) {
+      // Дар экрани дигар лайк/бекор шуд — он экран худаш ба сервер
+      // фиристод; ин корт набояд дубора toggle фиристад.
+      _liked = s.liked!;
+      _serverLiked = s.liked!;
+      _likeDebounce?.cancel();
+      changed = true;
+    }
+    if (s.likesCount != null && s.likesCount != _likeCount) {
+      _countUp = s.likesCount! > _likeCount;
+      _likeCount = s.likesCount!;
+      changed = true;
+    }
+    if (s.saved != null && s.saved != _saved) {
+      _saved = s.saved!; changed = true;
+    }
+    if (s.commentsCount != null && s.commentsCount != _commentCount) {
+      _commentCount = s.commentsCount!; changed = true;
+    }
+    if (s.sharesCount != null && s.sharesCount != _shareCount) {
+      _shareCount = s.sharesCount!; changed = true;
+    }
+    if (s.hideLikes != null && s.hideLikes != _hideLikes) {
+      _hideLikes = s.hideLikes!; changed = true;
+    }
+    if (s.commentsOff != null && s.commentsOff != _commentsDisabled) {
+      _commentsDisabled = s.commentsOff!; changed = true;
+    }
+    if (changed && !initial) setState(() {});
+  }
+
+  /// Ҳолати ҷории ин кортро ба ҳамаи экранҳо хабар медиҳад.
+  void _reportSync({bool like = false, bool save = false,
+      bool comments = false, bool shares = false,
+      bool hideLikes = false, bool commentsOff = false}) {
+    ContentSync.instance.report(widget.post.id,
+        liked:         like ? _liked : null,
+        likesCount:    like ? _likeCount : null,
+        saved:         save ? _saved : null,
+        commentsCount: comments ? _commentCount : null,
+        sharesCount:   shares ? _shareCount : null,
+        hideLikes:     hideLikes ? _hideLikes : null,
+        commentsOff:   commentsOff ? _commentsDisabled : null);
+  }
+
+  @override
+  void didUpdateWidget(PostCard old) {
+    super.didUpdateWidget(old);
+    if (identical(old.post, widget.post)) return;
+    if (old.post.id != widget.post.id) {
+      _syncNote.removeListener(_onSync);
+      _syncNote = ContentSync.instance.watch(widget.post.id)
+        ..addListener(_onSync);
+    }
+    // Рӯйхат аз сервер нав шуд — агар маълумот навтар бошад, ба ҳама.
+    ContentSync.primeSoon(widget.post.primeSync);
+  }
+
   void _trackView() {
     if (_viewTracked) return;
     _viewTracked = true;
@@ -232,6 +311,7 @@ class _PostCardState extends State<PostCard>
 
   @override
   void dispose() {
+    _syncNote.removeListener(_onSync);
     FeedAudio.instance.owner.removeListener(_onAudioChanged);
     FeedAudio.instance.muted.removeListener(_onAudioChanged);
     FeedAudio.instance.foreground.removeListener(_onAudioChanged);
@@ -265,6 +345,7 @@ class _PostCardState extends State<PostCard>
       _likeCount += _liked ? 1 : -1;
       if (_likeCount < 0) _likeCount = 0;
     });
+    _reportSync(like: true); // Reels/Explore/профил фавран мебинанд
     if (_liked) {
       HapticFeedback.lightImpact();
       _likeCtrl.forward(from: 0);
@@ -291,6 +372,7 @@ class _PostCardState extends State<PostCard>
         _serverLiked = (b['liked'] as bool?) ?? target;
         if (mounted && (b['likesCount'] is int) && _liked == _serverLiked) {
           setState(() => _likeCount = b['likesCount'] as int);
+          _reportSync(like: true); // рақами дақиқи сервер ба ҳама
         }
       }
     } catch (_) {}
@@ -346,7 +428,10 @@ class _PostCardState extends State<PostCard>
     if (chosen == null || !mounted) return;
     final ok = await CollectionsApi.addPost(chosen.id, widget.post.id);
     if (!mounted) return;
-    if (ok) setState(() => _saved = true);
+    if (ok) {
+      setState(() => _saved = true);
+      _reportSync(save: true);
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(ok
             ? tr('collection.addedTo', {'name': chosen.name})
@@ -356,6 +441,7 @@ class _PostCardState extends State<PostCard>
   Future<void> _toggleSave() async {
     final was = _saved;
     setState(() => _saved = !was);
+    _reportSync(save: true);
     if (!was) {
       HapticFeedback.selectionClick();
       AnalyticsService.instance.logEvent(AnalyticsEvents.postSave,
@@ -364,8 +450,14 @@ class _PostCardState extends State<PostCard>
     try {
       final res = await ApiClient.instance
           .post('/posts/${widget.post.id}/save');
-      if (res.statusCode >= 400 && mounted) setState(() => _saved = was);
-    } catch (_) { if (mounted) setState(() => _saved = was); }
+      if (res.statusCode >= 400) _revertSave(was);
+    } catch (_) { _revertSave(was); }
+  }
+
+  void _revertSave(bool was) {
+    // Баргардонӣ ҳам ба ҳама — вагарна экранҳои дигар «захира» мемонданд.
+    ContentSync.instance.report(widget.post.id, saved: was);
+    if (mounted) setState(() => _saved = was);
   }
 
 
@@ -447,19 +539,22 @@ class _PostCardState extends State<PostCard>
   // Пинҳон/нишон додани лайкҳо — ҳолати UI дарҳол нав мешавад.
   Future<void> _toggleHideLikes() async {
     final target = !_hideLikes;
-    setState(() => _hideLikes = target);
+    // ContentSync: соҳиб дар Reels/Explore/профил ҳам фавран мебинад.
+    void setHide(bool v) {
+      ContentSync.instance.report(widget.post.id, hideLikes: v);
+      if (mounted) setState(() => _hideLikes = v);
+    }
+    setHide(target);
     try {
       final res = await ApiClient.instance
           .post('/posts/${widget.post.id}/hide-likes');
       if (res.statusCode < 400) {
         final b = jsonDecode(res.body);
-        if (b['hideLikes'] is bool && mounted) {
-          setState(() => _hideLikes = b['hideLikes'] as bool);
-        }
-      } else if (mounted) {
-        setState(() => _hideLikes = !target); // баргардон
+        if (b['hideLikes'] is bool) setHide(b['hideLikes'] as bool);
+      } else {
+        setHide(!target); // баргардон
       }
-    } catch (_) { if (mounted) setState(() => _hideLikes = !target); }
+    } catch (_) { setHide(!target); }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_hideLikes
@@ -473,7 +568,11 @@ class _PostCardState extends State<PostCard>
   // Хомӯш/фаъол кардани шарҳҳо — ҳолати UI дарҳол нав мешавад.
   Future<void> _toggleComments() async {
     final target = !_commentsDisabled;
-    setState(() => _commentsDisabled = target);
+    void setOff(bool v) {
+      ContentSync.instance.report(widget.post.id, commentsOff: v);
+      if (mounted) setState(() => _commentsDisabled = v);
+    }
+    setOff(target);
     try {
       final res = await ApiClient.instance
           .post('/posts/${widget.post.id}/toggle-comments');
@@ -481,13 +580,11 @@ class _PostCardState extends State<PostCard>
         final b = jsonDecode(res.body);
         // Backend-и пост калиди «commentsOff»-ро бармегардонад.
         final v = b['commentsOff'] ?? b['commentsDisabled'];
-        if (v is bool && mounted) {
-          setState(() => _commentsDisabled = v);
-        }
-      } else if (mounted) {
-        setState(() => _commentsDisabled = !target);
+        if (v is bool) setOff(v);
+      } else {
+        setOff(!target);
       }
-    } catch (_) { if (mounted) setState(() => _commentsDisabled = !target); }
+    } catch (_) { setOff(!target); }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_commentsDisabled
@@ -915,7 +1012,10 @@ class _PostCardState extends State<PostCard>
           .post('/posts/${widget.post.id}/share');
       if (res.statusCode < 400 && mounted) {
         final b = jsonDecode(res.body);
-        if (b['shares'] is int) setState(() => _shareCount = b['shares'] as int);
+        if (b['shares'] is int) {
+          setState(() => _shareCount = b['shares'] as int);
+          _reportSync(shares: true);
+        }
       }
     } catch (_) {}
   }
@@ -1096,9 +1196,12 @@ class _PostCardState extends State<PostCard>
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SizedBox(
         height: MediaQuery.of(context).size.height * 0.85,
+        // Шумораи шарҳҳо дар CommentsScreen ба ContentSync хабар дода
+        // мешавад ва ин корт онро аз _onSync мегирад (ду бор ++ намешавад).
         child: CommentsScreen(
-          post: widget.post,
-          onCommentAdded: () { if (mounted) setState(() => _commentCount++); })));
+          post: widget.post.copyWith(
+              commentsCount: _commentCount,
+              commentsDisabled: _commentsDisabled))));
   }
 
   void _showTaggedUsers(List<String> users) {

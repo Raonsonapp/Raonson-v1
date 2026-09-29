@@ -32,6 +32,15 @@ class FollowService {
     states.value = next;
   }
 
+  /// Амали корбар, ки аз ҷои дигар (масалан контроллери профил) ба
+  /// сервер рафт — ҲАМЕША менависад. `prime` ин ҷо кор намекард: агар
+  /// ҳолат аллакай буд, unfollow-и профил дар reels «обуна» мемонд.
+  void report(String userId, bool following) {
+    if (userId.isEmpty) return;
+    if (states.value[userId] == following) return;
+    _set(userId, following);
+  }
+
   final Set<String> _inFlight = {};
 
   /// Follow/unfollow мекунад, ҳолатро фавран (optimistic) нав мекунад ва

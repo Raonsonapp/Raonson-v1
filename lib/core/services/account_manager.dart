@@ -9,6 +9,7 @@ import '../firebase_init.dart';
 import '../api/api_client.dart';
 import 'socket_service.dart';
 import 'follow_service.dart';
+import '../content_sync.dart';
 import 'notification_badge_controller.dart';
 import 'user_session.dart';
 import '../storage/token_storage.dart';
@@ -172,6 +173,8 @@ class AccountManager {
     ReelsRepository.clearAllCaches();
     // FollowService override-и обунаҳои корбари куҳнаро дошт — reset.
     FollowService.instance.clear();
+    // Лайк/захираҳои корбари куҳна ба корбари нав намегузаранд.
+    ContentSync.instance.clear();
     // Бейҷи огоҳиҳо-и корбари куҳнаро тоза мекунем — вагарна корбари нав
     // рақами гумшудаи корбари қаблиро мебинад.
     NotificationBadgeController.instance.reset();

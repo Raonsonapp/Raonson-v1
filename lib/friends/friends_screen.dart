@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import '../core/api/api_client.dart';
+import '../core/services/follow_service.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
@@ -206,6 +207,8 @@ class _FriendsScreenState extends State<FriendsScreen>
   Future<void> _follow(String userId) async {
     try {
       await ApiClient.instance.postOk('/follow/$userId');
+      // Ба ҳамаи тугмаҳои дигар (reels, explore, профил) хабар медиҳем.
+      FollowService.instance.report(userId, true);
       setState(() {
         final idx = _suggestions.indexWhere((u) => u.id == userId);
         if (idx >= 0) {

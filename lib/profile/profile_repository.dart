@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/content_sync.dart';
 import '../core/services/user_session.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
@@ -41,6 +42,10 @@ class ProfileRepository {
   }
 
   Future<void> _save(String key, dynamic data) async {
+    // Вақти гирифтан ба ҳар унсур навишта мешавад: вагарна рӯйхати аз
+    // кэш хондашуда «нав» ҳисоб мешуд ва лайки навтари корбарро дар
+    // экранҳои дигар бармегардонд (ниг. ContentSync.prime).
+    ContentSync.stampAll(data);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(key, jsonEncode({

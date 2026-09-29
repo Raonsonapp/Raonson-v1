@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:shimmer/shimmer.dart';
 import '../core/content_events.dart';
+import '../core/content_sync.dart';
 import '../core/ui/report_dialog.dart';
 import '../core/ui/video_frame.dart';
 import '../core/services/user_session.dart';
@@ -178,6 +180,9 @@ class _SearchScreenState extends State<SearchScreen>
       final res = await ApiClient.instance.get('/explore');
       if (res.statusCode == 200 && mounted) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
+        // Reel-ҳо Map-и хом мемонанд — вақти гирифтанро ба онҳо менависем
+        // (ниг. ContentSync.prime: рӯйхати куҳна лайки навро пахш накунад).
+        ContentSync.stampAll(body['reels']);
 
         final items = <_ExploreItem>[];
 
@@ -264,6 +269,7 @@ class _SearchScreenState extends State<SearchScreen>
       if (!mounted) return;
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
+        ContentSync.stampAll(body['reels']);
         setState(() {
           _users = (body['users'] as List? ?? [])
               .map((e) => UserModel.fromJson(e as Map<String, dynamic>)).toList();
@@ -288,6 +294,7 @@ class _SearchScreenState extends State<SearchScreen>
           .timeout(const Duration(seconds: 25));
       if (res.statusCode < 400 && mounted) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
+        ContentSync.stampAll(body['reels']);
         setState(() {
           _posts = (body['posts'] as List? ?? [])
               .map((e) => PostModel.fromJson(e as Map<String, dynamic>)).toList();
@@ -1323,8 +1330,44 @@ class _FeedCardState extends State<_FeedCard> {
   VideoPlayerController? _video;
   bool _ready = false;
   bool _failed = false;
-  bool _liked = false, _saved = false, _muted = false;
-  int  _likeCount = 0, _commentCount = 0, _shareCount = 0;
+  bool _muted = false;
+
+  // Лайк/захира/шарҳ/паҳн — аз ContentSync, то ҳамон рақамҳое бошанд,
+  // ки дар Home, Reels ва профил. Пеш нусхаи худи explore буд.
+  late final ContentState _base = _baseState();
+  ContentState get _cs => ContentSync.instance.view(_id, _base);
+  bool get _liked        => _cs.liked ?? false;
+  bool get _saved        => _cs.saved ?? false;
+  int  get _likeCount    => _cs.likesCount ?? 0;
+  int  get _commentCount => _cs.commentsCount ?? 0;
+  int  get _shareCount   => _cs.sharesCount ?? 0;
+  bool get _likesHidden  => (_cs.hideLikes ?? false) && !_isMine;
+  bool get _commentsOff  => (_cs.commentsOff ?? false) && !_isMine;
+  bool get _isMine {
+    final (authorId, _) = _author;
+    return authorId.isNotEmpty && authorId == UserSession.userId;
+  }
+
+  ContentState _baseState() {
+    final p = widget.item.postData;
+    if (p != null) return p.syncState;
+    final r = widget.item.reelData ?? const {};
+    // Сервер барои «лайкҳо пинҳон» ба бегона -1 мефиристад.
+    final likes = (r['likesCount'] as num?)?.toInt() ?? 0;
+    return ContentState(
+      liked: r['isLiked'] == true || r['liked'] == true,
+      saved: r['isSaved'] == true || r['saved'] == true,
+      likesCount: likes < 0 ? 0 : likes,
+      commentsCount: (r['commentsCount'] as num?)?.toInt() ?? 0,
+      sharesCount: (r['sharesCount'] as num?)?.toInt() ?? 0,
+      hideLikes: r['hideLikes'] == true || likes < 0,
+      commentsOff: r['commentsOff'] == true || r['commentsDisabled'] == true,
+    );
+  }
+
+  late final ValueListenable<ContentState?> _syncNote =
+      ContentSync.instance.watch(_id);
+  void _onSync() { if (mounted) setState(() {}); }
 
   bool get _isVideo =>
       widget.item.type == _ItemType.video || widget.item.type == _ItemType.reel;
@@ -1336,19 +1379,21 @@ class _FeedCardState extends State<_FeedCard> {
   @override
   void initState() {
     super.initState();
-    final r = widget.item.reelData;
     final p = widget.item.postData;
-    if (r != null) {
-      _liked = r['isLiked'] == true;
-      _saved = r['isSaved'] == true;
-      _likeCount = (r['likesCount'] as num?)?.toInt() ?? 0;
-      _commentCount = (r['commentsCount'] as num?)?.toInt() ?? 0;
-      _shareCount = (r['sharesCount'] as num?)?.toInt() ?? 0;
-    } else if (p != null) {
-      _liked = p.liked; _saved = p.saved;
-      _likeCount = p.likesCount; _commentCount = p.commentsCount;
-      _shareCount = p.sharesCount;
-    }
+    final r = widget.item.reelData;
+    final b = _base;
+    ContentSync.primeSoon(() => ContentSync.instance.prime(_id,
+        liked: b.liked, likesCount: b.likesCount, saved: b.saved,
+        commentsCount: b.commentsCount, sharesCount: b.sharesCount,
+        hideLikes: b.hideLikes, commentsOff: b.commentsOff,
+        fetchedAt: p?.fetchedAt ?? (r == null ? null : ContentSync.fetchedAtOf(r))));
+    _syncNote.addListener(_onSync);
+    // Муаллиф: обуна дар ҳамаи экранҳо як хел.
+    final (authorId, _) = _author;
+    final following = p?.user.isFollowing ??
+        (((r?['user'] ?? const {}) as Map)['isFollowing'] == true);
+    ContentSync.primeSoon(
+        () => FollowService.instance.prime(authorId, following));
     if (_isVideo) _initVideo();
   }
 
@@ -1391,6 +1436,7 @@ class _FeedCardState extends State<_FeedCard> {
 
   @override
   void dispose() {
+    _syncNote.removeListener(_onSync);
     _video?.dispose();
     super.dispose();
   }
@@ -1402,21 +1448,37 @@ class _FeedCardState extends State<_FeedCard> {
   }
 
   void _toggleLike() {
-    setState(() {
-      _liked = !_liked;
-      _likeCount += _liked ? 1 : -1;
-      if (_likeCount < 0) _likeCount = 0;
-    });
+    final was = _liked, wasCount = _likeCount;
+    final liked = !was;
+    final count = (wasCount + (liked ? 1 : -1)).clamp(0, 1 << 31);
+    // Home, Reels ва профил ҳамин лайкро фавран мебинанд.
+    ContentSync.instance.report(_id, liked: liked, likesCount: count);
     ApiClient.instance
         .post(_isReel ? '/reels/$_id/like' : '/posts/$_id/like')
-        .then((_) {}, onError: (_) {});
+        .then((res) {
+      if (res.statusCode >= 400) throw Exception('${res.statusCode}');
+      final b = jsonDecode(res.body);
+      if (b is Map && b['liked'] is bool) {
+        ContentSync.instance.report(_id,
+            liked: b['liked'] as bool,
+            likesCount: (b['likesCount'] as num?)?.toInt());
+      }
+    }).catchError((_) {
+      // Сервер нагирифт — баргардонӣ дар ҳамаи экранҳо.
+      ContentSync.instance.report(_id, liked: was, likesCount: wasCount);
+    });
   }
 
   void _toggleSave() {
-    setState(() => _saved = !_saved);
+    final was = _saved;
+    ContentSync.instance.report(_id, saved: !was);
     ApiClient.instance
         .post(_isReel ? '/reels/$_id/save' : '/posts/$_id/save')
-        .then((_) {}, onError: (_) {});
+        .then((res) {
+      if (res.statusCode >= 400) {
+        ContentSync.instance.report(_id, saved: was);
+      }
+    }, onError: (_) => ContentSync.instance.report(_id, saved: was));
   }
 
   /// Паҳн кардан — ва ҳисоб кардани он.
@@ -1432,7 +1494,7 @@ class _FeedCardState extends State<_FeedCard> {
           .post(_isReel ? '/reels/$_id/share' : '/posts/$_id/share');
       if (res.statusCode < 400 && mounted) {
         final n = (jsonDecode(res.body)['shares'] as num?)?.toInt();
-        if (n != null) setState(() => _shareCount = n);
+        if (n != null) ContentSync.instance.report(_id, sharesCount: n);
       }
     } catch (_) {
       // Ҳисоб нашуд — паҳнкунӣ ба ҳар ҳол шуд, хатогӣ нишон надиҳем.
@@ -1568,10 +1630,13 @@ class _FeedCardState extends State<_FeedCard> {
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      // Шумора ба ContentSync — ҳамон рақам дар Home/Reels/профил.
+      // (Пеш дарозии рӯйхати боршуда рақамро иваз мекард — он метавонад
+      // танҳо як саҳифа бошад ва аз рақами сервер фарқ кунад.)
       builder: (_) => _ExploreCommentsSheet(
         id: _id, isReel: _isReel,
-        onAdded: () { if (mounted) setState(() => _commentCount++); },
-        onCount: (n) { if (mounted) setState(() => _commentCount = n); },
+        onAdded: () =>
+            ContentSync.instance.bumpComments(_id, 1, base: _commentCount),
       ),
     );
   }
@@ -1665,13 +1730,17 @@ class _FeedCardState extends State<_FeedCard> {
                   ? 'assets/icons/heart_filled.svg'
                   : 'assets/icons/heart.svg',
               color: _liked ? Color(0xFFFF3040) : AppColors.textPrimary,
-              label: _likeCount > 0 ? _fmt(_likeCount) : null,
+              // Лайкҳо пинҳонанд ва бинанда соҳиб нест → рақам нест.
+              label: (!_likesHidden && _likeCount > 0) ? _fmt(_likeCount) : null,
               onTap: _toggleLike),
+          // Шарҳҳо хомӯш → тугма нест (мисли Home ва Reels).
+          if (!_commentsOff) ...[
           const SizedBox(height: 18),
           _ActionBtn(
               svg: 'assets/icons/comment.svg',
               label: _commentCount > 0 ? _fmt(_commentCount) : null,
               onTap: _openComments),
+          ],
           // Харид — танҳо барои пости магоза (мисли Instagram search + харид).
           if (widget.item.isProduct && widget.item.postData != null) ...[
             const SizedBox(height: 18),
@@ -1733,7 +1802,8 @@ class _FeedCardState extends State<_FeedCard> {
                       fill: 1, color: AppColors.textPrimary, size: 14),
                 ],
                 const SizedBox(width: 10),
-                _FollowChip(userId: widget.item.postData!.user.id),
+                _FollowChip(userId: widget.item.postData!.user.id,
+                    following: widget.item.postData!.user.isFollowing),
               ]),
               // Суруди пост — пеш аз explore ҳеҷ гоҳ намехонд.
               if (_hasSong) ...[
@@ -1784,7 +1854,8 @@ class _FeedCardState extends State<_FeedCard> {
                         fill: 1, color: AppColors.textPrimary, size: 14),
                   ],
                   const SizedBox(width: 10),
-                  _FollowChip(userId: (u['_id'] ?? u['id'] ?? '').toString()),
+                  _FollowChip(userId: (u['_id'] ?? u['id'] ?? '').toString(),
+                      following: u['isFollowing'] == true),
                 ]),
                 if (caption.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -1797,6 +1868,7 @@ class _FeedCardState extends State<_FeedCard> {
           }),
         ),
       // Bottom "add comment" bar — мисли Instagram Reels (расми 2)
+      if (!_commentsOff)
       Positioned(
         left: 0, right: 0, bottom: 0,
         child: SafeArea(
@@ -1859,7 +1931,10 @@ class _ActionBtn extends StatelessWidget {
 
 class _FollowChip extends StatelessWidget {
   final String userId;
-  const _FollowChip({this.userId = ''});
+  /// Ҳолати сервер — вагарна касе, ки аллакай обуна будӣ, «Пайравӣ»
+  /// менамуд, ҳол он ки дар reels «обуна шуд» буд.
+  final bool following;
+  const _FollowChip({this.userId = '', this.following = false});
 
   bool get _isMe =>
       userId.isEmpty || userId == (UserSession.userId ?? '__none__');
@@ -1871,7 +1946,8 @@ class _FollowChip extends StatelessWidget {
     return ValueListenableBuilder<Map<String, bool>>(
       valueListenable: FollowService.instance.states,
       builder: (_, __, ___) {
-        final following = FollowService.instance.resolve(userId, false);
+        final following =
+            FollowService.instance.resolve(userId, this.following);
         return GestureDetector(
           onTap: () => FollowService.instance.toggle(userId, following),
           child: Container(
@@ -2154,24 +2230,34 @@ class _UserRow extends StatefulWidget {
 }
 
 class _UserRowState extends State<_UserRow> {
-  bool _following = false;
   bool _loading   = false;
 
   bool get _isMe => UserSession.userId == widget.user.id;
 
+  // Пеш ҳамеша `false` оғоз мешуд (ҳатто барои касе, ки аллакай обуна
+  // будӣ) ва аз reels/explore бехабар буд. Акнун FollowService.
+  bool get _following =>
+      FollowService.instance.resolve(widget.user.id, widget.user.isFollowing);
+
+  @override
+  void initState() {
+    super.initState();
+    FollowService.instance.states.addListener(_onFollow);
+  }
+
+  @override
+  void dispose() {
+    FollowService.instance.states.removeListener(_onFollow);
+    super.dispose();
+  }
+
+  void _onFollow() { if (mounted) setState(() {}); }
+
   Future<void> _toggle() async {
     if (_loading || _isMe) return;
     setState(() => _loading = true);
-    try {
-      if (_following) {
-        await ApiClient.instance.deleteOk('/follow/${widget.user.id}');
-      } else {
-        await ApiClient.instance.postOk('/follow/${widget.user.id}');
-      }
-      if (mounted) setState(() { _following = !_following; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+    await FollowService.instance.toggle(widget.user.id, _following);
+    if (mounted) setState(() => _loading = false);
   }
 
   @override
@@ -2472,10 +2558,8 @@ class _ExploreCommentsSheet extends StatefulWidget {
   final String id;
   final bool isReel;
   final VoidCallback onAdded;
-  final ValueChanged<int>? onCount;
   const _ExploreCommentsSheet(
-      {required this.id, required this.isReel, required this.onAdded,
-      this.onCount});
+      {required this.id, required this.isReel, required this.onAdded});
   @override
   State<_ExploreCommentsSheet> createState() => _ExploreCommentsSheetState();
 }
@@ -2503,7 +2587,6 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
           _comments = list.cast<Map<String, dynamic>>();
           _loading = false;
         });
-        widget.onCount?.call(_comments.length);
       } else {
         setState(() => _loading = false);
       }
@@ -2519,10 +2602,14 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
           'user': {'username': UserSession.username ?? 'шумо'},
         }));
     widget.onAdded();
+    var ok = false;
     try {
-      await ApiClient.instance
+      final res = await ApiClient.instance
           .post('$_base/${widget.id}/comments', body: {'text': text});
+      ok = res.statusCode < 400;
     } catch (_) {}
+    // Сервер нагирифт — рақами шарҳҳо дар ҳамаи экранҳо бармегардад.
+    if (!ok) ContentSync.instance.bumpComments(widget.id, -1);
   }
 
   @override

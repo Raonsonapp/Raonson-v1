@@ -1,3 +1,4 @@
+import '../core/content_sync.dart';
 import '../core/utils/server_time.dart';
 import 'user_model.dart';
 
@@ -22,6 +23,8 @@ class ReelModel {
   final DateTime? createdAt;     // ← нав
   final bool      hideLikes;        // лайкҳо пинҳонанд
   final bool      commentsDisabled; // шарҳҳо хомӯшанд
+  /// Кай аз сервер гирифта шуд (ниг. ContentSync.prime).
+  final DateTime? fetchedAt;
 
   const ReelModel({
     required this.id,
@@ -44,7 +47,21 @@ class ReelModel {
     this.createdAt,
     this.hideLikes        = false,
     this.commentsDisabled = false,
+    this.fetchedAt,
   });
+
+  /// Ҳолати лайк/шарҳ/... -и ҳамин модел — барои ContentSync.view.
+  ContentState get syncState => ContentState(
+        liked: isLiked, likesCount: likesCount, saved: isSaved,
+        commentsCount: commentsCount, sharesCount: sharesCount,
+        hideLikes: hideLikes, commentsOff: commentsDisabled);
+
+  /// Маълумоти серверии ин reel-ро ба ContentSync медиҳад.
+  void primeSync() => ContentSync.instance.prime(id,
+        liked: isLiked, likesCount: likesCount, saved: isSaved,
+        commentsCount: commentsCount, sharesCount: sharesCount,
+        hideLikes: hideLikes, commentsOff: commentsDisabled,
+        fetchedAt: fetchedAt);
 
   // ── copyWith ─────────────────────────────────────────────────
   ReelModel copyWith({
@@ -68,6 +85,7 @@ class ReelModel {
     DateTime?  createdAt,
     bool?      hideLikes,
     bool?      commentsDisabled,
+    DateTime?  fetchedAt,
   }) {
     return ReelModel(
       id:            id            ?? this.id,
@@ -90,6 +108,7 @@ class ReelModel {
       createdAt:     createdAt     ?? this.createdAt,
       hideLikes:        hideLikes        ?? this.hideLikes,
       commentsDisabled: commentsDisabled ?? this.commentsDisabled,
+      fetchedAt:        fetchedAt        ?? this.fetchedAt,
     );
   }
 
@@ -127,6 +146,7 @@ class ReelModel {
       hideLikes:        (json['hideLikes'] == true) || rawLikes < 0,
       commentsDisabled: json['commentsDisabled'] == true
           || json['commentsOff'] == true,
+      fetchedAt: ContentSync.fetchedAtOf(json) ?? DateTime.now(),
     );
   }
 
@@ -150,6 +170,8 @@ class ReelModel {
     'createdAt':    createdAt?.toIso8601String(),
     'hideLikes':        hideLikes,
     'commentsDisabled': commentsDisabled,
+    if (fetchedAt != null)
+      ContentSync.fetchedAtKey: fetchedAt!.millisecondsSinceEpoch,
     'user': {
       '_id':            user.id,
       'username':       user.username,

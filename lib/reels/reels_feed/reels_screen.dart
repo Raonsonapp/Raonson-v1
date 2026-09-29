@@ -1,6 +1,7 @@
 import 'dart:async';
 import '../../models/story_model.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -13,6 +14,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../core/api/api_client.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/follow_service.dart';
+import '../../core/content_sync.dart';
 import '../../core/services/network_quality.dart';
 import '../../widgets/embed_player.dart';
 import '../../widgets/verified_badge.dart';
@@ -93,39 +95,51 @@ class _ReelsVM extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Ҳолати ҷорӣ аз ContentSync — шояд ҳамин reel дар Home/Explore
+  /// аллакай лайк шуда бошад, ва модели ин рӯйхат инро намедонад.
+  ContentState? _current(String id) {
+    final i = reels.indexWhere((r) => r.id == id);
+    if (i < 0) return null;
+    return ContentSync.instance.view(id, reels[i].syncState);
+  }
+
+  void _patch(String id, ReelModel Function(ReelModel) f) {
+    reels = reels.map((r) => r.id == id ? f(r) : r).toList();
+  }
+
   void toggleLike(String id) {
-    bool nowLiked = false;
-    reels = reels.map((r) {
-      if (r.id != id) return r;
-      final liked = !r.isLiked;
-      nowLiked = liked;
-      return r.copyWith(
-          isLiked: liked, likesCount: r.likesCount + (liked ? 1 : -1));
-    }).toList();
-    if (nowLiked) {
+    final cur = _current(id);
+    if (cur == null) return;
+    final was = cur.liked ?? false;
+    final wasCount = cur.likesCount ?? 0;
+    final liked = !was;
+    final count = (wasCount + (liked ? 1 : -1)).clamp(0, 1 << 31);
+    _patch(id, (r) => r.copyWith(isLiked: liked, likesCount: count));
+    // Home/Explore/профил фавран мебинанд.
+    ContentSync.instance.report(id, liked: liked, likesCount: count);
+    if (liked) {
       AnalyticsService.instance.logEvent(AnalyticsEvents.reelLike,
           params: {'reelId': id});
     }
     notifyListeners();
     _repo.likeReel(id).then((res) {
-      if (res == null) return;
-      reels = reels.map((r) {
-        if (r.id != id) return r;
-        return r.copyWith(
-            isLiked: res['liked'] ?? r.isLiked,
-            likesCount: res['likesCount'] ?? r.likesCount);
-      }).toList();
+      // Хато — баргардонӣ ба ҳама, вагарна дар экранҳои дигар дурӯғ мемонд.
+      final l = res == null ? was : (res['liked'] as bool? ?? liked);
+      final c = res == null
+          ? wasCount
+          : ((res['likesCount'] as num?)?.toInt() ?? count);
+      _patch(id, (r) => r.copyWith(isLiked: l, likesCount: c));
+      ContentSync.instance.report(id, liked: l, likesCount: c);
       notifyListeners();
     });
   }
 
   void toggleSave(String id) {
-    bool nowSaved = false;
-    reels = reels.map((r) {
-      if (r.id != id) return r;
-      nowSaved = !r.isSaved;
-      return r.copyWith(isSaved: nowSaved);
-    }).toList();
+    final cur = _current(id);
+    if (cur == null) return;
+    final nowSaved = !(cur.saved ?? false);
+    _patch(id, (r) => r.copyWith(isSaved: nowSaved));
+    ContentSync.instance.report(id, saved: nowSaved);
     if (nowSaved) {
       AnalyticsService.instance.logEvent(AnalyticsEvents.reelSave,
           params: {'reelId': id});
@@ -606,20 +620,31 @@ class _ReelItemState extends State<_ReelItem> {
   }
   bool _paused = false;
   bool _showHeart = false;
-  bool _saved = false;
   bool _following = false;
   bool _captionExpanded = false;
   bool _isBuffering = false;
   bool _downloading = false; // ← НАВ
-  late bool _hideLikes;      // ҳолати маҳаллӣ (то дарҳол нав шавад)
-  late bool _commentsOff;    // ҳолати маҳаллӣ
+  // Лайк/захира/шарҳ/пинҳонӣ — на нусхаи маҳаллӣ, балки ContentSync:
+  // амале, ки дар Home/Explore шуд, ин ҷо ҳам фавран намоён аст.
+  ContentState get _cs =>
+      ContentSync.instance.view(widget.reel.id, widget.reel.syncState);
+  bool get _saved       => _cs.saved ?? false;
+  bool get _hideLikes   => _cs.hideLikes ?? false;
+  bool get _commentsOff => _cs.commentsOff ?? false;
+  int  get _commentsCount => _cs.commentsCount ?? 0;
+  set _hideLikes(bool v) =>
+      ContentSync.instance.report(widget.reel.id, hideLikes: v);
+  set _commentsOff(bool v) =>
+      ContentSync.instance.report(widget.reel.id, commentsOff: v);
+
+  late ValueListenable<ContentState?> _syncNote;
+  void _onSync() { if (mounted) setState(() {}); }
 
   DateTime? _watchStart;
   int _totalWatchMs = 0;
 
   bool? _hasStory;
   bool _storyViewed = false;
-  late int _commentsCount; // ҳолати маҳаллӣ — дарҳол нав мешавад
 
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
@@ -629,10 +654,9 @@ class _ReelItemState extends State<_ReelItem> {
   @override
   void initState() {
     super.initState();
-    _saved = widget.reel.isSaved;
-    _hideLikes   = widget.reel.hideLikes;
-    _commentsOff = widget.reel.commentsDisabled;
-    _commentsCount = widget.reel.commentsCount;
+    ContentSync.primeSoon(widget.reel.primeSync);
+    _syncNote = ContentSync.instance.watch(widget.reel.id)
+      ..addListener(_onSync);
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
     FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
     _hasStory = widget.reel.user.hasStory ? true : null;
@@ -780,9 +804,12 @@ class _ReelItemState extends State<_ReelItem> {
     super.didUpdateWidget(old);
     // Реели дигар ба ҳамин slot омад — ҳолати маҳаллиро нав мекунем.
     if (widget.reel.id != old.reel.id) {
-      _commentsCount = widget.reel.commentsCount;
-      _hideLikes     = widget.reel.hideLikes;
-      _commentsOff   = widget.reel.commentsDisabled;
+      _syncNote.removeListener(_onSync);
+      _syncNote = ContentSync.instance.watch(widget.reel.id)
+        ..addListener(_onSync);
+    }
+    if (!identical(widget.reel, old.reel)) {
+      ContentSync.primeSoon(widget.reel.primeSync);
     }
     if (widget.isMuted != old.isMuted && _ctrl != null) {
       _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
@@ -799,6 +826,7 @@ class _ReelItemState extends State<_ReelItem> {
 
   @override
   void dispose() {
+    _syncNote.removeListener(_onSync);
     _flashTimer?.cancel();
     _sendWatchTime();
     _ctrl?.removeListener(_onVideoUpdate);
@@ -863,7 +891,7 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _doubleTapLike() {
     HapticFeedback.lightImpact();
-    if (!widget.reel.isLiked) widget.onLike();
+    if (!(_cs.liked ?? false)) widget.onLike();
     setState(() => _showHeart = true);
     Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted) setState(() => _showHeart = false);
@@ -968,13 +996,15 @@ class _ReelItemState extends State<_ReelItem> {
                 .post('/reels/${widget.reel.id}/hide-likes');
             if (res.statusCode < 400) {
               final b = jsonDecode(res.body);
-              if (b['hideLikes'] is bool && mounted) {
-                setState(() => _hideLikes = b['hideLikes'] as bool);
+              if (b['hideLikes'] is bool) {
+                _hideLikes = b['hideLikes'] as bool;
+                if (mounted) setState(() {});
               }
-            } else if (mounted) {
-              setState(() => _hideLikes = !target);
+            } else {
+              _hideLikes = !target; // баргардонӣ ба ҳама экранҳо
+              if (mounted) setState(() {});
             }
-          } catch (_) { if (mounted) setState(() => _hideLikes = !target); }
+          } catch (_) { _hideLikes = !target; if (mounted) setState(() {}); }
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(_hideLikes
@@ -997,13 +1027,15 @@ class _ReelItemState extends State<_ReelItem> {
                 .post('/reels/${widget.reel.id}/toggle-comments');
             if (res.statusCode < 400) {
               final b = jsonDecode(res.body);
-              if (b['commentsOff'] is bool && mounted) {
-                setState(() => _commentsOff = b['commentsOff'] as bool);
+              if (b['commentsOff'] is bool) {
+                _commentsOff = b['commentsOff'] as bool;
+                if (mounted) setState(() {});
               }
-            } else if (mounted) {
-              setState(() => _commentsOff = !target);
+            } else {
+              _commentsOff = !target;
+              if (mounted) setState(() {});
             }
-          } catch (_) { if (mounted) setState(() => _commentsOff = !target); }
+          } catch (_) { _commentsOff = !target; if (mounted) setState(() {}); }
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(_commentsOff
@@ -1038,8 +1070,7 @@ class _ReelItemState extends State<_ReelItem> {
         _menuItem(_saved ? AppIcons.bookmark : AppIcons.bookmark_border_rounded,
             _saved ? tr('reels.saved') : tr('reels.saveAction'), () {
           Navigator.pop(context);
-          setState(() => _saved = !_saved);
-          widget.onSave();
+          widget.onSave(); // VM ба ContentSync хабар медиҳад
         }),
         _menuItem(AppIcons.thumb_up_outlined, tr('reels.interesting'), () {
           Navigator.pop(context);
@@ -1432,10 +1463,10 @@ class _ReelItemState extends State<_ReelItem> {
       user:          reel.user,
       caption:       reel.caption,
       media: [{'url': reel.videoUrl, 'type': 'video'}],
-      likesCount:    reel.likesCount,
+      likesCount:    _cs.likesCount ?? reel.likesCount,
       commentsCount: _commentsCount,
-      liked:         reel.isLiked,
-      saved:         reel.isSaved,
+      liked:         _cs.liked ?? reel.isLiked,
+      saved:         _saved,
       createdAt:     reel.createdAt ?? DateTime.now(),
       commentsDisabled: _commentsOff,
     );
@@ -1449,11 +1480,9 @@ class _ReelItemState extends State<_ReelItem> {
           height: MediaQuery.of(context).size.height * 0.85,
           child: CommentsScreen(
               post: asPost,
-              targetType: 'reel',
-              // Ҳар шарҳи нав — шумориш дарҳол дар рӯи Reel нав мешавад.
-              onCommentAdded: () {
-                if (mounted) setState(() => _commentsCount++);
-              })),
+              // Ҳар шарҳи нав — CommentsScreen ба ContentSync хабар
+              // медиҳад ва рақам дар Reel ва ҳамаи экранҳо нав мешавад.
+              targetType: 'reel')),
     ).then((_) {
       if (!_paused && mounted) _ctrl?.play();
     });
@@ -1556,12 +1585,27 @@ class _ReelItemState extends State<_ReelItem> {
             onTap: () {
               Navigator.pop(context);
               Share.share(url);
+              _recordShare();
             }),
         const SizedBox(height: 8),
       ])),
     ).then((_) {
       if (!_paused && mounted) _ctrl?.play();
     });
+  }
+
+  /// Паҳнкуниро ба сервер мефиристад ва рақами навро ба ҳама экранҳо.
+  Future<void> _recordShare() async {
+    try {
+      final res = await ApiClient.instance
+          .post('/reels/${widget.reel.id}/share');
+      if (res.statusCode < 400) {
+        final n = (jsonDecode(res.body)['shares'] as num?)?.toInt();
+        if (n != null) {
+          ContentSync.instance.report(widget.reel.id, sharesCount: n);
+        }
+      }
+    } catch (_) {}
   }
 
   // Рилсро воқеан ба чат мефиристад. Пеш рӯйхати чатҳо кушода мешуд
@@ -1825,11 +1869,11 @@ class _ReelItemState extends State<_ReelItem> {
             child:
                 Column(mainAxisSize: MainAxisSize.min, children: [
               _LikeBtn(
-                  isLiked: reel.isLiked,
+                  isLiked: _cs.liked ?? false,
                   // Лайкҳо пинҳонанд ва бинанда соҳиб нест → калима, на рақам.
                   count: (_hideLikes && !_isOwner)
                       ? 'Лайкҳо'
-                      : _fmt(reel.likesCount),
+                      : _fmt(_cs.likesCount ?? 0),
                   onTap: widget.onLike),
               const SizedBox(height: 22),
               // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад (мисли Instagram).
@@ -1842,7 +1886,8 @@ class _ReelItemState extends State<_ReelItem> {
               ],
               _ReelStableBtn(
                   svgPath: 'assets/icons/share.svg',
-                  count: '',
+                  // Ҳамон рақаме, ки Explore нишон медиҳад.
+                  count: _fmt(_cs.sharesCount ?? 0),
                   onTap: _share),
               const SizedBox(height: 22),
               _ReelStableBtn(
@@ -1853,8 +1898,7 @@ class _ReelItemState extends State<_ReelItem> {
                   count: '',
                   onTap: () {
                     HapticFeedback.selectionClick();
-                    setState(() => _saved = !_saved);
-                    widget.onSave();
+                    widget.onSave(); // VM ба ContentSync хабар медиҳад
                   }),
               const SizedBox(height: 22),
               GestureDetector(

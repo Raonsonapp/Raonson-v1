@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -8,6 +9,7 @@ import '../../models/reel_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
+import '../../core/content_sync.dart';
 import '../../core/services/user_session.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
@@ -30,10 +32,18 @@ class ReelControls extends StatefulWidget {
 }
 
 class _ReelControlsState extends State<ReelControls> {
-  late bool _liked;
-  late bool _saved;
-  late int  _likeCount;
-  late int  _commentCount;
+  // Ҳамаи рақамҳо аз ContentSync: reel-и аз профил/чат/огоҳинома
+  // кушодашуда ҳамон лайк ва шумораеро нишон медиҳад, ки Reels ва Home.
+  ContentState get _cs => ContentSync.instance.view(reel.id, reel.syncState);
+  bool get _liked        => _cs.liked ?? false;
+  bool get _saved        => _cs.saved ?? false;
+  int  get _likeCount    => _cs.likesCount ?? 0;
+  int  get _commentCount => _cs.commentsCount ?? 0;
+  bool get _hideLikes    => _cs.hideLikes ?? false;
+  bool get _commentsOff  => _cs.commentsOff ?? false;
+
+  late ValueListenable<ContentState?> _syncNote;
+  void _onSync() { if (mounted) setState(() {}); }
 
   ReelModel get reel => widget.reel;
   bool get _isOwner {
@@ -44,26 +54,37 @@ class _ReelControlsState extends State<ReelControls> {
   @override
   void initState() {
     super.initState();
-    _liked = reel.isLiked;
-    _saved = reel.isSaved;
-    _likeCount = reel.likesCount;
-    _commentCount = reel.commentsCount;
+    ContentSync.primeSoon(reel.primeSync);
+    _syncNote = ContentSync.instance.watch(reel.id)..addListener(_onSync);
+  }
+
+  @override
+  void didUpdateWidget(ReelControls old) {
+    super.didUpdateWidget(old);
+    if (old.reel.id == reel.id) return;
+    _syncNote.removeListener(_onSync);
+    _syncNote = ContentSync.instance.watch(reel.id)..addListener(_onSync);
+    ContentSync.primeSoon(reel.primeSync);
+  }
+
+  @override
+  void dispose() {
+    _syncNote.removeListener(_onSync);
+    super.dispose();
   }
 
   void _toggleLike() {
     HapticFeedback.lightImpact();
-    setState(() {
-      _liked = !_liked;
-      _likeCount += _liked ? 1 : -1;
-      if (_likeCount < 0) _likeCount = 0;
-    });
-    ApiClient.instance.post('/reels/${reel.id}/like').then((_) {}, onError: (_) {});
+    toggleReelLike(reel);
   }
 
   void _toggleSave() {
     HapticFeedback.selectionClick();
-    setState(() => _saved = !_saved);
-    ApiClient.instance.post('/reels/${reel.id}/save').then((_) {}, onError: (_) {});
+    final was = _saved;
+    ContentSync.instance.report(reel.id, saved: !was);
+    ApiClient.instance.post('/reels/${reel.id}/save').then((res) {
+      if (res.statusCode >= 400) ContentSync.instance.report(reel.id, saved: was);
+    }, onError: (_) => ContentSync.instance.report(reel.id, saved: was));
   }
 
   // Пештар суроғаи файли видео фиристода мешуд: он барномаро
@@ -125,7 +146,9 @@ class _ReelControlsState extends State<ReelControls> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _ReelCommentsSheet(
         reelId: reel.id,
-        onAdded: () { if (mounted) setState(() => _commentCount++); },
+        // Рақам ба ContentSync — дар Reels/Home/профил ҳам нав мешавад.
+        onAdded: (delta) => ContentSync.instance
+            .bumpComments(reel.id, delta, base: _commentCount),
       ),
     );
   }
@@ -149,13 +172,13 @@ class _ReelControlsState extends State<ReelControls> {
                   ? 'assets/icons/heart_filled.svg'
                   : 'assets/icons/heart.svg',
               color: _liked ? const Color(0xFFFF3040) : Colors.white,
-              label: (reel.hideLikes && !_isOwner)
+              label: (_hideLikes && !_isOwner)
                   ? 'Лайкҳо'
                   : _fmt(_likeCount),
               onTap: _toggleLike),
           const SizedBox(height: 18),
           // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад.
-          if (!reel.commentsDisabled) ...[
+          if (!_commentsOff) ...[
             _SvgBtn(
                 asset: 'assets/icons/comment.svg',
                 label: _fmt(_commentCount),
@@ -269,7 +292,7 @@ class _SvgBtn extends StatelessWidget {
 // ── Шарҳҳои reel — bottom sheet ──
 class _ReelCommentsSheet extends StatefulWidget {
   final String reelId;
-  final VoidCallback onAdded;
+  final void Function(int delta) onAdded;
   const _ReelCommentsSheet({required this.reelId, required this.onAdded});
   @override
   State<_ReelCommentsSheet> createState() => _ReelCommentsSheetState();
@@ -317,11 +340,14 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
           'text': text,
           'user': {'username': 'шумо'},
         }));
-    widget.onAdded();
+    widget.onAdded(1);
+    var ok = false;
     try {
-      await ApiClient.instance
+      final res = await ApiClient.instance
           .post('/reels/${widget.reelId}/comments', body: {'text': text});
+      ok = res.statusCode < 400;
     } catch (_) {}
+    if (!ok) widget.onAdded(-1); // сервер нагирифт — рақам бармегардад
   }
 
   @override
@@ -403,4 +429,30 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
       ),
     );
   }
+}
+
+/// Лайк/бекор кардани reel бо ContentSync (optimistic + баргардонӣ).
+///
+/// Ҳам тугмаи дил ва ҳам ду зарба дар экрани як reel инро истифода
+/// мебаранд — пеш ду зарба дархости toggle-ро кӯр-кӯрона мефиристод ва
+/// reel-и аллакай лайкшударо БЕКОР мекард, дар ҳоле ки дил сурх мемонд.
+void toggleReelLike(ReelModel reel, {bool onlyLike = false}) {
+  final cur = ContentSync.instance.view(reel.id, reel.syncState);
+  final was = cur.liked ?? false;
+  if (onlyLike && was) return;
+  final wasCount = cur.likesCount ?? 0;
+  final liked = !was;
+  final count = (wasCount + (liked ? 1 : -1)).clamp(0, 1 << 31);
+  ContentSync.instance.report(reel.id, liked: liked, likesCount: count);
+  ApiClient.instance.post('/reels/${reel.id}/like').then((res) {
+    if (res.statusCode >= 400) throw Exception('${res.statusCode}');
+    final b = jsonDecode(res.body);
+    if (b is Map && b['liked'] is bool) {
+      ContentSync.instance.report(reel.id,
+          liked: b['liked'] as bool,
+          likesCount: (b['likesCount'] as num?)?.toInt());
+    }
+  }).catchError((_) {
+    ContentSync.instance.report(reel.id, liked: was, likesCount: wasCount);
+  });
 }

@@ -7,6 +7,7 @@ import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../models/reel_model.dart';
 import 'player/reel_player.dart';
+import 'player/reel_controls.dart' show toggleReelLike;
 import '../core/ui/app_icons.dart';
 
 class SingleReelScreen extends StatefulWidget {
@@ -38,11 +39,9 @@ class _SingleReelScreenState extends State<SingleReelScreen> {
           Positioned.fill(
             child: ReelPlayer(
               reel: widget.reel,
-              onLike: () {
-                ApiClient.instance
-                    .post('/reels/${widget.reel.id}/like')
-                    .then((_) {}, onError: (_) {});
-              },
+              // Ду зарба — танҳо ЛАЙК (мисли Instagram), бо ContentSync:
+              // пеш toggle-и кӯр reel-и лайкшударо бекор мекард.
+              onLike: () => toggleReelLike(widget.reel, onlyLike: true),
             ),
           ),
           SafeArea(

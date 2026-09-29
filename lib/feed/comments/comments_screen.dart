@@ -7,6 +7,7 @@ import '../../models/post_model.dart';
 import '../../models/comment_model.dart';
 import '../../models/user_model.dart';
 import '../../core/api/api_client.dart';
+import '../../core/content_sync.dart';
 import '../../core/services/user_session.dart';
 import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
@@ -215,6 +216,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
           final idx = _comments.indexWhere((c) => c.id == tempId);
           if (idx >= 0) _comments[idx] = real;
         });
+        // Шумораи шарҳҳо дар ҳамаи экранҳо (Home, Reels, Explore, профил).
+        ContentSync.instance.bumpComments(widget.post.id, 1,
+            base: widget.post.commentsCount);
         widget.onCommentAdded?.call();
       } else {
         setState(() => _comments.removeWhere((c) => c.id == tempId));
@@ -237,6 +241,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
     try {
       final res = await ApiClient.instance.delete('/comments/$commentId');
       if (res.statusCode >= 400) throw Exception('delete failed');
+      // Танҳо баъди ҳазфи воқеӣ — вагарна рақам бе сабаб кам мешуд.
+      ContentSync.instance.bumpComments(widget.post.id, -removed.length,
+          base: widget.post.commentsCount);
     } catch (_) {
       // Барқарор мекунем — сервер нест накард.
       if (mounted) setState(() => _comments.addAll(removed));

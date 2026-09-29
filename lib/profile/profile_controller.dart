@@ -65,6 +65,9 @@ class ProfileController extends ChangeNotifier {
       posts      = await _repo.getUserPosts(profile?.id ?? userId);
       reels      = await _repo.getUserReels(profile?.id ?? userId);
       highlights = await _repo.getHighlights(profile?.id ?? userId);
+      // Плиткаҳои профил рақамҳоро аз ContentSync мехонанд.
+      for (final p in posts) { p.primeSync(); }
+      for (final r in reels) { r.primeSync(); }
       error      = null;
     } catch (e) {
       error = e.toString();
@@ -76,6 +79,7 @@ class ProfileController extends ChangeNotifier {
   Future<void> loadTaggedPosts() async {
     try {
       taggedPosts = await _repo.getTaggedPosts(profile?.id ?? userId);
+      for (final p in taggedPosts) { p.primeSync(); }
       notifyListeners();
     } catch (_) {}
   }
@@ -83,6 +87,7 @@ class ProfileController extends ChangeNotifier {
   Future<void> loadSavedPosts() async {
     try {
       savedPosts = await _repo.getSavedPosts();
+      for (final p in savedPosts) { p.primeSync(); }
       notifyListeners();
     } catch (_) {}
   }
@@ -124,17 +129,21 @@ class ProfileController extends ChangeNotifier {
       catch (_) { profile = u; notifyListeners(); }
       return;
     }
-    final was   = u.isFollowing;
+    // Ҳолати ҷорӣ аз FollowService: шояд корбар аллакай дар reels/explore
+    // обуна шуда бошад, ва модели профил инро намедонад.
+    final was   = FollowService.instance.resolve(u.id, u.isFollowing);
     final delta = was ? -1 : 1;
     profile = u.copyWith(
         isFollowing:    !was,
         followersCount: (u.followersCount + delta).clamp(0, 999999999));
-    FollowService.instance.prime(u.id, !was); // синхрон бо reels/search/home
+    // report, на prime: prime ҳолати мавҷударо иваз намекунад.
+    FollowService.instance.report(u.id, !was); // синхрон бо reels/search/home
     notifyListeners();
     try {
       was ? await _repo.unfollow(u.id) : await _repo.follow(u.id);
     } catch (_) {
       profile = u;
+      FollowService.instance.report(u.id, was); // баргардонӣ
       notifyListeners();
     }
   }

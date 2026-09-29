@@ -18,6 +18,7 @@ import 'saved_collections_screen.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
+import '../core/content_sync.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
@@ -624,19 +625,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                         onShare:  _shareProfile,
                         verified: user.isVerified,
                         onVerify: user.isVerified ? null : _verifySheet)
-                    : _OtherBtns(
-                        isFollowing:       user.isFollowing,
+                    // FollowService: обунае, ки дар reels/explore шуд,
+                    // дар ин тугма ҳам фавран намоён мешавад.
+                    : ValueListenableBuilder<Map<String, bool>>(
+                        valueListenable: FollowService.instance.states,
+                        builder: (_, __, ___) {
+                          final following = FollowService.instance
+                              .resolve(user.id, user.isFollowing);
+                          return _OtherBtns(
+                        isFollowing:       following,
                         isPrivate:         user.isPrivate,
-                        followRequestSent: user.followRequestSent,
+                        followRequestSent: user.followRequestSent && !following,
                         onFollow:  () {
-                          AnalyticsService.instance.logEvent(user.isFollowing
+                          AnalyticsService.instance.logEvent(following
                               ? AnalyticsEvents.unfollowUser
                               : AnalyticsEvents.followUser);
                           _ctrl.toggleFollow();
                         },
                         onMessage: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                                builder: (_) => ChatRoomScreen(peer: user))))),
+                                builder: (_) => ChatRoomScreen(peer: user))));
+                        })),
 
               // ── MUTUAL ──────────────────────────────────────────────
               if (!_isMe && _mutualTxt(user).isNotEmpty)
@@ -949,17 +958,29 @@ class _PostGrid extends StatelessWidget {
               Positioned(top: 6, left: 6, child: Icon(
                   AppIcons.push_pin_rounded, color: AppColors.textPrimary, size: 15,
                   shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
-            Positioned(bottom: 5, left: 5,
+            // Рақам аз ContentSync: лайке, ки дар Home/Reels/Explore
+            // шуд, дар плиткаи профил ҳам фавран нав мешавад; «лайкҳо
+            // пинҳон» барои бегона — рақам намоён нест.
+            ValueListenableBuilder<ContentState?>(
+              valueListenable: ContentSync.instance.watch(p.id),
+              builder: (_, __, ___) {
+                final s = ContentSync.instance.view(p.id, ContentState(
+                    likesCount: p.likesCount, hideLikes: p.hideLikes));
+                if ((s.hideLikes ?? false) && !isMe) {
+                  return const SizedBox.shrink();
+                }
+                return Positioned(bottom: 5, left: 5,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(AppIcons.remove_red_eye_rounded,
                     fill: 1, color: AppColors.textPrimary, size: 11,
                     shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
                 const SizedBox(width: 2),
-                Text(_f(p.likesCount), style: TextStyle(
+                Text(_f(s.likesCount ?? 0), style: TextStyle(
                     color: AppColors.textPrimary, fontSize: 10,
                     fontWeight: FontWeight.w600,
                     shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
-              ])),
+              ]));
+              }),
           ]));
       });
   }
