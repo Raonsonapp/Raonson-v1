@@ -1207,13 +1207,7 @@ func migrate() {
 // Block кардан followers_count-ро кам намекард ва unfollow-и такрорӣ онро
 // дучанд кам мекард, бинобар ин рақамҳои мавҷуда бояд ислоҳ шаванд.
 func backfillCounters(ctx context.Context) {
-	const name = "recount_follow_and_comment_counters_v1"
-	var exists bool
-	if err := Pool.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM schema_backfills WHERE name=$1)`, name).Scan(&exists); err != nil || exists {
-		return
-	}
-	stmts := []string{
+	runBackfill(ctx, "recount_follow_and_comment_counters_v1", []string{
 		`UPDATE users u SET followers_count =
 		   (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id)`,
 		`UPDATE users u SET following_count =
@@ -1222,6 +1216,24 @@ func backfillCounters(ctx context.Context) {
 		   (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)`,
 		`UPDATE reels r SET comments_count =
 		   (SELECT COUNT(*) FROM reel_comments rc WHERE rc.reel_id = r.id)`,
+	})
+	// Тамошои reel: views_count — ягона манбаъ (ниг. handlers/views.go).
+	// NULL → 0, ва ҳеҷ гоҳ камтар аз шумораи бинандагони воқеӣ не.
+	// Рақамро КАМ намекунем: корбарон онро аллакай дидаанд.
+	runBackfill(ctx, "reel_views_count_floor_v1", []string{
+		`UPDATE reels SET views_count = 0 WHERE views_count IS NULL`,
+		`UPDATE reels r SET views_count = v.n
+		   FROM (SELECT reel_id, COUNT(*)::int AS n FROM reel_views GROUP BY reel_id) v
+		  WHERE v.reel_id = r.id AND r.views_count < v.n`,
+	})
+}
+
+// runBackfill — як бор (аз рӯи [name]) иҷро мекунад; хато → дафъаи оянда.
+func runBackfill(ctx context.Context, name string, stmts []string) {
+	var exists bool
+	if err := Pool.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM schema_backfills WHERE name=$1)`, name).Scan(&exists); err != nil || exists {
+		return
 	}
 	for _, s := range stmts {
 		if _, err := Pool.Exec(ctx, s); err != nil {
@@ -1231,5 +1243,5 @@ func backfillCounters(ctx context.Context) {
 	}
 	Pool.Exec(ctx, `INSERT INTO schema_backfills(name) VALUES($1)
 	                ON CONFLICT DO NOTHING`, name)
-	log.Println("✅ Counters recounted from source tables")
+	log.Printf("✅ Backfill %s applied", name)
 }

@@ -21,10 +21,14 @@ class ReelControls extends StatefulWidget {
   final ReelModel reel;
   final bool isPlaying;
 
+  /// Тугмаи иловагӣ дар сутуни рост пеш аз «⋯» (мас. ист/бозӣ).
+  final Widget? extraAction;
+
   const ReelControls({
     super.key,
     required this.reel,
     required this.isPlaying,
+    this.extraAction,
   });
 
   @override
@@ -193,6 +197,10 @@ class _ReelControlsState extends State<ReelControls> {
                   : 'assets/icons/save.svg',
               onTap: _toggleSave),
           const SizedBox(height: 18),
+          if (widget.extraAction != null) ...[
+            widget.extraAction!,
+            const SizedBox(height: 18),
+          ],
           GestureDetector(
             onTap: _more,
             child: const Icon(AppIcons.more_vert, color: Colors.white, size: 26),

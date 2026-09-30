@@ -49,7 +49,8 @@ func StartJobs() {
 func runAll() {
 	cleanExpiredStories()
 	cleanOldNotifications()
-	cleanOldPostViews()
+	// cleanOldPostViews — хомӯш: post_views манбаи рақами тамошост (ниг.
+	// handlers/views.go); нест кардани сатрҳо рақамро КАМ мекард.
 	cleanOldAdSessions()
 }
 
@@ -84,17 +85,3 @@ func cleanOldNotifications() {
 	}
 }
 
-func cleanOldPostViews() {
-	// Keep only last 500 views per user
-	res, _ := db.Pool.Exec(context.Background(), `
-		DELETE FROM post_views WHERE (user_id, post_id) IN (
-		  SELECT user_id, post_id FROM (
-		    SELECT user_id, post_id,
-		           ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY viewed_at DESC) rn
-		    FROM post_views
-		  ) t WHERE rn > 500
-		)`)
-	if res.RowsAffected() > 0 {
-		log.Printf("[Job] cleaned %d old post views", res.RowsAffected())
-	}
-}

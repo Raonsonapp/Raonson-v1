@@ -27,8 +27,11 @@ class ProfileController extends ChangeNotifier {
 
   StreamSubscription<String>? _deletedSub;
 
+  bool _disposed = false;
+
   @override
   void dispose() {
+    _disposed = true;
     _deletedSub?.cancel();
     super.dispose();
   }
@@ -63,7 +66,8 @@ class ProfileController extends ChangeNotifier {
           : userId;
       profile    = await _repo.getProfile(resolvedId);
       posts      = await _repo.getUserPosts(profile?.id ?? userId);
-      reels      = await _repo.getUserReels(profile?.id ?? userId);
+      reels      = await _repo.getUserReels(profile?.id ?? userId,
+          onFresh: _onFreshReels);
       highlights = await _repo.getHighlights(profile?.id ?? userId);
       // Плиткаҳои профил рақамҳоро аз ContentSync мехонанд.
       for (final p in posts) { p.primeSync(); }
@@ -73,6 +77,15 @@ class ProfileController extends ChangeNotifier {
       error = e.toString();
     }
     isLoading = false;
+    notifyListeners();
+  }
+
+  /// Рӯйхати нави сервер баъди кэш — тамошо/лайкҳо ҳамон рақамҳое
+  /// мешаванд, ки дар Explore ва Reels.
+  void _onFreshReels(List<ReelModel> fresh) {
+    if (_disposed) return;
+    reels = fresh;
+    for (final r in reels) { r.primeSync(); }
     notifyListeners();
   }
 

@@ -120,7 +120,7 @@ func GetReelAudio(c *gin.Context) {
 	// Рилсҳои бо ҳамин садо. Корбари блокшуда ва бандкардашуда берун.
 	rows, err := db.Pool.Query(ctx, `
 		SELECT r.id, COALESCE(r.thumbnail_url,''), r.video_url,
-		       r.views_count, r.likes_count, u.id, u.username, COALESCE(u.avatar,'')
+		       COALESCE(r.views_count,0), r.likes_count, u.id, u.username, COALESCE(u.avatar,'')
 		FROM reels r
 		JOIN users u ON u.id = r.user_id
 		WHERE r.audio_id=$1 AND u.banned=FALSE AND COALESCE(r.media_missing,false)=FALSE
@@ -147,7 +147,7 @@ func GetReelAudio(c *gin.Context) {
 		}
 		reels = append(reels, gin.H{
 			"_id": id, "thumbnailUrl": thumb, "videoUrl": video,
-			"viewsCount": views, "likesCount": likes,
+			"viewsCount": views, "views": views, "likesCount": likes,
 			"user": gin.H{"_id": uid, "username": uname, "avatar": avatar},
 		})
 	}

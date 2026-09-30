@@ -214,14 +214,11 @@ class _BottomNavViewState extends State<_BottomNavView> {
             animation: NotificationBadgeController.instance,
             builder: (_, __) => BottomNavBar(
               currentIndex: nav.currentIndex,
-              onTap: (i) {
-                // Дубора зеркунии tab-и профил → account switcher (мисли Instagram).
-                if (i == 4 && nav.currentIndex == 4) {
-                  showAccountSwitcher(context);
-                } else {
-                  nav.setIndex(i);
-                }
-              },
+              // Зарбаи дубора ба ҳамон таб → ба боло / навсозӣ (ниг.
+              // scrollTopOrRefresh). Профил ҳам: account switcher акнун
+              // танҳо бо пахш-нигоҳ, мисли Instagram — вагарна зарбаи
+              // дубора ҳеҷ гоҳ профилро ба боло намебурд.
+              onTap: nav.setIndex,
               onProfileLongPress: () => showAccountSwitcher(context),
               avatarUrl: liveAvatar,
               notifCount: NotificationBadgeController.instance.count,

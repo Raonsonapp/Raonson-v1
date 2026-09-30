@@ -37,6 +37,8 @@ import '../../core/ads/ads_manager.dart';
 import '../../core/ads/rewarded_ad_flow.dart';
 import '../../core/ui/app_icons.dart';
 import '../audio/audio_page_screen.dart';
+import '../player/reel_gestures.dart';
+import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 import '../../core/ui/r_icon.dart';
 
 class ReelsScreen extends StatelessWidget {
@@ -189,6 +191,8 @@ class _ReelsViewState extends State<_ReelsView> {
   int _currentPage = 0;
   final Map<int, VideoPlayerController> _preloaded = {};
   bool _initialPreloadDone = false;
+  final _refreshKey = GlobalKey<RefreshIndicatorState>();
+  ValueNotifier<int>? _retapNotifier;
 
   @override
   void initState() {
@@ -199,7 +203,46 @@ class _ReelsViewState extends State<_ReelsView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reels аз app_controller бе навбари поён ҳам кушода мешавад —
+    // он ҷо BottomNavController нест.
+    final nav = context.read<BottomNavController?>();
+    if (nav == null || _retapNotifier == nav.scrollToTopNotifier) return;
+    _retapNotifier?.removeListener(_onRetap);
+    _retapNotifier = nav.scrollToTopNotifier..addListener(_onRetap);
+  }
+
+  /// Зарбаи дубора ба таби Reels (мисли Instagram): ба reel-и ЯКУМ
+  /// бармегардем ва лентаро аз нав мегирем — дар ҳар ду ҳолат.
+  void _onRetap() {
+    if (!mounted) return;
+    if (context.read<BottomNavController?>()?.currentIndex != 1) return;
+    final vm = context.read<_ReelsVM>();
+    if (vm.loading) return;
+    if (_pageCtrl.hasClients && _currentPage != 0) _pageCtrl.jumpToPage(0);
+    final ri = _refreshKey.currentState;
+    if (ri != null) {
+      ri.show(); // спиннер + _refresh
+    } else {
+      _refresh(vm);
+    }
+  }
+
+  Future<void> _refresh(_ReelsVM vm) async {
+    _currentPage = 0;
+    _initialPreloadDone = false;
+    for (final ctrl in _preloaded.values) {
+      ctrl.dispose();
+    }
+    _preloaded.clear();
+    await vm.load();
+    if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
+  }
+
+  @override
   void dispose() {
+    _retapNotifier?.removeListener(_onRetap);
     _pageCtrl.dispose();
     for (final ctrl in _preloaded.values) {
       ctrl.dispose();
@@ -450,18 +493,10 @@ class _ReelsViewState extends State<_ReelsView> {
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.black,
       body: RefreshIndicator(
+        key: _refreshKey,
         color: Colors.white,
         backgroundColor: Colors.black54,
-        onRefresh: () async {
-          _currentPage = 0;
-          _initialPreloadDone = false;
-          for (final ctrl in _preloaded.values) {
-            ctrl.dispose();
-          }
-          _preloaded.clear();
-          await vm.load();
-          if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
-        },
+        onRefresh: () => _refresh(vm),
         child: PageView.builder(
         controller: _pageCtrl,
         scrollDirection: Axis.vertical,
@@ -658,7 +693,10 @@ class _ReelItemState extends State<_ReelItem> {
     _syncNote = ContentSync.instance.watch(widget.reel.id)
       ..addListener(_onSync);
     _following = widget.reel.user.isFollowing; // агар аллакай пайравӣ кунӣ, тугма намебарояд
-    FollowService.instance.prime(widget.reel.user.id, widget.reel.user.isFollowing);
+    // fetchedAt: reel-и нав аз сервер ҳолати куҳнаи кэши дискро иваз мекунад.
+    ContentSync.primeSoon(() => FollowService.instance.prime(
+        widget.reel.user.id, widget.reel.user.isFollowing,
+        fetchedAt: widget.reel.fetchedAt));
     _hasStory = widget.reel.user.hasStory ? true : null;
     _initVideo();
     // ҲАМЕША бор мекунем — на танҳо вақте `hasStory` маълум нест.
@@ -815,6 +853,8 @@ class _ReelItemState extends State<_ReelItem> {
       _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
     }
     if (widget.isActive && !old.isActive) {
+      // Бозгашт ба ҳамин reel — бозӣ мекунад, пас нишони ▶ набояд монад.
+      _paused = false; // build баъди didUpdateWidget худкор меояд
       _ctrl?.setVolume(widget.isMuted ? 0.0 : 1.0);
       _ctrl?.play();
       _startWatchTimer();
@@ -841,13 +881,14 @@ class _ReelItemState extends State<_ReelItem> {
   //   як зарба          → садо фаъол / хомӯш (нишони баландгӯяк
   //                       як лаҳза дар марказ медурахшад);
   //   пахш карда нигоҳ  → видео меистад, то ангушт бардошта шавад;
-  //   ду зарба          → лайк.
+  //   нигоҳ дар канор   → 2x, то ангушт бардошта шавад;
+  //   ду зарба          → лайк;
+  //   тугмаи ❚❚ / ▶     → истодан/бозии доимӣ (дар сутуни рост).
   //
   // Пеш як зарба видеоро МЕИСТОНД, ва тугмаи садо ТАНҲО дар ҳолати
   // истода намоён мешуд. Яъне барои фаъол кардани садо корбар бояд
   // аввал видеоро бас мекард, садоро мезад, баъд боз play мекард —
   // маҳз он «play-ро зер кун, stop кун»-е, ки корбар шикоят кард.
-  bool _holding = false;
   bool _flashMute = false;
   Timer? _flashTimer;
 
@@ -859,22 +900,6 @@ class _ReelItemState extends State<_ReelItem> {
     _flashTimer = Timer(const Duration(milliseconds: 750), () {
       if (mounted) setState(() => _flashMute = false);
     });
-  }
-
-  void _holdStart() {
-    if (_ctrl == null || _paused) return;
-    setState(() => _holding = true);
-    _ctrl!.pause();
-    _stopWatchTimer();
-  }
-
-  void _holdEnd() {
-    if (!_holding) return;
-    setState(() => _holding = false);
-    if (!_paused && widget.isActive) {
-      _ctrl?.play();
-      _startWatchTimer();
-    }
   }
 
   void _togglePause() {
@@ -1689,12 +1714,20 @@ class _ReelItemState extends State<_ReelItem> {
     final bottom = MediaQuery.of(context).padding.bottom;
     final top = MediaQuery.of(context).padding.top;
 
-    return GestureDetector(
+    // Зарба → садо; hold миёна → ист; hold канор → 2x (ниг. reel_gestures).
+    return ReelPressGestures(
+      controller: _initialized ? _ctrl : null,
+      paused: _paused,
+      active: widget.isActive,
       onTap: _paused ? _togglePause : _tapToggleMute,
       onDoubleTap: _doubleTapLike,
-      onLongPressStart: (_) => _holdStart(),
-      onLongPressEnd: (_) => _holdEnd(),
-      onLongPressCancel: _holdEnd,
+      onHoldPause: (holding) {
+        if (holding) {
+          _stopWatchTimer();
+        } else if (!_paused) {
+          _startWatchTimer();
+        }
+      },
       child: Stack(fit: StackFit.expand, children: [
         // Фони сиёҳ — кафолат, ки ягон навори хокистарӣ намонад (мисли Instagram)
         const ColoredBox(color: Colors.black),
@@ -1904,6 +1937,12 @@ class _ReelItemState extends State<_ReelItem> {
                     widget.onSave(); // VM ба ContentSync хабар медиҳад
                   }),
               const SizedBox(height: 22),
+              // Тугмаи намоёни ист/бозӣ — зарба ба видео садоро иваз
+              // мекунад, барои ҳамин истодан тугмаи алоҳида дорад.
+              if (_initialized && _ctrl != null && !_isEmbed) ...[
+                ReelPlayPauseButton(paused: _paused, onTap: _togglePause),
+                const SizedBox(height: 18),
+              ],
               GestureDetector(
                   onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
                   child: const SizedBox(
