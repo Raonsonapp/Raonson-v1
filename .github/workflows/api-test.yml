@@ -226,6 +226,13 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_autodm.py
 
+      # Notes: реаксия, ҷавоб ба Direct, блок ва обуна.
+      - name: Санҷиши реаксияҳои Notes
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_note_reactions.py
+
       # «Навбати ту» (Add Yours): занҷир, мавзӯъ, иштирокчиён, блок.
       - name: Санҷиши «Навбати ту»
         env:
