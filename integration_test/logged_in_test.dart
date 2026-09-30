@@ -38,6 +38,7 @@ import 'harness.dart';
 
 import 'package:raonson/core/i18n/strings.dart';
 import 'package:raonson/notifications/notification_badge.dart';
+import 'package:raonson/stories/story_bar.dart';
 import 'package:raonson/app/app.dart' show appNavigatorKey;
 import 'package:raonson/auth/login/login_screen.dart';
 import 'package:raonson/auth/widgets/auth_kit.dart';
@@ -243,8 +244,11 @@ void main() {
     checkStep('огоҳиномаҳо');
 
     // Стори — аввалин доира дар сари лента.
-    final story = find.byType(GestureDetector);
-    if (story.evaluate().length > 2) {
+    // Танҳо доираҳои худи сатри сторис — на ҳар GestureDetector-и
+    // экран (пеш тугмаи «Мағоза» ё дигар чиз зада мешуд).
+    final story = find.descendant(
+        of: find.byType(StoryBar), matching: find.byType(GestureDetector));
+    if (story.evaluate().length > 1) {
       await tester.tap(story.at(1), warnIfMissed: false);
       await pumpFor(tester, 2500);
       await goBack(tester);
@@ -254,7 +258,9 @@ void main() {
     // ── 2. REELS ────────────────────────────────────────────────
     await _tab(tester, 1);
     expect(_visible(find.byType(ReelsScreen)), isTrue,
-        reason: 'Reels кушода нашуд');
+        reason: 'Reels кушода нашуд. Навбар: '
+            '${find.byType(BottomNavScaffold).evaluate().isNotEmpty}, '
+            'дар экран: ${_visibleTexts(tester)}');
     // Ба реели навбатӣ — маҳз ин ҷо плеери кӯҳна бояд озод шавад.
     for (var i = 0; i < 3; i++) {
       final s = find.byType(Scrollable);
