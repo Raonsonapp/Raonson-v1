@@ -83,6 +83,10 @@ class StoryModel {
   final String sharedPostId;
   final String sharedReelId;
 
+  /// Агар ин сторис аз сториси дигаре илова шуда бошад, ки маро
+  /// зикр карда буд — номи муаллифи асл («@ном»).
+  final String sharedStoryUser;
+
   bool get hasShared =>
       sharedPostId.isNotEmpty || sharedReelId.isNotEmpty;
 
@@ -104,6 +108,7 @@ class StoryModel {
     this.song = SongInfo.none,
     this.sharedPostId = '',
     this.sharedReelId = '',
+    this.sharedStoryUser = '',
   });
 
   bool get isVideo => mediaType == 'video';
@@ -144,6 +149,7 @@ class StoryModel {
       song: SongInfo.fromJson(json['song'] as Map<String, dynamic>?),
       sharedPostId: (json['sharedPostId'] ?? '').toString(),
       sharedReelId: (json['sharedReelId'] ?? '').toString(),
+      sharedStoryUser: (json['sharedStoryUser'] ?? '').toString(),
     );
   }
 }

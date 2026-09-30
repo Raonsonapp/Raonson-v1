@@ -44,6 +44,10 @@ class NotificationModel {
       case 'message': return 'паём фиристод';
       case 'effect_sale': return 'эффекти шуморо харид';
       case 'order': return 'маҳсули шуморо фармоиш дод';
+      case 'collab_invite': return 'шуморо ба ҳамкорӣ дар пост даъват кард';
+      case 'collab_accepted': return 'даъвати ҳамкориро қабул кард — пост дар ҳарду профил аст';
+      case 'story_reshared': return 'сторисатро ба сториси худ илова кард';
+      case 'reel_mention': return 'шуморо дар шарҳи Reel зикр кард';
       default: return 'бо шумо амал кард';
     }
   }

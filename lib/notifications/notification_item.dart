@@ -74,7 +74,11 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'comment':
       case 'reel_comment': return AppIcons.mode_comment_rounded;
       case 'reply': return AppIcons.mode_comment_outlined;
-      case 'mention': return AppIcons.alternate_email_rounded;
+      case 'mention':
+      case 'story_mention':
+      case 'story_reshared': return AppIcons.alternate_email_rounded;
+      case 'collab_invite':
+      case 'collab_accepted': return AppIcons.group_add_outlined;
       case 'follow':
       case 'follow_request': return AppIcons.person_add_rounded;
       case 'story_view': return AppIcons.remove_red_eye_rounded;
@@ -108,6 +112,62 @@ class _NotificationItemState extends State<NotificationItem> {
     }
   }
 
+  // Даъвати ҳамкорӣ — мисли Instagram, бевосита аз огоҳинома.
+  Future<void> _respondCollab(bool accept) async {
+    final pid = notification.targetId;
+    if (_busy || pid == null || pid.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await ApiClient.instance
+          .postOk('/posts/$pid/collab/${accept ? 'accept' : 'decline'}');
+      if (!mounted) return;
+      setState(() { _accepted = accept; _busy = false; });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(accept
+          ? 'Қабул шуд — пост акнун дар профили шумо ҳам ҳаст'
+          : 'Даъват рад шуд')));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Даъват дигар дастрас нест')));
+    }
+  }
+
+  // «Илова ба сториси худ» — сторисе, ки маро зикр кардааст.
+  Future<void> _addMentionToStory() async {
+    final sid = notification.targetId;
+    if (_busy || sid == null || sid.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await ApiClient.instance.postOk('/stories/', body: {'sharedStoryId': sid});
+      if (!mounted) return;
+      setState(() { _accepted = true; _busy = false; });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ба сториси шумо илова шуд')));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Сторис дигар дастрас нест (24 соат гузашт)')));
+    }
+  }
+
+  Widget _addStoryAction() {
+    if (_accepted == true) {
+      return Icon(AppIcons.check_rounded, size: 18, color: AppColors.textTertiary);
+    }
+    if (_busy) {
+      return const SizedBox(width: 16, height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2));
+    }
+    // Сторис 24 соат зинда аст.
+    if (DateTime.now().difference(notification.createdAt.toLocal()).inHours >= 24) {
+      return const SizedBox.shrink();
+    }
+    return _requestButton('Ба сторис', const Color(0xFF0095F6), Colors.white,
+        _addMentionToStory);
+  }
+
   Widget _requestButton(String label, Color bg, Color fg, VoidCallback onTap) =>
       GestureDetector(
         onTap: onTap,
@@ -123,7 +183,7 @@ class _NotificationItemState extends State<NotificationItem> {
         ),
       );
 
-  Widget _requestActions() {
+  Widget _requestActions({bool collab = false}) {
     if (_accepted != null) {
       return Icon(
         _accepted == true ? AppIcons.check_rounded : AppIcons.close_rounded,
@@ -139,10 +199,10 @@ class _NotificationItemState extends State<NotificationItem> {
     }
     return Row(mainAxisSize: MainAxisSize.min, children: [
       _requestButton('Қабул', const Color(0xFF0095F6), Colors.white,
-          () => _respond(true)),
+          () => collab ? _respondCollab(true) : _respond(true)),
       const SizedBox(width: 6),
       _requestButton('Рад', AppColors.card, AppColors.textPrimary,
-          () => _respond(false)),
+          () => collab ? _respondCollab(false) : _respond(false)),
     ]);
   }
 
@@ -204,6 +264,14 @@ class _NotificationItemState extends State<NotificationItem> {
           if (notification.type == 'follow_request') ...[
             const SizedBox(width: 8),
             _requestActions(),
+          ],
+          if (notification.type == 'collab_invite') ...[
+            const SizedBox(width: 8),
+            _requestActions(collab: true),
+          ],
+          if (notification.type == 'story_mention') ...[
+            const SizedBox(width: 8),
+            _addStoryAction(),
           ],
           const SizedBox(width: 8),
           // Unread dot

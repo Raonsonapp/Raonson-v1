@@ -287,7 +287,8 @@ func GetFeed(c *gin.Context) {
 		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
 		  AND ($4 = '' OR p.user_id = $1::text AND $4 = 'following'
 		       OR ($4 = 'following' AND EXISTS (SELECT 1 FROM follows ff
-		             WHERE ff.follower_id=$1::text AND ff.following_id=p.user_id))
+		             WHERE ff.follower_id=$1::text AND (ff.following_id=p.user_id
+		               OR ff.following_id = ANY(COALESCE(p.collaborators,'{}')))))
 		       OR ($4 = 'favorites' AND EXISTS (SELECT 1 FROM favorites fv
 		             WHERE fv.user_id=$1::text AND fv.fav_id=p.user_id)))
 		ORDER BY p.created_at DESC
@@ -389,7 +390,8 @@ func GetPost(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"location": extra["location"], "taggedUsers": extra["taggedUsers"],
-		"collaborators": extra["collaborators"], "isPinned": extra["isPinned"],
+		"collaborators": extra["collaborators"], "collaboratorUsers": extra["collaboratorUsers"],
+		"isPinned": extra["isPinned"],
 		"_id": pid2, "caption": cap, "likesCount": likes, "commentsCount": comms,
 		"createdAt": createdAt, "media": nilToEmpty(media), "liked": liked, "saved": saved,
 		"hideLikes": hideLikes, "commentsOff": commentsOff,

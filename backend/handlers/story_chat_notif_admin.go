@@ -33,7 +33,8 @@ func GetStories(c *gin.Context) {
 		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
 		       COALESCE(s.music_track_ms,0),COALESCE(s.music_start_ms,0),
 		       COALESCE(s.music_end_ms,0),
-		       COALESCE(s.shared_post_id,''),COALESCE(s.shared_reel_id,'')
+		       COALESCE(s.shared_post_id,''),COALESCE(s.shared_reel_id,''),
+		       COALESCE(s.shared_story_user,'')
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE
 		  AND ($2::text = '' OR s.user_id = $2::text)
@@ -97,7 +98,8 @@ func GetMyStories(c *gin.Context) {
 		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
 		       COALESCE(s.music_track_ms,0),COALESCE(s.music_start_ms,0),
 		       COALESCE(s.music_end_ms,0),
-		       COALESCE(s.shared_post_id,''),COALESCE(s.shared_reel_id,'')
+		       COALESCE(s.shared_post_id,''),COALESCE(s.shared_reel_id,''),
+		       COALESCE(s.shared_story_user,'')
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.user_id=$1 AND s.expires_at > NOW()
 		ORDER BY s.created_at DESC`, myID)
@@ -130,8 +132,32 @@ func CreateStory(c *gin.Context) {
 		// Пост ё Reel, ки дар ин стори паҳн мешавад.
 		SharedPostID string `json:"sharedPostId"`
 		SharedReelID string `json:"sharedReelId"`
+		// «Илова ба сториси худ» — сторисе, ки МАРО зикр кардааст.
+		SharedStoryID string `json:"sharedStoryId"`
 	}
-	if err := c.ShouldBindJSON(&b); err != nil || b.MediaURL == "" {
+	if err := c.ShouldBindJSON(&b); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
+		return
+	}
+	// Мисли Instagram: танҳо касе, ки дар сторис зикр шудааст, онро ба
+	// сториси худ илова карда метавонад. Медиа аз худи сторис гирифта
+	// мешавад, на аз барнома.
+	var sharedStoryUser, sharedStoryOwner string
+	if b.SharedStoryID != "" {
+		var murl, mtype string
+		err := db.Pool.QueryRow(context.Background(), `
+			SELECT s.media_url, COALESCE(s.media_type,'image'), u.username, u.id
+			FROM stories s JOIN users u ON u.id=s.user_id
+			JOIN story_mentions m ON m.story_id=s.id AND m.user_id=$2
+			WHERE s.id=$1 AND s.expires_at > NOW()`, b.SharedStoryID, myID).
+			Scan(&murl, &mtype, &sharedStoryUser, &sharedStoryOwner)
+		if err != nil || IsBlockedBetween(myID, sharedStoryOwner) {
+			c.JSON(http.StatusForbidden, gin.H{"message": "Ин сторисро илова карда наметавонед"})
+			return
+		}
+		b.MediaURL, b.MediaType = murl, mtype
+	}
+	if b.MediaURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "mediaUrl and mediaType required"})
 		return
 	}
@@ -170,12 +196,16 @@ func CreateStory(c *gin.Context) {
 		`INSERT INTO stories(user_id,media_url,media_type,expires_at,caption,audience,
 		                     music_title,music_artist,music_url,music_art,
 		                     music_track_ms,music_start_ms,music_end_ms,
-		                     shared_post_id,shared_reel_id)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+		                     shared_post_id,shared_reel_id,shared_story_id,shared_story_user)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
 		myID, b.MediaURL, b.MediaType, exp, b.Caption, b.Audience,
 		song.Title, song.Artist, song.URL, song.ArtURL,
 		song.TrackMs, song.StartMs, song.EndMs,
-		sharedPost, sharedReel).Scan(&sid)
+		sharedPost, sharedReel, b.SharedStoryID, sharedStoryUser).Scan(&sid)
+	if sid != "" && sharedStoryOwner != "" {
+		notify(sharedStoryOwner, myID, "story_reshared", sid)
+		pushNotify(sharedStoryOwner, myID, "story_reshared", sid, "сториси шуморо ба сториси худ илова кард")
+	}
 
 	saveSticker(sid, sticker)
 	saveStoryMentions(sid, myID, b.Mentions)
@@ -439,11 +469,11 @@ func scanStoryRows(rows interface {
 		var exp, createdAt interface{}
 		var mTitle, mArtist, mURL, mArt string
 		var mTrackMs, mStartMs, mEndMs int
-		var sharedPost, sharedReel string
+		var sharedPost, sharedReel, sharedStoryUser string
 		rows.Scan(&sid, &murl, &mtype, &exp, &createdAt, &uid, &uname, &uavatar,
 			&verified, &audience, &repliesOff,
 			&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs,
-			&sharedPost, &sharedReel)
+			&sharedPost, &sharedReel, &sharedStoryUser)
 		item := gin.H{
 			"_id": sid, "mediaUrl": murl, "mediaType": mtype,
 			"expiresAt": exp, "createdAt": createdAt,
@@ -462,6 +492,11 @@ func scanStoryRows(rows interface {
 		}
 		if sharedReel != "" {
 			item["sharedReelId"] = sharedReel
+		}
+		// Сториси дигаре, ки маро зикр карда буд ва ман онро ба сториси
+		// худ илова кардам — «@муаллиф» дар стикер нишон дода мешавад.
+		if sharedStoryUser != "" {
+			item["sharedStoryUser"] = sharedStoryUser
 		}
 		item["_owner"] = uid
 		stories = append(stories, item)

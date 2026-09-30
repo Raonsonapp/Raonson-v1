@@ -507,6 +507,9 @@ class _PostCardState extends State<PostCard>
           _MenuItem(icon: AppIcons.add_circle_outline,
               label: 'Ба стори гузоштан',
               onTap: () { Navigator.pop(context); _shareToStory(); }),
+          _MenuItem(icon: AppIcons.group_add_outlined,
+              label: 'Ҳамкорон',
+              onTap: () { Navigator.pop(context); _manageCollabs(); }),
           _SvgMenuTile(assetPath: 'assets/icons/music.svg',
               label: tr('post.changeMusic'),
               onTap: () { Navigator.pop(context); _editMusic(); }),
@@ -661,6 +664,110 @@ class _PostCardState extends State<PostCard>
     }
   }
 
+  bool get _iAmCollaborator {
+    final me = UserSession.userId?.trim() ?? '';
+    return me.isNotEmpty &&
+        widget.post.collaboratorUsers.any((u) => u['_id'] == me);
+  }
+
+  /// Ҳамкор номи худро аз пост мегирад — пост аз профили ӯ меравад,
+  /// дар профили муаллиф мемонад (мисли Instagram).
+  Future<void> _leaveCollab() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Аз ҳамкорӣ баромадан?'),
+        content: const Text(
+            'Пост аз профили шумо меравад ва номи шумо дар он намемонад. '
+            'Пост дар профили муаллиф боқӣ мемонад.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+              child: Text(tr('common.cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Баромадан',
+                  style: TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ApiClient.instance
+          .postOk('/posts/${widget.post.id}/collab/decline');
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Шумо аз ҳамкорӣ баромадед')));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(tr('common.errorTryAgain'))));
+    }
+  }
+
+  /// Муаллиф: рӯйхати ҳамкорон (қабулкарда ва интизор) ва хориҷ кардан.
+  Future<void> _manageCollabs() async {
+    List<Map<String, dynamic>> list = [];
+    try {
+      final res = await ApiClient.instance
+          .getOk('/posts/${widget.post.id}/collabs');
+      final b = jsonDecode(res.body);
+      list = ((b is Map ? b['collaborators'] : null) as List? ?? [])
+          .whereType<Map>()
+          .map((e) => e.cast<String, dynamic>())
+          .toList();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('common.errorTryAgain'))));
+      }
+      return;
+    }
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setS) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          _handle(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Text('Ҳамкорон',
+                style: TextStyle(color: AppColors.textPrimary,
+                    fontSize: 16, fontWeight: FontWeight.w700)),
+          ),
+          if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Ҳамкор нест',
+                  style: TextStyle(color: AppColors.textTertiary)),
+            ),
+          for (final u in List.of(list))
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: AppColors.card,
+                backgroundImage: (u['avatar'] ?? '').toString().isNotEmpty
+                    ? NetworkImage(u['avatar'].toString()) : null),
+              title: Text('@${u['username']}',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: Text(u['status'] == 'accepted' ? 'Қабул кард' : 'Интизор',
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+              trailing: TextButton(
+                onPressed: () async {
+                  try {
+                    await ApiClient.instance.deleteOk(
+                        '/posts/${widget.post.id}/collab/${u['_id']}');
+                    setS(() => list.remove(u));
+                  } catch (_) {}
+                },
+                child: Text(u['status'] == 'accepted' ? 'Хориҷ' : 'Бекор',
+                    style: const TextStyle(color: Colors.redAccent)),
+              ),
+            ),
+          const SizedBox(height: 8),
+        ]),
+      )),
+    );
+  }
+
   void _showOtherMenu() {
     showModalBottomSheet(
       context: context,
@@ -673,6 +780,11 @@ class _PostCardState extends State<PostCard>
           // Агар дар ин пост қайд шуда бошӣ — қайди худро бардор
           // (мисли Instagram: ҳар кас қайд карда метавонад, вале ту
           //  метавонӣ онро аз профили худ бигирӣ).
+          if (_iAmCollaborator)
+            _MenuItem(icon: AppIcons.group_add_outlined,
+                iconColor: Colors.redAccent, labelColor: Colors.redAccent,
+                label: 'Аз ҳамкорӣ баромадан',
+                onTap: () { Navigator.pop(context); _leaveCollab(); }),
           if (_taggedMe)
             _MenuItem(icon: AppIcons.person_off_rounded,
                 label: tr('ui.fc18bb515b'),
@@ -1377,13 +1489,17 @@ class _PostCardState extends State<PostCard>
                 if (post.user.isVerified) ...[ const SizedBox(width: 4),
                   const VerifiedBadge(size: 15) ],
                 // Соавтор (2 user 1 публикатсия) — мисли Instagram
-                if (post.collaborators.isNotEmpty) ...[
+                // Ном аз `collaboratorUsers` — пеш шиносаи хоми корбар
+                // (ID) навишта мешуд.
+                if (post.collaboratorUsers.isNotEmpty) ...[
                   Text(tr('ui.a8e76e4df4'),
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                   Flexible(child: GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/profile-by-username',
-                        arguments: post.collaborators.first),
-                    child: Text(post.collaborators.first,
+                    onTap: () => Navigator.pushNamed(context, '/profile',
+                        arguments: post.collaboratorUsers.first['_id']),
+                    child: Text(post.collaboratorUsers.length > 1
+                        ? '${post.collaboratorUsers.first['username']} +${post.collaboratorUsers.length - 1}'
+                        : post.collaboratorUsers.first['username']!,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontWeight: FontWeight.w600,
                             fontSize: 14, color: AppColors.textPrimary)))),

@@ -17,6 +17,9 @@ class PostModel {
   final String       location;
   final List<String> taggedUsers;
   final List<String> collaborators;
+  /// Ҳамкорони тасдиқкарда: {_id, username, avatar}. `collaborators`
+  /// танҳо шиноса аст — пеш ҳамон шиноса ҳамчун ном нишон дода мешуд.
+  final List<Map<String, String>> collaboratorUsers;
   final String       musicTitle;   // ✅ НАВ
   final String       musicArtist;  // ✅ НАВ
 
@@ -60,6 +63,7 @@ class PostModel {
     this.location    = '',
     this.taggedUsers = const [],
     this.collaborators = const [],
+    this.collaboratorUsers = const [],
     this.musicTitle  = '',
     this.musicArtist = '',
     this.song        = SongInfo.none,
@@ -108,6 +112,7 @@ class PostModel {
     bool? liked, bool? saved, bool? isPinned,
     DateTime? createdAt, String? location, List<String>? taggedUsers,
     List<String>? collaborators,
+    List<Map<String, String>>? collaboratorUsers,
     String? musicTitle, String? musicArtist, SongInfo? song,
     int? sharesCount,
     bool? hideLikes, bool? commentsDisabled,
@@ -128,6 +133,7 @@ class PostModel {
     location:      location      ?? this.location,
     taggedUsers:   taggedUsers   ?? this.taggedUsers,
     collaborators: collaborators ?? this.collaborators,
+    collaboratorUsers: collaboratorUsers ?? this.collaboratorUsers,
     musicTitle:    musicTitle    ?? this.musicTitle,
     musicArtist:   musicArtist   ?? this.musicArtist,
     song:          song          ?? this.song,
@@ -181,6 +187,15 @@ class PostModel {
       location:      (json['location']    ?? '').toString(),
       taggedUsers:   (json['taggedUsers'] as List? ?? []).map((e)=>e.toString()).toList(),
       collaborators: (json['collaborators'] as List? ?? []).map((e)=>e.toString()).toList(),
+      collaboratorUsers: (json['collaboratorUsers'] as List? ?? [])
+          .whereType<Map>()
+          .map((u) => <String, String>{
+                '_id': (u['_id'] ?? u['id'] ?? '').toString(),
+                'username': (u['username'] ?? '').toString(),
+                'avatar': (u['avatar'] ?? '').toString(),
+              })
+          .where((u) => u['username']!.isNotEmpty)
+          .toList(),
       musicTitle:    (json['musicTitle']  ?? json['music']?['title'] ?? '').toString(),
       musicArtist:   (json['musicArtist'] ?? json['music']?['artist'] ?? '').toString(),
       sharesCount:   (json['sharesCount'] as num?)?.toInt() ?? 0,
@@ -214,6 +229,7 @@ class PostModel {
     'createdAt': createdAt.toIso8601String(),
     'location': location, 'taggedUsers': taggedUsers,
     'collaborators': collaborators,
+    'collaboratorUsers': collaboratorUsers,
     // Бе инҳо кэши диск пинҳонии лайкҳо / хомӯшии шарҳҳоро гум мекард.
     'sharesCount': sharesCount,
     'hideLikes': hideLikes,

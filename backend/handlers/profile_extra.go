@@ -71,6 +71,7 @@ func scanFeedPosts(rows interface {
 				"verified": verified, "hasStory": hasStory, "isFollowing": isFollowing},
 		})
 	}
+	attachCollabUsers(posts)
 	return posts
 }
 

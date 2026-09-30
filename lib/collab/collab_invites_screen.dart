@@ -19,7 +19,7 @@ import '../core/ui/app_icons.dart';
 
 /// Даъвате, ки ҷавоб интизор аст.
 class CollabInvite {
-  final String postId, ownerId, username, avatar, caption;
+  final String postId, ownerId, username, avatar, caption, thumb, mediaType;
 
   const CollabInvite({
     required this.postId,
@@ -27,6 +27,8 @@ class CollabInvite {
     required this.username,
     required this.avatar,
     required this.caption,
+    this.thumb = '',
+    this.mediaType = 'image',
   });
 
   factory CollabInvite.fromJson(Map<String, dynamic> j) => CollabInvite(
@@ -35,6 +37,8 @@ class CollabInvite {
         username: (j['username'] ?? '').toString(),
         avatar: (j['avatar'] ?? '').toString(),
         caption: (j['caption'] ?? '').toString(),
+        thumb: (j['thumb'] ?? '').toString(),
+        mediaType: (j['mediaType'] ?? 'image').toString(),
       );
 }
 
@@ -198,6 +202,19 @@ class _CollabInvitesScreenState extends State<CollabInvitesScreen> {
                     height: 1.35)),
           ),
         ]),
+        // Пешнамоиши пост — то бидонед ба чӣ розӣ мешавед.
+        if (i.thumb.isNotEmpty && i.mediaType != 'video') ...[
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Image.network(i.thumb, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      Container(color: AppColors.surface)),
+            ),
+          ),
+        ],
         if (i.caption.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(i.caption,

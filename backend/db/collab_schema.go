@@ -20,4 +20,8 @@ CREATE TABLE IF NOT EXISTS post_collab_invites (
 );
 CREATE INDEX IF NOT EXISTS idx_collab_invites_user
     ON post_collab_invites(user_id, status, created_at DESC);
+-- 'removed': муаллиф ҳамкорро хориҷ кард (дубора қабул намешавад).
+ALTER TABLE post_collab_invites DROP CONSTRAINT IF EXISTS collab_status;
+ALTER TABLE post_collab_invites ADD CONSTRAINT collab_status
+    CHECK (status IN ('pending','accepted','declined','removed'));
 `

@@ -34,16 +34,17 @@ const (
 	StoryLike  Kind = "story_like"
 	StoryReply Kind = "story_reply"
 	// Касе дар пурсиши стори овоз дод.
-	StoryPoll    Kind = "story_poll"
-	StoryAnswer  Kind = "story_answer"  // ҷавоб ба стикери «савол»
-	StoryQuiz    Kind = "story_quiz"    // ҷавоб ба викторина
-	StoryMention Kind = "story_mention" // шуморо дар сторис зикр кард
+	StoryPoll     Kind = "story_poll"
+	StoryAnswer   Kind = "story_answer"   // ҷавоб ба стикери «савол»
+	StoryQuiz     Kind = "story_quiz"     // ҷавоб ба викторина
+	StoryMention  Kind = "story_mention"  // шуморо дар сторис зикр кард
 	StoryAddYours Kind = "story_addyours" // ба занҷири «Навбати ту»-и шумо ҳамроҳ шуд
 	Gift          Kind = "gift"           // ба шумо ситора тӯҳфа кард
-	ReelLike     Kind = "reel_like"
-	ReelReply    Kind = "reel_comment"
+	ReelLike      Kind = "reel_like"
+	ReelReply     Kind = "reel_comment"
 	// Вокуниш (эмодзи/лайк) ба ёддошт (Notes) дар болои чатҳо.
-	NoteReaction Kind = "note_reaction"
+	NoteReaction  Kind = "note_reaction"
+	StoryReshared Kind = "story_reshared" // сториси шуморо ба сториси худ илова кард
 
 	// Эҷодкор.
 	CreatorMilestone Kind = "creator_milestone"
@@ -147,12 +148,13 @@ var rules = map[Kind]Rule{
 	// Ҳамроҳшавиҳо ҷамъ мешаванд — даҳ нафар як огоҳинома.
 	StoryAddYours: {Normal, ChannelSocial, "mentions", true},
 	// Тӯҳфа — пул аст; корбар бояд фавран бидонад.
-	Gift: {High, ChannelSocial, "likes", false},
-	StoryReply:   {Normal, ChannelSocial, "messages", false},
-	ReelLike:     {Normal, ChannelSocial, "likes", true},
-	ReelReply:    {Normal, ChannelSocial, "comments", true},
+	Gift:       {High, ChannelSocial, "likes", false},
+	StoryReply: {Normal, ChannelSocial, "messages", false},
+	ReelLike:   {Normal, ChannelSocial, "likes", true},
+	ReelReply:  {Normal, ChannelSocial, "comments", true},
 	// Мисли лайк: ҷамъ мешавад ва бо танзими «likes» хомӯш мешавад.
-	NoteReaction: {Normal, ChannelSocial, "likes", true},
+	NoteReaction:  {Normal, ChannelSocial, "likes", true},
+	StoryReshared: {Normal, ChannelSocial, "mentions", false},
 
 	CreatorMilestone: {Low, ChannelCreator, "creator", false},
 	CreatorRecap:     {Low, ChannelCreator, "creator", false},

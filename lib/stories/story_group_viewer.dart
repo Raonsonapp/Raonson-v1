@@ -148,6 +148,34 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   StoryModel get _current => widget.stories[_idx];
   bool get _isVideo  => _current.mediaType == 'video';
+  bool _addingToStory = false;
+  final Set<String> _addedToStory = {};
+
+  bool get _mentionsMe {
+    final me = (UserSession.userId ?? '').trim();
+    return me.isNotEmpty && _current.mentions.any((m) => m.userId == me);
+  }
+
+  Future<void> _addToMyStory() async {
+    final id = _current.id;
+    if (_addingToStory || _addedToStory.contains(id)) return;
+    _pause();
+    setState(() => _addingToStory = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ApiClient.instance.postOk('/stories/', body: {'sharedStoryId': id});
+      _addedToStory.add(id);
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Ба сториси шумо илова шуд')));
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Илова нашуд. Боз кӯшиш кунед')));
+    } finally {
+      if (mounted) setState(() => _addingToStory = false);
+      _resume();
+    }
+  }
+
   bool get _isOwner {
     final myId = (UserSession.userId ?? '').trim();
     final sid  = _current.user.id.trim();
@@ -758,6 +786,63 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
                 ),
               );
             }),
+
+          // ── Маро зикр кард → «Ба сториси худ илова кардан» ────
+          // Мисли Instagram: танҳо касе, ки зикр шудааст, мебинад.
+          if (!_isOwner && _mentionsMe)
+            Positioned(
+              left: 0, right: 0, bottom: 96,
+              child: Center(child: GestureDetector(
+                onTap: _addToMyStory,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8)],
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (_addingToStory)
+                      const SizedBox(width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    else
+                      Icon(_addedToStory.contains(_current.id)
+                          ? AppIcons.check_rounded : AppIcons.add_circle_outline,
+                          color: Colors.black, size: 18),
+                    const SizedBox(width: 8),
+                    Text(_addedToStory.contains(_current.id)
+                        ? 'Илова шуд' : 'Ба сториси худ илова кардан',
+                        style: const TextStyle(color: Colors.black,
+                            fontWeight: FontWeight.w700, fontSize: 14)),
+                  ]),
+                ),
+              )),
+            ),
+
+          // ── Сторисе, ки аз сториси дигар илова шуд: «@муаллиф» ──
+          if (_current.sharedStoryUser.isNotEmpty)
+            Positioned(
+              left: 16, bottom: 150,
+              child: GestureDetector(
+                onTap: () {
+                  _pause();
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pushNamed('/profile-by-username',
+                      arguments: _current.sharedStoryUser);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Text('@${_current.sharedStoryUser}',
+                      style: const TextStyle(color: Colors.white,
+                          fontWeight: FontWeight.w700, fontSize: 13)),
+                ),
+              ),
+            ),
 
           // ── Савол / викторина / слайдер / ҳисоби баръакс ────────
           if (_current.sticker != null)

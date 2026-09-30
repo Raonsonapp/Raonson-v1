@@ -97,7 +97,7 @@ func GetSmartFeed(c *gin.Context) {
 		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1 AND hf.following_id=s.user_id)) AND (s.user_id=$1 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1))),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
-		  (CASE WHEN f.following_id IS NOT NULL THEN 100 ELSE 0 END
+		  (CASE WHEN f.following_id IS NOT NULL OR fc.ok THEN 100 ELSE 0 END
 		   + GREATEST(0, 50 - EXTRACT(EPOCH FROM (NOW()-p.created_at))/3600)
 		   + LEAST(50, p.likes_count)
 		   + LEAST(30, p.comments_count*2)
@@ -132,6 +132,13 @@ func GetSmartFeed(c *gin.Context) {
 		FROM posts p
 		JOIN users u ON u.id=p.user_id
 		LEFT JOIN follows     f  ON f.follower_id=$1 AND f.following_id=p.user_id
+		-- Пости ҳамкорӣ: обуначиёни ҲАМКОР ҳам онро ҳамчун «аз обунаҳо»
+		-- мебинанд — мисли Instagram (1 пост, 2 ҳисоб).
+		LEFT JOIN LATERAL (
+		  SELECT TRUE AS ok FROM follows ff
+		  WHERE ff.follower_id=$1
+		    AND ff.following_id = ANY(COALESCE(p.collaborators,'{}'))
+		  LIMIT 1) fc ON TRUE
 		LEFT JOIN post_views  pv ON pv.post_id=p.id AND pv.user_id=$1
 		LEFT JOIN paff        pa ON pa.creator_id=p.user_id
 		LEFT JOIN feed_creator_prefs cp
@@ -156,7 +163,8 @@ func GetSmartFeed(c *gin.Context) {
 		  AND (p.user_id=$1 OR COALESCE(u.is_private,false)=FALSE
 		       OR f.following_id IS NOT NULL)
 		  AND (
-		    (f.following_id IS NOT NULL AND p.created_at > NOW() - INTERVAL '7 days')
+		    ((f.following_id IS NOT NULL OR fc.ok IS TRUE)
+		      AND p.created_at > NOW() - INTERVAL '7 days')
 		    OR
 		    (p.likes_count >= 3 AND p.created_at > NOW() - INTERVAL '3 days')
 		  )
@@ -228,6 +236,7 @@ func GetSmartFeed(c *gin.Context) {
 		return
 	}
 
+	attachCollabUsers(posts)
 	result := gin.H{"posts": posts, "page": page, "limit": limit, "algo": "smart"}
 	if page <= 2 {
 		if b, err := json.Marshal(result); err == nil {

@@ -269,6 +269,8 @@ func main() {
 		po.POST("/:id/comments",     handlers.AddComment)
 		po.POST("/:id/collab/accept",  handlers.AcceptCollab)
 		po.POST("/:id/collab/decline", handlers.DeclineCollab)
+		po.GET("/:id/collabs",              handlers.GetPostCollabs)
+		po.DELETE("/:id/collab/:userId",    handlers.RemoveCollaborator)
 		po.DELETE("/:id",            handlers.DeletePost)
 		po.POST("/:id/like",         handlers.RequireVisible("post"), handlers.TogglePostLike)
 		po.POST("/:id/save",         handlers.RequireVisible("post"), handlers.TogglePostSave)
