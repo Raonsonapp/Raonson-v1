@@ -101,14 +101,28 @@ class _FeedShellState extends State<_FeedShell> {
     }
   }
 
+  // NestedScrollView ду scroll дорад: берунӣ (AppBar) ва дарунӣ (сторисҳо +
+  // постҳо). Пеш танҳо берунӣ ба 0 мерафт — AppBar намоён мешуд, вале
+  // рӯйхат дар ҳамон ҷо мемонд. Ҳоло ҳарду → то қатори сторисҳо.
+  final _nestedKey  = GlobalKey<NestedScrollViewState>();
+  final _refreshKey = GlobalKey<RefreshIndicatorState>();
+
   void _onScrollToTop() {
     final nav = context.read<BottomNavController>();
     if (nav.currentIndex != 0) return;
-    if (_scroll.hasClients) {
-      _scroll.animateTo(0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut);
-    }
+    scrollTopOrRefresh(
+      [_scroll, _nestedKey.currentState?.innerController],
+      () async {
+        // Дар боло → навсозӣ бо спиннери RefreshIndicator (мисли Instagram).
+        context.read<StoryController>().loadStories();
+        final ri = _refreshKey.currentState;
+        if (ri != null) {
+          await ri.show();
+        } else {
+          await context.read<FeedController>().refresh();
+        }
+      },
+    );
   }
 
   void _onScroll() {
@@ -175,6 +189,7 @@ class _FeedShellState extends State<_FeedShell> {
       backgroundColor: AppColors.bg,
       // SliverAppBar — пинҳон мешавад вақти scroll — мисли Instagram
       body: NestedScrollView(
+        key: _nestedKey,
         controller: _scroll,
         headerSliverBuilder: (ctx, _) => [
           SliverAppBar(
@@ -253,7 +268,8 @@ class _FeedShellState extends State<_FeedShell> {
             ],
           ),
         ],
-        body: _FeedBody(isActive: widget.isActive, onCreatePost: widget.onCreatePost),
+        body: _FeedBody(isActive: widget.isActive, onCreatePost: widget.onCreatePost,
+            refreshKey: _refreshKey),
       ),
     );
   }
@@ -263,7 +279,9 @@ class _FeedShellState extends State<_FeedShell> {
 class _FeedBody extends StatelessWidget {
   final bool isActive;
   final VoidCallback? onCreatePost;
-  const _FeedBody({this.isActive = true, this.onCreatePost});
+  /// Дар ҳар лаҳза танҳо як RefreshIndicator сохта мешавад — калид ба он.
+  final GlobalKey<RefreshIndicatorState>? refreshKey;
+  const _FeedBody({this.isActive = true, this.onCreatePost, this.refreshKey});
 
   Future<void> _openStoryGroup(
       BuildContext context,
@@ -363,6 +381,7 @@ class _FeedBody extends StatelessWidget {
     // ── Empty state ─────────────────────────────────────────────
     if (!state.isLoading && state.posts.isEmpty && !state.hasError) {
       return RefreshIndicator(
+        key: refreshKey,
         color: AppColors.neonBlue, backgroundColor: AppColors.surface,
         onRefresh: () => feedCtrl.refresh(),
         child: CustomScrollView(
@@ -410,6 +429,7 @@ class _FeedBody extends StatelessWidget {
     // ── Error state бо Retry ────────────────────────────────────
     if (state.hasError && state.posts.isEmpty) {
       return RefreshIndicator(
+        key: refreshKey,
         color: AppColors.neonBlue, backgroundColor: AppColors.surface,
         onRefresh: () => feedCtrl.refresh(),
         child: CustomScrollView(
@@ -452,6 +472,7 @@ class _FeedBody extends StatelessWidget {
 
     // ── Main feed ───────────────────────────────────────────────
     return RefreshIndicator(
+      key: refreshKey,
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
       onRefresh: () => feedCtrl.refresh(),

@@ -243,7 +243,7 @@ func AiSearch(c *gin.Context) {
 		}
 		query := fmt.Sprintf(`
 			SELECT r.id, r.video_url, COALESCE(r.thumbnail_url,''), r.caption,
-			       r.views_count, r.likes_count, r.created_at,
+			       COALESCE(r.views_count,0), r.likes_count, r.created_at,
 			       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
 			FROM reels r JOIN users u ON u.id=r.user_id
 			WHERE %s %s AND COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
@@ -260,7 +260,7 @@ func AiSearch(c *gin.Context) {
 					&uid, &uname, &uavatar, &verified)
 				reels = append(reels, gin.H{
 					"_id": rid, "videoUrl": vurl, "thumbnailUrl": thumb, "caption": cap,
-					"viewsCount": views, "likesCount": likes, "createdAt": createdAt,
+					"viewsCount": views, "views": views, "likesCount": likes, "createdAt": createdAt,
 					"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 				})
 			}

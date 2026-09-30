@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/reel_model.dart';
+import '../core/services/follow_service.dart';
 
 class ReelsRepository {
   final ApiClient _api;
@@ -147,11 +148,19 @@ class ReelsRepository {
     });
   }
 
+  /// Танҳо барои ҷавоби ШАБАКА (на кэши диск): ҳолати обуна аз сервер
+  /// бо вақти гирифтан ба FollowService меравад ва кэши куҳнаро иваз
+  /// мекунад — ҳатто агар Reels аллакай аз диск нишон дода шуда бошад.
   List<ReelModel> _parse(dynamic body) {
     final List list = body is Map
         ? (body['reels'] ?? body['data'] ?? []) : body as List;
-    return list.map((e) =>
+    final reels = list.map((e) =>
         ReelModel.fromJson(e as Map<String, dynamic>)).toList();
+    for (final r in reels) {
+      FollowService.instance.prime(r.user.id, r.user.isFollowing,
+          fetchedAt: r.fetchedAt ?? DateTime.now());
+    }
+    return reels;
   }
 
   Future<Map<String, dynamic>?> likeReel(String reelId) async {

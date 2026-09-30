@@ -601,7 +601,7 @@ func Search(c *gin.Context) {
 
 	// Reels
 	rRows, _ := db.Pool.Query(context.Background(), `
-		SELECT r.id,r.video_url,r.caption,r.views_count,r.likes_count,r.created_at
+		SELECT r.id,r.video_url,r.caption,COALESCE(r.views_count,0),r.likes_count,r.created_at
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE r.caption ILIKE $1
 		  -- Пеш ин ҷо ҳеҷ филтр набуд: Reels-и ҳисобҳои пӯшида,
@@ -618,7 +618,7 @@ func Search(c *gin.Context) {
 			rRows.Scan(&rid, &vurl, &cap, &views, &likes, &createdAt)
 			reels = append(reels, gin.H{
 				"_id": rid, "videoUrl": vurl, "caption": cap,
-				"views": views, "likesCount": likes, "createdAt": createdAt,
+				"views": views, "viewsCount": views, "likesCount": likes, "createdAt": createdAt,
 			})
 		}
 		rRows.Close()
@@ -760,7 +760,7 @@ func GetReels(c *gin.Context) {
 
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT r.id, r.video_url, COALESCE(r.video_url_low,''),
-		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
+		       COALESCE(r.thumbnail_url,''), r.caption, COALESCE(r.views_count,0),
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
 		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
@@ -800,7 +800,7 @@ func GetReels(c *gin.Context) {
 		reels = append(reels, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 			"thumbnailUrl": thumb, "caption": cap,
-			"viewsCount": views, "likesCount": likes, "commentsCount": comms,
+			"viewsCount": views, "views": views, "likesCount": likes, "commentsCount": comms,
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
 			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 			"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
@@ -809,13 +809,6 @@ func GetReels(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
-}
-
-// POST /reels/:id/view
-func AddReelView(c *gin.Context) {
-	db.Pool.Exec(context.Background(),
-		`UPDATE reels SET views_count=views_count+1 WHERE id=$1`, c.Param("id"))
-	c.JSON(http.StatusOK, gin.H{"viewed": true})
 }
 
 // POST /reels/:id/like
@@ -1049,7 +1042,7 @@ func GetReelByID(c *gin.Context) {
 
 	err := db.Pool.QueryRow(context.Background(), `
 		SELECT r.video_url, COALESCE(r.video_url_low,''),
-		       COALESCE(r.thumbnail_url,''), r.caption, r.views_count,
+		       COALESCE(r.thumbnail_url,''), r.caption, COALESCE(r.views_count,0),
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $2::text
 		            THEN -1 ELSE r.likes_count END, r.comments_count, r.created_at,
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
@@ -1096,7 +1089,7 @@ func GetReelByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 		"thumbnailUrl": thumb, "caption": capt,
-		"viewsCount": views, "likesCount": likes, "commentsCount": comms,
+		"viewsCount": views, "views": views, "likesCount": likes, "commentsCount": comms,
 		"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
 		"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 		"sharesCount": shares,

@@ -165,6 +165,8 @@ class ReelModel {
     'audioTitle':   audioTitle,
     'audioArtist':  audioArtist,
     'audioId':      audioId,
+    // Ҳамон шакле, ки сервер медиҳад ва fromJson аввал мехонад.
+    'audio': {'id': audioId, 'title': audioTitle, 'artist': audioArtist},
     'location':     location,
     'taggedUsers':  taggedUsers,
     'createdAt':    createdAt?.toIso8601String(),
@@ -181,6 +183,13 @@ class ReelModel {
       'postsCount':     user.postsCount,
       'followersCount': user.followersCount,
       'followingCount': user.followingCount,
+      if (user.fullName != null) 'fullName': user.fullName,
+      // ⚠️ Пеш ин майдонҳо навишта намешуданд: баъди бозкушоии барнома
+      // Reels аз кэши диск меомад бо isFollowing=false ва тугмаи
+      // «Пайравӣ кунед» дубора пайдо мешуд, гарчанде корбар обуна буд.
+      'isFollowing':       user.isFollowing,
+      'followRequestSent': user.followRequestSent,
+      'hasStory':          user.hasStory,
     },
   };
 }

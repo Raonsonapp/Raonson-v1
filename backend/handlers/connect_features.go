@@ -398,6 +398,14 @@ func TrackReelWatch(c *gin.Context) {
 		       completed=EXCLUDED.completed,
 		       created_at=NOW()`,
 		myID, rid, b.WatchMs, b.Completed)
+	// Тамошо дар лентаи Reels ҳам тамошо аст. Пеш ин ҷо ҳисоб намешуд ва
+	// рақам танҳо аз reel-и дар профил кушодашуда меафзуд.
+	if b.WatchMs > 0 {
+		if views, err := countReelView(c.Request.Context(), myID, rid); err == nil {
+			c.JSON(http.StatusOK, gin.H{"ok": true, "views": views, "viewsCount": views})
+			return
+		}
+	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 

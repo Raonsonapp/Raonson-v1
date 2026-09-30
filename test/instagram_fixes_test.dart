@@ -149,10 +149,19 @@ void main() {
       expect(reels, contains('onTap: _paused ? _togglePause : _tapToggleMute'));
     });
 
-    test('пахш карда нигоҳ доштан — истодан', () {
-      expect(reels, contains('onLongPressStart: (_) => _holdStart()'));
-      expect(reels, contains('onLongPressEnd: (_) => _holdEnd()'));
-      expect(reels, contains('onLongPressCancel: _holdEnd'));
+    test('пахш карда нигоҳ доштан — истодан (миёна) / 2x (канор)', () {
+      // Ишораҳо акнун дар як виджети умумӣ (Reels, Explore, reel-и алоҳида).
+      expect(reels, contains('return ReelPressGestures('));
+      final g = _read('lib/reels/player/reel_gestures.dart');
+      expect(g, contains('onLongPressStart: (d) => _start(d, box.maxWidth)'));
+      expect(g, contains('onLongPressEnd: (_) => _end()'));
+      expect(g, contains('onLongPressCancel: _end'));
+      expect(g, contains('c.setPlaybackSpeed(2.0)'));
+      expect(g, contains('c.setPlaybackSpeed(1.0)'));
+    });
+
+    test('тугмаи намоёни ист/бозӣ', () {
+      expect(reels, contains('ReelPlayPauseButton(paused: _paused, onTap: _togglePause)'));
     });
 
     test('таймери нишони садо озод мешавад', () {

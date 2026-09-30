@@ -74,7 +74,7 @@ func GetSmartReels(c *gin.Context) {
 		  SELECT
 		    r.id, r.video_url, COALESCE(r.video_url_low,'') AS video_url_low,
 		    COALESCE(r.thumbnail_url,'') AS thumbnail_url,
-		    r.caption, r.views_count,
+		    r.caption, COALESCE(r.views_count,0) AS views_count,
 		    COALESCE(r.audio_id,'')     AS audio_id,
 		    COALESCE(r.audio_title,'')  AS audio_title,
 		    COALESCE(r.audio_artist,'') AS audio_artist,
@@ -199,7 +199,7 @@ func GetSmartReels(c *gin.Context) {
 			"id": id, "_id": id,
 			"videoUrl": videoURL, "videoUrlLow": videoURLLow,
 			"thumbnailUrl": thumb, "caption": cap,
-			"viewsCount": views, "likesCount": likes,
+			"viewsCount": views, "views": views, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
 			"isLiked": liked, "isSaved": saved,
 			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
@@ -234,23 +234,11 @@ func GetSmartReels(c *gin.Context) {
 
 // POST /reels/:id/view — view tracking (dedup барои алгоритм)
 func TrackReelView(c *gin.Context) {
-	rid := c.Param("id")
-	myID := mw.UID(c)
-
-	// Ҳар як user танҳо 1 маротиба ҳисоб мешавад.
-	// DO NOTHING → RowsAffected танҳо ҳангоми дидани АВВАЛИН > 0 мешавад.
-	ct, err := db.Pool.Exec(context.Background(), `
-		INSERT INTO reel_views (user_id, reel_id, viewed_at)
-		VALUES ($1, $2, NOW())
-		ON CONFLICT (user_id, reel_id) DO NOTHING
-	`, myID, rid)
-
-	// Шумораи views танҳо ҳангоми бори АВВАЛ зиёд мешавад
-	if err == nil && ct.RowsAffected() > 0 {
-		db.Pool.Exec(context.Background(), `
-			UPDATE reels SET views_count=views_count+1 WHERE id=$1
-		`, rid)
+	// Ҳар корбар як бор — ниг. countReelView (views.go).
+	views, err := countReelView(c.Request.Context(), mw.UID(c), c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ok": false})
+		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	c.JSON(http.StatusOK, gin.H{"ok": true, "views": views, "viewsCount": views})
 }

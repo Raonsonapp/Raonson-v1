@@ -1044,7 +1044,7 @@ func ExploreGrid(c *gin.Context) {
 			}
 			posts = append(posts, gin.H{
 				"_id": pid, "likesCount": likes, "commentsCount": comments,
-				"viewsCount": views, "createdAt": createdAt,
+				"viewsCount": views, "views": views, "createdAt": createdAt,
 				"caption": caption,
 				"media": nilToEmpty(media),
 				"isProduct": isProduct, "price": price,
@@ -1081,7 +1081,7 @@ func ExploreGrid(c *gin.Context) {
 		       -- «Лайкҳо пинҳон»: пеш дар Explore шумора ба ҳама намоён буд.
 		       CASE WHEN COALESCE(r.hide_likes,false) AND r.user_id <> $1::text
 		            THEN -1 ELSE r.likes_count END,
-		       COALESCE(r.comments_count,0), r.views_count,
+		       COALESCE(r.comments_count,0), COALESCE(r.views_count,0),
 		       COALESCE(r.caption,''),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$1::text),
@@ -1112,7 +1112,7 @@ func ExploreGrid(c *gin.Context) {
 				"_id": rid, "videoUrl": vurl,
 				"thumbnailUrl": thumb,
 				"likesCount": likes, "commentsCount": comments,
-				"viewsCount": views, "caption": caption,
+				"viewsCount": views, "views": views, "caption": caption,
 				// Бе `isSaved` нишони захира ҳамеша холӣ менамуд,
 				// ҳатто агар корбар аллакай захира карда бошад.
 				"isLiked": liked, "isSaved": saved, "sharesCount": shares,

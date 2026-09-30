@@ -39,6 +39,7 @@ import '../core/ui/app_icons.dart';
 import '../core/music/music_bar.dart';
 import '../shop/buy_sheet.dart';
 import '../live/live_rail.dart';
+import '../reels/player/reel_gestures.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  MAIN SCREEN
@@ -121,14 +122,13 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
+  // Зарбаи дубора ба таби Ҷустуҷӯ: грид ба боло, дар боло → Explore-и нав.
+  // (Пеш `_scroll` ба ягон рӯйхат пайваст набуд — зарба ҳеҷ кор намекард.)
   void _onScrollToTop() {
     final nav = context.read<BottomNavController>();
-    if (nav.currentIndex != 3) return;
-    if (_scroll.hasClients) {
-      _scroll.animateTo(0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut);
-    }
+    if (nav.currentIndex != 3 || _mode != _Mode.idle) return;
+    if (_exploreLoading) return;
+    scrollTopOrRefresh([_scroll], _loadExplore);
   }
 
   @override
@@ -558,6 +558,7 @@ class _SearchScreenState extends State<SearchScreen>
                   color: AppColors.textPrimary,
                   backgroundColor: AppColors.bg,
                   child: _ExploreGrid(
+                    controller: _scroll,
                     items:   _exploreItems,
                     onTap:   _openExploreAt,
                     onLongPress: _showExplorePreview,
@@ -977,8 +978,9 @@ class _ExploreGrid extends StatelessWidget {
   final void Function(int index)? onLongPress;
   /// Видеои плитка кушода нашуд.
   final void Function(String id)? onBroken;
+  final ScrollController? controller;
   const _ExploreGrid({required this.items, required this.onTap,
-      this.onLongPress, this.onBroken});
+      this.onLongPress, this.onBroken, this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -997,6 +999,8 @@ class _ExploreGrid extends StatelessWidget {
 
     // Гриди quilted — айнан мисли Instagram Explore (ҳуҷайраҳои баланди reel).
     return GridView.custom(
+      controller: controller,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       gridDelegate: SliverQuiltedGridDelegate(
         crossAxisCount: 3,
@@ -1397,8 +1401,23 @@ class _FeedCardState extends State<_FeedCard> {
     final following = p?.user.isFollowing ??
         (((r?['user'] ?? const {}) as Map)['isFollowing'] == true);
     ContentSync.primeSoon(
-        () => FollowService.instance.prime(authorId, following));
+        () => FollowService.instance.prime(authorId, following,
+            fetchedAt: p?.fetchedAt ??
+                (r == null ? null : ContentSync.fetchedAtOf(r))));
     if (_isVideo) _initVideo();
+    if (widget.isActive) _trackView();
+  }
+
+  /// Тамошо — як бор барои ҳар корт (сервер ҳам dedup мекунад).
+  /// Пеш reel/пости аз Explore кушодашуда ҳеҷ гоҳ ҳисоб намешуд, ва
+  /// рақами Explore бо Reels ва профил мувофиқат намекард.
+  bool _viewTracked = false;
+  void _trackView() {
+    if (_viewTracked) return;
+    _viewTracked = true;
+    ApiClient.instance
+        .post(_isReel ? '/reels/$_id/view' : '/posts/view/$_id')
+        .then((_) {}, onError: (_) {});
   }
 
   Future<void> _initVideo() async {
@@ -1435,6 +1454,8 @@ class _FeedCardState extends State<_FeedCard> {
     super.didUpdateWidget(old);
     if (old.isActive == widget.isActive) return;
     // Аз саҳифа рафтем — садо бояд фавран қатъ шавад.
+    _paused = false;
+    if (widget.isActive) _trackView();
     widget.isActive ? _video?.play() : _video?.pause();
   }
 
@@ -1508,6 +1529,15 @@ class _FeedCardState extends State<_FeedCard> {
   void _toggleMute() {
     setState(() => _muted = !_muted);
     _video?.setVolume(_muted ? 0 : 1);
+  }
+
+  /// Истодани доимӣ бо тугма (на бо зарба — зарба садоро иваз мекунад).
+  bool _paused = false;
+  void _togglePause() {
+    final v = _video;
+    if (v == null || !_ready) return;
+    setState(() => _paused = !_paused);
+    _paused ? v.pause() : v.play();
   }
 
   /// Шиноса ва номи муаллифи ин мундариҷа.
@@ -1653,9 +1683,14 @@ class _FeedCardState extends State<_FeedCard> {
       // ── Media: видеоро бозӣ мекунад, на ҳамчун расм (боги сиёҳ ислоҳ шуд) ──
       if (_isVideo)
         (_ready && _video != null
-            ? GestureDetector(
-                onTap: () => setState(() =>
-                    _video!.value.isPlaying ? _video!.pause() : _video!.play()),
+            // Ҳамон ишораҳои Reels: зарба → садо, hold миёна → ист,
+            // hold канор → 2x; истодани доимӣ — тугмаи ❚❚ дар сутуни рост.
+            ? ReelPressGestures(
+                controller: _video,
+                paused: _paused,
+                active: widget.isActive,
+                onTap: _paused ? _togglePause : _toggleMute,
+                onDoubleTap: () { if (!_liked) _toggleLike(); },
                 child: FittedBox(
                   fit: BoxFit.cover,
                   child: SizedBox(
@@ -1709,6 +1744,7 @@ class _FeedCardState extends State<_FeedCard> {
           ),
         ),
       ),
+      if (_isVideo && _paused) ReelPausedIndicator(onTap: _togglePause),
       // Меню «⋯» — мисли Instagram ва мисли Reels-и худамон.
       // Пеш дар explore ҳеҷ меню набуд: на шикоят, на ҳазфи худӣ.
       Positioned(
@@ -1773,6 +1809,13 @@ class _FeedCardState extends State<_FeedCard> {
                   ? 'assets/icons/save_filled.svg'
                   : 'assets/icons/save.svg',
               onTap: _toggleSave),
+          if (_isVideo && _ready && _video != null) ...[
+            const SizedBox(height: 18),
+            ReelPlayPauseButton(
+                paused: _paused,
+                onTap: _togglePause,
+                color: AppColors.textPrimary),
+          ],
           if (_isVideo || _hasSong) ...[
             const SizedBox(height: 18),
             GestureDetector(

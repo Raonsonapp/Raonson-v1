@@ -42,6 +42,8 @@ import '../core/ui/report_dialog.dart';
 import '../core/i18n/strings.dart';
 import '../core/links/deep_links.dart';
 import '../verification/verification_screen.dart';
+import '../navigation/bottom_nav/bottom_nav_controller.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -97,8 +99,49 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  // Зарбаи дубора ба таби профил (мисли Instagram): аввал ба боло,
+  // дар боло → навсозӣ. Account switcher — бо пахш-нигоҳ дар таб.
+  final _outerScroll = ScrollController();
+  final _nestedKey   = GlobalKey<NestedScrollViewState>();
+  final _refreshKey  = GlobalKey<RefreshIndicatorState>();
+  ValueNotifier<int>? _retapNotifier;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Профили аз экранҳои дигар кушодашуда навбари поён надорад.
+    final nav = context.read<BottomNavController?>();
+    if (nav == null || _retapNotifier == nav.scrollToTopNotifier) return;
+    _retapNotifier?.removeListener(_onRetap);
+    _retapNotifier = nav.scrollToTopNotifier..addListener(_onRetap);
+  }
+
+  void _onRetap() {
+    if (!mounted || widget.userId != 'me') return;
+    if (context.read<BottomNavController?>()?.currentIndex != 4) return;
+    scrollTopOrRefresh(
+      [_outerScroll, _nestedKey.currentState?.innerController],
+      () async {
+        final ri = _refreshKey.currentState;
+        if (ri != null) {
+          await ri.show();
+        } else {
+          await _refreshAll();
+        }
+      },
+    );
+  }
+
+  Future<void> _refreshAll() async {
+    await _ctrl.loadProfile();
+    if (_tab.index == 2) await _ctrl.loadTaggedPosts();
+    if (_isMe && _tab.index == 3) await _ctrl.loadSavedPosts();
+  }
+
   @override
   void dispose() {
+    _retapNotifier?.removeListener(_onRetap);
+    _outerScroll.dispose();
     _ctrl.removeListener(_onCtrl);
     _ctrl.dispose();
     _tab.dispose();
@@ -424,6 +467,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: RefreshIndicator(
+        key: _refreshKey,
         color: AppColors.neonBlue,
         backgroundColor: AppColors.card,
         // ⚠️ Бе ин кашидани экран ба поён ҲЕҶ КОР намекард.
@@ -433,12 +477,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         // ҳақиқӣ дар дохили `TabBarView` аст ва хабарҳои он ба
         // `depth == 2` мерасанд — пас онҳо партофта мешуданд.
         notificationPredicate: (n) => n.depth == 0 || n.depth == 2,
-        onRefresh: () async {
-          await _ctrl.loadProfile();
-          if (_tab.index == 2) await _ctrl.loadTaggedPosts();
-          if (_isMe && _tab.index == 3) await _ctrl.loadSavedPosts();
-        },
+        onRefresh: _refreshAll,
         child: NestedScrollView(
+        key: _nestedKey,
+        controller: _outerScroll,
         headerSliverBuilder: (_, __) => [
           SliverToBoxAdapter(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

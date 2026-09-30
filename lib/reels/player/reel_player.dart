@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../models/reel_model.dart';
@@ -29,6 +32,34 @@ class _ReelPlayerState extends State<ReelPlayer> {
   VideoPlayerController? _videoController;
   bool _initialized = false;
   bool _failed = false;
+
+  // Ҳамон қоидаҳои лентаи Reels: зарба → садо, тугма → ист/бозӣ.
+  bool _paused = false;
+  bool _muted = false;
+  bool _flashMute = false;
+  Timer? _flashTimer;
+
+  void _togglePause() {
+    final c = _videoController;
+    if (c == null || !_initialized) return;
+    setState(() => _paused = !_paused);
+    _paused ? c.pause() : c.play();
+  }
+
+  void _toggleMute() {
+    final c = _videoController;
+    if (c == null || !_initialized) return;
+    HapticFeedback.selectionClick();
+    _flashTimer?.cancel();
+    setState(() {
+      _muted = !_muted;
+      _flashMute = true;
+    });
+    c.setVolume(_muted ? 0 : 1);
+    _flashTimer = Timer(const Duration(milliseconds: 750), () {
+      if (mounted) setState(() => _flashMute = false);
+    });
+  }
 
   bool get _isEmbed => EmbedUtils.isEmbed(widget.reel.videoUrl);
 
@@ -61,6 +92,7 @@ class _ReelPlayerState extends State<ReelPlayer> {
 
   @override
   void dispose() {
+    _flashTimer?.cancel();
     _videoController?.dispose();
     super.dispose();
   }
@@ -114,22 +146,44 @@ class _ReelPlayerState extends State<ReelPlayer> {
             ),
           ),
 
-        ReelGestures(
-          onLike: widget.onLike,
-          onPauseToggle: () {
-            if (ctrl == null || !_initialized) return;
-            if (ctrl.value.isPlaying) {
-              ctrl.pause();
-            } else {
-              ctrl.play();
-            }
-            setState(() {});
+        // Ишораҳо зери тугмаҳо: зарба → садо, ду зарба → лайк,
+        // hold миёна → ист, hold канор → 2x.
+        ReelPressGestures(
+          controller: _initialized ? ctrl : null,
+          paused: _paused,
+          onTap: _paused ? _togglePause : _toggleMute,
+          onDoubleTap: () {
+            HapticFeedback.lightImpact();
+            widget.onLike();
           },
+          child: const SizedBox.expand(),
+        ),
+
+        if (_paused) ReelPausedIndicator(onTap: _togglePause),
+
+        IgnorePointer(
+          child: Center(
+            child: AnimatedOpacity(
+              opacity: _flashMute ? 1 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: Container(
+                width: 64, height: 64,
+                decoration: const BoxDecoration(
+                    color: Colors.black54, shape: BoxShape.circle),
+                child: Icon(
+                    _muted ? AppIcons.volume_off_rounded : AppIcons.volume_up_rounded,
+                    color: Colors.white, size: 30),
+              ),
+            ),
+          ),
         ),
 
         ReelControls(
           reel: widget.reel,
-          isPlaying: ctrl?.value.isPlaying ?? false,
+          isPlaying: _initialized && !_paused,
+          extraAction: (_initialized && ctrl != null)
+              ? ReelPlayPauseButton(paused: _paused, onTap: _togglePause)
+              : null,
         ),
       ],
     );

@@ -178,11 +178,17 @@ class ProfileRepository {
     } catch (_) { return []; }
   }
 
-  Future<List<ReelModel>> getUserReels(String userId) async {
+  /// [onFresh] — рӯйхати нави сервер, вақте аввал кэш баргардонда шуд.
+  ///
+  /// ⚠️ Пеш ҷавоби нав танҳо ба диск навишта мешуд ва экран то кушодани
+  /// навбатӣ рақамҳои кэши куҳнаро (то 24 соат) нишон медод: як видео
+  /// дар Explore 8 тамошо, дар профил 5.
+  Future<List<ReelModel>> getUserReels(String userId,
+      {void Function(List<ReelModel> fresh)? onFresh}) async {
     final cacheKey = _reelsKey(userId);
     final cached = await _load(cacheKey);
     if (cached != null) {
-      _refreshReels(userId, cacheKey);
+      _refreshReels(userId, cacheKey, onFresh);
       return (cached as List)
           .map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
     }
@@ -190,19 +196,28 @@ class ProfileRepository {
   }
 
   Future<List<ReelModel>> _fetchReels(String userId, String cacheKey) async {
+    return (await _tryFetchReels(userId, cacheKey)) ?? [];
+  }
+
+  /// null — шабака/сервер ҷавоб надод (on кэшро иваз накунем).
+  Future<List<ReelModel>?> _tryFetchReels(String userId, String cacheKey) async {
     try {
       final res = await _api.get('/users/$userId/reels').timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400) return [];
+      if (res.statusCode >= 400) return null;
       final body = jsonDecode(res.body);
       final raw  = body is List ? body : (body['reels'] ?? []) as List;
       await _save(cacheKey, raw);
       return raw.map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
-    } catch (_) { return []; }
+    } catch (_) { return null; }
   }
 
-  void _refreshReels(String userId, String cacheKey) {
+  void _refreshReels(String userId, String cacheKey,
+      void Function(List<ReelModel>)? onFresh) {
     Future.delayed(const Duration(milliseconds: 800), () async {
-      try { await _fetchReels(userId, cacheKey); } catch (_) {}
+      try {
+        final fresh = await _tryFetchReels(userId, cacheKey);
+        if (fresh != null) onFresh?.call(fresh);
+      } catch (_) {}
     });
   }
 
