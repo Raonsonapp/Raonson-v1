@@ -1,4 +1,7 @@
+import '../../core/ads/ad_eligibility.dart';
+import '../../core/ads/ad_slot_layout.dart';
 import '../../core/ads/feed_ad_card.dart';
+import '../../core/ads/sponsored_ads.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -33,13 +36,6 @@ import '../../core/ui/tajikshop_brand.dart';
 import 'mode_feed_screen.dart';
 import '../../shop/shop_screen.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
-
-/// Байни чанд пост як реклама.
-///
-/// Instagram тақрибан ҳар 4–6 постро як реклама мемонад. Камтар
-/// кардан лентаро ба реклама табдил медиҳад; зиёд кардан даромадро
-/// нест мекунад.
-const int kPostsPerAd = 5;
 
 class FeedScreen extends StatelessWidget {
   final bool isActive;
@@ -88,6 +84,8 @@ class _FeedShellState extends State<_FeedShell> {
     _scroll = ScrollController()..addListener(_onScroll);
     NotificationService.startPolling();
     AnalyticsService.instance.logEvent(AnalyticsEvents.feedView);
+    // Рекламаи дохилӣ — як дархост барои тамоми лента (VIP — ҳеҷ).
+    SponsoredAdsRepository.instance.prefetch(SponsoredPlacement.feed);
   }
 
   @override
@@ -499,44 +497,48 @@ class _FeedBody extends StatelessWidget {
             ),
           // ── Лента бо реклама, мисли Instagram ──
           //
-          // Дар Instagram реклама дар ХУДИ лента, байни постҳо
-          // меояд — на ҳамчун равзанаи болопӯш.
+          // Реклама дар ХУДИ лента, байни постҳо — мисли пости оддӣ,
+          // ки корбар онро гузашта метавонад. Ҳеҷ равзанаи болопӯш.
           //
-          // `FeedAdCard` кайҳо навишта шуда буд, вале аз ҲЕҶ ҶО
-          // истифода намешуд. Яъне реклама дар лента умуман набуд.
-          //
-          // Ҳар `kPostsPerAd` пост як карти реклама. Агар шиноса
-          // танзим нашуда бошад, карт худаш холӣ мемонад —
-          // `FeedAdCard` инро месанҷад.
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                // Ҷои реклама: баъди ҳар `kPostsPerAd` пост.
-                if (index > 0 && index % (kPostsPerAd + 1) == kPostsPerAd) {
-                  return const FeedAdCard();
-                }
-                // Шумораи постҳо аз рӯи ҷойҳои гирифтаи реклама.
-                final postIndex = index - index ~/ (kPostsPerAd + 1);
+          // Ҷойҳо: баъди пости 4-ум, баъд ҳар 8 пост (`kFeedAdLayout`).
+          // VIP/Pro — ҷойҳо умуман сохта намешаванд.
+          ValueListenableBuilder<bool>(
+            valueListenable: AdEligibility.instance.adsFree,
+            builder: (context, adsFree, _) {
+              final layout = kFeedAdLayout.copyWith(enabled: !adsFree);
+              final total = layout.totalFor(state.posts.length);
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    // Сатри охирин (loader) ҳеҷ гоҳ реклама нест.
+                    if (index < total && layout.isAdAt(index)) {
+                      final slot = layout.slotAt(index);
+                      return FeedAdCard(
+                          key: ValueKey('feed-ad-$slot'), slot: slot);
+                    }
+                    // Индекси пост бе ҷойҳои реклама.
+                    final postIndex = layout.itemIndexAt(index);
 
-                if (postIndex >= state.posts.length) {
-                  return state.hasMore
-                      ? const Padding(padding: EdgeInsets.all(16),
-                          child: Center(child: CircularProgressIndicator(
-                              color: AppColors.neonBlue, strokeWidth: 2)))
-                      : const SizedBox(height: 40);
-                }
-                return PostCard(
-                  key: ValueKey(state.posts[postIndex].id), // ҳар пост state-и худаш
-                  post: state.posts[postIndex],
-                  isActive: isActive,
-                  onDeleted: () => context.read<FeedController>()
-                      .removePost(state.posts[postIndex].id),
-                );
-              },
-              // Постҳо + картҳои реклама + як сатри поёнӣ.
-              childCount: state.posts.length +
-                  state.posts.length ~/ kPostsPerAd + 1,
-            ),
+                    if (index >= total || postIndex >= state.posts.length) {
+                      return state.hasMore
+                          ? const Padding(padding: EdgeInsets.all(16),
+                              child: Center(child: CircularProgressIndicator(
+                                  color: AppColors.neonBlue, strokeWidth: 2)))
+                          : const SizedBox(height: 40);
+                    }
+                    return PostCard(
+                      key: ValueKey(state.posts[postIndex].id), // ҳар пост state-и худаш
+                      post: state.posts[postIndex],
+                      isActive: isActive,
+                      onDeleted: () => context.read<FeedController>()
+                          .removePost(state.posts[postIndex].id),
+                    );
+                  },
+                  // Постҳо + ҷойҳои реклама + як сатри поёнӣ.
+                  childCount: total + 1,
+                ),
+              );
+            },
           ),
         ],
       ),

@@ -157,7 +157,8 @@ void main() {
     test('баннер ба stream обуна мешавад ва баъд load мекунад', () {
       for (final path in [
         'lib/core/ads/ad_banner_widget.dart',
-        'lib/core/ads/feed_ad_card.dart',
+        // Баннери лента/Reels аз feed_ad_card.dart ба ин ҷо омад.
+        'lib/core/ads/yandex_banner_slot.dart',
       ]) {
         final code = adFiles[path];
         expect(code, isNotNull, reason: '$path yandex-ро истифода намебарад');
@@ -173,7 +174,8 @@ void main() {
       // Бе ин, ҳар бор кушодани экран як обунаи нав мемонад.
       for (final path in [
         'lib/core/ads/ad_banner_widget.dart',
-        'lib/core/ads/feed_ad_card.dart',
+        // Баннери лента/Reels аз feed_ad_card.dart ба ин ҷо омад.
+        'lib/core/ads/yandex_banner_slot.dart',
       ]) {
         expect(adFiles[path], contains('_sub?.cancel();'), reason: path);
         expect(adFiles[path], contains('_bannerAd?.destroy();'), reason: path);

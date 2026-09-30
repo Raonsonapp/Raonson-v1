@@ -571,6 +571,12 @@ func main() {
 		adRL := mw.RateLimit(30, 60)
 		ad2.POST("/watch-session", adRL, handlers.AdWatchSession)
 		ad2.POST("/watched", adRL, handlers.AdWatched)
+
+		// Рекламаи дохилӣ дар лента/Reels. VIP рӯйхати холӣ мегирад.
+		ad2.GET("/sponsored", handlers.GetSponsored)
+		ad2.POST("/sponsored/:id/impression", handlers.SponsoredImpression)
+		ad2.POST("/sponsored/:id/click", handlers.SponsoredClick)
+		ad2.POST("/sponsored/:id/hide", handlers.HideSponsored)
 	}
 
 	// ── ДАЪВАТ ──────────────────────────────────────────────────
@@ -631,6 +637,9 @@ func main() {
 		ad.POST("/unverify/:id", handlers.UnverifyUser)
 		ad.POST("/vip/:id",     handlers.SetVip)
 		ad.POST("/unvip/:id",   handlers.UnsetVip)
+		ad.GET("/promotions",               handlers.AdminListPromotions)
+		ad.POST("/promotions/:id/approve",  handlers.AdminApprovePromotion)
+		ad.POST("/promotions/:id/reject",   handlers.AdminRejectPromotion)
 		ad.DELETE("/users/:id", handlers.AdminDeleteUser)
 		ad.GET("/orders",       handlers.AdminOrders) // фармоишҳо + комиссияи умумӣ
 		ad.GET("/reports",          handlers.AdminGetReports)

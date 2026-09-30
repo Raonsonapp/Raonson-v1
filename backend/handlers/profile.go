@@ -152,6 +152,10 @@ func GetMyProfile(c *gin.Context) {
 	}
 	clearExpiredNote(myID, u)
 	u["isFollowing"] = false
+	// VIP/Pro — бе реклама. Майдони алоҳида, то барнома маънои
+	// «VIP»-ро (сифати видео ва ғ.) бо «реклама нест» омехта накунад.
+	vip, _ := u["isVip"].(bool)
+	u["adsFree"] = vip
 
 	// Постҳо ва маълумот якҷо — 1 trip to DB
 	posts := postsForUser(myID, myID, 30)

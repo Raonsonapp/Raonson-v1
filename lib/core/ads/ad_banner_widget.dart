@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'ad_config.dart';
+import 'ad_eligibility.dart';
 import 'package:yandex_mobileads/mobile_ads.dart';
 import '../../app/app_theme.dart';
 
@@ -31,6 +32,8 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
     // ба хатои «AdUnitId does not exist» меорад.
     final unitId = AdConfig.idFor(AdFormat.banner);
     if (unitId == null) return;
+    // VIP/Pro — ҳеҷ дархост.
+    if (AdEligibility.instance.isAdsFree) return;
     final width = MediaQuery.of(context).size.width.round();
 
     final ad = BannerAd(adSize: BannerAdSize.sticky(width: width));

@@ -15,6 +15,8 @@ import 'core/services/subscription_service.dart';
 import 'core/services/chat_lock_service.dart';
 import 'core/services/network_service.dart';
 import 'core/services/network_quality.dart';
+import 'core/ads/ad_eligibility.dart';
+import 'core/services/vip_service.dart';
 import 'core/ads/ads_manager.dart';
 import 'core/services/ad_consent_service.dart';
 import 'core/services/server_wakeup_service.dart';
@@ -75,7 +77,10 @@ Future<void> main() async {
     NetworkQuality.init(),
     AppSettingsState.instance.init(),
     AdConsentService.instance.load(),
+    VipService.instance.load(),
   ]);
+  // Пеш аз реклама: VIP/Pro дар оғози сард ҳам ҳеҷ дархост намефиристад.
+  await AdEligibility.instance.load();
 
   // ✅ 4. Network monitoring
   NetworkService.instance.init();
