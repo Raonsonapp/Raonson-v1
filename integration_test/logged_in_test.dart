@@ -36,6 +36,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'harness.dart';
 
+import 'package:raonson/core/i18n/strings.dart';
 import 'package:raonson/auth/login/login_screen.dart';
 import 'package:raonson/auth/widgets/auth_kit.dart';
 import 'package:raonson/chat/inbox/chat_list_screen.dart';
@@ -198,6 +199,17 @@ void main() {
             'Санҷед: TEST_USERNAME ва TEST_PASSWORD дар GitHub '
             'Secrets дуруст ҳастанд?');
     checkStep('вуруд');
+
+    // Диалоги розигӣ барои реклама (як бор баъди вуруди аввал) — бе
+    // ҷавоб баста намешавад ва тамоми экранро мепӯшонад. Корбари воқеӣ
+    // ҳам аввал ба он ҷавоб медиҳад.
+    await pumpFor(tester, 2000);
+    final decline = find.text(tr('ui.1045f7b687'));
+    if (decline.evaluate().isNotEmpty) {
+      await tester.tap(decline.first, warnIfMissed: false);
+      await pumpFor(tester, 800);
+    }
+    checkStep('розигии реклама');
 
     // ── 1. ЛЕНТА ────────────────────────────────────────────────
     await _tab(tester, 0);

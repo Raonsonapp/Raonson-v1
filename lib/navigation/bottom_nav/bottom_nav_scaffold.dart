@@ -19,6 +19,7 @@ import '../../widgets/offline_banner.dart';
 import '../../core/firebase_init.dart';
 import '../../core/services/ad_consent_service.dart';
 import '../../core/ads/ads_manager.dart';
+import '../../core/ads/ad_eligibility.dart';
 import '../../core/webrtc_service.dart';
 import '../../calls/call_coordinator.dart';
 import '../../calls/call_payload.dart';
@@ -65,7 +66,8 @@ class _BottomNavViewState extends State<_BottomNavView> {
   Future<void> _showAdConsentIfNeeded() async {
     if (AdConsentService.instance.consentGiven) return;
     await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
+    // Pro/VIP реклама намебинад — пас розигӣ барои реклама ҳам намепурсем.
+    if (!mounted || AdEligibility.instance.isAdsFree) return;
     final accepted = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
