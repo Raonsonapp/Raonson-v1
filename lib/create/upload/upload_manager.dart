@@ -9,6 +9,39 @@ import '../../core/api/api_client.dart';
 import '../../core/utils/media_compressor.dart';
 import '../../app/app_config.dart';
 
+/// Пешрафти боргузорӣ: [sent] аз [total] байт.
+typedef ByteProgress = void Function(int sent, int total);
+
+/// MultipartRequest, ки байтҳои фиристодашударо мешуморад.
+///
+/// `http` пешрафт намедиҳад; ин ҷо ҷараёни бадан (body) аз
+/// трансформер мегузарад ва ҳар порча ҳисоб карда мешавад. IOClient
+/// порчаҳоро ҳангоми навиштан ба socket мехонад, пас шумора бо
+/// фиристодани воқеӣ қариб баробар аст (бо буфери хурди система).
+class ProgressMultipartRequest extends http.MultipartRequest {
+  ProgressMultipartRequest(super.method, super.url, {this.onBytes});
+
+  final ByteProgress? onBytes;
+
+  @override
+  http.ByteStream finalize() {
+    final stream = super.finalize();
+    final cb = onBytes;
+    if (cb == null) return stream;
+    final total = contentLength;
+    var sent = 0;
+    return http.ByteStream(stream.transform(
+      StreamTransformer<List<int>, List<int>>.fromHandlers(
+        handleData: (chunk, sink) {
+          sent += chunk.length;
+          try { cb(sent, total); } catch (_) {}
+          sink.add(chunk);
+        },
+      ),
+    ));
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // МУҲИМ: Gin backend routes:
 //   po.POST("/")  → /posts/   (бо slash)
@@ -79,7 +112,12 @@ class UploadManager {
 
   // ── Upload file to R2 ─────────────────────────────────────────
   // Retry: 3 маротиба (2с/4с фосила) — интернети суст талаб мекунад.
-  Future<String> _uploadFile(File rawFile) async {
+  //
+  // [onProgress] — 0..1 аз рӯи БАЙТҲОИ фиристодашуда (фишурдан ба ҳисоб
+  // намеравад). Ҳангоми retry шумора аз нав оғоз мешавад — даъваткунанда
+  // (UploadNotifier / MonotonicProgress) онро якрав нигоҳ медорад.
+  Future<String> _uploadFile(File rawFile,
+      {void Function(double)? onProgress}) async {
     final token = _token;
     if (token.isEmpty) throw Exception('Токен нест');
 
@@ -90,8 +128,13 @@ class UploadManager {
     Object? lastErr;
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
-        final req = http.MultipartRequest(
-            'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'))
+        final req = ProgressMultipartRequest(
+            'POST', Uri.parse('${AppConfig.apiBaseUrl}/upload'),
+            onBytes: onProgress == null
+                ? null
+                : (sent, total) {
+                    if (total > 0) onProgress(sent / total);
+                  })
           ..headers['Authorization'] = 'Bearer $token'
           ..files.add(await http.MultipartFile.fromPath(
               'file', file.path, contentType: _mime(file)));
@@ -132,8 +175,10 @@ class UploadManager {
     throw Exception(lastErr?.toString() ?? 'Upload ноком шуд');
   }
 
-  Future<String> uploadAvatar(File f) => _uploadFile(f);
-  Future<String> uploadFile(File f)   => _uploadFile(f);
+  Future<String> uploadAvatar(File f, {void Function(double)? onProgress}) =>
+      _uploadFile(f, onProgress: onProgress);
+  Future<String> uploadFile(File f, {void Function(double)? onProgress}) =>
+      _uploadFile(f, onProgress: onProgress);
 
   // ── Upload post ───────────────────────────────────────────────
   Future<void> uploadPost({

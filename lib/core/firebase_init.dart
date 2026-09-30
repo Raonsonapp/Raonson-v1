@@ -33,6 +33,7 @@ import 'api/api_client.dart';
 import 'links/deep_links.dart';
 import 'notifications/active_chat.dart';
 import 'notifications/notification_channels.dart';
+import 'notifications/upload_notifier.dart';
 
 // Background/terminated.
 //
@@ -85,11 +86,14 @@ class FirebaseInit {
           if (payload != null && payload.isNotEmpty) _openPayload(payload);
         },
       );
+      LocalUploadNotificationSink.markInitialized();
       final android = _localNotif.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       for (final ch in NotificationChannels.all()) {
         await android?.createNotificationChannel(ch);
       }
+      await android
+          ?.createNotificationChannel(NotificationChannels.uploadsChannel());
       // Каналҳои кӯҳна (садои пешина) — то дар танзимоти система ду
       // «Паёмҳо» набошад.
       for (final id in NotificationChannels.legacy) {

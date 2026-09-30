@@ -17,6 +17,7 @@ import '../profile_repository.dart';
 import 'edit_profile_controller.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/notifications/upload_notifier.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final String userId;
@@ -154,7 +155,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (file == null || !mounted) { return; }
     setState(() { _localAvatar = file; _uploadingAvatar = true; });
     try {
-      final url = await UploadManager().uploadAvatar(file);
+      // Огоҳиномаи «Акси профил бор мешавад…» — танҳо агар > 1 с.
+      final url = await UploadNotifier.instance.track(
+          UploadKind.avatar,
+          (p) => UploadManager().uploadAvatar(file, onProgress: p),
+          delay: UploadNotifier.chatDelay, announce: false);
       if (mounted) { setState(() { _uploadedAvatarUrl = url; _uploadingAvatar = false; }); }
     } catch (e) {
       if (mounted) { setState(() => _uploadingAvatar = false);
@@ -167,7 +172,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (file == null || !mounted) return;
     setState(() => _uploadingCover = true);
     try {
-      final url = await UploadManager().uploadFile(file);
+      final url = await UploadNotifier.instance.track(
+          UploadKind.photo,
+          (p) => UploadManager().uploadFile(file, onProgress: p),
+          delay: UploadNotifier.chatDelay, announce: false);
       if (mounted) setState(() { _ctrl.coverUrl = url; _uploadingCover = false; });
     } catch (_) {
       if (mounted) { setState(() => _uploadingCover = false);

@@ -11,6 +11,7 @@ import '../auto_dm_sheet.dart';
 
 import '../../core/music/song_info.dart';
 import '../../core/api/api_client.dart';
+import '../../core/notifications/upload_notifier.dart';
 import '../../core/utils/media_compressor.dart';
 import 'upload_manager.dart';
 
@@ -78,21 +79,37 @@ class PostUploadService {
     String altText = '',     // тавсифи расм барои нобиноён
     AutoDmDraft? autoDm,     // паёми худкор ба Direct аз рӯи калимаи шарҳ
   }) async {
-    state.value = UploadState(thumb: file, progress: 0.08);
+    // Огоҳиномаи системавӣ («Пост бор мешавад… 45%») ҳамон рақамеро
+    // нишон медиҳад, ки навори дохили барнома.
+    final notifier = UploadNotifier.instance;
+    final nid = notifier.start(UploadKind.post);
+    // Пешрафт танҳо ба пеш; навори дохилӣ ҳар 1% навсозӣ мешавад.
+    int shownPct = -1;
+    final report = MonotonicProgress((p) {
+      notifier.progress(nid, p);
+      final pct = toPercent(p);
+      if (pct != shownPct) {
+        shownPct = pct;
+        state.value = UploadState(thumb: file, progress: p);
+      }
+    });
+    report(0.08);
     try {
       // 0. Ratio-и аслиро аз файли аслӣ мегирем (пеш аз фишурдан).
       final ar = await mediaAspectRatio(file, isVideo);
 
       // 1. Compress (видеоро ~720p, расмро дар UploadManager)
       final media = isVideo
-          ? await MediaCompressor.compressVideo(file)
+          ? await MediaCompressor.compressVideo(file,
+              onProgress: (f) => report(phase(0.08, 0.3, f)))
           : file;
-      state.value = UploadState(thumb: file, progress: 0.3);
+      report(0.3);
 
-      // 2. Upload медиа → URL
-      final url = await UploadManager().uploadFile(media);
+      // 2. Upload медиа → URL (пешрафт аз рӯи байтҳо)
+      final url = await UploadManager().uploadFile(media,
+          onProgress: (f) => report(phase(0.3, 0.85, f)));
       if (url.isEmpty) throw Exception('upload failed');
-      state.value = UploadState(thumb: file, progress: 0.85);
+      report(0.85);
 
       // 3. POST /posts/
       final res = await ApiClient.instance.post('/posts/', body: {
@@ -117,10 +134,12 @@ class PostUploadService {
       }
 
       state.value = UploadState(thumb: file, progress: 1.0, done: true);
+      notifier.done(nid);
       onPublished?.call();
       await Future.delayed(const Duration(seconds: 2));
       if (state.value?.done == true) state.value = null;
     } catch (_) {
+      notifier.failed(nid);
       state.value = UploadState(thumb: file, error: true);
       await Future.delayed(const Duration(seconds: 4));
       if (state.value?.error == true) state.value = null;

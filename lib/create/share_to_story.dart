@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import '../core/notifications/upload_notifier.dart';
 import '../core/ui/app_icons.dart';
 import '../stories/story_repository.dart';
 import 'upload/upload_manager.dart';
@@ -57,6 +58,10 @@ Future<void> shareToStory(
   messenger.showSnackBar(
       const SnackBar(content: Text('Ба стори гузошта мешавад…')));
 
+  // Карти хурд аст — огоҳинома танҳо агар кор аз 1 с дароз шавад.
+  final notifier = UploadNotifier.instance;
+  final nid = notifier.start(UploadKind.story, delay: UploadNotifier.chatDelay);
+  final report = MonotonicProgress((p) => notifier.progress(nid, p));
   try {
     final file = await _renderCard(
       mediaUrl: mediaUrl,
@@ -66,8 +71,10 @@ Future<void> shareToStory(
     );
     if (file == null) throw Exception('карт сохта нашуд');
 
-    final uploaded = await UploadManager().uploadFile(file);
+    final uploaded = await UploadManager().uploadFile(file,
+        onProgress: (f) => report(phase(0.1, 0.9, f)));
     if (uploaded.isEmpty) throw Exception('бор нашуд');
+    report(0.9);
 
     final res = await ApiClient.instance.post('/stories/', body: {
       'mediaUrl': uploaded,
@@ -79,10 +86,12 @@ Future<void> shareToStory(
     });
     if (res.statusCode >= 400) throw Exception('${res.statusCode}');
 
+    notifier.done(nid);
     await StoryRepository.clearAllCaches();
     messenger.showSnackBar(
         const SnackBar(content: Text('Ба стори гузошта шуд')));
   } catch (e) {
+    notifier.failed(nid);
     debugPrint('[shareToStory] $e');
     messenger.showSnackBar(
         const SnackBar(content: Text('Гузошта нашуд')));

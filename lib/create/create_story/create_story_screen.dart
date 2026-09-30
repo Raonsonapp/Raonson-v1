@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'story_editor.dart';
 import '../../core/music/song_info.dart';
 import '../../core/api/api_client.dart';
+import '../../core/notifications/upload_notifier.dart';
 import '../../core/utils/media_compressor.dart';
 import '../../stories/story_repository.dart';
 import '../upload/upload_manager.dart';
@@ -68,6 +69,10 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) return;
     setState(() { _isUploading = true; _error = null; });
+    // «Сторис бор мешавад… 45%» дар пардаи огоҳиномаҳо.
+    final notifier = UploadNotifier.instance;
+    final nid = notifier.start(UploadKind.story);
+    final report = MonotonicProgress((p) => notifier.progress(nid, p));
     try {
       // ── Фишурдани файл пеш аз бор кардан ─────────────────────
       // Расми ноом (5-10MB) → ~0.5MB, видеои ноом (30-50MB) → ~10-15MB.
@@ -75,9 +80,11 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       File fileToUpload = capturedFile;
       if (_isVideo) {
         try {
-          fileToUpload = await MediaCompressor.compressVideo(capturedFile);
+          fileToUpload = await MediaCompressor.compressVideo(capturedFile,
+              onProgress: (f) => report(phase(0, 0.3, f)));
         } catch (_) {/* фишурдан наомад — оригинал */}
       }
+      report(0.3);
       // Расм худкор дар UploadManager._maybeCompressImage фишурда мешавад
       // (~72% сифат, ҳадди аксар 1080px).
 
@@ -87,7 +94,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       Object? lastErr;
       for (int i = 0; i < 3; i++) {
         try {
-          mediaUrl = await UploadManager().uploadFile(fileToUpload);
+          mediaUrl = await UploadManager().uploadFile(fileToUpload,
+              onProgress: (f) => report(phase(0.3, 0.9, f)));
           if (mediaUrl.isNotEmpty) break;
         } catch (e) {
           lastErr = e;
@@ -97,6 +105,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       if (mediaUrl == null || mediaUrl.isEmpty) {
         throw Exception(lastErr?.toString() ?? 'Upload ноком шуд');
       }
+      report(0.9);
 
       // POST /stories/ ба backend — то 60с барои интернети суст
       final res = await ApiClient.instance.post('/stories/', body: {
@@ -118,9 +127,11 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       // навбати оянда StoryRepository stori-и куҳнаро зикр накунад.
       // WebSocket "story:new" аллакай ба StoryController хабар медиҳад, ки
       // stori-и навро дар лаҳза илова кунад (мисли Instagram).
+      notifier.done(nid);
       await StoryRepository.clearAllCaches();
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
+      notifier.failed(nid);
       if (mounted) setState(() { _isUploading = false; _error = e.toString().replaceAll('Exception: ', ''); });
     }
   }

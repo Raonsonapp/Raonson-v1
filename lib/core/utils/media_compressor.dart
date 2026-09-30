@@ -38,14 +38,38 @@ class MediaCompressor {
 
   // ── Видео compress ─────────────────────────────────────────────
   // 45MB → ~15MB  (medium quality, 720p)
-  static Future<File> compressVideo(File file) async {
-    final info = await VideoCompress.compressVideo(
-      file.path,
-      quality:         VideoQuality.MediumQuality, // 720p
-      deleteOrigin:    false,
-      includeAudio:    true,
-      frameRate:       30,
-    );
+  //
+  // [onProgress] — 0..1 (VideoCompress 0..100 медиҳад). Ихтиёрӣ.
+  static Future<File> compressVideo(File file,
+      {void Function(double)? onProgress}) async {
+    Subscription? sub;
+    if (onProgress != null) {
+      try {
+        // Ҷараёни VideoCompress рӯйдодҳои фишурдани ПЕШИНаро (бе
+        // шунаванда) нигоҳ медорад ва ба шунавандаи нав якбора
+        // медиҳад. Онҳо дар microtask-ҳо меоянд — то `live` нашуданамон
+        // рад мешаванд.
+        var live = false;
+        sub = VideoCompress.compressProgress$.subscribe((p) {
+          if (!live) return;
+          try { onProgress((p / 100).clamp(0.0, 1.0)); } catch (_) {}
+        });
+        await Future<void>.delayed(Duration.zero);
+        live = true;
+      } catch (_) {}
+    }
+    final MediaInfo? info;
+    try {
+      info = await VideoCompress.compressVideo(
+        file.path,
+        quality:         VideoQuality.MediumQuality, // 720p
+        deleteOrigin:    false,
+        includeAudio:    true,
+        frameRate:       30,
+      );
+    } finally {
+      sub?.unsubscribe();
+    }
 
     if (info == null || info.file == null) return file;
 

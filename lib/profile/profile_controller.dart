@@ -13,6 +13,7 @@ import '../models/user_model.dart';
 import 'profile_repository.dart';
 import '../create/upload/upload_manager.dart';
 import 'highlight_model.dart';
+import '../core/notifications/upload_notifier.dart';
 
 class ProfileController extends ChangeNotifier {
   final String userId;
@@ -107,7 +108,10 @@ class ProfileController extends ChangeNotifier {
 
   Future<void> uploadAvatar(File file) async {
     try {
-      final url = await UploadManager().uploadAvatar(file);
+      final url = await UploadNotifier.instance.track(
+          UploadKind.avatar,
+          (p) => UploadManager().uploadAvatar(file, onProgress: p),
+          delay: UploadNotifier.chatDelay, announce: false);
       if (url.isNotEmpty && profile != null) {
         profile = profile!.copyWith(avatar: url);
         UserSession.avatar = url;

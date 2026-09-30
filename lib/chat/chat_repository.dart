@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
+import '../core/notifications/upload_notifier.dart';
 import '../core/storage/token_storage.dart';
 import '../create/upload/upload_manager.dart';
 import '../models/message_model.dart';
@@ -321,10 +322,29 @@ class ChatRepository {
   }
 
   // Медиаро (акс/видео/овоз) ба R2 бор мекунад ва URL-ро бармегардонад.
-  Future<String?> uploadMedia(dynamic file) async {
+  //
+  // Огоҳиномаи системавӣ («Паёми овозӣ фиристода мешавад… 45%») танҳо
+  // вақте пайдо мешавад, ки бор кардан аз ~1 с дароз шавад — паёмҳои
+  // хурд дар парда милт намезананд. Ҳамаи чатҳо (1:1 ва гурӯҳ) аз ин
+  // ҷо мегузаранд.
+  Future<String?> uploadMedia(dynamic file, {UploadKind? kind}) async {
+    if (file is! File) return null;
+    final notifier = UploadNotifier.instance;
+    final nid = notifier.start(kind ?? chatUploadKind(file.path),
+        delay: UploadNotifier.chatDelay);
+    final report = MonotonicProgress((p) => notifier.progress(nid, p));
     try {
-      if (file is! File) return null;
-      return await UploadManager().uploadFile(file);
-    } catch (_) { return null; }
+      final url = await UploadManager().uploadFile(file, onProgress: report.call);
+      if (url.isEmpty) {
+        notifier.failed(nid);
+      } else {
+        // Паём дар худи чат пайдо мешавад — «Нашр шуд» лозим нест.
+        notifier.done(nid, announce: false);
+      }
+      return url;
+    } catch (_) {
+      notifier.failed(nid);
+      return null;
+    }
   }
 }
