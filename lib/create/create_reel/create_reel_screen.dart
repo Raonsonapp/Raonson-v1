@@ -6,6 +6,7 @@ import '../../core/analytics/analytics_events.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../../core/api/api_client.dart';
+import '../../core/notifications/upload_notifier.dart';
 import '../../core/utils/media_compressor.dart';
 import '../upload/upload_manager.dart';
 import '../auto_dm_sheet.dart';
@@ -233,11 +234,29 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       _status   = 'Видео фишурда мешавад...';
     });
 
+    // «Reel бор мешавад… 45%» дар пардаи огоҳиномаҳо — ҳамон рақамҳои
+    // навори дохилӣ (_progress), бо пешрафти воқеии фишурдан ва байтҳо.
+    final notifier = UploadNotifier.instance;
+    final nid = notifier.start(UploadKind.reel);
+    int shownPct = -1;
+    final report = MonotonicProgress((p) {
+      notifier.progress(nid, p);
+      final pct = toPercent(p);
+      if (pct != shownPct && mounted) {
+        shownPct = pct;
+        setState(() => _progress = p);
+      }
+    });
+    report(0.05);
+
     try {
       // ── 1. Compress (сифати баланд ~720p) + upload ────────────
-      final high = await MediaCompressor.compressVideo(_file!);
+      final high = await MediaCompressor.compressVideo(_file!,
+          onProgress: (f) => report(phase(0.05, 0.35, f)));
       _setProgress('Видео бор мешавад...', 0.35);
-      final videoUrl = await UploadManager().uploadFile(high);
+      report(0.35);
+      final videoUrl = await UploadManager().uploadFile(high,
+          onProgress: (f) => report(phase(0.35, 0.65, f)));
       if (videoUrl.isEmpty) throw Exception('Сервер URL нафиристод');
 
       // ── 1b. Сифати ПАСТ (~480p) барои интернети суст — адаптивӣ ──
@@ -245,8 +264,12 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       String videoUrlLow = '';
       try {
         _setProgress('Барои интернети суст омода мешавад...', 0.65);
+        report(0.65);
         final low = await MediaCompressor.compressVideoLow(_file!);
-        if (low != null) videoUrlLow = await UploadManager().uploadFile(low);
+        if (low != null) {
+          videoUrlLow = await UploadManager().uploadFile(low,
+              onProgress: (f) => report(phase(0.65, 0.75, f)));
+        }
       } catch (_) {}
 
       // ── 1c. Thumbnail (кадри аввал) — барои grid-ҳо мисли Instagram ──
@@ -254,12 +277,14 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       String thumbnailUrl = '';
       try {
         _setProgress('Тасвири пешнамоиш сохта мешавад...', 0.75);
+        report(0.75);
         final thumb = await MediaCompressor.generateVideoThumbnail(_file!);
         if (thumb != null) thumbnailUrl = await UploadManager().uploadFile(thumb);
       } catch (_) {}
 
       // ── 2. POST /reels (БЕ slash!) ────────────────────────────
       _setProgress('Reel сохта мешавад...', 0.9);
+      report(0.9);
 
       final res = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/reels/'),  // ← slash ЛОЗИМ
@@ -293,9 +318,11 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
         throw Exception('Reel ${res.statusCode}: ${err['message'] ?? res.body}');
       }
 
+      notifier.done(nid);
       if (mounted) Navigator.of(context).pop(true);
 
     } catch (e) {
+      notifier.failed(nid);
       if (mounted) {
         setState(() {
           _busy     = false;

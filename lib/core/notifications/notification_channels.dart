@@ -45,6 +45,11 @@ class NotificationChannels {
   /// Кампания ва пардохт.
   static const marketplace = 'marketplace';
 
+  /// Боргузорӣ (пост, сторис, Reel, медиаи чат) — навори пешрафт.
+  /// Танҳо маҳаллӣ: сервер ин каналро намефиристад, барои ҳамин дар
+  /// [all] ва [resolve] нест. Ором: бе садо ва ларзиш.
+  static const uploads = 'uploads';
+
   /// Канали захиравӣ барои payload-и бе channel_id.
   static const fallback = social;
 
@@ -109,6 +114,18 @@ class NotificationChannels {
           importance: Importance.high,
         ),
       ];
+
+  /// Канали «Боргузорӣ» — паст ва хомӯш (мисли Instagram).
+  static AndroidNotificationChannel uploadsChannel() =>
+      AndroidNotificationChannel(
+        uploads,
+        tr('nch.uploads'),
+        description: tr('nch.uploadsDesc'),
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        showBadge: false,
+      );
 
   /// Аҳамияти канал — барои огоҳиномаи маҳаллӣ дар foreground.
   static Importance importanceOf(String channelId) {
