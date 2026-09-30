@@ -15,11 +15,14 @@ class NoteService extends ChangeNotifier {
   DateTime?       _myExpiresAt;          // ← нигоҳ медорад
   List<NoteModel> _friends     = [];
   bool            _loading     = false;
+  /// Кӣ ба ёддошти ман вокуниш дод (танҳо барои ёддошти ҷорӣ).
+  List<NoteReaction> _myReactions = [];
 
   String          get myNote    => _myNote;
   SongInfo        get mySong    => _mySong;
   List<NoteModel> get friends   => List.unmodifiable(_friends);
   bool            get loading   => _loading;
+  List<NoteReaction> get myReactions => List.unmodifiable(_myReactions);
 
   // hasMyNote — expiry тафтиш мешавад
   bool get hasMyNote {
@@ -47,7 +50,12 @@ class NoteService extends ChangeNotifier {
           _myExpiresAt = null;
         }
       }
-      await _loadFriendsNotes();
+      // Ҳарду дархост ҳамзамон — на пайдарпай.
+      if (!hasMyNote) _myReactions = [];
+      await Future.wait<void>([
+        _loadFriendsNotes(),
+        if (hasMyNote) _loadMyReactions(),
+      ]);
     } catch (e) {
       debugPrint('[Note] load: $e');
     } finally {
@@ -71,6 +79,59 @@ class NoteService extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadMyReactions() async {
+    try {
+      final r = await _api.get('/profile/note/reactions');
+      if (r.statusCode != 200) return;
+      final List raw = (jsonDecode(r.body) as Map)['reactions'] ?? [];
+      _myReactions = raw
+          .map((e) => NoteReaction.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('[Note] reactions: $e');
+    }
+  }
+
+  /// Вокуниш ба ёддошти дӯст. Фавран (optimistic) нишон дода мешавад ва
+  /// агар сервер рад кунад, бармегардад. emoji == '' → бекор кардан.
+  Future<bool> react(String ownerId, String emoji) async {
+    final i = _friends.indexWhere((n) => n.userId == ownerId);
+    final before = i >= 0 ? _friends[i].myReaction : '';
+    if (i >= 0) {
+      _friends[i] = _friends[i].copyWith(myReaction: emoji);
+      notifyListeners();
+    }
+    try {
+      final r = emoji.isEmpty
+          ? await _api.delete('/profile/notes/$ownerId/react')
+          : await _api.post('/profile/notes/$ownerId/react',
+              body: {'emoji': emoji});
+      if (r.statusCode >= 400) throw Exception('react ${r.statusCode}');
+      return true;
+    } catch (e) {
+      debugPrint('[Note] react: $e');
+      final j = _friends.indexWhere((n) => n.userId == ownerId);
+      if (j >= 0) {
+        _friends[j] = _friends[j].copyWith(myReaction: before);
+        notifyListeners();
+      }
+      return false;
+    }
+  }
+
+  /// Ҷавоб ба ёддошт — ҳамчун DM ба соҳиб меравад (сервер иқтибоси
+  /// ёддоштро худаш илова мекунад).
+  Future<bool> reply(String ownerId, String text) async {
+    try {
+      final r = await _api.post('/profile/notes/$ownerId/reply',
+          body: {'text': text});
+      return r.statusCode < 400;
+    } catch (e) {
+      debugPrint('[Note] reply: $e');
+      return false;
+    }
+  }
+
   Future<bool> setNote(String text, {SongInfo? song}) async {
     try {
       final body = <String, dynamic>{'note': text};
@@ -82,6 +143,8 @@ class NoteService extends ChangeNotifier {
       _mySong = song ?? const SongInfo(title: '', artist: '', artUrl: '');
       final expStr = resp['noteExpiresAt'];
       _myExpiresAt = expStr != null ? DateTime.tryParse(expStr.toString()) : null;
+      // Ёддошти нав — вокунишҳои кӯҳна дар сервер пок шуданд.
+      _myReactions = [];
       notifyListeners();
       return true;
     } catch (e) {

@@ -21,6 +21,12 @@ class ChatRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_inboxKey);
+      // Кэши кӯҳнаи паёмҳо аз рӯи peerId буд (байни аккаунтҳо омехта
+      // мешуд) — калидҳои боқимондаашро пок мекунем. Кэши нав (chat_msgs_v2_)
+      // аз рӯи chatId аст ва ба аккаунт вобаста, пас нигоҳ дошта мешавад.
+      for (final k in prefs.getKeys().toList()) {
+        if (k.startsWith('chat_messages_')) await prefs.remove(k);
+      }
     } catch (_) {}
   }
 
@@ -102,26 +108,33 @@ class ChatRepository {
   }
 
   // ── Messages бо cache ───────────────────────────────────────
-  String _msgKey(String peerId) => 'chat_messages_$peerId';
+  //
+  // Кэш аз рӯи chatId (на peerId) нигоҳ дошта мешавад: chatId myId-ро дар
+  // худ дорад, пас баъди иваз кардани аккаунт паёмҳои корбари дигар дар
+  // чати нав намебароянд.
+  static const _msgCacheMax = 60; // танҳо охиринҳо — prefs калон нашавад
+  String _msgKey(String chatId) => 'chat_msgs_v2_$chatId';
 
-  Future<List<MessageModel>> getMessagesWithUser(String peerId) async {
-    final cacheKey = _msgKey(peerId);
+  /// myId дар давоми умри repository як бор хонда мешавад — SecureStorage
+  /// дар Android суст аст ва пеш барои ҳар дархост аз нав хонда мешуд.
+  String? _myIdMemo;
+  Future<String> _myIdFast() async =>
+      _myIdMemo ??= await _myId();
 
-    // Cache аввал
-    final cached = await _loadMessages(cacheKey);
-    if (cached != null) {
-      _refreshMessagesBackground(peerId, cacheKey);
-      return cached;
-    }
-    return _fetchMessages(peerId, cacheKey);
-  }
+  /// chatId-и 1:1 — айнан мисли `sortedChatID` дар backend
+  /// (handlers/helpers.go). Ҳисоби маҳаллӣ як round-trip-и
+  /// `/chat/with/:id`-ро пеш аз гирифтани паёмҳо намегузорад.
+  static String localChatId(String myId, String peerId) =>
+      myId.compareTo(peerId) < 0 ? '${myId}_$peerId' : '${peerId}_$myId';
 
-  Future<List<MessageModel>?> _loadMessages(String key) async {
+  /// Паёмҳои кэшшуда (бе шабака) — барои фавран нишон додан.
+  Future<List<MessageModel>?> loadCachedMessages(String chatId) async {
+    if (chatId.isEmpty) return null;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(key);
+      final raw = prefs.getString(_msgKey(chatId));
       if (raw == null) return null;
-      final myId = await _myId();
+      final myId = await _myIdFast();
       final payload = jsonDecode(raw) as Map<String, dynamic>;
       final list = payload['data'] as List;
       return list.map((e) =>
@@ -129,41 +142,43 @@ class ChatRepository {
     } catch (_) { return null; }
   }
 
-  Future<List<MessageModel>> _fetchMessages(String peerId, String cacheKey) async {
+  Future<void> _saveMessagesCache(String chatId, List raw) async {
+    if (chatId.isEmpty) return;
     try {
-      final myId = await _myId();
-      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId')
-          .timeout(const Duration(seconds: 8));
-      if (cr.statusCode >= 400) return [];
-      final chatId = (jsonDecode(cr.body) as Map)['chatId']?.toString();
-      if (chatId == null || chatId.isEmpty) return [];
-
-      final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages')
-          .timeout(const Duration(seconds: 8));
-      if (mr.statusCode >= 400) return [];
-      final body = jsonDecode(mr.body);
-      final List data = body is Map ? (body['messages'] ?? []) : body as List;
-
-      // Кэшга сақла
+      final data = raw.length > _msgCacheMax
+          ? raw.sublist(raw.length - _msgCacheMax)
+          : raw;
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(cacheKey, jsonEncode({
+      await prefs.setString(_msgKey(chatId), jsonEncode({
         'time': DateTime.now().millisecondsSinceEpoch,
         'data': data,
       }));
-
-      return data.map((e) =>
-          MessageModel.fromRoomJson(e as Map<String,dynamic>, myId)).toList();
-    } catch (_) { return []; }
+    } catch (_) {}
   }
 
-  void _refreshMessagesBackground(String peerId, String cacheKey) {
-    Future.delayed(const Duration(milliseconds: 500), () async {
-      try { await _fetchMessages(peerId, cacheKey); } catch (_) {}
-    });
+  /// Паёми навфиристодаро ба охири кэш илова мекунад — то бозкушоии
+  /// навбатӣ онро фавран нишон диҳад (бе интизори шабака).
+  Future<void> appendToCache(String chatId, Map<String, dynamic> msg) async {
+    if (chatId.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_msgKey(chatId));
+      final List list = raw == null
+          ? []
+          : ((jsonDecode(raw) as Map)['data'] as List? ?? []);
+      final id = msg['id']?.toString();
+      list.removeWhere((e) => e is Map && e['id']?.toString() == id);
+      list.add(msg);
+      await _saveMessagesCache(chatId, list);
+    } catch (_) {}
   }
 
   // ── chatId-и сӯҳбат бо як корбарро ҳал мекунад ──────────────
+  // Маҳаллӣ ҳисоб мешавад (ниг. localChatId); шабака танҳо вақте лозим аст,
+  // ки myId ҳанӯз маълум нест.
   Future<String?> resolveChatId(String peerId) async {
+    final myId = await _myIdFast();
+    if (myId.isNotEmpty && peerId.isNotEmpty) return localChatId(myId, peerId);
     try {
       final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId')
           .timeout(const Duration(seconds: 8));
@@ -172,25 +187,32 @@ class ChatRepository {
     } catch (_) { return null; }
   }
 
-  // ── Fetch-и мустақим аз шабака (бе cache) — барои auto-refresh ──
-  Future<List<MessageModel>> fetchFreshByChatId(String chatId) async {
+  /// Навтарин паёмҳо аз шабака; `null` = хато (кэшро намезанем),
+  /// рӯйхати холӣ = чат воқеан холист. Натиҷа ба кэш навишта мешавад.
+  Future<List<MessageModel>?> fetchLatest(String chatId) async {
     try {
-      final myId = await _myId();
+      final myId = await _myIdFast();
       final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages')
           .timeout(const Duration(seconds: 8));
-      if (mr.statusCode >= 400) return [];
+      if (mr.statusCode >= 400) return null;
       final body = jsonDecode(mr.body);
       final List data = body is Map ? (body['messages'] ?? []) : body as List;
+      // Кэш дар background — UI интизори навиштани диск намешавад.
+      _saveMessagesCache(chatId, data);
       return data.map((e) =>
           MessageModel.fromRoomJson(e as Map<String,dynamic>, myId)).toList();
-    } catch (_) { return []; }
+    } catch (_) { return null; }
   }
+
+  // ── Fetch-и мустақим аз шабака — барои auto-refresh ──
+  Future<List<MessageModel>> fetchFreshByChatId(String chatId) async =>
+      await fetchLatest(chatId) ?? [];
 
   // ── Паёмҳои кӯҳнатар — саҳифаи навбатӣ (load older) ──────────
   Future<List<MessageModel>> fetchOlderMessages(String chatId, int page,
       {int limit = 30}) async {
     try {
-      final myId = await _myId();
+      final myId = await _myIdFast();
       final mr = await _api
           .getRequest('${ApiEndpoints.chat}/$chatId/messages?page=$page&limit=$limit')
           .timeout(const Duration(seconds: 8));
@@ -221,13 +243,11 @@ class ChatRepository {
     /// Вақти фиристодан — паём то ин вақт ба гиранда намерасад.
     DateTime? sendAt,
   }) async {
-    final myId = await _myId();
+    final myId = await _myIdFast();
     var cid = chatId;
     if (cid == null || cid.isEmpty) {
-      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$toUserId')
-          .timeout(const Duration(seconds: 8));
-      if (cr.statusCode >= 400) throw Exception('Chat error');
-      cid = (jsonDecode(cr.body) as Map)['chatId']?.toString();
+      // Маҳаллӣ — бе round-trip-и иловагӣ пеш аз фиристодан.
+      cid = await resolveChatId(toUserId);
       if (cid == null || cid.isEmpty) throw Exception('Chat ID not found');
     }
 
@@ -246,8 +266,10 @@ class ChatRepository {
       },
     ).timeout(const Duration(seconds: 30));
     if (res.statusCode >= 400) throw Exception('Send error');
-    return MessageModel.fromRoomJson(
-        jsonDecode(res.body) as Map<String, dynamic>, myId);
+    final raw = jsonDecode(res.body) as Map<String, dynamic>;
+    // Паёми вақтбандишуда ҳанӯз «фиристода» нест — ба кэш намегузорем.
+    if (sendAt == null) appendToCache(cid, raw);
+    return MessageModel.fromRoomJson(raw, myId);
   }
 
   Future<Map<String, dynamic>?> getMyProfile() async {
@@ -286,9 +308,6 @@ class ChatRepository {
       return r.statusCode < 400;
     } catch (_) { return false; }
   }
-
-  Future<List<MessageModel>> getMessagesWithUserEx(String peerId) =>
-      getMessagesWithUser(peerId);
 
   Future<void> deleteMessage(String messageId) async {
     try { await _api.deleteRequest('/chat/messages/$messageId'); } catch (_) {}

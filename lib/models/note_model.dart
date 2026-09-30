@@ -15,6 +15,8 @@ class NoteModel {
   final String   text;
   final SongInfo song;
   final DateTime? expiresAt;
+  /// Вокуниши ХУДИ ман ба ин ёддошт ('' = нест; '❤️' = лайк).
+  final String   myReaction;
 
   const NoteModel({
     required this.userId,
@@ -24,7 +26,14 @@ class NoteModel {
     required this.text,
     required this.song,
     this.expiresAt,
+    this.myReaction = '',
   });
+
+  NoteModel copyWith({String? myReaction}) => NoteModel(
+    userId: userId, username: username, avatar: avatar, verified: verified,
+    text: text, song: song, expiresAt: expiresAt,
+    myReaction: myReaction ?? this.myReaction,
+  );
 
   bool get isExpired => expiresAt == null || DateTime.now().isAfter(expiresAt!);
   bool get hasText   => text.isNotEmpty;
@@ -39,5 +48,26 @@ class NoteModel {
     song:     SongInfo.fromJson(j['noteSong'] as Map<String, dynamic>?),
     expiresAt: j['noteExpiresAt'] != null
         ? parseServerTime(j['noteExpiresAt']) : null,
+    myReaction: (j['myReaction'] ?? '').toString(),
   );
+}
+
+/// Як вокуниш ба ёддошти ман — барои рӯйхати «кӣ вокуниш дод».
+class NoteReaction {
+  final String userId;
+  final String username;
+  final String avatar;
+  final String emoji;
+  const NoteReaction({required this.userId, required this.username,
+      required this.avatar, required this.emoji});
+
+  factory NoteReaction.fromJson(Map<String, dynamic> j) {
+    final u = (j['user'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return NoteReaction(
+      userId:   (u['_id'] ?? '').toString(),
+      username: (u['username'] ?? '').toString(),
+      avatar:   (u['avatar'] ?? '').toString(),
+      emoji:    (j['emoji'] ?? '').toString(),
+    );
+  }
 }

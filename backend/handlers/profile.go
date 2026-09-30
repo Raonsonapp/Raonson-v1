@@ -419,8 +419,12 @@ func SetNote(c *gin.Context) {
 		WHERE id=$10`,
 		text, expires, title, artist, artUrl, previewUrl,
 		trackMs, startMs, endMs, myID)
+	// Ёддошти нав (ё тозашуда) — вокунишҳои ёддошти кӯҳна ба он
+	// намегузаранд (мисли Instagram).
+	clearNoteReactions(myID)
+	mw.CacheDel("profile:me:" + myID)
 
-	c.JSON(http.StatusOK, gin.H{"note": text})
+	c.JSON(http.StatusOK, gin.H{"note": text, "noteExpiresAt": expires})
 }
 
 // GET /profile/notes/friends
@@ -433,11 +437,19 @@ func GetFriendsNotes(c *gin.Context) {
 		       u.note,u.note_expires_at,
 		       u.note_song_title,u.note_song_artist,u.note_song_art_url,
 		       u.note_song_preview_url,u.note_song_track_ms,
-		       u.note_song_start_ms,u.note_song_end_ms
+		       u.note_song_start_ms,u.note_song_end_ms,
+		       COALESCE(nr.emoji,'')
 		FROM follows f JOIN users u ON u.id=f.following_id
+		-- Вокуниши ХУДИ ман ба ин ёддошт — то тугма ҳолати дурустро нишон диҳад.
+		LEFT JOIN note_reactions nr
+		       ON nr.note_owner_id=u.id AND nr.user_id=$1
 		WHERE f.follower_id=$1
 		  AND u.note_expires_at > NOW()
-		  AND (u.note != '' OR u.note_song_title != '')`,
+		  AND (u.note != '' OR u.note_song_title != '')
+		  -- Блок: ёддошти басташуда (ва басткунанда) нишон дода намешавад.
+		  AND NOT EXISTS(SELECT 1 FROM blocks b
+		     WHERE (b.blocker_id=$1 AND b.blocked_id=u.id)
+		        OR (b.blocker_id=u.id AND b.blocked_id=$1))`,
 		myID)
 	if err != nil {
 		log.Printf("[Profile] GetFriendsNotes error: %v", err)
@@ -452,12 +464,13 @@ func GetFriendsNotes(c *gin.Context) {
 		var verified bool
 		var noteExp interface{}
 		var stTrackMs, stStartMs, stEndMs int
+		var myReaction string
 		rows.Scan(&id, &uname, &avatar, &verified, &note, &noteExp,
 			&stTitle, &stArtist, &stArtUrl, &stPreviewUrl,
-			&stTrackMs, &stStartMs, &stEndMs)
+			&stTrackMs, &stStartMs, &stEndMs, &myReaction)
 		friends = append(friends, gin.H{
 			"_id": id, "username": uname, "avatar": avatar, "verified": verified,
-			"note": note, "noteExpiresAt": noteExp,
+			"note": note, "noteExpiresAt": noteExp, "myReaction": myReaction,
 			"noteSong": gin.H{
 				"title": stTitle, "artist": stArtist, "artUrl": stArtUrl,
 				"previewUrl": stPreviewUrl, "trackMs": stTrackMs,

@@ -375,7 +375,8 @@ func AdminTestEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Аккаунти шумо почта надорад"})
 		return
 	}
-	cfg := os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != ""
+	cfg := os.Getenv("BREVO_API_KEY") != "" ||
+		(os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != "")
 	if err := utils.SendEmailOTP(email, "123456"); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"sent": false, "to": email, "configured": cfg,

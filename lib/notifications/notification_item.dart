@@ -30,6 +30,7 @@ class _NotificationItemState extends State<NotificationItem> {
     switch (notification.type) {
       case 'like':
       case 'reel_like':
+      case 'note_reaction':
       case 'story_like': return const Color(0xFFFF3040);
       case 'comment':
       case 'reel_comment': return const Color(0xFF0095F6);
@@ -52,6 +53,7 @@ class _NotificationItemState extends State<NotificationItem> {
     switch (notification.type) {
       case 'like':
       case 'reel_like':
+      case 'note_reaction':
       case 'story_like':
         return RIcon.like(filled: true, size: 11, color: AppColors.textPrimary);
       case 'comment':

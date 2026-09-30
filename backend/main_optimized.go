@@ -212,6 +212,11 @@ func main() {
 		p.GET("/insights",      handlers.GetProfileInsights) // обзори 30-рӯза
 		p.GET("/notes/friends", cache3s, handlers.GetFriendsNotes)
 		p.POST("/note",         handlers.SetNote)
+		// Вокуниш/ҷавоб ба ёддошти дӯст ва рӯйхати вокунишҳо барои соҳиб.
+		p.POST("/notes/:userId/react",   handlers.ReactToNote)
+		p.DELETE("/notes/:userId/react", handlers.UnreactToNote)
+		p.POST("/notes/:userId/reply",   handlers.ReplyToNote)
+		p.GET("/note/reactions",         handlers.GetMyNoteReactions)
 		p.PUT("/",              handlers.UpdateProfile)
 		p.PUT("/settings",      handlers.UpdateSettings)
 		p.GET("/saved",         handlers.GetSavedPosts)

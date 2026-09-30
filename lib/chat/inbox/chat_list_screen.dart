@@ -13,6 +13,7 @@ import 'package:shimmer/shimmer.dart';
 import 'chat_list_controller.dart';
 import '../../core/i18n/strings.dart';
 import 'note_bottom_sheet.dart';
+import 'note_reply_sheet.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
 import '../../models/note_model.dart';
@@ -115,6 +116,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void _onSearch() => _ctrl.filterChats(_searchCtrl.text);
 
   Future<void> _openMyNote() async {
+    // Ёддошт ҳаст → аввал кӣ вокуниш дод (мисли Instagram), баъд таҳрир/нест.
+    if (_notes.hasMyNote) {
+      final action = await showMyNoteSheet(context);
+      if (!mounted || action == null) return;
+      if (action == MyNoteAction.delete) {
+        await _notes.clearNote();
+        return;
+      }
+    }
+    if (!mounted) return;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -284,6 +295,7 @@ class _ChatView extends StatelessWidget {
                 myNote:    notes.myNote,
                 mySong:    notes.mySong,
                 hasNote:   notes.hasMyNote,
+                reactions: notes.myReactions,
                 friends:   notes.friends,
                 onMyTap:   onMyNoteTap,
               ),
@@ -588,6 +600,7 @@ class _NotesRow extends StatelessWidget {
   final String          myNote;
   final SongInfo        mySong;
   final bool            hasNote;
+  final List<NoteReaction> reactions;
   final List<NoteModel> friends;
   final VoidCallback    onMyTap;
 
@@ -596,6 +609,7 @@ class _NotesRow extends StatelessWidget {
     required this.myNote,
     required this.mySong,
     required this.hasNote,
+    required this.reactions,
     required this.friends,
     required this.onMyTap,
   });
@@ -613,6 +627,7 @@ class _NotesRow extends StatelessWidget {
             myNote:  myNote,
             mySong:  mySong,
             hasNote: hasNote,
+            reactions: reactions,
             onTap:   onMyTap,
           ),
           ...friends.map((n) =>
@@ -628,11 +643,12 @@ class _MyNoteBubble extends StatelessWidget {
   final String       myNote;
   final SongInfo     mySong;
   final bool         hasNote;
+  final List<NoteReaction> reactions;
   final VoidCallback onTap;
 
   const _MyNoteBubble({
     required this.avatar, required this.myNote, required this.mySong,
-    required this.hasNote, required this.onTap,
+    required this.hasNote, required this.onTap, this.reactions = const [],
   });
 
   @override
@@ -645,7 +661,15 @@ class _MyNoteBubble extends StatelessWidget {
           width: 68,
           child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
             if (hasNote) ...[
-              _SpeechBubble(text: myNote, song: mySong.isEmpty ? null : mySong, isMine: true),
+              // Соҳиб мебинад, ки ба ёддошташ вокуниш доданд (эмодзиҳо + шумора).
+              Stack(clipBehavior: Clip.none, children: [
+                _SpeechBubble(text: myNote, song: mySong.isEmpty ? null : mySong, isMine: true),
+                if (reactions.isNotEmpty)
+                  Positioned(
+                    top: -8, right: -10,
+                    child: _ReactionBadge(reactions: reactions),
+                  ),
+              ]),
               const SizedBox(height: 5),
             ] else
               const SizedBox(height: 30),
@@ -708,15 +732,16 @@ class _FriendNoteBubble extends StatefulWidget {
 
 class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
   final _player = AudioPlayer();
-  bool  _playing = false;
+  // ValueNotifier — то варақаи ёддошт (route-и дигар) ҳам ҳолати
+  // навохтанро бинад.
+  final _playingN = ValueNotifier<bool>(false);
+  bool get _playing => _playingN.value;
   StreamSubscription? _sub;
 
   @override
   void initState() {
     super.initState();
-    _sub = _player.onPlayerComplete.listen((_) {
-      if (mounted) setState(() => _playing = false);
-    });
+    _sub = _player.onPlayerComplete.listen((_) => _setPlaying(false));
   }
 
   @override
@@ -724,7 +749,13 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
     _sub?.cancel();
     _player.stop();
     _player.dispose();
+    _playingN.dispose();
     super.dispose();
+  }
+
+  void _setPlaying(bool v) {
+    if (!mounted) return;
+    setState(() => _playingN.value = v);
   }
 
   Future<void> _toggle() async {
@@ -732,17 +763,22 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
     if (s.previewUrl.isEmpty) return;
     if (_playing) {
       await _player.pause();
-      setState(() => _playing = false);
+      _setPlaying(false);
     } else {
       await _player.play(UrlSource(s.previewUrl));
       await _player.seek(Duration(milliseconds: s.startMs));
-      setState(() => _playing = true);
+      _setPlaying(true);
       final seg = s.endMs - s.startMs;
       Future.delayed(Duration(milliseconds: seg), () {
-        if (mounted && _playing) { _player.stop(); setState(() => _playing = false); }
+        if (mounted && _playing) { _player.stop(); _setPlaying(false); }
       });
     }
   }
+
+  // Зеркунӣ варақаи вокуниш/ҷавобро мекушояд (мисли Instagram). Суруд
+  // дар худи варақа навохта мешавад.
+  void _open() => showFriendNoteSheet(context, widget.note,
+      onPlaySong: widget.note.hasSong ? _toggle : null, playing: _playingN);
 
   @override
   Widget build(BuildContext context) {
@@ -752,16 +788,32 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
         width: 72,
         child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
           GestureDetector(
-            onTap: widget.note.hasSong ? _toggle : null,
-            child: _SpeechBubble(
-              text:      widget.note.text,
-              song:      widget.note.hasSong ? widget.note.song : null,
-              isMine:    false,
-              isPlaying: _playing,
-            ),
+            onTap: _open,
+            child: Stack(clipBehavior: Clip.none, children: [
+              _SpeechBubble(
+                text:      widget.note.text,
+                song:      widget.note.hasSong ? widget.note.song : null,
+                isMine:    false,
+                isPlaying: _playing,
+              ),
+              // Вокуниши ман — то маълум бошад, ки аллакай ҷавоб додам.
+              if (widget.note.myReaction.isNotEmpty)
+                Positioned(
+                  top: -8, right: -8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColors.bg, shape: BoxShape.circle),
+                    child: Text(widget.note.myReaction,
+                        style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
+            ]),
           ),
           const SizedBox(height: 5),
-          Container(
+          GestureDetector(
+            onTap: _open,
+            child: Container(
             width: 54, height: 54,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -774,7 +826,7 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
                       errorWidget: (_, __, ___) => _ph())
                   : _ph(),
             ),
-          ),
+          )),
           const SizedBox(height: 5),
           Text(widget.note.username,
               style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
@@ -787,6 +839,38 @@ class _FriendNoteBubbleState extends State<_FriendNoteBubble> {
 
   Widget _ph() => Container(color: AppColors.card,
       child: Icon(AppIcons.person, color: AppColors.textFaint, size: 26));
+}
+
+/// Нишони вокунишҳо дар ёддошти ман: то 3 эмодзии гуногун + шумора.
+class _ReactionBadge extends StatelessWidget {
+  final List<NoteReaction> reactions;
+  const _ReactionBadge({required this.reactions});
+
+  @override
+  Widget build(BuildContext context) {
+    final emojis = <String>[];
+    for (final r in reactions) {
+      if (!emojis.contains(r.emoji)) emojis.add(r.emoji);
+      if (emojis.length == 3) break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.bg, width: 1.5),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(emojis.join(), style: const TextStyle(fontSize: 10)),
+        if (reactions.length > 1) ...[
+          const SizedBox(width: 2),
+          Text('${reactions.length}',
+              style: TextStyle(color: AppColors.textPrimary,
+                  fontSize: 10, fontWeight: FontWeight.w600)),
+        ],
+      ]),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────

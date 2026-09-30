@@ -189,13 +189,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             child: CircularProgressIndicator(color: AppColors.neonBlue)));
     String result;
     try {
-      final res = await ApiClient.instance.post('/admin/test-email');
+      // Сервер то 20с ба провайдери почта мунтазир мешавад — timeout-и
+      // оддии 8с ин ҷо «Хатои шабака» медод, гарчи почта дар роҳ буд.
+      final res = await ApiClient.instance.postLong('/admin/test-email');
       final j = jsonDecode(res.body) as Map<String, dynamic>;
       if (j['sent'] == true) {
         result = '✅ Фиристода шуд ба ${j['to']}\n\nПочтаатонро (ва Spam) санҷед.';
       } else {
         result = '❌ Нафиристода шуд\n\n'
-            'Танзим: ${j['configured'] == true ? 'SMTP_USER/PASS гузошта шуда' : 'SMTP_USER/PASS НЕСТ'}\n\n'
+            'Танзим: ${j['configured'] == true ? 'почта (Brevo/SMTP) танзим шуда' : 'BREVO_API_KEY ё SMTP_USER/PASS НЕСТ'}\n\n'
             'Хато:\n${j['error'] ?? 'номаълум'}';
       }
     } catch (e) {

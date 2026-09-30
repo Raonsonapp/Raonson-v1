@@ -278,6 +278,13 @@ class _BubbleBody extends StatelessWidget {
       );
     }
 
+    // Ҷавоб ба ёддошт (Notes): иқтибоси ёддошт + матни ҷавоб. Бояд пеш аз
+    // корти умумии мубодила бошад — вагарна матни ҷавоб пинҳон мешуд.
+    if (m.share?.kind == 'note') {
+      return _NoteReplyBubble(
+          message: m, isMine: isMine, myBubbleColor: myBubbleColor);
+    }
+
     // Мубодилаи пост/рилс/сторис — корти пешнамоиш (мисли Instagram),
     // на танҳо линки хом.
     if (m.share != null) {
@@ -428,6 +435,69 @@ class _SharedRefBubble extends StatelessWidget {
             ]),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+// ── Ҷавоб ба ёддошт ─────────────────────────────────────────────
+// Мисли Instagram: боло «Ба ёддошти … ҷавоб дод» ва иқтибоси ёддошт,
+// поён худи ҷавоб. Матни ёддошт дар shareThumb (нусха дар лаҳзаи ҷавоб)
+// аст, то баъди гузаштани 24 соат ҳам маълум бошад, ки ҷавоб ба чӣ буд.
+class _NoteReplyBubble extends StatelessWidget {
+  final MessageModel message;
+  final bool isMine;
+  final Color? myBubbleColor;
+  const _NoteReplyBubble(
+      {required this.message, required this.isMine, this.myBubbleColor});
+
+  @override
+  Widget build(BuildContext context) {
+    final share = message.share!;
+    final maxW = MediaQuery.of(context).size.width * 0.72;
+    final header = isMine
+        ? 'Шумо ба ёддошти @${share.username} ҷавоб додед'
+        : 'Ба ёддошти шумо ҷавоб дод';
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxW),
+      child: Column(
+        crossAxisAlignment:
+            isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(header,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: AppColors.textFaint, fontSize: 11.5)),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.dividerFaint),
+            ),
+            child: Text(share.thumb,
+                maxLines: 3, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: AppColors.textSecondary,
+                    fontSize: 13.5, height: 1.3)),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isMine
+                  ? (myBubbleColor ?? AppColors.neonBlue)
+                  : AppColors.card,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Text(message.text,
+                style: TextStyle(color: AppColors.textPrimary,
+                    fontSize: 15, height: 1.35)),
+          ),
+        ],
       ),
     );
   }

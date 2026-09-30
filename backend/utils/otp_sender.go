@@ -6,7 +6,9 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
+	"errors"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,7 +24,34 @@ import (
 // SendEmailOTP — рамзро тавассути email мефиристад.
 // Афзалият бо Brevo (HTTP, порти 443) — чун хостингҳои ройгон (Hugging Face)
 // порти SMTP-ро мебанданд. Агар Brevo танзим нашуда бошад, ба SMTP мегузарад.
+// EmailTimeout — буҷети УМУМИИ як фиристодан (Brevo ё ҳамаи портҳои SMTP
+// якҷоя). Пеш SMTP баъди пайвастшавӣ deadline надошт: сервери хомӯш
+// дархостро то абад нигоҳ медошт ва клиент бо TimeoutException меафтод,
+// бе ягон сабаби фаҳмо. 20с < timeout-и дарози клиент (30с).
+var EmailTimeout = 20 * time.Second
+
+// errEmailTimeout — хатои фаҳмо ба ҷои «context deadline exceeded».
+func emailTimeoutErr(err error) error {
+	if errors.Is(err, context.DeadlineExceeded) || isNetTimeout(err) {
+		return fmt.Errorf("провайдери почта дар %s ҷавоб надод (timeout): %v",
+			EmailTimeout, err)
+	}
+	return err
+}
+
+func isNetTimeout(err error) bool {
+	var ne net.Error
+	return errors.As(err, &ne) && ne.Timeout()
+}
+
 func SendEmailOTP(to, otp string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), EmailTimeout)
+	defer cancel()
+	return SendEmailOTPContext(ctx, to, otp)
+}
+
+// SendEmailOTPContext — мисли SendEmailOTP, вале бо deadline-и додашуда.
+func SendEmailOTPContext(ctx context.Context, to, otp string) error {
 	subject := "Раонсон — рамзи барқарорсозӣ"
 	body := fmt.Sprintf(
 		"Рамзи тасдиқи шумо: %s\n\nИн рамз 10 дақиқа эътибор дорад.\n"+
@@ -31,15 +60,15 @@ func SendEmailOTP(to, otp string) error {
 
 	// 1) Brevo HTTP API (тавсияшаванда барои Hugging Face)
 	if key := os.Getenv("BREVO_API_KEY"); key != "" {
-		return sendBrevo(key, to, subject, body)
+		return emailTimeoutErr(sendBrevo(ctx, key, to, subject, body))
 	}
 	// 2) Fallback: SMTP (берун аз HF кор мекунад)
-	return sendSMTP(to, subject, body)
+	return emailTimeoutErr(sendSMTP(ctx, to, subject, body))
 }
 
 // Brevo — transactional email тавассути HTTPS.
 // env: BREVO_API_KEY, BREVO_SENDER (почтаи тасдиқшудаи фиристанда)
-func sendBrevo(apiKey, to, subject, text string) error {
+func sendBrevo(ctx context.Context, apiKey, to, subject, text string) error {
 	sender := os.Getenv("BREVO_SENDER")
 	if sender == "" {
 		sender = os.Getenv("SMTP_USER")
@@ -54,7 +83,7 @@ func sendBrevo(apiKey, to, subject, text string) error {
 		"textContent": text,
 	}
 	jb, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST",
+	req, err := http.NewRequestWithContext(ctx, "POST",
 		"https://api.brevo.com/v3/smtp/email", bytes.NewReader(jb))
 	if err != nil {
 		return err
@@ -62,14 +91,15 @@ func sendBrevo(apiKey, to, subject, text string) error {
 	req.Header.Set("api-key", apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("accept", "application/json")
-	client := &http.Client{Timeout: 15 * time.Second}
+	// Timeout аз ctx меояд; Client.Timeout танҳо ҳимояи иловагист.
+	client := &http.Client{Timeout: EmailTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("brevo: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		b, _ := io.ReadAll(resp.Body)
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 		return fmt.Errorf("brevo %d: %s", resp.StatusCode, string(b))
 	}
 	return nil
@@ -77,7 +107,7 @@ func sendBrevo(apiKey, to, subject, text string) error {
 
 // SMTP бо timeout — портҳои гуногунро меозмоем (587 STARTTLS, баъд 465 SSL).
 // Баъзе хостингҳо 587-ро мебанданд вале 465-ро мекушоянд (ё баръакс).
-func sendSMTP(to, subject, bodyText string) error {
+func sendSMTP(ctx context.Context, to, subject, bodyText string) error {
 	host := os.Getenv("SMTP_HOST")
 	user := os.Getenv("SMTP_USER")
 	pass := strings.ReplaceAll(os.Getenv("SMTP_PASS"), " ", "")
@@ -110,7 +140,11 @@ func sendSMTP(to, subject, bodyText string) error {
 	auth := smtp.PlainAuth("", user, pass, host)
 	var lastErr error
 	for _, port := range ports {
-		err := smtpDeliver(host, port, from, to, msg, auth)
+		if ctx.Err() != nil {
+			// Буҷет тамом шуд — порти навбатиро намеозмоем.
+			break
+		}
+		err := smtpDeliver(ctx, host, port, from, to, msg, auth)
 		if err == nil {
 			return nil
 		}
@@ -121,20 +155,28 @@ func sendSMTP(to, subject, bodyText string) error {
 
 // smtpDeliver — як кӯшиши расонидан тавассути порти мушаххас.
 // Порти 465 = implicit TLS; дигарон = plain + STARTTLS.
-func smtpDeliver(host, port, from, to, msg string, auth smtp.Auth) error {
+func smtpDeliver(ctx context.Context, host, port, from, to, msg string, auth smtp.Auth) error {
 	addr := host + ":" + port
+	// Dial то 8с (то порти дигар ҳам вақт монад), аммо на дертар аз ctx.
+	dctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	d := &net.Dialer{}
 	var conn net.Conn
 	var err error
 	if port == "465" {
-		d := &net.Dialer{Timeout: 8 * time.Second}
-		conn, err = tls.DialWithDialer(d, "tcp", addr, &tls.Config{ServerName: host})
+		td := &tls.Dialer{NetDialer: d, Config: &tls.Config{ServerName: host}}
+		conn, err = td.DialContext(dctx, "tcp", addr)
 	} else {
-		conn, err = net.DialTimeout("tcp", addr, 8*time.Second)
+		conn, err = d.DialContext(dctx, "tcp", addr)
 	}
 	if err != nil {
 		return fmt.Errorf("dial: %w", err)
 	}
 	defer conn.Close()
+	// ⚠️ Бе deadline net/smtp (Auth/DATA) метавонист то абад мунтазир шавад.
+	if dl, ok := ctx.Deadline(); ok {
+		conn.SetDeadline(dl)
+	}
 
 	c, err := smtp.NewClient(conn, host)
 	if err != nil {

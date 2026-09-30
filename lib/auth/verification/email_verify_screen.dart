@@ -48,7 +48,7 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
 
     try {
       final res = await ApiClient.instance
-          .post('/auth/verify-email', body: {'email': email});
+          .postLong('/auth/verify-email', body: {'email': email}); // email суст аст
 
       // Маҳз ин санҷиш нарасида буд.
       if (res.statusCode >= 400) {

@@ -20,6 +20,7 @@ import '../../core/presence_service.dart';
 import '../../core/services/socket_service.dart';
 import 'message_bubble.dart';
 import 'chat_theme.dart';
+import 'chat_room_app_bar.dart';
 import 'message_input.dart';
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
@@ -165,18 +166,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Future<void> _init() async {
     _myId = await TokenStorage.getUserId() ?? '';
     _scroll.addListener(_onScrollLoadOlder);
-    // ⚡ ТЕЗ: аввал паёмҳои кэшро фавран нишон медиҳем (бе интизори шабака),
-    // то чат дарҳол кушода шавад ва корбар интизор нашавад.
-    await _load();
-    // Баъд chatId-и воқеиро дар background ҳал мекунем (socket/read/theme) ва
-    // навтарин паёмҳоро reconcile мекунем.
+    // chatId МАҲАЛЛӢ ҳисоб мешавад (sorted(myId, peerId)) — пеш аввал
+    // `/chat/with` ва баъд `/messages` пайдарпай мерафтанд (+ як fetch-и
+    // дубора), ки кушодани чатро 3–4 сония дароз мекард.
     _chatId = await _repo.resolveChatId(widget.peer.id) ?? '';
+    // Кэш → фавран, баъд ЯК дархости шабака. Мунтазири он намешавем, то
+    // socket/presence ҳамзамон пайваст шаванд.
+    _load();
     if (_chatId.isNotEmpty) {
       _repo.markAsRead(_chatId); // хонда ҳисоб кун
       ChatThemes.load(_chatId).then((t) {
         if (mounted) setState(() => _theme = t);
       });
-      _load(); // fresh-by-chatId reconcile (дигар _loading нест)
     }
     _setupSocket();
     _setupPresence();
@@ -253,40 +254,42 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   Future<void> _load() async {
-    try {
-      // 1. Кэшро фавран нишон медиҳем (тез).
-      final msgs = await _repo.getMessagesWithUserEx(widget.peer.id);
-      if (mounted) {
-        setState(() {
-          _messages = msgs;
-          _loading = false;
-          _msgPage = 1;
-          _hasMoreOlder = msgs.length >= _msgPageSize;
-        });
-      }
-      _scrollBottom();
-    } catch (_) {
+    if (_chatId.isEmpty) {
       if (mounted) setState(() => _loading = false);
+      return;
     }
-    // 2. Сипас аз шабака навтаринро мегирем ва ҷойгузин мекунем — то паёми
-    // навфиристода (ки ҳанӯз дар кэш нест) баъди бозкушоиш ГУМ нашавад.
-    // Кэши getMessagesWithUserEx навсозӣ мешавад, вале UI-ро навсозӣ намекард.
-    if (_chatId.isEmpty) return;
-    try {
-      final fresh = await _repo.fetchFreshByChatId(_chatId);
-      if (!mounted || fresh.isEmpty) return;
-      final pending = _messages.where((m) => m.isOptimistic).toList();
-      final freshIds = fresh.map((m) => m.id).toSet();
-      setState(() {
-        _messages = [
-          ...fresh,
-          ...pending.where((m) => !freshIds.contains(m.id)),
-        ];
-        _msgPage = 1;
-        _hasMoreOlder = fresh.length >= _msgPageSize;
-      });
-      _scrollBottom();
-    } catch (_) {}
+    // 1. Кэш — танҳо вақте экран ҳанӯз холист (бори аввал). Баъдтар кэшро
+    // бар рӯи паёмҳои навтари экран НАМЕГУЗОРЕМ.
+    if (_messages.isEmpty) {
+      final cached = await _repo.loadCachedMessages(_chatId);
+      if (mounted && cached != null && cached.isNotEmpty && _messages.isEmpty) {
+        setState(() {
+          _messages = cached;
+          _loading = false;
+        });
+        _scrollBottom();
+      }
+    }
+    // 2. Як дархости шабака — навтаринҳо (ва кэш дар repository нав мешавад).
+    final fresh = await _repo.fetchLatest(_chatId);
+    if (!mounted) return;
+    if (fresh == null) {
+      // Хатои шабака: кэш (агар буд) дар экран мемонад.
+      if (_loading) setState(() => _loading = false);
+      return;
+    }
+    final pending = _messages.where((m) => m.isOptimistic).toList();
+    final freshIds = fresh.map((m) => m.id).toSet();
+    setState(() {
+      _messages = [
+        ...fresh,
+        ...pending.where((m) => !freshIds.contains(m.id)),
+      ];
+      _loading = false;
+      _msgPage = 1;
+      _hasMoreOlder = fresh.length >= _msgPageSize;
+    });
+    _scrollBottom();
   }
 
   void _setupSocket() {
@@ -309,6 +312,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (_chatId.isNotEmpty && msg.chatId.isNotEmpty && msg.chatId != _chatId) {
         return;
       }
+      // Ба кэш ҳам — то бозкушоии навбатӣ ин паёмро фавран нишон диҳад.
+      if (_chatId.isNotEmpty) _repo.appendToCache(_chatId, data);
       setState(() {
         // Аллакай ҳаст (POST-и худам ё poll-refresh оварда) → дубликат накунем.
         if (_messages.any((m) => m.id == msg.id)) return;
@@ -801,7 +806,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           _ => 'file',
         },
       },
-      if (msg.share != null) ...{
+      // Ҷавоби ёддошт корт нест — танҳо матн фиристода мешавад.
+      if (msg.share != null && msg.share!.kind != 'note') ...{
         'shareId': msg.share!.id,
         'shareKind': msg.share!.kind,
         'shareThumb': msg.share!.thumb,
@@ -1000,92 +1006,30 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (mounted) Navigator.pop(context);
   }
 
-  AppBar _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.bg,
-      elevation: 0,
-      leading: IconButton(
-        icon: Icon(AppIcons.arrow_back_ios_new_rounded,
-            color: AppColors.textPrimary, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: GestureDetector(
-        onTap: () => Navigator.pushNamed(
-            context, '/user-profile', arguments: widget.peer.id),
-        child: Row(children: [
-          Stack(clipBehavior: Clip.none, children: [
-            Avatar(imageUrl: widget.peer.avatar, size: 36, glowBorder: false),
-            if (_online)
-              Positioned(
-                bottom: 0, right: 0,
-                child: Container(
-                  width: 11, height: 11,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00E676),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.bg, width: 2),
-                  ),
-                ),
-              ),
-          ]),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(widget.peer.username,
-                    style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15)),
-                if (widget.peer.isVerified) ...[
-                  const SizedBox(width: 4),
-                  const Icon(AppIcons.verified_rounded,
-                      fill: 1, color: Color(0xFF00C853), size: 14),
-                ],
-              ]),
-              Text(
-                _isPeerTyping
-                    ? 'менависад...'
-                    : (_online ? 'Онлайн' : _label),
-                style: TextStyle(
-                  color: _isPeerTyping || _online
-                      ? const Color(0xFF00E676)
-                      : AppColors.textFaint,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ]),
-      ),
-      actions: [
-        // Vanish mode — мисли Instagram.
-        _AppBarBtn(
-            icon: AppIcons.visibility_off_rounded,
-            onTap: () {
-              setState(() => _vanish = !_vanish);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(_vanish
-                      ? '👻 Vanish mode: паёмҳои нав баъди дидан ва бастани чат нопадид мешаванд'
-                      : 'Vanish mode хомӯш шуд'),
-                  duration: const Duration(seconds: 3)));
-            }),
-        _AppBarBtn(
-            icon: AppIcons.videocam_rounded,
-            onTap: () => _startCall(CallType.video)),
-        _AppBarBtn(
-            icon: AppIcons.call_rounded,
-            onTap: () => _startCall(CallType.voice)),
-        _AppBarBtn(
-            icon: AppIcons.palette_outlined,
-            onTap: _pickTheme),
-        const SizedBox(width: 4),
-      ],
-    );
+  void _toggleVanish() {
+    setState(() => _vanish = !_vanish);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_vanish
+            ? '👻 Vanish mode: паёмҳои нав баъди дидан ва бастани чат нопадид мешаванд'
+            : 'Vanish mode хомӯш шуд'),
+        duration: const Duration(seconds: 3)));
   }
+
+  AppBar _buildAppBar() => buildChatRoomAppBar(
+        context,
+        peer:           widget.peer,
+        online:         _online,
+        statusLabel:    _label,
+        typing:         _isPeerTyping,
+        vanish:         _vanish,
+        onBack:         () => Navigator.pop(context),
+        onOpenProfile:  () => Navigator.pushNamed(
+            context, '/user-profile', arguments: widget.peer.id),
+        onToggleVanish: _toggleVanish,
+        onVideo:        () => _startCall(CallType.video),
+        onVoice:        () => _startCall(CallType.voice),
+        onTheme:        _pickTheme,
+      );
 
   void _pickTheme() {
     showModalBottomSheet(
@@ -1354,21 +1298,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────
-//  App bar action button
-// ─────────────────────────────────────────────────────────────────
-class _AppBarBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _AppBarBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    icon: Icon(icon, color: AppColors.textPrimary, size: 22),
-    onPressed: onTap,
-  );
 }
 
 class _QuickBtn extends StatelessWidget {

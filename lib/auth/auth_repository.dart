@@ -56,7 +56,8 @@ class AuthRepository {
   /// channel: 'email' | 'sms' | 'whatsapp'. Агар backend рамзро
   /// баргардонад (бе провайдер), онро бармегардонем (барои санҷиш).
   Future<String?> forgotPassword(String identifier, {String channel = 'email'}) async {
-    final res = await _api.post(
+    // postLong: фиристодани почта/SMS то 20с; retry мактуби дуюм мефиристод.
+    final res = await _api.postLong(
       ApiEndpoints.forgotPassword,
       body: {'identifier': identifier, 'channel': channel},
     );
