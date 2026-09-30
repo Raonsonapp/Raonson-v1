@@ -1,10 +1,14 @@
 // lib/profile/share_profile_sheet.dart
-// Raonson Share Profile Sheet
-// Dependencies: share_plus (already in pubspec), cached_network_image
-// NO qr_flutter. Custom drawn QR with Raonson R logo via CustomPainter.
-import 'package:cached_network_image/cached_network_image.dart';
+// Raonson Share Profile Sheet — корти QR мисли Instagram.
+//
+// QR акнун МАҲАЛЛӢ сохта мешавад (qr_flutter) — пеш аз api.qrserver.com
+// гирифта мешуд (офлайн кор намекард) ва «логотип» як R-и дастикашида буд.
+// Ҳоло логотипи воқеии барнома (assets/qr_logo.png, аз icon.png) дар марказ
+// бо ErrorCorrection H аст: то ~30% модулҳо барқарор мешаванд, лого ~5%-и
+// масоҳатро мепӯшонад — скан бехатар мемонад.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../app/app_theme.dart';
@@ -12,6 +16,11 @@ import '../models/user_model.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
 import '../core/links/deep_links.dart';
+
+// Рангҳои бренд — аз худи логотип (кабуд → сабз).
+const _brandBlue  = Color(0xFF1E6BFF);
+const _brandGreen = Color(0xFF14D97A);
+const _brandNavy  = Color(0xFF071A3D);
 
 class ShareProfileSheet extends StatefulWidget {
   final UserModel user;
@@ -51,96 +60,103 @@ class _ShareState extends State<ShareProfileSheet> {
         Expanded(child: SingleChildScrollView(child: Column(children: [
 
           // ── Card ──────────────────────────────────────────────────
+          // Заминаи градиенти бренд + корти сафеди QR (мисли Instagram).
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             margin: const EdgeInsets.symmetric(horizontal: 28),
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.fromLTRB(22, 26, 22, 18),
             decoration: BoxDecoration(
-              color:  _dark ? AppColors.surface : AppColors.textPrimary,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                  color: _dark ? AppColors.dividerFaint : Colors.black12)),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: _dark
+                    ? const [_brandNavy, Color(0xFF0B3A8C), Color(0xFF0B6B4A)]
+                    : const [_brandBlue, Color(0xFF2FA8FF), _brandGreen],
+              ),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                    color: _brandBlue.withOpacity(0.25),
+                    blurRadius: 24, offset: const Offset(0, 10)),
+              ],
+            ),
             child: Column(children: [
-
-              // User row
-              Row(children: [
-                ClipOval(
-                  child: widget.user.avatar.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: widget.user.avatar,
-                          width: 48, height: 48, fit: BoxFit.cover,
-                          memCacheWidth: 96,
-                          placeholder: (_, __) =>
-                              Container(color: AppColors.card),
-                          errorWidget: (_, __, ___) =>
-                              Container(color: AppColors.card,
-                                  child: Icon(AppIcons.person_rounded,
-                                      color: AppColors.textFaint, size: 26)))
-                      : Container(width: 48, height: 48,
-                          color: AppColors.card,
-                          child: Icon(AppIcons.person_rounded,
-                              color: AppColors.textFaint, size: 26))),
-                const SizedBox(width: 12),
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Flexible(child: Text(widget.user.username,
-                          style: TextStyle(
-                              color: _dark ? AppColors.textPrimary : AppColors.bg,
-                              fontSize: 15, fontWeight: FontWeight.bold))),
-                      if (widget.user.isVerified) ...[
-                        const SizedBox(width: 5),
-                        const Icon(AppIcons.verified_rounded,
-                            fill: 1, color: Color(0xFF00C853), size: 14),
-                      ],
-                    ]),
-                    const SizedBox(height: 2),
-                    // Ҳамон линки воқеӣ, ки QR дорад — `raonson.app` вуҷуд надорад.
-                    Text(_url.replaceFirst(RegExp(r'^https?://'), ''),
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: _dark ? AppColors.textFaint : Colors.black38,
-                            fontSize: 11.5)),
-                  ])),
-              ]),
-              const SizedBox(height: 22),
-
-              // QR — воқеӣ ва скан-шаванда (API-и ройгон); офлайн → fallback.
-              // Ҳамеша дар қуттии сафед, то ҳар сканер онро хонда тавонад.
+              // Корти сафед: QR + @username. QR ҳамеша дар заминаи сафед ва
+              // модулҳои торик аст — контрасти баланд барои ҳар сканер.
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
                 decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16)),
-                child: SizedBox(width: 180, height: 180,
-                  child: CachedNetworkImage(
-                    imageUrl:
-                        'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${Uri.encodeComponent(_url)}',
-                    fit: BoxFit.contain,
-                    memCacheWidth: 360,
-                    placeholder: (_, __) => const Center(
-                        child: SizedBox(width: 22, height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2))),
-                    errorWidget: (_, __, ___) => CustomPaint(
-                        painter: _QrPainter(
-                            fg: Colors.black, bg: Colors.white,
-                            urlLen: _url.length)),
-                  ),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
                 ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  QrImageView(
+                    data: _url,
+                    size: 200,
+                    padding: EdgeInsets.zero,
+                    backgroundColor: Colors.white,
+                    // H: то ~30% барқарор — лого дар марказ скан-ро намешиканад.
+                    errorCorrectionLevel: QrErrorCorrectLevel.H,
+                    eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square, color: _brandNavy),
+                    dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: _brandNavy),
+                    // ~24% паҳнӣ → ~5.8% масоҳат (хеле камтар аз ҳадди 20%).
+                    embeddedImage: const AssetImage('assets/qr_logo.png'),
+                    embeddedImageStyle:
+                        const QrEmbeddedImageStyle(size: Size(48, 48)),
+                    semanticsLabel: 'QR-и профили @${widget.user.username}',
+                  ),
+                  const SizedBox(height: 12),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    Flexible(
+                      child: ShaderMask(
+                        blendMode: BlendMode.srcIn,
+                        shaderCallback: (r) => const LinearGradient(
+                                colors: [_brandBlue, _brandGreen])
+                            .createShader(r),
+                        child: Text('@${widget.user.username.toUpperCase()}',
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3)),
+                      ),
+                    ),
+                    if (widget.user.isVerified) ...[
+                      const SizedBox(width: 5),
+                      const Icon(AppIcons.verified_rounded,
+                          fill: 1, color: _brandBlue, size: 16),
+                    ],
+                  ]),
+                ]),
               ),
               const SizedBox(height: 14),
 
-              // Raonson brand row
+              // Wordmark: логотип + «Raonson» бо ҳарфи бренд.
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                SizedBox(width: 16, height: 16,
-                    child: CustomPaint(painter: _RLogoPainter(
-                        color: _dark ? AppColors.neonBlue : AppColors.neonBlueDim))),
-                const SizedBox(width: 7),
-                Text('Raonson', style: TextStyle(
-                    color: _dark ? AppColors.textFaint : Colors.black38,
-                    fontSize: 12, letterSpacing: 0.5)),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: Image.asset('assets/qr_logo.png',
+                      width: 26, height: 26, cacheWidth: 78),
+                ),
+                const SizedBox(width: 8),
+                const Text('Raonson',
+                    style: TextStyle(
+                        fontFamily: 'RaonsonFont',
+                        color: Colors.white,
+                        fontSize: 30,
+                        height: 1.1)),
               ]),
+              const SizedBox(height: 4),
+              // Ҳамон линки воқеӣ, ки QR дорад.
+              Text(_url.replaceFirst(RegExp(r'^https?://'), ''),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.75),
+                      fontSize: 11.5)),
             ]),
           ),
 
@@ -182,168 +198,6 @@ class _ShareState extends State<ShareProfileSheet> {
       ])),
     );
   }
-}
-
-// ════════════════════════════════════════════════════════════════════
-//  QR PAINTER — Deterministic 21×21 pattern + Raonson logo center
-// ════════════════════════════════════════════════════════════════════
-class _QrPainter extends CustomPainter {
-  final Color fg, bg;
-  final int   urlLen;
-  const _QrPainter({required this.fg, required this.bg, required this.urlLen});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final cell  = size.width / 21;
-
-    // Background
-    paint.color = bg;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
-
-    paint.color = fg;
-
-    // 3 finder patterns (corners)
-    _finder(canvas, paint, bg, 0,  0,  cell);
-    _finder(canvas, paint, bg, 14, 0,  cell);
-    _finder(canvas, paint, bg, 0,  14, cell);
-
-    // Data modules — deterministic pseudo-random from urlLen
-    for (int row = 0; row < 21; row++) {
-      for (int col = 0; col < 21; col++) {
-        // Skip finder zones + timing row/col
-        if ((row < 9 && col < 9) ||
-            (row < 9 && col > 11) ||
-            (row > 11 && col < 9)) continue;
-        if (row == 6 || col == 6) { // timing pattern
-          paint.color = (row + col) % 2 == 0 ? fg : bg;
-          canvas.drawRect(
-              Rect.fromLTWH(col * cell, row * cell, cell, cell), paint);
-          paint.color = fg;
-          continue;
-        }
-        final hash = (row * 31 + col * 17 + urlLen * 7) % 23;
-        if (hash < 11) {
-          canvas.drawRect(
-              Rect.fromLTWH(col * cell, row * cell, cell, cell), paint);
-        }
-      }
-    }
-
-    // Center white box for logo
-    final cx  = size.width  * 0.5;
-    final cy  = size.height * 0.5;
-    final lsz = cell * 5;
-    paint.color = bg;
-    canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset(cx, cy), width: lsz, height: lsz),
-            const Radius.circular(4)),
-        paint);
-
-    // Draw Raonson "R" in center
-    _drawR(canvas, Offset(cx - lsz * 0.3, cy - lsz * 0.38), lsz * 0.76, fg);
-  }
-
-  void _finder(Canvas canvas, Paint paint, Color bgColor,
-      int col, int row, double cell) {
-    paint.color = fg;
-    canvas.drawRect(
-        Rect.fromLTWH(col * cell, row * cell, 7 * cell, 7 * cell), paint);
-    paint.color = bgColor;
-    canvas.drawRect(
-        Rect.fromLTWH((col + 1) * cell, (row + 1) * cell,
-            5 * cell, 5 * cell), paint);
-    paint.color = fg;
-    canvas.drawRect(
-        Rect.fromLTWH((col + 2) * cell, (row + 2) * cell,
-            3 * cell, 3 * cell), paint);
-  }
-
-  void _drawR(Canvas canvas, Offset o, double h, Color color) {
-    final paint = Paint()..style = PaintingStyle.fill..color = color;
-    final w     = h * 0.65;
-    final sw    = h * 0.16; // stroke width
-
-    // Vertical bar
-    canvas.drawRect(Rect.fromLTWH(o.dx, o.dy, sw, h), paint);
-
-    // Top bump
-    final bump = Path()
-      ..moveTo(o.dx + sw, o.dy)
-      ..lineTo(o.dx + w * 0.65, o.dy)
-      ..quadraticBezierTo(
-          o.dx + w, o.dy,
-          o.dx + w, o.dy + h * 0.28)
-      ..quadraticBezierTo(
-          o.dx + w, o.dy + h * 0.5,
-          o.dx + w * 0.55, o.dy + h * 0.5)
-      ..lineTo(o.dx + sw, o.dy + h * 0.5)
-      ..close();
-    canvas.drawPath(bump, paint);
-
-    // Inner cutout
-    final cutout = Paint()..style = PaintingStyle.fill..color = bg;
-    canvas.drawRect(Rect.fromLTWH(
-        o.dx + sw, o.dy + sw * 0.6, w * 0.55 - sw, h * 0.35), cutout);
-
-    // Leg (diagonal)
-    final leg = Path()
-      ..moveTo(o.dx + sw, o.dy + h * 0.5)
-      ..lineTo(o.dx + w * 0.55, o.dy + h * 0.5)
-      ..lineTo(o.dx + w,        o.dy + h)
-      ..lineTo(o.dx + w - sw,   o.dy + h)
-      ..lineTo(o.dx + w * 0.5 - sw * 0.3, o.dy + h * 0.5 + sw * 0.6)
-      ..lineTo(o.dx + sw, o.dy + h * 0.5 + sw * 0.4)
-      ..close();
-    canvas.drawPath(leg, paint);
-  }
-
-  @override
-  bool shouldRepaint(_QrPainter old) =>
-      old.fg != fg || old.bg != bg || old.urlLen != urlLen;
-}
-
-// Small "R" logo painter for brand row
-class _RLogoPainter extends CustomPainter {
-  final Color color;
-  const _RLogoPainter({required this.color});
-  @override
-  void paint(Canvas canvas, Size size) {
-    final p  = Paint()..style = PaintingStyle.fill..color = color;
-    final h  = size.height;
-    final w  = size.width;
-    final sw = w * 0.18;
-    final o  = Offset(w * 0.1, 0);
-
-    canvas.drawRect(Rect.fromLTWH(o.dx, o.dy, sw, h), p);
-
-    final bump = Path()
-      ..moveTo(o.dx + sw, o.dy)
-      ..lineTo(o.dx + w * 0.7, o.dy)
-      ..quadraticBezierTo(o.dx + w, o.dy, o.dx + w, h * 0.28)
-      ..quadraticBezierTo(o.dx + w, h * 0.5, o.dx + w * 0.62, h * 0.5)
-      ..lineTo(o.dx + sw, h * 0.5)
-      ..close();
-    canvas.drawPath(bump, p);
-
-    final bg = Paint()..style = PaintingStyle.fill
-        ..color = Colors.transparent;
-    canvas.drawRect(
-        Rect.fromLTWH(o.dx + sw, sw * 0.5, w * 0.55 - sw, h * 0.35), bg);
-
-    final leg = Path()
-      ..moveTo(o.dx + sw, h * 0.5)
-      ..lineTo(o.dx + w * 0.6, h * 0.5)
-      ..lineTo(o.dx + w,     h)
-      ..lineTo(o.dx + w - sw, h)
-      ..lineTo(o.dx + w * 0.52, h * 0.5 + sw * 0.5)
-      ..lineTo(o.dx + sw, h * 0.5 + sw * 0.3)
-      ..close();
-    canvas.drawPath(leg, p);
-  }
-  @override
-  bool shouldRepaint(_RLogoPainter old) => old.color != color;
 }
 
 // Theme toggle button

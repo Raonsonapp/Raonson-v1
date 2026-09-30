@@ -328,7 +328,9 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 		       m.is_deleted, m.created_at,
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       m.sender_id, m.edited_at, COALESCE(m.forwarded,false),
-		       COALESCE(m.vanish,false)
+		       COALESCE(m.vanish,false),
+		       COALESCE(m.share_id,''), COALESCE(m.share_kind,''),
+		       COALESCE(m.share_thumb,''), COALESCE(m.share_user,'')
 		FROM messages m
 		JOIN users u ON u.id = m.sender_id
 		WHERE m.id = $1
@@ -344,12 +346,15 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 		editedAt               *time.Time
 		forwarded              bool
 		vanish                 bool
+		shareID, shareKind     string
+		shareThumb, shareUser  string
 	)
 	if err := row.Scan(
 		&id, &chatID, &text, &mType, &mediaURL, &replyToID,
 		&isDeleted, &createdAt,
 		&senderID, &username, &avatar, &verified,
 		&senderID, &editedAt, &forwarded, &vanish,
+		&shareID, &shareKind, &shareThumb, &shareUser,
 	); err != nil {
 		return nil, err
 	}
@@ -379,6 +384,14 @@ func fetchMessageByID(msgID, myID string) (map[string]interface{}, error) {
 	}
 	if editedAt != nil {
 		msg["editedAt"] = *editedAt
+	}
+	// Корти мубодила (пост/рилс/сторис/ёддошт) — бе ин паёми socket ва
+	// ҷавоби POST корт надошт ва танҳо баъди бозкушоии чат пайдо мешуд.
+	if shareKind != "" {
+		msg["shareId"] = shareID
+		msg["shareKind"] = shareKind
+		msg["shareThumb"] = shareThumb
+		msg["shareUser"] = shareUser
 	}
 	return msg, nil
 }

@@ -126,6 +126,11 @@ var bodies = map[Kind]map[Lang]string{
 		RU: "ответил(а) на вашу историю",
 		EN: "replied to your story",
 	},
+	NoteReaction: {
+		TJ: "ба ёддошти шумо вокуниш нишон дод",
+		RU: "отреагировал(а) на вашу заметку",
+		EN: "reacted to your note",
+	},
 	ReelLike: {
 		TJ: "Reel-и шуморо писандид",
 		RU: "понравился ваш Reel",
@@ -194,6 +199,11 @@ var grouped = map[Kind]map[Lang]string{
 		TJ: "ва {n} нафари дигар сторисатонро писандиданд",
 		RU: "и ещё {n} понравилась ваша история",
 		EN: "and {n} others liked your story",
+	},
+	NoteReaction: {
+		TJ: "ва {n} нафари дигар ба ёддошти шумо вокуниш нишон доданд",
+		RU: "и ещё {n} отреагировали на вашу заметку",
+		EN: "and {n} others reacted to your note",
 	},
 }
 
@@ -324,7 +334,8 @@ func Link(k Kind, targetID, actorName string) string {
 		if targetID != "" {
 			return "/post/" + targetID
 		}
-	case StoryLike, StoryReply, StoryPoll, StoryAnswer, StoryQuiz, StoryMention, StoryAddYours, Gift:
+	case StoryLike, StoryReply, StoryPoll, StoryAnswer, StoryQuiz, StoryMention, StoryAddYours, Gift, NoteReaction:
+		// Ёддошт ҳам баъди 24 соат нест мешавад — профили муаллиф.
 		// Стори баъди 24 соат нест мешавад; профили муаллиф
 		// ҷои боэътимодтар аст.
 		if actorName != "" {

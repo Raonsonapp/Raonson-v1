@@ -33,6 +33,8 @@ class NotificationModel {
       case 'reel_comment': return 'ба Reels-ат шарҳ навишт';
       case 'story_like': return 'Сторисататро писанд кард';
       case 'story_reply': return 'ба Сторисат ҷавоб дод';
+      // targetId = эмодзи (ниг. backend ReactToNote).
+      case 'note_reaction': return 'ба ёддоштат вокуниш нишон дод ${(targetId ?? '').isNotEmpty ? targetId : '❤️'}';
       case 'story_view': return 'Сторисататро дид';
       // Пеш ин се ба «бо шумо амал кард»-и умумӣ меафтоданд.
       case 'story_poll': return 'дар пурсиши сторисат овоз дод';

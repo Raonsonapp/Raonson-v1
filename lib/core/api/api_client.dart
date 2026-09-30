@@ -113,6 +113,18 @@ class ApiClient {
             body: body != null ? jsonEncode(body) : null).timeout(_timeout));
   }
 
+  /// POST барои амалҳои суст ва ҒАЙРИ-такроршаванда (фиристодани email/OTP).
+  ///
+  /// Timeout-и 8с барои почта кам буд: сервер то 20с ба SMTP/Brevo мунтазир
+  /// мешавад ва клиент пеш аз ҷавоб бо TimeoutException меафтод. Такрор
+  /// (retry) ҳам нест — вагарна timeout мактуби ДУЮМ мефиристод.
+  Future<http.Response> postLong(String path, {Map<String, dynamic>? body}) async {
+    return _withRetry(() =>
+        _client.post(_uri(path), headers: _headers(),
+            body: body != null ? jsonEncode(body) : null).timeout(_longTimeout),
+        attempts: 1);
+  }
+
   Future<http.Response> put(String path, {Map<String, dynamic>? body}) async {
     return _withRetry(() =>
         _client.put(_uri(path), headers: _headers(),
@@ -136,21 +148,26 @@ class ApiClient {
 
   // ✅ Retry: 2 кӯшиш бо 1 сония фосила
   Future<http.Response> _withRetry(
-      Future<http.Response> Function() request) async {
-    for (int i = 0; i < 2; i++) {
+      Future<http.Response> Function() request, {int attempts = 2}) async {
+    // 401 → refresh ва як бори дигар, ҳатто вақте attempts=1.
+    var refreshed401 = false;
+    for (int i = 0; i < attempts || (refreshed401 && i == attempts); i++) {
       try {
         final response = await request();
         // 401 → як бор token-ро нав мекунем ва дархостро такрор мекунем.
         if (response.statusCode == 401 && i == 0 && _refreshToken != null) {
           final refreshed = await _tryRefresh();
-          if (refreshed) continue; // retry бо token-и нав (headers нав мешаванд)
+          if (refreshed) {
+            refreshed401 = true;
+            continue; // retry бо token-и нав (headers нав мешаванд)
+          }
         }
         return response;
       } on SocketException {
-        if (i == 1) rethrow;
+        if (i >= attempts - 1) rethrow;
         await Future.delayed(const Duration(seconds: 1));
       } on TimeoutException {
-        if (i == 1) rethrow;
+        if (i >= attempts - 1) rethrow;
         await Future.delayed(const Duration(milliseconds: 500));
       } catch (e) {
         rethrow;

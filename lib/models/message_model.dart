@@ -39,6 +39,7 @@ class SharedRef {
     switch (kind) {
       case 'reel':  return 'Рилс';
       case 'story': return 'Сторис';
+      case 'note':  return 'Ёддошт'; // thumb = матни ёддошт, на расм
       default:      return 'Пост';
     }
   }

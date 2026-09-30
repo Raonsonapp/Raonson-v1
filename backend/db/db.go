@@ -988,6 +988,17 @@ func migrate() {
 	-- Ҷонишинҳо дар профил (мисли Instagram: «ӯ», «she/her» …).
 	ALTER TABLE users ADD COLUMN IF NOT EXISTS pronouns TEXT DEFAULT '';
 
+	-- Вокуниш ба ёддошт (Notes) — мисли Instagram. Як вокуниш аз ҳар
+	-- корбар барои ёддошти ҶОРИИ соҳиб; SetNote онҳоро пок мекунад, то
+	-- вокунишҳои ёддошти кӯҳна ба нав нагузаранд.
+	CREATE TABLE IF NOT EXISTS note_reactions (
+		note_owner_id TEXT NOT NULL,
+		user_id       TEXT NOT NULL,
+		emoji         TEXT NOT NULL,
+		created_at    TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (note_owner_id, user_id)
+	);
+
 	-- «Дӯстдоштаҳо» — лентаи алоҳида, мисли Instagram Favorites.
 	CREATE TABLE IF NOT EXISTS favorites (
 		user_id    TEXT NOT NULL,

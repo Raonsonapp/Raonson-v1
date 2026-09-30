@@ -42,6 +42,8 @@ const (
 	Gift          Kind = "gift"           // ба шумо ситора тӯҳфа кард
 	ReelLike     Kind = "reel_like"
 	ReelReply    Kind = "reel_comment"
+	// Вокуниш (эмодзи/лайк) ба ёддошт (Notes) дар болои чатҳо.
+	NoteReaction Kind = "note_reaction"
 
 	// Эҷодкор.
 	CreatorMilestone Kind = "creator_milestone"
@@ -149,6 +151,8 @@ var rules = map[Kind]Rule{
 	StoryReply:   {Normal, ChannelSocial, "messages", false},
 	ReelLike:     {Normal, ChannelSocial, "likes", true},
 	ReelReply:    {Normal, ChannelSocial, "comments", true},
+	// Мисли лайк: ҷамъ мешавад ва бо танзими «likes» хомӯш мешавад.
+	NoteReaction: {Normal, ChannelSocial, "likes", true},
 
 	CreatorMilestone: {Low, ChannelCreator, "creator", false},
 	CreatorRecap:     {Low, ChannelCreator, "creator", false},
