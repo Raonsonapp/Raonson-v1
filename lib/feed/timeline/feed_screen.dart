@@ -196,9 +196,16 @@ class _FeedShellState extends State<_FeedShell> {
             floating: true,   // зуд намоён мешавад
             snap: true,       // яклухт пайдо мешавад
             pinned: false,    // scroll кунӣ пинҳон мешавад
-            leadingWidth: 100,
-            leading: Row(mainAxisSize: MainAxisSize.min, children: [
+            leadingWidth: 116,
+            // FittedBox: дар экрани танг ё бо шрифти калон тугмаҳо хурд
+            // мешаванд, на аз ҳудуд мебароянд (дар эмулятор 22px мебаромад).
+            leading: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 44, height: 44),
                 icon: SvgPicture.asset('assets/icons/upload.svg',
                   width: 26, height: 26,
                   colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn)),
@@ -224,12 +231,12 @@ class _FeedShellState extends State<_FeedShell> {
                 ),
               ),
               const SizedBox(width: 4),
-            ]),
+            ])),
             // Логоро занед → «Барои шумо / Обунаҳо / Дӯстдоштаҳо»,
             // айнан мисли Instagram.
             title: GestureDetector(
               onTap: () => _pickFeedMode(ctx),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
+              child: FittedBox(fit: BoxFit.scaleDown, child: Row(mainAxisSize: MainAxisSize.min, children: [
                 // Номи Raonson ҲЕҶ ГОҲ иваз намешавад.
                 Text('Raonson',
                     style: TextStyle(
@@ -238,7 +245,7 @@ class _FeedShellState extends State<_FeedShell> {
                         fontFamily: 'RaonsonFont', letterSpacing: 0.5, height: 1.1)),
                 Icon(HeroiconsOutline.chevronDown,
                     color: AppColors.textPrimary, size: 22),
-              ]),
+              ])),
             ),
             centerTitle: true, // лого дар марказ — мисли скриншоти Instagram
             actions: [
