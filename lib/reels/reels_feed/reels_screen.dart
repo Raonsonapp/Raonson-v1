@@ -30,6 +30,7 @@ import '../../feed_ai/why_this_sheet.dart';
 import '../../core/analytics/analytics_events.dart';
 import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
+import '../../create/auto_dm_sheet.dart';
 import '../../feed/comments/comments_screen.dart';
 
 // ── Ads (ТАНҲО ИН 2 ХАТИ НАВ) ───────────────────────────────────────────────
@@ -976,6 +977,11 @@ class _ReelItemState extends State<_ReelItem> {
             () {
           Navigator.pop(context);
           _editCaption();
+        }),
+        _menuItem(AppIcons.chat_bubble_outline, 'Паёми худкор ба Direct',
+            () {
+          Navigator.pop(context);
+          openAutoDmSettings(context, 'reel', widget.reel.id);
         }),
         _menuItem(AppIcons.bar_chart_rounded, tr('reels.statistics'),
             () {

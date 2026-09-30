@@ -120,6 +120,7 @@ func AddComment(c *gin.Context) {
 
 	// @зикр дар шарҳ — ҳар корбари зикршударо огоҳ кун
 	notifyMentions(myID, "mention", postID, b.Text, "шуморо дар шарҳ зикр кард")
+	maybeAutoDM("post", postID, postOwner, myID, b.Text)
 
 	// Reply — соҳиби шарҳи волидро ҳам огоҳ кун (агар худаш набошад)
 	if b.ParentID != "" {
@@ -698,10 +699,17 @@ func CreateReel(c *gin.Context) {
 		VideoURLLow  string     `json:"videoUrlLow"`
 		ThumbnailURL string     `json:"thumbnailUrl"`
 		Audio        AudioInput `json:"audio"`
+		AutoDM       *AutoDMInput `json:"autoDm"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.VideoURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "videoUrl is required"})
 		return
+	}
+	if b.AutoDM != nil {
+		if msg := b.AutoDM.normalize(); msg != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"message": msg})
+			return
+		}
 	}
 	b.Caption = clampRunes(b.Caption, 2200)
 	if flagged, cats := utils.ModerateText(context.Background(), b.Caption); flagged {
@@ -727,6 +735,9 @@ func CreateReel(c *gin.Context) {
 	// Садоро дар реестр сабт мекунем — то «Ин садоро истифода бар»
 	// ва рӯйхати садоҳои маъмул кор кунад.
 	registerAudio(context.Background(), audio, myID)
+	if b.AutoDM != nil {
+		saveAutoDM("reel", rid, myID, *b.AutoDM)
+	}
 	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{
@@ -1017,6 +1028,7 @@ func AddReelComment(c *gin.Context) {
 	notify(owner, myID, "reel_comment", rid)
 	pushNotify(owner, myID, "reel_comment", rid, "ба Reel-и шумо шарҳ гузошт")
 	notifyMentions(myID, "reel_mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
+	maybeAutoDM("reel", rid, owner, myID, b.Text)
 	mw.InvalidateUserCache(myID)
 	// Шакли пурра — пеш танҳо {_id, text}: шарҳи нав бе ном ва аватар
 	// меомад ва ҷавоб аз шохааш ҷудо мешуд.

@@ -1192,6 +1192,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, referralSchema); err != nil {
 		log.Fatalf("❌ Referral migration failed: %v", err)
 	}
+	// Паёми худкор аз рӯи калимаи шарҳ.
+	if _, err := Pool.Exec(ctx, autoDMSchema); err != nil {
+		log.Fatalf("❌ Auto-DM migration failed: %v", err)
+	}
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

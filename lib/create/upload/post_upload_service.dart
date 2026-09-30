@@ -7,6 +7,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
+import '../auto_dm_sheet.dart';
 
 import '../../core/music/song_info.dart';
 import '../../core/api/api_client.dart';
@@ -75,6 +76,7 @@ class PostUploadService {
     List<String> collaborators = const [],
     String scheduledAt = '', // ISO-8601 — агар холӣ набошад, ба нақша гирифта мешавад
     String altText = '',     // тавсифи расм барои нобиноён
+    AutoDmDraft? autoDm,     // паёми худкор ба Direct аз рӯи калимаи шарҳ
   }) async {
     state.value = UploadState(thumb: file, progress: 0.08);
     try {
@@ -108,6 +110,7 @@ class PostUploadService {
         'taggedUsers': taggedUsers,
         'collaborators': collaborators,
         if (scheduledAt.isNotEmpty) 'scheduledAt': scheduledAt,
+        if (autoDm != null) 'autoDm': autoDm.toJson(),
       });
       if (res.statusCode >= 400) {
         throw Exception(_msg(res.body, res.statusCode));

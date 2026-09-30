@@ -17,6 +17,7 @@ import '../../core/music/song_info.dart';
 import '../../core/ui/app_icons.dart';
 import '../../ai/ai_tools.dart';
 import '../../core/i18n/strings.dart';
+import '../auto_dm_sheet.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -130,7 +131,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       String location = '',
       List<String> taggedUsers = const [],
       List<String> collaborators = const [],
-      String altText = ''}) async {
+      String altText = '',
+      AutoDmDraft? autoDm}) async {
     if (_publishing) return; // ду бор зеркунӣ → ду пости якхела
     _publishing = true;
     // Интихоб: ҳозир ё ба нақша (Pro).
@@ -149,6 +151,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       collaborators: collaborators,
       scheduledAt: scheduledAt,
       altText: altText,
+      autoDm: autoDm,
     );
     if (mounted) Navigator.of(context).pop(true);
   }
@@ -221,7 +224,7 @@ class _PostEditor extends StatefulWidget {
   final void Function(File, String,
       {SongInfo? song, String location,
        List<String> taggedUsers, List<String> collaborators,
-       String altText}) onPublish;
+       String altText, AutoDmDraft? autoDm}) onPublish;
   final VoidCallback onCancel; final String? errorMessage;
   const _PostEditor({required this.media, required this.isVideo,
     required this.isUploading, required this.onPublish,
@@ -255,6 +258,16 @@ class _PostEditorState extends State<_PostEditor> {
   String _location = '';
   /// Тавсифи расм барои нобиноён (TalkBack), мисли Instagram.
   String _altText = '';
+  /// Паёми худкор ба Direct аз рӯи калимаи шарҳ.
+  AutoDmDraft? _autoDm;
+
+  Future<void> _showAutoDm() async {
+    final r = await showAutoDmEditor(context,
+        initial: _autoDm, canRemove: _autoDm != null);
+    if (!mounted) return;
+    if (r == AutoDmResult.removed) setState(() => _autoDm = null);
+    if (r is AutoDmDraft) setState(() => _autoDm = r);
+  }
 
   void _showAltTextDialog() {
     final ctrl = TextEditingController(text: _altText);
@@ -474,7 +487,7 @@ class _PostEditorState extends State<_PostEditor> {
       widget.onPublish(widget.media, caption,
           song: _song, location: _location,
           taggedUsers: tagged, collaborators: _collaborators,
-          altText: _altText);
+          altText: _altText, autoDm: _autoDm);
     } else {
       // Агар ягон overlay (матн/стикер/зикр/расм) НЕСТ → расми аслиро мегузорем,
       // то формат/нисбати тарафҳо нигоҳ дошта шавад (бе хатти ранга дар боло/поён).
@@ -484,7 +497,7 @@ class _PostEditorState extends State<_PostEditor> {
       widget.onPublish(fileToPost, caption,
           song: _song, location: _location,
           taggedUsers: tagged, collaborators: _collaborators,
-          altText: _altText);
+          altText: _altText, autoDm: _autoDm);
     }
   }
 
@@ -943,6 +956,9 @@ class _PostEditorState extends State<_PostEditor> {
                   _ToolBtn(icon: AppIcons.accessibility_new_rounded, label: 'Alt text',
                     isActive: _altText.isNotEmpty,
                     onTap: () { setState(() => _tool = _Tool.none); _showAltTextDialog(); }),
+                _ToolBtn(icon: AppIcons.chat_bubble_outline, label: 'Auto DM',
+                  isActive: _autoDm != null,
+                  onTap: () { setState(() => _tool = _Tool.none); _showAutoDm(); }),
                 _ToolBtn(icon: AppIcons.edit_note,           label: tr('ui.13c977b6ae'),
                   isActive: _showCaption,
                   onTap: () => setState(() { _tool = _Tool.none; _showCaption = !_showCaption; })),

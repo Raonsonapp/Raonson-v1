@@ -26,6 +26,7 @@ import '../../models/story_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
+import '../../create/auto_dm_sheet.dart';
 import '../../core/services/user_session.dart';
 import '../../core/services/view_tracker.dart';
 import '../comments/comments_screen.dart';
@@ -509,6 +510,10 @@ class _PostCardState extends State<PostCard>
           _SvgMenuTile(assetPath: 'assets/icons/music.svg',
               label: tr('post.changeMusic'),
               onTap: () { Navigator.pop(context); _editMusic(); }),
+          _MenuItem(icon: AppIcons.chat_bubble_outline,
+              label: 'Паёми худкор ба Direct',
+              onTap: () { Navigator.pop(context);
+                openAutoDmSettings(context, 'post', widget.post.id); }),
           _SvgMenuTile(assetPath: 'assets/icons/stats.svg',
               label: tr('post.statistics'),
               onTap: () { Navigator.pop(context); _showStats(); }),

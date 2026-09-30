@@ -45,6 +45,8 @@ func CreatePost(c *gin.Context) {
 		ShopPhone      string                  `json:"shopPhone"`
 		// Post scheduling (нашри вақтбандӣ) — RFC3339, оянда
 		ScheduledAt    string                  `json:"scheduledAt"`
+		// Паёми худкор ба Direct аз рӯи калимаи шарҳ (ихтиёрӣ).
+		AutoDM         *AutoDMInput            `json:"autoDm"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || len(b.Media) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "At least one media item required"})
@@ -69,6 +71,12 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
+	if b.AutoDM != nil {
+		if msg := b.AutoDM.normalize(); msg != "" {
+			c.JSON(http.StatusBadRequest, gin.H{"message": msg})
+			return
+		}
+	}
 	if b.IsProduct && !validPrice(b.Price) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Нарх бояд аз 0 то 100000 бошад"})
 		return
@@ -169,6 +177,9 @@ func CreatePost(c *gin.Context) {
 	// ва cache-и middleware-и корбар (то пости нав фавран дар profile/feed
 	// худи ӯ намоён шавад).
 	mw.InvalidateUserCache(myID)
+	if b.AutoDM != nil {
+		saveAutoDM("post", postID, myID, *b.AutoDM)
+	}
 
 	// ⚠️ Пости вақтбандишуда: пеш зикрҳо ва паёми сокет ФАВРАН мерафтанд —
 	// одамон пеш аз нашр мефаҳмиданд ва постро медиданд.

@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/api/api_client.dart';
 import '../../core/utils/media_compressor.dart';
 import '../upload/upload_manager.dart';
+import '../auto_dm_sheet.dart';
+import 'package:heroicons_flutter/heroicons_flutter.dart';
 import '../../app/app_config.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
@@ -170,6 +172,50 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
     setState(() { _status = status; _progress = progress; });
   }
 
+  /// Паёми худкор ба Direct аз рӯи калимаи шарҳ (мисли ManyChat).
+  AutoDmDraft? _autoDm;
+
+  Widget _autoDmRow() {
+    final d = _autoDm;
+    final sub = d == null
+        ? 'Ба шарҳ бо калимаи шумо — паём ба Direct'
+        : (d.anyWord ? 'Ба ҳар шарҳ' : 'Калимаҳо: ${d.keywords.join(', ')}');
+    return Material(
+      color: const Color(0xFF111111),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: _busy ? null : () async {
+          final r = await showAutoDmEditor(context,
+              initial: _autoDm, canRemove: _autoDm != null);
+          if (!mounted) return;
+          if (r == AutoDmResult.removed) setState(() => _autoDm = null);
+          if (r is AutoDmDraft) setState(() => _autoDm = r);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(children: [
+            Icon(AppIcons.chat_bubble_outline,
+                color: d == null ? Colors.white54 : const Color(0xFF00C6FF)),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Паёми худкор ба Direct',
+                    style: TextStyle(color: Colors.white, fontSize: 14,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              ],
+            )),
+            const Icon(HeroiconsOutline.chevronRight, color: Colors.white38, size: 18),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Future<void> _publish() async {
     if (_file == null || _busy) return;
     AnalyticsService.instance.logEvent(AnalyticsEvents.createReel);
@@ -228,6 +274,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
           'caption' : _caption.text.trim(),
           // Садо танҳо вақте фиристода мешавад, ки воқеан интихоб шуда
           // бошад — вагарна сервер сатри холии садо сабт мекунад.
+          if (_autoDm != null) 'autoDm': _autoDm!.toJson(),
           if (_hasAudio) 'audio': {
             'id'        : _audioId,
             'title'     : _audioTitle,
@@ -381,6 +428,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
 
             const SizedBox(height: 12),
             _audioRow(),
+            const SizedBox(height: 10),
+            _autoDmRow(),
 
             // ── Error ──────────────────────────────────────────
             if (_error != null) ...[

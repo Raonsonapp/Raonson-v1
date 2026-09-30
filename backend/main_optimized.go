@@ -323,6 +323,13 @@ func main() {
 	// Боргирӣ бо тамғаи Raonson (@муаллиф + логотип). Коркарди видео
 	// гарон аст — лимити қатъӣ.
 	r.GET("/media/download", auth, mw.RateLimit(10, 60), handlers.DownloadWithWatermark)
+	// Паёми худкор ба Direct аз рӯи калимаи шарҳ (ManyChat).
+	adm := r.Group("/auto-dm", auth, mw.RateLimit(60, 60))
+	{
+		adm.GET("/:kind/:id",    handlers.GetAutoDM)
+		adm.PUT("/:kind/:id",    handlers.SetAutoDM)
+		adm.DELETE("/:kind/:id", handlers.DeleteAutoDM)
+	}
 
 	// Хатоҳои барнома (бе вуруд ҳам — хато метавонад дар экрани вуруд бошад).
 	r.POST("/client-errors", mw.OptionalAuth(), rl20, handlers.ReportClientError)
