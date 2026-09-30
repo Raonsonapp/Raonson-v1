@@ -1376,6 +1376,10 @@ class _FeedCardState extends State<_FeedCard> {
       !_isVideo && (widget.item.postData?.song.isNotEmpty ?? false);
   String get _id => widget.item.id;
 
+  /// Тавсифи таҳриршуда дар дигар экран — фавран ин ҷо ҳам.
+  String _liveCaption(String fallback) =>
+      ContentSync.instance.get(widget.item.id)?.caption ?? fallback;
+
   @override
   void initState() {
     super.initState();
@@ -1814,9 +1818,9 @@ class _FeedCardState extends State<_FeedCard> {
                   paused: _muted || !widget.isActive,
                 ),
               ],
-              if (widget.item.postData!.caption.isNotEmpty) ...[
+              if (_liveCaption(widget.item.postData!.caption).isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text(widget.item.postData!.caption,
+                Text(_liveCaption(widget.item.postData!.caption),
                     style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                     maxLines: 2, overflow: TextOverflow.ellipsis),
               ],
@@ -1832,8 +1836,8 @@ class _FeedCardState extends State<_FeedCard> {
             final uname = (u['username'] ?? '').toString();
             final avatar = (u['avatar'] ?? '').toString();
             final verified = u['verified'] == true;
-            final caption =
-                (widget.item.reelData!['caption'] ?? '').toString();
+            final caption = _liveCaption(
+                (widget.item.reelData!['caption'] ?? '').toString());
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

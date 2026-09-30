@@ -641,6 +641,11 @@ class _ReelItemState extends State<_ReelItem> {
   late ValueListenable<ContentState?> _syncNote;
   void _onSync() { if (mounted) setState(() {}); }
 
+  /// Тавсифи охирин: баъди таҳрир дар ҳар экран (Home, Explore, профил)
+  /// фавран ин ҷо ҳам нав мешавад.
+  String get _caption =>
+      ContentSync.instance.get(widget.reel.id)?.caption ?? widget.reel.caption;
+
   DateTime? _watchStart;
   int _totalWatchMs = 0;
 
@@ -1136,7 +1141,7 @@ class _ReelItemState extends State<_ReelItem> {
           onTap: onTap);
 
   Future<void> _editCaption() async {
-    final ctrl = TextEditingController(text: widget.reel.caption);
+    final ctrl = TextEditingController(text: _caption);
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -1174,10 +1179,18 @@ class _ReelItemState extends State<_ReelItem> {
       if (!_paused) _ctrl?.play();
       return;
     }
+    final before = _caption;
+    ContentSync.instance.report(widget.reel.id, caption: trimmed);
     try {
-      await ApiClient.instance.put('/reels/${widget.reel.id}/caption',
+      await ApiClient.instance.putOk('/reels/${widget.reel.id}/caption',
           body: {'caption': trimmed});
-    } catch (_) {}
+    } catch (_) {
+      ContentSync.instance.report(widget.reel.id, caption: before);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Тавсиф сабт нашуд')));
+      }
+    }
     if (!_paused && mounted) _ctrl?.play();
   }
 
@@ -2004,11 +2017,11 @@ class _ReelItemState extends State<_ReelItem> {
                         },
                       ),
                   ]),
-                  if (reel.caption.isNotEmpty) ...[
+                  if (_caption.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     _CaptionWidget(
-                        caption: reel.caption,
-                        spans: _buildCaptionSpans(reel.caption),
+                        caption: _caption,
+                        spans: _buildCaptionSpans(_caption),
                         expanded: _captionExpanded,
                         onToggle: () => setState(
                             () => _captionExpanded = !_captionExpanded)),

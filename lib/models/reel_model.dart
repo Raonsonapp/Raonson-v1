@@ -61,7 +61,7 @@ class ReelModel {
         liked: isLiked, likesCount: likesCount, saved: isSaved,
         commentsCount: commentsCount, sharesCount: sharesCount,
         hideLikes: hideLikes, commentsOff: commentsDisabled,
-        fetchedAt: fetchedAt);
+        caption: caption, fetchedAt: fetchedAt);
 
   // ── copyWith ─────────────────────────────────────────────────
   ReelModel copyWith({
