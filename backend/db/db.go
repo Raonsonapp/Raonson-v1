@@ -776,6 +776,24 @@ func migrate() {
 	CREATE INDEX IF NOT EXISTS idx_promotions_user ON promotions(user_id, created_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_promotions_post ON promotions(post_id);
 
+	-- ── Рекламаи дохилӣ дар лента/Reels ──
+	-- Пинҳон кардан ва ҳисоби намоиш як бор дар рӯз барои ҳар корбар:
+	-- бе ин як корбар бо scroll-и боло-поён намоишро сохта афзун мекард.
+	CREATE INDEX IF NOT EXISTS idx_promotions_active ON promotions(status, ends_at);
+	CREATE TABLE IF NOT EXISTS sponsored_hides (
+		user_id      TEXT NOT NULL,
+		promotion_id TEXT NOT NULL,
+		created_at   TIMESTAMPTZ DEFAULT NOW(),
+		PRIMARY KEY (user_id, promotion_id)
+	);
+	CREATE TABLE IF NOT EXISTS sponsored_events (
+		user_id      TEXT NOT NULL,
+		promotion_id TEXT NOT NULL,
+		kind         TEXT NOT NULL, -- impression | click
+		day          DATE NOT NULL DEFAULT CURRENT_DATE,
+		PRIMARY KEY (user_id, promotion_id, kind, day)
+	);
+
 	-- ── Тӯҳфаҳо (gifts / звёзды) — дастгирии муаллифон ──
 	CREATE TABLE IF NOT EXISTS gifts (
 		id           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

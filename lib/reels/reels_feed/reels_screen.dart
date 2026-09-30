@@ -32,9 +32,12 @@ import '../../app/app_theme.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 import '../../feed/comments/comments_screen.dart';
 
-// ── Ads (ТАНҲО ИН 2 ХАТИ НАВ) ───────────────────────────────────────────────
+// ── Ads ─────────────────────────────────────────────────────────────────────
+import '../../core/ads/ad_slot_layout.dart';
 import '../../core/ads/ads_manager.dart';
+import '../../core/ads/reels_ad_page.dart';
 import '../../core/ads/rewarded_ad_flow.dart';
+import '../../core/ads/sponsored_ads.dart';
 import '../../core/ui/app_icons.dart';
 import '../audio/audio_page_screen.dart';
 import '../../core/ui/r_icon.dart';
@@ -187,15 +190,23 @@ class _ReelsView extends StatefulWidget {
 class _ReelsViewState extends State<_ReelsView> {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
+  // Калид — индекси ВИДЕО, на саҳифа: саҳифаҳои реклама дар байн
+  // ҳастанд ва индекси саҳифа ба видео рост намеояд.
   final Map<int, VideoPlayerController> _preloaded = {};
   bool _initialPreloadDone = false;
+
+  // Ҷойҳои реклама — саҳифаҳои оддии PageView, мисли Instagram.
+  final ReelsAdPlan _adPlan = ReelsAdPlan();
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    // ── АД: инициализация (1 хати нав) ──────────────────────
+    // SDK (бо розигӣ; барои VIP худаш ҳеҷ кор намекунад).
     AdsManager.instance.init();
+    // Рӯйхати рекламаи дохилӣ — як бор дар TTL, на барои ҳар ҷой.
+    SponsoredAdsRepository.instance.prefetch(SponsoredPlacement.reels)
+        .then((_) { if (mounted) _planAds(_currentPage); });
   }
 
   @override
@@ -304,11 +315,32 @@ class _ReelsViewState extends State<_ReelsView> {
 
   void _onPageChanged(int i, _ReelsVM vm) {
     setState(() => _currentPage = i);
-    if (i >= vm.reels.length - 3) vm.loadMore();
-    _preloadAhead(i, vm);
-    _disposeOld(i);
-    // ── АД: ҳар 5 рилс interstitial нишон медиҳад (1 хати нав) ─
-    AdsManager.instance.onReelSwiped();
+    final isAd = _adPlan.isAdAt(i);
+    // Дар саҳифаи реклама видеои навбатӣ ҳамон `reelIndexAt` аст.
+    final ri = _adPlan.reelIndexAt(i);
+    if (ri >= vm.reels.length - 3) vm.loadMore();
+    _preloadAhead(isAd ? ri - 1 : ri, vm);
+    _disposeOld(ri);
+    // Пештар ин ҷо ҳар 5 рилс рекламаи томэкранӣ мебаромад ва видео
+    // то «X» дида намешуд. Акнун реклама саҳифаи оддист, ки корбар
+    // фавран мегузарад.
+    _planAds(i);
+  }
+
+  /// Ҷойи рекламаи навбатиро танҳо ПЕШ аз саҳифаи ҷорӣ мегузорад.
+  void _planAds(int current) {
+    final slot = _adPlan.positions.length;
+    if (_adPlan.planAhead(
+        currentPage: current, available: reelsAdAvailable(slot))) {
+      setState(() {});
+    }
+  }
+
+  /// Реклама набаромад — корбарро дар саҳифаи холӣ намемонем.
+  void _skipAdPage(int page) {
+    if (!mounted || _currentPage != page || !_pageCtrl.hasClients) return;
+    _pageCtrl.nextPage(
+        duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
   }
 
   void _preloadAhead(int current, _ReelsVM vm) {
@@ -369,7 +401,8 @@ class _ReelsViewState extends State<_ReelsView> {
       _initialPreloadDone = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _preloadFirst(vm);
-        if (mounted) _preloadAhead(_currentPage, vm);
+        if (mounted) _preloadAhead(_adPlan.reelIndexAt(_currentPage), vm);
+        if (mounted) _planAds(_currentPage);
       });
     }
 
@@ -455,6 +488,7 @@ class _ReelsViewState extends State<_ReelsView> {
         onRefresh: () async {
           _currentPage = 0;
           _initialPreloadDone = false;
+          _adPlan.reset();
           for (final ctrl in _preloaded.values) {
             ctrl.dispose();
           }
@@ -465,12 +499,24 @@ class _ReelsViewState extends State<_ReelsView> {
         child: PageView.builder(
         controller: _pageCtrl,
         scrollDirection: Axis.vertical,
-        itemCount: vm.reels.length,
+        itemCount: _adPlan.pageCount(vm.reels.length),
         onPageChanged: (i) => _onPageChanged(i, vm),
-        itemBuilder: (_, i) => _ReelItem(
+        itemBuilder: (_, page) {
+          if (_adPlan.isAdAt(page)) {
+            final slot = _adPlan.slotAt(page);
+            return ReelsAdPage(
+              key: ValueKey('reels-ad-$slot'),
+              slot: slot,
+              isActive: page == _currentPage && widget.isActive,
+              isMuted: vm.isMuted,
+              onUnavailable: () => _skipAdPage(page),
+            );
+          }
+          final i = _adPlan.reelIndexAt(page);
+          return _ReelItem(
           key: ValueKey(vm.reels[i].id),
           reel: vm.reels[i],
-          isActive: i == _currentPage && widget.isActive,
+          isActive: page == _currentPage && widget.isActive,
           isMuted: vm.isMuted,
           friendsFilter: vm.friendsFilter,
           preloadCtrl: _preloaded[i],
@@ -497,7 +543,8 @@ class _ReelsViewState extends State<_ReelsView> {
             context,
             rewardType: RewardType.videoDownload,
           ),
-        ),
+        );
+        },
       ),
       ),
     );

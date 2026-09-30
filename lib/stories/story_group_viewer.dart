@@ -20,7 +20,6 @@ import '../models/reel_model.dart';
 import '../models/story_model.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../reels/single_reel_screen.dart';
-import '../core/ads/ads_manager.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../app/app_theme.dart';
@@ -298,28 +297,12 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   }
 
   void _nextStory() {
-    // ── Реклама байни сторисҳо, мисли Instagram ──
-    //
-    // Instagram баъди чанд стори як рекламаи томэкранӣ нишон
-    // медиҳад. Дар Raonson стори умуман реклама надошт.
-    //
-    // Шартҳо (ҳамаашон лозиманд):
-    //
-    //   • танҳо ҳангоми ГУЗАШТАН ба стории навбатӣ, на дар оғоз;
-    //   • шумора ба `kStoriesPerAd` расад;
-    //   • реклама аллакай ОМОДА бошад — вагарна корбар интизори
-    //     боркунӣ мемонад ва ин UX-ро мешиканад;
-    //   • фосилаи хунуккунии `AdsManager` риоя шавад (он худаш
-    //     месанҷад).
-    //
-    // Намоиш ҳеҷ гоҳ маҷбурӣ нест: агар реклама набошад, стори
-    // мисли пештара давом мекунад.
-    // Ҳисобкунак дар `AdsManager` аст — ниг. эзоҳи он ҷо.
-    // Сторӣ таваққуф мекунад, то садо болои реклама наравад.
+    // ⚠️ Пештар ин ҷо баъди ҳар 5 стори рекламаи томэкрании
+    // interstitial мебаромад ва стори то «X» зер нашавад давом
+    // намекард — ҳамон рекламаи маҷбурӣ, ки дар Reels буд.
+    // Реклама дар стори дигар маҷбурӣ нест: гузариш фавран аст.
     _timer?.cancel();
-    AdsManager.instance.onStoryAdvanced().then((shown) {
-      if (mounted) _advanceStory();
-    });
+    _advanceStory();
   }
 
   /// Худи гузариш — бе мантиқи реклама.

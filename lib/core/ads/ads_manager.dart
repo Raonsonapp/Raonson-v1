@@ -6,6 +6,7 @@ import 'package:yandex_mobileads/mobile_ads.dart';
 
 import '../services/network_service.dart';
 import 'ad_config.dart';
+import 'ad_eligibility.dart';
 import 'reward_backend.dart';
 
 /// Ҳолати як шакли реклама — барои экрани ташхис.
@@ -178,9 +179,6 @@ class AdsManager extends ChangeNotifier {
   bool _rewardedReady       = false;
 
   DateTime? _lastInterstitialShown;
-  int _reelsSinceAd = 0;
-  static const int _reelsBetweenAds        = 5;
-  static const int _interstitialCooldownSec = 180;
 
   bool _initialized = false;
 
@@ -195,8 +193,14 @@ class AdsManager extends ChangeNotifier {
   /// network error-ро ҳал мекунад.
   Future<void>? _initing;
 
-  Future<void> init() {
+  /// `userInitiated` — корбар худаш рекламаи мукофотиро кушод
+  /// (масалан экрани галочка). Танҳо он вақт VIP ҳам SDK-ро оғоз
+  /// мекунад; вагарна VIP/Pro ҳеҷ дархости реклама намефиристад.
+  Future<void> init({bool userInitiated = false}) {
     if (_initialized) return Future.value();
+    if (AdEligibility.instance.isAdsFree && !userInitiated) {
+      return Future.value();
+    }
     return _initing ??= _doInit();
   }
 
@@ -213,7 +217,7 @@ class AdsManager extends ChangeNotifier {
       return;
     }
     _attachAutoPreload();
-    _preloadInterstitial();
+    // Interstitial бор карда намешавад — ниг. эзоҳи `_onInterstitialDone`.
     _preloadRewarded();
     notifyListeners();
     // Рекламае, ки дида шуд, вале хабараш нарасид.
@@ -454,48 +458,30 @@ class AdsManager extends ChangeNotifier {
     _interstitialAd        = null;
     _interstitialReady     = false;
     _lastInterstitialShown = DateTime.now();
-    _reelsSinceAd          = 0;
-    Future.delayed(const Duration(seconds: 5), _preloadInterstitial);
   }
 
-  Future<void> onReelSwiped() async {
-    _reelsSinceAd++;
-    if (_reelsSinceAd >= _reelsBetweenAds) {
-      _reelsSinceAd = 0;
-      await showInterstitialIfReady();
-    }
-  }
-
-  // ── Реклама байни сторисҳо ──
+  // ══════════════════════════════════════════════════════════════
+  //  Interstitial ДИГАР НИШОН ДОДА НАМЕШАВАД.
   //
-  // Ҳисобкунак ин ҷост, на дар экрани стори: корбар аз як гурӯҳ ба
-  // гурӯҳи дигар мегузарад ва ҳар гурӯҳ `State`-и НАВ месозад. Агар
-  // ҳисоб он ҷо мебуд, он ҳар дафъа аз сифр сар мешуд ва реклама
-  // ҳеҷ гоҳ ба нуқтаи худ намерасид.
-  int _storiesSinceAd = 0;
-  static const int _storiesBetweenAds = 5;
+  //  Пештар Reels баъди ҳар 5 рилс ва стори
+  //  баъди ҳар 5 стори рекламаи томэкранӣ мебароварданд: то «X» зер
+  //  нашавад, видео дида намешуд — корбар маҷбур буд тамошо кунад.
+  //
+  //  Акнун реклама дар лента ва Reels ҳамчун ҷойи оддии рӯйхат
+  //  меояд (feed_ad_card.dart, reels_ad_page.dart), ки корбар фавран
+  //  мегузарад. Рекламаи томэкранӣ танҳо мукофотӣ аст ва танҳо бо
+  //  зеркунии худи корбар (`showRewarded`).
+  //
+  //  Боркунии interstitial ҳангоми оғоз ҳам хомӯш аст: рекламаи
+  //  боршуда, ки ҳеҷ гоҳ нишон дода намешавад, танҳо дархости беҳуда
+  //  аст. Он танҳо аз экрани ташхис (`reload`) бор мешавад.
+  // ══════════════════════════════════════════════════════════════
 
-  /// Баъди гузаштан ба стории навбатӣ даъват мешавад.
-  ///
-  /// `true` — реклама нишон дода шуд (экрани стори бояд интизор
-  /// шавад). Агар реклама омода набошад, ҳеҷ чиз намешавад ва
-  /// стори мисли пештара давом мекунад — интизори боркунӣ НЕСТ.
-  Future<bool> onStoryAdvanced() async {
-    _storiesSinceAd++;
-    if (_storiesSinceAd < _storiesBetweenAds) return false;
-    if (!_interstitialReady) return false; // интизор намекунем
-    _storiesSinceAd = 0;
-    return showInterstitialIfReady();
-  }
-
-  Future<bool> showInterstitialIfReady() async {
+  /// ТАНҲО экрани ташхис: корбар (admin) худаш тугмаро зер мекунад,
+  /// то санҷад, ки шиносаи interstitial кор мекунад. Ҳеҷ ҷойи дигари
+  /// барнома инро даъват намекунад — ниг. test/ad_placement_test.dart.
+  Future<bool> showInterstitialForDiagnostics() async {
     if (!_interstitialReady || _interstitialAd == null) return false;
-    if (_lastInterstitialShown != null) {
-      final elapsed = DateTime.now()
-          .difference(_lastInterstitialShown!)
-          .inSeconds;
-      if (elapsed < _interstitialCooldownSec) return false;
-    }
     try {
       _interstitialAd!.show();
       _interstitialReady = false;
@@ -806,7 +792,8 @@ class AdsManager extends ChangeNotifier {
   /// Маҳз банди охирин тугмаи дастиро нолозим мекунад.
   void ensureRewardedReady() {
     if (!_initialized) {
-      unawaited(init());
+      // Экрани мукофот кушода шуд — ин интихоби худи корбар аст.
+      unawaited(init(userInitiated: true));
       return;
     }
     switch (_rewardedState) {

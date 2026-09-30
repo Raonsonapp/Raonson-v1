@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ad_eligibility.dart';
 import 'ads_manager.dart';
 import 'reward_backend.dart';
 import '../../app/app_theme.dart';
@@ -51,6 +52,9 @@ Future<bool> showRewardedAdFlow(
   BuildContext context, {
   required RewardType rewardType,
 }) async {
+  // VIP/Pro — бе реклама: имтиёз фавран кушода мешавад.
+  if (AdEligibility.instance.isAdsFree) return true;
+
   final confirmed = await showDialog<bool>(
     context: context,
     barrierDismissible: true,

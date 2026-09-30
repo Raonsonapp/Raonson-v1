@@ -5,6 +5,8 @@ import '../core/api/api_client.dart';
 import '../core/storage/token_storage.dart';
 import '../core/services/user_session.dart';
 import '../core/services/vip_service.dart';
+import '../core/ads/ad_eligibility.dart';
+import '../core/ads/sponsored_ads.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 
@@ -65,6 +67,12 @@ class AppState extends ChangeNotifier {
           final vip = user['is_vip'] == true || user['isVip'] == true ||
               uname.toLowerCase() == 'raonson';
           await VipService.instance.setVip(vip);
+          // VIP/Pro — бе реклама. Сервер `adsFree`-ро худаш мегӯяд;
+          // сервери кӯҳна онро надорад — он гоҳ аз VIP.
+          final adsFree = user['adsFree'] is bool
+              ? user['adsFree'] as bool
+              : vip;
+          await AdEligibility.instance.updateFromServer(adsFree);
 
           if (id.isNotEmpty) {
             // Аватари холиро ба ҷои аватари кэшшуда нанависем
@@ -91,6 +99,9 @@ class AppState extends ChangeNotifier {
   void login() {
     _isAuthenticated = true;
     notifyListeners();
+    // VIP/бе-реклама барои аккаунти НАВ — вагарна то оғози дубора
+    // ҳолати аккаунти пешина мемонд.
+    _syncProfileInBackground();
   }
 
   Future<void> logout() async {
@@ -100,6 +111,10 @@ class AppState extends ChangeNotifier {
     await TokenStorage.clearTokens();
     ApiClient.instance.setAuthToken(null);
     await UserSession.clear();
+    // Корбари навбатӣ VIP-и пешинаро мерос намегирад.
+    await VipService.instance.setVip(false);
+    await AdEligibility.instance.reset();
+    SponsoredAdsRepository.instance.clear();
     _isAuthenticated = false;
     notifyListeners();
   }

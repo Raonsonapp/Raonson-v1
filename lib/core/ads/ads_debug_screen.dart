@@ -136,7 +136,7 @@ class _AdsDebugScreenState extends State<AdsDebugScreen> {
 
   Future<void> _showInterstitial() async {
     _say(tr('adbg.showing', {'kind': 'Interstitial'}));
-    final ok = await _ads.showInterstitialIfReady();
+    final ok = await _ads.showInterstitialForDiagnostics();
     _say(ok ? tr('adbg.shown') : tr('adbg.notShown'));
   }
 
