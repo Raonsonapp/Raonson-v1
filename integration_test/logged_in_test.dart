@@ -37,6 +37,8 @@ import 'package:integration_test/integration_test.dart';
 import 'harness.dart';
 
 import 'package:raonson/core/i18n/strings.dart';
+import 'package:raonson/notifications/notification_badge.dart';
+import 'package:raonson/app/app.dart' show appNavigatorKey;
 import 'package:raonson/auth/login/login_screen.dart';
 import 'package:raonson/auth/widgets/auth_kit.dart';
 import 'package:raonson/chat/inbox/chat_list_screen.dart';
@@ -67,6 +69,13 @@ bool _visible(Finder screen) => find
     .isNotEmpty;
 
 Future<void> _tab(WidgetTester t, int i) async {
+  // Ҳар экрани боқимонда (эҷод, мағоза, сторис…) навбарро мепӯшонад —
+  // корбар ҳам аввал бармегардад ва баъд табро мезанад.
+  final nav = appNavigatorKey.currentState;
+  if (nav != null) {
+    nav.popUntil((r) => r.isFirst);
+    await pumpFor(t, 600);
+  }
   final bar = find.byType(BottomNavBar);
   if (bar.evaluate().isEmpty) return;
   final r = t.getRect(bar);
@@ -225,7 +234,12 @@ void main() {
     checkStep('лента: шарҳҳо');
 
     // Огоҳиномаҳо — аз сари лента.
-    await _openThenBack(tester, find.byType(IconButton), wait: 2000);
+    await _openThenBack(
+        tester,
+        find.descendant(
+            of: find.byType(NotificationBadge),
+            matching: find.byType(IconButton)),
+        wait: 2000);
     checkStep('огоҳиномаҳо');
 
     // Стори — аввалин доира дар сари лента.
