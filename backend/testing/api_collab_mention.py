@@ -34,9 +34,9 @@ def user(u, ph):
 def ok(n, c, d=""): res.append((bool(c), n, str(d)[:180]))
 def jd(x): return json.dumps(x, ensure_ascii=False)
 S = os.environ.get("SUFFIX", "col")
-tA, A = user(f"ca{S}", "+992900980001")   # муаллиф
-tB, Bb = user(f"cb{S}", "+992900980002")  # ҳамкор
-tC, C = user(f"cc{S}", "+992900980003")   # обуначии ҳамкор
+tA, A = user(f"ca{S}", "+992900977001")   # муаллиф
+tB, Bb = user(f"cb{S}", "+992900977002")  # ҳамкор
+tC, C = user(f"cc{S}", "+992900977003")   # обуначии ҳамкор
 if not (tA and tB and tC): print("!! вуруд нашуд"); sys.exit(1)
 nB, nA = f"cb{S}".lower(), f"ca{S}".lower()
 st, _ = call("POST", f"/follow/{Bb}", tok=tC); ok("обуна шуд", st in (200, 201), st)
