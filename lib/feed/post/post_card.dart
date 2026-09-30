@@ -269,6 +269,9 @@ class _PostCardState extends State<PostCard>
     if (s.commentsOff != null && s.commentsOff != _commentsDisabled) {
       _commentsDisabled = s.commentsOff!; changed = true;
     }
+    if (s.caption != null && s.caption != _caption) {
+      _caption = s.caption!; changed = true;
+    }
     if (changed && !initial) setState(() {});
   }
 
@@ -793,6 +796,8 @@ class _PostCardState extends State<PostCard>
                   body: {'caption': newCaption});
                 if (res.statusCode < 400 && mounted) {
                   setState(() => _caption = newCaption);
+                  // Ҳамаи экранҳо (лента, Explore, профил) матни навро мегиранд.
+                  ContentSync.instance.report(widget.post.id, caption: newCaption);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(tr('ui.5dda457972')),
                     backgroundColor: Colors.green,

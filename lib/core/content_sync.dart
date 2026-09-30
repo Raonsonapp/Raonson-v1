@@ -37,6 +37,9 @@ class ContentState {
   final int?  sharesCount;
   final bool? hideLikes;
   final bool? commentsOff;
+  // Матни пост: баъди таҳрир дар ҳамаи экранҳо фавран нав мешавад
+  // (пеш танҳо дар профил, дар лента баъди соатҳо, дар Explore — ҳеҷ).
+  final String? caption;
 
   const ContentState({
     this.liked,
@@ -46,6 +49,7 @@ class ContentState {
     this.sharesCount,
     this.hideLikes,
     this.commentsOff,
+    this.caption,
   });
 
   /// Майдонҳои маълуми [o] болои ҳамин мегузоранд (null = «номаълум»).
@@ -57,6 +61,7 @@ class ContentState {
         sharesCount:   o.sharesCount   ?? sharesCount,
         hideLikes:     o.hideLikes     ?? hideLikes,
         commentsOff:   o.commentsOff   ?? commentsOff,
+        caption:       o.caption       ?? caption,
       );
 
   @override
@@ -68,11 +73,12 @@ class ContentState {
       other.commentsCount == commentsCount &&
       other.sharesCount == sharesCount &&
       other.hideLikes == hideLikes &&
-      other.commentsOff == commentsOff;
+      other.commentsOff == commentsOff &&
+      other.caption == caption;
 
   @override
   int get hashCode => Object.hash(liked, likesCount, saved, commentsCount,
-      sharesCount, hideLikes, commentsOff);
+      sharesCount, hideLikes, commentsOff, caption);
 
   @override
   String toString() => 'ContentState(liked: $liked, likes: $likesCount, '
@@ -121,21 +127,21 @@ class ContentSync {
   /// Амали корбар (ё ҷавоб/баргардонии он). Ҳамеша менависад.
   void report(String id, {
     bool? liked, int? likesCount, bool? saved, int? commentsCount,
-    int? sharesCount, bool? hideLikes, bool? commentsOff,
+    int? sharesCount, bool? hideLikes, bool? commentsOff, String? caption,
   }) {
     if (id.isEmpty) return;
     _localAt[id] = clock();
     _merge(id, ContentState(
       liked: liked, likesCount: _nonNeg(likesCount), saved: saved,
       commentsCount: _nonNeg(commentsCount), sharesCount: _nonNeg(sharesCount),
-      hideLikes: hideLikes, commentsOff: commentsOff,
+      hideLikes: hideLikes, commentsOff: commentsOff, caption: caption,
     ));
   }
 
   /// Маълумоти сервер аз рӯйхат. Ниг. қоида дар боло.
   void prime(String id, {
     bool? liked, int? likesCount, bool? saved, int? commentsCount,
-    int? sharesCount, bool? hideLikes, bool? commentsOff,
+    int? sharesCount, bool? hideLikes, bool? commentsOff, String? caption,
     DateTime? fetchedAt,
   }) {
     if (id.isEmpty) return;
@@ -151,7 +157,7 @@ class ContentSync {
     _merge(id, ContentState(
       liked: liked, likesCount: _nonNeg(likesCount), saved: saved,
       commentsCount: _nonNeg(commentsCount), sharesCount: _nonNeg(sharesCount),
-      hideLikes: hideLikes, commentsOff: commentsOff,
+      hideLikes: hideLikes, commentsOff: commentsOff, caption: caption,
     ));
   }
 

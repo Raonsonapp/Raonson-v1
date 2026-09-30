@@ -96,7 +96,7 @@ class PostModel {
         liked: liked, likesCount: likesCount, saved: saved,
         commentsCount: commentsCount, sharesCount: sharesCount,
         hideLikes: hideLikes, commentsOff: commentsDisabled,
-        fetchedAt: fetchedAt);
+        caption: caption, fetchedAt: fetchedAt);
 
   String get mediaUrl  => media.isNotEmpty ? media.first['url']  ?? '' : '';
   String get mediaType => media.isNotEmpty ? media.first['type'] ?? 'image' : 'image';
@@ -218,11 +218,19 @@ class PostModel {
     'sharesCount': sharesCount,
     'hideLikes': hideLikes,
     'commentsOff': commentsDisabled,
+    // ⚠️ Инҳо НАБУДАНД: лента аз кэши диск бор мешуд ва пост бе музика
+    // (ва бе маълумоти маҳсулот) нишон дода мешуд.
+    'musicTitle': musicTitle, 'musicArtist': musicArtist,
+    if (song.isNotEmpty) 'song': song.toJson(),
+    'isProduct': isProduct, 'price': price, 'currency': currency,
+    'productName': productName, 'contactRaonson': contactRaonson,
+    'shopWhatsapp': shopWhatsapp, 'shopPhone': shopPhone,
     if (fetchedAt != null)
       ContentSync.fetchedAtKey: fetchedAt!.millisecondsSinceEpoch,
     'user': {'_id':user.id,'username':user.username,'avatar':user.avatar,
       'verified':user.verified,'isPrivate':user.isPrivate,
       'postsCount':user.postsCount,'followersCount':user.followersCount,
-      'followingCount':user.followingCount},
+      'followingCount':user.followingCount,
+      'hasStory':user.hasStory,'isFollowing':user.isFollowing},
   };
 }

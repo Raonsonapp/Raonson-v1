@@ -231,4 +231,18 @@ void main() {
       }
     });
   });
+
+  // Банди 3: матни таҳриршуда бояд ба ҳамаи экранҳо расад.
+  test('матни таҳриршуда ба ҳама мерасад ва рӯйхати кӯҳна онро бар намегардонад', () {
+    final cs = ContentSync.instance
+      ..clear()
+      ..clock = DateTime.now; // тестҳои пешина соатро иваз мекунанд
+    cs.report('capt1', caption: 'нав');
+    expect(cs.get('capt1')?.caption, 'нав');
+    // Рӯйхати пеш аз таҳрир боршуда матни кӯҳнаро намегузорад.
+    cs.prime('capt1', caption: 'кӯҳна',
+        fetchedAt: DateTime.now().subtract(const Duration(minutes: 5)));
+    expect(cs.get('capt1')?.caption, 'нав');
+    cs.clear();
+  });
 }

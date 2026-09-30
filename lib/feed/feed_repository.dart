@@ -168,6 +168,12 @@ class FeedRepository {
             _memCache     = posts;
             _memCacheTime = DateTime.now();
             _saveToDisk(posts);
+            // ⚠️ Лента аз кэши диск нишон дода шуда буд; маълумоти нав
+            // (матни таҳриршуда, лайкҳо, шарҳҳо) ба кортҳои ДАР ЭКРАН
+            // намерасид — то кушодани дубораи барнома (баъзан соатҳо).
+            for (final p in posts) {
+              p.primeSync();
+            }
           }
         }
       } catch (_) {} // Silent — кэш нигоҳ дор
