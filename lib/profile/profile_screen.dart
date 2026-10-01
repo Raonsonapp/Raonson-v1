@@ -626,9 +626,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const Icon(AppIcons.link_rounded,
                           color: AppColors.neonBlue, size: 14),
                       const SizedBox(width: 5),
-                      Text(user.website!, style: const TextStyle(
+                      // Суроғаи дароз аз экран берун мебаромад.
+                      Flexible(child: Text(user.website!,
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                           color: AppColors.neonBlue,
-                          fontSize: 13.5, fontWeight: FontWeight.w500)),
+                          fontSize: 13.5, fontWeight: FontWeight.w500))),
                     ]))),
 
               // ── BIO LINKS (Pro — зиёда аз як линк) ──────────────────
@@ -652,9 +655,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                             const Icon(AppIcons.link_rounded,
                                 color: AppColors.neonBlue, size: 13),
                             const SizedBox(width: 5),
-                            Text(title,
+                            Flexible(child: Text(title,
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(color: AppColors.neonBlue,
-                                    fontSize: 12.5, fontWeight: FontWeight.w600)),
+                                    fontSize: 12.5, fontWeight: FontWeight.w600))),
                           ]),
                         ),
                       );
@@ -832,13 +836,18 @@ class _Stat extends StatelessWidget {
     return '$v';
   }
   @override
-  Widget build(BuildContext context) => GestureDetector(onTap: onTap,
-    child: Column(children: [
+  // Expanded + FittedBox: се рақам («12.3M Пайравон») дар экрани 320dp бо
+  // ҳарфи калон ба сатр намегунҷиданд (RenderFlex overflow) — акнун
+  // ҳар яке ҳиссаи баробар мегирад ва ҳангоми зарурат хурд мешавад.
+  Widget build(BuildContext context) => Expanded(child: GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: FittedBox(fit: BoxFit.scaleDown, child: Column(children: [
       Text(_f(n), style: TextStyle(color: AppColors.textPrimary,
           fontSize: 17, fontWeight: FontWeight.bold)),
       const SizedBox(height: 2),
       Text(label, style: TextStyle(color: AppColors.textTertiary, fontSize: 11.5)),
-    ]));
+    ]))));
 }
 
 // ─── Own Buttons ────────────────────────────────────────────────────────
@@ -877,7 +886,9 @@ class _OtherBtns extends StatelessWidget {
       required this.onMessage});
   String get _label {
     if (isFollowing)       return 'Пайравишуда';
-    if (followRequestSent) return 'Дархост фиристода шуд';
+    // Кӯтоҳ, мисли Instagram («Requested»): «Дархост фиристода шуд» дар
+    // нисфи экрани 320dp ба ду сатр мешикаст ва аз тугма берун мебаромад.
+    if (followRequestSent) return tr('common.requested');
     return 'Пайравӣ';
   }
   @override
@@ -897,7 +908,9 @@ class _OtherBtns extends StatelessWidget {
             color: muted ? AppColors.surface : AppColors.textPrimary,
             borderRadius: BorderRadius.circular(10),
             border: muted ? Border.all(color: AppColors.dividerFaint) : null),
-          child: Center(child: Text(_label, style: TextStyle(
+          child: Center(child: Text(_label,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(
             color: muted ? AppColors.textPrimary : AppColors.bg,
             fontWeight: FontWeight.bold, fontSize: 13.5)))))),
       const SizedBox(width: 8),

@@ -404,11 +404,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
         child: Row(children: [
-          Text(
+          Expanded(child: Text(
             'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
+            maxLines: 1, overflow: TextOverflow.ellipsis,
             style: TextStyle(color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold, fontSize: 16)),
-          const Spacer(),
+                fontWeight: FontWeight.bold, fontSize: 16))),
           if (_comments.length >= 3)
             GestureDetector(
               onTap: _summarize,
@@ -964,17 +964,19 @@ class _CommentItemState extends State<_CommentItem> {
             const SizedBox(height: 6),
 
             // ── Нижняя строка: время · лайков · Ответить · Тарҷума · ⋮ ──
-            Row(children: [
+            // Wrap, на Row: дар ҷавоб (бо фосилаи чап) ва экрани 320dp ин
+            // сатр ~300px мешуд ва аз экран берун мебаромад.
+            Wrap(
+              spacing: 12, runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
               Text(_timeAgo(),
                   style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-              if (_likeCount > 0) ...[
-                const SizedBox(width: 12),
+              if (_likeCount > 0)
                 Text(trn('count.likes', _likeCount),
                     style: TextStyle(
                         color: AppColors.textFaint, fontSize: 12,
                         fontWeight: FontWeight.w600)),
-              ],
-              const SizedBox(width: 12),
               // ── Ответить — барои ҲАМА ──────────────────────
               GestureDetector(
                 onTap: widget.onReply,
@@ -983,7 +985,6 @@ class _CommentItemState extends State<_CommentItem> {
                         color: AppColors.textTertiary, fontSize: 12,
                         fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(width: 12),
               // ── Тарҷума кардан (OpenAI) ─────────────────────
               GestureDetector(
                 onTap: _translating ? null : _toggleTranslate,
@@ -997,7 +998,6 @@ class _CommentItemState extends State<_CommentItem> {
                             color: AppColors.textTertiary, fontSize: 12,
                             fontWeight: FontWeight.w600)),
               ),
-              const SizedBox(width: 8),
               // ── ⋮ меню ──────────────────────────────────────
               GestureDetector(
                 onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
