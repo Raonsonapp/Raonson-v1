@@ -283,6 +283,7 @@ func main() {
 		po.POST("/:id/not_interest", handlers.MarkNotInterest)
 		po.DELETE("/:id/tag",        handlers.RemoveMyTag) // қайди худро бардор
 		po.POST("/:id/not-interested", handlers.PostNotInterested)
+		po.DELETE("/:id/not-interested", handlers.UndoPostNotInterested)
 		po.POST("/:id/pin",          handlers.PinPost)
 		po.PUT("/:id/caption",       handlers.UpdatePostCaption)
 		po.PUT("/:id/music",         handlers.UpdatePostMusic)

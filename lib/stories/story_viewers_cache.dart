@@ -52,7 +52,10 @@ class StoryViewersCache {
   final Map<String, Future<Map<String, dynamic>?>> _inFlight = {};
 
   static Future<Map<String, dynamic>?> _apiFetch(String id) async {
-    final res = await ApiClient.instance.get('/stories/$id/viewers');
+    // Сервер пешфарз 50 бинандаро медиҳад — шумора «120 нафар дид»
+    // буд, вале дар рӯйхат танҳо 50 ном. 200 — ҳадди сервер.
+    final res = await ApiClient.instance
+        .get('/stories/$id/viewers', query: const {'limit': '200'});
     if (res.statusCode >= 400) return null;
     final b = jsonDecode(res.body);
     return b is Map<String, dynamic> ? b : null;

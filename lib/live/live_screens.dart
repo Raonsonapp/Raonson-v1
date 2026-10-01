@@ -233,6 +233,12 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
       }
     } catch (_) {
       if (_gone) return _abortStart(joined: true);
+      // Токен ё камера (иҷозат) нашуд, вале /live/start аллакай пахшро
+      // сабт кард. Пеш экран дар спиннери абадӣ мемонд ва дигарон «Live»-и
+      // холиро дар рӯйхат медиданд. Акнун пахш дар сервер анҷом меёбад ва
+      // хатои «оғоз нашуд» бо тугмаи баромад нишон дода мешавад.
+      _abortStart(joined: true);
+      _id = '';
     }
     if (mounted) setState(() => _starting = false);
   }
@@ -259,7 +265,9 @@ class _LiveBroadcastState extends State<LiveBroadcastScreen> {
     _ending = true;
     _poll?.cancel();
     _agora.removeListener(_onAgora);
-    try { await ApiClient.instance.post('/live/$_id/end'); } catch (_) {}
+    if (_id.isNotEmpty) {
+      try { await ApiClient.instance.post('/live/$_id/end'); } catch (_) {}
+    }
     await _agora.leaveCall();
     if (mounted) Navigator.pop(context);
   }

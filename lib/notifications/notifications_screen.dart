@@ -37,6 +37,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   int _unreadCount = 0;
   bool _loading = true;
   bool _hasError = false;
+  // Саҳифабандӣ. Пеш танҳо 30 огоҳиномаи охирин буд — кӯҳнатаринҳо
+  // ҳеҷ гоҳ нишон дода намешуданд.
+  bool _hasMore = false;
+  bool _loadingMore = false;
 
   @override
   void initState() {
@@ -65,11 +69,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (!mounted) return;
       setState(() {
         _notifications = (data['notifications'] as List?)
-            ?.cast<NotificationModel>() ?? const <NotificationModel>[];
+            ?.cast<NotificationModel>().toList() ?? <NotificationModel>[];
         _unreadCount = (data['unreadCount'] as int?) ?? 0;
+        _hasMore = _notifications.length >= NotificationsRepository.pageSize;
         _loading = false;
       });
-      _repo.markAllAsRead();
+      _repo.markAllAsRead().catchError((_) {});
       NotificationBadgeController.instance.reset();
       NotificationService.markRead();
     } catch (_) {
@@ -78,8 +83,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _loading) return;
+    _loadingMore = true;
+    try {
+      final data = await _repo.fetchNotifications(
+          page: _notifications.length ~/ NotificationsRepository.pageSize + 1);
+      if (!mounted) return;
+      final page = (data['notifications'] as List?)
+              ?.cast<NotificationModel>() ?? const <NotificationModel>[];
+      final seen = _notifications.map((n) => n.id).toSet();
+      final fresh = page.where((n) => seen.add(n.id)).toList();
+      setState(() {
+        _notifications = [..._notifications, ...fresh];
+        _hasMore = page.length >= NotificationsRepository.pageSize &&
+            fresh.isNotEmpty;
+      });
+    } catch (_) {
+      // Ҳангоми ғелондани навбатӣ боз кӯшиш мешавад.
+    } finally {
+      _loadingMore = false;
+    }
+  }
+
   Future<void> _markAllRead() async {
-    await _repo.markAllAsRead();
+    try { await _repo.markAllAsRead(); } catch (_) { return; }
     if (!mounted) return;
     setState(() {
       _notifications = _notifications.map((e) => e.copyWith(read: true)).toList();
@@ -92,7 +120,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     AnalyticsService.instance.logEvent(AnalyticsEvents.notificationOpen,
         params: {'type': n.type});
     if (!n.isRead) {
-      await _repo.markAsRead(n.id);
+      // Хатои шабака набояд гузаришро манъ кунад — пеш пахш бе интернет
+      // ҳеҷ кор намекард (истисно ҳамаро қатъ мекард).
+      try { await _repo.markAsRead(n.id); } catch (_) {}
       if (!mounted) return;
       setState(() {
         _notifications = _notifications
@@ -172,7 +202,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (postId == null || postId.isEmpty) return;
     try {
       final res = await ApiClient.instance.get('/posts/$postId');
-      if (res.statusCode >= 400) return;
+      if (res.statusCode >= 400) return _unavailable();
       final post =
           PostModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
       if (!mounted) return;
@@ -188,13 +218,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       // GET /reels/:id мавҷуд аст — пеш танҳо 24 рилси ХУДРО меҷустем,
       // бинобар ин рилси каси дигар (зикр, шарҳ) ҳеҷ гоҳ кушода намешуд.
       final res = await ApiClient.instance.get('/reels/$reelId');
-      if (res.statusCode >= 400) return;
+      if (res.statusCode >= 400) return _unavailable();
       final reel =
           ReelModel.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
       if (!mounted) return;
       Navigator.push(context,
           MaterialPageRoute(builder: (_) => SingleReelScreen(reel: reel)));
     } catch (_) {}
+  }
+
+  /// Пост/Reels нест шуд ё пӯшида аст. Пеш пахш ҳеҷ натиҷа надошт ва
+  /// корбар гумон мекард, ки барнома ҳалқ шуд.
+  void _unavailable() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('link.unavailable')),
+        duration: const Duration(seconds: 2)));
   }
 
   void _openProfile(String? userId) {
@@ -268,14 +307,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     section(tr('common.today'), today);
     section(tr('common.yesterday'), yesterday);
-    section(tr('common.earlier'), week);
+    // Пеш ин ҳам «Қаблтар» буд — ду сарлавҳаи якхела паси ҳам.
+    section(tr('common.thisWeek'), week);
     section(tr('common.earlier'), earlier);
 
     return RefreshIndicator(
       onRefresh: _load,
       color: AppColors.textPrimary,
       backgroundColor: AppColors.bg,
-      child: ListView(padding: const EdgeInsets.only(top: 4), children: children),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (n) {
+          if (n.metrics.extentAfter < 600) _loadMore();
+          return false;
+        },
+        child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(top: 4), children: children),
+      ),
     );
   }
 

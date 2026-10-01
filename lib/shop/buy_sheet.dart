@@ -42,8 +42,11 @@ class _BuySheetState extends State<_BuySheet> {
 
   PostModel get post => widget.post;
 
+  // Ҳамон ҳисоби сервер (CreateOrder): аввал тахфифи фаъол (Flash Sale),
+  // баъд промокод. Пеш тахфиф ба назар гирифта намешуд — варақа нархи
+  // пурраро нишон медод, вале фармоиш бо нархи арзон сабт мешуд.
   double get _finalPrice =>
-      post.price * (1 - _discountPct / 100);
+      post.salePrice * (1 - _discountPct / 100);
 
   int get _cashback {
     final v = (_finalPrice * 0.05).floor();
@@ -150,7 +153,7 @@ class _BuySheetState extends State<_BuySheet> {
         const SizedBox(height: 4),
         // Нарх (бо тахфиф)
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          if (_discountPct > 0) ...[
+          if (_discountPct > 0 || post.onSale) ...[
             Text(_priceLabel(post.price),
                 style: TextStyle(color: AppColors.textFaint, fontSize: 14,
                     decoration: TextDecoration.lineThrough)),

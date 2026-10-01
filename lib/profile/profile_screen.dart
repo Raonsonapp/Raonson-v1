@@ -42,6 +42,7 @@ import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 import '../core/i18n/strings.dart';
 import '../core/links/deep_links.dart';
 import '../verification/verification_screen.dart';
@@ -752,15 +753,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         body: locked
             ? const _PrivateAccountView()
             : TabBarView(controller: _tab, children: [
-          _PostGrid(
+          _onNearEnd(_ctrl.loadMorePosts, _PostGrid(
               posts:       _ctrl.sortedPosts,
               isMe:        _isMe,
               owner:       _ctrl.profile,
               onLongPress: _postMenu,
-              onRemoved:   (id) => _ctrl.removePostById(id)),
-          _ReelGrid(reels: _ctrl.reels),
+              onRemoved:   (id) => _ctrl.removePostById(id))),
+          _onNearEnd(_ctrl.loadMoreReels, _ReelGrid(reels: _ctrl.reels)),
           _TaggedGrid(ctrl: _ctrl),
-          if (_isMe) _SavedGrid(ctrl: _ctrl),
+          if (_isMe) _onNearEnd(_ctrl.loadMoreSaved, _SavedGrid(ctrl: _ctrl)),
         ]),
         ),
       ),
@@ -963,6 +964,20 @@ class _PrivateAccountView extends StatelessWidget {
     );
   }
 }
+
+/// Вақте рӯйхат ба поён наздик шуд, саҳифаи навбатиро мехонад.
+/// Бе ин профил танҳо саҳифаи аввалро (24 пост) нишон медод.
+Widget _onNearEnd(Future<void> Function() loadMore, Widget child) =>
+    NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n.metrics.axis == Axis.vertical &&
+            n.metrics.extentAfter < 900) {
+          loadMore();
+        }
+        return false;
+      },
+      child: child,
+    );
 
 // ─── Post Grid ─────────────────────────────────────────────────────────
 class _PostGrid extends StatelessWidget {
@@ -1199,6 +1214,9 @@ class _ULS extends State<_UserListSheet> {
   final _searchCtrl = TextEditingController();
   List<UserModel> _list = []; bool _loading = true;
   String _query = '';
+  // Саҳифабандӣ: сервер 50-тоӣ медиҳад. Пеш танҳо 50-и аввал нишон
+  // дода мешуд — дигарон дар рӯйхат умуман набуданд.
+  bool _hasMore = false, _loadingMore = false, _failed = false;
 
   @override void initState() {
     super.initState();
@@ -1208,12 +1226,41 @@ class _ULS extends State<_UserListSheet> {
   }
   @override void dispose() { _searchCtrl.dispose(); super.dispose(); }
 
+  Future<List<UserModel>> _page(int page) => widget.isFollowers
+      ? _repo.getFollowers(widget.userId, page: page)
+      : _repo.getFollowing(widget.userId, page: page);
+
   Future<void> _load() async {
-    final list = widget.isFollowers
-        ? await _repo.getFollowers(widget.userId)
-        : await _repo.getFollowing(widget.userId);
-    if (mounted) {
-      setState(() { _list = list; _loading = false; });
+    if (!_loading) setState(() { _loading = true; _failed = false; });
+    try {
+      final list = await _page(1);
+      if (!mounted) return;
+      setState(() {
+        _list = list; _loading = false; _failed = false;
+        _hasMore = list.length >= ProfileRepository.followPageSize;
+      });
+    } catch (_) {
+      // Пеш хатои шабака скелетро то абад мечархонд.
+      if (mounted) setState(() { _loading = false; _failed = true; });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _loading) return;
+    _loadingMore = true;
+    try {
+      final page = await _page(ProfileController.nextPage(
+          _list.length, ProfileRepository.followPageSize));
+      if (!mounted) return;
+      setState(() {
+        final added = ProfileController.appendUnique<UserModel>(
+            _list, page, (u) => u.id);
+        _hasMore = page.length >= ProfileRepository.followPageSize && added > 0;
+      });
+    } catch (_) {
+      // Бори дигар ҳангоми ғелондан кӯшиш мешавад.
+    } finally {
+      _loadingMore = false;
     }
   }
 
@@ -1262,12 +1309,19 @@ class _ULS extends State<_UserListSheet> {
         const SizedBox(height: 6),
         Expanded(child: _loading
             ? _UserListSkeleton()
+            : _failed && _list.isEmpty
+                ? ErrorState(message: tr('common.noConnection'), onRetry: _load)
             : list.isEmpty
                 ? Center(child: Text(_query.isNotEmpty
                         ? 'Натиҷае нест'
                         : tr('profile.emptyYet', {'what': widget.title.toLowerCase()}),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 14)))
-                : ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
+                : NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    if (_query.isEmpty && n.metrics.extentAfter < 600) _loadMore();
+                    return false;
+                  },
+                  child: ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
                     final u = list[i];
                     return ListTile(
                       leading: CircleAvatar(radius: 22,
@@ -1298,7 +1352,7 @@ class _ULS extends State<_UserListSheet> {
                         Navigator.push(context, MaterialPageRoute(
                             builder: (_) => ProfileScreen(userId: u.id)));
                       });
-                  })),
+                  }))),
       ]));
   }
 }

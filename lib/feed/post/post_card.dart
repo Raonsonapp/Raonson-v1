@@ -1109,7 +1109,8 @@ class _PostCardState extends State<PostCard>
         label: tr('ui.47ba09d086'),
         textColor: Colors.white,
         onPressed: () {
-          ApiClient.instance.delete('/users/${widget.post.user.id}/mute');
+          ApiClient.instance.delete('/users/${widget.post.user.id}/mute')
+              .then((_) {}, onError: (_) {});
           if (mounted) setState(() => _hidden = false);
         },
       ),
@@ -1133,7 +1134,14 @@ class _PostCardState extends State<PostCard>
         backgroundColor: Colors.grey[800],
         duration: const Duration(seconds: 3),
         action: SnackBarAction(label: tr('ui.47ba09d086'), textColor: AppColors.textPrimary,
-          onPressed: () { if (mounted) setState(() => _hidden = false); }),
+          onPressed: () {
+            // Дар сервер ҳам бекор мешавад — вагарна баъди навсозӣ пост
+            // боз нопадид мешуд.
+            ApiClient.instance
+                .delete('/posts/${widget.post.id}/not-interested')
+                .then((_) {}, onError: (_) {});
+            if (mounted) setState(() => _hidden = false);
+          }),
       ));
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1721,12 +1729,15 @@ class _PostCardState extends State<PostCard>
                   const Icon(AppIcons.storefront_rounded,
                       color: Colors.white, size: 19),
                   const SizedBox(width: 8),
-                  Text(
-                    post.price > 0 ? 'Tajikshop · ${post.priceLabel}' : 'Tajikshop · Харид',
+                  Flexible(child: Text(
+                    post.price > 0
+                        ? 'Tajikshop · ${post.onSale ? post.salePriceLabel : post.priceLabel}'
+                        : 'Tajikshop · Харид',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15, fontWeight: FontWeight.w700),
-                  ),
+                  )),
                 ],
               ),
             ),

@@ -75,6 +75,7 @@ func scanFeedPosts(rows interface {
 		})
 	}
 	attachCollabUsers(posts)
+	attachSalePct(posts)
 	return posts
 }
 

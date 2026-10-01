@@ -20,6 +20,9 @@ class _HashtagScreenState extends State<HashtagScreen> {
   List<PostModel> _posts = [];
   bool _loading = true;
   String? _error;
+  // Сервер 24-тоӣ медиҳад. Пеш танҳо 24 пости охирини ҳаштаг дида мешуд.
+  static const _pageSize = 24;
+  bool _hasMore = false, _loadingMore = false;
 
   @override
   void initState() {
@@ -27,25 +30,54 @@ class _HashtagScreenState extends State<HashtagScreen> {
     _load();
   }
 
+  Future<List<PostModel>> _page(int page) async {
+    final res = await ApiClient.instance
+        .get('/posts/hashtag/${Uri.encodeComponent(widget.hashtag)}',
+            query: {'page': '$page', 'limit': '$_pageSize'})
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode >= 400) throw Exception('Хато ${res.statusCode}');
+    final body = jsonDecode(res.body);
+    final list = body is List ? body : (body['posts'] ?? []) as List;
+    return list
+        .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<void> _load() async {
     if (mounted) setState(() { _loading = true; _error = null; });
     try {
-      final res = await ApiClient.instance
-          .get('/posts/hashtag/${Uri.encodeComponent(widget.hashtag)}')
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode >= 400) throw Exception('Хато ${res.statusCode}');
-      final body = jsonDecode(res.body);
-      final list = body is List ? body : (body['posts'] ?? []) as List;
+      final posts = await _page(1);
       if (mounted) {
         setState(() {
-          _posts = list
-              .map((e) => PostModel.fromJson(e as Map<String, dynamic>))
-              .toList();
+          _posts = posts;
+          _hasMore = posts.length >= _pageSize;
           _loading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = e.toString(); });
+      // Матни истисно («TimeoutException after 0:00:10…») ба корбар
+      // маъное надорад.
+      if (mounted) {
+        setState(() { _loading = false; _error = tr('common.noConnection'); });
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _loading) return;
+    _loadingMore = true;
+    try {
+      final page = await _page(_posts.length ~/ _pageSize + 1);
+      if (!mounted) return;
+      final seen = _posts.map((p) => p.id).toSet();
+      final fresh = page.where((p) => seen.add(p.id)).toList();
+      setState(() {
+        _posts = [..._posts, ...fresh];
+        _hasMore = page.length >= _pageSize && fresh.isNotEmpty;
+      });
+    } catch (_) {
+    } finally {
+      _loadingMore = false;
     }
   }
 
@@ -105,11 +137,17 @@ class _HashtagScreenState extends State<HashtagScreen> {
                       color: AppColors.neonBlue,
                       backgroundColor: AppColors.surface,
                       onRefresh: _load,
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: _posts.length,
-                        itemBuilder: (_, i) =>
-                            PostCard(key: ValueKey(_posts[i].id), post: _posts[i]),
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (n) {
+                          if (n.metrics.extentAfter < 1200) _loadMore();
+                          return false;
+                        },
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: _posts.length,
+                          itemBuilder: (_, i) =>
+                              PostCard(key: ValueKey(_posts[i].id), post: _posts[i]),
+                        ),
                       ),
                     ),
     );

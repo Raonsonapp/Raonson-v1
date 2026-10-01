@@ -105,28 +105,70 @@ class _CommentsScreenState extends State<CommentsScreen> {
   String get _base =>
       widget.targetType == 'reel' ? '/reels' : '/posts';
 
+  bool get _iOwnPost {
+    final me = UserSession.userId?.trim() ?? '';
+    return me.isNotEmpty && me == widget.post.user.id.trim();
+  }
+
+  // Саҳифабандӣ. Сервер пешфарз 20 шарҳи охиринро медод ва дигар
+  // ҳеҷ чиз бор намешуд: дар пости 60-шарҳа 40-тои кӯҳна умуман
+  // дида намешуданд.
+  static const _pageSize = 50;
+  bool _hasMore = false, _loadingMore = false;
+
+  /// null — шабака/сервер ҷавоб надод.
+  Future<List<CommentModel>?> _fetchPage(int page) async {
+    final q = {'page': '$page', 'limit': '$_pageSize'};
+    // ✅ Ду endpoint санҷед (аввал base-и мушаххас, баъд fallback-и куҳна)
+    var res = await ApiClient.instance
+        .get('$_base/${widget.post.id}/comments', query: q)
+        .timeout(const Duration(seconds: 8));
+    if (res.statusCode >= 400 && widget.targetType != 'reel') {
+      res = await ApiClient.instance
+          .get('/comments/${widget.post.id}', query: q)
+          .timeout(const Duration(seconds: 8));
+    }
+    if (res.statusCode >= 400) return null;
+    final body = jsonDecode(res.body);
+    final List list = body is List
+        ? body
+        : (body['comments'] ?? body['data'] ?? []);
+    return list
+        .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _loading) return;
+    _loadingMore = true;
+    try {
+      final page = await _fetchPage(_comments.length ~/ _pageSize + 1);
+      if (page == null || !mounted) return;
+      final seen = _comments.map((c) => c.id).toSet();
+      final fresh = page.where((c) => seen.add(c.id)).toList();
+      final now = DateTime.now();
+      for (final c in fresh) {
+        StorySeenSync.instance.primeUser(c.user, fetchedAt: now);
+      }
+      setState(() {
+        _comments = [..._comments, ...fresh];
+        _hasMore = page.length >= _pageSize && fresh.isNotEmpty;
+      });
+    } catch (_) {
+    } finally {
+      _loadingMore = false;
+    }
+  }
+
   Future<void> _loadComments() async {
     setState(() => _loading = true);
     try {
-      // ✅ Ду endpoint санҷед (аввал base-и мушаххас, баъд fallback-и куҳна)
-      var res = await ApiClient.instance
-          .get('$_base/${widget.post.id}/comments')
-          .timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400 && widget.targetType != 'reel') {
-        res = await ApiClient.instance
-            .get('/comments/${widget.post.id}')
-            .timeout(const Duration(seconds: 8));
-      }
-      if (res.statusCode < 400) {
-        final body = jsonDecode(res.body);
-        final List list = body is List
-            ? body
-            : (body['comments'] ?? body['data'] ?? []);
+      final list = await _fetchPage(1);
+      if (list != null) {
         if (mounted) {
           setState(() {
-            _comments = list
-                .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
-                .toList();
+            _comments = list;
+            _hasMore = list.length >= _pageSize;
           });
           // Ҳалқаи сториси муаллифони шарҳ — ҳамон манбаи Home/профил.
           final now = DateTime.now();
@@ -440,7 +482,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   ]))
                 : Builder(builder: (_) {
                     final items = _threaded();
-                    return ListView.builder(
+                    return NotificationListener<ScrollNotification>(
+                      onNotification: (n) {
+                        if (n.metrics.extentAfter < 600) _loadMore();
+                        return false;
+                      },
+                      child: ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       itemCount: items.length,
                       addAutomaticKeepAlives: false,
@@ -457,10 +504,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
                             onDelete: () => _onDelete(c.id),
                             onEdit:   (t) => _onEdit(c, t),
                             onReply:  () => _startReply(c),
+                            canModerate: _iOwnPost,
                           ),
                         );
                       },
-                    );
+                    ));
                   }),
       ),
 
@@ -603,6 +651,10 @@ class _CommentItem extends StatefulWidget {
   final VoidCallback onDelete;
   final void Function(String) onEdit;
   final VoidCallback onReply;
+  /// Ман соҳиби пост/Reels ҳастам — шарҳи ҳар касро нест карда
+  /// метавонам (мисли Instagram; сервер инро аллакай иҷозат медод,
+  /// вале дар меню тугма набуд).
+  final bool canModerate;
 
   const _CommentItem({
     super.key,
@@ -611,6 +663,7 @@ class _CommentItem extends StatefulWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onReply,
+    this.canModerate = false,
   });
 
   @override
@@ -715,6 +768,13 @@ class _CommentItemState extends State<_CommentItem> {
     );
   }
 
+  void _failSnack() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('common.failedRetry')),
+        duration: const Duration(seconds: 2)));
+  }
+
   // ── ⋮ меню дигарон ───────────────────────────────────────────
   void _showOtherMenu() {
     showModalBottomSheet(
@@ -726,6 +786,13 @@ class _CommentItemState extends State<_CommentItem> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
+          if (widget.canModerate)
+            ListTile(
+              leading: const Icon(AppIcons.delete_outline,
+                  color: Colors.redAccent, size: 22),
+              title: Text(tr('ui.bffaabdbc0'),
+                  style: TextStyle(color: Colors.redAccent, fontSize: 15)),
+              onTap: () { Navigator.pop(context); widget.onDelete(); }),
           ListTile(
             leading: const Icon(AppIcons.flag_outlined,
                 color: Colors.redAccent, size: 22),
@@ -735,10 +802,16 @@ class _CommentItemState extends State<_CommentItem> {
               Navigator.pop(context);
               final result = await ReportDialog.showWithDescription(context);
               if (result == null || !mounted) return;
-              final okRes = await ApiClient.instance.post(
-                  '/comments/${widget.comment.id}/report',
-                  body: {'reason': result.reason, 'description': result.description});
-              if (okRes.statusCode >= 400) throw Exception();
+              // Пеш хато партофта мешуд ва ҳеҷ кас онро намегирифт —
+              // корбар ҳеҷ ҷавоб намедид.
+              try {
+                final okRes = await ApiClient.instance.post(
+                    '/comments/${widget.comment.id}/report',
+                    body: {'reason': result.reason, 'description': result.description});
+                if (okRes.statusCode >= 400) throw Exception();
+              } catch (_) {
+                return _failSnack();
+              }
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(tr('ui.476cbb2898')),
@@ -752,10 +825,13 @@ class _CommentItemState extends State<_CommentItem> {
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
             onTap: () async {
               Navigator.pop(context);
+              // Пеш «маҳдуд шуд» ҳатто ҳангоми хато нишон дода мешуд.
               try {
                 await ApiClient.instance
-                    .post('/users/${widget.comment.user.id}/restrict');
-              } catch (_) {}
+                    .postOk('/users/${widget.comment.user.id}/restrict');
+              } catch (_) {
+                return _failSnack();
+              }
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(tr('ui.47558f97c0')),

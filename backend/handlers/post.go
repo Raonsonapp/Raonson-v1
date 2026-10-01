@@ -394,6 +394,10 @@ func GetPost(c *gin.Context) {
 	if views == nil {
 		views = 0
 	}
+	salePct := extra["salePct"]
+	if salePct == nil {
+		salePct = 0
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"location": extra["location"], "taggedUsers": extra["taggedUsers"],
 		"collaborators": extra["collaborators"], "collaboratorUsers": extra["collaboratorUsers"],
@@ -402,6 +406,7 @@ func GetPost(c *gin.Context) {
 		"createdAt": createdAt, "media": nilToEmpty(media), "liked": liked, "saved": saved,
 		"hideLikes": hideLikes, "commentsOff": commentsOff,
 		"isProduct": isProduct, "price": price, "currency": currency,
+		"salePct": salePct,
 		"productName": productName, "contactRaonson": contactRaonson,
 		"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 		"musicTitle": mTitle, "musicArtist": mArtist,

@@ -256,6 +256,14 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_unread.py
 
+      # Саҳифабандӣ (профил, шарҳ, огоҳинома, ҳаштаг, обуначиён),
+      # тахфифи маҳсул дар лента, бекор кардани «Ҷолиб нест», Live.
+      - name: Санҷиши саҳифабандӣ ва тахфифи маҳсул
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_paging_shop.py
+
       # «Навбати ту» (Add Yours): занҷир, мавзӯъ, иштирокчиён, блок.
       - name: Санҷиши «Навбати ту»
         env:
