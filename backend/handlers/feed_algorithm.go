@@ -94,7 +94,8 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
 		  COALESCE(p.contact_raonson,false), COALESCE(p.shop_whatsapp,''),
 		  COALESCE(p.shop_phone,''),
-		  EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1 AND hf.following_id=s.user_id)) AND (s.user_id=$1 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1))),
+		  `+storyRingCols("u.id", "$1")+`,
+		  (SELECT COUNT(*) FROM post_views pvc WHERE pvc.post_id=p.id),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
 		  (CASE WHEN f.following_id IS NOT NULL OR fc.ok THEN 100 ELSE 0 END
@@ -189,7 +190,8 @@ func GetSmartFeed(c *gin.Context) {
 		var musicURL, musicArt string
 		var musicTrackMs, musicStartMs, musicEndMs int
 		var tagged []string
-		var hasStory bool
+		var hasStory, unseenStory bool
+		var views int64
 		var score float64
 		var isProduct, contactRaonson bool
 		var price float64
@@ -205,7 +207,7 @@ func GetSmartFeed(c *gin.Context) {
 			&location, &tagged, &collaborators, &following, &shares,
 			&isProduct, &price, &currency, &productName,
 			&contactRaonson, &shopWhatsapp, &shopPhone,
-			&hasStory, &score)
+			&hasStory, &unseenStory, &views, &score)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
@@ -222,11 +224,12 @@ func GetSmartFeed(c *gin.Context) {
 			"isProduct": isProduct, "price": price, "currency": currency,
 			"productName": productName, "contactRaonson": contactRaonson,
 			"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
-			"user": gin.H{
+			"viewsCount": views, "views": views,
+			"user": putStoryRing(gin.H{
 				"_id": uid, "username": uname,
-				"avatar": uavatar, "verified": verified, "hasStory": hasStory,
+				"avatar": uavatar, "verified": verified,
 				"isFollowing": following,
-			},
+			}, hasStory, unseenStory),
 		})
 	}
 

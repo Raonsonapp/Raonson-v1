@@ -16,6 +16,7 @@ import '../storage/token_storage.dart';
 import '../../feed/feed_repository.dart';
 import '../../reels/reels_repository.dart';
 import '../../stories/story_repository.dart';
+import '../../stories/story_seen_sync.dart';
 import '../../chat/chat_repository.dart';
 import '../../profile/profile_repository.dart';
 
@@ -175,6 +176,8 @@ class AccountManager {
     FollowService.instance.clear();
     // Лайк/захираҳои корбари куҳна ба корбари нав намегузаранд.
     ContentSync.instance.clear();
+    // Ҳалқаҳои сториси корбари куҳна («дидам») ба корбари нав намегузаранд.
+    StorySeenSync.instance.clear();
     // Бейҷи огоҳиҳо-и корбари куҳнаро тоза мекунем — вагарна корбари нав
     // рақами гумшудаи корбари қаблиро мебинад.
     NotificationBadgeController.instance.reset();

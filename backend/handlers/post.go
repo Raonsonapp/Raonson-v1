@@ -385,8 +385,14 @@ func GetPost(c *gin.Context) {
 	}
 	userOut := gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified}
 	if u, ok := extra["user"].(gin.H); ok {
-		userOut["hasStory"] = u["hasStory"]
-		userOut["isFollowing"] = u["isFollowing"]
+		for _, k := range []string{"hasStory", "hasUnseenStory", "storySeen", "isFollowing"} {
+			userOut[k] = u[k]
+		}
+	}
+	// Тамошо — ҳамон COUNT(post_views), ки профил ва Explore медиҳанд.
+	views := extra["viewsCount"]
+	if views == nil {
+		views = 0
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"location": extra["location"], "taggedUsers": extra["taggedUsers"],
@@ -400,6 +406,7 @@ func GetPost(c *gin.Context) {
 		"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 		"musicTitle": mTitle, "musicArtist": mArtist,
 		"sharesCount": mShares,
+		"viewsCount": views, "views": views,
 		"song": songJSON(mTitle, mArtist, mArt, mURL,
 			mTrackMs, mStartMs, mEndMs),
 		"user": userOut,

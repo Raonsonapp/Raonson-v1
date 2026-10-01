@@ -317,7 +317,7 @@ func GetUserReels(c *gin.Context) {
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM reel_likes rl WHERE rl.reel_id=r.id AND rl.user_id=$4),
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$4),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=u.id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$4 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$4 AND hf.following_id=s.user_id)) AND (s.user_id=$4 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$4))),
+		       `+storyRingCols("u.id", "$4")+`,
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
 		       COALESCE(r.audio_id,''), COALESCE(r.audio_title,''),
 		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,''),
@@ -336,13 +336,13 @@ func GetUserReels(c *gin.Context) {
 	for rows.Next() {
 		var rid, vurl, vurlLow, thumb, cap, uid, uname, uavatar string
 		var views, likes, comments int
-		var verified, liked, saved, hasStory bool
+		var verified, liked, saved, hasStory, unseenStory bool
 		var hideLikes, commentsOff bool
 		var createdAt interface{}
 		var aID, aTitle, aArtist, aCover string
 		var shares int
 		rows.Scan(&rid, &vurl, &vurlLow, &thumb, &cap, &views, &likes, &comments, &createdAt,
-			&uid, &uname, &uavatar, &verified, &liked, &saved, &hasStory,
+			&uid, &uname, &uavatar, &verified, &liked, &saved, &hasStory, &unseenStory,
 			&hideLikes, &commentsOff, &aID, &aTitle, &aArtist, &aCover, &shares)
 		out = append(out, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
@@ -354,10 +354,10 @@ func GetUserReels(c *gin.Context) {
 			// Садо ва паҳн — пеш дар ҷадвали Reels-и профил набуданд.
 			"audio":       reelAudioJSON(aID, aTitle, aArtist, aCover, uname),
 			"sharesCount": shares,
-			"user": gin.H{
+			"user": putStoryRing(gin.H{
 				"_id": uid, "id": uid, "username": uname, "avatar": uavatar,
-				"verified": verified, "hasStory": hasStory,
-			},
+				"verified": verified,
+			}, hasStory, unseenStory),
 		})
 	}
 	c.JSON(http.StatusOK, out)

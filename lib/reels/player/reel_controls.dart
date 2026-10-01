@@ -222,7 +222,7 @@ class _ReelControlsState extends State<ReelControls> {
                   imageUrl: reel.user.avatar,
                   name: reel.user.username,
                   size: 34,
-                  glowBorder: reel.user.hasStory,
+                  storyUserId: reel.user.id,
                 ),
               ),
               const SizedBox(width: 8),

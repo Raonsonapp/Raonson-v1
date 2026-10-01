@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
+import '../../stories/story_seen_sync.dart';
 
 /// Tabҳои inbox — мисли Instagram: Асосӣ / Дархостҳо.
 enum ChatTab { primary, general, requests }
@@ -85,12 +86,20 @@ class ChatListController extends ChangeNotifier {
     await loadChats();
   }
 
+  /// Ҳалқаи сториси ҳамсуҳбат — ҳамон манбаи Home/профил.
+  void _primeRings(List<MessageModel> list) {
+    for (final c in list) {
+      StorySeenSync.instance.primeUser(c.peer);
+    }
+  }
+
   Future<void> loadChats() async {
     _loading = true;
     _error   = null;
     notifyListeners();
     try {
       _chats = await _repository.getInboxChats();
+      _primeRings(_chats);
       _page = 1;
       _hasMore = _chats.length >= _pageSize;
       _applyFilter();
@@ -120,6 +129,7 @@ class ChatListController extends ChangeNotifier {
         if (fresh.isEmpty) {
           _hasMore = false;
         } else {
+          _primeRings(fresh);
           _chats = [..._chats, ...fresh];
           _page++;
           _applyFilter();

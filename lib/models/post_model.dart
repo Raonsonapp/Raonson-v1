@@ -1,6 +1,7 @@
 import '../core/content_sync.dart';
 import '../core/utils/server_time.dart';
 import '../core/music/song_info.dart';
+import '../stories/story_seen_sync.dart';
 import 'user_model.dart';
 
 class PostModel {
@@ -34,6 +35,10 @@ class PostModel {
   /// Reel ин майдонро дошт, пост НЕ — пас дар назди тугмаи «паҳн
   /// кардан» ҳеҷ рақам набуд.
   final int          sharesCount;
+
+  /// Тамошоҳо — ҲАМОН рақам дар Explore, профил, пост ва омори соҳиб
+  /// (сервер: COUNT(post_views); калидҳо `viewsCount` ва `views`).
+  final int          viewsCount;
   final bool         hideLikes;        // лайкҳо пинҳонанд (танҳо соҳиб мебинад)
   final bool         commentsDisabled; // шарҳҳо хомӯшанд
   // ── Магоза (пости маҳсулот) ──
@@ -68,6 +73,7 @@ class PostModel {
     this.musicArtist = '',
     this.song        = SongInfo.none,
     this.sharesCount = 0,
+    this.viewsCount  = 0,
     this.hideLikes        = false,
     this.commentsDisabled = false,
     this.isProduct      = false,
@@ -96,11 +102,15 @@ class PostModel {
 
   /// Маълумоти серверии ин постро ба ContentSync медиҳад. Рӯйхати
   /// куҳна амали навтари корбарро пахш намекунад (ниг. ContentSync).
-  void primeSync() => ContentSync.instance.prime(id,
+  void primeSync() {
+    ContentSync.instance.prime(id,
         liked: liked, likesCount: likesCount, saved: saved,
         commentsCount: commentsCount, sharesCount: sharesCount,
         hideLikes: hideLikes, commentsOff: commentsDisabled,
         caption: caption, fetchedAt: fetchedAt);
+    // Ҳалқаи сториси муаллиф — ҳамон манбаъ барои ҳамаи экранҳо.
+    StorySeenSync.instance.primeUser(user, fetchedAt: fetchedAt);
+  }
 
   String get mediaUrl  => media.isNotEmpty ? media.first['url']  ?? '' : '';
   String get mediaType => media.isNotEmpty ? media.first['type'] ?? 'image' : 'image';
@@ -114,7 +124,7 @@ class PostModel {
     List<String>? collaborators,
     List<Map<String, String>>? collaboratorUsers,
     String? musicTitle, String? musicArtist, SongInfo? song,
-    int? sharesCount,
+    int? sharesCount, int? viewsCount,
     bool? hideLikes, bool? commentsDisabled,
     bool? isProduct, double? price, String? currency, String? productName,
     bool? contactRaonson, String? shopWhatsapp, String? shopPhone,
@@ -138,6 +148,7 @@ class PostModel {
     musicArtist:   musicArtist   ?? this.musicArtist,
     song:          song          ?? this.song,
     sharesCount:   sharesCount   ?? this.sharesCount,
+    viewsCount:    viewsCount    ?? this.viewsCount,
     hideLikes:        hideLikes        ?? this.hideLikes,
     commentsDisabled: commentsDisabled ?? this.commentsDisabled,
     isProduct:      isProduct      ?? this.isProduct,
@@ -199,6 +210,8 @@ class PostModel {
       musicTitle:    (json['musicTitle']  ?? json['music']?['title'] ?? '').toString(),
       musicArtist:   (json['musicArtist'] ?? json['music']?['artist'] ?? '').toString(),
       sharesCount:   (json['sharesCount'] as num?)?.toInt() ?? 0,
+      viewsCount:    (json['viewsCount'] as num?)?.toInt()
+          ?? (json['views'] as num?)?.toInt() ?? 0,
       // Сервери кӯҳна `song` намедиҳад — он гоҳ ном ва хонандаи
       // ҷудогона истифода мешаванд, танҳо бе садо.
       song: json['song'] != null
@@ -232,6 +245,7 @@ class PostModel {
     'collaboratorUsers': collaboratorUsers,
     // Бе инҳо кэши диск пинҳонии лайкҳо / хомӯшии шарҳҳоро гум мекард.
     'sharesCount': sharesCount,
+    'viewsCount': viewsCount,
     'hideLikes': hideLikes,
     'commentsOff': commentsDisabled,
     // ⚠️ Инҳо НАБУДАНД: лента аз кэши диск бор мешуд ва пост бе музика
@@ -247,6 +261,6 @@ class PostModel {
       'verified':user.verified,'isPrivate':user.isPrivate,
       'postsCount':user.postsCount,'followersCount':user.followersCount,
       'followingCount':user.followingCount,
-      'hasStory':user.hasStory,'isFollowing':user.isFollowing},
+      ...user.storyRingJson,'isFollowing':user.isFollowing},
   };
 }

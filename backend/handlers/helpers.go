@@ -178,6 +178,8 @@ func setIsFollowing(u gin.H, myID, targetID string) {
 		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1::text AND following_id=$2::text)`,
 		myID, targetID).Scan(&isFollowing)
 	u["isFollowing"] = isFollowing
+	// Ҳалқаи сторис дар сарлавҳаи профил — ҳамон қоидаи лента/reels.
+	setStoryRing(u, myID, targetID)
 	if myID == "" || myID == targetID {
 		return
 	}

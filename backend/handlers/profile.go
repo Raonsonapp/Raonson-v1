@@ -152,6 +152,7 @@ func GetMyProfile(c *gin.Context) {
 	}
 	clearExpiredNote(myID, u)
 	u["isFollowing"] = false
+	setStoryRing(u, myID, myID)
 	// VIP/Pro — бе реклама. Майдони алоҳида, то барнома маънои
 	// «VIP»-ро (сифати видео ва ғ.) бо «реклама нест» омехта накунад.
 	vip, _ := u["isVip"].(bool)
@@ -174,7 +175,9 @@ func GetProfile(c *gin.Context) {
 	username := c.Param("username")
 	myID := mw.UID(c)
 
-	cacheKey := "profile:u:" + username + ":" + myID + mw.ContentEpoch()
+	// Тамошобин ПЕШ аз ном: «дидам»-и сторис кэши ҳамин тамошобинро
+	// бо префикс мепартояд (ниг. invalidateStoryRingCaches).
+	cacheKey := "profile:u:" + myID + ":" + username + mw.ContentEpoch()
 	if cached, ok := mw.CacheGet(cacheKey); ok {
 		c.Header("X-Cache", "HIT")
 		c.Data(http.StatusOK, "application/json", cached)

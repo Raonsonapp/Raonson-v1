@@ -12,6 +12,8 @@ import '../../core/services/user_session.dart';
 import '../../app/app_settings.dart';
 import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
+import '../../widgets/avatar.dart' show StoryRingFrame;
+import '../../stories/story_seen_sync.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../gifts/gift_sheet.dart';
 import '../../ai/ai_tools.dart';
@@ -126,6 +128,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
                 .toList();
           });
+          // Ҳалқаи сториси муаллифони шарҳ — ҳамон манбаи Home/профил.
+          final now = DateTime.now();
+          for (final c in _comments) {
+            StorySeenSync.instance.primeUser(c.user, fetchedAt: now);
+          }
         }
       }
     } catch (_) {}
@@ -832,14 +839,18 @@ class _CommentItemState extends State<_CommentItem> {
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/user-profile',
               arguments: c.user.id),
-          child: CircleAvatar(
-            radius: widget.isReply ? 14 : 18,
-            backgroundColor: AppColors.card,
-            backgroundImage: c.user.avatar.isNotEmpty
-                ? CachedNetworkImageProvider(c.user.avatar, maxWidth: 72) : null,
-            child: c.user.avatar.isEmpty
-                ? Icon(AppIcons.person, color: AppColors.textTertiary,
-                    size: widget.isReply ? 14 : 18) : null,
+          child: StoryRingFrame(
+            userId: c.user.id,
+            ringWidth: 2,
+            child: CircleAvatar(
+              radius: widget.isReply ? 14 : 18,
+              backgroundColor: AppColors.card,
+              backgroundImage: c.user.avatar.isNotEmpty
+                  ? CachedNetworkImageProvider(c.user.avatar, maxWidth: 72) : null,
+              child: c.user.avatar.isEmpty
+                  ? Icon(AppIcons.person, color: AppColors.textTertiary,
+                      size: widget.isReply ? 14 : 18) : null,
+            ),
           ),
         ),
         const SizedBox(width: 10),
