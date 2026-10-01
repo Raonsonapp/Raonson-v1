@@ -41,10 +41,14 @@ class GroupRepository {
     }
   }
 
+  /// Андозаи саҳифаи паёмҳои гурӯҳ.
+  static const pageSize = 40;
+
   Future<List<GroupMessage>> getMessages(String groupId,
       {int page = 1}) async {
     try {
-      final r = await _api.get('/groups/$groupId/messages?page=$page&limit=40');
+      final r = await _api.get(
+          '/groups/$groupId/messages?page=$page&limit=$pageSize');
       if (r.statusCode >= 400) return [];
       final body = jsonDecode(r.body);
       final list = (body is List ? body : (body['messages'] ?? [])) as List;

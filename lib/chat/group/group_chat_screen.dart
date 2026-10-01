@@ -62,12 +62,39 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (!mounted) return;
     setState(() {
       _messages = msgs;
+      _hasOlder = msgs.length >= GroupRepository.pageSize;
       _loading = false;
     });
   }
 
+  // Паёмҳои кӯҳна. Пеш танҳо 40 паёми охирин буд — болотар ғелондан
+  // ҳеҷ чиз бор намекард ва таърихи гурӯҳ гум менамуд.
+  bool _hasOlder = false, _loadingOlder = false;
+
+  Future<void> _loadOlder() async {
+    if (!_hasOlder || _loadingOlder || _loading) return;
+    _loadingOlder = true;
+    final page = await _repo.getMessages(_gid,
+        page: _messages.length ~/ GroupRepository.pageSize + 1);
+    _loadingOlder = false;
+    if (!mounted) return;
+    final seen = _messages.map((m) => m.id).toSet();
+    final older = page.where((m) => seen.add(m.id)).toList();
+    setState(() {
+      _messages = [..._messages, ...older];
+      _hasOlder = page.length >= GroupRepository.pageSize && older.isNotEmpty;
+    });
+  }
+
+  /// Паём нарафт — пеш матн аз майдон пок мешуд ва ҳеҷ хабаре набуд.
   void _addLocal(GroupMessage? m) {
-    if (m != null && mounted && !_messages.any((x) => x.id == m.id)) {
+    if (!mounted) return;
+    if (m == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('chat.sendFailed'))));
+      return;
+    }
+    if (!_messages.any((x) => x.id == m.id)) {
       setState(() => _messages.insert(0, m));
     }
   }
@@ -87,13 +114,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   Future<void> _sendMedia(File file, {bool viewOnce = false}) async {
     final type = _typeByExt(file.path);
     final url = await _chatRepo.uploadMedia(file);
-    if (url == null || url.isEmpty) return;
+    if (url == null || url.isEmpty) return _addLocal(null);
     _addLocal(await _repo.sendMessage(_gid, '', type: type, mediaUrl: url));
   }
 
   Future<void> _sendVoice(File file) async {
     final url = await _chatRepo.uploadMedia(file);
-    if (url == null || url.isEmpty) return;
+    if (url == null || url.isEmpty) return _addLocal(null);
     _addLocal(await _repo.sendMessage(_gid, '', type: 'audio', mediaUrl: url));
   }
 
@@ -213,7 +240,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ? Center(
                       child: Text(tr('ui.d564af1bcc'),
                           style: TextStyle(color: AppColors.textFaint)))
-                  : ListView.builder(
+                  : NotificationListener<ScrollNotification>(
+                    // reverse: true — «поён»-и рӯйхат паёмҳои кӯҳнатар аст.
+                    onNotification: (n) {
+                      if (n.metrics.extentAfter < 400) _loadOlder();
+                      return false;
+                    },
+                    child: ListView.builder(
                       reverse: true,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       itemCount: _messages.length,
@@ -225,7 +258,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           senderName: mine ? null : m.senderName,
                         );
                       },
-                    ),
+                    )),
         ),
         MessageInput(
           onSend:         _sendText,

@@ -284,6 +284,22 @@ u = prof.get("user", prof) if isinstance(prof, dict) else {}
 ok("профил: followRequestSent = false", u.get("followRequestSent") in (False, None),
    str(u)[:140])
 
+# ═══ 11. ПАЁМҲОИ ГУРӮҲ — ТАЪРИХИ КӮҲНА ════════════════════════════
+st, g = call("POST", "/groups/", {"name": f"г{S}", "memberIds": [idB]}, tA)
+gid = (g.get("id") or g.get("_id")
+       or (g.get("group") or {}).get("_id")) if isinstance(g, dict) else None
+ok("гурӯҳ сохта шуд", gid, f"HTTP {st}: {g}")
+if gid:
+    mids = []
+    for i in range(3):
+        st, m = call("POST", f"/groups/{gid}/messages", {"text": f"п{i}"}, tA)
+        mids.append((m or {}).get("_id") or (m or {}).get("id"))
+    st, m1 = call("GET", f"/groups/{gid}/messages?page=1&limit=2", tok=tB)
+    st, m2 = call("GET", f"/groups/{gid}/messages?page=2&limit=2", tok=tB)
+    x1, x2 = ids(items(m1, "messages")), ids(items(m2, "messages"))
+    ok("гурӯҳ: саҳифаи 2 — паёми кӯҳнатарин",
+       len(x1) == 2 and x2 == [mids[0]], (x1, x2, mids))
+
 # ═══ ҲИСОБОТ ═════════════════════════════════════════════════════
 bad = [x for x in res if not x[0]]
 print()

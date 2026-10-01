@@ -148,6 +148,25 @@ void main() {
       expect(src, contains("'page': '\$page'"));
     });
 
+    test('гурӯҳ: паёмҳои кӯҳна ва хатои фиристодан', () {
+      final src = _read('lib/chat/group/group_chat_screen.dart');
+      expect(src, contains('_loadOlder()'));
+      expect(src, contains("tr('chat.sendFailed')"));
+    });
+
+    test('«Дӯстони наздик» ҳамаи обунаҳоро мехонад, на 50-тои аввал', () {
+      final src = _read('lib/settings/account_screens.dart');
+      expect(src, contains('getFollowing(myId, page: page, limit: size)'));
+    });
+
+    test('ҷустуҷӯ: «Такрор» дархостро воқеан такрор мекунад', () {
+      final src = _read('lib/search/search_screen.dart');
+      expect(src, contains('_doSearch(_lastQ, force: true)'));
+      expect(src, contains('if (q == _lastQ && !force) return;'));
+      // Ҷавоби кӯҳна натиҷаи навро пахш намекунад.
+      expect(src, contains('if (!mounted || q != _lastQ) return;'));
+    });
+
     test('бинандагони сторӣ — то 200, на 50', () {
       expect(_read('lib/stories/story_viewers_cache.dart'),
           contains("'limit': '200'"));
