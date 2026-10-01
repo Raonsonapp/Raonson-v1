@@ -77,6 +77,10 @@ jobs:
           # даст намехӯрад — танҳо дар ИН сервери санҷишӣ васеъ
           # карда мешавад. Дар продакшн ин тағйирёбанда нест.
           RATE_LIMIT_MULTIPLIER: '50'
+          # Рамзи якдафъаина дар ҷавоб — ТАНҲО дар ин сервери санҷишӣ
+          # (GIN_MODE: debug). Дар release сервер онро ҳеҷ гоҳ
+          # барнамегардонад. Бе ин барқарорсозии парол санҷида намешавад.
+          OTP_ECHO: '1'
         run: |
           /tmp/raonson-server > /tmp/server.log 2>&1 &
           for i in $(seq 1 40); do
@@ -278,6 +282,16 @@ jobs:
           BASE: http://127.0.0.1:8099
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_security2.py
+
+      # Барқарорсозии ҳисоб: ёфтан (ном/почта/телефон), рамз, қуфл баъди
+      # 5 кӯшиш, token-и якдафъаина, бекор шудани сессияҳо, «Кӯмак лозим»
+      # → admin. DATABASE_URL — барои admin кардани корбари санҷишӣ (psql).
+      - name: Санҷиши барқарорсозии ҳисоб
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+        run: python3 backend/testing/api_recover.py
 
       # Майдонҳое, ки барнома мехонад, воқеан аз сервер меоянд.
       - name: Санҷиши мувофиқати маълумот

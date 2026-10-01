@@ -25,6 +25,7 @@ import '../../core/webrtc_service.dart';
 import '../../calls/call_coordinator.dart';
 import '../../calls/call_payload.dart';
 import '../../core/i18n/strings.dart';
+import '../../auth/password/recovery_status.dart';
 
 class BottomNavScaffold extends StatelessWidget {
   const BottomNavScaffold({super.key});
@@ -64,6 +65,8 @@ class _BottomNavViewState extends State<_BottomNavView> {
     ChatUnreadStore.instance.wire();
     FirebaseInit.requestNotificationPermission();
     _showAdConsentIfNeeded();
+    // Почтаи тасдиқшуда нест → як бор огоҳии нарм (барои барқарорсозӣ).
+    maybeShowRecoveryBanner(context);
   }
 
   Future<void> _showAdConsentIfNeeded() async {

@@ -12,6 +12,7 @@ import 'package:heroicons_flutter/heroicons_flutter.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import 'client_errors_screen.dart';
+import 'recovery_requests_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
 
@@ -244,6 +245,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 color: Colors.redAccent),
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AdminReportsScreen())),
+          ),
+          IconButton(
+            tooltip: 'Барқарорсозии ҳисоб',
+            icon: Icon(AppIcons.lock_open_rounded,
+                color: AppColors.neonBlue),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(
+                    builder: (_) => const RecoveryRequestsScreen())),
           ),
           IconButton(
             tooltip: 'Хатоҳои барнома',

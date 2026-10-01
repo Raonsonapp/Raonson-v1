@@ -48,6 +48,8 @@ class NotificationModel {
       case 'collab_accepted': return 'даъвати ҳамкориро қабул кард — пост дар ҳарду профил аст';
       case 'story_reshared': return 'сторисатро ба сториси худ илова кард';
       case 'reel_mention': return 'шуморо дар шарҳи Reel зикр кард';
+      // Огоҳии амниятӣ (fromUser — худи корбар).
+      case 'password_changed': return 'рамзи ҳисобро иваз кард. Агар шумо набудед, фавран рамзро барқарор кунед.';
       default: return 'бо шумо амал кард';
     }
   }

@@ -17,6 +17,7 @@ import '../app/app_settings.dart';
 import '../app/app_theme.dart';
 import 'hidden_words_screen.dart';
 import '../auth/verification/email_verify_screen.dart';
+import '../auth/password/recovery_status.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/api/api_client.dart';
@@ -957,10 +958,51 @@ class _NotifState extends State<NotificationsScreen> {
 // ════════════════════════════════════════════════════════════════════
 //  SECURITY SCREEN
 // ════════════════════════════════════════════════════════════════════
-class SecurityScreen extends StatelessWidget {
+class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
   @override
+  State<SecurityScreen> createState() => _SecurityScreenState();
+}
+
+class _SecurityScreenState extends State<SecurityScreen> {
+  RecoveryStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final s = await fetchRecoveryStatus();
+    if (mounted) setState(() => _status = s);
+  }
+
+  Future<void> _open(Widget screen) async {
+    await Navigator.push(
+        context, MaterialPageRoute(builder: (_) => screen));
+    _load(); // почта/телефон шояд тағйир ёфт
+  }
+
+  String? _emailSub(RecoveryStatus? s) {
+    if (s == null) return null;
+    if (s.email.isEmpty) return tr('security.noEmail');
+    return s.emailVerified
+        ? tr('security.emailVerified', {'email': s.email})
+        : tr('security.emailNotVerified', {'email': s.email});
+  }
+
+  String? _phoneSub(RecoveryStatus? s) {
+    if (s == null) return null;
+    if (!s.hasPhone) return tr('security.noPhone');
+    return s.phoneChannels.isEmpty
+        ? tr('security.phoneNoChannel', {'phone': s.phone})
+        : s.phone;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final s = _status;
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: _appBar(context, 'Амният'),
@@ -968,32 +1010,37 @@ class SecurityScreen extends StatelessWidget {
         _NavTile(
           icon:  AppIcons.lock_outline_rounded,
           title: tr('ui.f615cf5296'),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(
-                  builder: (_) => const ChangePasswordScreen())),
-        ),
-        const _ThinDiv(),
-        // «Тасдиқи дутарафа» пинҳон: сервер 2FA-ро ҳангоми воридшавӣ
-        // талаб намекунад, пас калид танҳо ҳимояи дурӯғин нишон медод.
-        // Тасдиқи почта.
-        //
-        // Экрани он кайҳо навишта шуда буд, вале ба он на роҳ буд,
-        // на роҳи серверӣ — `/auth/verify-email` вуҷуд надошт. Ҳоло
-        // ҳарду ҳастанд ва даромадгоҳ маҳз ин ҷост, мисли Instagram.
-        _NavTile(
-          icon:  AppIcons.email_outlined,
-          title: tr('settings.verifyEmail'),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(
-                  builder: (_) => const EmailVerifyScreen())),
+          onTap: () => _open(const ChangePasswordScreen()),
         ),
         const _ThinDiv(),
         _NavTile(
           icon:  AppIcons.devices_rounded,
           title: tr('ui.b3231c3de9'),
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(
-                  builder: (_) => const SessionsScreen())),
+          onTap: () => _open(const SessionsScreen()),
+        ),
+        // «Тасдиқи дутарафа» пинҳон: сервер 2FA-ро ҳангоми воридшавӣ
+        // талаб намекунад, пас калид танҳо ҳимояи дурӯғин нишон медод.
+        //
+        // Барқарорсозии ҳисоб: бе почтаи тасдиқшуда (ё телефон бо SMS-и
+        // фаъол) корбар ҳангоми фаромӯш кардани рамз ҳисобро гум мекунад.
+        // Пас ин ҷо ҳолат нишон дода мешавад — мисли Instagram.
+        _Hdr(tr('security.recoveryHeader')),
+        _NavTile(
+          key: const Key('security-email'),
+          icon:  s != null && !s.needsEmail
+              ? AppIcons.mark_email_read_outlined
+              : AppIcons.email_outlined,
+          title: tr('security.email'),
+          sub:   _emailSub(s),
+          onTap: () => _open(EmailVerifyScreen(initialEmail: s?.email ?? '')),
+        ),
+        const _ThinDiv(),
+        _NavTile(
+          key: const Key('security-phone'),
+          icon:  AppIcons.phone_outlined,
+          title: tr('security.phone'),
+          sub:   _phoneSub(s),
+          onTap: () => _open(const ChangePhoneScreen()),
         ),
       ]),
     );
@@ -1693,7 +1740,7 @@ class _NavTile extends StatelessWidget {
   final String   title;
   final String?  sub;
   final VoidCallback onTap;
-  const _NavTile({required this.icon, required this.title,
+  const _NavTile({super.key, required this.icon, required this.title,
       required this.onTap, this.sub});
   @override
   Widget build(BuildContext context) {

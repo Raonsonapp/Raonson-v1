@@ -89,6 +89,7 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'message': return AppIcons.send_rounded;
       case 'effect_sale': return AppIcons.bolt_rounded;
       case 'order': return AppIcons.storefront_rounded;
+      case 'password_changed': return AppIcons.lock_outline_rounded;
       default: return AppIcons.notifications_rounded;
     }
   }

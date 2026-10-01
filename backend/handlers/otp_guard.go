@@ -84,23 +84,40 @@ func otpSendAllowed(target string, max int, per time.Duration) bool {
 // Баъди 5 кӯшиши нодуруст рамз нест мешавад (бояд нав дархост кард).
 // Бармегардонад: (дуруст, қуфл шуд).
 func checkOTP(cacheKey, given string) (bool, bool) {
+	st, _ := checkOTPDetailed(cacheKey, given)
+	return st == otpOK, st == otpLocked
+}
+
+type otpStatus int
+
+const (
+	otpOK otpStatus = iota
+	otpWrong
+	otpLocked
+	otpMissing // рамз нест: мӯҳлат гузашт, истифода шуд ё қуфл шуда буд
+)
+
+// checkOTPDetailed — мисли checkOTP, вале «нодуруст» ва «гузашт»-ро фарқ
+// мекунад ва шумораи кӯшишҳои боқимондаро медиҳад.
+func checkOTPDetailed(cacheKey, given string) (otpStatus, int) {
 	stored, ok := mw.CacheGet(cacheKey)
 	if !ok {
-		return false, false
+		return otpMissing, 0
 	}
 	given = strings.TrimSpace(given)
 	if len(given) == len(stored) &&
 		subtle.ConstantTimeCompare(stored, []byte(given)) == 1 {
 		mw.CacheDel(cacheKey)
 		resetCounter("try:" + cacheKey)
-		return true, false
+		return otpOK, otpMaxAttempts
 	}
-	if bump("try:"+cacheKey, 15*time.Minute) >= otpMaxAttempts {
+	n := bump("try:"+cacheKey, 15*time.Minute)
+	if n >= otpMaxAttempts {
 		mw.CacheDel(cacheKey)
 		resetCounter("try:" + cacheKey)
-		return false, true
+		return otpLocked, 0
 	}
-	return false, false
+	return otpWrong, otpMaxAttempts - n
 }
 
 // storeOTP — рамзи навро мегузорад ва ҳисоби кӯшишҳоро аз нав мекунад.

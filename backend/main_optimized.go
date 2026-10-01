@@ -54,7 +54,15 @@ func main() {
 		port = "7860"
 	}
 
-	gin.SetMode(gin.ReleaseMode)
+	// Пешфарз ва продакшн — release. Танҳо сервери санҷишӣ GIN_MODE=debug
+	// (ё test) мегузорад; бе ин OTP_ECHO (рамз дар ҷавоб барои санҷиш)
+	// ҳеҷ гоҳ кор намекард. Дар release рамз ҳеҷ гоҳ дар ҷавоб нест.
+	switch os.Getenv("GIN_MODE") {
+	case gin.DebugMode, gin.TestMode:
+		gin.SetMode(os.Getenv("GIN_MODE"))
+	default:
+		gin.SetMode(gin.ReleaseMode)
+	}
 	r := gin.New()
 	// Як мундариҷа — як рақам дар ҳамаи экранҳо (ниг. ContentWriteBump).
 	r.Use(mw.ContentWriteBump())
@@ -163,8 +171,20 @@ func main() {
 		a.POST("/login",           rl20, handlers.Login)
 		a.POST("/refresh",         handlers.RefreshToken)
 		a.POST("/logout",          auth, handlers.Logout)
+		// Роҳҳои кӯҳна (версияҳои пешинаи барнома) — акнун ба
+		// handlers/recover.go такя мекунанд.
 		a.POST("/forgot-password", rl20, handlers.ForgotPassword)
 		a.POST("/reset-password",  rl20, handlers.ResetPassword)
+		// Барқарорсозии ҳисоб: ёфтан → рамз → тасдиқ → рамзи нав.
+		// Лимити ҷудогона (на rl20-и умумии /auth), ба иловаи ҳадҳои
+		// дохилӣ аз рӯи IP, идентификатор ва ҳисоб.
+		rlRecover := mw.RateLimit(30, 60)
+		a.POST("/recover/lookup",  rlRecover, handlers.RecoverLookup)
+		a.POST("/recover/send",    rlRecover, handlers.RecoverSend)
+		a.POST("/recover/verify",  rlRecover, handlers.RecoverVerify)
+		a.POST("/recover/reset",   rlRecover, handlers.RecoverReset)
+		a.POST("/recover/request", rlRecover, handlers.RecoverRequestHelp)
+		a.GET("/recovery-status",  auth, rl100, handlers.RecoveryStatus)
 		a.POST("/change-password", auth, rl20, handlers.ChangePassword)
 		a.POST("/send-phone-otp",   rl20, handlers.SendPhoneOTP)      // Telegram OTP
 		// OptionalAuth: корбари воридшуда рақамашро воқеан сабт мекунад.
@@ -634,6 +654,10 @@ func main() {
 	{
 		ad.GET("/stats",        handlers.AdminStats)
 		ad.POST("/test-email",  handlers.AdminTestEmail)
+		// «Кӯмак лозим»: дархостҳои барқарорсозии ҳисоб.
+		ad.GET("/recovery-requests",              handlers.AdminListRecoveryRequests)
+		ad.POST("/recovery-requests/:id/approve", handlers.AdminApproveRecovery)
+		ad.POST("/recovery-requests/:id/reject",  handlers.AdminRejectRecovery)
 		ad.GET("/users",        handlers.AdminListUsers)
 		ad.POST("/ban/:id",     handlers.BanUser)
 		ad.POST("/unban/:id",   handlers.UnbanUser)

@@ -550,3 +550,31 @@
 	UPDATE users SET role='admin', verified=TRUE, is_vip=TRUE
 	WHERE LOWER(username)='raonson';
 	
+
+	-- ── Барқарорсозии ҳисоб (ниг. db/recovery_schema.go) ──
+	CREATE TABLE IF NOT EXISTS password_reset_tokens (
+		token_hash TEXT PRIMARY KEY,
+		user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		purpose    TEXT NOT NULL DEFAULT 'otp',
+		expires_at TIMESTAMPTZ NOT NULL,
+		used_at    TIMESTAMPTZ,
+		created_by TEXT DEFAULT '',
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	);
+	CREATE TABLE IF NOT EXISTS account_recovery_requests (
+		id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+		user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		identifier    TEXT NOT NULL DEFAULT '',
+		contact_email TEXT NOT NULL,
+		full_name     TEXT NOT NULL DEFAULT '',
+		message       TEXT NOT NULL DEFAULT '',
+		status        TEXT NOT NULL DEFAULT 'pending',
+		ip            TEXT NOT NULL DEFAULT '',
+		reviewed_by   TEXT NOT NULL DEFAULT '',
+		reviewed_at   TIMESTAMPTZ,
+		review_note   TEXT NOT NULL DEFAULT '',
+		created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		CONSTRAINT recovery_status CHECK (status IN ('pending','approved','rejected'))
+	);
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_recovery_req_open
+		ON account_recovery_requests(user_id) WHERE status = 'pending';

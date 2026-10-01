@@ -20,14 +20,17 @@ import '../../core/i18n/strings.dart';
 //     ҳисоб мешуд.
 
 class EmailVerifyScreen extends StatefulWidget {
-  const EmailVerifyScreen({super.key});
+  /// Почтаи ҷорӣ (масалан аз Танзимот → Амният) — корбар танҳо тасдиқ мекунад.
+  final String initialEmail;
+  const EmailVerifyScreen({super.key, this.initialEmail = ''});
 
   @override
   State<EmailVerifyScreen> createState() => _EmailVerifyScreenState();
 }
 
 class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
-  final TextEditingController _emailController = TextEditingController();
+  late final TextEditingController _emailController =
+      TextEditingController(text: widget.initialEmail);
   bool _isLoading = false;
   String? _error;
 
@@ -59,7 +62,12 @@ class _EmailVerifyScreenState extends State<EmailVerifyScreen> {
       }
 
       if (!mounted) return;
-      Navigator.pushNamed(context, AppRoutes.otpVerify, arguments: email);
+      setState(() => _isLoading = false);
+      final ok = await Navigator.pushNamed(context, AppRoutes.otpVerify,
+          arguments: email);
+      // Тасдиқ шуд — ба экрани пештара (Танзимот → Амният) бармегардем,
+      // то он ҳолати навро нишон диҳад.
+      if (ok == true && mounted) Navigator.pop(context, true);
     } catch (_) {
       if (mounted) setState(() => _error = tr('verify.failed'));
     } finally {

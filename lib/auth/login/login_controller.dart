@@ -65,39 +65,7 @@ class LoginController extends ChangeNotifier {
       }
 
       final data  = jsonDecode(res.body) as Map<String, dynamic>;
-      final token = data['accessToken']?.toString() ?? '';
-      if (token.isEmpty) throw Exception('Token нест');
-
-      // Save token — мондагорӣ
-      await TokenStorage.saveAccessToken(token);
-      ApiClient.instance.setAuthToken(token);
-
-      // Save refresh token if present
-      final refresh = data['refreshToken']?.toString() ?? '';
-      if (refresh.isNotEmpty) {
-        await TokenStorage.saveRefreshToken(refresh);
-        ApiClient.instance.setRefreshToken(refresh);
-      }
-
-      // Save user info
-      final user = data['user'] as Map<String, dynamic>?;
-      if (user != null) {
-        final uid = (user['id'] ?? user['_id'])?.toString() ?? '';
-        if (uid.isNotEmpty) {
-          await TokenStorage.saveUserId(uid);
-          UserSession.userId   = uid;
-          UserSession.username = (user['username'] ?? '').toString();
-          UserSession.avatar   = (user['avatar']   ?? '').toString();
-          // Multi-account: аккаунтро сабт мекунем
-          await AccountManager.upsertCurrent(
-            userId: uid,
-            username: (user['username'] ?? '').toString(),
-            avatar: (user['avatar'] ?? '').toString(),
-            token: token,
-            refreshToken: refresh,
-          );
-        }
-      }
+      await persistLoginResponse(data);
 
       AnalyticsService.instance.logEvent(AnalyticsEvents.login);
       _state = _state.copyWith(isLoading: false);
@@ -111,6 +79,48 @@ class LoginController extends ChangeNotifier {
       );
       notifyListeners();
       return false;
+    }
+  }
+}
+
+/// Ҷавоби воридшавиро (`accessToken`, `refreshToken`, `user`) нигоҳ
+/// медорад: token-ҳо, корбари ҷорӣ ва рӯйхати аккаунтҳо.
+///
+/// Ҳам `/auth/login` ва ҳам барқарорсозии рамз (`/auth/recover/reset`)
+/// ҳамин шаклро бармегардонанд — пас корбар баъди иваз кардани рамз
+/// фавран ворид мешавад, бе такрори воридшавӣ.
+Future<void> persistLoginResponse(Map<String, dynamic> data) async {
+  final token = data['accessToken']?.toString() ?? '';
+  if (token.isEmpty) throw Exception('Token нест');
+
+  // Save token — мондагорӣ
+  await TokenStorage.saveAccessToken(token);
+  ApiClient.instance.setAuthToken(token);
+
+  // Save refresh token if present
+  final refresh = data['refreshToken']?.toString() ?? '';
+  if (refresh.isNotEmpty) {
+    await TokenStorage.saveRefreshToken(refresh);
+    ApiClient.instance.setRefreshToken(refresh);
+  }
+
+  // Save user info
+  final user = data['user'] as Map<String, dynamic>?;
+  if (user != null) {
+    final uid = (user['id'] ?? user['_id'])?.toString() ?? '';
+    if (uid.isNotEmpty) {
+      await TokenStorage.saveUserId(uid);
+      UserSession.userId   = uid;
+      UserSession.username = (user['username'] ?? '').toString();
+      UserSession.avatar   = (user['avatar']   ?? '').toString();
+      // Multi-account: аккаунтро сабт мекунем
+      await AccountManager.upsertCurrent(
+        userId: uid,
+        username: (user['username'] ?? '').toString(),
+        avatar: (user['avatar'] ?? '').toString(),
+        token: token,
+        refreshToken: refresh,
+      );
     }
   }
 }

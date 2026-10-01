@@ -1227,6 +1227,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, autoDMSchema); err != nil {
 		log.Fatalf("❌ Auto-DM migration failed: %v", err)
 	}
+	// Барқарорсозии ҳисоб: token-и якдафъаина ва дархости «Кӯмак».
+	if _, err := Pool.Exec(ctx, RecoverySchema); err != nil {
+		log.Fatalf("❌ Recovery migration failed: %v", err)
+	}
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

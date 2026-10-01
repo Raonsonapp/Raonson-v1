@@ -21,7 +21,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -91,7 +90,9 @@ func SendEmailVerify(c *gin.Context) {
 	otp := secureOTP()
 	storeOTP(emailOTPKey(uid, email), otp, 10*time.Minute)
 
-	if err := utils.SendEmailOTP(email, otp); err != nil {
+	// Дар муҳити санҷиш (OTP_ECHO, на release) рамз дар ҷавоб меояд,
+	// бинобар ин набудани провайдери почта хато нест.
+	if err := utils.SendEmailOTP(email, otp); err != nil && !otpEcho() {
 		// ⚠️ Пеш ин ҷо 200 бо `error: true` бармегашт — ҳамон
 		// камбудие, ки дар OTP-и телефон буд. Барнома 200-ро
 		// муваффақият мешумурд, экрани «рамзро ворид кунед»
@@ -117,7 +118,7 @@ func SendEmailVerify(c *gin.Context) {
 
 	resp := gin.H{"message": "Рамз ба почта фиристода шуд",
 		"to": utils.MaskEmail(email)}
-	if os.Getenv("OTP_ECHO") == "1" && gin.Mode() != gin.ReleaseMode {
+	if otpEcho() {
 		resp["otp"] = otp
 	}
 	c.JSON(http.StatusOK, resp)

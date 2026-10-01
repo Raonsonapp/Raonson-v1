@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"log"
-	"fmt"
 	"net/http"
 	"os"
 	"regexp"
@@ -69,9 +68,9 @@ func Register(c *gin.Context) {
 		return
 	}
 	// Парол дар сервер ҳам санҷида мешавад (на танҳо дар клиент).
-	if len(b.Password) < 8 {
-		c.JSON(http.StatusBadRequest,
-			gin.H{"message": "Рамз ҳадди аққал 8 аломат бошад"})
+	// Ҳамон қоидаҳо барои ивазкунӣ ва барқарорсозӣ (passwordProblem).
+	if msg := passwordProblem(b.Password); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": msg})
 		return
 	}
 
@@ -254,9 +253,8 @@ func ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid body"})
 		return
 	}
-	if len(b.NewPassword) < 8 {
-		c.JSON(http.StatusBadRequest,
-			gin.H{"message": "Рамзи нав ҳадди аққал 8 аломат бошад"})
+	if msg := passwordProblem(b.NewPassword); msg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": msg})
 		return
 	}
 	var hash string
@@ -282,86 +280,14 @@ func ChangePassword(c *gin.Context) {
 	// Дигар дастгоҳҳо мебароянд (мисли Instagram); ин дастгоҳ token-и
 	// нав мегирад, то корбар худаш набарояд.
 	mw.RevokeTokens(myID)
+	var uname, uemail string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT username, COALESCE(email,'') FROM users WHERE id=$1`, myID).Scan(&uname, &uemail)
+	notifyPasswordChanged(myID, uname, uemail)
 	c.JSON(http.StatusOK, gin.H{"ok": true,
 		"accessToken":  makeJWT(myID, mw.JWTSecret(), 1*time.Hour),
 		"refreshToken": makeJWT(myID, mw.RefreshSecret(), 30*24*time.Hour),
 	})
-}
-
-// POST /auth/forgot-password
-func ForgotPassword(c *gin.Context) {
-	var b struct {
-		Identifier string `json:"identifier"` // email ё телефон ё username
-		Email      string `json:"email"`      // мутобиқати қафо
-		Channel    string `json:"channel"`    // email | sms | whatsapp
-	}
-	c.ShouldBindJSON(&b)
-	ident := normalizeLoginID(b.Identifier)
-	if ident == "" {
-		ident = normalizeLoginID(b.Email)
-	}
-	if ident == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Email ё телефон лозим аст"})
-		return
-	}
-	if b.Channel == "" {
-		b.Channel = "email"
-	}
-
-	var id, email, phone string
-	err := db.Pool.QueryRow(context.Background(),
-		`SELECT id, COALESCE(email,''), COALESCE(phone,'')
-		 FROM users WHERE LOWER(email)=$1 OR phone=$1 OR LOWER(username)=$1`,
-		ident).Scan(&id, &email, &phone)
-	if err != nil {
-		// Маълумотро ошкор намекунем
-		c.JSON(http.StatusOK, gin.H{"message": "Агар ҳисоб мавҷуд бошад, рамз фиристода шуд"})
-		return
-	}
-
-	// То 3 рамз дар 15 дақиқа ба як ҳисоб — пеш почта ё телефони
-	// касро бо рамзҳо «бомбаборон» кардан мумкин буд.
-	if !otpSendAllowed("reset:"+id, 3, 15*time.Minute) {
-		c.JSON(http.StatusOK, gin.H{"message": "Агар ҳисоб мавҷуд бошад, рамз фиристода шуд"})
-		return
-	}
-	otp := secureOTP()
-	// Бо id нигоҳ медорем — то reset бо ҳар идентификатор кор кунад.
-	storeOTP("otp:reset:"+id, otp, 10*time.Minute)
-
-	// Тавассути канали интихобшуда мефиристем.
-	var sendErr error
-	var dest string
-	switch b.Channel {
-	case "sms":
-		if phone == "" { sendErr = fmt.Errorf("no phone") } else {
-			sendErr = utils.SendSMSOTP(phone, otp); dest = utils.MaskPhone(phone)
-		}
-	case "whatsapp":
-		if phone == "" { sendErr = fmt.Errorf("no phone") } else {
-			sendErr = utils.SendWhatsAppOTP(phone, otp); dest = utils.MaskPhone(phone)
-		}
-	case "telegram":
-		if phone == "" { sendErr = fmt.Errorf("no phone") } else {
-			sendErr = utils.SendTelegramOTP(phone, otp); dest = utils.MaskPhone(phone)
-		}
-	default: // email
-		if email == "" { sendErr = fmt.Errorf("no email") } else {
-			sendErr = utils.SendEmailOTP(email, otp); dest = utils.MaskEmail(email)
-		}
-	}
-
-	resp := gin.H{"message": "Рамз ба почтаи шумо фиристода шуд", "to": dest, "channel": b.Channel}
-	if sendErr != nil {
-		// Хатогиро сабт мекунем, вале ба корбар ошкор намекунем (бехатарӣ).
-		log.Printf("[ForgotPassword] send via %s failed: %v", b.Channel, sendErr)
-	}
-	// Рамз ТАНҲО ба email/SMS меравад. Дар экран нишон дода НАМЕШАВАД.
-	// Барои санҷиш (бе провайдер) — env OTP_ECHO=1 гузоред.
-	if os.Getenv("OTP_ECHO") == "1" && gin.Mode() != gin.ReleaseMode {
-		resp["otp"] = otp
-	}
-	c.JSON(http.StatusOK, resp)
 }
 
 // POST /admin/test-email — ба почтаи худи admin тест мефиристад ва
@@ -401,60 +327,6 @@ func AdminTestEmail(c *gin.Context) {
 		log.Printf("[AdminTestEmail] provider=%s failed", res.Provider)
 	}
 	c.JSON(http.StatusOK, out)
-}
-
-// POST /auth/reset-password
-func ResetPassword(c *gin.Context) {
-	var b struct {
-		Identifier  string `json:"identifier"`
-		Email       string `json:"email"`
-		OTP         string `json:"otp"`
-		NewPassword string `json:"newPassword"`
-	}
-	c.ShouldBindJSON(&b)
-	ident := normalizeLoginID(b.Identifier)
-	if ident == "" {
-		ident = normalizeLoginID(b.Email)
-	}
-	if ident == "" || b.OTP == "" || len(b.NewPassword) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Майдонҳо нопурра (парол ≥6)"})
-		return
-	}
-
-	// Ҷавоби «ҳисоб нест» ва «рамз нодуруст» як хел — вагарна ин роҳ
-	// нишон медод, ки кадом почта/телефон дар Raonson ҳаст.
-	var id string
-	if err := db.Pool.QueryRow(context.Background(),
-		`SELECT id FROM users WHERE LOWER(email)=$1 OR phone=$1 OR LOWER(username)=$1`,
-		ident).Scan(&id); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
-		return
-	}
-
-	good, locked := checkOTP("otp:reset:"+id, b.OTP)
-	if locked {
-		c.JSON(http.StatusTooManyRequests, gin.H{
-			"message": "Кӯшишҳо зиёд шуданд. Рамзи нав дархост кунед."})
-		return
-	}
-	if !good {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Рамз нодуруст ё кӯҳна"})
-		return
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(b.NewPassword), 10)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Барқарорсозӣ ноком шуд"})
-		return
-	}
-	if _, err := db.Pool.Exec(context.Background(),
-		`UPDATE users SET password=$1, updated_at=NOW() WHERE id=$2`, string(hash), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Барқарорсозӣ ноком шуд"})
-		return
-	}
-	// Рамз барқарор шуд — ҳамаи сессияҳои кӯҳна (шояд аз дузд) бекор.
-	mw.RevokeTokens(id)
-	c.JSON(http.StatusOK, gin.H{"message": "Парол бо муваффақият иваз шуд"})
 }
 
 // POST /auth/send-phone-otp — рамзро ба телефон тавассути Telegram мефиристад.
