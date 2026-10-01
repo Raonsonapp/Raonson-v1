@@ -18,6 +18,7 @@ import '../core/music/music_bar.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import '../models/story_model.dart';
+import 'story_seen_sync.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../reels/single_reel_screen.dart';
 import '../core/api/api_client.dart';
@@ -363,6 +364,10 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
 
   Future<void> _markViewed() async {
     widget.onViewed?.call(_current.id);
+    // Ҳалқа дар ҲАМАИ экранҳо (сатри сторис, Home, Reels, профил, чат…)
+    // — новобаста аз он ки ин тамошобин аз куҷо кушода шуд.
+    StorySeenSync.instance.markViewed(_current.user.id, _current.id,
+        groupIds: widget.stories.map((s) => s.id));
     AnalyticsService.instance.logEvent(AnalyticsEvents.storyView,
         params: {'storyId': _current.id});
     try {

@@ -22,6 +22,10 @@ class UserModel {
   final int     mutualCount;
   final List<String> mutualNames;
   final bool    hasStory; // story-и фаъол дорад?
+  /// Сторисе дорад, ки тамошобин ҲАНӮЗ надидааст (ҳалқаи ранга).
+  /// `null` — сервери кӯҳна нагуфт; он гоҳ StorySeenSync ҳолати
+  /// маҳаллиро нигоҳ медорад.
+  final bool?   hasUnseenStory;
   final String  coverUrl;               // баннери профил (Pro)
   final List<Map<String, String>> links; // линкҳои био (Pro): {title,url}
 
@@ -45,6 +49,7 @@ class UserModel {
     this.mutualCount       = 0,
     this.mutualNames       = const [],
     this.hasStory          = false,
+    this.hasUnseenStory,
     this.coverUrl          = '',
     this.links             = const [],
   });
@@ -83,6 +88,7 @@ class UserModel {
     mutualNames:      (j['mutualNames'] as List? ?? [])
         .map((e) => e.toString()).toList(),
     hasStory:         j['hasStory'] == true,
+    hasUnseenStory:   _unseen(j),
     coverUrl:         j['coverUrl']?.toString() ?? '',
     links:            _parseLinks(j['links']),
   );
@@ -112,7 +118,23 @@ class UserModel {
     postsCount:    0, followersCount: 0, followingCount: 0,
     bio:           j['bio']?.toString(),
     hasStory:      j['hasStory'] == true,
+    hasUnseenStory: _unseen(j),
   );
+
+  /// `hasUnseenStory` ё (сервери дигар) `storySeen` → «надида».
+  static bool? _unseen(Map j) {
+    final u = j['hasUnseenStory'];
+    if (u is bool) return u;
+    final s = j['storySeen'];
+    if (s is bool) return j['hasStory'] == true && !s;
+    return null;
+  }
+
+  /// Ҳолати ҳалқа барои навиштан ба JSON (кэши диск).
+  Map<String, dynamic> get storyRingJson => {
+        'hasStory': hasStory,
+        if (hasUnseenStory != null) 'hasUnseenStory': hasUnseenStory,
+      };
 
   UserModel copyWith({
     String? avatar, String? fullName, String? website,
@@ -120,7 +142,8 @@ class UserModel {
     int? postsCount, int? followersCount, int? followingCount,
     String? bio, bool? isFollowing, bool? isBlocked, bool? isFavorite,
     bool? followRequestSent, int? mutualCount, List<String>? mutualNames,
-    bool? hasStory, String? coverUrl, List<Map<String, String>>? links,
+    bool? hasStory, bool? hasUnseenStory,
+    String? coverUrl, List<Map<String, String>>? links,
   }) => UserModel(
     id: id, username: username,
     avatar:          avatar          ?? this.avatar,
@@ -140,6 +163,7 @@ class UserModel {
     mutualCount:     mutualCount     ?? this.mutualCount,
     mutualNames:     mutualNames     ?? this.mutualNames,
     hasStory:        hasStory        ?? this.hasStory,
+    hasUnseenStory:  hasUnseenStory  ?? this.hasUnseenStory,
     coverUrl:        coverUrl        ?? this.coverUrl,
     links:           links           ?? this.links,
   );

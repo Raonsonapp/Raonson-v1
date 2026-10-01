@@ -13,6 +13,8 @@ import '../core/api/api_client.dart';
 import '../core/notifications/upload_notifier.dart';
 import '../core/ui/app_icons.dart';
 import '../stories/story_repository.dart';
+import '../stories/story_seen_sync.dart';
+import '../core/services/user_session.dart';
 import 'upload/upload_manager.dart';
 
 // ══════════════════════════════════════════════════════════════════
@@ -88,6 +90,8 @@ Future<void> shareToStory(
 
     notifier.done(nid);
     await StoryRepository.clearAllCaches();
+    // Ҳалқаи худам дар ҳамаи экранҳо фавран ранга (сториси нав).
+    StorySeenSync.instance.markNewStory(UserSession.userId ?? '');
     messenger.showSnackBar(
         const SnackBar(content: Text('Ба стори гузошта шуд')));
   } catch (e) {

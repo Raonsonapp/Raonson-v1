@@ -2,7 +2,7 @@
 """Як пост / Reel — ҳамон лайк, шарҳ, «лайк кардам», «лайкҳо пинҳон» ва
  обуна дар ҲАМАИ экранҳо (лента, smart, профил, explore, ягона). ⚠️ Сервери МАҲАЛЛӢ.
 """
-import json, os, sys, time, urllib.request, urllib.error
+import json, os, sys, time, urllib.request, urllib.error, urllib.parse
 B = os.environ.get("BASE", "http://127.0.0.1:8099"); PW = "Test12345!"; res = []
 def call(m, p, body=None, tok=None):
     req = urllib.request.Request(B + p, data=json.dumps(body).encode() if body is not None else None, method=m)
@@ -123,10 +123,17 @@ same("reel: баъди бекор кардани обуна — false дар ҳ�
 tD, D = user(f"yd{S}", "+992900890104"); tE, E = user(f"ye{S}", "+992900890105")
 tF, F = user(f"yf{S}", "+992900890106")
 
-def views_of(tok, kind, id_):
+def views_of(tok, kind, id_, q=""):
+    # Ҳамаи экранҳое, ки тамошоро нишон медиҳанд: лента, smart, профил
+    # (ҷадвал ва /profile/:username), Explore, ҷустуҷӯ ва худи пост/Reel.
+    sq = "/search/?q=" + urllib.parse.quote(q)
     paths = ([("reels", "/reels/?limit=50"), ("smart", "/reels/smart?limit=50"),
-              ("profile", f"/users/{A}/reels"), ("explore", "/explore"), ("single", f"/reels/{id_}")]
-             if kind == "reel" else [("explore", "/explore")])
+              ("profile", f"/users/{A}/reels"), ("explore", "/explore"), ("single", f"/reels/{id_}"),
+              ("search", sq)]
+             if kind == "reel" else
+             [("explore", "/explore"), ("profile", f"/users/{A}/posts"),
+              ("profileU", f"/profile/ya{S}"), ("single", f"/posts/{id_}"),
+              ("search", sq)])
     out = {}
     for name, p in paths:
         st, r = call("GET", p, tok=tok)
@@ -157,8 +164,8 @@ ok("reel: такрор ҳисоб намешавад (3 бинанда → 3)", 
 # Explore аз рӯи лайк мураттаб аст (LIMIT 20) — лайкҳо, то reel он ҷо бошад.
 for t in (tB, tC, tD, tF): call("POST", f"/reels/{rid2}/like", tok=t)
 # E ҳеҷ гоҳ ин reel-ро надидааст (smart онро пинҳон намекунад) ва кэш надорад.
-v = views_of(tE, "reel", rid2)
-views_same("reel: тамошоҳо дар /reels, smart, профил, explore, ягона — 3", v, 3)
+v = views_of(tE, "reel", rid2, "тамошо якхела")
+views_same("reel: тамошоҳо дар /reels, smart, профил, explore, ҷустуҷӯ, ягона — 3", v, 3)
 st, stt = call("GET", f"/reels/{rid2}/stats", tok=tA)
 ok("reel: омори соҳиб ҳамон 3", stt.get("views") == 3, stt)
 
@@ -168,11 +175,16 @@ pid2 = p2["_id"]
 call("POST", f"/posts/view/{pid2}", tok=tB); call("POST", f"/posts/view/{pid2}", tok=tB)
 call("POST", "/posts/view-batch", {"postIds": [pid2]}, tC)
 for t in (tB, tC, tD, tE): call("POST", f"/posts/{pid2}/like", tok=t)  # explore аз рӯи лайк
-v = views_of(tF, "post", pid2)
+v = views_of(tF, "post", pid2, "тамошои пост")
 st, pst = call("GET", f"/posts/{pid2}/stats", tok=tA)
-ev = (v.get("explore") or (None, None))
-ok("пост: explore — 2 тамошо (viewsCount == views)", ev[0] == 2 and ev[1] == 2, v)
+# Пеш танҳо Explore рақам дошт; профил ва пости кушодашуда умуман
+# views надоштанд, ва ҷустуҷӯ ба ҷои он лайкҳоро нишон медод.
+views_same("пост: тамошоҳо дар explore, профил, /profile, ҷустуҷӯ, ягона — 2", v, 2)
 ok("пост: омори соҳиб ҳамон 2", pst.get("views") == 2, pst)
+# Соҳиб ҳам дар профили худ (/profile/me) ҳамон рақамро мебинад.
+st, me = call("GET", "/profile/me", tok=tA)
+x = find(me, pid2)
+ok("пост: /profile/me — ҳамон 2", x is not None and x.get("viewsCount") == 2 and x.get("views") == 2, x)
 
 # ── ОБУНА аз Reels баъди «бозкушоӣ» ─────────────────────────────────
 # Клиент баъди бозкушоӣ маълумоти навро аз сервер мегирад: он бояд

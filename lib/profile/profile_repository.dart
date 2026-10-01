@@ -7,6 +7,7 @@ import '../core/services/user_session.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/user_model.dart';
+import '../stories/story_seen_sync.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
 import 'highlight_model.dart';
@@ -76,9 +77,18 @@ class ProfileRepository {
     final cached = await _load(cacheKey);
     if (cached != null) {
       _refreshProfile(path, cacheKey);
-      return UserModel.fromJson(cached as Map<String, dynamic>);
+      return _primeRing(cached as Map<String, dynamic>);
     }
     return _fetchProfile(path, cacheKey);
+  }
+
+  /// Ҳалқаи сторис дар сарлавҳаи профил — аз ҳамон манбаи умумӣ
+  /// (StorySeenSync), бо вақти гирифтан: кэши куҳна «дидам»-и навро
+  /// бекор намекунад.
+  UserModel _primeRing(Map<String, dynamic> j) {
+    final u = UserModel.fromJson(j);
+    StorySeenSync.instance.primeUser(u, fetchedAt: ContentSync.fetchedAtOf(j));
+    return u;
   }
 
   Future<UserModel> _fetchProfile(String path, String cacheKey) async {
@@ -86,8 +96,9 @@ class ProfileRepository {
     if (res.statusCode >= 400) throw Exception('Корбар ёфт нашуд');
     final body = jsonDecode(res.body);
     final j = (body is Map && body.containsKey('user')) ? body['user'] : body;
+    ContentSync.stamp(j);
     await _save(cacheKey, j);
-    return UserModel.fromJson(j as Map<String, dynamic>);
+    return _primeRing(j as Map<String, dynamic>);
   }
 
   void _refreshProfile(String path, String cacheKey) {

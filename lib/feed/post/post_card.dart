@@ -21,6 +21,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../stories/story_seen_sync.dart';
 import '../../models/post_model.dart';
 import '../../models/story_model.dart';
 import '../../widgets/avatar.dart';
@@ -175,14 +176,20 @@ class _PostCardState extends State<PostCard>
     _shareCount   = widget.post.sharesCount;
     _hideLikes        = widget.post.hideLikes;
     _commentsDisabled = widget.post.commentsDisabled;
+    // ⚠️ `_caption` ва `_song` БОЯД пеш аз `_applySync` бошанд. Пеш
+    // онҳо баъд меомаданд: вақте ContentSync аллакай ҳолати ин постро
+    // бо тавсиф дошт (пост дар Home/профил дида шуда буд), `_applySync`
+    // `_caption`-и ҳанӯз холиро мехонд → LateInitializationError дар
+    // initState → дар release ба ҷои пост танҳо рахи хокистарии
+    // ErrorWidget ва экрани сиёҳ («Постҳо» кушода намешуд).
+    _caption      = widget.post.caption;
+    _song         = widget.post.song;
     // Ҳамин пост шояд аллакай дар Reels/Explore/профил лайк ё захира
     // шуда бошад — ҳолати навтаринро аз ContentSync мегирем.
     _applySync(ContentSync.instance.get(widget.post.id), initial: true);
-    ContentSync.primeSoon(widget.post.primeSync);
+    ContentSync.primeSoon(widget.post.primeSync); // + ҳалқаи сторис
     _syncNote = ContentSync.instance.watch(widget.post.id)
       ..addListener(_onSync);
-    _caption      = widget.post.caption;
-    _song         = widget.post.song;
 
     // Ҳар тағйири «соҳиби садо» ё «хомӯш» — корт аз нав кашида
     // мешавад, то MusicBar фармони нав гирад.
@@ -1280,7 +1287,8 @@ class _PostCardState extends State<PostCard>
   // Тапи аватар: агар story дошта бошад → story кушояд, вагарна → профил.
   Future<void> _openAvatarTap() async {
     final post = widget.post;
-    if (!post.user.hasStory) {
+    if (StorySeenSync.instance.ringOf(post.user.id) == StoryRing.none &&
+        !post.user.hasStory) {
       Navigator.pushNamed(context, '/profile', arguments: post.user.id);
       return;
     }
@@ -1297,6 +1305,9 @@ class _PostCardState extends State<PostCard>
               (su['_id'] ?? su['id'] ?? s['userId'] ?? '').toString();
           return sid == post.user.id;
         }).map((s) => StoryModel.fromJson(s as Map<String, dynamic>)).toList();
+        // Рӯйхати пурра → ҳалқа дақиқ (мас. сторис мӯҳлаташ гузашт).
+        StorySeenSync.instance
+            .primeStories(mine, completeFor: [post.user.id]);
         if (mounted && mine.isNotEmpty) {
           Navigator.pushNamed(context, '/story-group-viewer', arguments: {
             'groups': <List<StoryModel>>[mine],
@@ -1480,7 +1491,7 @@ class _PostCardState extends State<PostCard>
             onTap: _openAvatarTap,
             child: Avatar(imageUrl: post.user.avatar, size: 42,
                 name: post.user.username,
-                glowBorder: post.user.hasStory)),
+                storyUserId: post.user.id)),
           const SizedBox(width: 11),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -28,6 +28,9 @@ import '../reels/single_reel_screen.dart';
 import '../chat/room/chat_room_screen.dart';
 import '../widgets/verified_badge.dart';
 import '../widgets/account_switcher.dart';
+import '../widgets/avatar.dart' show StoryRingFrame;
+import '../stories/story_open.dart';
+import '../stories/story_seen_sync.dart';
 import 'edit/edit_profile_screen.dart';
 import 'highlight_model.dart';
 import 'highlight_viewer.dart';
@@ -149,8 +152,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   // ── Avatar ────────────────────────────────────────────────────────
-  void _avatarTap() {
+  /// Мисли Instagram: аватари дорои ҳалқа → сторис; вагарна расм/меню.
+  Future<void> _avatarTap() async {
+    final uid = _ctrl.profile?.id ?? '';
+    if (uid.isNotEmpty &&
+        StorySeenSync.instance.ringOf(uid) != StoryRing.none &&
+        await openUserStories(context, uid)) {
+      return;
+    }
+    if (!mounted) return;
     if (!_isMe) { _viewPhoto(); return; }
+    _avatarMenu();
+  }
+
+  void _avatarMenu() {
     _sheet([
       _tile(AppIcons.person_rounded, 'Расмро бин',
           () { Navigator.pop(context); _viewPhoto(); }),
@@ -562,8 +577,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Row(crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     GestureDetector(onTap: _avatarTap,
-                      child: Hero(tag: 'av_${widget.userId}',
-                          child: _Avatar(url: avatarUrl, size: 86))),
+                      onLongPress: _isMe ? _avatarMenu : null,
+                      // Ҳалқаи сторис — ҳамон ҳолат, ки дар Home ва Reels.
+                      child: StoryRingFrame(userId: user.id,
+                        child: Hero(tag: 'av_${widget.userId}',
+                            child: _Avatar(url: avatarUrl, size: 86)))),
                     const SizedBox(width: 24),
                     Expanded(child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,

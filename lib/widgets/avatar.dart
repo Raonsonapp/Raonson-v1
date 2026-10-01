@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../stories/story_seen_sync.dart';
+
+/// Ранги ҳалқаи «дида шуд» — ҳамон хокистарии сатри сторис.
+const List<Color> kStorySeenRing = [Color(0xFF555555), Color(0xFF444444)];
 
 class Avatar extends StatelessWidget {
   final String imageUrl;
@@ -14,6 +18,11 @@ class Avatar extends StatelessWidget {
   /// онро аз PresenceService гирад ва ҳамин ҷо диҳад.
   final bool online;
 
+  /// Ҳалқаи сторисро аз [StorySeenSync] мегирад: ранга (надида),
+  /// хокистарӣ (дида шуд) ё бе ҳалқа — ҲАМОН ҳолат дар ҳамаи экранҳо.
+  /// `null` — рафтори кӯҳна бо [glowBorder].
+  final String? storyUserId;
+
   const Avatar({
     super.key,
     required this.imageUrl,
@@ -23,30 +32,47 @@ class Avatar extends StatelessWidget {
     this.onTap,
     this.name = '',
     this.online = false,
+    this.storyUserId,
   });
 
   @override
   Widget build(BuildContext context) {
+    final uid = storyUserId;
+    if (uid == null || uid.isEmpty) {
+      return _build(showBorder || glowBorder ? AppColors.storyGradient : null);
+    }
+    return ValueListenableBuilder<StoryRing>(
+      valueListenable: StorySeenSync.instance.watch(uid),
+      builder: (_, ring, __) => _build(switch (ring) {
+        StoryRing.unseen => AppColors.storyGradient,
+        StoryRing.seen => kStorySeenRing,
+        StoryRing.none => showBorder ? AppColors.storyGradient : null,
+      }),
+    );
+  }
+
+  Widget _build(List<Color>? ring) {
+    final has = ring != null;
     Widget avatar = Container(
-      width: size + (showBorder || glowBorder ? 4 : 0),
-      height: size + (showBorder || glowBorder ? 4 : 0),
+      width: size + (has ? 4 : 0),
+      height: size + (has ? 4 : 0),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: (showBorder || glowBorder)
-            ? const LinearGradient(
-                colors: AppColors.storyGradient,
+        gradient: has
+            ? LinearGradient(
+                colors: ring,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               )
             : null,
       ),
       child: Padding(
-        padding: EdgeInsets.all(showBorder || glowBorder ? 2.5 : 0),
+        padding: EdgeInsets.all(has ? 2.5 : 0),
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             // Ҳалқаи сафед дар дохили градиент — айнан мисли Instagram
-            border: (showBorder || glowBorder)
+            border: has
                 ? Border.all(color: AppColors.bg, width: 2)
                 : null,
           ),
@@ -107,6 +133,43 @@ class Avatar extends StatelessWidget {
           size: size * 0.62, color: AppColors.textPrimary.withOpacity(0.85)),
     );
   }
+}
+
+/// Ҳалқаи сторис дар гирди ҳар виҷет (мас. аватари калони профил).
+/// Ранг аз [StorySeenSync] — ҳамон ҳолат, ки дар Home ва Reels.
+class StoryRingFrame extends StatelessWidget {
+  final String userId;
+  final Widget child;
+  final double ringWidth;
+  const StoryRingFrame({super.key, required this.userId, required this.child,
+      this.ringWidth = 2.5});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<StoryRing>(
+        valueListenable: StorySeenSync.instance.watch(userId),
+        builder: (_, ring, __) {
+          if (ring == StoryRing.none) return child;
+          return Container(
+            padding: EdgeInsets.all(ringWidth),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: ring == StoryRing.unseen
+                    ? AppColors.storyGradient
+                    : kStorySeenRing,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration:
+                  BoxDecoration(shape: BoxShape.circle, color: AppColors.bg),
+              child: child,
+            ),
+          );
+        },
+      );
 }
 
 // Барои мутобиқати рамзӣ нигоҳ дошта мешавад (дигар истифода намешавад).

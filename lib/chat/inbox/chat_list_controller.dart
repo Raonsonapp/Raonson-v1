@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
 import '../unread/chat_unread_store.dart';
+import '../../stories/story_seen_sync.dart';
 
 /// Tabҳои inbox — мисли Instagram: Асосӣ / Дархостҳо.
 enum ChatTab { primary, general, requests }
@@ -134,6 +135,13 @@ class ChatListController extends ChangeNotifier {
     await loadChats();
   }
 
+  /// Ҳалқаи сториси ҳамсуҳбат — ҳамон манбаи Home/профил.
+  void _primeRings(List<MessageModel> list) {
+    for (final c in list) {
+      StorySeenSync.instance.primeUser(c.peer);
+    }
+  }
+
   /// Кэш фавран (агар рӯйхат холӣ бошад), баъд ҲАМЕША шабака.
   ///
   /// ⚠️ Пеш кэши то 12 соата натиҷаи ниҳоӣ буд ва навсозии фонӣ ба
@@ -154,6 +162,7 @@ class ChatListController extends ChangeNotifier {
       final fresh = await _repository.fetchInboxFresh();
       if (fresh != null) {
         _chats = _withLocalUnread(fresh.chats, started);
+        _primeRings(_chats);
         _page = 1;
         _hasMore = _chats.length >= _pageSize;
         _applyFilter();
@@ -192,6 +201,7 @@ class ChatListController extends ChangeNotifier {
         if (fresh.isEmpty) {
           _hasMore = false;
         } else {
+          _primeRings(fresh);
           _chats = [..._chats, ...fresh];
           _page++;
           _applyFilter();

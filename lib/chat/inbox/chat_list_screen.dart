@@ -1083,7 +1083,9 @@ class _ChatTile extends StatelessWidget {
         Row(children: [
           // Avatar + online dot
           Stack(clipBehavior: Clip.none, children: [
-            Avatar(imageUrl: chat.peer.avatar, size: 54, glowBorder: false),
+            // Ҳалқаи сторис (ранга/хокистарӣ) — мисли Instagram Direct.
+            Avatar(imageUrl: chat.peer.avatar, size: 54,
+                storyUserId: chat.peer.id),
             if (online)
               Positioned(
                 bottom: 1, right: 1,

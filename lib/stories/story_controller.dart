@@ -3,12 +3,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/services/socket_service.dart';
 import 'story_repository.dart';
+import 'story_seen_sync.dart';
 import '../models/story_model.dart';
 import '../core/services/user_session.dart';
 
 class StoryController extends ChangeNotifier {
   final StoryRepository _repository;
-  StoryController(this._repository) { _subscribeSocket(); _loadViewedCache(); }
+  StoryController(this._repository) {
+    _subscribeSocket();
+    _loadViewedCache();
+    // Сторис аз сарлавҳаи пост / Reels / профил дида шуд → сатри
+    // сторис ҳам фавран хокистарӣ (пеш танҳо аз худи сатр кор мекард).
+    StorySeenSync.instance.lastViewed.addListener(_onSyncViewed);
+  }
+
+  void _onSyncViewed() {
+    final id = StorySeenSync.instance.lastViewed.value;
+    if (id == null || id.isEmpty) return;
+    final known = _stories.any((s) => s.id == id && !s.viewed) ||
+        _myStories.any((s) => s.id == id && !s.viewed);
+    if (!known) return;
+    _viewedIds.add(id);
+    _saveViewedCache();
+    _stories = _applyViewedCache(_stories);
+    _myStories = _applyViewedCache(_myStories);
+    notifyListeners();
+  }
 
   List<StoryModel> _stories   = [];
   List<StoryModel> _myStories = [];
@@ -57,6 +77,8 @@ class StoryController extends ChangeNotifier {
     if (data is! Map<String, dynamic>) return;
     try {
       final s     = StoryModel.fromJson(data);
+      // Сториси нав → ҳалқа дар ҳамаи экранҳо боз ранга.
+      StorySeenSync.instance.markNewStory(s.user.id, storyId: s.id);
       final myId  = UserSession.userId ?? '';
       if (s.user.id == myId) {
         if (!_myStories.any((x) => x.id == s.id)) {
@@ -83,6 +105,9 @@ class StoryController extends ChangeNotifier {
       // ── Apply local viewed cache (persistent across sessions) ─
       _stories   = _applyViewedCache(res[0]);
       _myStories = _applyViewedCache(res[1]);
+      // Ҳамин рӯйхат — манбаи дақиқи ҳалқа барои ҳамаи экранҳо.
+      StorySeenSync.instance.primeStories([..._stories, ..._myStories],
+          completeFor: [if ((UserSession.userId ?? '').isNotEmpty) UserSession.userId!]);
     } catch (_) {
       _stories = []; _myStories = [];
     } finally {
@@ -130,6 +155,7 @@ class StoryController extends ChangeNotifier {
 
   @override
   void dispose() {
+    StorySeenSync.instance.lastViewed.removeListener(_onSyncViewed);
     try { SocketService.instance.off('story:new'); } catch (_) {}
     super.dispose();
   }

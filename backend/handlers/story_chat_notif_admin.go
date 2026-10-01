@@ -360,7 +360,8 @@ func ViewStory(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO story_seen(story_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 		sid, myID)
-	mw.InvalidateUserCache(myID)
+	// Ҳалқа дар ҲАМАИ экранҳо (лента, reels, профил…) — на танҳо /stories.
+	invalidateStoryRingCaches(myID)
 	if owner == myID {
 		c.JSON(http.StatusOK, gin.H{"viewed": true})
 		return
@@ -655,7 +656,9 @@ func GetChats(c *gin.Context) {
 		              AND mu.receiver_id=$1 AND mu.read=false
 		              AND (mu.scheduled_at IS NULL OR mu.scheduled_at <= NOW())) AS unread_count,
 		       COALESCE(cp.pinned,false) AS pinned,
-		       COALESCE(cp.muted,false)  AS muted
+		       COALESCE(cp.muted,false)  AS muted,
+		       -- Ҳалқаи сториси ҳамсуҳбат (мисли лента ва профил).
+		       `+storyRingCols("(CASE WHEN sub.sender_id=$1 THEN sub.receiver_id ELSE sub.sender_id END)", "$1")+`
 		FROM (
 			SELECT DISTINCT ON (m.chat_id)
 			       m.id,m.chat_id,m.sender_id,m.receiver_id,m.text,
@@ -690,9 +693,10 @@ func GetChats(c *gin.Context) {
 		var sVer, rVer, iFollow, iSent, accepted, hidden bool
 		var unreadCount int
 		var pinned, muted bool
+		var hasStory, unseenStory bool
 		rows.Scan(&msgID, &chatID, &senderID, &receiverID, &text, &msgType, &read, &createdAt,
 			&sUname, &sAvatar, &sVer, &rUname, &rAvatar, &rVer, &iFollow, &iSent, &accepted, &hidden, &unreadCount,
-			&pinned, &muted)
+			&pinned, &muted, &hasStory, &unseenStory)
 
 		if hidden {
 			continue // корбар ин дархостро нест/пинҳон кардааст
@@ -707,6 +711,7 @@ func GetChats(c *gin.Context) {
 		if peer["username"] == "" {
 			continue
 		}
+		putStoryRing(peer, hasStory, unseenStory)
 		// Message request: I don't follow + never replied + haven't accepted.
 		isRequest := !iFollow && !iSent && !accepted
 		result = append(result, gin.H{
@@ -1185,7 +1190,8 @@ func ExploreGrid(c *gin.Context) {
 		       COALESCE(p.music_end_ms,0), COALESCE(p.location,''),
 		       COALESCE(p.hide_likes,false), COALESCE(p.comments_off,false),
 		       p.user_id = $1::text,
-		       EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1::text AND fo.following_id=u.id)
+		       EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1::text AND fo.following_id=u.id),
+		       `+storyRingCols("u.id", "$1")+`
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
@@ -1210,11 +1216,13 @@ func ExploreGrid(c *gin.Context) {
 			var mTitle, mArtist, mURL, mArt, location string
 			var mTrack, mStart, mEnd int
 			var hideLikes, commentsOff, mine, following bool
+			var hasStory, unseenStory bool
 			pRows.Scan(&pid, &likes, &comments, &createdAt, &caption, &media,
 				&uid, &uname, &uavatar, &verified, &views,
 				&isProduct, &price, &currency, &productName, &liked, &saved,
 				&shares, &mTitle, &mArtist, &mURL, &mArt, &mTrack, &mStart, &mEnd,
-				&location, &hideLikes, &commentsOff, &mine, &following)
+				&location, &hideLikes, &commentsOff, &mine, &following,
+				&hasStory, &unseenStory)
 			if hideLikes && !mine {
 				likes = -1
 			}
@@ -1229,9 +1237,9 @@ func ExploreGrid(c *gin.Context) {
 				"musicTitle": mTitle, "musicArtist": mArtist, "location": location,
 				"song": songJSON(mTitle, mArtist, mArt, mURL, mTrack, mStart, mEnd),
 				"hideLikes": hideLikes, "commentsOff": commentsOff,
-				"user": gin.H{"_id": uid, "id": uid, "username": uname,
+				"user": putStoryRing(gin.H{"_id": uid, "id": uid, "username": uname,
 					"avatar": uavatar, "verified": verified,
-					"isFollowing": following},
+					"isFollowing": following}, hasStory, unseenStory),
 			})
 		}
 	}
@@ -1266,7 +1274,8 @@ func ExploreGrid(c *gin.Context) {
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
 		       COALESCE(r.audio_id,''), COALESCE(r.audio_title,''),
-		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,'')
+		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,''),
+		       `+storyRingCols("u.id", "$1")+`
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
 		  AND `+publicAuthorSQL("r.user_id", "u", "$1")+`
@@ -1281,9 +1290,11 @@ func ExploreGrid(c *gin.Context) {
 			var shares int
 			var hideLikes, commentsOff, following bool
 			var aID, aTitle, aArtist, aCover string
+			var hasStory, unseenStory bool
 			rRows.Scan(&rid, &vurl, &thumb, &likes, &comments, &views, &caption,
 				&uid, &uname, &uavatar, &verified, &liked, &saved, &shares,
-				&hideLikes, &commentsOff, &following, &aID, &aTitle, &aArtist, &aCover)
+				&hideLikes, &commentsOff, &following, &aID, &aTitle, &aArtist, &aCover,
+				&hasStory, &unseenStory)
 			reels = append(reels, gin.H{
 				"_id": rid, "videoUrl": vurl,
 				"thumbnailUrl": thumb,
@@ -1294,8 +1305,9 @@ func ExploreGrid(c *gin.Context) {
 				"isLiked": liked, "isSaved": saved, "sharesCount": shares,
 				"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 				"audio": reelAudioJSON(aID, aTitle, aArtist, aCover, uname),
-				"user": gin.H{"_id": uid, "id": uid, "username": uname,
+				"user": putStoryRing(gin.H{"_id": uid, "id": uid, "username": uname,
 					"avatar": uavatar, "verified": verified, "isFollowing": following},
+					hasStory, unseenStory),
 			})
 		}
 	}

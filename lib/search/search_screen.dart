@@ -31,6 +31,7 @@ import '../models/post_model.dart';
 import '../models/user_model.dart';
 import '../profile/profile_screen.dart';
 import '../widgets/avatar.dart';
+import '../stories/story_seen_sync.dart';
 import '../widgets/verified_badge.dart';
 import 'search_history.dart';
 import '../core/i18n/strings.dart';
@@ -189,6 +190,8 @@ class _SearchScreenState extends State<SearchScreen>
         // Posts
         for (final p in (body['posts'] as List? ?? [])) {
           final post = PostModel.fromJson(p as Map<String, dynamic>);
+          // Ҳалқаи сториси муаллиф — ҳамон манбаи Home/Reels/профил.
+          StorySeenSync.instance.primeUser(post.user, fetchedAt: post.fetchedAt);
           if (post.mediaUrl.isNotEmpty) {
             items.add(_ExploreItem(
               id:      post.id,
@@ -198,7 +201,7 @@ class _SearchScreenState extends State<SearchScreen>
               isProduct: post.isProduct,
               // Сервер `viewsCount` мефиристад; пеш ҷои он лайкҳо нишон
               // дода мешуданд (ва барои «лайкҳо пинҳон» 0).
-              views:   ((p as Map)['viewsCount'] as num?)?.toInt() ?? 0,
+              views:   post.viewsCount,
               postData: post,
             ));
           }
@@ -207,6 +210,8 @@ class _SearchScreenState extends State<SearchScreen>
         // Reels
         for (final r in (body['reels'] as List? ?? [])) {
           final rm = r as Map<String, dynamic>;
+          StorySeenSync.instance.primeJson(rm['user'] as Map?,
+              fetchedAt: ContentSync.fetchedAtOf(rm));
           final thumb = rm['thumbnailUrl']?.toString() ?? '';
           final video = rm['videoUrl']?.toString() ?? '';
           if (video.isEmpty && thumb.isEmpty) continue;
@@ -278,6 +283,13 @@ class _SearchScreenState extends State<SearchScreen>
           _reels    = body['reels']    as List? ?? [];
           _hashtags = body['hashtags'] as List? ?? [];
         });
+        final now = DateTime.now();
+        for (final u in _users) {
+          StorySeenSync.instance.primeUser(u, fetchedAt: now);
+        }
+        for (final p in _posts) {
+          StorySeenSync.instance.primeUser(p.user, fetchedAt: p.fetchedAt);
+        }
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -489,7 +501,8 @@ class _SearchScreenState extends State<SearchScreen>
           id: p.id, url: p.mediaUrl,
           type: p.mediaType == 'video' ? _ItemType.video : _ItemType.image,
           isMulti: p.media.length > 1,
-          views: p.likesCount,
+          // Тамошо — на лайкҳо (пеш лайкҳо ҳамчун тамошо нишон дода мешуданд).
+          views: p.viewsCount,
           postData: p,
         ));
       }
@@ -659,7 +672,7 @@ class _SearchScreenState extends State<SearchScreen>
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(children: [
-          Avatar(imageUrl: avatar, size: 44, glowBorder: false),
+          Avatar(imageUrl: avatar, size: 44, storyUserId: id),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
@@ -1831,7 +1844,8 @@ class _FeedCardState extends State<_FeedCard> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(children: [
-                Avatar(imageUrl: widget.item.postData!.user.avatar, size: 32),
+                Avatar(imageUrl: widget.item.postData!.user.avatar, size: 32,
+                    storyUserId: widget.item.postData!.user.id),
                 const SizedBox(width: 8),
                 Text(widget.item.postData!.user.username,
                     style: TextStyle(
@@ -1880,7 +1894,8 @@ class _FeedCardState extends State<_FeedCard> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(children: [
-                  Avatar(imageUrl: avatar, size: 32, name: uname),
+                  Avatar(imageUrl: avatar, size: 32, name: uname,
+                      storyUserId: (u['_id'] ?? u['id'] ?? '').toString()),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(uname,
@@ -2042,7 +2057,8 @@ class _ForYouTab extends StatelessWidget {
           id: p.id, url: p.mediaUrl,
           type: p.mediaType == 'video' ? _ItemType.video : _ItemType.image,
           isMulti: p.media.length > 1,
-          views: p.likesCount,
+          // Тамошо — на лайкҳо (пеш лайкҳо ҳамчун тамошо нишон дода мешуданд).
+          views: p.viewsCount,
           postData: p,
         ));
       }
@@ -2152,7 +2168,7 @@ class _UserChip extends StatelessWidget {
       child: Container(
         width: 60, margin: const EdgeInsets.symmetric(horizontal: 6),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Avatar(imageUrl: user.avatar, size: 48),
+          Avatar(imageUrl: user.avatar, size: 48, storyUserId: user.id),
           const SizedBox(height: 4),
           Text(user.username,
               style: TextStyle(
@@ -2308,7 +2324,8 @@ class _UserRowState extends State<_UserRow> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
         child: Row(children: [
-          Avatar(imageUrl: widget.user.avatar, size: 48),
+          Avatar(imageUrl: widget.user.avatar, size: 48,
+              storyUserId: widget.user.id),
           const SizedBox(width: 12),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

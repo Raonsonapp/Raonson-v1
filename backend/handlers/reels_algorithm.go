@@ -88,7 +88,7 @@ func GetSmartReels(c *gin.Context) {
 		    EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1 AND fo.following_id=r.user_id) AS following,
 		    COALESCE(r.hide_likes,false) AS hide_likes,
 		    COALESCE(r.comments_off,false) AS comments_off,
-		    EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1 OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1 AND hf.following_id=s.user_id)) AND (s.user_id=$1 OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1))) AS has_story,
+		    `+storyRingCols("r.user_id", "$1")+`,
 		    -- Алгоритми баллгузорӣ
 		    (
 		      -- 1. Дӯстон: +50
@@ -166,7 +166,7 @@ func GetSmartReels(c *gin.Context) {
 		       views_count, likes_count,
 		       comments_count, created_at, uid, username, avatar,
 		       verified, liked, saved, following, hide_likes, comments_off,
-		       has_story, audio_id, audio_title, audio_artist, audio_cover, score
+		       has_story, has_unseen_story, audio_id, audio_title, audio_artist, audio_cover, score
 		FROM scored
 		ORDER BY score DESC
 		LIMIT $2 OFFSET $3
@@ -184,14 +184,14 @@ func GetSmartReels(c *gin.Context) {
 		var id, videoURL, videoURLLow, thumb, cap, uid, uname, uavatar string
 		var audioID, audioTitle, audioArtist, audioCover string
 		var views, likes, comms int
-		var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
+		var verified, liked, saved, following, hideLikes, commentsOff, hasStory, unseenStory bool
 		var createdAt interface{}
 		var score float64
 
 		if err := rows.Scan(&id, &videoURL, &videoURLLow, &thumb, &cap, &views, &likes,
 			&comms, &createdAt, &uid, &uname, &uavatar,
 			&verified, &liked, &saved, &following, &hideLikes, &commentsOff,
-			&hasStory, &audioID, &audioTitle, &audioArtist, &audioCover,
+			&hasStory, &unseenStory, &audioID, &audioTitle, &audioArtist, &audioCover,
 			&score); err != nil {
 			continue
 		}
@@ -204,12 +204,11 @@ func GetSmartReels(c *gin.Context) {
 			"isLiked": liked, "isSaved": saved,
 			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 			"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
-			"user": gin.H{
+			"user": putStoryRing(gin.H{
 				"id": uid, "_id": uid,
 				"username": uname, "avatar": uavatar,
 				"verified": verified, "isFollowing": following,
-				"hasStory": hasStory,
-			},
+			}, hasStory, unseenStory),
 		})
 	}
 

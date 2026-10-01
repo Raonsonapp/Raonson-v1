@@ -9,6 +9,8 @@ import '../../core/api/api_client.dart';
 import '../../core/notifications/upload_notifier.dart';
 import '../../core/utils/media_compressor.dart';
 import '../../stories/story_repository.dart';
+import '../../stories/story_seen_sync.dart';
+import '../../core/services/user_session.dart';
 import '../upload/upload_manager.dart';
 import '../../core/i18n/strings.dart';
 
@@ -129,6 +131,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       // stori-и навро дар лаҳза илова кунад (мисли Instagram).
       notifier.done(nid);
       await StoryRepository.clearAllCaches();
+      // Ҳалқаи худам дар ҳамаи экранҳо фавран ранга (сториси нав).
+      StorySeenSync.instance.markNewStory(UserSession.userId ?? '');
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       notifier.failed(nid);

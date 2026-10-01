@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../content_sync.dart';
 import 'follow_service.dart';
+import '../../stories/story_seen_sync.dart';
 
 class UserSession {
   UserSession._();
@@ -86,6 +87,7 @@ class UserSession {
     // корбари навбатӣ дар ҳамин телефон намоён шавад.
     ContentSync.instance.clear();
     FollowService.instance.clear();
+    StorySeenSync.instance.clear();
     userIdNotifier.value   = null;
     usernameNotifier.value = null;
     avatarNotifier.value   = null;

@@ -165,7 +165,8 @@ func GetComments(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT c.id, c.text, c.likes_count, c.created_at, COALESCE(c.parent_id,''),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
-		       EXISTS(SELECT 1 FROM comment_likes cl WHERE cl.comment_id=c.id AND cl.user_id=$2)
+		       EXISTS(SELECT 1 FROM comment_likes cl WHERE cl.comment_id=c.id AND cl.user_id=$2),
+		       `+storyRingCols("u.id", "$2")+`
 		FROM comments c JOIN users u ON u.id=c.user_id
 		WHERE c.post_id=$1
 		  -- ⚠️ Шарҳи пинҳон танҳо ба НАВИСАНДАИ он намоён аст.
@@ -187,13 +188,15 @@ func GetComments(c *gin.Context) {
 		var cid, text, uid, uname, uavatar string
 		var parentID string
 		var likes int
-		var verified, liked bool
+		var verified, liked, hasStory, unseenStory bool
 		var createdAt interface{}
-		rows.Scan(&cid, &text, &likes, &createdAt, &parentID, &uid, &uname, &uavatar, &verified, &liked)
+		rows.Scan(&cid, &text, &likes, &createdAt, &parentID, &uid, &uname, &uavatar, &verified, &liked,
+			&hasStory, &unseenStory)
 		comments = append(comments, gin.H{
 			"_id": cid, "text": text, "liked": liked, "likesCount": likes,
 			"createdAt": createdAt, "parentId": parentID,
-			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
+			"user": putStoryRing(gin.H{"_id": uid, "username": uname, "avatar": uavatar,
+				"verified": verified}, hasStory, unseenStory),
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"comments": comments, "page": page, "limit": limit})
@@ -531,7 +534,8 @@ func Search(c *gin.Context) {
 
 	// Users
 	uRows, _ := db.Pool.Query(context.Background(), `
-		SELECT id,username,avatar,verified,bio,followers_count
+		SELECT id,username,avatar,verified,bio,followers_count,
+		       `+storyRingCols("u.id", "$2")+`
 		FROM users u WHERE username ILIKE $1 AND banned=FALSE
 		  -- Бастагон дар ҷустуҷӯ пайдо намешаванд (ҳар ду тараф).
 		  AND NOT EXISTS (SELECT 1 FROM blocks vb
@@ -544,12 +548,13 @@ func Search(c *gin.Context) {
 			var id, uname, avatar, bio string
 			var verified bool
 			var fc int
-			uRows.Scan(&id, &uname, &avatar, &verified, &bio, &fc)
-			users = append(users, gin.H{
+			var hasStory, unseenStory bool
+			uRows.Scan(&id, &uname, &avatar, &verified, &bio, &fc, &hasStory, &unseenStory)
+			users = append(users, putStoryRing(gin.H{
 				"_id": id, "id": id, "username": uname,
 				"avatar": avatar, "verified": verified,
 				"bio": bio, "followersCount": fc,
-			})
+			}, hasStory, unseenStory))
 		}
 		uRows.Close()
 	}
@@ -565,7 +570,9 @@ func Search(c *gin.Context) {
 		       (SELECT COALESCE(json_agg(
 		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
 		                ORDER BY m.position),'[]'::json)
-		        FROM post_media m WHERE m.post_id=p.id)
+		        FROM post_media m WHERE m.post_id=p.id),
+		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
+		       `+storyRingCols("u.id", "$2")+`
 		FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE p.caption ILIKE $1
 		  -- Ҷустуҷӯ — кашф аст: танҳо ҳисобҳои кушода, мисли Instagram.
@@ -585,15 +592,21 @@ func Search(c *gin.Context) {
 			// маълумотро дошта бошад, ки лента дорад.
 			var mTitle, mArtist, mURL, mArt string
 			var mTrackMs, mStartMs, mEndMs int
+			var views int64
+			var hasStory, unseenStory bool
 			pRows.Scan(&pid, &cap, &likes, &comms, &createdAt, &uid, &uname, &uavatar, &verified,
-				&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs, &media)
+				&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs, &media,
+				&views, &hasStory, &unseenStory)
 			posts = append(posts, gin.H{
 				"_id": pid, "caption": cap, "likesCount": likes,
 				"commentsCount": comms, "createdAt": createdAt, "media": nilToEmpty(media),
 				"musicTitle": mTitle, "musicArtist": mArtist,
 				"song": songJSON(mTitle, mArtist, mArt, mURL,
 					mTrackMs, mStartMs, mEndMs),
-				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
+				// Тамошо — ҳамон COUNT(post_views), ки Explore ва профил медиҳанд.
+				"viewsCount": views, "views": views,
+				"user": putStoryRing(gin.H{"_id": uid, "username": uname,
+					"avatar": uavatar, "verified": verified}, hasStory, unseenStory),
 			})
 		}
 		pRows.Close()
@@ -601,7 +614,10 @@ func Search(c *gin.Context) {
 
 	// Reels
 	rRows, _ := db.Pool.Query(context.Background(), `
-		SELECT r.id,r.video_url,r.caption,COALESCE(r.views_count,0),r.likes_count,r.created_at
+		SELECT r.id,r.video_url,r.caption,COALESCE(r.views_count,0),r.likes_count,r.created_at,
+		       COALESCE(r.thumbnail_url,''),
+		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
+		       `+storyRingCols("u.id", "$2")+`
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE r.caption ILIKE $1
 		  -- Пеш ин ҷо ҳеҷ филтр набуд: Reels-и ҳисобҳои пӯшида,
@@ -615,10 +631,15 @@ func Search(c *gin.Context) {
 			var rid, vurl, cap string
 			var views, likes int
 			var createdAt interface{}
-			rRows.Scan(&rid, &vurl, &cap, &views, &likes, &createdAt)
+			var thumb, uid, uname, uavatar string
+			var verified, hasStory, unseenStory bool
+			rRows.Scan(&rid, &vurl, &cap, &views, &likes, &createdAt,
+				&thumb, &uid, &uname, &uavatar, &verified, &hasStory, &unseenStory)
 			reels = append(reels, gin.H{
-				"_id": rid, "videoUrl": vurl, "caption": cap,
+				"_id": rid, "videoUrl": vurl, "caption": cap, "thumbnailUrl": thumb,
 				"views": views, "viewsCount": views, "likesCount": likes, "createdAt": createdAt,
+				"user": putStoryRing(gin.H{"_id": uid, "id": uid, "username": uname,
+					"avatar": uavatar, "verified": verified}, hasStory, unseenStory),
 			})
 		}
 		rRows.Close()
@@ -663,7 +684,8 @@ func SearchUsers(c *gin.Context) {
 		return
 	}
 	rows, _ := db.Pool.Query(context.Background(), `
-		SELECT id,username,avatar,verified,bio,followers_count
+		SELECT id,username,avatar,verified,bio,followers_count,
+		       `+storyRingCols("u.id", "$2")+`
 		FROM users u WHERE username ILIKE $1 AND banned=FALSE
 		  AND NOT EXISTS (SELECT 1 FROM blocks vb
 		       WHERE (vb.blocker_id = $2::text AND vb.blocked_id = u.id)
@@ -677,12 +699,13 @@ func SearchUsers(c *gin.Context) {
 			var id, uname, avatar, bio string
 			var verified bool
 			var fc int
-			rows.Scan(&id, &uname, &avatar, &verified, &bio, &fc)
-			users = append(users, gin.H{
+			var hasStory, unseenStory bool
+			rows.Scan(&id, &uname, &avatar, &verified, &bio, &fc, &hasStory, &unseenStory)
+			users = append(users, putStoryRing(gin.H{
 				"_id": id, "id": id, "username": uname,
 				"avatar": avatar, "verified": verified,
 				"bio": bio, "followersCount": fc,
-			})
+			}, hasStory, unseenStory))
 		}
 	}
 	c.JSON(http.StatusOK, users)
@@ -768,7 +791,7 @@ func GetReels(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$1::text AND f.following_id=r.user_id),
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$1::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$1::text AND hf.following_id=s.user_id)) AND (s.user_id=$1::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$1::text))),
+		       `+storyRingCols("r.user_id", "$1")+`,
 		       COALESCE(r.audio_id,''), COALESCE(r.audio_title,''),
 		       COALESCE(r.audio_artist,''), COALESCE(r.audio_cover,'')
 		FROM reels r JOIN users u ON u.id=r.user_id
@@ -791,11 +814,11 @@ func GetReels(c *gin.Context) {
 		var rid, vurl, vurlLow, thumb, cap, uid, uname, uavatar string
 		var audioID, audioTitle, audioArtist, audioCover string
 		var views, likes, comms int
-		var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
+		var verified, liked, saved, following, hideLikes, commentsOff, hasStory, unseenStory bool
 		var createdAt interface{}
 		rows.Scan(&rid, &vurl, &vurlLow, &thumb, &cap, &views, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
-			&hideLikes, &commentsOff, &hasStory,
+			&hideLikes, &commentsOff, &hasStory, &unseenStory,
 			&audioID, &audioTitle, &audioArtist, &audioCover)
 		reels = append(reels, gin.H{
 			"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
@@ -804,8 +827,8 @@ func GetReels(c *gin.Context) {
 			"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
 			"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 			"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
-			"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
-				"verified": verified, "isFollowing": following, "hasStory": hasStory},
+			"user": putStoryRing(gin.H{"_id": uid, "username": uname, "avatar": uavatar,
+				"verified": verified, "isFollowing": following}, hasStory, unseenStory),
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
@@ -1037,7 +1060,7 @@ func GetReelByID(c *gin.Context) {
 
 	var vurl, vurlLow, thumb, capt, uid, uname, uavatar string
 	var views, likes, comms int
-	var verified, liked, saved, following, hideLikes, commentsOff, hasStory bool
+	var verified, liked, saved, following, hideLikes, commentsOff, hasStory, unseenStory bool
 	var createdAt interface{}
 
 	err := db.Pool.QueryRow(context.Background(), `
@@ -1050,12 +1073,12 @@ func GetReelByID(c *gin.Context) {
 		       EXISTS(SELECT 1 FROM reel_saves rs WHERE rs.reel_id=r.id AND rs.user_id=$2::text),
 		       EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=$2::text AND f.following_id=r.user_id),
 		       COALESCE(r.hide_likes,false), COALESCE(r.comments_off,false),
-		       EXISTS(SELECT 1 FROM stories s WHERE s.user_id=r.user_id AND s.expires_at > NOW() AND COALESCE(s.archived,false)=FALSE AND (s.user_id=$2::text OR EXISTS(SELECT 1 FROM follows hf WHERE hf.follower_id=$2::text AND hf.following_id=s.user_id)) AND (s.user_id=$2::text OR COALESCE(s.audience,'all')='all' OR EXISTS(SELECT 1 FROM close_friends hcf WHERE hcf.user_id=s.user_id AND hcf.friend_id=$2::text)))
+		       `+storyRingCols("r.user_id", "$2")+`
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE r.id=$1`, rid, myID).
 		Scan(&vurl, &vurlLow, &thumb, &capt, &views, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &liked, &saved, &following,
-			&hideLikes, &commentsOff, &hasStory)
+			&hideLikes, &commentsOff, &hasStory, &unseenStory)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
 		return
@@ -1094,8 +1117,8 @@ func GetReelByID(c *gin.Context) {
 		"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 		"sharesCount": shares,
 		"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
-		"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar,
-			"verified": verified, "isFollowing": following, "hasStory": hasStory},
+		"user": putStoryRing(gin.H{"_id": uid, "username": uname, "avatar": uavatar,
+			"verified": verified, "isFollowing": following}, hasStory, unseenStory),
 	})
 }
 

@@ -1,5 +1,6 @@
 import '../core/content_sync.dart';
 import '../core/utils/server_time.dart';
+import '../stories/story_seen_sync.dart';
 import 'user_model.dart';
 
 class ReelModel {
@@ -57,11 +58,15 @@ class ReelModel {
         hideLikes: hideLikes, commentsOff: commentsDisabled);
 
   /// Маълумоти серверии ин reel-ро ба ContentSync медиҳад.
-  void primeSync() => ContentSync.instance.prime(id,
+  void primeSync() {
+    ContentSync.instance.prime(id,
         liked: isLiked, likesCount: likesCount, saved: isSaved,
         commentsCount: commentsCount, sharesCount: sharesCount,
         hideLikes: hideLikes, commentsOff: commentsDisabled,
         caption: caption, fetchedAt: fetchedAt);
+    // Ҳалқаи сториси муаллиф — ҳамон манбаъ барои ҳамаи экранҳо.
+    StorySeenSync.instance.primeUser(user, fetchedAt: fetchedAt);
+  }
 
   // ── copyWith ─────────────────────────────────────────────────
   ReelModel copyWith({
@@ -189,7 +194,7 @@ class ReelModel {
       // «Пайравӣ кунед» дубора пайдо мешуд, гарчанде корбар обуна буд.
       'isFollowing':       user.isFollowing,
       'followRequestSent': user.followRequestSent,
-      'hasStory':          user.hasStory,
+      ...user.storyRingJson,
     },
   };
 }

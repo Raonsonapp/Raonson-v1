@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../../models/story_model.dart';
+import '../../stories/story_seen_sync.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
@@ -743,8 +744,7 @@ class _ReelItemState extends State<_ReelItem> {
   DateTime? _watchStart;
   int _totalWatchMs = 0;
 
-  bool? _hasStory;
-  bool _storyViewed = false;
+  // Ҳалқаи сторис — аз StorySeenSync (ҳамон ҳолат дар Home, профил…).
 
   bool get _isOwner {
     final myId = UserSession.userId?.trim() ?? '';
@@ -762,48 +762,36 @@ class _ReelItemState extends State<_ReelItem> {
     ContentSync.primeSoon(() => FollowService.instance.prime(
         widget.reel.user.id, widget.reel.user.isFollowing,
         fetchedAt: widget.reel.fetchedAt));
-    _hasStory = widget.reel.user.hasStory ? true : null;
     _initVideo();
-    // ҲАМЕША бор мекунем — на танҳо вақте `hasStory` маълум нест.
-    // Пеш агар Reel бо `hasStory: true` меомад, ҳолати «дида шуд»
-    // ҳеҷ гоҳ бор намешуд ва ҳалқа то абад ранга мемонд.
+    // Ҳалқаро аз рӯйхати сторисҳои муаллиф дақиқ мекунем (як бор дар
+    // сессия барои ҳар муаллиф). Ҳолат худаш дар StorySeenSync аст — пеш
+    // ин ҷо кэши `static`-и ҷудогона буд ва бо Home мувофиқ намеомад.
     _loadStoryStatus();
   }
 
-  static final Map<String, ({bool has, bool viewed})> _storyCache = {};
+  static final Set<String> _storyChecked = {};
 
   Future<void> _loadStoryStatus() async {
     final uid = widget.reel.user.id;
-    final cached = _storyCache[uid];
-    if (cached != null) {
-      if (mounted) {
-        setState(() {
-          _hasStory = cached.has;
-          _storyViewed = cached.viewed;
-        });
-      }
-      return;
-    }
+    if (uid.isEmpty || _storyChecked.contains(uid)) return;
+    if (_storyChecked.length >= 200) _storyChecked.clear();
+    _storyChecked.add(uid);
     try {
       final res = await ApiClient.instance
           .get('/stories', query: {'userId': uid})
           .timeout(const Duration(seconds: 5));
-      if (res.statusCode < 400 && mounted) {
+      if (res.statusCode < 400) {
         final body = jsonDecode(res.body);
         final List list =
             body is List ? body : (body['stories'] ?? body['data'] ?? []);
-        final has = list.isNotEmpty;
-        final viewed = has && list.every((s) => s['viewed'] == true);
-        if (_storyCache.length >= 200) {
-          _storyCache.remove(_storyCache.keys.first);
-        }
-        _storyCache[uid] = (has: has, viewed: viewed);
-        setState(() {
-          _hasStory = has;
-          _storyViewed = viewed;
-        });
+        StorySeenSync.instance.primeStories(
+            list.whereType<Map>()
+                .map((e) => StoryModel.fromJson(Map<String, dynamic>.from(e))),
+            completeFor: [uid]);
       }
-    } catch (_) {}
+    } catch (_) {
+      _storyChecked.remove(uid);
+    }
   }
 
   // Видеои берунӣ (Aparat/YouTube) — на файли мустақим
@@ -986,7 +974,10 @@ class _ReelItemState extends State<_ReelItem> {
 
   /// Мисли Instagram: аватари дорои ҳалқа → СТОРИС, на профил.
   Future<void> _openAvatar() async {
-    if (_hasStory != true) { _openProfile(); return; }
+    if (StorySeenSync.instance.ringOf(widget.reel.user.id) == StoryRing.none) {
+      _openProfile();
+      return;
+    }
     final uid = widget.reel.user.id;
     List<StoryModel> stories = [];
     try {
@@ -1010,9 +1001,8 @@ class _ReelItemState extends State<_ReelItem> {
       'initialGroupIndex': 0,
     });
     if (!mounted) return;
-    // Дида шуд → ҳалқа хокистарӣ, ва дар ҳамаи Reels-и ҳамин муаллиф.
-    _storyCache[uid] = (has: true, viewed: true);
-    setState(() => _storyViewed = true);
+    // Дида шуд → тамошобин худаш ба StorySeenSync хабар дод: ҳалқа дар
+    // ҳамаи Reels-и ҳамин муаллиф, Home ва профил хокистарӣ мешавад.
     if (!_paused && widget.isActive) _ctrl?.play();
   }
 
@@ -1991,10 +1981,13 @@ class _ReelItemState extends State<_ReelItem> {
                   Row(children: [
                     GestureDetector(
                         onTap: _openAvatar,
-                        child: _AvatarWithStoryRing(
-                            avatarUrl: reel.user.avatar,
-                            hasStory: _hasStory,
-                            storyViewed: _storyViewed)),
+                        child: ValueListenableBuilder<StoryRing>(
+                            valueListenable:
+                                StorySeenSync.instance.watch(reel.user.id),
+                            builder: (_, ring, __) => _AvatarWithStoryRing(
+                                avatarUrl: reel.user.avatar,
+                                hasStory: ring != StoryRing.none,
+                                storyViewed: ring == StoryRing.seen))),
                     const SizedBox(width: 10),
                     Flexible(
                         child: GestureDetector(
