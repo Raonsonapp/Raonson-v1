@@ -2035,7 +2035,11 @@ class _ReelItemState extends State<_ReelItem> {
                                           color: Colors.white, width: 1.2),
                                       borderRadius:
                                           BorderRadius.circular(20)),
-                                  child: Text(tr('ui.61dfadd676'),
+                                  child: Text(
+                                      // Ҳисоби пӯшида: дархост фиристода шуд.
+                                      FollowService.instance.isRequested(reel.user.id)
+                                          ? tr('common.requested')
+                                          : tr('ui.61dfadd676'),
                                       style: TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w600,

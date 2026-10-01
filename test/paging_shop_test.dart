@@ -202,6 +202,8 @@ void main() {
         'lib/search/search_screen.dart',
         'lib/profile/profile_screen.dart',
         'lib/feed/timeline/feed_screen.dart',
+        'lib/reels/reels_feed/reels_screen.dart',
+        'lib/friends/friends_screen.dart',
       ]) {
         expect(_read(f), contains("tr('common.requested')"), reason: f);
       }

@@ -218,13 +218,15 @@ class _ReelControlsState extends State<ReelControls> {
                 ),
               ),
               const SizedBox(width: 8),
-              GestureDetector(
+              // Номи дароз дар экрани хурд сатрро аз экран берун мебурд.
+              Flexible(child: GestureDetector(
                 onTap: _openProfile,
                 child: Text(reel.user.username,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700, fontSize: 14)),
-              ),
+              )),
               if (reel.user.verified) ...[
                 const SizedBox(width: 4),
                 const VerifiedBadge(size: 14, color: Colors.white),

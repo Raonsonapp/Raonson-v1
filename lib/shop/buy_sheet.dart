@@ -151,8 +151,12 @@ class _BuySheetState extends State<_BuySheet> {
               style: TextStyle(color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700, fontSize: 16)),
         const SizedBox(height: 4),
-        // Нарх (бо тахфиф)
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        // Нарх (бо тахфиф). FittedBox: нархи кӯҳна + нав бо ҳарфи калон
+        // дар экрани 320dp ба як сатр намегунҷиданд (RenderFlex overflow).
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FittedBox(fit: BoxFit.scaleDown, child: Row(
+            mainAxisSize: MainAxisSize.min, children: [
           if (_discountPct > 0 || post.onSale) ...[
             Text(_priceLabel(post.price),
                 style: TextStyle(color: AppColors.textFaint, fontSize: 14,
@@ -162,7 +166,7 @@ class _BuySheetState extends State<_BuySheet> {
           Text(_priceLabel(_finalPrice),
               style: TextStyle(color: const Color(0xFF00C853),
                   fontWeight: FontWeight.w800, fontSize: 20)),
-        ]),
+        ]))),
         const SizedBox(height: 4),
         // Cashback — 5% ҳамчун ситора баргардонида мешавад.
         Text('💰 Cashback: $_cashback ⭐',

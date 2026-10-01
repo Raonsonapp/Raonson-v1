@@ -1557,9 +1557,12 @@ class _PostCardState extends State<PostCard>
                     Icon(AppIcons.location_on_outlined,
                         size: 11, color: AppColors.timeColor),
                     const SizedBox(width: 2),
-                    Text(post.location,
+                    // Ҷойи дароз дар телефони хурд сатрро аз экран
+                    // берун мебурд (RenderFlex overflow).
+                    Flexible(child: Text(post.location,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: AppColors.timeColor, fontSize: 11)),
+                            color: AppColors.timeColor, fontSize: 11))),
                   ]),
                 ),
               Text(_timeAgo(post.createdAt),
@@ -1655,6 +1658,12 @@ class _PostCardState extends State<PostCard>
       Padding(
         padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
         child: Row(children: [
+          // Рақамҳои калон (123.4K) дар экрани 320dp бо ҳарфи калон аз
+          // сатр берун мебаромаданд — гурӯҳи чап ҳангоми зарурат хурд мешавад.
+          Expanded(child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
           // ♡ Like — bounce + count slide animation
           ScaleTransition(
             scale: _likeScale,
@@ -1695,8 +1704,8 @@ class _PostCardState extends State<PostCard>
           _StableBtn(onTap: _showShare,
               svgPath: 'assets/icons/share.svg', size: 25,
               count: _shareCount, fmt: _fmt),
-
-          const Spacer(),
+            ]),
+          )),
 
           _StableBtn(
             onTap: _toggleSave,
@@ -1886,7 +1895,9 @@ class _CaptionWidgetState extends State<_CaptionWidget> {
                   color: AppColors.textSecondary, fontSize: 13.5,
                   fontStyle: FontStyle.italic)),
         ),
-      Row(children: [
+      // Wrap, на Row: «...бештар нишон деҳ» + «Тарҷума кардан» дар экрани
+      // хурд ба як сатр намегунҷиданд.
+      Wrap(spacing: 0, children: [
         if (needsMore)
           GestureDetector(
             onTap: widget.onToggle,
