@@ -1065,8 +1065,8 @@ class _ChatTile extends StatelessWidget {
     return InkWell(
       onLongPress: chat.isRequest ? null : () => _showActions(context),
       onTap: () {
-        // Бейҷро фавран пок кун (мисли Instagram) — мунтазири refresh намешавем.
-        context.read<ChatListController>().clearUnread(chat.chatId);
+        // Бейҷ ҲАНГОМИ ДИДАНИ паёмҳо дар чат кам мешавад (ChatUnreadStore),
+        // на дар лаҳзаи зарба — паёмҳои дида нашуда хонда ҳисоб намешаванд.
         Navigator.push(
           context,
           MaterialPageRoute(

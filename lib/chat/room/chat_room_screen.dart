@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../models/user_model.dart';
 import '../../models/message_model.dart';
@@ -19,6 +20,8 @@ import '../../core/webrtc_service.dart';
 import '../../core/presence_service.dart';
 import '../../core/services/socket_service.dart';
 import 'message_bubble.dart';
+import 'read_tracker.dart';
+import '../unread/chat_unread_store.dart';
 import 'chat_theme.dart';
 import 'chat_room_app_bar.dart';
 import 'message_input.dart';
@@ -42,7 +45,8 @@ class ChatRoomScreen extends StatefulWidget {
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
 }
 
-class _ChatRoomScreenState extends State<ChatRoomScreen> {
+class _ChatRoomScreenState extends State<ChatRoomScreen>
+    with WidgetsBindingObserver {
   final _repo     = ChatRepository();
   final _scroll   = ScrollController();
   final _signal   = WebRTCService();
@@ -91,15 +95,41 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   Timer? _typingResetTimer;
 
+  // ── «Дида шуд → хонда шуд» (ниг. read_tracker.dart) ──────────────
+  final _readTracker = ReadTracker();
+  Timer? _readDebounce;
+  /// Ҳангоми ҷойгиркунии аввал (scroll ба аввалин хонданашуда) паёмҳое,
+  /// ки лаҳзае аз экран мегузаранд, хонда ҳисоб намешаванд.
+  bool _positioning = false;
+  bool _initialPositioned = false;
+  String? _firstUnreadId;
+  final GlobalKey _firstUnreadKey = GlobalKey();
+  bool _appResumed = true;
+  bool _disposed = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _listenOutbox();
     _init();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appResumed = state == AppLifecycleState.resumed;
+    // Барнома баргашт — паёмҳое, ки ҳозир дар экрананд, хонда мешаванд.
+    if (_appResumed) _scheduleMarkRead();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _disposed = true;
+    _readDebounce?.cancel();
+    _flushMarkRead(); // охирин паёмҳои дидашуда — пеш аз баромадан
+    final store = ChatUnreadStore.instance;
+    if (store.activeChatId == _chatId) store.activeChatId = null;
     _outboxSub?.cancel();
     _scroll.dispose();
     // onIncomingCall ба таври глобалӣ дар BottomNavScaffold идора мешавад —
@@ -174,7 +204,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // socket/presence ҳамзамон пайваст шаванд.
     _load();
     if (_chatId.isNotEmpty) {
-      _repo.markAsRead(_chatId); // хонда ҳисоб кун
+      // Паёмҳо акнун ҲАНГОМИ ДИДАН хонда мешаванд (VisibilityDetector),
+      // на «ҳама» дар лаҳзаи кушодан — ниг. _flushMarkRead.
+      ChatUnreadStore.instance.activeChatId = _chatId;
       ChatThemes.load(_chatId).then((t) {
         if (mounted) setState(() => _theme = t);
       });
@@ -194,6 +226,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       // Online статуси ҳамсӯҳбатро тоза нигоҳ медорад (бе broadcast-и глобалӣ).
       _presence.checkUser(widget.peer.id);
       if (!_socket.isConnected) _pollRefresh();
+      // Баъди бозгашт аз экрани дигар (пост/профил) паёмҳои дар экран
+      // мондаро хонда мекунем — VisibilityDetector дубора хабар намедиҳад.
+      _scheduleMarkRead();
     });
   }
 
@@ -289,7 +324,103 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _msgPage = 1;
       _hasMoreOlder = fresh.length >= _msgPageSize;
     });
+    if (!_initialPositioned) {
+      _initialPositioned = true;
+      // Мисли WhatsApp: чат дар аввалин паёми хонданашуда кушода мешавад.
+      final items = _readItems();
+      final i = ReadTracker.firstUnreadIndex(items);
+      if (i >= 0) {
+        setState(() => _firstUnreadId = items[i].id);
+        _positionAtFirstUnread();
+        return;
+      }
+    }
     _scrollBottom();
+  }
+
+  List<ReadItem> _readItems() => _messages
+      .map((m) => ReadItem(
+            id: m.id,
+            incoming: !m.isMine && !m.isOptimistic,
+            read: m.status == MessageStatus.read,
+          ))
+      .toList();
+
+  Future<void> _nextFrame() => WidgetsBinding.instance.endOfFrame;
+
+  /// Аввал ба поён, баъд қадам ба қадам боло то аввалин хонданашуда
+  /// сохта шавад (ListView.builder танҳо наздикиҳоро месозад).
+  Future<void> _positionAtFirstUnread() async {
+    _positioning = true;
+    try {
+      await _nextFrame();
+      if (!mounted || !_scroll.hasClients) return;
+      _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      for (var i = 0; i < 40; i++) {
+        await _nextFrame();
+        if (!mounted || !_scroll.hasClients) return;
+        final ctx = _firstUnreadKey.currentContext;
+        if (ctx != null) {
+          // Агар ҳама ҷо шаванд, scroll дар поён мемонад (clamp).
+          await Scrollable.ensureVisible(ctx, alignment: 0.05);
+          break;
+        }
+        final p = _scroll.position;
+        if (p.pixels <= p.minScrollExtent) break;
+        _scroll.jumpTo((p.pixels - p.viewportDimension * 0.8)
+            .clamp(p.minScrollExtent, p.maxScrollExtent));
+      }
+      await _nextFrame();
+    } catch (_) {
+    } finally {
+      _positioning = false;
+      _scheduleMarkRead();
+    }
+  }
+
+  void _onMessageVisibility(String id, VisibilityInfo info) {
+    // Нисфи паём ё ҳадди ақал 60px — «дида шуд».
+    final seen = info.visibleFraction >= 0.5 || info.visibleBounds.height >= 60;
+    _readTracker.setVisible(id, seen);
+    if (seen) _scheduleMarkRead();
+  }
+
+  void _scheduleMarkRead() {
+    _readDebounce?.cancel();
+    _readDebounce = Timer(const Duration(milliseconds: 250), _flushMarkRead);
+  }
+
+  /// Паёмҳои дидашударо хонда мекунад: маҳаллӣ фавран (бейҷҳо кам
+  /// мешаванд), сервер бо `upTo` — то паёмҳои дида нашуда хонда нашаванд.
+  void _flushMarkRead() {
+    if (_chatId.isEmpty || _positioning || !_appResumed) return;
+    // Экрани дигар (пост, профил) болои чат — паёмҳо дида намешаванд.
+    if (!_disposed && mounted && ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+    final mark = _readTracker.next(_readItems());
+    if (mark == null) return;
+    final chatId = _chatId;
+    final updated = [
+      for (var i = 0; i < _messages.length; i++)
+        if (i <= mark.upToIndex &&
+            !_messages[i].isMine &&
+            _messages[i].status != MessageStatus.read)
+          _messages[i].copyWith(status: MessageStatus.read)
+        else
+          _messages[i],
+    ];
+    if (mounted && !_disposed) {
+      setState(() => _messages = updated);
+    } else {
+      _messages = updated;
+    }
+    final store = ChatUnreadStore.instance;
+    store.markedLocally(chatId,
+        remaining: mark.remaining, delta: mark.newlyRead);
+    _repo.markAsRead(chatId, upTo: mark.upToId).then((r) {
+      if (r != null) store.applyServer(chatId, r.unread, r.total);
+    });
   }
 
   void _setupSocket() {
@@ -330,7 +461,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         }
       });
       _scrollBottom();
-      if (!msg.isMine && _chatId.isNotEmpty) _repo.markAsRead(_chatId);
+      // Хонда ҳангоми ДИДАН мешавад (VisibilityDetector), на ин ҷо.
     });
 
     // Typing
@@ -353,12 +484,34 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     // Read receipt
     _listen('chat:read', (data) {
       if (!mounted) return;
+      // Танҳо барои ҲАМИН чат (пеш ҳар «chat:read» ҳамаи паёмҳои
+      // чати кушодаро «хонда» мекард).
+      if (data is Map) {
+        final cid = data['chatId']?.toString() ?? '';
+        if (cid.isNotEmpty && _chatId.isNotEmpty && cid != _chatId) return;
+      }
+      // Агар сервер рӯйхати паёмҳоро дод — то навтаринашон (бо вақт).
+      final ids = data is Map
+          ? ((data['messageIds'] as List?)?.map((e) => e.toString()).toSet() ??
+              <String>{})
+          : <String>{};
+      DateTime? until;
+      if (ids.isNotEmpty) {
+        for (final m in _messages) {
+          if (ids.contains(m.id) &&
+              (until == null || m.createdAt.isAfter(until))) {
+            until = m.createdAt;
+          }
+        }
+      }
       setState(() {
         _messages = _messages.map((m) {
-          if (m.isMine && m.status != MessageStatus.read) {
-            return m.copyWith(status: MessageStatus.read);
+          if (!m.isMine || m.status == MessageStatus.read) return m;
+          if (ids.isNotEmpty && !ids.contains(m.id) &&
+              (until == null || m.createdAt.isAfter(until))) {
+            return m;
           }
-          return m;
+          return m.copyWith(status: MessageStatus.read);
         }).toList();
       });
     });
@@ -1103,10 +1256,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         final showDate = prev == null ||
             !_sameDay(prev.createdAt, msg.createdAt);
 
-        return Column(
-          children: [
-            if (showDate) DateSeparator(date: msg.createdAt),
-            MessageBubble(
+        // Ҳамеша барои паёмҳои ҳамсӯҳбат (на танҳо хонданашуда) — то
+        // сохтори дарахт баъди «хонда шуд» иваз нашавад ва ҳолати
+        // MessageBubble (масалан, овози дар ҳоли пахш) гум нагардад.
+        final incoming = !msg.isMine && !msg.isOptimistic;
+        Widget bubble = MessageBubble(
               key:      ValueKey(msg.id),
               message:  msg,
               myBubbleColor: _theme.bubble,
@@ -1122,7 +1276,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 final isVid = p.length > 1 && p[1] == 'video';
                 _startCall(isVid ? CallType.video : CallType.voice);
               },
-            ),
+            );
+        if (incoming) {
+          bubble = VisibilityDetector(
+            key: Key('read_${msg.id}'),
+            onVisibilityChanged: (info) => _onMessageVisibility(msg.id, info),
+            child: bubble,
+          );
+        }
+        return Column(
+          key: msg.id == _firstUnreadId ? _firstUnreadKey : null,
+          children: [
+            if (showDate) DateSeparator(date: msg.createdAt),
+            bubble,
           ],
         );
       },

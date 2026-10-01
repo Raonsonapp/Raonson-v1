@@ -58,12 +58,21 @@ func inviteCollaborators(postID, ownerID string, ids []string) {
 				continue
 			}
 			seen[id] = true
-			if _, err := db.Pool.Exec(ctx, `
+			tag, err := db.Pool.Exec(ctx, `
 				INSERT INTO post_collab_invites(post_id, user_id)
-				VALUES ($1,$2) ON CONFLICT DO NOTHING`, postID, id); err != nil {
+				VALUES ($1,$2) ON CONFLICT DO NOTHING`, postID, id)
+			if err != nil {
 				continue
 			}
 			sent++
+			// Даъвати такрорӣ (аллакай ҳаст) — на огоҳинома, на паём.
+			if tag.RowsAffected() == 0 {
+				continue
+			}
+			// Мисли Instagram: даъват ҳамчун корти пост дар Direct ҳам
+			// меояд, бо тугмаҳои «Қабул / Рад».
+			sendShareDM(ctx, ownerID, id, "post", postID, postThumb(ctx, postID),
+				CollabInviteDMText)
 			// ⚠️ Пеш танҳо push мерафт — дар рӯйхати «Огоҳиномаҳо»
 			// даъват умуман намебаромад ва корбар онро намеёфт.
 			notify(id, ownerID, "collab_invite", postID)

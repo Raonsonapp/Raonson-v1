@@ -240,6 +240,14 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_collab_mention.py
 
+      # Бейҷи паёмҳои хонданашуда: хондан то паёми дидашуда (upTo),
+      # шумораи ҳар чат ва бейҷи умумӣ (бе дархост/хомӯш).
+      - name: Санҷиши ҳисоби паёмҳои хонданашуда
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_unread.py
+
       # «Навбати ту» (Add Yours): занҷир, мавзӯъ, иштирокчиён, блок.
       - name: Санҷиши «Навбати ту»
         env:

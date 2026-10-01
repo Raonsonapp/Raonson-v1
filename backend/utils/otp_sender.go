@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"errors"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -52,29 +52,189 @@ func SendEmailOTP(to, otp string) error {
 
 // SendEmailOTPContext — мисли SendEmailOTP, вале бо deadline-и додашуда.
 func SendEmailOTPContext(ctx context.Context, to, otp string) error {
-	subject := "Раонсон — рамзи барқарорсозӣ"
-	body := fmt.Sprintf(
+	_, err := SendEmailDetailed(ctx, to, otpSubject, otpBody(otp))
+	return err
+}
+
+const otpSubject = "Раонсон — рамзи барқарорсозӣ"
+
+func otpBody(otp string) string {
+	return fmt.Sprintf(
 		"Рамзи тасдиқи шумо: %s\n\nИн рамз 10 дақиқа эътибор дорад.\n"+
 			"Агар шумо дархост накарда бошед, ин паёмро нодида гиред.\n\n— Раонсон",
 		otp)
+}
 
-	// 1) Brevo HTTP API (тавсияшаванда барои Hugging Face)
-	if key := os.Getenv("BREVO_API_KEY"); key != "" {
-		return emailTimeoutErr(sendBrevo(ctx, key, to, subject, body))
+// ══════════════════════════════════════════════════════════════════
+//  Провайдерҳои почта
+//
+//  Hugging Face Spaces (ва бисёр хостингҳои ройгон) ҳамаи портҳои
+//  берунаи SMTP-ро (25/465/587) мебанданд: `dial tcp …:465: i/o
+//  timeout`. Барои ҳамин API-ҳои HTTPS (порти 443) ҲАМЕША аввал
+//  меоянд, вақте калидашон ҳаст; SMTP танҳо захира аст.
+// ══════════════════════════════════════════════════════════════════
+
+const (
+	EmailProviderBrevo  = "brevo"
+	EmailProviderResend = "resend"
+	EmailProviderSMTP   = "smtp"
+)
+
+// Суроғаҳо тағйирёбандаанд, то тестҳо сервери httptest гузоранд.
+var (
+	brevoAPIURL  = "https://api.brevo.com/v3/smtp/email"
+	resendAPIURL = "https://api.resend.com/emails"
+)
+
+// EmailAttempt — як кӯшиш: кадом провайдер ва (агар нашуд) чаро.
+// Error ҳеҷ гоҳ калид/паролро дар бар намегирад (ниг. redactSecrets).
+type EmailAttempt struct {
+	Provider string `json:"provider"`
+	OK       bool   `json:"ok"`
+	Error    string `json:"error,omitempty"`
+}
+
+// EmailResult — натиҷаи фиристодан: провайдере, ки кор кард (ё
+// охирин озмудашуда) ва ҳамаи кӯшишҳо бо тартиб.
+type EmailResult struct {
+	Provider string         `json:"provider"`
+	Attempts []EmailAttempt `json:"attempts"`
+}
+
+// brevoKey — калиди API-и Brevo.
+//
+// Агар BREVO_API_KEY набошад, вале дар SMTP_PASS калиди API-и Brevo
+// (xkeysib-…) гузошта шуда бошад, ҳамонро истифода мебарем: он бо
+// HTTPS кор мекунад, ҳатто вақте портҳои SMTP баста бошанд.
+func brevoKey() string {
+	if k := strings.TrimSpace(os.Getenv("BREVO_API_KEY")); k != "" {
+		return k
 	}
-	// 2) Fallback: SMTP (берун аз HF кор мекунад)
-	return emailTimeoutErr(sendSMTP(ctx, to, subject, body))
+	if p := strings.TrimSpace(os.Getenv("SMTP_PASS")); strings.HasPrefix(p, "xkeysib-") {
+		return p
+	}
+	return ""
+}
+
+func smtpConfigured() bool {
+	return os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != ""
+}
+
+// EmailProvidersConfigured — провайдерҳои танзимшуда бо ҳамон тартибе,
+// ки озмуда мешаванд. Танҳо номҳо — калидҳо ҳеҷ гоҳ.
+func EmailProvidersConfigured() []string {
+	var out []string
+	if brevoKey() != "" {
+		out = append(out, EmailProviderBrevo)
+	}
+	if strings.TrimSpace(os.Getenv("RESEND_API_KEY")) != "" {
+		out = append(out, EmailProviderResend)
+	}
+	if smtpConfigured() {
+		out = append(out, EmailProviderSMTP)
+	}
+	return out
+}
+
+// SendEmailDetailed почтаро мефиристад ва мегӯяд, ки кадом провайдер
+// озмуда шуд. Тартиб: Brevo (HTTPS) → Resend (HTTPS) → SMTP.
+func SendEmailDetailed(ctx context.Context, to, subject, body string) (EmailResult, error) {
+	var res EmailResult
+	providers := EmailProvidersConfigured()
+	if len(providers) == 0 {
+		return res, fmt.Errorf("почта танзим нашудааст: BREVO_API_KEY (тавсия), " +
+			"RESEND_API_KEY ё SMTP_USER/SMTP_PASS лозим аст")
+	}
+	var lastErr error
+	for _, p := range providers {
+		if ctx.Err() != nil && lastErr != nil {
+			break // буҷет тамом шуд
+		}
+		var err error
+		switch p {
+		case EmailProviderBrevo:
+			err = sendBrevo(ctx, brevoKey(), to, subject, body)
+		case EmailProviderResend:
+			err = sendResend(ctx, strings.TrimSpace(os.Getenv("RESEND_API_KEY")), to, subject, body)
+		case EmailProviderSMTP:
+			err = sendSMTP(ctx, to, subject, body)
+			if err != nil && smtpBlocked(err) && len(providers) == 1 {
+				err = fmt.Errorf("%w. %s", err, SMTPBlockedHint)
+			}
+		}
+		res.Provider = p
+		if err == nil {
+			res.Attempts = append(res.Attempts, EmailAttempt{Provider: p, OK: true})
+			return res, nil
+		}
+		err = errors.New(redactSecrets(emailTimeoutErr(err).Error()))
+		res.Attempts = append(res.Attempts, EmailAttempt{Provider: p, Error: err.Error()})
+		lastErr = err
+	}
+	if len(res.Attempts) == 1 {
+		return res, lastErr
+	}
+	parts := make([]string, 0, len(res.Attempts))
+	for _, a := range res.Attempts {
+		parts = append(parts, a.Provider+": "+a.Error)
+	}
+	return res, errors.New(strings.Join(parts, "; "))
+}
+
+// SMTPBlockedHint — ба admin мефаҳмонад, ки чӣ кор кунад.
+const SMTPBlockedHint = "Хостинг (масалан Hugging Face Spaces) портҳои SMTP-ро " +
+	"(25/465/587) мебандад, бинобар ин почта тавассути SMTP намеравад. " +
+	"Дар Secrets-и Space BREVO_API_KEY гузоред — калиди API аз Brevo → " +
+	"SMTP & API → API Keys (бо xkeysib- оғоз мешавад), НА пароли SMTP. " +
+	"Инчунин BREVO_SENDER = почтаи тасдиқшудаи фиристанда"
+
+// smtpBlocked — хато ба порти басташуда монанд аст (dial timeout,
+// пайваст рад шуд ё буҷет дар вақти dial тамом шуд).
+func smtpBlocked(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) || isNetTimeout(err) {
+		return true
+	}
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "i/o timeout") ||
+		strings.Contains(s, "connection refused") ||
+		strings.Contains(s, "network is unreachable") ||
+		strings.Contains(s, "deadline exceeded")
+}
+
+// redactSecrets ҳар калид/пароли маълумро аз матни хато пок мекунад.
+func redactSecrets(s string) string {
+	for _, k := range []string{"BREVO_API_KEY", "RESEND_API_KEY", "SMTP_PASS"} {
+		v := strings.TrimSpace(os.Getenv(k))
+		if len(v) < 4 {
+			continue
+		}
+		s = strings.ReplaceAll(s, v, "***")
+		if nv := strings.ReplaceAll(v, " ", ""); nv != v && len(nv) >= 4 {
+			s = strings.ReplaceAll(s, nv, "***")
+		}
+	}
+	return s
 }
 
 // Brevo — transactional email тавассути HTTPS.
 // env: BREVO_API_KEY, BREVO_SENDER (почтаи тасдиқшудаи фиристанда)
 func sendBrevo(ctx context.Context, apiKey, to, subject, text string) error {
+	if strings.HasPrefix(apiKey, "xsmtpsib-") {
+		return fmt.Errorf("brevo: BREVO_API_KEY калиди SMTP аст (xsmtpsib-…), на калиди API. " +
+			"Дар Brevo → SMTP & API → API Keys калиди нав (xkeysib-…) созед")
+	}
 	sender := os.Getenv("BREVO_SENDER")
+	if sender == "" {
+		sender = os.Getenv("SMTP_FROM")
+	}
 	if sender == "" {
 		sender = os.Getenv("SMTP_USER")
 	}
 	if sender == "" {
-		return fmt.Errorf("BREVO_SENDER not set")
+		return fmt.Errorf("brevo: BREVO_SENDER танзим нашудааст (почтаи тасдиқшудаи фиристанда)")
 	}
 	payload := map[string]interface{}{
 		"sender":      map[string]string{"email": sender, "name": "Raonson"},
@@ -83,24 +243,53 @@ func sendBrevo(ctx context.Context, apiKey, to, subject, text string) error {
 		"textContent": text,
 	}
 	jb, _ := json.Marshal(payload)
-	req, err := http.NewRequestWithContext(ctx, "POST",
-		"https://api.brevo.com/v3/smtp/email", bytes.NewReader(jb))
+	req, err := http.NewRequestWithContext(ctx, "POST", brevoAPIURL, bytes.NewReader(jb))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("api-key", apiKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("accept", "application/json")
+	return doEmailAPI(req, "brevo")
+}
+
+// Resend — https://resend.com (HTTPS). env: RESEND_API_KEY, RESEND_FROM.
+func sendResend(ctx context.Context, apiKey, to, subject, text string) error {
+	from := os.Getenv("RESEND_FROM")
+	if from == "" {
+		from = "onboarding@resend.dev"
+	}
+	if !strings.Contains(from, "<") {
+		from = "Raonson <" + from + ">"
+	}
+	jb, _ := json.Marshal(map[string]interface{}{
+		"from": from, "to": []string{to}, "subject": subject, "text": text,
+	})
+	req, err := http.NewRequestWithContext(ctx, "POST", resendAPIURL, bytes.NewReader(jb))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	return doEmailAPI(req, "resend")
+}
+
+func doEmailAPI(req *http.Request, name string) error {
 	// Timeout аз ctx меояд; Client.Timeout танҳо ҳимояи иловагист.
 	client := &http.Client{Timeout: EmailTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("brevo: %w", err)
+		return fmt.Errorf("%s: %w", name, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		b, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("brevo %d: %s", resp.StatusCode, string(b))
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		msg := strings.TrimSpace(string(b))
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			return fmt.Errorf("%s %d: калиди API нодуруст ё ғайрифаъол аст (%s)",
+				name, resp.StatusCode, msg)
+		}
+		return fmt.Errorf("%s %d: %s", name, resp.StatusCode, msg)
 	}
 	return nil
 }
@@ -319,10 +508,10 @@ func telegramGatewaySend(token, phone, otp string) error {
 
 func telegramProxySend(proxyURL, secret, phone, otp string) error {
 	payload := map[string]interface{}{
-		"phone_number":  phone,
-		"code":          otp,
-		"ttl":           300,
-		"relay_secret":  secret,
+		"phone_number": phone,
+		"code":         otp,
+		"ttl":          300,
+		"relay_secret": secret,
 	}
 	jb, _ := json.Marshal(payload)
 	req, err := http.NewRequest("POST", proxyURL, bytes.NewReader(jb))
@@ -429,8 +618,7 @@ func OTPChannelsReady() map[string]bool {
 		"sms":      twilio && os.Getenv("TWILIO_FROM") != "",
 		"whatsapp": twilio && os.Getenv("TWILIO_WA_FROM") != "",
 		"telegram": os.Getenv("TELEGRAM_GATEWAY_TOKEN") != "",
-		"email": os.Getenv("BREVO_API_KEY") != "" ||
-			(os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != ""),
+		"email":    len(EmailProvidersConfigured()) > 0,
 	}
 }
 

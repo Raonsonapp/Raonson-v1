@@ -419,6 +419,7 @@ func main() {
 	{
 		st.GET("/",            cache3s, handlers.GetStories)
 		st.GET("/my",          handlers.GetMyStories)
+		st.GET("/:id",         handlers.GetStoryByID) // корти сторис дар чат
 		st.POST("/",           handlers.CreateStory)
 		st.DELETE("/:id",      handlers.DeleteStory)
 		st.POST("/:id/view",   handlers.ViewStory)
@@ -447,6 +448,7 @@ func main() {
 	{
 		ch.GET("/",                  handlers.GetChats)
 		ch.GET("/with/:userId",      handlers.GetOrCreateChat)
+		ch.GET("/unread-count",      handlers.GetChatUnreadTotal) // бейҷи навбари поён
 		ch.GET("/:chatId/messages",  handlers.GetMessages)
 		ch.POST("/:chatId/messages", handlers.SendMessageExt)
 		ch.POST("/:chatId/read",     handlers.MarkChatRead)

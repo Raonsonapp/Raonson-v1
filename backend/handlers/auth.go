@@ -375,16 +375,32 @@ func AdminTestEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Аккаунти шумо почта надорад"})
 		return
 	}
-	cfg := os.Getenv("BREVO_API_KEY") != "" ||
-		(os.Getenv("SMTP_USER") != "" && os.Getenv("SMTP_PASS") != "")
-	if err := utils.SendEmailOTP(email, "123456"); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"sent": false, "to": email, "configured": cfg,
-			"error": err.Error(),
-		})
-		return
+	// Танҳо НОМИ провайдерҳо бармегардад — калид/парол ҳеҷ гоҳ.
+	providers := utils.EmailProvidersConfigured()
+	if providers == nil {
+		providers = []string{}
 	}
-	c.JSON(http.StatusOK, gin.H{"sent": true, "to": email, "configured": cfg})
+	ctx, cancel := context.WithTimeout(c.Request.Context(), utils.EmailTimeout)
+	defer cancel()
+	res, err := utils.SendEmailDetailed(ctx, email,
+		"Раонсон — санҷиши почта", "Ин паёми санҷишӣ аз панели admin аст.\n\n— Раонсон")
+	attempts := res.Attempts
+	if attempts == nil {
+		attempts = []utils.EmailAttempt{}
+	}
+	out := gin.H{
+		"sent": err == nil, "to": email, "configured": len(providers) > 0,
+		"providers": providers, "provider": res.Provider, "attempts": attempts,
+	}
+	if err != nil {
+		out["error"] = err.Error()
+		// Танҳо SMTP ва он баста аст → маслиҳати аниқ (Brevo API).
+		if res.Provider == utils.EmailProviderSMTP && len(providers) == 1 {
+			out["hint"] = utils.SMTPBlockedHint
+		}
+		log.Printf("[AdminTestEmail] provider=%s failed", res.Provider)
+	}
+	c.JSON(http.StatusOK, out)
 }
 
 // POST /auth/reset-password
