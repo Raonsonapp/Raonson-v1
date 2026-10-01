@@ -1413,7 +1413,56 @@ class AboutScreen extends StatelessWidget {
             child: Text('Версия $_version',
                 style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 6),
+          Center(
+            child: Text('Real Aura Of New Social Online Network',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.neonBlue, fontSize: 12.5,
+                    fontWeight: FontWeight.w600, letterSpacing: 0.4)),
+          ),
+          const SizedBox(height: 22),
+
+          // ── Номи пурра ва маънои ҳар ҳарф (аз баннери расмӣ) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset('assets/about_banner.jpg',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+            ),
+          ),
+          const SizedBox(height: 22),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text('Фазои воқеии як шабакаи иҷтимоии нави онлайн.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 17,
+                    fontWeight: FontWeight.w700, height: 1.35)),
+          ),
+          const SizedBox(height: 16),
+          const _AcronymGrid(),
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(children: const [
+              _AboutValue(icon: AppIcons.group_add_outlined, title: 'Пайваст шав',
+                  text: 'Бо дӯстон аз тамоми ҷаҳон'),
+              _AboutValue(icon: AppIcons.chat_bubble_outline, title: 'Муошират кун',
+                  text: 'Паёмҳои фаврӣ, овоз ва видео'),
+              _AboutValue(icon: AppIcons.smart_display_outlined, title: 'Илҳом бигир',
+                  text: 'Постҳо, наворҳо ва лаҳзаҳои зебо'),
+              _AboutValue(icon: AppIcons.privacy_tip_outlined, title: 'Амният',
+                  text: 'Ҳифзи махфият ва бехатарӣ'),
+            ]),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Text('Одамонро наздиктар месозем ♡',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 15,
+                    fontStyle: FontStyle.italic)),
+          ),
+          const SizedBox(height: 22),
 
           _AboutRow(
               icon: AppIcons.calendar_today_rounded,
@@ -1436,8 +1485,9 @@ class AboutScreen extends StatelessWidget {
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 24),
             child: Text(
-              'Raonson — шабакаи иҷтимоии тоҷикӣ барои мубодилаи аксҳо, '
-              'видеоҳо, стори ва паёмҳо. Бо муҳаббат дар Тоҷикистон сохта шудааст.',
+              'Raonson (Real Aura Of New Social Online Network) — шабакаи '
+              'иҷтимоии тоҷикӣ барои мубодилаи аксҳо, видеоҳо, стори ва '
+              'паёмҳо. Бо муҳаббат дар Тоҷикистон сохта шудааст.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textTertiary, fontSize: 13, height: 1.5),
             ),
@@ -1462,6 +1512,92 @@ class AboutScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// R-A-O-N-S-O-N: ҳар ҳарф — калимаи англисӣ ва маънои тоҷикӣ.
+class _AcronymGrid extends StatelessWidget {
+  const _AcronymGrid();
+
+  static const _letters = [
+    ('R', 'Real', 'Воқеӣ (ҳақиқӣ)'),
+    ('A', 'Aura', 'Фазо / ҳисси махсус'),
+    ('O', 'Of', 'Аз'),
+    ('N', 'New', 'Нав'),
+    ('S', 'Social', 'Иҷтимоӣ'),
+    ('O', 'Online', 'Онлайн'),
+    ('N', 'Network', 'Шабака'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var i = 0; i < _letters.length; i++)
+            Container(
+              width: 92,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.neonBlue.withOpacity(0.25)),
+              ),
+              child: Column(children: [
+                Text(_letters[i].$1,
+                    style: TextStyle(
+                        fontSize: 26, fontWeight: FontWeight.w800,
+                        color: i.isEven
+                            ? AppColors.neonBlue
+                            : const Color(0xFF00E87A))),
+                Text(_letters[i].$2,
+                    style: TextStyle(color: AppColors.textPrimary,
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(_letters[i].$3,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textTertiary, fontSize: 11)),
+              ]),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutValue extends StatelessWidget {
+  final IconData icon;
+  final String title, text;
+  const _AboutValue({required this.icon, required this.title, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Container(
+          width: 38, height: 38,
+          decoration: BoxDecoration(
+            color: AppColors.neonBlue.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.neonBlue, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(color: AppColors.textPrimary,
+                fontSize: 14, fontWeight: FontWeight.w700)),
+            Text(text, style: TextStyle(color: AppColors.textTertiary, fontSize: 12.5)),
+          ],
+        )),
+      ]),
     );
   }
 }

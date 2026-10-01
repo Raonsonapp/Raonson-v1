@@ -115,6 +115,7 @@ flutter:
 
   assets:
     - assets/icon.png
+    - assets/about_banner.jpg  # «Дар бораи барнома»: номи пурра ва маъно
     - assets/qr_logo.png   # логотипи мудаввар барои маркази QR (аз icon.png)
     - assets/icons/
     # Оҳанги занг, «туут»-и зангзананда ва садои пайвастшавӣ (худсохт).
