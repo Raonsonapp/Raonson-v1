@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:raonson/core/content_sync.dart';
+import 'package:raonson/chat/inbox/chat_list_screen.dart';
 import 'package:raonson/chat/room/message_bubble.dart';
 import 'package:raonson/core/analytics/analytics_service.dart';
 import 'package:raonson/feed/comments/comments_screen.dart';
@@ -15,6 +16,7 @@ import 'package:raonson/models/user_model.dart';
 import 'package:raonson/models/notification_model.dart';
 import 'package:raonson/notifications/notification_item.dart';
 import 'package:raonson/profile/profile_screen.dart';
+import 'package:raonson/settings/settings_screen.dart';
 import 'package:raonson/models/post_model.dart';
 import 'package:raonson/models/reel_model.dart';
 import 'package:raonson/reels/player/reel_controls.dart';
@@ -50,10 +52,27 @@ PostModel _longPost() => PostModel.fromJson({
       },
     });
 
+/// Хатоҳои рендер бо ҷойи Row/Column дар код — то дар ҳисобот маълум
+/// бошад, КАДОМ сатр аз экран берун баромад. [stopCapture] ҳатман пеш
+/// аз `expect` даъват мешавад (flutter_test инро талаб мекунад).
+late List<String> Function() stopCapture;
+
 Future<void> _narrow(WidgetTester t) async {
   t.view.physicalSize = const Size(320 * 3, 640 * 3);
   t.view.devicePixelRatio = 3;
   addTearDown(t.view.reset);
+  final errors = <String>[];
+  final old = FlutterError.onError;
+  FlutterError.onError = (d) {
+    final where = RegExp(r'(Row|Column|Flex):file://\S*/(lib/\S+)')
+        .firstMatch(d.toString());
+    errors.add('${d.exceptionAsString().split('\n').first} '
+        '${where == null ? '' : '@ ${where.group(2)}'}');
+  };
+  stopCapture = () {
+    FlutterError.onError = old;
+    return errors;
+  };
 }
 
 Widget _scaled(Widget child) => MaterialApp(
@@ -75,7 +94,7 @@ void main() {
     await t.pumpWidget(_scaled(
         PostDetailScreen(posts: [_longPost()], initialIndex: 0)));
     await t.pump(const Duration(milliseconds: 300));
-    expect(t.takeException(), isNull);
+    expect(stopCapture(), isEmpty);
     // VisibilityDetector таймер мегузорад — дарахтро мепӯшонем.
     await t.pumpWidget(const SizedBox());
     await t.pump(const Duration(seconds: 1));
@@ -90,7 +109,7 @@ void main() {
             child: const Text('buy')))))));
     await t.tap(find.text('buy'));
     await t.pumpAndSettle();
-    expect(t.takeException(), isNull);
+    expect(stopCapture(), isEmpty);
   });
 
   testWidgets('огоҳиномаҳо (ҳар навъ) дар 320dp бо ҳарфи 1.3× — бе overflow',
@@ -116,7 +135,7 @@ void main() {
         ),
     ]))));
     await t.pump(const Duration(milliseconds: 300));
-    expect(t.takeException(), isNull);
+    expect(stopCapture(), isEmpty);
   });
 
   testWidgets('тугмаҳои Reels дар 320dp бо ҳарфи 1.3× — бе overflow',
@@ -141,7 +160,7 @@ void main() {
           ReelControls(reel: reel, isPlaying: true),
         ]))));
     await t.pump(const Duration(milliseconds: 300));
-    expect(t.takeException(), isNull);
+    expect(stopCapture(), isEmpty);
   });
 
   const longName = 'username_bisyor_daroz_baroi_sanjish_xxxxxxxxxx';
@@ -161,7 +180,7 @@ void main() {
     await t.pumpWidget(_scaled(Scaffold(body: SafeArea(
         child: CommentsScreen(post: _longPost(), comments: comments)))));
     await t.pump(const Duration(milliseconds: 500));
-    expect(t.takeException(), isNull);
+    expect(stopCapture(), isEmpty);
   });
 
   testWidgets('паёмҳои чат дар 320dp бо ҳарфи 1.3× — бе overflow', (t) async {
@@ -185,7 +204,7 @@ void main() {
           text: '38.5598,68.7870')),
     ]))));
     await t.pump(const Duration(milliseconds: 300));
-    expect(t.takeException(), isNull);
+    expect(stopCapture(), isEmpty);
   });
 
   testWidgets('профили бегона (номи дароз, био, линк) дар 320dp — бе overflow',
@@ -216,9 +235,55 @@ void main() {
       await t.pump(const Duration(milliseconds: 300));
     }
     expect(find.text(longName), findsWidgets);
-    expect(t.takeException(), isNull);
+    expect(stopCapture(), isEmpty);
     await t.pumpWidget(const SizedBox());
     await t.pump(const Duration(seconds: 2));
     AnalyticsService.instance.resetForTest(); // таймери 10-сонияи бастаи рӯйдодҳо
+  });
+
+  testWidgets('рӯйхати чатҳо дар 320dp бо ҳарфи 1.3× — бе overflow',
+      (t) async {
+    await _narrow(t);
+    final now = DateTime.now();
+    SharedPreferences.setMockInitialValues({
+      'chat_inbox_cache': jsonEncode({
+        'time': now.millisecondsSinceEpoch,
+        'data': [
+          for (var i = 0; i < 4; i++) {
+            '_id': 'm$i', 'chatId': 'c$i',
+            'text': 'Паёми охирини хеле дароз ' * 6,
+            'createdAt': now.subtract(Duration(days: i * 3)).toIso8601String(),
+            'isMine': i.isOdd, 'unreadCount': i * 37, 'muted': i == 2,
+            'pinned': i == 1, 'type': i == 3 ? 'audio' : 'text',
+            'peer': {'_id': 'p$i', 'username': longName, 'avatar': '',
+                     'verified': true, 'fullName': 'Ном ' * 10},
+          },
+        ],
+      }),
+    });
+    await t.pumpWidget(_scaled(const Scaffold(body: ChatListScreen())));
+    for (var i = 0; i < 5; i++) {
+      await t.pump(const Duration(milliseconds: 300));
+    }
+    expect(find.text(longName), findsWidgets);
+    expect(stopCapture(), isEmpty);
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 2));
+    AnalyticsService.instance.resetForTest();
+  });
+
+  testWidgets('танзимот дар 320dp бо ҳарфи 1.3× — бе overflow', (t) async {
+    await _narrow(t);
+    await t.pumpWidget(_scaled(const SettingsScreen()));
+    await t.pump(const Duration(milliseconds: 500));
+    // То поён ғелонда мешавад — ҳамаи бахшҳо сохта шаванд.
+    for (var i = 0; i < 12; i++) {
+      await t.drag(find.byType(Scrollable).first, const Offset(0, -500));
+      await t.pump(const Duration(milliseconds: 100));
+    }
+    expect(stopCapture(), isEmpty);
+    await t.pumpWidget(const SizedBox());
+    await t.pump(const Duration(seconds: 2));
+    AnalyticsService.instance.resetForTest();
   });
 }

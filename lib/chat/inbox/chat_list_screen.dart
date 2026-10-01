@@ -433,7 +433,11 @@ class _TabBar extends StatelessWidget {
     final ctrl = context.watch<ChatListController>();
     const tabs = [ChatTab.primary, ChatTab.general, ChatTab.requests];
     final labels = [tr('tab.primary'), tr('tab.general'), tr('tab.requests')];
-    return Row(
+    // Ғелонандаи уфуқӣ: се таб + шумораи дархостҳо бо ҳарфи калон дар
+    // экрани 320dp ба як сатр намегунҷиданд (RenderFlex overflow).
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
       children: List.generate(tabs.length, (i) {
         final tab      = tabs[i];
         final selected = ctrl.tab == tab;
@@ -480,7 +484,7 @@ class _TabBar extends StatelessWidget {
           ),
         );
       }),
-    );
+    ));
   }
 }
 
