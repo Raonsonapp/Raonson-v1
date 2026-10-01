@@ -314,8 +314,9 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
 
   Future<void> _load() async {
     try {
-      final res =
-          await ApiClient.instance.get('/reels/${widget.reelId}/comments');
+      // Сервер пешфарз 20 шарҳ медиҳад; ин варақа саҳифабандӣ надорад.
+      final res = await ApiClient.instance.get(
+          '/reels/${widget.reelId}/comments', query: const {'limit': '100'});
       if (!mounted) return;
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -336,10 +337,11 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
     _ctrl.clear();
-    setState(() => _comments.insert(0, {
-          'text': text,
-          'user': {'username': 'шумо'},
-        }));
+    final optimistic = <String, dynamic>{
+      'text': text,
+      'user': {'username': 'шумо'},
+    };
+    setState(() => _comments.insert(0, optimistic));
     widget.onAdded(1);
     var ok = false;
     try {
@@ -347,7 +349,15 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
           .post('/reels/${widget.reelId}/comments', body: {'text': text});
       ok = res.statusCode < 400;
     } catch (_) {}
-    if (!ok) widget.onAdded(-1); // сервер нагирифт — рақам бармегардад
+    if (!ok) {
+      widget.onAdded(-1); // сервер нагирифт — рақам бармегардад
+      // Шарҳи нафиристода дар рӯйхат намемонад; матн барои такрор бармегардад.
+      if (!mounted) return;
+      setState(() => _comments.remove(optimistic));
+      _ctrl.text = text;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('common.failedRetry'))));
+    }
   }
 
   @override

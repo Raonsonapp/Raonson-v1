@@ -2647,7 +2647,10 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
 
   Future<void> _load() async {
     try {
-      final res = await ApiClient.instance.get('$_base/${widget.id}/comments');
+      // Сервер пешфарз 20 шарҳ медиҳад — ин варақа саҳифабандӣ надорад,
+      // пас ҳадди сервер (100) пурсида мешавад.
+      final res = await ApiClient.instance.get('$_base/${widget.id}/comments',
+          query: const {'limit': '100'});
       if (!mounted) return;
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -2666,10 +2669,11 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
     _ctrl.clear();
-    setState(() => _comments.insert(0, {
-          'text': text,
-          'user': {'username': UserSession.username ?? 'шумо'},
-        }));
+    final optimistic = <String, dynamic>{
+      'text': text,
+      'user': {'username': UserSession.username ?? 'шумо'},
+    };
+    setState(() => _comments.insert(0, optimistic));
     widget.onAdded();
     var ok = false;
     try {
@@ -2678,7 +2682,15 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
       ok = res.statusCode < 400;
     } catch (_) {}
     // Сервер нагирифт — рақами шарҳҳо дар ҳамаи экранҳо бармегардад.
-    if (!ok) ContentSync.instance.bumpComments(widget.id, -1);
+    if (!ok) {
+      ContentSync.instance.bumpComments(widget.id, -1);
+      // Пеш шарҳи нафиристода дар рӯйхат мемонд, гӯё нашр шуда бошад.
+      if (!mounted) return;
+      setState(() => _comments.remove(optimistic));
+      _ctrl.text = text;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('common.failedRetry'))));
+    }
   }
 
   @override

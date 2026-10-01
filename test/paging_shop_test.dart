@@ -236,6 +236,17 @@ void main() {
       expect(src, contains("_abortStart(joined: true);\n      _id = '';"));
     });
 
+    test('шарҳи нафиристода дар варақаҳои Reels/Explore намемонад', () {
+      for (final f in [
+        'lib/reels/player/reel_controls.dart',
+        'lib/search/search_screen.dart',
+      ]) {
+        final src = _read(f);
+        expect(src, contains('_comments.remove(optimistic)'), reason: f);
+        expect(src, contains("'limit': '100'"), reason: f);
+      }
+    });
+
     test('«Ҷолиб нест» дар сервер ҳам бекор мешавад', () {
       expect(_read('lib/feed/post/post_card.dart'),
           contains(".delete('/posts/\${widget.post.id}/not-interested')"));
