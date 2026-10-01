@@ -106,9 +106,15 @@ class _PostCardState extends State<PostCard>
   /// намемонад.
   bool get _audioOn =>
       _onScreen &&
-      widget.isActive &&
+      _hasFocus &&
       FeedAudio.instance.foreground.value &&
       FeedAudio.instance.isOwner(widget.post.id);
+
+  /// Лента кушода аст ВА саҳифаи ин пост дар боло аст — на зери
+  /// стори ё reel-и пурра (ниг. [FeedAudio.hasFocus]).
+  bool get _hasFocus =>
+      widget.isActive &&
+      FeedAudio.instance.hasFocus(ModalRoute.of(context));
 
   void _onAudioChanged() {
     if (mounted) setState(() {});
@@ -184,6 +190,7 @@ class _PostCardState extends State<PostCard>
     FeedAudio.instance.owner.addListener(_onAudioChanged);
     FeedAudio.instance.muted.addListener(_onAudioChanged);
     FeedAudio.instance.foreground.addListener(_onAudioChanged);
+    FeedAudio.instance.focusRoute.addListener(_onAudioChanged);
 
     // Зарбаи фаврӣ, баъд каме "фурӯ" ва нишастани фаврӣ — ҳисси
     // тугмаи дили Instagram. Пештар танҳо як scale-и ҳамвор буд.
@@ -319,6 +326,7 @@ class _PostCardState extends State<PostCard>
     FeedAudio.instance.owner.removeListener(_onAudioChanged);
     FeedAudio.instance.muted.removeListener(_onAudioChanged);
     FeedAudio.instance.foreground.removeListener(_onAudioChanged);
+    FeedAudio.instance.focusRoute.removeListener(_onAudioChanged);
     // Корт нест шуд (пост ҳазф шуд, ё рӯйхат аз нав сохта шуд) —
     // садо бояд бо он равад, вагарна суруд бе пост мехонад.
     FeedAudio.instance.release(widget.post.id);
@@ -1564,7 +1572,7 @@ class _PostCardState extends State<PostCard>
               setState(() => _showHeart = true);
               _heartCtrl.forward(from: 0);
             },
-            child: MediaCarousel(media: post.media, isActive: widget.isActive),
+            child: MediaCarousel(media: post.media, isActive: _hasFocus),
           ),
 
           // ── Нишони одамони зикршуда ─────────────────────────

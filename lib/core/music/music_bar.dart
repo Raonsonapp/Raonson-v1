@@ -172,7 +172,10 @@ class _MusicBarState extends State<MusicBar> {
     super.dispose();
   }
 
-  Future<void> _start() async {
+  /// [manual] — корбар худаш play зад; вагарна оғози худкор аст ва
+  /// агар дар вақти боршавӣ фармон иваз шуд (стори кушода шуд, таб
+  /// иваз шуд), суруд набояд баъди боршавӣ ногаҳон сар шавад.
+  Future<void> _start({bool manual = false}) async {
     if (_loading) return;
     setState(() => _loading = true);
 
@@ -211,6 +214,10 @@ class _MusicBarState extends State<MusicBar> {
       await p.setReleaseMode(ReleaseMode.loop);
       await p.setSource(UrlSource(_song.previewUrl));
       await p.seek(Duration(milliseconds: startAt));
+      if (!mounted || (!manual && !_shouldPlay)) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
       await p.resume();
     } catch (e) {
       debugPrint('[MusicBar] $e');
@@ -226,7 +233,7 @@ class _MusicBarState extends State<MusicBar> {
     } else if (_player != null) {
       await _player!.resume();
     } else {
-      await _start();
+      await _start(manual: true);
     }
   }
 

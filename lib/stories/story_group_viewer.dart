@@ -30,6 +30,7 @@ import '../chat/share/share_to_chat_row.dart';
 import '../core/services/media_saver.dart';
 import '../core/utils/time_ago.dart';
 import 'story_sticker.dart';
+import 'story_viewers_cache.dart';
 import 'add_yours.dart';
 import '../create/create_story/create_story_screen.dart';
 import '../core/ui/r_icon.dart';
@@ -192,6 +193,12 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
   void initState() {
     super.initState();
     _progressCtrl = AnimationController(vsync: this);
+    // Стори-ҳои худам: «Кӣ дид»-и ҲАМАашон фавран пешакӣ гирифта
+    // мешавад — аватарҳо дар поён-чап бе таъхир пайдо мешаванд.
+    if (_isOwner) {
+      StoryViewersCache.instance
+          .prefetch(widget.stories.map((s) => s.id).where((id) => id.isNotEmpty));
+    }
     _loadStory();
     _markViewed();
   }
@@ -212,6 +219,7 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     _videoFailed = false;
     _liked = _current.isLiked;
     _poll  = _current.poll;
+    if (_isOwner) _loadViewerPreview();
 
     if (_isVideo) {
       _initVideo();
@@ -360,26 +368,24 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     try {
       await ApiClient.instance.post('/stories/${_current.id}/view');
     } catch (_) {}
-    if (_isOwner) _loadViewerPreview();
   }
 
   // Пешнамоиши бинандагон (то 3 аватар + шумора) барои тугмаи «Амалҳо».
-  Future<void> _loadViewerPreview() async {
-    setState(() { _viewerAvatars = []; _viewerCount = 0; });
-    try {
-      final res = await ApiClient.instance.get('/stories/${_current.id}/viewers');
-      if (res.statusCode >= 400 || !mounted) return;
-      final b = jsonDecode(res.body) as Map<String, dynamic>;
-      final viewers = (b['viewers'] as List?) ?? [];
-      setState(() {
-        _viewerCount = (b['viewsCount'] as num?)?.toInt() ?? viewers.length;
-        _viewerAvatars = viewers
-            .take(3)
-            .map((v) => (v['avatar'] ?? '').toString())
-            .where((s) => s.isNotEmpty)
-            .toList();
-      });
-    } catch (_) {}
+  // Кэш фавран нишон дода мешавад; навсозӣ дар замина. Ҷавоби дер барои
+  // стори-и пешина (корбар аллакай гузашт) нодида гирифта мешавад.
+  void _loadViewerPreview() {
+    final id = _current.id;
+    _applyViewerPreview(
+        StoryViewersCache.instance.preview(id) ?? StoryViewerPreview.empty);
+    StoryViewersCache.instance.refresh(id).then((b) {
+      if (!mounted || b == null || _current.id != id) return;
+      setState(() => _applyViewerPreview(StoryViewerPreview.fromBody(b)));
+    });
+  }
+
+  void _applyViewerPreview(StoryViewerPreview p) {
+    _viewerCount = p.count;
+    _viewerAvatars = p.avatars;
   }
 
   // ── Owner menu — ТОҶИКӢ ─────────────────────────────────────────
@@ -1423,37 +1429,36 @@ class _StoryInsightsSheetState extends State<StoryInsightsSheet> {
   @override
   void initState() {
     super.initState();
+    // Аз кэш — фавран (viewer онро пешакӣ гирифта буд), баъд навсозӣ.
+    final cached = StoryViewersCache.instance.body(widget.storyId);
+    if (cached != null) _apply(cached);
     _fetch();
   }
 
   Future<void> _fetch() async {
-    try {
-      final resp =
-          await ApiClient.instance.get('/stories/${widget.storyId}/viewers');
-      if (!mounted) return;
-      if (resp.statusCode >= 400) {
-        setState(() => _loading = false);
-        return;
-      }
-      final body = jsonDecode(resp.body) as Map<String, dynamic>;
-      final list = (body['viewers'] as List? ?? [])
-          .map((v) => v as Map<String, dynamic>)
-          .toList();
-      setState(() {
-        _viewers = list;
-        _views = (body['viewsCount'] as num?)?.toInt() ?? list.length;
-        _likes = (body['likesCount'] as num?)?.toInt() ?? 0;
-        _replies = (body['repliesCount'] as num?)?.toInt() ?? 0;
-        _interactions = (body['interactions'] as num?)?.toInt() ??
-            (_likes + _replies);
-        _folViewed = (body['followersViewed'] as num?)?.toInt() ?? 0;
-        _folTotal  = (body['followersTotal']  as num?)?.toInt() ?? 0;
-        _nonFol    = (body['nonFollowers']     as num?)?.toInt() ?? 0;
-        _loading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
+    final body = await StoryViewersCache.instance.refresh(widget.storyId);
+    if (!mounted) return;
+    setState(() {
+      if (body != null) _apply(body);
+      _loading = false;
+    });
+  }
+
+  void _apply(Map<String, dynamic> body) {
+    final list = (body['viewers'] as List? ?? [])
+        .whereType<Map>()
+        .map((v) => Map<String, dynamic>.from(v))
+        .toList();
+    _viewers = list;
+    _views = (body['viewsCount'] as num?)?.toInt() ?? list.length;
+    _likes = (body['likesCount'] as num?)?.toInt() ?? 0;
+    _replies = (body['repliesCount'] as num?)?.toInt() ?? 0;
+    _interactions = (body['interactions'] as num?)?.toInt() ??
+        (_likes + _replies);
+    _folViewed = (body['followersViewed'] as num?)?.toInt() ?? 0;
+    _folTotal  = (body['followersTotal']  as num?)?.toInt() ?? 0;
+    _nonFol    = (body['nonFollowers']     as num?)?.toInt() ?? 0;
+    _loading = false;
   }
 
   @override

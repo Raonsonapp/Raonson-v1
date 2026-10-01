@@ -17,6 +17,7 @@ import '../../core/music/song_info.dart';
 import '../../core/ui/app_icons.dart';
 import '../../ai/ai_tools.dart';
 import '../../core/i18n/strings.dart';
+import '../../widgets/mention_suggestions.dart';
 import '../auto_dm_sheet.dart';
 
 // ─────────────────────────────────────────────
@@ -641,30 +642,46 @@ class _PostEditorState extends State<_PostEditor> {
 
   void _showMentionDialog() {
     final ctrl = TextEditingController(text: '@');
+    // Стикери зикр — бо номи ДАҚИҚ (аз пешниҳод ё навиштаи корбар).
+    void addMention(BuildContext dlg, String raw) {
+      final u = raw.replaceAll('@', '').trim();
+      if (u.isNotEmpty) {
+        setState(() => _mentions.add(_MentionItem(
+          username: '@$u',
+          position: Offset(MediaQuery.of(context).size.width / 2 - 60,
+            MediaQuery.of(context).size.height / 2))));
+      }
+      Navigator.pop(dlg);
+    }
     showDialog(context: context, barrierColor: Colors.black87,
-      builder: (_) => AlertDialog(
+      builder: (dlg) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C1E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(tr('ui.db62ebe335'), style: TextStyle(color: Colors.white)),
-        content: TextField(controller: ctrl, autofocus: true,
-          style: const TextStyle(color: Colors.white, fontSize: 18),
-          decoration: const InputDecoration(hintText: '@username',
-            hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: ctrl, autofocus: true,
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+              decoration: const InputDecoration(hintText: '@username',
+                hintStyle: TextStyle(color: Colors.white38), border: InputBorder.none),
+              onSubmitted: (v) => addMention(dlg, v)),
+            // «@eh» → рӯйхати зиндаи корбарон; зарба → стикер бо ҳамон ном.
+            MentionSuggestions(
+              controller: ctrl,
+              wholeField: true,
+              onPick: (u) => addMention(dlg, u.username)),
+          ]),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
+          TextButton(onPressed: () => Navigator.pop(dlg),
             child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            onPressed: () {
-              final u = ctrl.text.trim();
-              if (u.isNotEmpty && u != '@') { setState(() => _mentions.add(_MentionItem(
-                username: u,
-                position: Offset(MediaQuery.of(context).size.width / 2 - 60,
-                  MediaQuery.of(context).size.height / 2)))); }
-              Navigator.pop(context);
-            },
+            onPressed: () => addMention(dlg, ctrl.text),
             child: Text(tr('ui.d4a317a798'), style: TextStyle(color: Colors.black))),
-        ]));
+        ]),
+    );
   }
 
   void _showStickerPanel() {
@@ -851,6 +868,8 @@ class _PostEditorState extends State<_PostEditor> {
                       counterStyle: TextStyle(color: Colors.white24)),
                     onSubmitted: (_) => setState(() => _showCaption = false),
                   ),
+                  // «@eh» дар тавсиф → пешниҳоди корбарон (мисли Instagram).
+                  MentionSuggestions(controller: _captionCtrl),
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(

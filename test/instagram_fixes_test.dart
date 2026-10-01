@@ -107,8 +107,13 @@ void main() {
     test('садо дар замина ва дар таби дигар бас мешавад', () {
       final i = card.indexOf('bool get _audioOn');
       final body = card.substring(i, i + 260);
-      expect(body, contains('widget.isActive'));
+      expect(body, contains('_hasFocus'));
       expect(body, contains('foreground.value'));
+      // Таб ва саҳифаи болоӣ (стори/reel-и пурра → музикаи лента хомӯш).
+      final j = card.indexOf('bool get _hasFocus');
+      final focus = card.substring(j, j + 160);
+      expect(focus, contains('widget.isActive'));
+      expect(focus, contains('FeedAudio.instance.hasFocus(ModalRoute.of(context))'));
     });
 
     test('корт ҳангоми нест шудан садоро озод мекунад', () {
@@ -146,7 +151,8 @@ void main() {
     setUpAll(() => reels = _read('lib/reels/reels_feed/reels_screen.dart'));
 
     test('як зарба — садо, на истодан', () {
-      expect(reels, contains('onTap: _paused ? _togglePause : _tapToggleMute'));
+      expect(reels, contains('onTap: _tapToggleMute,'));
+      expect(reels, contains('onResume: _togglePause,'));
     });
 
     test('пахш карда нигоҳ доштан — истодан (миёна) / 2x (канор)', () {
@@ -160,12 +166,17 @@ void main() {
       expect(g, contains('c.setPlaybackSpeed(1.0)'));
     });
 
-    test('тугмаи намоёни ист/бозӣ', () {
-      expect(reels, contains('ReelPlayPauseButton(paused: _paused, onTap: _togglePause)'));
+    test('дар сутуни рост тугмаи ист/бозӣ нест', () {
+      expect(reels, isNot(contains('ReelPlayPauseButton')));
+      expect(_read('lib/search/search_screen.dart'),
+          isNot(contains('ReelPlayPauseButton')));
+      expect(_read('lib/reels/player/reel_player.dart'),
+          isNot(contains('ReelPlayPauseButton')));
     });
 
     test('таймери нишони садо озод мешавад', () {
-      expect(reels, contains('_flashTimer?.cancel();\n    _sendWatchTime();'));
+      final g = _read('lib/reels/player/reel_gestures.dart');
+      expect(g, contains('_flashTimer?.cancel();\n    super.dispose();'));
     });
   });
 

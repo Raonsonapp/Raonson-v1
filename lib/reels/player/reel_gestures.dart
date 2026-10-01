@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
@@ -12,21 +14,36 @@ import '../../core/ui/app_icons.dart';
 //   пахш-нигоҳ дар КАНОР (20%-и    → суръати 2x бо нишони «2x ▶▶»;
 //   чап ё рост)                      бардоштан → боз 1x
 //
-// Истодани доимӣ — бо тугмаи намоёни ▶/❚❚ ([ReelPlayPauseButton]) дар
-// сутуни рост. Зарба ба садо мемонад, чунки корбарони Instagram ба ҳамин
-// одат доранд; агар зарба ҳам истонад, ҳам садоро иваз кунад — ошуфта мешаванд.
+// Дар сутуни рост тугмаи ▶/❚❚ НЕСТ (мисли Instagram). Вақте видео истодааст,
+// дар марказ нишони калони ▶ пайдо мешавад ва баъди бозӣ оҳиста нопадид
+// мешавад; зарба ба он — боз бозӣ. Нишони садо баъди зарба ~700 ms намоён
+// аст ва баъд нопадид мешавад. Ҳардуи ин нишонҳо дар худи ҳамин виҷет
+// кашида мешаванд — Reels, Explore ва reel-и алоҳида як хел рафтор мекунанд.
 
 /// Қисми канорӣ (аз ҳар ду тараф), ки пахш-нигоҳ дар он 2x мекунад.
 const double kReelFastEdgeFraction = 0.2;
+
+/// Чанд вақт нишони садо (баъди зарба) дар марказ мемонад.
+const Duration kReelMuteFlash = Duration(milliseconds: 700);
+
+/// Давомнокии пайдо/нопадид шудани нишонҳои марказӣ.
+const Duration kReelOverlayFade = Duration(milliseconds: 200);
 
 enum _HoldMode { none, pause, fast }
 
 class ReelPressGestures extends StatefulWidget {
   final VideoPlayerController? controller;
 
-  /// Корбар бо тугма истонд — пахш-нигоҳ он гоҳ ҳеҷ кор намекунад,
+  /// Видео истода аст (на бо hold) — пахш-нигоҳ он гоҳ ҳеҷ кор намекунад,
   /// вагарна бардоштани ангушт видеои истондашударо боз ба кор медаровард.
+  /// Дар марказ нишони ▶ намоён аст; зарба → [onResume].
   final bool paused;
+
+  /// Ҳолати садо барои нишони баландгӯяк баъди зарба. null — нишон нест.
+  final bool? muted;
+
+  /// Зарба ҳангоми [paused] (ба экран ё ба нишони ▶) — бозӣ.
+  final VoidCallback? onResume;
 
   /// Саҳифаи ҷорӣ аст (дар PageView) — танҳо он гоҳ баъди hold бозӣ мекунем.
   final bool active;
@@ -44,6 +61,8 @@ class ReelPressGestures extends StatefulWidget {
     required this.controller,
     required this.child,
     this.paused = false,
+    this.muted,
+    this.onResume,
     this.active = true,
     this.onTap,
     this.onDoubleTap,
@@ -56,6 +75,8 @@ class ReelPressGestures extends StatefulWidget {
 
 class _ReelPressGesturesState extends State<ReelPressGestures> {
   _HoldMode _mode = _HoldMode.none;
+  bool _flash = false;
+  Timer? _flashTimer;
 
   bool get _ready => widget.controller?.value.isInitialized ?? false;
 
@@ -90,6 +111,26 @@ class _ReelPressGesturesState extends State<ReelPressGestures> {
     }
   }
 
+  void _tap() {
+    if (widget.paused) {
+      (widget.onResume ?? widget.onTap)?.call();
+      return;
+    }
+    widget.onTap?.call();
+    if (widget.muted == null) return;
+    _flashTimer?.cancel();
+    setState(() => _flash = true);
+    _flashTimer = Timer(kReelMuteFlash, () {
+      if (mounted) setState(() => _flash = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _flashTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(ReelPressGestures old) {
     super.didUpdateWidget(old);
@@ -106,13 +147,20 @@ class _ReelPressGesturesState extends State<ReelPressGestures> {
     return LayoutBuilder(builder: (context, box) {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
+        onTap: _tap,
         onDoubleTap: widget.onDoubleTap,
         onLongPressStart: (d) => _start(d, box.maxWidth),
         onLongPressEnd: (_) => _end(),
         onLongPressCancel: _end,
         child: Stack(fit: StackFit.expand, children: [
           widget.child,
+          // ▶ дар марказ: ҳангоми ист (ё hold) намоён, баъди бозӣ нопадид.
+          ReelPausedIndicator(
+            visible: widget.paused || _mode == _HoldMode.pause,
+            onTap: widget.paused ? (widget.onResume ?? widget.onTap) : null,
+          ),
+          if (widget.muted != null)
+            ReelMuteFlash(visible: _flash, muted: widget.muted!),
           if (_mode == _HoldMode.fast)
             Positioned(
               top: MediaQuery.of(context).padding.top + 56,
@@ -150,38 +198,39 @@ class _FastBadge extends StatelessWidget {
   }
 }
 
-/// Тугмаи хурди намоёни ▶ / ❚❚ — барои сутуни рости Reels.
-class ReelPlayPauseButton extends StatelessWidget {
-  final bool paused;
-  final VoidCallback onTap;
-  final Color color;
-
-  const ReelPlayPauseButton({
-    super.key,
-    required this.paused,
-    required this.onTap,
-    this.color = Colors.white,
-  });
+/// Нишони калони ▶ дар марказ, вақте видео истодааст. Ҳангоми бозӣ
+/// оҳиста нопадид мешавад. Зарба ба худи он — боз бозӣ (мисли Instagram).
+class ReelPausedIndicator extends StatelessWidget {
+  final bool visible;
+  final VoidCallback? onTap;
+  const ReelPausedIndicator({super.key, this.visible = true, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: paused ? 'Бозӣ' : 'Ист',
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: SizedBox(
-          width: 34,
-          height: 34,
-          child: Icon(
-            paused ? AppIcons.play_arrow_rounded : AppIcons.pause_rounded,
-            color: color,
-            size: 26,
-            shadows: const [Shadow(blurRadius: 6, color: Colors.black54)],
+    final active = visible && onTap != null;
+    return IgnorePointer(
+      ignoring: !active,
+      child: Center(
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: kReelOverlayFade,
+          child: Semantics(
+            button: active,
+            label: 'Бозӣ',
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 20)],
+                ),
+                padding: const EdgeInsets.all(16),
+                child: const Icon(AppIcons.play_arrow_rounded,
+                    color: Colors.white, size: 48),
+              ),
+            ),
           ),
         ),
       ),
@@ -189,26 +238,29 @@ class ReelPlayPauseButton extends StatelessWidget {
   }
 }
 
-/// Нишони калони ▶ дар марказ, вақте видео бо тугма истондааст.
-/// Зарба ба худи он — боз бозӣ (мисли Instagram).
-class ReelPausedIndicator extends StatelessWidget {
-  final VoidCallback onTap;
-  const ReelPausedIndicator({super.key, required this.onTap});
+/// Нишони баландгӯяк дар марказ баъди зарба — ~700 ms, баъд нопадид.
+class ReelMuteFlash extends StatelessWidget {
+  final bool visible;
+  final bool muted;
+  const ReelMuteFlash({super.key, required this.visible, required this.muted});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.black45,
-            shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 20)],
+    return IgnorePointer(
+      child: Center(
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: kReelOverlayFade,
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+                color: Colors.black54, shape: BoxShape.circle),
+            child: Icon(
+                muted ? AppIcons.volume_off_rounded : AppIcons.volume_up_rounded,
+                color: Colors.white,
+                size: 30),
           ),
-          padding: const EdgeInsets.all(16),
-          child: const Icon(AppIcons.play_arrow_rounded,
-              color: Colors.white, size: 48),
         ),
       ),
     );
