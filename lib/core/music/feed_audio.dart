@@ -96,6 +96,79 @@ class FeedAudio {
   }
 
   bool isOwner(String postId) => owner.value == postId;
+
+  // ── Фокуси садо (audio focus) ─────────────────────────────────
+  //
+  // Шикоят: стори кушода аст — музикаи пости Home ҳам ҳамроҳи музикаи
+  // стори мехонад. Пеш ҳар экран худаш медонист кай хомӯш шавад, ва
+  // экранҳои пурра (стори, reel аз Home) ба лента ҳеҷ чиз намегуфтанд.
+  //
+  // Ҳоло ЯК қоида: садо танҳо ба саҳифаи БОЛОИИ навигатор тааллуқ
+  // дорад. [AudioFocusObserver] саҳифаи болоиро (PageRoute — на
+  // bottom sheet ё диалог) дар [focusRoute] нигоҳ медорад. Пост ё
+  // reel-е, ки дар саҳифаи зерин аст, фокус надорад ва хомӯш мешавад;
+  // вақте саҳифаи болоӣ баста шуд, фокус худкор бармегардад.
+
+  /// Саҳифаи болоии навигатори асосӣ. `null` — номаълум (мас. дар тест).
+  final ValueNotifier<Route<dynamic>?> focusRoute =
+      ValueNotifier<Route<dynamic>?>(null);
+
+  /// Садои виҷете, ки дар [route] аст, ҳозир иҷозат дорад?
+  bool hasFocus(Route<dynamic>? route) {
+    final top = focusRoute.value;
+    return top == null || route == null || identical(top, route);
+  }
+}
+
+/// Саҳифаи болоиро барои [FeedAudio.focusRoute] пайгирӣ мекунад.
+///
+/// Танҳо [PageRoute]-ҳо ба ҳисоб мераванд: шарҳҳо (bottom sheet) ва
+/// диалогҳо садоро намегиранд — мисли Instagram.
+class AudioFocusObserver extends NavigatorObserver {
+  AudioFocusObserver({FeedAudio? audio}) : _audio = audio ?? FeedAudio.instance;
+
+  final FeedAudio _audio;
+  final List<Route<dynamic>> _pages = [];
+
+  void _sync() {
+    final top = _pages.isEmpty ? null : _pages.last;
+    if (!identical(_audio.focusRoute.value, top)) {
+      _audio.focusRoute.value = top;
+    }
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is PageRoute) {
+      _pages.add(route);
+      _sync();
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (_pages.remove(route)) _sync();
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (_pages.remove(route)) _sync();
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    final i = oldRoute == null ? -1 : _pages.indexOf(oldRoute);
+    if (newRoute is PageRoute) {
+      if (i >= 0) {
+        _pages[i] = newRoute;
+      } else {
+        _pages.add(newRoute);
+      }
+    } else if (i >= 0) {
+      _pages.removeAt(i);
+    }
+    _sync();
+  }
 }
 
 class _Lifecycle extends WidgetsBindingObserver {

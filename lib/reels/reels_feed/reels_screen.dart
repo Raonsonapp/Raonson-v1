@@ -40,6 +40,7 @@ import '../../core/ads/reels_ad_page.dart';
 import '../../core/ads/rewarded_ad_flow.dart';
 import '../../core/ads/sponsored_ads.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/music/feed_audio.dart';
 import '../audio/audio_page_screen.dart';
 import '../player/reel_gestures.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
@@ -203,9 +204,19 @@ class _ReelsViewState extends State<_ReelsView> {
   // Ҷойҳои реклама — саҳифаҳои оддии PageView, мисли Instagram.
   final ReelsAdPlan _adPlan = ReelsAdPlan();
 
+  /// Таби Reels намоён аст ВА ягон саҳифаи пурра (стори, профил…)
+  /// болои он кушода нест — вагарна садои reel бо садои он омехта мешуд.
+  bool get _active =>
+      widget.isActive && FeedAudio.instance.hasFocus(ModalRoute.of(context));
+
+  void _onFocus() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
+    FeedAudio.instance.focusRoute.addListener(_onFocus);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     // SDK (бо розигӣ; барои VIP худаш ҳеҷ кор намекунад).
     AdsManager.instance.init();
@@ -255,6 +266,7 @@ class _ReelsViewState extends State<_ReelsView> {
 
   @override
   void dispose() {
+    FeedAudio.instance.focusRoute.removeListener(_onFocus);
     _retapNotifier?.removeListener(_onRetap);
     _pageCtrl.dispose();
     for (final ctrl in _preloaded.values) {
@@ -543,7 +555,7 @@ class _ReelsViewState extends State<_ReelsView> {
             return ReelsAdPage(
               key: ValueKey('reels-ad-$slot'),
               slot: slot,
-              isActive: page == _currentPage && widget.isActive,
+              isActive: page == _currentPage && _active,
               isMuted: vm.isMuted,
               onUnavailable: () => _skipAdPage(page),
             );
@@ -552,7 +564,7 @@ class _ReelsViewState extends State<_ReelsView> {
           return _ReelItem(
           key: ValueKey(vm.reels[i].id),
           reel: vm.reels[i],
-          isActive: page == _currentPage && widget.isActive,
+          isActive: page == _currentPage && _active,
           isMuted: vm.isMuted,
           friendsFilter: vm.friendsFilter,
           preloadCtrl: _preloaded[i],
@@ -920,7 +932,6 @@ class _ReelItemState extends State<_ReelItem> {
   @override
   void dispose() {
     _syncNote.removeListener(_onSync);
-    _flashTimer?.cancel();
     _sendWatchTime();
     _ctrl?.removeListener(_onVideoUpdate);
     if (widget.preloadCtrl == null || widget.preloadCtrl != _ctrl) {
@@ -936,23 +947,16 @@ class _ReelItemState extends State<_ReelItem> {
   //   пахш карда нигоҳ  → видео меистад, то ангушт бардошта шавад;
   //   нигоҳ дар канор   → 2x, то ангушт бардошта шавад;
   //   ду зарба          → лайк;
-  //   тугмаи ❚❚ / ▶     → истодан/бозии доимӣ (дар сутуни рост).
+  //   ▶ дар марказ      → ҳангоми ист намоён; зарба → бозӣ (тугма дар
+  //                       сутуни рост нест, мисли Instagram).
   //
   // Пеш як зарба видеоро МЕИСТОНД, ва тугмаи садо ТАНҲО дар ҳолати
   // истода намоён мешуд. Яъне барои фаъол кардани садо корбар бояд
   // аввал видеоро бас мекард, садоро мезад, баъд боз play мекард —
   // маҳз он «play-ро зер кун, stop кун»-е, ки корбар шикоят кард.
-  bool _flashMute = false;
-  Timer? _flashTimer;
-
   void _tapToggleMute() {
     HapticFeedback.selectionClick();
     widget.onMuteToggle();
-    _flashTimer?.cancel();
-    setState(() => _flashMute = true);
-    _flashTimer = Timer(const Duration(milliseconds: 750), () {
-      if (mounted) setState(() => _flashMute = false);
-    });
   }
 
   void _togglePause() {
@@ -1784,8 +1788,10 @@ class _ReelItemState extends State<_ReelItem> {
     return ReelPressGestures(
       controller: _initialized ? _ctrl : null,
       paused: _paused,
+      muted: widget.isMuted,
       active: widget.isActive,
-      onTap: _paused ? _togglePause : _tapToggleMute,
+      onTap: _tapToggleMute,
+      onResume: _togglePause,
       onDoubleTap: _doubleTapLike,
       onHoldPause: (holding) {
         if (holding) {
@@ -1857,53 +1863,7 @@ class _ReelItemState extends State<_ReelItem> {
                   valueColor:
                       AlwaysStoppedAnimation(Colors.white70))),
 
-        if (_paused && !_isBuffering)
-          Center(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Mute button above play (Instagram style)
-              GestureDetector(
-                onTap: widget.onMuteToggle,
-                child: Container(
-                  width: 36, height: 36,
-                  decoration: const BoxDecoration(
-                      color: Colors.black54, shape: BoxShape.circle),
-                  child: Icon(
-                      widget.isMuted
-                          ? AppIcons.volume_off_rounded
-                          : AppIcons.volume_up_rounded,
-                      color: Colors.white, size: 20))),
-              const SizedBox(height: 10),
-              // Play button
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.black45,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 20)]),
-                padding: const EdgeInsets.all(16),
-                child: const Icon(AppIcons.play_arrow_rounded,
-                    color: Colors.white, size: 48)),
-            ])),
-
-        // Нишони садо — баъди зарба як лаҳза, мисли Instagram.
-        IgnorePointer(
-          child: Center(
-            child: AnimatedOpacity(
-              opacity: _flashMute ? 1 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Container(
-                width: 64, height: 64,
-                decoration: const BoxDecoration(
-                    color: Colors.black54, shape: BoxShape.circle),
-                child: Icon(
-                    widget.isMuted
-                        ? AppIcons.volume_off_rounded
-                        : AppIcons.volume_up_rounded,
-                    color: Colors.white, size: 30),
-              ),
-            ),
-          ),
-        ),
-
+        // ▶ ва нишони садо дар марказ — дар ReelPressGestures.
         if (_showHeart) const Center(child: _HeartBurst()),
 
         if (_initialized && _ctrl != null)
@@ -2003,12 +1963,6 @@ class _ReelItemState extends State<_ReelItem> {
                     widget.onSave(); // VM ба ContentSync хабар медиҳад
                   }),
               const SizedBox(height: 22),
-              // Тугмаи намоёни ист/бозӣ — зарба ба видео садоро иваз
-              // мекунад, барои ҳамин истодан тугмаи алоҳида дорад.
-              if (_initialized && _ctrl != null && !_isEmbed) ...[
-                ReelPlayPauseButton(paused: _paused, onTap: _togglePause),
-                const SizedBox(height: 18),
-              ],
               GestureDetector(
                   onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
                   child: const SizedBox(

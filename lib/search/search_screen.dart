@@ -1531,7 +1531,7 @@ class _FeedCardState extends State<_FeedCard> {
     _video?.setVolume(_muted ? 0 : 1);
   }
 
-  /// Истодани доимӣ бо тугма (на бо зарба — зарба садоро иваз мекунад).
+  /// Истода — ▶ дар марказ; зарба ба он бозиро идома медиҳад.
   bool _paused = false;
   void _togglePause() {
     final v = _video;
@@ -1684,12 +1684,14 @@ class _FeedCardState extends State<_FeedCard> {
       if (_isVideo)
         (_ready && _video != null
             // Ҳамон ишораҳои Reels: зарба → садо, hold миёна → ист,
-            // hold канор → 2x; истодани доимӣ — тугмаи ❚❚ дар сутуни рост.
+            // hold канор → 2x; ҳангоми ист ▶ дар марказ (зарба → бозӣ).
             ? ReelPressGestures(
                 controller: _video,
                 paused: _paused,
+                muted: _muted,
                 active: widget.isActive,
-                onTap: _paused ? _togglePause : _toggleMute,
+                onTap: _toggleMute,
+                onResume: _togglePause,
                 onDoubleTap: () { if (!_liked) _toggleLike(); },
                 child: FittedBox(
                   fit: BoxFit.cover,
@@ -1744,7 +1746,6 @@ class _FeedCardState extends State<_FeedCard> {
           ),
         ),
       ),
-      if (_isVideo && _paused) ReelPausedIndicator(onTap: _togglePause),
       // Меню «⋯» — мисли Instagram ва мисли Reels-и худамон.
       // Пеш дар explore ҳеҷ меню набуд: на шикоят, на ҳазфи худӣ.
       Positioned(
@@ -1809,13 +1810,6 @@ class _FeedCardState extends State<_FeedCard> {
                   ? 'assets/icons/save_filled.svg'
                   : 'assets/icons/save.svg',
               onTap: _toggleSave),
-          if (_isVideo && _ready && _video != null) ...[
-            const SizedBox(height: 18),
-            ReelPlayPauseButton(
-                paused: _paused,
-                onTap: _togglePause,
-                color: AppColors.textPrimary),
-          ],
           if (_isVideo || _hasSong) ...[
             const SizedBox(height: 18),
             GestureDetector(

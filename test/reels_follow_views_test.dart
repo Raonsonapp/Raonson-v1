@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:raonson/core/services/follow_service.dart';
 import 'package:raonson/models/reel_model.dart';
 import 'package:raonson/navigation/bottom_nav/bottom_nav_controller.dart';
+import 'package:raonson/core/ui/app_icons.dart';
 import 'package:raonson/reels/player/reel_gestures.dart';
 
 Map<String, dynamic> _reelJson({bool following = true}) => {
@@ -93,17 +94,65 @@ void main() {
     });
   });
 
-  group('Тугмаи ист/бозӣ', () {
-    testWidgets('нишонаи дуруст ва зарба', (t) async {
-      var taps = 0;
-      await t.pumpWidget(MaterialApp(
+  group('Ист/бозӣ мисли Instagram (бе тугма дар сутун)', () {
+    Widget host({required bool paused, bool? muted,
+        VoidCallback? onTap, VoidCallback? onResume}) =>
+      MaterialApp(
         home: Scaffold(
-          body: ReelPlayPauseButton(paused: false, onTap: () => taps++),
+          body: ReelPressGestures(
+            controller: null,
+            paused: paused,
+            muted: muted,
+            onTap: onTap,
+            onResume: onResume,
+            child: const SizedBox.expand(),
+          ),
         ),
-      ));
-      expect(find.bySemanticsLabel('Ист'), findsOneWidget);
-      await t.tap(find.byType(ReelPlayPauseButton));
+      );
+
+    double opacityOf(WidgetTester t, Type type) => t
+        .widget<AnimatedOpacity>(find.descendant(
+            of: find.byType(type), matching: find.byType(AnimatedOpacity)))
+        .opacity;
+
+    testWidgets('ҳангоми ист ▶ дар марказ; зарба ба он — бозӣ', (t) async {
+      var resumed = 0, taps = 0;
+      await t.pumpWidget(host(
+          paused: true, onTap: () => taps++, onResume: () => resumed++));
+      expect(opacityOf(t, ReelPausedIndicator), 1);
+      await t.tap(find.byIcon(AppIcons.play_arrow_rounded));
+      expect(resumed, 1);
+      expect(taps, 0);
+      // Зарба ба ҷои дигари экран ҳам бозӣ мекунад, на садоро.
+      await t.tapAt(const Offset(20, 20));
+      await t.pump(const Duration(milliseconds: 400));
+      expect(resumed, 2);
+      expect(taps, 0);
+    });
+
+    testWidgets('баъди бозӣ ▶ нопадид мешавад ва зарбаро намегирад',
+        (t) async {
+      var resumed = 0, taps = 0;
+      await t.pumpWidget(host(
+          paused: false, onTap: () => taps++, onResume: () => resumed++));
+      expect(opacityOf(t, ReelPausedIndicator), 0);
+      await t.tap(find.byType(ReelPausedIndicator), warnIfMissed: false);
+      await t.pump(const Duration(milliseconds: 400));
+      expect(resumed, 0);
       expect(taps, 1);
+    });
+
+    testWidgets('нишони садо баъди ~700 ms нопадид мешавад', (t) async {
+      var taps = 0;
+      await t.pumpWidget(host(paused: false, muted: true, onTap: () => taps++));
+      expect(opacityOf(t, ReelMuteFlash), 0);
+      await t.tapAt(const Offset(200, 300));
+      await t.pump(const Duration(milliseconds: 350)); // double-tap timeout
+      expect(taps, 1);
+      expect(opacityOf(t, ReelMuteFlash), 1);
+      await t.pump(kReelMuteFlash);
+      expect(opacityOf(t, ReelMuteFlash), 0);
+      await t.pumpAndSettle();
     });
   });
 }

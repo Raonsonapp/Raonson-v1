@@ -13,6 +13,7 @@ import 'app_splash.dart';
 import '../auth/login/login_screen.dart';
 import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
 import '../core/analytics/analytics_observer.dart';
+import '../core/music/feed_audio.dart';
 import '../core/ui/app_icons.dart';
 
 /// Navigator-и умумӣ.
@@ -26,6 +27,8 @@ class RaonsonApp extends StatelessWidget {
   const RaonsonApp({super.key});
 
   static final AnalyticsObserver _analyticsObserver = AnalyticsObserver();
+  // Садо танҳо ба саҳифаи болоӣ: стори/reel-и пурра → музикаи лента хомӯш.
+  static final AudioFocusObserver _audioFocusObserver = AudioFocusObserver();
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +77,11 @@ class RaonsonApp extends StatelessWidget {
                 onGenerateRoute: controller.onGenerateRoute,
                 // Пахши огоҳинома бе он ҷое рафта наметавонад.
                 navigatorKey: appNavigatorKey,
-                navigatorObservers: [_analyticsObserver, ErrorReporter.observer],
+                navigatorObservers: [
+                  _analyticsObserver,
+                  ErrorReporter.observer,
+                  _audioFocusObserver,
+                ],
               );
             },
           );
