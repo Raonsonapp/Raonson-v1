@@ -66,6 +66,10 @@ class ProfileController extends ChangeNotifier {
           ? await _repo.getUserIdByUsername(userId)
           : userId;
       profile    = await _repo.getProfile(resolvedId);
+      if (profile != null && !isOwnProfile) {
+        FollowService.instance
+            .primeRequested(profile!.id, profile!.followRequestSent);
+      }
       posts      = await _repo.getUserPosts(profile?.id ?? userId);
       reels      = await _repo.getUserReels(profile?.id ?? userId,
           onFresh: _onFreshReels);
@@ -215,11 +219,32 @@ class ProfileController extends ChangeNotifier {
   Future<void> toggleFollow() async {
     if (profile == null || isOwnProfile) return;
     final u = profile!;
-    if (u.isPrivate && !u.isFollowing) {
+    final following = FollowService.instance.resolve(u.id, u.isFollowing);
+    final requested = !following &&
+        (u.followRequestSent || FollowService.instance.isRequested(u.id));
+    if (requested) {
+      // Бекор кардани дархост (сервер бо unfollow дархостро ҳам нест мекунад).
+      profile = u.copyWith(followRequestSent: false);
+      FollowService.instance.primeRequested(u.id, false);
+      notifyListeners();
+      try { await _repo.unfollow(u.id); }
+      catch (_) {
+        profile = u;
+        FollowService.instance.primeRequested(u.id, true);
+        notifyListeners();
+      }
+      return;
+    }
+    if (u.isPrivate && !following) {
       profile = u.copyWith(followRequestSent: true);
+      FollowService.instance.primeRequested(u.id, true);
       notifyListeners();
       try { await _repo.follow(u.id); }
-      catch (_) { profile = u; notifyListeners(); }
+      catch (_) {
+        profile = u;
+        FollowService.instance.primeRequested(u.id, false);
+        notifyListeners();
+      }
       return;
     }
     // Ҳолати ҷорӣ аз FollowService: шояд корбар аллакай дар reels/explore

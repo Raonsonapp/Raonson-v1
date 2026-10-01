@@ -282,8 +282,9 @@ class ProfileRepository {
     } catch (_) { return []; }
   }
 
-  Future<void> follow(String uid)    async => _api.post(ApiEndpoints.follow(uid));
-  Future<void> unfollow(String uid)  async => _api.post(ApiEndpoints.unfollow(uid));
+  // `…Ok`: рад кардани сервер хато аст — тугма ба ҳолати пешина бармегардад.
+  Future<void> follow(String uid)    async => _api.postOk(ApiEndpoints.follow(uid));
+  Future<void> unfollow(String uid)  async => _api.postOk(ApiEndpoints.unfollow(uid));
   Future<void> blockUser(String uid)   async => _api.post('/users/$uid/block');
   Future<void> unblockUser(String uid) async => _api.post('/users/$uid/unblock');
   Future<void> pinPost(String postId, bool pin) async =>

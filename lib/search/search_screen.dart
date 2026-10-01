@@ -258,8 +258,11 @@ class _SearchScreenState extends State<SearchScreen>
     _debounce = Timer(const Duration(milliseconds: 350), () => _doSearch(q));
   }
 
-  Future<void> _doSearch(String q) async {
-    if (q == _lastQ) return;
+  /// [force] — тугмаи «Такрор». Пеш он `_doSearch(_lastQ)`-ро мезад ва
+  /// санҷиши «ҳамон дархост» онро фавран бармегардонд: тугма ҳеҷ кор
+  /// намекард.
+  Future<void> _doSearch(String q, {bool force = false}) async {
+    if (q == _lastQ && !force) return;
     _lastQ = q;
     setState(() { _searching = true; _error = null; });
     await SearchHistory.add(q);
@@ -271,7 +274,9 @@ class _SearchScreenState extends State<SearchScreen>
   Future<void> _searchBackend(String q) async {
     try {
       final res = await ApiClient.instance.get('/search', query: {'q': q});
-      if (!mounted) return;
+      // Ҷавоби дархости КӮҲНА (корбар аллакай чизи дигар навишт) натиҷаи
+      // навро пахш намекунад — ҷавобҳо метавонанд баръакс расанд.
+      if (!mounted || q != _lastQ) return;
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         ContentSync.stampAll(body['reels']);
@@ -292,7 +297,9 @@ class _SearchScreenState extends State<SearchScreen>
         }
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted && q == _lastQ) {
+        setState(() => _error = tr('common.checkInternet'));
+      }
     }
   }
 
@@ -336,7 +343,7 @@ class _SearchScreenState extends State<SearchScreen>
           'https://itunes.apple.com/search?term=${Uri.encodeComponent(q)}'
           '&media=music&limit=15&country=US');
       final res = await http.get(uri).timeout(const Duration(seconds: 6));
-      if (res.statusCode == 200 && mounted) {
+      if (res.statusCode == 200 && mounted && q == _lastQ) {
         final j = jsonDecode(res.body) as Map<String, dynamic>;
         setState(() {
           _music = (j['results'] as List? ?? [])
@@ -821,7 +828,7 @@ class _SearchScreenState extends State<SearchScreen>
           child: _error != null
               ? _ErrView(msg: _error!, onRetry: () {
                   setState(() => _error = null);
-                  if (_lastQ.isNotEmpty) _doSearch(_lastQ);
+                  if (_lastQ.isNotEmpty) _doSearch(_lastQ, force: true);
                 })
               : TabBarView(
                   controller: _tabs,
@@ -2012,7 +2019,9 @@ class _FollowChip extends StatelessWidget {
               border: Border.all(color: AppColors.textSecondary),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
+            child: Text(following ? 'Пайравӣ шуд'
+                    : FollowService.instance.isRequested(userId)
+                        ? tr('common.requested') : 'Пайравӣ',
                 style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 12, fontWeight: FontWeight.w600)),
           ),
@@ -2295,6 +2304,7 @@ class _UserRowState extends State<_UserRow> {
   // будӣ) ва аз reels/explore бехабар буд. Акнун FollowService.
   bool get _following =>
       FollowService.instance.resolve(widget.user.id, widget.user.isFollowing);
+  bool get _requested => FollowService.instance.isRequested(widget.user.id);
 
   @override
   void initState() {
@@ -2362,10 +2372,10 @@ class _UserRowState extends State<_UserRow> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 7),
                 decoration: BoxDecoration(
-                  color: _following
+                  color: _following || _requested
                       ? Colors.transparent : AppColors.neonBlue,
                   border: Border.all(
-                      color: _following
+                      color: _following || _requested
                           ? AppColors.textFaint : AppColors.neonBlue),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -2375,9 +2385,10 @@ class _UserRowState extends State<_UserRow> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: AppColors.textPrimary))
                     : Text(
-                        _following ? 'Пайрав' : 'Пайравӣ',
+                        _following ? 'Пайрав'
+                            : _requested ? tr('common.requested') : 'Пайравӣ',
                         style: TextStyle(
-                          color: _following
+                          color: _following || _requested
                               ? AppColors.textTertiary : AppColors.textPrimary,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,

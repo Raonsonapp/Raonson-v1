@@ -252,6 +252,38 @@ if sid:
     ok("бинандагони сторӣ бо limit=200",
        st == 200 and idB in ids(r.get("viewers") or []), f"HTTP {st}: {str(r)[:140]}")
 
+# ═══ 10. ДАРХОСТИ ОБУНА БА ҲИСОБИ ПӮШИДА — БЕКОР КАРДАН ════════════
+C = f"pc{S}"
+tC, idC = reg_login(C, 3)
+call("PUT", "/profile/", {"isPrivate": True}, tC)
+st, r = call("POST", f"/follow/{idC}", tok=tB)
+ok("обуна ба ҳисоби пӯшида → requested (на following)",
+   st == 200 and r.get("requested") is True and not r.get("following"),
+   f"HTTP {st}: {r}")
+
+
+def req_ids():
+    _, rq = call("GET", "/follow/requests", tok=tC)
+    lst = rq.get("requests") if isinstance(rq, dict) else rq
+    return ids(lst or []) + [
+        (x.get("user") or {}).get("_id") for x in (lst or []) if isinstance(x, dict)]
+
+
+ok("дархост дар рӯйхати соҳиб аст", idB in req_ids(), req_ids())
+st, r = call("DELETE", f"/follow/{idC}", tok=tB)
+ok("дархостро бекор кардан (DELETE /follow/:id)", st == 200, f"HTTP {st}: {r}")
+ok("баъди бекор дархост аз рӯйхати соҳиб рафт", idB not in req_ids(), req_ids())
+_, nr = call("GET", "/notifications", tok=tC)
+left = [n for n in items(nr, "notifications")
+        if n.get("type") == "follow_request"
+        and ((n.get("fromUser") or n.get("from_user") or n.get("user") or {}).get("_id")
+             or n.get("fromUserId")) == idB]
+ok("огоҳиномаи «мехоҳад обуна шавад» ҳам рафт", not left, str(left)[:140])
+st, prof = call("GET", f"/users/{idC}", tok=tB)
+u = prof.get("user", prof) if isinstance(prof, dict) else {}
+ok("профил: followRequestSent = false", u.get("followRequestSent") in (False, None),
+   str(u)[:140])
+
 # ═══ ҲИСОБОТ ═════════════════════════════════════════════════════
 bad = [x for x in res if not x[0]]
 print()

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:raonson/core/services/follow_service.dart';
 import 'package:raonson/models/post_model.dart';
 import 'package:raonson/models/user_model.dart';
 import 'package:raonson/profile/profile_controller.dart';
@@ -150,6 +151,43 @@ void main() {
     test('бинандагони сторӣ — то 200, на 50', () {
       expect(_read('lib/stories/story_viewers_cache.dart'),
           contains("'limit': '200'"));
+    });
+  });
+
+  group('дархости обуна ба ҳисоби пӯшида', () {
+    test('ҷавоби {"requested": true} обуна нест', () {
+      expect(isFollowRequested('{"requested": true}'), isTrue);
+      expect(isFollowRequested('{"following": true}'), isFalse);
+      expect(isFollowRequested('not json'), isFalse);
+    });
+
+    test('ҳолати «Дархост» ба ҳамаи тугмаҳо хабар медиҳад', () {
+      final fs = FollowService.instance;
+      fs.clear();
+      var calls = 0;
+      void l() => calls++;
+      fs.states.addListener(l);
+      fs.primeRequested('u1', true);
+      expect(fs.isRequested('u1'), isTrue);
+      expect(fs.resolve('u1', false), isFalse, reason: 'дархост ≠ обуна');
+      fs.primeRequested('u1', true); // бе тағйир — бе хабар
+      fs.primeRequested('u1', false);
+      expect(fs.isRequested('u1'), isFalse);
+      expect(calls, 2);
+      fs.states.removeListener(l);
+      fs.clear();
+    });
+
+    test('тугмаҳо «Дархост» нишон медиҳанд ва бекор кардан мумкин аст', () {
+      for (final f in [
+        'lib/search/search_screen.dart',
+        'lib/profile/profile_screen.dart',
+        'lib/feed/timeline/feed_screen.dart',
+      ]) {
+        expect(_read(f), contains("tr('common.requested')"), reason: f);
+      }
+      final prof = _read('lib/profile/profile_screen.dart');
+      expect(prof, isNot(contains('onTap: followRequestSent ? null : onFollow')));
     });
   });
 

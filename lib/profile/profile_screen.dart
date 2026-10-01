@@ -696,7 +696,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                           return _OtherBtns(
                         isFollowing:       following,
                         isPrivate:         user.isPrivate,
-                        followRequestSent: user.followRequestSent && !following,
+                        followRequestSent: (user.followRequestSent ||
+                                FollowService.instance.isRequested(user.id)) &&
+                            !following,
                         onFollow:  () {
                           AnalyticsService.instance.logEvent(following
                               ? AnalyticsEvents.unfollowUser
@@ -884,7 +886,10 @@ class _OtherBtns extends StatelessWidget {
     return Row(children: [
       // ── Пайравӣ / Пайравишуда ──
       Expanded(child: GestureDetector(
-        onTap: followRequestSent ? null : onFollow,
+        // Дархостро бекор кардан мумкин аст (мисли Instagram). Пеш
+        // тугма хомӯш буд — дархости хато фиристодаро бозпас гирифтан
+        // имкон надошт.
+        onTap: onFollow,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           height: 34,
@@ -1416,14 +1421,17 @@ class _UserFollowBtn extends StatelessWidget {
           height: 32, width: 104,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: following ? AppColors.divider : AppColors.neonBlue,
+              backgroundColor: following || FollowService.instance.isRequested(user.id)
+                  ? AppColors.divider : AppColors.neonBlue,
               foregroundColor: AppColors.textPrimary,
               elevation: 0,
               padding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => FollowService.instance.toggle(user.id, following),
-            child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
+            child: Text(following ? 'Пайравӣ шуд'
+                    : FollowService.instance.isRequested(user.id)
+                        ? tr('common.requested') : 'Пайравӣ',
                 style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
           ),
         );

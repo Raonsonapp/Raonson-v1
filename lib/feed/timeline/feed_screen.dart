@@ -729,7 +729,8 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
                       child: ElevatedButton(
                         onPressed: u.following ? null : () => _follow(u),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: u.following
+                          backgroundColor: u.following ||
+                                  FollowService.instance.isRequested(u.id)
                               ? AppColors.surface
                               : AppColors.neonBlue,
                           foregroundColor: AppColors.textPrimary,
@@ -738,7 +739,9 @@ class _SuggestedUsersListState extends State<_SuggestedUsersList> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: Text(u.following ? '${tr('common.followed')} ✓' : tr('common.follow'),
+                        child: Text(u.following ? '${tr('common.followed')} ✓'
+                            : FollowService.instance.isRequested(u.id)
+                                ? tr('common.requested') : tr('common.follow'),
                             style: const TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.w600)),
                       ),

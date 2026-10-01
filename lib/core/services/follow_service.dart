@@ -2,8 +2,20 @@
 // Ҳолати ягонаи «обуна» барои тамоми барнома. Вақте дар ягон ҷо (home,
 // reels, search, профил) касеро follow/unfollow мекунӣ, ҳамаи тугмаҳои
 // дигар фавран нав мешаванд (мисли Instagram).
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../api/api_client.dart';
+
+/// Ҷавоби POST /follow/:id: `{"requested": true}` — ҳисоби пӯшида,
+/// дархост фиристода шуд, обуна ҳанӯз нест.
+bool isFollowRequested(String body) {
+  try {
+    final j = jsonDecode(body);
+    return j is Map && j['requested'] == true;
+  } catch (_) {
+    return false;
+  }
+}
 
 class FollowService {
   FollowService._();
@@ -63,27 +75,56 @@ class FollowService {
 
   final Set<String> _inFlight = {};
 
+  /// Ба ҳисобҳои пӯшида — дархости обуна фиристода шуд (ҳанӯз обуна нест).
+  final Set<String> _requested = {};
+
+  /// Оё ба ин ҳисоби пӯшида дархости обуна фиристодаам?
+  bool isRequested(String userId) => _requested.contains(userId);
+
+  /// Ҳолати «дархост»-ро аз маълумоти сервер (followRequestSent) мегирад.
+  void primeRequested(String userId, bool requested) {
+    if (userId.isEmpty || _inFlight.contains(userId)) return;
+    if (requested == _requested.contains(userId)) return;
+    requested ? _requested.add(userId) : _requested.remove(userId);
+    states.value = Map<String, bool>.from(states.value);
+  }
+
   /// Follow/unfollow мекунад, ҳолатро фавран (optimistic) нав мекунад ва
   /// ба сервер мефиристад. Қимати нави обунаро бармегардонад.
+  ///
+  /// ⚠️ Ҳисоби ПӮШИДА: сервер `{"requested": true}` медиҳад — обуна ҳанӯз
+  /// нест. Пеш тугма «Пайравӣ шуд» мешуд ва ҳамин тавр мемонд, гӯё
+  /// корбар аллакай обуна бошад. Акнун «Дархост» нишон дода мешавад ва
+  /// пахши дубора дархостро бекор мекунад (мисли Instagram).
   Future<bool> toggle(String userId, bool currentlyFollowing) async {
     if (_inFlight.contains(userId)) return currentlyFollowing;
+    final cancelRequest = !currentlyFollowing && _requested.contains(userId);
     _inFlight.add(userId);
-    final next = !currentlyFollowing;
+    final next = !currentlyFollowing && !cancelRequest;
+    if (cancelRequest) _requested.remove(userId);
     _set(userId, next); // optimistic
+    var requested = false;
     try {
       // `…Ok` — вагарна рад кардани сервер (масалан маҳдудият ё
       // бастани ҳисоб) хато ҳисоб намешуд ва дар экран «Обуна шуд»
       // мемонд, ҳол он ки дар сервер ҳеҷ чиз нашуда буд.
       if (next) {
-        await ApiClient.instance.postOk('/follow/$userId');
+        final res = await ApiClient.instance.postOk('/follow/$userId');
+        requested = isFollowRequested(res.body);
       } else {
         await ApiClient.instance.deleteOk('/follow/$userId');
       }
     } catch (_) {
+      if (cancelRequest) _requested.add(userId);
       _set(userId, currentlyFollowing); // баргардонӣ
       return currentlyFollowing;
     } finally {
       _inFlight.remove(userId);
+    }
+    if (requested) {
+      _requested.add(userId);
+      _set(userId, false);
+      return false;
     }
     // Вақти ТАМОМ шудани амал: маълумоте, ки пеш аз ин гирифта шуда
     // буд (ҳанӯз бе обуна), онро барнагардонад.
@@ -102,6 +143,7 @@ class FollowService {
   /// мекунад, то ки тугмаҳои "Обуна" ба ҷои корбари нав рафтор кунанд.
   void clear() {
     _at.clear();
+    _requested.clear();
     if (states.value.isNotEmpty) states.value = {};
   }
 }
