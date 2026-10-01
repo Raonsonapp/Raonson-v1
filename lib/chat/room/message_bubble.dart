@@ -12,6 +12,9 @@ import '../../core/api/api_client.dart';
 import '../../models/message_model.dart';
 import '../../models/post_model.dart';
 import '../../models/reel_model.dart';
+import '../../models/story_model.dart';
+import '../../stories/story_group_viewer.dart';
+import 'system_share.dart';
 import '../../feed/post/post_detail_screen.dart';
 import '../../reels/single_reel_screen.dart';
 import '../../app/app_theme.dart';
@@ -288,7 +291,7 @@ class _BubbleBody extends StatelessWidget {
     // Мубодилаи пост/рилс/сторис — корти пешнамоиш (мисли Instagram),
     // на танҳо линки хом.
     if (m.share != null) {
-      return _SharedRefBubble(share: m.share!, isMine: isMine);
+      return _SharedRefBubble(share: m.share!, isMine: isMine, text: m.text);
     }
 
     // Медиа дар ҳолати боркунӣ (optimistic — ҳанӯз URL нест)
@@ -349,10 +352,25 @@ class _BubbleBody extends StatelessWidget {
 // ── Корти мубодилашудаи пост/рилс/сторис ─────────────────────────
 // Instagram линки хом нишон намедиҳад — корти пешнамоишро мебарорад,
 // ки зеркуни ба худи мӯҳтаво мебарад.
-class _SharedRefBubble extends StatelessWidget {
+class _SharedRefBubble extends StatefulWidget {
   final SharedRef share;
   final bool isMine;
-  const _SharedRefBubble({required this.share, required this.isMine});
+  /// Матни паём — барои кортҳои системавӣ («Шуморо … даъват кард»).
+  final String text;
+  const _SharedRefBubble(
+      {required this.share, required this.isMine, this.text = ''});
+
+  @override
+  State<_SharedRefBubble> createState() => _SharedRefBubbleState();
+}
+
+class _SharedRefBubbleState extends State<_SharedRefBubble> {
+  SharedRef get share => widget.share;
+  late final SystemShare _system = classifySystemShare(share, widget.text);
+
+  /// null — ҳанӯз ҷавоб надодааст; true/false — қабул/рад.
+  bool? _collabAnswer;
+  bool _busy = false;
 
   Future<void> _open(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -368,12 +386,20 @@ class _SharedRefBubble extends StatelessWidget {
         return;
       }
       if (share.kind == 'story') {
-        // Сторис 24 соат зиндагӣ мекунад — ба ҷои он профили муаллифро
-        // мекушоем, ки ҳалқаи сторисаш он ҷо ҳаст.
-        if (share.username.isNotEmpty) {
-          navigator.pushNamed('/profile-by-username',
-              arguments: share.username);
+        // Сторис 24 соат зиндагӣ мекунад: агар мӯҳлаташ гузашта ё
+        // дастрас набошад, сервер 404 медиҳад — ба корбар мегӯем.
+        final res = await ApiClient.instance.get('/stories/${share.id}');
+        if (res.statusCode >= 400) {
+          messenger.showSnackBar(
+              const SnackBar(content: Text('Сторис дастрас нест')));
+          return;
         }
+        final story = StoryModel.fromJson(
+            jsonDecode(res.body) as Map<String, dynamic>);
+        navigator.push(MaterialPageRoute(
+            builder: (_) => StoryGroupViewer(groups: [
+                  [story]
+                ])));
         return;
       }
       final res = await ApiClient.instance.get('/posts/${share.id}');
@@ -384,13 +410,88 @@ class _SharedRefBubble extends StatelessWidget {
           builder: (_) => PostDetailScreen(
               posts: [post], initialIndex: 0, title: share.label)));
     } catch (_) {
-      messenger.showSnackBar(
-          SnackBar(content: Text(tr('ui.870bce111b'))));
+      messenger.showSnackBar(SnackBar(
+          content: Text(share.kind == 'story'
+              ? 'Сторис дастрас нест'
+              : tr('ui.870bce111b'))));
     }
+  }
+
+  /// POST /posts/:id/collab/accept|decline — ҳамон API-и CollabInvitesScreen.
+  Future<void> _answerCollab(bool accept) async {
+    if (_busy) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      final res = await ApiClient.instance.post(
+          '/posts/${share.id}/collab/${accept ? 'accept' : 'decline'}');
+      if (res.statusCode >= 400) {
+        String why = 'Нашуд';
+        try {
+          why = (jsonDecode(res.body) as Map)['message']?.toString() ?? why;
+        } catch (_) {}
+        messenger.showSnackBar(SnackBar(content: Text(why)));
+      } else if (mounted) {
+        setState(() => _collabAnswer = accept);
+        messenger.showSnackBar(SnackBar(
+            content: Text(accept ? 'Ҳамкорӣ қабул шуд' : 'Даъват рад шуд')));
+      }
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Хатои шабака')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _collabActions() {
+    if (_collabAnswer != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        child: Text(_collabAnswer! ? '✓ Қабул шуд' : 'Рад шуд',
+            style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: Row(children: [
+        Expanded(
+          child: OutlinedButton(
+            key: const Key('collab_decline'),
+            onPressed: _busy ? null : () => _answerCollab(false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              side: BorderSide(color: AppColors.textFaint),
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Рад', style: TextStyle(fontSize: 13)),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: ElevatedButton(
+            key: const Key('collab_accept'),
+            onPressed: _busy ? null : () => _answerCollab(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.neonBlue,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Қабул',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          ),
+        ),
+      ]),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final systemText = _system != SystemShare.none ? widget.text.trim() : '';
     return GestureDetector(
       onTap: () => _open(context),
       child: Container(
@@ -402,6 +503,15 @@ class _SharedRefBubble extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (systemText.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Text(
+                systemText,
+                style: TextStyle(color: AppColors.textPrimary,
+                    fontSize: 13, height: 1.3),
+              ),
+            ),
           AspectRatio(
             aspectRatio: share.kind == 'post' ? 1 : 9 / 16,
             child: share.thumb.isNotEmpty
@@ -434,6 +544,8 @@ class _SharedRefBubble extends StatelessWidget {
               ],
             ]),
           ),
+          if (_system == SystemShare.collabInvite && !widget.isMine)
+            _collabActions(),
         ]),
       ),
     );

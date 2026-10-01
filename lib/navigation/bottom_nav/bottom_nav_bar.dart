@@ -10,6 +10,8 @@ class BottomNavBar extends StatelessWidget {
   final ValueChanged<int> onTap;
   final String? avatarUrl;
   final int notifCount;
+  /// Паёмҳои хонданашуда — бейҷ дар таби чат (мисли WhatsApp/Instagram).
+  final int chatUnread;
   final VoidCallback? onProfileLongPress; // ← account switcher (мисли Instagram)
 
   const BottomNavBar({
@@ -18,6 +20,7 @@ class BottomNavBar extends StatelessWidget {
     required this.onTap,
     this.avatarUrl,
     this.notifCount = 0,
+    this.chatUnread = 0,
     this.onProfileLongPress,
   });
 
@@ -52,6 +55,7 @@ class BottomNavBar extends StatelessWidget {
                 svgActive: 'assets/icons/nav_chat_filled.svg',
                 svgInactive: 'assets/icons/nav_chat.svg',
                 fallback: AppIcons.chat_bubble_outline_rounded,
+                badge: chatUnread,
               ),
               _SvgNavItem(
                 index: 3, currentIndex: currentIndex, onTap: onTap,
@@ -89,6 +93,7 @@ class _SvgNavItem extends StatelessWidget {
   final String svgActive;
   final String svgInactive;
   final IconData fallback;
+  final int badge;
 
   const _SvgNavItem({
     required this.index,
@@ -97,6 +102,7 @@ class _SvgNavItem extends StatelessWidget {
     required this.svgActive,
     required this.svgInactive,
     required this.fallback,
+    this.badge = 0,
   });
 
   @override
@@ -108,12 +114,35 @@ class _SvgNavItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: SvgPicture.asset(
-          sel ? svgActive : svgInactive,
-          width: 26, height: 26,
-          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-          placeholderBuilder: (_) => Icon(fallback, color: color, size: 26),
-        ),
+        child: Stack(clipBehavior: Clip.none, children: [
+          SvgPicture.asset(
+            sel ? svgActive : svgInactive,
+            width: 26, height: 26,
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            placeholderBuilder: (_) => Icon(fallback, color: color, size: 26),
+          ),
+          if (badge > 0)
+            Positioned(
+              right: -6, top: -4,
+              child: Container(
+                key: const Key('nav_chat_unread_badge'),
+                constraints: const BoxConstraints(minWidth: 16),
+                height: 16,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.bg, width: 1.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  badge > 99 ? '99+' : '$badge',
+                  style: const TextStyle(fontSize: 9, color: Colors.white,
+                      fontWeight: FontWeight.bold, height: 1),
+                ),
+              ),
+            ),
+        ]),
       ),
     );
   }

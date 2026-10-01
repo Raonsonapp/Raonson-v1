@@ -45,6 +45,38 @@ class ChatRepository {
     return _fetchInbox();
   }
 
+  /// Танҳо кэши диск (бе шабака) — барои фавран нишон додани inbox.
+  Future<List<MessageModel>?> loadCachedInbox() => _loadInbox();
+
+  /// Inbox аз шабака (ва кэш нав мешавад). `null` = хатои шабака.
+  ///
+  /// ⚠️ Пеш `getInboxChats` кэши то 12-соатаро бармегардонд ва навсозии
+  /// фонӣ натиҷаро ба экран намерасонд — бейҷи «2» баъди хондан ҳам
+  /// аз кэш бармегашт. Акнун контроллер баъди кэш ҲАМЕША инро мегирад.
+  Future<({List<MessageModel> chats, int? totalUnread})?> fetchInboxFresh() async {
+    try {
+      final res = await _api.getRequest(ApiEndpoints.chat)
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode >= 400) return null;
+      final body = jsonDecode(res.body);
+      final List raw = body is List ? body : (body['chats'] ?? []);
+      final total = body is Map ? (body['totalUnread'] as num?)?.toInt() : null;
+      final out = <MessageModel>[];
+      for (final e in raw) {
+        try {
+          final m = MessageModel.fromJson(e as Map<String, dynamic>);
+          if (m.peer.username.isNotEmpty) out.add(m);
+        } catch (err) { debugPrint('[Chat] parse: $err'); }
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_inboxKey, jsonEncode({
+        'time': DateTime.now().millisecondsSinceEpoch,
+        'data': raw,
+      }));
+      return (chats: out, totalUnread: total);
+    } catch (_) { return null; }
+  }
+
   Future<List<MessageModel>?> _loadInbox() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -282,8 +314,21 @@ class ChatRepository {
     } catch (_) { return null; }
   }
 
-  Future<void> markAsRead(String chatId) async {
-    try { await _api.postRequest('${ApiEndpoints.chat}/$chatId/read'); } catch (_) {}
+  /// Паёмҳоро хонда мекунад. [upTo] — танҳо то ҳамин паём (ҳамроҳ),
+  /// барои хондани тадриҷӣ. Ҷавоб: (unreadCount, totalUnread) ё null.
+  Future<({int unread, int? total})?> markAsRead(String chatId,
+      {String? upTo}) async {
+    try {
+      final res = await _api.postRequest('${ApiEndpoints.chat}/$chatId/read',
+          body: {if (upTo != null && upTo.isNotEmpty) 'upTo': upTo});
+      if (res.statusCode >= 400) return null;
+      final j = jsonDecode(res.body);
+      if (j is! Map) return null;
+      return (
+        unread: (j['unreadCount'] as num?)?.toInt() ?? 0,
+        total: (j['totalUnread'] as num?)?.toInt(),
+      );
+    } catch (_) { return null; }
   }
 
   // ── Дархостҳои паём: қабул / нест кардан ────────────────────────

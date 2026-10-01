@@ -11,6 +11,7 @@ import '../../notifications/notifications_repository.dart';
 import '../../feed/timeline/feed_screen.dart';
 import '../../reels/reels_feed/reels_screen.dart';
 import '../../chat/inbox/chat_list_screen.dart';
+import '../../chat/unread/chat_unread_store.dart';
 import '../../search/search_screen.dart';
 import '../../profile/profile_screen.dart';
 import '../../widgets/account_switcher.dart';
@@ -59,6 +60,8 @@ class _BottomNavViewState extends State<_BottomNavView> {
     UserSession.userIdNotifier.addListener(_onUserChanged);
     _setupGlobalCalls();
     _setupNotifBadge();
+    // Бейҷи паёмҳои хонданашуда дар таби чат (сокет + сервер).
+    ChatUnreadStore.instance.wire();
     FirebaseInit.requestNotificationPermission();
     _showAdConsentIfNeeded();
   }
@@ -118,6 +121,9 @@ class _BottomNavViewState extends State<_BottomNavView> {
     final uid = UserSession.userId;
     if (uid == _lastUserId) return;
     _lastUserId = uid;
+    // Аккаунти нав — шумораи хонданашудаи аккаунти кӯҳна намемонад.
+    ChatUnreadStore.instance.reset();
+    ChatUnreadStore.instance.refresh();
     if (!mounted) return;
     setState(() {
       _feedKey    = UniqueKey();
@@ -213,7 +219,10 @@ class _BottomNavViewState extends State<_BottomNavView> {
         bottomNavigationBar: ValueListenableBuilder<String?>(
           valueListenable: UserSession.avatarNotifier,
           builder: (_, liveAvatar, __) => AnimatedBuilder(
-            animation: NotificationBadgeController.instance,
+            animation: Listenable.merge([
+              NotificationBadgeController.instance,
+              ChatUnreadStore.instance,
+            ]),
             builder: (_, __) => BottomNavBar(
               currentIndex: nav.currentIndex,
               // Зарбаи дубора ба ҳамон таб → ба боло / навсозӣ (ниг.
@@ -224,6 +233,7 @@ class _BottomNavViewState extends State<_BottomNavView> {
               onProfileLongPress: () => showAccountSwitcher(context),
               avatarUrl: liveAvatar,
               notifCount: NotificationBadgeController.instance.count,
+              chatUnread: ChatUnreadStore.instance.total,
             ),
           ),
         ),

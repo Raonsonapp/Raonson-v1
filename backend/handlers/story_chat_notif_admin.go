@@ -106,6 +106,52 @@ func GetMyStories(c *gin.Context) {
 	c.JSON(http.StatusOK, scanStoryRows(rows, myID))
 }
 
+// GET /stories/:id — як сторис (барои корти «шуморо зикр кард» дар чат).
+//
+// 404 «Сторис дастрас нест», агар мӯҳлаташ гузашта, бойгонӣ, басташуда
+// ё ба тамошобин намоён набошад. Намоён: соҳиб, касе ки зикр шудааст,
+// ё (пайрав ё аккаунти кушода) бо назардошти «дӯстони наздик».
+func GetStoryByID(c *gin.Context) {
+	myID := mw.UID(c)
+	sid := c.Param("id")
+	rows, err := db.Pool.Query(c.Request.Context(), `
+		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
+		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),
+		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false),
+		       COALESCE(s.music_title,''),COALESCE(s.music_artist,''),
+		       COALESCE(s.music_url,''),COALESCE(s.music_art,''),
+		       COALESCE(s.music_track_ms,0),COALESCE(s.music_start_ms,0),
+		       COALESCE(s.music_end_ms,0),
+		       COALESCE(s.shared_post_id,''),COALESCE(s.shared_reel_id,''),
+		       COALESCE(s.shared_story_user,'')
+		FROM stories s JOIN users u ON u.id=s.user_id
+		WHERE s.id::text=$2::text AND s.expires_at > NOW()
+		  AND ( s.user_id=$1::text OR (
+		        COALESCE(s.archived,false)=FALSE
+		    AND NOT EXISTS (SELECT 1 FROM blocks b
+		          WHERE (b.blocker_id=$1::text AND b.blocked_id=s.user_id)
+		             OR (b.blocker_id=s.user_id AND b.blocked_id=$1::text))
+		    AND ( EXISTS (SELECT 1 FROM story_mentions sm
+		                  WHERE sm.story_id=s.id::text AND sm.user_id=$1::text)
+		       OR ( ( COALESCE(u.is_private,false)=FALSE
+		              OR EXISTS (SELECT 1 FROM follows f
+		                         WHERE f.follower_id=$1::text AND f.following_id=s.user_id) )
+		            AND ( COALESCE(s.audience,'all')='all'
+		              OR EXISTS (SELECT 1 FROM close_friends cf
+		                         WHERE cf.user_id=s.user_id AND cf.friend_id=$1::text) ) ) ) ) )
+		LIMIT 1`, myID, sid)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Сторис дастрас нест"})
+		return
+	}
+	list := scanStoryRows(rows, myID)
+	if len(list) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Сторис дастрас нест"})
+		return
+	}
+	c.JSON(http.StatusOK, list[0])
+}
+
 // POST /stories
 func CreateStory(c *gin.Context) {
 	myID := mw.UID(c)
@@ -670,7 +716,8 @@ func GetChats(c *gin.Context) {
 			"pinned": pinned, "muted": muted,
 		})
 	}
-	c.JSON(http.StatusOK, gin.H{"chats": result, "page": page, "limit": limit})
+	c.JSON(http.StatusOK, gin.H{"chats": result, "page": page, "limit": limit,
+		"totalUnread": chatUnreadTotal(c.Request.Context(), myID)})
 }
 
 // POST /chat/requests/:peerId/accept — дархостро қабул мекунад
@@ -916,25 +963,119 @@ func SendMessage(c *gin.Context) {
 }
 
 // POST /chat/:chatId/read
+//
+// Body (ихтиёрӣ): {"upTo": "<messageId>"} — танҳо паёмҳои то ҳамин
+// паём (аз рӯи вақт, ҳамроҳ) хонда мешаванд. Ин хондани тадриҷиро
+// медиҳад (мисли WhatsApp): 10 паёми нав, 4-тоаш дар экран → 6 мемонад.
+// Бе upTo — ҳамаи паёмҳои чат (рафтори кӯҳна).
+//
+// Ҷавоб: {ok, marked, unreadCount (боқимонда дар ҳамин чат), totalUnread}.
+// Сокет: «chat:read» ба фиристанда (ду тик) бо messageIds ва
+// «chat:unread» ба дастгоҳҳои дигари худи хонанда (бейҷи inbox).
 func MarkChatRead(c *gin.Context) {
 	chatID := c.Param("chatId")
 	myID   := mw.UID(c)
-	db.Pool.Exec(context.Background(),
-		`UPDATE messages SET read=TRUE, read_at=COALESCE(read_at, NOW())
-		 WHERE chat_id=$1::text AND receiver_id=$2::text`, chatID, myID)
-	// Ба ҳамсӯҳбат хабар медиҳем, то ду тик фавран пайдо шавад
-	// (пештар танҳо баъд аз refresh дида мешуд).
-	if a, b, ok := strings.Cut(chatID, "_"); ok {
-		peer := a
-		if myID == a {
-			peer = b
-		}
-		if peer != "" && peer != myID {
-			sockets.EmitToUser(peer, "chat:read",
-				map[string]interface{}{"chatId": chatID, "readBy": myID})
-		}
+	var b struct {
+		UpTo string `json:"upTo"`
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	_ = c.ShouldBindJSON(&b)
+	b.UpTo = strings.TrimSpace(b.UpTo)
+	ctx := c.Request.Context()
+
+	var ids []string
+	cond := ""
+	args := []interface{}{chatID, myID}
+	if b.UpTo != "" {
+		// Паёми upTo бояд дар ҳамин чат бошад; вагарна ҳеҷ чиз (на «ҳама»).
+		cond = ` AND created_at <= (SELECT created_at FROM messages
+		          WHERE id::text=$3 AND chat_id=$1::text)`
+		args = append(args, b.UpTo)
+	}
+	rows, err := db.Pool.Query(ctx, `
+		UPDATE messages SET read=TRUE, read_at=COALESCE(read_at, NOW())
+		 WHERE chat_id=$1::text AND receiver_id=$2::text AND read=FALSE
+		   AND (scheduled_at IS NULL OR scheduled_at <= NOW())`+cond+`
+		 RETURNING id::text`, args...)
+	if err == nil {
+		for rows.Next() {
+			var id string
+			if rows.Scan(&id) == nil {
+				ids = append(ids, id)
+			}
+		}
+		rows.Close()
+	}
+
+	remaining := chatUnreadCount(ctx, chatID, myID)
+	total := chatUnreadTotal(ctx, myID)
+
+	if len(ids) > 0 {
+		// Ба ҳамсӯҳбат хабар медиҳем, то ду тик фавран пайдо шавад
+		// (пештар танҳо баъд аз refresh дида мешуд).
+		if a, bb, ok := strings.Cut(chatID, "_"); ok {
+			peer := a
+			if myID == a {
+				peer = bb
+			}
+			if peer != "" && peer != myID {
+				sockets.EmitToUser(peer, "chat:read", map[string]interface{}{
+					"chatId": chatID, "readBy": myID, "messageIds": ids,
+					"upTo": b.UpTo,
+				})
+			}
+		}
+		// Дастгоҳҳои дигари ман (телефон + планшет) бейҷро нав мекунанд.
+		sockets.EmitToUser(myID, "chat:unread", map[string]interface{}{
+			"chatId": chatID, "unreadCount": remaining, "totalUnread": total,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"ok": true, "marked": len(ids),
+		"unreadCount": remaining, "totalUnread": total,
+	})
+}
+
+// chatUnreadCount — паёмҳои хонданашуда ба ман дар як чат.
+func chatUnreadCount(ctx context.Context, chatID, myID string) int {
+	var n int
+	db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM messages
+		 WHERE chat_id=$1::text AND receiver_id=$2::text AND read=FALSE
+		   AND (scheduled_at IS NULL OR scheduled_at <= NOW())`,
+		chatID, myID).Scan(&n)
+	return n
+}
+
+// chatUnreadTotal — шумораи умумии паёмҳои хонданашуда барои бейҷи
+// навбари поён: бе дархостҳо (мисли Instagram — онҳо алоҳидаанд), бе
+// чатҳои пинҳон/хомӯш ва бе бастагон.
+func chatUnreadTotal(ctx context.Context, myID string) int {
+	var n int
+	db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM messages m
+		 WHERE m.receiver_id=$1::text AND m.read=FALSE
+		   AND (m.scheduled_at IS NULL OR m.scheduled_at <= NOW())
+		   AND NOT EXISTS (SELECT 1 FROM chat_hidden ch
+		                    WHERE ch.user_id=$1::text AND ch.peer_id=m.sender_id)
+		   AND NOT EXISTS (SELECT 1 FROM chat_prefs cp
+		                    WHERE cp.user_id=$1::text AND cp.peer_id=m.sender_id
+		                      AND COALESCE(cp.muted,false))
+		   AND NOT EXISTS (SELECT 1 FROM blocks b
+		                    WHERE (b.blocker_id=$1::text AND b.blocked_id=m.sender_id)
+		                       OR (b.blocker_id=m.sender_id AND b.blocked_id=$1::text))
+		   AND ( EXISTS (SELECT 1 FROM follows f
+		                  WHERE f.follower_id=$1::text AND f.following_id=m.sender_id)
+		      OR EXISTS (SELECT 1 FROM chat_accepts ca
+		                  WHERE ca.user_id=$1::text AND ca.peer_id=m.sender_id)
+		      OR EXISTS (SELECT 1 FROM messages mm
+		                  WHERE mm.chat_id=m.chat_id AND mm.sender_id=$1::text) )`,
+		myID).Scan(&n)
+	return n
+}
+
+// GET /chat/unread-count — {totalUnread} барои бейҷи навбари поён.
+func GetChatUnreadTotal(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"totalUnread": chatUnreadTotal(c.Request.Context(), mw.UID(c))})
 }
 
 

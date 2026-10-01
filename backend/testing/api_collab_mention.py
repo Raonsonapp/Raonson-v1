@@ -37,7 +37,21 @@ S = os.environ.get("SUFFIX", "col")
 tA, A = user(f"kla{S}", "+992900977001")   # муаллиф
 tB, Bb = user(f"klb{S}", "+992900977002")  # ҳамкор
 tC, C = user(f"klc{S}", "+992900977003")   # обуначии ҳамкор
-if not (tA and tB and tC): print("!! вуруд нашуд"); sys.exit(1)
+tD, D = user(f"kld{S}", "+992900977004")   # муаллифро бастааст
+if not (tA and tB and tC and tD): print("!! вуруд нашуд"); sys.exit(1)
+nD = f"kld{S}".lower()
+st, _ = call("POST", f"/users/{A}/block", tok=tD); ok("D муаллифро баст", st in (200, 201), st)
+
+COLLAB_DM = "Шуморо ба ҳамкорӣ дар пост даъват кард"
+MENTION_DM = "Шуморо дар сторис зикр кард"
+
+def dm_from(tok, peer):
+    """Паёмҳои Direct-и ин корбар бо peer ва сатри inbox."""
+    st, r = call("GET", "/chat", tok=tok)
+    rows = [c for c in (r.get("chats") or []) if (c.get("peer") or {}).get("_id") == peer]
+    if not rows: return None, []
+    st, m = call("GET", f"/chat/{rows[0]['chatId']}/messages", tok=tok)
+    return rows[0], (m.get("messages") or [])
 nB, nA = f"klb{S}".lower(), f"kla{S}".lower()
 st, _ = call("POST", f"/follow/{Bb}", tok=tC); ok("обуна шуд", st in (200, 201), st)
 
@@ -61,10 +75,27 @@ ok("то қабул дар профили ҳамкор нест", pid not in ids
 st, g = call("GET", f"/posts/{pid}", tok=tC)
 ok("то қабул номи ҳамкор дар пост нест", not g.get("collaborators"), g.get("collaborators"))
 
+# ── Даъват ҳамчун паёми Direct (мисли Instagram) ──
+row, msgs = dm_from(tB, A)
+cm = [m for m in msgs if m.get("shareId") == pid and m.get("shareKind") == "post"]
+ok("даъват дар Direct ҳамчун корти пост омад", len(cm) == 1 and cm[0].get("text") == COLLAB_DM, msgs[-2:])
+ok("корт аз номи муаллиф ва бо расм", cm and (cm[0].get("sender") or {}).get("_id") == A
+   and cm[0].get("shareThumb", "").startswith("https://") and cm[0].get("shareUser") == nA, cm[:1])
+ok("B ба A обуна нест → паём дар «Дархостҳо»", row and row.get("isRequest") is True, row)
+ok("паёми даъват хонда нашуда ҳисоб мешавад", row and row.get("unreadCount", 0) >= 1, row)
+row_a, msgs_a = dm_from(tA, Bb)
+ok("муаллиф ҳам паёмро дар чати худ мебинад", [m for m in msgs_a if m.get("shareId") == pid], msgs_a[-1:])
+st, pd = call("POST", "/posts/", {"caption": "басташуда", "media": [{"url": "https://example.com/z.jpg", "type": "image"}], "collaborators": [nD]}, tA)
+time.sleep(1.5)
+row_d, msgs_d = dm_from(tD, A)
+ok("ба касе, ки муаллифро бастааст, паём намеравад", not msgs_d, msgs_d[-1:])
+
 st, _ = call("POST", f"/posts/{pid}/collab/accept", tok=tC)
 ok("бегона даъватро қабул карда наметавонад", st == 404, st)
 st, _ = call("POST", f"/posts/{pid}/collab/accept", tok=tB)
-ok("ҳамкор қабул кард", st == 200, st)
+ok("ҳамкор қабул кард (тугмаи корти Direct ҳамин API-ро мезанад)", st == 200, st)
+row, msgs = dm_from(tB, A)
+ok("даъват такрор нашуд", len([m for m in msgs if m.get("shareId") == pid]) == 1, len(msgs))
 time.sleep(1)
 ok("огоҳиномаи даъват пас аз ҷавоб нест шуд", not [x for x in notifs(tB) if x.get("type") == "collab_invite"])
 ok("муаллиф «қабул кард» гирифт", [x for x in notifs(tA) if x.get("type") == "collab_accepted"])
@@ -114,6 +145,21 @@ st, s1 = call("POST", "/stories/", {"mediaUrl": "https://example.com/s.jpg", "me
 sid = s1.get("_id") or s1.get("id"); ok("сторис бо зикр сохта шуд", st in (200, 201) and sid, (st, s1))
 time.sleep(1.5)
 ok("зикршуда огоҳинома гирифт", [x for x in notifs(tB) if x.get("type") == "story_mention"])
+row, msgs = dm_from(tB, A)
+sm = [m for m in msgs if m.get("shareId") == sid and m.get("shareKind") == "story"]
+ok("зикр дар Direct ҳамчун корти сторис омад", len(sm) == 1 and sm[0].get("text") == MENTION_DM, msgs[-2:])
+ok("корти сторис бо расм ва номи муаллиф", sm and sm[0].get("shareThumb") == "https://example.com/s.jpg"
+   and sm[0].get("shareUser") == nA, sm[:1])
+st, one = call("GET", f"/stories/{sid}", tok=tB)
+ok("зикршуда сторисро аз корт мекушояд", st == 200 and one.get("_id") == sid, (st, one))
+st, one = call("GET", "/stories/00000000-0000-0000-0000-000000000000", tok=tB)
+ok("сториси нест/кӯҳна → 404 «Сторис дастрас нест»", st == 404 and "дастрас нест" in jd(one), (st, one))
+st, one = call("GET", f"/stories/{sid}", tok=tD)
+ok("басташуда сторисро намебинад", st == 404, st)
+st, s2 = call("POST", "/stories/", {"mediaUrl": "https://example.com/s2.jpg", "mediaType": "image", "mentions": [{"username": nD, "x": 0.5, "y": 0.5}]}, tA)
+time.sleep(1)
+row_d, msgs_d = dm_from(tD, A)
+ok("зикри басташуда ба Direct намеравад", not msgs_d, msgs_d[-1:])
 st, r = call("POST", "/stories/", {"sharedStoryId": sid}, tC)
 ok("зикрнашуда илова карда наметавонад", st == 403, st)
 st, r = call("POST", "/stories/", {"sharedStoryId": sid, "mediaUrl": "https://evil.example/x.jpg", "mediaType": "image"}, tB)

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
+import '../unread/chat_unread_store.dart';
 
 /// Tabҳои inbox — мисли Instagram: Асосӣ / Дархостҳо.
 enum ChatTab { primary, general, requests }
@@ -8,7 +9,52 @@ enum ChatTab { primary, general, requests }
 class ChatListController extends ChangeNotifier {
   final ChatRepository _repository;
 
-  ChatListController(this._repository);
+  ChatListController(this._repository, {ChatUnreadStore? unread})
+      : _unread = unread ?? ChatUnreadStore.instance {
+    _unread.addListener(_onUnreadChanged);
+  }
+
+  /// Бейҷҳои хонданашуда барои тамоми барнома (экрани чат онро нав
+  /// мекунад, ҳангоме ки паёмҳо дар экран дида мешаванд).
+  final ChatUnreadStore _unread;
+
+  @override
+  void dispose() {
+    _unread.removeListener(_onUnreadChanged);
+    super.dispose();
+  }
+
+  /// Шумораҳои навтарини маҳаллӣ (аз чати кушода/сокет) ба рӯйхат.
+  void _onUnreadChanged() {
+    var changed = false;
+    for (var i = 0; i < _chats.length; i++) {
+      final n = _unread.unreadFor(_chats[i].chatId);
+      if (n != null && n != _chats[i].unreadCount) {
+        _chats[i] = _chats[i].copyWith(unreadCount: n);
+        changed = true;
+      }
+    }
+    if (changed) {
+      _applyFilter();
+      notifyListeners();
+    }
+  }
+
+  /// Пас аз гирифтани рӯйхат аз сервер: агар дар ҳамин вақт чат
+  /// маҳаллӣ хонда шуда бошад (POST /read ҳанӯз дар роҳ), шумораи
+  /// камтарро нигоҳ медорем — то бейҷ «бознагардад».
+  List<MessageModel> _withLocalUnread(List<MessageModel> list, DateTime since) {
+    return list.map((c) {
+      final n = _unread.unreadFor(c.chatId);
+      if (n == null) return c;
+      if (_unread.changedSince(c.chatId, since) && n < c.unreadCount) {
+        return c.copyWith(unreadCount: n);
+      }
+      // Сервер ҳақиқати навтар аст — тағйироти кӯҳнаро мепартоем.
+      _unread.forget(c.chatId);
+      return c;
+    }).toList();
+  }
 
   bool   _loading = false;
   bool   get isLoading => _loading;
@@ -68,6 +114,9 @@ class ChatListController extends ChangeNotifier {
   }
 
   /// Ҳисоби хонданашударо фавран барои як сӯҳбат пок мекунад (ҳангоми кушодан).
+  ///
+  /// ⚠️ Акнун танҳо экрани чат паёмҳоро хонда мекунад — ҳангоми ДИДАН
+  /// (ниг. ReadTracker). Ин метод барои мувофиқат боқӣ монд.
   void clearUnread(String chatId) {
     final i = _chats.indexWhere((c) => c.chatId == chatId);
     if (i >= 0 && _chats[i].unreadCount > 0) {
@@ -85,25 +134,48 @@ class ChatListController extends ChangeNotifier {
     await loadChats();
   }
 
+  /// Кэш фавран (агар рӯйхат холӣ бошад), баъд ҲАМЕША шабака.
+  ///
+  /// ⚠️ Пеш кэши то 12 соата натиҷаи ниҳоӣ буд ва навсозии фонӣ ба
+  /// экран намерасид: баъди хондани чат бейҷи «2» аз кэш бармегашт.
   Future<void> loadChats() async {
-    _loading = true;
-    _error   = null;
+    final started = DateTime.now();
+    _error = null;
+    if (_chats.isEmpty) {
+      final cached = await _repository.loadCachedInbox();
+      if (cached != null && cached.isNotEmpty && _chats.isEmpty) {
+        _chats = _withLocalUnread(cached, DateTime(2000));
+        _applyFilter();
+      }
+    }
+    _loading = _chats.isEmpty;
     notifyListeners();
     try {
-      _chats = await _repository.getInboxChats();
-      _page = 1;
-      _hasMore = _chats.length >= _pageSize;
-      _applyFilter();
-      debugPrint('[Inbox] loaded ${_chats.length} chats');
+      final fresh = await _repository.fetchInboxFresh();
+      if (fresh != null) {
+        _chats = _withLocalUnread(fresh.chats, started);
+        _page = 1;
+        _hasMore = _chats.length >= _pageSize;
+        _applyFilter();
+        _unread.setTotal(fresh.totalUnread);
+        debugPrint('[Inbox] loaded ${_chats.length} chats');
+      } else if (_chats.isEmpty) {
+        _error = 'network';
+      }
     } catch (e) {
       debugPrint('[Inbox] ERROR: $e');
-      _chats = [];
-      _error = e.toString();
+      if (_chats.isEmpty) _error = e.toString();
     } finally {
       _loading = false;
       notifyListeners();
     }
   }
+
+  /// Бейҷи умумӣ — ҷамъи хонданашудаҳо дар чатҳои асосӣ (на дархостҳо,
+  /// на хомӯш). Сервер ҳамин қоидаро дорад (`totalUnread`).
+  int get totalUnreadMessages => _chats
+      .where((c) => !c.isRequest && !c.muted)
+      .fold(0, (a, c) => a + c.unreadCount);
 
   /// Саҳифаи навбатии сӯҳбатҳоро бор мекунад (scroll pagination).
   Future<void> loadMoreChats() async {

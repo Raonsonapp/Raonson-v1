@@ -193,12 +193,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       // оддии 8с ин ҷо «Хатои шабака» медод, гарчи почта дар роҳ буд.
       final res = await ApiClient.instance.postLong('/admin/test-email');
       final j = jsonDecode(res.body) as Map<String, dynamic>;
+      final provider = (j['provider'] ?? '').toString();
+      final providers = (j['providers'] as List?)?.join(' → ') ?? '';
       if (j['sent'] == true) {
-        result = '✅ Фиристода шуд ба ${j['to']}\n\nПочтаатонро (ва Spam) санҷед.';
+        result = '✅ Фиристода шуд ба ${j['to']}'
+            '${provider.isNotEmpty ? ' (тавассути $provider)' : ''}'
+            '\n\nПочтаатонро (ва Spam) санҷед.';
       } else {
+        final hint = (j['hint'] ?? '').toString();
         result = '❌ Нафиристода шуд\n\n'
-            'Танзим: ${j['configured'] == true ? 'почта (Brevo/SMTP) танзим шуда' : 'BREVO_API_KEY ё SMTP_USER/PASS НЕСТ'}\n\n'
-            'Хато:\n${j['error'] ?? 'номаълум'}';
+            'Танзим: ${j['configured'] == true ? 'провайдерҳо: $providers' : 'BREVO_API_KEY, RESEND_API_KEY ё SMTP_USER/PASS НЕСТ'}\n'
+            '${provider.isNotEmpty ? 'Охирин озмудашуда: $provider\n' : ''}\n'
+            'Хато:\n${j['error'] ?? 'номаълум'}'
+            '${hint.isNotEmpty && !(j['error'] ?? '').toString().contains(hint) ? '\n\n💡 $hint' : ''}';
       }
     } catch (e) {
       result = '❌ Хатои шабака: $e';

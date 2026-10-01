@@ -566,11 +566,18 @@ func saveStoryMentions(storyID, authorID string, in []mentionInput) {
 		if IsBlockedBetween(authorID, uid) {
 			continue
 		}
-		db.Pool.Exec(ctx, `INSERT INTO story_mentions(story_id,user_id,username,pos_x,pos_y)
+		tag, err := db.Pool.Exec(ctx, `INSERT INTO story_mentions(story_id,user_id,username,pos_x,pos_y)
 			VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
 			storyID, uid, real, clamp01(m.X), clamp01(m.Y))
+		if err != nil || tag.RowsAffected() == 0 {
+			continue
+		}
 		notify(uid, authorID, "story_mention", storyID)
 		pushNotify(uid, authorID, "story_mention", storyID, "")
+		// Мисли Instagram: зикр ҳамчун корти сторис дар Direct ҳам меояд.
+		// Агар зикршуда ба муаллиф пайравӣ накунад — дар «Дархостҳо».
+		sendShareDM(ctx, authorID, uid, "story", storyID, storyThumb(ctx, storyID),
+			StoryMentionDMText)
 	}
 }
 
