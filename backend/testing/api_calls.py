@@ -26,7 +26,7 @@ def user(u, ph):
     return r.get("accessToken"), (r.get("user") or {}).get("id") or (r.get("user") or {}).get("_id")
 def ok(n, c, d=""): res.append((bool(c), n, str(d)[:200]))
 S = os.environ.get("SUFFIX", "cl")
-tA, A = user(f"ca{S}", "+992900970001"); tB, Bb = user(f"cb{S}", "+992900970002"); tC, C = user(f"cc{S}", "+992900970003")
+tA, A = user(f"kca{S}", "+992900970001"); tB, Bb = user(f"kcb{S}", "+992900970002"); tC, C = user(f"kcc{S}", "+992900970003")
 
 st, ra = call("POST", "/calls/token", {"peerId": Bb}, tA)
 st2, rb = call("POST", "/calls/token", {"peerId": A}, tB)
