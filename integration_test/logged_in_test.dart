@@ -79,8 +79,15 @@ Future<void> _tab(WidgetTester t, int i) async {
   }
   final bar = find.byType(BottomNavBar);
   if (bar.evaluate().isEmpty) return;
-  final r = t.getRect(bar);
-  await t.tapAt(Offset(r.left + r.width * (i + 0.5) / 5, r.center.dy));
+  // Худи тугмаи таб (маркази нишона), на нуқтаи тахминӣ дар навбар.
+  final items = find.descendant(
+      of: bar, matching: find.byType(GestureDetector));
+  if (items.evaluate().length > i) {
+    await t.tap(items.at(i), warnIfMissed: false);
+  } else {
+    final r = t.getRect(bar);
+    await t.tapAt(Offset(r.left + r.width * (i + 0.5) / 5, r.top + 30));
+  }
   await pumpFor(t, 1600);
 }
 
