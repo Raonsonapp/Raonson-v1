@@ -205,17 +205,17 @@ class _FriendsScreenState extends State<FriendsScreen>
   }
 
   Future<void> _follow(String userId) async {
-    try {
-      await ApiClient.instance.postOk('/follow/$userId');
-      // Ба ҳамаи тугмаҳои дигар (reels, explore, профил) хабар медиҳем.
-      FollowService.instance.report(userId, true);
-      setState(() {
-        final idx = _suggestions.indexWhere((u) => u.id == userId);
-        if (idx >= 0) {
-          _suggestions[idx] = _suggestions[idx].copyWith(isFollowing: true);
-        }
-      });
-    } catch (_) {}
+    // FollowService: ҳамаи тугмаҳои дигар (reels, explore, профил) низ
+    // нав мешаванд, ва ҳисоби пӯшида «Дархост» мешавад, на «Обуна шуд».
+    // Пеш ҳар ҷавоби 200 «обуна» ҳисоб мешуд — ҳатто {"requested": true}.
+    final now = await FollowService.instance.toggle(userId, false);
+    if (!mounted) return;
+    setState(() {
+      final idx = _suggestions.indexWhere((u) => u.id == userId);
+      if (idx >= 0) {
+        _suggestions[idx] = _suggestions[idx].copyWith(isFollowing: now);
+      }
+    });
   }
 
   Future<void> _removeSuggestion(String userId) async {
@@ -458,7 +458,8 @@ class _SuggestionCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.neonBlue,
                   borderRadius: BorderRadius.circular(8)),
-                child: Text(tr('ui.bc99e8eb3c'),
+                child: Text(FollowService.instance.isRequested(user.id)
+                        ? tr('common.requested') : tr('ui.bc99e8eb3c'),
                     style: TextStyle(color: AppColors.textPrimary,
                         fontSize: 13, fontWeight: FontWeight.w600)),
               ),

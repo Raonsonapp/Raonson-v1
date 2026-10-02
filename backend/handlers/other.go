@@ -458,6 +458,17 @@ func UnfollowUser(c *gin.Context) {
 	targetID := c.Param("id")
 	myID := mw.UID(c)
 	defer invalidateFeedCache(myID) // лентаи «Обунаҳо» фавран нав шавад
+	// Дархости обунаи ҳанӯз қабулнашуда (ҳисоби пӯшида) низ бекор мешавад.
+	// Пеш онро бозпас гирифтан ғайриимкон буд: тугма «Дархост фиристода
+	// шуд» мемонд ва соҳиби ҳисоб онро то абад дар рӯйхат медид.
+	if tag, err := db.Pool.Exec(context.Background(),
+		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`,
+		myID, targetID); err == nil && tag.RowsAffected() > 0 {
+		db.Pool.Exec(context.Background(), `
+			DELETE FROM notifications
+			WHERE user_id=$1 AND from_user_id=$2 AND type='follow_request'`,
+			targetID, myID)
+	}
 	// RETURNING — шумориш танҳо вақте кам мешавад, ки сатр воқеан нест
 	// шуда бошад. Бе ин такрори дархост шуморишро поин мебарад.
 	var deleted int

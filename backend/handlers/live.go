@@ -30,8 +30,8 @@ func StartLive(c *gin.Context) {
 
 	var id string
 	err := db.Pool.QueryRow(context.Background(), `
-		INSERT INTO live_streams(host_id, channel, title)
-		VALUES($1, '', $2) RETURNING id`, myID, title).Scan(&id)
+		INSERT INTO live_streams(host_id, channel, title, heartbeat_at)
+		VALUES($1, '', $2, NOW()) RETURNING id`, myID, title).Scan(&id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "стрим сар нашуд"})
 		return
@@ -111,8 +111,28 @@ func LeaveLive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true, "viewers": refreshViewers(id)})
 }
 
+// liveStaleAfter — агар ҳост ин қадар сония худро нишон надиҳад, эфир
+// хотимаёфта ҳисоб мешавад.
+const liveStaleAfter = "90 seconds"
+
 // GET /live → стримҳои фаъол
+//
+// ⚠️ Эфир танҳо бо /live/:id/end баста мешуд. Агар барномаи ҳост
+// афтад, интернет қатъ шавад ё телефонро хомӯш кунанд, эфир то абад
+// «фаъол» мемонд: дар рӯйхат «🔴 LIVE»-и мурда меистод ва бинанда
+// абадан «Интизори пахш…»-ро медид.
+//
+// Ҳост ҳангоми пахш ҳар 5 сония ҳамин рӯйхатро мехонад (шумораи
+// бинандагон) — ҳамин хондан «зинда ҳастам» аст (барномаҳои кӯҳна ҳам
+// бе тағйир кор мекунанд). Эфире, ки 90 сония хабар надод, баста мешавад.
 func ListLive(c *gin.Context) {
+	me := mw.UID(c)
+	db.Pool.Exec(context.Background(),
+		`UPDATE live_streams SET heartbeat_at=NOW() WHERE host_id=$1 AND active=TRUE`, me)
+	db.Pool.Exec(context.Background(), `
+		UPDATE live_streams SET active=FALSE, ended_at=NOW()
+		WHERE active=TRUE
+		  AND COALESCE(heartbeat_at, started_at) < NOW() - INTERVAL '`+liveStaleAfter+`'`)
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT l.id, l.channel, l.title, l.viewers, COALESCE(l.likes,0),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false)
@@ -120,7 +140,7 @@ func ListLive(c *gin.Context) {
 		WHERE l.active=TRUE
 		  -- Бастагон ва ҳисобҳои пӯшидаи бегона дар рӯйхат нестанд.
 		  AND `+visibleAuthorSQL("l.host_id", "u", "$1")+`
-		ORDER BY l.started_at DESC LIMIT 50`, mw.UID(c))
+		ORDER BY l.started_at DESC LIMIT 50`, me)
 	out := []gin.H{}
 	if err == nil {
 		defer rows.Close()

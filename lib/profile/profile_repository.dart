@@ -18,6 +18,11 @@ class ProfileRepository {
 
   static const _diskCacheTTL = Duration(hours: 24);
 
+  /// Андозаи саҳифа — ҳамон пешфарзи сервер (GetUserPosts/GetUserReels).
+  static const profilePageSize = 24;
+  /// Андозаи саҳифаи обуначиён/обунаҳо (followPage дар сервер).
+  static const followPageSize = 50;
+
   /// 'me' барои ҳар аккаунт як чиз нест — калидро бо id-и воқеӣ
   /// месозем, вагарна баъд аз иваз кардани аккаунт профили корбари
   /// қаблӣ то 24 соат бармегашт.
@@ -179,6 +184,41 @@ class ProfileRepository {
     });
   }
 
+  /// Саҳифаи навбатии постҳои профил (бе кэш). Саҳифаи аввал — аз
+  /// [getUserPosts]; инҳо ҳангоми ғелондан то поён илова мешаванд.
+  ///
+  /// ⚠️ Пеш профил танҳо 24 пости охиринро нишон медод ва ҳеҷ гоҳ
+  /// бештар бор намекард: пости 25-ум ва кӯҳнатар дар профил умуман
+  /// дида намешуд (ҳамчунин Reels, обуначиён ва захирашудаҳо).
+  Future<List<PostModel>?> getUserPostsPage(String userId,
+      {required int page, int limit = profilePageSize}) async {
+    try {
+      final res = await _api.get('/users/$userId/posts',
+          query: {'page': '$page', 'limit': '$limit'})
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode >= 400) return null;
+      final body = jsonDecode(res.body);
+      final raw  = body is List ? body : (body['posts'] ?? []) as List;
+      ContentSync.stampAll(raw);
+      return raw.map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
+    } catch (_) { return null; }
+  }
+
+  /// Саҳифаи навбатии Reels-и профил (ниг. [getUserPostsPage]).
+  Future<List<ReelModel>?> getUserReelsPage(String userId,
+      {required int page, int limit = profilePageSize}) async {
+    try {
+      final res = await _api.get('/users/$userId/reels',
+          query: {'page': '$page', 'limit': '$limit'})
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode >= 400) return null;
+      final body = jsonDecode(res.body);
+      final raw  = body is List ? body : (body['reels'] ?? []) as List;
+      ContentSync.stampAll(raw);
+      return raw.map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
+    } catch (_) { return null; }
+  }
+
   Future<List<PostModel>> getTaggedPosts(String userId) async {
     try {
       final res = await _api.get('/users/$userId/tagged').timeout(const Duration(seconds: 8));
@@ -242,24 +282,29 @@ class ProfileRepository {
     } catch (_) { return []; }
   }
 
-  Future<void> follow(String uid)    async => _api.post(ApiEndpoints.follow(uid));
-  Future<void> unfollow(String uid)  async => _api.post(ApiEndpoints.unfollow(uid));
+  // `…Ok`: рад кардани сервер хато аст — тугма ба ҳолати пешина бармегардад.
+  Future<void> follow(String uid)    async => _api.postOk(ApiEndpoints.follow(uid));
+  Future<void> unfollow(String uid)  async => _api.postOk(ApiEndpoints.unfollow(uid));
   Future<void> blockUser(String uid)   async => _api.post('/users/$uid/block');
   Future<void> unblockUser(String uid) async => _api.post('/users/$uid/unblock');
   Future<void> pinPost(String postId, bool pin) async =>
       _api.post('/posts/$postId/pin', body: {'pin': pin});
   Future<void> deletePost(String postId) async => _api.delete('/posts/$postId');
 
-  Future<List<UserModel>> getFollowers(String uid) async {
-    final res = await _api.get('/users/$uid/followers');
+  Future<List<UserModel>> getFollowers(String uid,
+      {int page = 1, int limit = followPageSize}) async {
+    final res = await _api.get('/users/$uid/followers',
+        query: {'page': '$page', 'limit': '$limit'});
     if (res.statusCode >= 400) return [];
     final body = jsonDecode(res.body);
     final list = body is List ? body : (body['followers'] ?? []) as List;
     return list.map((e) => UserModel.fromJson(e as Map<String,dynamic>)).toList();
   }
 
-  Future<List<UserModel>> getFollowing(String uid) async {
-    final res = await _api.get('/users/$uid/following');
+  Future<List<UserModel>> getFollowing(String uid,
+      {int page = 1, int limit = followPageSize}) async {
+    final res = await _api.get('/users/$uid/following',
+        query: {'page': '$page', 'limit': '$limit'});
     if (res.statusCode >= 400) return [];
     final body = jsonDecode(res.body);
     final list = body is List ? body : (body['following'] ?? []) as List;
@@ -287,9 +332,11 @@ class ProfileRepository {
 extension ProfileRepositoryExt on ProfileRepository {
 
   /// Saved posts — GET /profile/saved
-  Future<List<PostModel>> getSavedPosts() async {
+  Future<List<PostModel>> getSavedPosts(
+      {int page = 1, int limit = ProfileRepository.profilePageSize}) async {
     try {
-      final res = await _api.get('/profile/saved')
+      final res = await _api.get('/profile/saved',
+          query: {'page': '$page', 'limit': '$limit'})
           .timeout(const Duration(seconds: 8));
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);

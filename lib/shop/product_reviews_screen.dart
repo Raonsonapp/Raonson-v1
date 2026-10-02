@@ -48,13 +48,28 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
 
   Future<void> _submit() async {
     setState(() => _sending = true);
+    // Пеш ҷавоби сервер санҷида намешуд: харидоре, ки молро ҳанӯз
+    // нагирифтааст (403), матни баҳояшро гум мекард ва ҳеҷ сабабе
+    // намедид. Акнун матн танҳо баъди сабти воқеӣ пок мешавад.
+    String? err;
     try {
-      await ApiClient.instance.post('/posts/${widget.postId}/review',
+      final r = await ApiClient.instance.post('/posts/${widget.postId}/review',
           body: {'rating': _myRating, 'text': _text.text.trim()});
-      _text.clear();
-      await _load();
-    } catch (_) {}
-    if (mounted) setState(() => _sending = false);
+      if (r.statusCode >= 400) {
+        err = ApiException(r.statusCode, r.body).message ??
+            tr('common.failedRetry');
+      } else {
+        _text.clear();
+        await _load();
+      }
+    } catch (_) {
+      err = tr('common.noConnection');
+    }
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (err != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+    }
   }
 
   Widget _stars(int rating, {double size = 16}) => Row(
@@ -157,9 +172,10 @@ class _ProductReviewsState extends State<ProductReviewsScreen> {
                       Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Row(children: [
-                            Text('@${r['username'] ?? ''}',
+                            Flexible(child: Text('@${r['username'] ?? ''}',
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
                                 style: TextStyle(color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                                    fontWeight: FontWeight.w600, fontSize: 13))),
                             const SizedBox(width: 8),
                             _stars((r['rating'] as num?)?.toInt() ?? 0, size: 13),
                           ]),

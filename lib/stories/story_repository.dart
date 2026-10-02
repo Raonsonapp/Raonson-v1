@@ -102,7 +102,8 @@ class StoryRepository {
 
   Future<Map<String, dynamic>> getViewers(String storyId) async {
     try {
-      final res = await _api.get('${ApiEndpoints.stories}/$storyId/viewers')
+      final res = await _api.get('${ApiEndpoints.stories}/$storyId/viewers',
+              query: const {'limit': '200'})
           .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;

@@ -141,7 +141,9 @@ class SettingsScreen extends StatelessWidget {
                 child: Row(children: [
                   TajikshopBrand.logo(size: 18),
                   const Spacer(),
-                  TajikshopBrand.poweredBy(),
+                  // Бо ҳарфи калон дар 320dp ҷой намерасид.
+                  Flexible(child: FittedBox(fit: BoxFit.scaleDown,
+                      child: TajikshopBrand.poweredBy())),
                 ]),
               ),
               _NavTile(

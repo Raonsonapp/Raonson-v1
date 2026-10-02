@@ -355,15 +355,17 @@ class ChatRepository {
     } catch (_) { return false; }
   }
 
+  /// Хато (шабака ё рад кардани сервер) ПАРТОФТА мешавад. Пеш хато
+  /// хомӯшона фурӯ бурда мешуд: паём дар экран «нест шуд», вале дар
+  /// сервер мемонд ва баъди кушодани дубораи чат бармегашт.
   Future<void> deleteMessage(String messageId) async {
-    try { await _api.deleteRequest('/chat/messages/$messageId'); } catch (_) {}
+    await _api.deleteOk('/chat/messages/$messageId');
   }
 
+  /// Ниг. [deleteMessage]: хато партофта мешавад, то экран дурӯғ нагӯяд.
   Future<void> reactToMessage(String messageId, String emoji) async {
-    try {
-      await _api.postRequest(
-          '/chat/messages/$messageId/react', body: {'emoji': emoji});
-    } catch (_) {}
+    await _api.postOk(
+        '/chat/messages/$messageId/react', body: {'emoji': emoji});
   }
 
   // Медиаро (акс/видео/овоз) ба R2 бор мекунад ва URL-ро бармегардонад.

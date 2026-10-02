@@ -160,6 +160,47 @@ func GetReviews(c *gin.Context) {
 	})
 }
 
+// attachSalePct — ба постҳои маҳсул тахфифи ФАЪОЛРО (salePct) илова
+// мекунад. Пеш онро танҳо /shop медод: тугмаи «Харид» дар лента,
+// профил ва Explore нархи пурраро нишон медод, вале фармоиш бо нархи
+// тахфифӣ сабт мешуд — харидор ва фурӯшанда рақамҳои гуногун медиданд.
+// Як дархост барои тамоми рӯйхат (на N+1).
+func attachSalePct(posts []gin.H) {
+	ids := []string{}
+	for _, p := range posts {
+		p["salePct"] = 0
+		if prod, _ := p["isProduct"].(bool); prod {
+			if id, _ := p["_id"].(string); id != "" {
+				ids = append(ids, id)
+			}
+		}
+	}
+	if len(ids) == 0 || db.Pool == nil {
+		return
+	}
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT id, sale_pct FROM posts
+		WHERE id = ANY($1) AND COALESCE(sale_pct,0) > 0
+		  AND (sale_until IS NULL OR sale_until > now())`, ids)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	sale := map[string]int{}
+	for rows.Next() {
+		var id string
+		var pct int
+		if rows.Scan(&id, &pct) == nil {
+			sale[id] = pct
+		}
+	}
+	for _, p := range posts {
+		if id, _ := p["_id"].(string); sale[id] > 0 {
+			p["salePct"] = sale[id]
+		}
+	}
+}
+
 // ── PUT /posts/:id/sale {salePct, saleDays} → тахфифи муддатнок ──
 func SetProductSale(c *gin.Context) {
 	myID := mw.UID(c)

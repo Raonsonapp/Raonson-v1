@@ -179,6 +179,27 @@ func PostNotInterested(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"not_interested": true})
 }
 
+// ── DELETE /posts/:id/not-interested ──────────────────────────────
+// «Бекор кардан»-и «Ҷолиб нест». Пеш тугмаи «Бекор» дар snackbar
+// постро танҳо дар экран бармегардонд: дар сервер он пинҳон мемонд ва
+// баъди навсозии лента боз нопадид мешуд.
+func UndoPostNotInterested(c *gin.Context) {
+	pid := c.Param("id")
+	myID := mw.UID(c)
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM post_not_interested WHERE post_id=$1 AND user_id=$2`, pid, myID)
+	var was bool
+	if db.Pool.QueryRow(context.Background(), `
+		DELETE FROM post_interests WHERE post_id=$1 AND user_id=$2
+		RETURNING interested`, pid, myID).Scan(&was) == nil && !was {
+		// Ҷаримаи setInterest(false) (−1) баргардонда мешавад.
+		db.Pool.Exec(context.Background(),
+			`UPDATE posts SET interest_score = COALESCE(interest_score,0) + 1 WHERE id=$1`, pid)
+	}
+	invalidateFeedCache(myID)
+	c.JSON(http.StatusOK, gin.H{"not_interested": false})
+}
+
 // ── PUT /posts/:id/caption ────────────────────────────────────────
 // Соҳиби пост → тавсифро тағир медиҳад
 func UpdatePostCaption(c *gin.Context) {

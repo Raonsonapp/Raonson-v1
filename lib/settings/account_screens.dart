@@ -10,6 +10,7 @@ import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/i18n/strings.dart';
 import '../models/user_model.dart';
+import '../profile/profile_controller.dart' show ProfileController;
 import '../profile/profile_repository.dart';
 import '../widgets/avatar.dart';
 import '../widgets/verified_badge.dart';
@@ -286,7 +287,18 @@ class _CloseFriendsState extends State<CloseFriendsScreen> {
   Future<void> _load() async {
     final myId = UserSession.userId ?? '';
     try {
-      _following = await _repo.getFollowing(myId);
+      // Ҳамаи обунаҳо, на танҳо 50-тои аввал: пеш касеро, ки 51-ум
+      // обуна шуда буд, ба «Дӯстони наздик» илова кардан ғайриимкон буд.
+      const size = 100; // ҳадди сервер
+      final all = <UserModel>[];
+      for (var page = 1; page <= 50; page++) {
+        final chunk = await _repo.getFollowing(myId, page: page, limit: size);
+        if (ProfileController.appendUnique<UserModel>(all, chunk, (u) => u.id) == 0 ||
+            chunk.length < size) {
+          break;
+        }
+      }
+      _following = all;
       final res = await ApiClient.instance.get('/close-friends/ids');
       if (res.statusCode < 400) {
         final b = jsonDecode(res.body);

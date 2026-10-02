@@ -893,6 +893,8 @@ func migrate() {
 	);
 	CREATE INDEX IF NOT EXISTS idx_live_active ON live_streams(active, started_at DESC);
 	ALTER TABLE live_streams ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0;
+	-- Охирин «зинда ҳастам»-и ҳост (ниг. handlers.ListLive).
+	ALTER TABLE live_streams ADD COLUMN IF NOT EXISTS heartbeat_at TIMESTAMPTZ;
 
 	CREATE TABLE IF NOT EXISTS live_comments (
 		id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

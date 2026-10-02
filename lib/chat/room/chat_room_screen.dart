@@ -819,7 +819,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           return m.copyWith(reactions: existing);
         }).toList();
       });
-    } catch (_) {}
+    } catch (_) {
+      _failSnack();
+    }
+  }
+
+  void _failSnack() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(tr('common.failedRetry')),
+        duration: const Duration(seconds: 2)));
   }
 
   // ─── Delete ──────────────────────────────────────────────────
@@ -833,7 +842,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           return m.copyWith(isDeleted: true, type: MessageType.deleted);
         }).toList();
       });
-    } catch (_) {}
+    } catch (_) {
+      _failSnack();
+    }
   }
 
   /// Тарҷумаи паём ба забони барнома.
@@ -978,7 +989,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         '/chat/messages/${msg.id}/report',
         body: {'reason': result.reason, 'description': result.description});
       if (okRes.statusCode >= 400) throw Exception();
-    } catch (_) {}
+    } catch (_) {
+      // Пеш ҳатто ҳангоми хато «Шикоят фиристода шуд» нишон дода мешуд.
+      return _failSnack();
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(tr('ui.3fed985ffa')),
@@ -1143,11 +1157,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   Future<void> _acceptRequest() async {
     setState(() => _isRequest = false);
-    await _repo.acceptRequest(widget.peer.id);
+    // Натиҷа санҷида мешавад: пеш ҳангоми хато дархост «қабул шуд»
+    // менамуд, вале паёмҳо дар «Дархостҳо» мемонданд.
+    if (!await _repo.acceptRequest(widget.peer.id) && mounted) {
+      setState(() => _isRequest = true);
+      _failSnack();
+    }
   }
 
   Future<void> _deleteRequest() async {
-    await _repo.deleteRequest(widget.peer.id);
+    if (!await _repo.deleteRequest(widget.peer.id)) return _failSnack();
     if (mounted) Navigator.pop(context);
   }
 

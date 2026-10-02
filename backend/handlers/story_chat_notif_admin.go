@@ -1181,6 +1181,8 @@ func ExploreGrid(c *gin.Context) {
 		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
 		       COALESCE(p.is_product,false), COALESCE(p.price,0),
 		       COALESCE(p.currency,'TJS'), COALESCE(p.product_name,''),
+		       COALESCE(p.contact_raonson,true), COALESCE(p.shop_whatsapp,''),
+		       COALESCE(p.shop_phone,''),
 		       EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id=p.id AND pl.user_id=$1::text),
 		       EXISTS(SELECT 1 FROM post_saves ps WHERE ps.post_id=p.id AND ps.user_id=$1::text),
 		       (SELECT COUNT(*) FROM post_shares sh WHERE sh.post_id=p.id),
@@ -1211,6 +1213,11 @@ func ExploreGrid(c *gin.Context) {
 			var isProduct, verified, liked, saved bool
 			var price float64
 			var currency, productName string
+			// Роҳҳои алоқаи фурӯшанда: бе инҳо «Харид» аз Explore
+			// ҳамеша чатро мекушод, ҳатто агар фурӯшанда танҳо WhatsApp
+			// ё телефонро интихоб карда бошад.
+			var contactRaonson bool
+			var shopWhatsapp, shopPhone string
 			var shares int
 			// Музика: бе ин пости кушодашуда аз explore суруд намехонд.
 			var mTitle, mArtist, mURL, mArt, location string
@@ -1219,7 +1226,8 @@ func ExploreGrid(c *gin.Context) {
 			var hasStory, unseenStory bool
 			pRows.Scan(&pid, &likes, &comments, &createdAt, &caption, &media,
 				&uid, &uname, &uavatar, &verified, &views,
-				&isProduct, &price, &currency, &productName, &liked, &saved,
+				&isProduct, &price, &currency, &productName,
+				&contactRaonson, &shopWhatsapp, &shopPhone, &liked, &saved,
 				&shares, &mTitle, &mArtist, &mURL, &mArt, &mTrack, &mStart, &mEnd,
 				&location, &hideLikes, &commentsOff, &mine, &following,
 				&hasStory, &unseenStory)
@@ -1233,6 +1241,8 @@ func ExploreGrid(c *gin.Context) {
 				"media": nilToEmpty(media),
 				"isProduct": isProduct, "price": price,
 				"currency": currency, "productName": productName,
+				"contactRaonson": contactRaonson,
+				"shopWhatsapp": shopWhatsapp, "shopPhone": shopPhone,
 				"liked": liked, "saved": saved, "sharesCount": shares,
 				"musicTitle": mTitle, "musicArtist": mArtist, "location": location,
 				"song": songJSON(mTitle, mArtist, mArt, mURL, mTrack, mStart, mEnd),
@@ -1243,6 +1253,7 @@ func ExploreGrid(c *gin.Context) {
 			})
 		}
 	}
+	attachSalePct(posts)
 
 	// ⚠️ Reels ин ҷо ҲЕҶ маълумоти муаллиф надоштанд.
 	//

@@ -42,6 +42,8 @@ import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
+import '../core/music/music_bar.dart';
+import '../marketplace/marketplace_widgets.dart' show ErrorState;
 import '../core/i18n/strings.dart';
 import '../core/links/deep_links.dart';
 import '../verification/verification_screen.dart';
@@ -625,10 +627,23 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const Icon(AppIcons.link_rounded,
                           color: AppColors.neonBlue, size: 14),
                       const SizedBox(width: 5),
-                      Text(user.website!, style: const TextStyle(
+                      // Суроғаи дароз аз экран берун мебаромад.
+                      Flexible(child: Text(user.website!,
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
                           color: AppColors.neonBlue,
-                          fontSize: 13.5, fontWeight: FontWeight.w500)),
+                          fontSize: 13.5, fontWeight: FontWeight.w500))),
                     ]))),
+
+              // ── СУРУДИ ПРОФИЛ ───────────────────────────────────────
+              // Дар «Таҳрири профил» интихоб мешуд ва дар сервер сабт
+              // мешуд, вале то ин ҷо ҳеҷ ҷо нишон дода намешуд.
+              if (user.bioSong.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                  child: MusicBar(song: user.bioSong,
+                      style: MusicBarStyle.header),
+                ),
 
               // ── BIO LINKS (Pro — зиёда аз як линк) ──────────────────
               if (user.links.isNotEmpty)
@@ -651,9 +666,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                             const Icon(AppIcons.link_rounded,
                                 color: AppColors.neonBlue, size: 13),
                             const SizedBox(width: 5),
-                            Text(title,
+                            Flexible(child: Text(title,
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(color: AppColors.neonBlue,
-                                    fontSize: 12.5, fontWeight: FontWeight.w600)),
+                                    fontSize: 12.5, fontWeight: FontWeight.w600))),
                           ]),
                         ),
                       );
@@ -695,7 +711,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                           return _OtherBtns(
                         isFollowing:       following,
                         isPrivate:         user.isPrivate,
-                        followRequestSent: user.followRequestSent && !following,
+                        followRequestSent: (user.followRequestSent ||
+                                FollowService.instance.isRequested(user.id)) &&
+                            !following,
                         onFollow:  () {
                           AnalyticsService.instance.logEvent(following
                               ? AnalyticsEvents.unfollowUser
@@ -752,15 +770,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         body: locked
             ? const _PrivateAccountView()
             : TabBarView(controller: _tab, children: [
-          _PostGrid(
+          _onNearEnd(_ctrl.loadMorePosts, _PostGrid(
               posts:       _ctrl.sortedPosts,
               isMe:        _isMe,
               owner:       _ctrl.profile,
               onLongPress: _postMenu,
-              onRemoved:   (id) => _ctrl.removePostById(id)),
-          _ReelGrid(reels: _ctrl.reels),
+              onRemoved:   (id) => _ctrl.removePostById(id))),
+          _onNearEnd(_ctrl.loadMoreReels, _ReelGrid(reels: _ctrl.reels)),
           _TaggedGrid(ctrl: _ctrl),
-          if (_isMe) _SavedGrid(ctrl: _ctrl),
+          if (_isMe) _onNearEnd(_ctrl.loadMoreSaved, _SavedGrid(ctrl: _ctrl)),
         ]),
         ),
       ),
@@ -829,13 +847,18 @@ class _Stat extends StatelessWidget {
     return '$v';
   }
   @override
-  Widget build(BuildContext context) => GestureDetector(onTap: onTap,
-    child: Column(children: [
+  // Expanded + FittedBox: се рақам («12.3M Пайравон») дар экрани 320dp бо
+  // ҳарфи калон ба сатр намегунҷиданд (RenderFlex overflow) — акнун
+  // ҳар яке ҳиссаи баробар мегирад ва ҳангоми зарурат хурд мешавад.
+  Widget build(BuildContext context) => Expanded(child: GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: FittedBox(fit: BoxFit.scaleDown, child: Column(children: [
       Text(_f(n), style: TextStyle(color: AppColors.textPrimary,
           fontSize: 17, fontWeight: FontWeight.bold)),
       const SizedBox(height: 2),
       Text(label, style: TextStyle(color: AppColors.textTertiary, fontSize: 11.5)),
-    ]));
+    ]))));
 }
 
 // ─── Own Buttons ────────────────────────────────────────────────────────
@@ -874,7 +897,9 @@ class _OtherBtns extends StatelessWidget {
       required this.onMessage});
   String get _label {
     if (isFollowing)       return 'Пайравишуда';
-    if (followRequestSent) return 'Дархост фиристода шуд';
+    // Кӯтоҳ, мисли Instagram («Requested»): «Дархост фиристода шуд» дар
+    // нисфи экрани 320dp ба ду сатр мешикаст ва аз тугма берун мебаромад.
+    if (followRequestSent) return tr('common.requested');
     return 'Пайравӣ';
   }
   @override
@@ -883,7 +908,10 @@ class _OtherBtns extends StatelessWidget {
     return Row(children: [
       // ── Пайравӣ / Пайравишуда ──
       Expanded(child: GestureDetector(
-        onTap: followRequestSent ? null : onFollow,
+        // Дархостро бекор кардан мумкин аст (мисли Instagram). Пеш
+        // тугма хомӯш буд — дархости хато фиристодаро бозпас гирифтан
+        // имкон надошт.
+        onTap: onFollow,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           height: 34,
@@ -891,7 +919,9 @@ class _OtherBtns extends StatelessWidget {
             color: muted ? AppColors.surface : AppColors.textPrimary,
             borderRadius: BorderRadius.circular(10),
             border: muted ? Border.all(color: AppColors.dividerFaint) : null),
-          child: Center(child: Text(_label, style: TextStyle(
+          child: Center(child: Text(_label,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(
             color: muted ? AppColors.textPrimary : AppColors.bg,
             fontWeight: FontWeight.bold, fontSize: 13.5)))))),
       const SizedBox(width: 8),
@@ -963,6 +993,20 @@ class _PrivateAccountView extends StatelessWidget {
     );
   }
 }
+
+/// Вақте рӯйхат ба поён наздик шуд, саҳифаи навбатиро мехонад.
+/// Бе ин профил танҳо саҳифаи аввалро (24 пост) нишон медод.
+Widget _onNearEnd(Future<void> Function() loadMore, Widget child) =>
+    NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n.metrics.axis == Axis.vertical &&
+            n.metrics.extentAfter < 900) {
+          loadMore();
+        }
+        return false;
+      },
+      child: child,
+    );
 
 // ─── Post Grid ─────────────────────────────────────────────────────────
 class _PostGrid extends StatelessWidget {
@@ -1199,6 +1243,9 @@ class _ULS extends State<_UserListSheet> {
   final _searchCtrl = TextEditingController();
   List<UserModel> _list = []; bool _loading = true;
   String _query = '';
+  // Саҳифабандӣ: сервер 50-тоӣ медиҳад. Пеш танҳо 50-и аввал нишон
+  // дода мешуд — дигарон дар рӯйхат умуман набуданд.
+  bool _hasMore = false, _loadingMore = false, _failed = false;
 
   @override void initState() {
     super.initState();
@@ -1208,12 +1255,41 @@ class _ULS extends State<_UserListSheet> {
   }
   @override void dispose() { _searchCtrl.dispose(); super.dispose(); }
 
+  Future<List<UserModel>> _page(int page) => widget.isFollowers
+      ? _repo.getFollowers(widget.userId, page: page)
+      : _repo.getFollowing(widget.userId, page: page);
+
   Future<void> _load() async {
-    final list = widget.isFollowers
-        ? await _repo.getFollowers(widget.userId)
-        : await _repo.getFollowing(widget.userId);
-    if (mounted) {
-      setState(() { _list = list; _loading = false; });
+    if (!_loading) setState(() { _loading = true; _failed = false; });
+    try {
+      final list = await _page(1);
+      if (!mounted) return;
+      setState(() {
+        _list = list; _loading = false; _failed = false;
+        _hasMore = list.length >= ProfileRepository.followPageSize;
+      });
+    } catch (_) {
+      // Пеш хатои шабака скелетро то абад мечархонд.
+      if (mounted) setState(() { _loading = false; _failed = true; });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (!_hasMore || _loadingMore || _loading) return;
+    _loadingMore = true;
+    try {
+      final page = await _page(ProfileController.nextPage(
+          _list.length, ProfileRepository.followPageSize));
+      if (!mounted) return;
+      setState(() {
+        final added = ProfileController.appendUnique<UserModel>(
+            _list, page, (u) => u.id);
+        _hasMore = page.length >= ProfileRepository.followPageSize && added > 0;
+      });
+    } catch (_) {
+      // Бори дигар ҳангоми ғелондан кӯшиш мешавад.
+    } finally {
+      _loadingMore = false;
     }
   }
 
@@ -1262,12 +1338,19 @@ class _ULS extends State<_UserListSheet> {
         const SizedBox(height: 6),
         Expanded(child: _loading
             ? _UserListSkeleton()
+            : _failed && _list.isEmpty
+                ? ErrorState(message: tr('common.noConnection'), onRetry: _load)
             : list.isEmpty
                 ? Center(child: Text(_query.isNotEmpty
                         ? 'Натиҷае нест'
                         : tr('profile.emptyYet', {'what': widget.title.toLowerCase()}),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 14)))
-                : ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
+                : NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    if (_query.isEmpty && n.metrics.extentAfter < 600) _loadMore();
+                    return false;
+                  },
+                  child: ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
                     final u = list[i];
                     return ListTile(
                       leading: CircleAvatar(radius: 22,
@@ -1298,7 +1381,7 @@ class _ULS extends State<_UserListSheet> {
                         Navigator.push(context, MaterialPageRoute(
                             builder: (_) => ProfileScreen(userId: u.id)));
                       });
-                  })),
+                  }))),
       ]));
   }
 }
@@ -1362,14 +1445,17 @@ class _UserFollowBtn extends StatelessWidget {
           height: 32, width: 104,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: following ? AppColors.divider : AppColors.neonBlue,
+              backgroundColor: following || FollowService.instance.isRequested(user.id)
+                  ? AppColors.divider : AppColors.neonBlue,
               foregroundColor: AppColors.textPrimary,
               elevation: 0,
               padding: EdgeInsets.zero,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => FollowService.instance.toggle(user.id, following),
-            child: Text(following ? 'Пайравӣ шуд' : 'Пайравӣ',
+            child: Text(following ? 'Пайравӣ шуд'
+                    : FollowService.instance.isRequested(user.id)
+                        ? tr('common.requested') : 'Пайравӣ',
                 style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
           ),
         );

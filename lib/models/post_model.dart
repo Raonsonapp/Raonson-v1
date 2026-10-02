@@ -49,6 +49,9 @@ class PostModel {
   final bool         contactRaonson;
   final String       shopWhatsapp;
   final String       shopPhone;
+  /// Тахфифи фаъол (Flash Sale), 0–90. Сервер фармоишро бо нархи
+  /// тахфифӣ сабт мекунад — «Харид» бояд ҳамонро нишон диҳад.
+  final int          salePct;
 
   /// Кай ин маълумот аз сервер гирифта шуд. ContentSync бо ин мефаҳмад,
   /// ки рӯйхати куҳна амали навтари корбарро пахш накунад.
@@ -83,11 +86,18 @@ class PostModel {
     this.contactRaonson = true,
     this.shopWhatsapp   = '',
     this.shopPhone      = '',
+    this.salePct        = 0,
     this.fetchedAt,
   });
 
   String get priceLabel =>
       '${price.toStringAsFixed(price % 1 == 0 ? 0 : 2)} $currency';
+
+  bool   get onSale    => salePct > 0;
+  /// Нархе, ки харидор воқеан пардохт мекунад (бо тахфифи фаъол).
+  double get salePrice => price * (1 - salePct / 100);
+  String get salePriceLabel =>
+      '${salePrice.toStringAsFixed(salePrice % 1 == 0 ? 0 : 2)} $currency';
 
   bool get isLiked  => liked;
   bool get isSaved  => saved;
@@ -128,6 +138,7 @@ class PostModel {
     bool? hideLikes, bool? commentsDisabled,
     bool? isProduct, double? price, String? currency, String? productName,
     bool? contactRaonson, String? shopWhatsapp, String? shopPhone,
+    int? salePct,
     DateTime? fetchedAt,
   }) => PostModel(
     id:            id            ?? this.id,
@@ -158,6 +169,7 @@ class PostModel {
     contactRaonson: contactRaonson ?? this.contactRaonson,
     shopWhatsapp:   shopWhatsapp   ?? this.shopWhatsapp,
     shopPhone:      shopPhone      ?? this.shopPhone,
+    salePct:        salePct        ?? this.salePct,
     fetchedAt:      fetchedAt      ?? this.fetchedAt,
   );
 
@@ -230,6 +242,7 @@ class PostModel {
       contactRaonson: json['contactRaonson'] != false,
       shopWhatsapp:   (json['shopWhatsapp'] ?? '').toString(),
       shopPhone:      (json['shopPhone'] ?? '').toString(),
+      salePct:        ((json['salePct'] as num?)?.toInt() ?? 0).clamp(0, 90),
       // Кэши диск вақти аслиро нигоҳ медорад; ҷавоби нав — ҳозир.
       fetchedAt:      ContentSync.fetchedAtOf(json) ?? DateTime.now(),
     );
@@ -255,6 +268,7 @@ class PostModel {
     'isProduct': isProduct, 'price': price, 'currency': currency,
     'productName': productName, 'contactRaonson': contactRaonson,
     'shopWhatsapp': shopWhatsapp, 'shopPhone': shopPhone,
+    'salePct': salePct,
     if (fetchedAt != null)
       ContentSync.fetchedAtKey: fetchedAt!.millisecondsSinceEpoch,
     'user': {'_id':user.id,'username':user.username,'avatar':user.avatar,

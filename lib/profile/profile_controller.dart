@@ -66,6 +66,10 @@ class ProfileController extends ChangeNotifier {
           ? await _repo.getUserIdByUsername(userId)
           : userId;
       profile    = await _repo.getProfile(resolvedId);
+      if (profile != null && !isOwnProfile) {
+        FollowService.instance
+            .primeRequested(profile!.id, profile!.followRequestSent);
+      }
       posts      = await _repo.getUserPosts(profile?.id ?? userId);
       reels      = await _repo.getUserReels(profile?.id ?? userId,
           onFresh: _onFreshReels);
@@ -73,6 +77,9 @@ class ProfileController extends ChangeNotifier {
       // Плиткаҳои профил рақамҳоро аз ContentSync мехонанд.
       for (final p in posts) { p.primeSync(); }
       for (final r in reels) { r.primeSync(); }
+      // Саҳифаи пурра → шояд боз ҳаст (ниг. loadMorePosts).
+      postsHasMore = posts.length >= ProfileRepository.profilePageSize;
+      reelsHasMore = reels.length >= ProfileRepository.profilePageSize;
       error      = null;
     } catch (e) {
       error = e.toString();
@@ -85,8 +92,80 @@ class ProfileController extends ChangeNotifier {
   /// мешаванд, ки дар Explore ва Reels.
   void _onFreshReels(List<ReelModel> fresh) {
     if (_disposed) return;
+    // Саҳифаҳои иловагии аллакай боршуда гум нашаванд.
+    if (reels.length > fresh.length) {
+      final ids = fresh.map((r) => r.id).toSet();
+      fresh = [...fresh, ...reels.skip(fresh.length).where((r) => !ids.contains(r.id))];
+    } else {
+      reelsHasMore = fresh.length >= ProfileRepository.profilePageSize;
+    }
     reels = fresh;
     for (final r in reels) { r.primeSync(); }
+    notifyListeners();
+  }
+
+  // ── Саҳифабандӣ (ғелондан то поён) ─────────────────────────────
+  bool postsHasMore = false;
+  bool reelsHasMore = false;
+  bool savedHasMore = false;
+  bool _postsBusy = false, _reelsBusy = false, _savedBusy = false;
+
+  /// Рақами саҳифаи навбатӣ аз рӯи шумораи боршуда. Агар чизе дар
+  /// миён нест шуда бошад, саҳифаи қаблӣ такрор мешавад — такрориҳо
+  /// аз рӯи id партофта мешаванд, пас ҳеҷ пост гум намешавад.
+  static int nextPage(int loaded, int pageSize) => loaded ~/ pageSize + 1;
+
+  /// Илова бе такрор; бармегардонад, ки чанд тои нав илова шуд.
+  static int appendUnique<T>(List<T> into, List<T> page, String Function(T) id) {
+    final seen = into.map(id).toSet();
+    var added = 0;
+    for (final x in page) {
+      if (seen.add(id(x))) { into.add(x); added++; }
+    }
+    return added;
+  }
+
+  Future<void> loadMorePosts() async {
+    final uid = profile?.id ?? '';
+    if (!postsHasMore || _postsBusy || uid.isEmpty) return;
+    _postsBusy = true;
+    const size = ProfileRepository.profilePageSize;
+    final page = await _repo.getUserPostsPage(uid,
+        page: nextPage(posts.length, size));
+    _postsBusy = false;
+    if (_disposed || page == null) return; // шабака — бори дигар кӯшиш
+    for (final p in page) { p.primeSync(); }
+    final added = appendUnique<PostModel>(posts, page, (p) => p.id);
+    postsHasMore = page.length >= size && added > 0;
+    notifyListeners();
+  }
+
+  Future<void> loadMoreReels() async {
+    final uid = profile?.id ?? '';
+    if (!reelsHasMore || _reelsBusy || uid.isEmpty) return;
+    _reelsBusy = true;
+    const size = ProfileRepository.profilePageSize;
+    final page = await _repo.getUserReelsPage(uid,
+        page: nextPage(reels.length, size));
+    _reelsBusy = false;
+    if (_disposed || page == null) return;
+    for (final r in page) { r.primeSync(); }
+    final added = appendUnique<ReelModel>(reels, page, (r) => r.id);
+    reelsHasMore = page.length >= size && added > 0;
+    notifyListeners();
+  }
+
+  Future<void> loadMoreSaved() async {
+    if (!savedHasMore || _savedBusy) return;
+    _savedBusy = true;
+    const size = ProfileRepository.profilePageSize;
+    final page = await _repo.getSavedPosts(
+        page: nextPage(savedPosts.length, size));
+    _savedBusy = false;
+    if (_disposed) return;
+    for (final p in page) { p.primeSync(); }
+    final added = appendUnique<PostModel>(savedPosts, page, (p) => p.id);
+    savedHasMore = page.length >= size && added > 0;
     notifyListeners();
   }
 
@@ -102,6 +181,7 @@ class ProfileController extends ChangeNotifier {
     try {
       savedPosts = await _repo.getSavedPosts();
       for (final p in savedPosts) { p.primeSync(); }
+      savedHasMore = savedPosts.length >= ProfileRepository.profilePageSize;
       notifyListeners();
     } catch (_) {}
   }
@@ -139,11 +219,32 @@ class ProfileController extends ChangeNotifier {
   Future<void> toggleFollow() async {
     if (profile == null || isOwnProfile) return;
     final u = profile!;
-    if (u.isPrivate && !u.isFollowing) {
+    final following = FollowService.instance.resolve(u.id, u.isFollowing);
+    final requested = !following &&
+        (u.followRequestSent || FollowService.instance.isRequested(u.id));
+    if (requested) {
+      // Бекор кардани дархост (сервер бо unfollow дархостро ҳам нест мекунад).
+      profile = u.copyWith(followRequestSent: false);
+      FollowService.instance.primeRequested(u.id, false);
+      notifyListeners();
+      try { await _repo.unfollow(u.id); }
+      catch (_) {
+        profile = u;
+        FollowService.instance.primeRequested(u.id, true);
+        notifyListeners();
+      }
+      return;
+    }
+    if (u.isPrivate && !following) {
       profile = u.copyWith(followRequestSent: true);
+      FollowService.instance.primeRequested(u.id, true);
       notifyListeners();
       try { await _repo.follow(u.id); }
-      catch (_) { profile = u; notifyListeners(); }
+      catch (_) {
+        profile = u;
+        FollowService.instance.primeRequested(u.id, false);
+        notifyListeners();
+      }
       return;
     }
     // Ҳолати ҷорӣ аз FollowService: шояд корбар аллакай дар reels/explore

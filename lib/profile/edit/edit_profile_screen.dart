@@ -107,6 +107,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _ctrl = EditProfileController();
     _ctrl.loadCurrentProfile(widget.userId).then((_) {
       _originalUsername = _ctrl.usernameController.text;
+      // Суруди ҳозираи профил — пеш экран онро намедонист ва ҳамеша
+      // «Илова кардан» нишон медод.
+      if (mounted && _ctrl.originalSong.isNotEmpty) {
+        setState(() => _bioSong = _ctrl.originalSong);
+      }
     });
     _ctrl.addListener(() { if (mounted) { setState(() {}); } });
     _ctrl.usernameController.addListener(_onUsernameChanged);
@@ -163,7 +168,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) { setState(() { _uploadedAvatarUrl = url; _uploadingAvatar = false; }); }
     } catch (e) {
       if (mounted) { setState(() => _uploadingAvatar = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Расм бор нашуд: $e'), backgroundColor: Colors.red.shade800)); }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Расм бор нашуд. ${tr('common.checkInternet')}'), backgroundColor: Colors.red.shade800)); }
     }
   }
 
@@ -233,7 +238,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_usernameError ?? 'Username нодуруст'), backgroundColor: Colors.red.shade800)); return;
     }
-    if (_checkingUsername) {
+    // Акс ҳанӯз бор мешавад: пеш «Захира» профилро БЕ акси нав нигоҳ
+    // медошт ва экран пӯшида мешуд — интихоби корбар гум мешуд.
+    if (_checkingUsername || _uploadingAvatar || _uploadingCover) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('ui.c375747034')), backgroundColor: Colors.orange)); return;
     }
     final ok = await _ctrl.save(bioSong: _bioSong, avatarUrl: _uploadedAvatarUrl);

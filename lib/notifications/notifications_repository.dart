@@ -5,8 +5,14 @@ import '../models/notification_model.dart';
 class NotificationsRepository {
   final ApiClient _api = ApiClient.instance;
 
-  Future<Map<String, dynamic>> fetchNotifications() async {
-    final res = await _api.get('/notifications');
+  /// Андозаи саҳифа — пешфарзи сервер (GetNotifications).
+  static const pageSize = 30;
+
+  Future<Map<String, dynamic>> fetchNotifications({int page = 1}) async {
+    final res = await _api.get('/notifications',
+        query: {'page': '$page', 'limit': '$pageSize'});
+    // Пеш хатои сервер (401/500) ҳамчун «огоҳинома нест» нишон дода мешуд.
+    if (res.statusCode >= 400) throw ApiException(res.statusCode, res.body);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     final list = (data['notifications'] as List? ?? [])
         .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
