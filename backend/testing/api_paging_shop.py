@@ -99,7 +99,7 @@ def items(r, key):
     return (r or {}).get(key) or []
 
 
-A, Bn = f"pa{S}", f"pb{S}"
+A, Bn = f"pgxa{S}", f"pgxb{S}"
 tA, idA = reg_login(A, 1)
 tB, idB = reg_login(Bn, 2)
 TAG = f"pg{S}".lower()
