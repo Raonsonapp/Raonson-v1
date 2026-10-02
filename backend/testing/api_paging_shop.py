@@ -300,6 +300,21 @@ if gid:
     ok("гурӯҳ: саҳифаи 2 — паёми кӯҳнатарин",
        len(x1) == 2 and x2 == [mids[0]], (x1, x2, mids))
 
+# ═══ 12. СУРУДИ ПРОФИЛ: сабт, нишон, нест кардан ══════════════════
+song = {"title": "Суруд", "artist": "Хонанда", "artUrl": "",
+        "previewUrl": "https://example.com/p.m4a", "trackMs": 200000,
+        "startMs": 1000, "endMs": 31000}
+st, r = call("PUT", "/profile/", {"username": A, "bioSong": song}, tA)
+ok("суруди профил сабт шуд", st == 200, f"HTTP {st}: {str(r)[:120]}")
+st, r = call("GET", f"/users/{idA}", tok=tB)
+u = r.get("user", r) if isinstance(r, dict) else {}
+ok("бегона суруди профилро мегирад",
+   (u.get("bioSong") or {}).get("title") == "Суруд", str(u.get("bioSong"))[:120])
+st, r = call("PUT", "/profile/", {"username": A, "bioSong": {}}, tA)
+st, r = call("GET", f"/users/{idA}", tok=tB)
+u = r.get("user", r) if isinstance(r, dict) else {}
+ok("суруди профил бо {} нест мешавад", not u.get("bioSong"), str(u.get("bioSong")))
+
 # ═══ ҲИСОБОТ ═════════════════════════════════════════════════════
 bad = [x for x in res if not x[0]]
 print()

@@ -219,6 +219,9 @@ void main() {
       'postsCount': 123456, 'followersCount': 12345678,
       'followingCount': 1234567, 'pronouns': 'ӯ/вай',
       'isFollowing': false,
+      'bioSong': {'title': 'Суруди хеле дароз барои профил ' * 3,
+                  'artist': 'Сарояндаи машҳур', 'artUrl': '',
+                  'previewUrl': 'https://example.com/p.m4a'},
       'links': [
         {'title': 'Линки хеле дароз барои мағозаи онлайн ' * 3,
          'url': 'https://example.com/shop'},

@@ -42,6 +42,7 @@ import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/report_dialog.dart';
+import '../core/music/music_bar.dart';
 import '../marketplace/marketplace_widgets.dart' show ErrorState;
 import '../core/i18n/strings.dart';
 import '../core/links/deep_links.dart';
@@ -633,6 +634,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                           color: AppColors.neonBlue,
                           fontSize: 13.5, fontWeight: FontWeight.w500))),
                     ]))),
+
+              // ── СУРУДИ ПРОФИЛ ───────────────────────────────────────
+              // Дар «Таҳрири профил» интихоб мешуд ва дар сервер сабт
+              // мешуд, вале то ин ҷо ҳеҷ ҷо нишон дода намешуд.
+              if (user.bioSong.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                  child: MusicBar(song: user.bioSong,
+                      style: MusicBarStyle.header),
+                ),
 
               // ── BIO LINKS (Pro — зиёда аз як линк) ──────────────────
               if (user.links.isNotEmpty)

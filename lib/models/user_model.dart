@@ -1,3 +1,5 @@
+import '../core/music/song_info.dart';
+
 class UserModel {
   final String id;
   final String username;
@@ -28,6 +30,9 @@ class UserModel {
   final bool?   hasUnseenStory;
   final String  coverUrl;               // баннери профил (Pro)
   final List<Map<String, String>> links; // линкҳои био (Pro): {title,url}
+  /// Суруди профил (мисли Instagram). Пеш дар «Таҳрири профил» интихоб
+  /// ва дар сервер сабт мешуд, вале ҳеҷ ҷо нишон дода намешуд.
+  final SongInfo bioSong;
 
   const UserModel({
     required this.id,
@@ -52,6 +57,7 @@ class UserModel {
     this.hasUnseenStory,
     this.coverUrl          = '',
     this.links             = const [],
+    this.bioSong           = SongInfo.none,
   });
 
   String get avatarUrl => avatar;
@@ -91,6 +97,9 @@ class UserModel {
     hasUnseenStory:   _unseen(j),
     coverUrl:         j['coverUrl']?.toString() ?? '',
     links:            _parseLinks(j['links']),
+    bioSong:          j['bioSong'] is Map
+        ? SongInfo.fromJson((j['bioSong'] as Map).cast<String, dynamic>())
+        : SongInfo.none,
   );
 
   static List<Map<String, String>> _parseLinks(dynamic raw) {
@@ -144,6 +153,7 @@ class UserModel {
     bool? followRequestSent, int? mutualCount, List<String>? mutualNames,
     bool? hasStory, bool? hasUnseenStory,
     String? coverUrl, List<Map<String, String>>? links,
+    SongInfo? bioSong,
   }) => UserModel(
     id: id, username: username,
     avatar:          avatar          ?? this.avatar,
@@ -166,6 +176,7 @@ class UserModel {
     hasUnseenStory:  hasUnseenStory  ?? this.hasUnseenStory,
     coverUrl:        coverUrl        ?? this.coverUrl,
     links:           links           ?? this.links,
+    bioSong:         bioSong         ?? this.bioSong,
   );
 
   static int _int(dynamic v) => (v as num?)?.toInt() ?? 0;

@@ -173,6 +173,26 @@ void main() {
     });
   });
 
+  group('суруди профил', () {
+    test('bioSong аз сервер хонда мешавад; холӣ — нест', () {
+      final u = UserModel.fromJson({'_id': 'u', 'username': 'a',
+          'bioSong': {'title': 'Суруд', 'artist': 'Х', 'previewUrl': 'https://x/p.m4a'}});
+      expect(u.bioSong.title, 'Суруд');
+      expect(u.copyWith(bio: 'b').bioSong.title, 'Суруд');
+      expect(UserModel.fromJson({'_id': 'u', 'username': 'a'}).bioSong.isEmpty, isTrue);
+    });
+
+    test('профил сурудро нишон медиҳад; таҳрир онро бор ва нест мекунад', () {
+      expect(_read('lib/profile/profile_screen.dart'),
+          contains('MusicBar(song: user.bioSong'));
+      final ctrl = _read('lib/profile/edit/edit_profile_controller.dart');
+      expect(ctrl, contains('originalSong = _original.bioSong'));
+      expect(ctrl, contains('<String, dynamic>{}'));
+      expect(_read('lib/profile/edit/edit_profile_screen.dart'),
+          contains('_bioSong = _ctrl.originalSong'));
+    });
+  });
+
   group('дархости обуна ба ҳисоби пӯшида', () {
     test('ҷавоби {"requested": true} обуна нест', () {
       expect(isFollowRequested('{"requested": true}'), isTrue);
