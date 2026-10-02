@@ -170,9 +170,14 @@ ok("захирашудаҳо: саҳифаи 2 боқимондаро медиҳ
 # Лайкҳо + обуна + шарҳҳо — огоҳиномаҳои гуногун барои A.
 for pid in pids[:4]:
     call("POST", f"/posts/{pid}/like", tok=tB)
-st, n1 = call("GET", "/notifications?page=1&limit=2", tok=tA)
-st2, n2 = call("GET", "/notifications?page=2&limit=2", tok=tA)
-e1, e2 = ids(items(n1, "notifications")), ids(items(n2, "notifications"))
+# Огоҳинома метавонад каме баъдтар сабт шавад — то 5 сония интизор.
+for _ in range(10):
+    st, n1 = call("GET", "/notifications?page=1&limit=2", tok=tA)
+    st2, n2 = call("GET", "/notifications?page=2&limit=2", tok=tA)
+    e1, e2 = ids(items(n1, "notifications")), ids(items(n2, "notifications"))
+    if len(e1) == 2 and e2:
+        break
+    time.sleep(0.5)
 ok("огоҳиномаҳо: page/limit кор мекунад",
    st == 200 and st2 == 200 and len(e1) == 2 and len(e2) >= 1
    and not set(e1) & set(e2), (st, st2, e1, e2))
