@@ -73,6 +73,8 @@ class PostUploadService {
     /// хонда намешуд.
     SongInfo? song,
     String location = '',
+    /// id-и ҷой аз рӯйхати /places ('' — ҷойи дастӣ ё бе ҷой).
+    String locationId = '',
     List<String> taggedUsers = const [],
     List<String> collaborators = const [],
     String scheduledAt = '', // ISO-8601 — агар холӣ набошад, ба нақша гирифта мешавад
@@ -124,6 +126,7 @@ class PostUploadService {
         'musicArtist': song?.artist ?? '',
         if (song != null && song.isNotEmpty) 'song': song.toJson(),
         'location': location,
+        if (locationId.isNotEmpty) 'locationId': locationId,
         'taggedUsers': taggedUsers,
         'collaborators': collaborators,
         if (scheduledAt.isNotEmpty) 'scheduledAt': scheduledAt,

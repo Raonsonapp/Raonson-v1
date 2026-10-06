@@ -1,0 +1,139 @@
+id,kind,parent,tj,ru,en,alt,lat,lon,pop
+tj,country,,Тоҷикистон,Таджикистан,Tajikistan,Tojikiston;Tadjikistan;Ҷумҳурии Тоҷикистон,38.5358,68.7791,10000000
+tj-dushanbe,city,tj,Душанбе,Душанбе,Dushanbe,Сталинобод;Сталинабад;Dushanbe city,38.5358,68.7791,1200000
+tj-sughd,region,tj,Вилояти Суғд,Согдийская область,Sughd Region,Суғд;Согд;Sughd;Sogd;Ленинобод;Ленинабадская область,40.0000,69.3000,2800000
+tj-khatlon,region,tj,Вилояти Хатлон,Хатлонская область,Khatlon Region,Хатлон;Khatlon;Xatlon,37.9000,69.0000,3500000
+tj-gbao,region,tj,Вилояти Мухтори Кӯҳистони Бадахшон,Горно-Бадахшанская автономная область,Gorno-Badakhshan Autonomous Region,ВМКБ;ГБАО;GBAO;Бадахшон;Бадахшан;Badakhshan;Помир;Памир;Pamir,38.2000,72.6000,230000
+tj-rrp,region,tj,Ноҳияҳои тобеи ҷумҳурӣ,Районы республиканского подчинения,Districts of Republican Subordination,НТҶ;НТМ;РРП;Ноҳияҳои тобеи марказ;RRP,38.7000,69.5000,2200000
+tj-dush-somoni,district,tj-dushanbe,Исмоили Сомонӣ,Исмоили Сомони,Ismoili Somoni,ноҳияи Исмоили Сомонӣ,38.5900,68.7750,200000
+tj-dush-sino,district,tj-dushanbe,Сино,Сино,Sino,ноҳияи Сино,38.5750,68.7250,300000
+tj-dush-firdavsi,district,tj-dushanbe,Фирдавсӣ,Фирдавси,Firdavsi,ноҳияи Фирдавсӣ,38.5450,68.7400,250000
+tj-dush-shohmansur,district,tj-dushanbe,Шоҳмансур,Шохмансур,Shohmansur,ноҳияи Шоҳмансур,38.5550,68.8150,200000
+tj-khujand,city,tj-sughd,Хуҷанд,Худжанд,Khujand,Ходжент;Ленинобод;Ленинабад;Xujand;Khodjent;Khujand city,40.2826,69.6222,190000
+tj-buston,city,tj-sughd,Бӯстон,Бустон,Buston,Чкалов;Чкаловск;Chkalovsk,40.2342,69.6948,37000
+tj-guliston,city,tj-sughd,Гулистон,Гулистон,Guliston,Қайроққум;Кайраккум;Qayroqqum;Kairakkum,40.2660,69.7959,49000
+tj-isfara,city,tj-sughd,Исфара,Исфара,Isfara,Isfara city,40.1265,70.6253,270000
+tj-istaravshan,city,tj-sughd,Истаравшан,Истаравшан,Istaravshan,Ӯротеппа;Ура-Тюбе;Uroteppa;Ura-Tyube,39.9142,69.0033,270000
+tj-istiqlol,city,tj-sughd,Истиқлол,Истиклол,Istiqlol,Табошар;Taboshar,40.5702,69.6418,17000
+tj-konibodom,city,tj-sughd,Конибодом,Канибадам,Konibodom,Kanibadam,40.2941,70.4312,210000
+tj-panjakent,city,tj-sughd,Панҷакент,Пенджикент,Panjakent,Панджакент;Penjikent;Panjikent,39.4952,67.6093,300000
+tj-asht,district,tj-sughd,Ашт,Аштский район,Asht,ноҳияи Ашт,40.6699,70.3502,170000
+tj-ayni,district,tj-sughd,Айнӣ,Айнинский район,Ayni,ноҳияи Айнӣ;Айни;Aini,39.3941,68.5377,80000
+tj-ghafurov,district,tj-sughd,Бобоҷон Ғафуров,Бободжон Гафуровский район,Bobojon Ghafurov,ноҳияи Ғафуров;Гафуров;Ghafurov;Gafurov,40.2157,69.7287,380000
+tj-devashtich,district,tj-sughd,Девоштич,Деваштичский район,Devashtich,ноҳияи Девоштич;Ғончӣ;Ганчи;Ganchi;Ghonchi,39.9624,69.1297,180000
+tj-rasulov,district,tj-sughd,Ҷаббор Расулов,Джаббор Расуловский район,Jabbor Rasulov,ноҳияи Ҷ. Расулов;Расулов;Пролетарск;Proletarsk,40.1671,69.5016,130000
+tj-zafarobod,district,tj-sughd,Зафаробод,Зафарабадский район,Zafarobod,ноҳияи Зафаробод;Zafarabad,40.1760,68.8468,75000
+tj-kmastchoh,district,tj-sughd,Кӯҳистони Мастчоҳ,Горно-Матчинский район,Kuhistoni Mastchoh,ноҳияи Кӯҳистони Мастчоҳ;Горная Матча;Mountain Mastchoh,39.3500,69.2000,25000
+tj-mastchoh,district,tj-sughd,Мастчоҳ,Матчинский район,Mastchoh,ноҳияи Мастчоҳ;Матча;Mastchokh,40.5229,69.3331,120000
+tj-spitamen,district,tj-sughd,Спитамен,Спитаменский район,Spitamen,ноҳияи Спитамен;Нау;Nau,40.1522,69.3708,140000
+tj-shahriston,district,tj-sughd,Шаҳристон,Шахристанский район,Shahriston,ноҳияи Шаҳристон;Shakhristan,39.7745,68.8093,45000
+tj-shaydon,town,tj-asht,Шайдон,Шайдан,Shaydon,Шайдан;Shaidon,40.6699,70.3502,12000
+tj-ghafurov-town,town,tj-ghafurov,Ғафуров,Гафуров,Ghafurov,Гафуров;Ghafurov town;Советобод,40.2157,69.7287,20000
+tj-ghonchi,town,tj-devashtich,Ғончӣ,Ганчи,Ghonchi,Ganchi,39.9624,69.1297,10000
+tj-nov,town,tj-spitamen,Нов,Нау,Nov,Nau,40.1522,69.3708,14000
+tj-mastchoh-buston,town,tj-mastchoh,Бӯстони Мастчоҳ,Бустон (Матча),Buston (Mastchoh),Бӯстон;Buston,40.5229,69.3331,13000
+tj-adrasmon,town,tj-sughd,Адрасмон,Адрасман,Adrasmon,Adrasman,40.6493,69.9847,13000
+tj-oltintopkan,town,tj-sughd,Олтинтопкан,Алтын-Топкан,Oltintopkan,Altyn-Topkan,40.6542,69.5981,5000
+tj-vorukh,town,tj-isfara,Ворух,Ворух,Vorukh,Vorukh,39.8513,70.5801,4000
+tj-shurob,town,tj-isfara,Шӯроб,Шураб,Shurob,Shurab,40.0461,70.5412,3000
+tj-neftobod,town,tj-isfara,Нефтобод,Нефтеабад,Neftobod,Neftabad,40.2152,70.5719,4600
+tj-chorkuh,town,tj-isfara,Чоркӯҳ,Чоркух,Chorkuh,Chorku,40.0500,70.6000,25000
+tj-kim,town,tj-konibodom,Ким,Ким,Kim,,40.2080,70.4688,1600
+tj-palos,town,tj-ghafurov,Палос,Палас,Palos,,40.3163,69.7374,3300
+tj-konsoy,town,tj-asht,Консой,Кансай,Konsoy,Kansai,40.4915,69.7024,6000
+tj-quruqsoy,town,tj-mastchoh,Қуруқсой,Куруксай,Quruqsoy,Обшорон;Kuruksay,40.5765,69.3796,3400
+tj-pakhtakoron,town,tj-zafarobod,Пахтакорон,Пахтакоран,Pakhtakoron,,40.1571,68.7466,8000
+tj-muchun,town,tj-istaravshan,Мучун,Мучун,Muchun,,39.8815,69.1822,28000
+tj-nijoni,town,tj-istaravshan,Ниҷонӣ,Ниджони,Nijoni,,39.9594,68.9242,10000
+tj-dalyoni-bolo,town,tj-shahriston,Далёни Боло,Далёни Боло,Dalyoni Bolo,,39.7490,68.9957,23000
+tj-amondara,town,tj-panjakent,Амондара,Амондара,Amondara,,39.5144,67.8108,13000
+tj-chorbogh,town,tj-panjakent,Чорбоғ,Чорбог,Chorbogh,,39.4262,67.7602,6000
+tj-navgarzan,town,tj-asht,Навгарзан,Навгарзан,Navgarzan,,40.9983,70.4275,900
+tj-zarkhoq,town,tj-isfara,Зархоқ,Зархок,Zarkhoq,,40.2666,70.5660,2200
+tj-mehron,town,tj-kmastchoh,Меҳрон,Мехрон,Mehron,,39.4169,69.2868,1000
+tj-bokhtar,city,tj-khatlon,Бохтар,Бохтар,Bokhtar,Қӯрғонтеппа;Курган-Тюбе;Kurgan-Tyube;Qurghonteppa;Kurgan-Tube,37.8365,68.7776,110000
+tj-kulob,city,tj-khatlon,Кӯлоб,Куляб,Kulob,Kulyab;Kŭlob,37.9146,69.7845,210000
+tj-levakant,city,tj-khatlon,Левакант,Левакант,Levakant,Сарбанд;Sarband;Калининобод,37.8714,68.9223,20000
+tj-norak,city,tj-khatlon,Норак,Нурек,Norak,Nurek,38.3892,69.3227,30000
+tj-jomi,district,tj-khatlon,Абдураҳмони Ҷомӣ,Район Абдурахмони Джоми,Abdurahmoni Jomi,ноҳияи Ҷомӣ;Ҷомӣ;Джоми;Jomi;Хоҷамастон;Куйбышев,37.9464,68.8088,150000
+tj-baljuvon,district,tj-khatlon,Балҷувон,Бальджуванский район,Baljuvon,ноҳияи Балҷувон;Бальджуван,38.3084,69.6767,30000
+tj-vakhsh,district,tj-khatlon,Вахш,Вахшский район,Vakhsh,ноҳияи Вахш,37.7148,68.8346,180000
+tj-vose,district,tj-khatlon,Восеъ,Восеъский район,Vose,ноҳияи Восеъ;Восе;Восейский район;Ҳулбук;Hulbuk,37.8040,69.6442,200000
+tj-danghara,district,tj-khatlon,Данғара,Дангаринский район,Danghara,ноҳияи Данғара;Дангара;Dangara,38.0958,69.3400,150000
+tj-dusti,district,tj-khatlon,Дӯстӣ,Район Дусти,Dusti,ноҳияи Дӯстӣ;Дусти;Ҷиликӯл;Джиликуль;Jilikul,37.4917,68.5311,100000
+tj-yovon,district,tj-khatlon,Ёвон,Яванский район,Yovon,ноҳияи Ёвон;Явань;Yavan,38.3141,69.0378,200000
+tj-jayhun,district,tj-khatlon,Ҷайҳун,Район Джайхун,Jayhun,ноҳияи Ҷайҳун;Джайхун;Қумсангир;Кумсангир;Qumsangir,37.3000,68.6200,110000
+tj-balkhi,district,tj-khatlon,Ҷалолиддини Балхӣ,Район Джалолиддина Балхи,Jaloliddini Balkhi,ноҳияи Ҷ. Балхӣ;Ҷалолиддини Румӣ;Румӣ;Колхозобод;Колхозабад;Kolkhozobod;Rumi;Balkhi,37.5882,68.6589,170000
+tj-kushoniyon,district,tj-khatlon,Кӯшониён,Кушониёнский район,Kushoniyon,ноҳияи Кӯшониён;Бохтар (ноҳия);Бохтарский район;Bokhtar district,37.8818,68.7297,200000
+tj-qubodiyon,district,tj-khatlon,Қубодиён,Кабодиёнский район,Qubodiyon,ноҳияи Қубодиён;Кабодиён;Kabodiyon,37.4097,68.1864,150000
+tj-muminobod,district,tj-khatlon,Мӯъминобод,Муминабадский район,Muminobod,ноҳияи Мӯъминобод;Муминабад;Mu'minobod,38.1071,70.0321,80000
+tj-khusrav,district,tj-khatlon,Носири Хусрав,Район Носири Хусрав,Nosiri Khusrav,ноҳияи Носири Хусрав;Бешкент;Beshkent,37.2000,67.9500,50000
+tj-panj,district,tj-khatlon,Панҷ,Пянджский район,Panj,ноҳияи Панҷ;Пяндж;Pyanj,37.2363,69.0991,110000
+tj-temurmalik,district,tj-khatlon,Темурмалик,Темурмаликский район,Temurmalik,ноҳияи Темурмалик;Советский район;Совет,38.0467,69.5882,60000
+tj-farkhor,district,tj-khatlon,Фархор,Фархорский район,Farkhor,ноҳияи Фархор,37.4922,69.4036,150000
+tj-hamadoni,district,tj-khatlon,Ҳамадонӣ,Район Хамадони,Hamadoni,ноҳияи Ҳамадонӣ;Мир Саид Алии Ҳамадонӣ;Московский район;Москва (Хатлон);Hamadani,37.6610,69.6285,150000
+tj-khovaling,district,tj-khatlon,Ховалинг,Ховалингский район,Khovaling,ноҳияи Ховалинг;Ховалинг,38.3419,69.9753,50000
+tj-khuroson,district,tj-khatlon,Хуросон,Хуросонский район,Khuroson,ноҳияи Хуросон;Ғозималик;Обикиик;Obikiik,38.1603,68.6660,100000
+tj-shohin,district,tj-khatlon,Шамсиддин Шоҳин,Район Шамсиддин Шохин,Shamsiddin Shohin,ноҳияи Шамсиддин Шоҳин;Шӯрообод;Шуроабад;Shurobod,37.8414,70.0486,50000
+tj-shahritus,district,tj-khatlon,Шаҳритус,Шаартузский район,Shahritus,ноҳияи Шаҳритус;Шаартуз;Shaartuz,37.2621,68.1385,120000
+tj-chubek,town,tj-hamadoni,Чубек,Чубек,Chubek,,37.6145,69.7053,19500
+tj-orzu,town,tj-vakhsh,Орзу,Орзу,Orzu,,37.5582,68.8195,6000
+tj-gharavuti,town,tj-dusti,Ғаравӯтӣ,Гаравути,Gharavuti,,37.5670,68.4467,8500
+tj-tartiki,town,tj-qubodiyon,Тартикӣ,Тартики,Tartiki,,37.5822,68.1335,2300
+tj-boshchorbogh,town,tj-qubodiyon,Бошчорбоғ,Бошчорбог,Boshchorbogh,,37.5203,68.1282,4200
+tj-bustonqala,town,tj-kushoniyon,Бӯстонқалъа,Бустонкала,Bustonqala,,37.8478,68.8312,4900
+tj-zarhalol,town,tj-shahritus,Зарҳалол,Зархалол,Zarhalol,Бошқалъа;Коммунизм,37.4647,68.1695,30000
+tj-bahori,town,tj-shahritus,Баҳорӣ,Бахори,Bahori,,37.4019,67.9945,1000
+tj-avzikent,town,tj-vose,Авзикент,Авзикент,Avzikent,Навбаҳор;Navbahor,37.8033,69.2772,10000
+tj-sarikhosor,town,tj-baljuvon,Сарихосор,Сарихосор,Sarikhosor,,38.5385,69.8308,5900
+tj-panji-poyon,town,tj-jayhun,Панҷи Поён,Нижний Пяндж,Panji Poyon,Нижний Пяндж;Lower Panj,37.1944,68.5772,5300
+tj-jilikul,town,tj-dusti,Ҷиликӯл,Джиликуль,Jilikul,,37.4917,68.5311,5400
+tj-kolkhozobod,town,tj-balkhi,Колхозобод,Колхозабад,Kolkhozobod,,37.5882,68.6589,18000
+tj-bokhtariyon,town,tj-kushoniyon,Бохтариён,Бохтариён,Bokhtariyon,,37.8818,68.7297,7900
+tj-obikiik,town,tj-khuroson,Обикиик,Обикиик,Obikiik,,38.1603,68.6660,3000
+tj-shurobod,town,tj-shohin,Шӯрообод,Шуроабад,Shurobod,,37.8414,70.0486,3000
+tj-hulbuk,town,tj-vose,Ҳулбук,Хулбук,Hulbuk,,37.8040,69.6442,20000
+tj-khorugh,city,tj-gbao,Хоруғ,Хорог,Khorugh,Khorog;Xorug,37.4904,71.5534,30000
+tj-vanj,district,tj-gbao,Ванҷ,Ванчский район,Vanj,ноҳияи Ванҷ;Ванч,38.3708,71.4547,33000
+tj-darvoz,district,tj-gbao,Дарвоз,Дарвазский район,Darvoz,ноҳияи Дарвоз;Дарваз;Darvaz,38.4537,70.7890,23000
+tj-ishkoshim,district,tj-gbao,Ишкошим,Ишкашимский район,Ishkoshim,ноҳияи Ишкошим;Ишкашим;Ishkashim,36.7248,71.6133,30000
+tj-murghob,district,tj-gbao,Мурғоб,Мургабский район,Murghob,ноҳияи Мурғоб;Мургаб;Murgab,38.1702,73.9667,15000
+tj-roshtqala,district,tj-gbao,Роштқалъа,Рошткалинский район,Roshtqala,ноҳияи Роштқалъа;Рошткала;Roshtkala,37.2583,71.8259,25000
+tj-rushon,district,tj-gbao,Рӯшон,Рушанский район,Rushon,ноҳияи Рӯшон;Рушан;Rushan;Вомар,37.9449,71.5575,25000
+tj-shughnon,district,tj-gbao,Шуғнон,Шугнанский район,Shughnon,ноҳияи Шуғнон;Шугнан;Shugnan,37.5500,71.7500,40000
+tj-qalaikhumb,town,tj-darvoz,Қалъаи Хумб,Калаи-Хумб,Qalaikhumb,Калаихумб;Kalai-Khumb,38.4537,70.7890,1600
+tj-vahdat,city,tj-rrp,Ваҳдат,Вахдат,Vahdat,Кофарниҳон;Кофарнихон;Орджоникидзеобод;Kofarnihon,38.5563,69.0135,350000
+tj-hisor,city,tj-rrp,Ҳисор,Гиссар,Hisor,Гиссар;Hissar;Gissar,38.5250,68.5512,300000
+tj-tursunzoda,city,tj-rrp,Турсунзода,Турсунзаде,Tursunzoda,Регар;Regar;Tursunzade,38.5127,68.2316,280000
+tj-roghun,city,tj-rrp,Роғун,Рогун,Roghun,Rogun,38.6933,69.7369,10000
+tj-varzob,district,tj-rrp,Варзоб,Варзобский район,Varzob,ноҳияи Варзоб;Varzob,38.7737,68.8178,80000
+tj-rudaki,district,tj-rrp,Рӯдакӣ,Район Рудаки,Rudaki,ноҳияи Рӯдакӣ;Рудаки;Ленинский район,38.4417,68.7746,500000
+tj-fayzobod,district,tj-rrp,Файзобод,Файзабадский район,Fayzobod,ноҳияи Файзобод;Файзабад;Faizabad,38.5473,69.3198,110000
+tj-nurobod,district,tj-rrp,Нуробод,Нурабадский район,Nurobod,ноҳияи Нуробод;Нурабад;Комсомолобод;Дарбанд,38.8678,69.9664,75000
+tj-rasht,district,tj-rrp,Рашт,Раштский район,Rasht,ноҳияи Рашт;Ғарм;Гарм;Garm,39.0287,70.3745,120000
+tj-tojikobod,district,tj-rrp,Тоҷикобод,Таджикабадский район,Tojikobod,ноҳияи Тоҷикобод;Таджикабад;Tajikabad,39.1240,70.8401,50000
+tj-lakhsh,district,tj-rrp,Лахш,Лахшский район,Lakhsh,ноҳияи Лахш;Ҷирғатол;Джиргиталь;Jirgatol,39.2197,71.1916,70000
+tj-sangvor,district,tj-rrp,Сангвор,Сангворский район,Sangvor,ноҳияи Сангвор;Тавилдара;Tavildara,38.6953,70.4842,25000
+tj-shahrinav,district,tj-rrp,Шаҳринав,Шахринавский район,Shahrinav,ноҳияи Шаҳринав;Шахринау,38.5709,68.3350,120000
+tj-somoniyon,town,tj-rudaki,Сомониён,Сомониён,Somoniyon,,38.4417,68.7746,10000
+tj-boshkengash,town,tj-rudaki,Бошкенгаш,Бошкенгаш,Boshkengash,,38.4661,68.8053,24000
+tj-darband,town,tj-nurobod,Дарбанд,Дарбанд,Darband,Комсомолобод,38.8678,69.9664,1100
+tj-gharm,town,tj-rasht,Ғарм,Гарм,Gharm,Garm,39.0287,70.3745,10000
+tj-novobod,town,tj-rasht,Навобод,Навабад,Novobod,,39.0108,70.1508,5300
+tj-tavildara,town,tj-sangvor,Тавилдара,Тавильдара,Tavildara,,38.6953,70.4842,6000
+tj-jirgatol,town,tj-lakhsh,Ҷирғатол,Джиргиталь,Jirgatol,Ваҳдат (Лахш),39.2197,71.1916,6400
+tj-qaraqenja,town,tj-lakhsh,Қарақенҷа,Каракенджа,Qaraqenja,Karakenja,39.2358,71.5241,2900
+tj-obigarm,town,tj-rrp,Обигарм,Обигарм,Obigarm,,38.7173,69.7088,7400
+tj-takob,town,tj-varzob,Тақоб,Такоб,Takob,Tagob,38.8383,68.8985,2600
+tj-khojamaston,town,tj-shahrinav,Хоҷамастон,Ходжа-Мастон,Khojamaston,Khodzha-Maston,38.7446,68.6270,9800
+poi-iskanderkul,poi,tj-ayni,Искандаркӯл,Озеро Искандеркуль,Iskanderkul Lake,Искандаркул;Iskandarkul;Кӯли Искандар,39.0780,68.3700,0
+poi-haftkul,poi,tj-panjakent,Ҳафткӯл,Семь озёр (Маргузор),Haft Kul (Seven Lakes),Маргузор;Marguzor;Семь озер;Haftkul,39.1500,67.8300,0
+poi-sarez,poi,tj-rushon,Кӯли Сарез,Сарезское озеро,Lake Sarez,Сарез;Sarez,38.2700,72.7000,0
+poi-karakul,poi,tj-murghob,Кӯли Қаракӯл,Озеро Каракуль,Karakul Lake,Қаракӯл;Каракуль;Karakul,39.0200,73.4700,0
+poi-somoni-peak,poi,tj-rrp,Қуллаи Исмоили Сомонӣ,Пик Исмоила Сомони,Ismoil Somoni Peak,Пик Коммунизма;Peak Communism,38.9417,72.0158,0
+poi-nurek-reservoir,poi,tj-norak,Обанбори Норак,Нурекское водохранилище,Nurek Reservoir,Баҳри Тоҷик (Норак);Nurek lake,38.3800,69.4000,0
+poi-hisor-fortress,poi,tj-hisor,Қалъаи Ҳисор,Гиссарская крепость,Hisor Fortress,Ҳисори Шодмон;Hissar fortress,38.5250,68.5500,0
+poi-navruz-palace,poi,tj-dushanbe,Кохи Наврӯз,Дворец Навруз,Navruz Palace,Kokhi Navruz,38.5800,68.8000,0
+poi-rudaki-park,poi,tj-dushanbe,Боғи Рӯдакӣ,Парк Рудаки,Rudaki Park,Rudaki park,38.5770,68.7860,0
+poi-dyu-airport,poi,tj-dushanbe,Фурудгоҳи Душанбе,Аэропорт Душанбе,Dushanbe Airport,Фурудгоҳи байналмилалии Душанбе;DYU,38.5433,68.8249,0
+poi-lbd-airport,poi,tj-khujand,Фурудгоҳи Хуҷанд,Аэропорт Худжанд,Khujand Airport,LBD,40.2154,69.6947,0

@@ -16,6 +16,8 @@ class PostModel {
   final bool isPinned;
   final DateTime createdAt;
   final String       location;
+  /// id-и ҷой аз рӯйхати /places ('' — ҷойи дастӣ ё пости кӯҳна).
+  final String       locationId;
   final List<String> taggedUsers;
   final List<String> collaborators;
   /// Ҳамкорони тасдиқкарда: {_id, username, avatar}. `collaborators`
@@ -69,6 +71,7 @@ class PostModel {
     required this.createdAt,
     this.isPinned    = false,
     this.location    = '',
+    this.locationId  = '',
     this.taggedUsers = const [],
     this.collaborators = const [],
     this.collaboratorUsers = const [],
@@ -130,7 +133,8 @@ class PostModel {
     List<Map<String, String>>? media,
     int? likesCount, int? commentsCount,
     bool? liked, bool? saved, bool? isPinned,
-    DateTime? createdAt, String? location, List<String>? taggedUsers,
+    DateTime? createdAt, String? location, String? locationId,
+    List<String>? taggedUsers,
     List<String>? collaborators,
     List<Map<String, String>>? collaboratorUsers,
     String? musicTitle, String? musicArtist, SongInfo? song,
@@ -152,6 +156,7 @@ class PostModel {
     isPinned:      isPinned      ?? this.isPinned,
     createdAt:     createdAt     ?? this.createdAt,
     location:      location      ?? this.location,
+    locationId:    locationId    ?? this.locationId,
     taggedUsers:   taggedUsers   ?? this.taggedUsers,
     collaborators: collaborators ?? this.collaborators,
     collaboratorUsers: collaboratorUsers ?? this.collaboratorUsers,
@@ -208,6 +213,7 @@ class PostModel {
       isPinned:      json['isPinned'] == true,
       createdAt:     parseServerTime(json['createdAt']) ?? DateTime.now(),
       location:      (json['location']    ?? '').toString(),
+      locationId:    (json['locationId']  ?? '').toString(),
       taggedUsers:   (json['taggedUsers'] as List? ?? []).map((e)=>e.toString()).toList(),
       collaborators: (json['collaborators'] as List? ?? []).map((e)=>e.toString()).toList(),
       collaboratorUsers: (json['collaboratorUsers'] as List? ?? [])
@@ -253,7 +259,8 @@ class PostModel {
     'likesCount': likesCount, 'commentsCount': commentsCount,
     'liked': liked, 'saved': saved, 'isPinned': isPinned,
     'createdAt': createdAt.toIso8601String(),
-    'location': location, 'taggedUsers': taggedUsers,
+    'location': location, 'locationId': locationId,
+    'taggedUsers': taggedUsers,
     'collaborators': collaborators,
     'collaboratorUsers': collaboratorUsers,
     // Бе инҳо кэши диск пинҳонии лайкҳо / хомӯшии шарҳҳоро гум мекард.

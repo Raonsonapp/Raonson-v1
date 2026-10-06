@@ -274,6 +274,16 @@ func main() {
 		cf.DELETE("/:id",  handlers.RemoveCloseFriend)
 	}
 
+	// ── PLACES («Ҷой»-и пост) ───────────────────────────────────
+	pl := r.Group("/places", auth, rl100)
+	{
+		pl.GET("/search",     handlers.SearchPlaces)
+		pl.GET("/nearest",    handlers.NearestPlace)
+		pl.GET("/text/posts", cache3s, handlers.PlaceTextPosts)
+		pl.GET("/:id",        handlers.GetPlace)
+		pl.GET("/:id/posts",  cache3s, handlers.PlacePosts)
+	}
+
 	// ── POSTS ────────────────────────────────────────────────────
 	po := r.Group("/posts", auth, rl100)
 	{

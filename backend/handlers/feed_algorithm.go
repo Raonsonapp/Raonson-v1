@@ -96,6 +96,7 @@ func GetSmartFeed(c *gin.Context) {
 		  COALESCE(p.shop_phone,''),
 		  `+storyRingCols("u.id", "$1")+`,
 		  (SELECT COUNT(*) FROM post_views pvc WHERE pvc.post_id=p.id),
+		  COALESCE(p.location_id,''),
 		  -- Instagram-монанд score: following + тозагӣ + лайк + коммент
 		  --   + interest score − ҷарима барои дидашуда
 		  (CASE WHEN f.following_id IS NOT NULL OR fc.ok THEN 100 ELSE 0 END
@@ -199,6 +200,7 @@ func GetSmartFeed(c *gin.Context) {
 		var collaborators []string
 		var shares int
 		var following bool
+		var locationID string
 		rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved,
 			&hideLikes, &commentsOff,
@@ -207,7 +209,7 @@ func GetSmartFeed(c *gin.Context) {
 			&location, &tagged, &collaborators, &following, &shares,
 			&isProduct, &price, &currency, &productName,
 			&contactRaonson, &shopWhatsapp, &shopPhone,
-			&hasStory, &unseenStory, &views, &score)
+			&hasStory, &unseenStory, &views, &locationID, &score)
 		posts = append(posts, gin.H{
 			"_id": pid, "caption": cap, "likesCount": likes,
 			"commentsCount": comms, "createdAt": createdAt,
@@ -218,7 +220,8 @@ func GetSmartFeed(c *gin.Context) {
 			// телефон суруди постро ҳеҷ гоҳ хонда наметавонист.
 			"song": songJSON(musicTitle, musicArtist, musicArt, musicURL,
 				musicTrackMs, musicStartMs, musicEndMs),
-			"location": location, "taggedUsers": tagged,
+			"location": location, "locationId": locationID,
+			"taggedUsers": tagged,
 			// Пеш ҳамкорон ва шумораи паҳн дар smart-feed набуданд.
 			"collaborators": collaborators, "sharesCount": shares,
 			"isProduct": isProduct, "price": price, "currency": currency,
