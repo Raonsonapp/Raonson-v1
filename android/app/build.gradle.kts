@@ -25,13 +25,14 @@ android {
 
     defaultConfig {
         applicationId = "com.raonson.app"
-        minSdk = 23
+        // Google Play барои ҳимояи худкор (automatic protection) SDK 24+ талаб мекунад.
+        minSdk = 24
         targetSdk = 36
 
         // versionCode худкор аз CI (APP_VERSION_CODE) — ҳамеша беназир ва
         // афзоянда, то дигар "version code already used" набошад.
         versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 100
-        versionName = System.getenv("APP_VERSION_NAME") ?: "1.1.0"
+        versionName = System.getenv("APP_VERSION_NAME") ?: "1.2.0"
     }
 
     compileOptions {

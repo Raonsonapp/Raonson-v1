@@ -1490,7 +1490,7 @@ class _BUSState extends State<BlockedUsersScreen> {
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
-  static const String _version = '1.1.0';
+  static const String _version = '1.2.0';
   static const String _year    = '2026';
 
   @override
