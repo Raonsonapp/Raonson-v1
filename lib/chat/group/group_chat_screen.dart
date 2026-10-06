@@ -17,6 +17,7 @@ import 'group_model.dart';
 import 'group_repository.dart';
 import 'group_info_screen.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/moderation/content_policy.dart';
 
 class GroupChatScreen extends StatefulWidget {
   final GroupModel group;
@@ -101,7 +102,21 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   Future<void> _sendText(String text) async {
     if (text.trim().isEmpty) return;
-    _addLocal(await _repo.sendMessage(_gid, text.trim()));
+    final host = ContentPolicy.adultLinkIn(text);
+    if (host != null) {
+      await showAdultLinkWarning(context, host);
+      return;
+    }
+    await _guard(() async => _addLocal(await _repo.sendMessage(_gid, text.trim())));
+  }
+
+  /// Мӯҳтавои радшуда → равзанаи фаҳмо (на хомӯшӣ).
+  Future<void> _guard(Future<void> Function() send) async {
+    try {
+      await send();
+    } on ContentRejection catch (r) {
+      if (mounted) await showContentRejection(context, r);
+    }
   }
 
   String _typeByExt(String path) {
@@ -111,12 +126,12 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     return 'image';
   }
 
-  Future<void> _sendMedia(File file, {bool viewOnce = false}) async {
-    final type = _typeByExt(file.path);
-    final url = await _chatRepo.uploadMedia(file);
-    if (url == null || url.isEmpty) return _addLocal(null);
-    _addLocal(await _repo.sendMessage(_gid, '', type: type, mediaUrl: url));
-  }
+  Future<void> _sendMedia(File file, {bool viewOnce = false}) => _guard(() async {
+        final type = _typeByExt(file.path);
+        final url = await _chatRepo.uploadMedia(file);
+        if (url == null || url.isEmpty) return _addLocal(null);
+        _addLocal(await _repo.sendMessage(_gid, '', type: type, mediaUrl: url));
+      });
 
   Future<void> _sendVoice(File file) async {
     final url = await _chatRepo.uploadMedia(file);

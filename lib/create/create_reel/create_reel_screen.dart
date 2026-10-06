@@ -17,6 +17,7 @@ import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/music/music_picker.dart';
 import '../../models/note_model.dart';
+import '../../core/moderation/content_policy.dart';
 
 class CreateReelScreen extends StatefulWidget {
   final File? initialFile;
@@ -313,6 +314,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       if (mounted) setState(() => _progress = 1.0);
 
       if (res.statusCode >= 400) {
+        final rejection = ContentPolicy.fromResponse(res.statusCode, res.body);
+        if (rejection != null) throw rejection;
         Map<String, dynamic> err = {};
         try { err = jsonDecode(res.body) as Map<String, dynamic>; } catch (_) {}
         throw Exception('Reel ${res.statusCode}: ${err['message'] ?? res.body}');
@@ -326,10 +329,13 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       if (mounted) {
         setState(() {
           _busy     = false;
-          _error    = e.toString().replaceAll('Exception: ', '');
+          // Мӯҳтавои радшуда — матни фаҳмои сервер, на «Reel 403: {...}».
+          _error    = ContentPolicy.friendlyError(e);
           _status   = '';
           _progress = 0;
         });
+        final rejection = ContentPolicy.fromError(e);
+        if (rejection != null) await showContentRejection(context, rejection);
       }
     }
   }

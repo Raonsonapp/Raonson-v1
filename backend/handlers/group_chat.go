@@ -291,6 +291,14 @@ func SendGroupMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "empty message"})
 		return
 	}
+	modReq := modRequest{Surface: "group_message", Texts: []string{b.Text}}
+	if b.MediaURL != "" && (b.Type == "image" || b.Type == "video") {
+		modReq.Media = []modMedia{{URL: b.MediaURL, Video: b.Type == "video"}}
+	}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
 	var mid string
 	var createdAt interface{}
 	err := db.Pool.QueryRow(context.Background(),
@@ -302,6 +310,7 @@ func SendGroupMessage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
 		return
 	}
+	queueReview(myID, modReq, mid, mod, false)
 	var uname, uavatar string
 	var verified bool
 	db.Pool.QueryRow(context.Background(),

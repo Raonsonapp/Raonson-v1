@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	mw "raonson/middleware"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -178,6 +180,14 @@ func UploadToR2(c *gin.Context) {
 		return
 	}
 
+	// Модератсия ПЕШ аз навиштан ба R2: расми/видеои 18+ умуман
+	// нигоҳ дошта намешавад (ниг. handlers/moderation.go).
+	uid := mw.UID(c)
+	verdict, allowed := screenUpload(c, uid, data, contentType)
+	if !allowed {
+		return
+	}
+
 	folder := "images"
 	if strings.HasPrefix(contentType, "video/") {
 		folder = "videos"
@@ -208,6 +218,7 @@ func UploadToR2(c *gin.Context) {
 	}
 
 	url := r2PublicURL() + "/" + key
+	recordUpload(uid, url, contentType, verdict)
 	c.JSON(http.StatusOK, gin.H{"url": url})
 }
 

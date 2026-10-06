@@ -150,6 +150,11 @@ func ReplyToNote(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Ёддошт ёфт нашуд"})
 		return
 	}
+	modReq := modRequest{Surface: "message", Texts: []string{text}}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
 	chatID := sortedChatID(myID, owner)
 	var msgID string
 	if err := db.Pool.QueryRow(context.Background(), `
@@ -162,6 +167,7 @@ func ReplyToNote(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
 		return
 	}
+	queueReview(myID, modReq, msgID, mod, false)
 	msg, err := fetchMessageByID(msgID, myID)
 	if err != nil {
 		c.JSON(http.StatusCreated, gin.H{"_id": msgID, "chatId": chatID})

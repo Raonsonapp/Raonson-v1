@@ -32,6 +32,7 @@ import '../../core/i18n/strings.dart';
 import '../share/share_to_chat_row.dart';
 import '../../core/utils/server_time.dart';
 import '../../app/app_settings.dart';
+import '../../core/moderation/content_policy.dart';
 
 // ─────────────────────────────────────────────────────────────────
 //  ChatRoomScreen — 10/10 Instagram DM style
@@ -90,6 +91,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   // Offline queue
   /// Обуна ба навбати диск — ҳангоми фиристодан экран нав мешавад.
   StreamSubscription<String>? _outboxSub;
+  StreamSubscription<(String, ContentRejection)>? _outboxRejectSub;
   late StreamSubscription<List<ConnectivityResult>> _connectSub;
   bool _isOnline = true;
 
@@ -131,6 +133,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final store = ChatUnreadStore.instance;
     if (store.activeChatId == _chatId) store.activeChatId = null;
     _outboxSub?.cancel();
+    _outboxRejectSub?.cancel();
     _scroll.dispose();
     // onIncomingCall ба таври глобалӣ дар BottomNavScaffold идора мешавад —
     // ин ҷо null намекунем, вагарна занг берун аз чат қабул намешавад.
@@ -274,6 +277,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
 
   /// Ҳангоми фиристодани паёми навбатӣ экранро нав мекунад.
   void _listenOutbox() {
+    // Паёми навбатӣ, ки сервер рад кард — аз экран хориҷ ва сабаб.
+    _outboxRejectSub ??= Outbox.instance.onRejected.listen((e) {
+      if (!mounted) return;
+      setState(() => _messages.removeWhere((m) => m.id == e.$1));
+      showContentRejection(context, e.$2);
+    });
     _outboxSub ??= Outbox.instance.onSent.listen((clientId) {
       if (!mounted) return;
       setState(() {
@@ -604,6 +613,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   // ─── Send text ───────────────────────────────────────────────
   void _onSend(String text) async {
     if (text.trim().isEmpty) return;
+    // Линки сайти 18+ — огоҳии пешакӣ; паём фиристода намешавад.
+    // (Сервер ҳакам аст ва ба ҳар ҳол рад мекард — бо огоҳӣ ба ҳисоб.)
+    final adultHost = ContentPolicy.adultLinkIn(text);
+    if (adultHost != null) {
+      await showAdultLinkWarning(context, adultHost);
+      return;
+    }
 
     final replyTo = _replyTo; // пеш аз null кардан нигоҳ медорем
     // Optimistic insert
@@ -647,6 +663,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
           final idx = _messages.indexWhere((m) => m.id == optimistic.id);
           if (idx >= 0) _messages[idx] = msg;
         });
+      } on ContentRejection catch (r) {
+        // Мӯҳтаво рад шуд — ба навбат НАМЕГУЗОРЕМ (такрор ҳамон 403).
+        if (!mounted) return;
+        setState(() => _messages.removeWhere((m) => m.id == optimistic.id));
+        await showContentRejection(context, r);
       } catch (_) {
         // ⚠️ Пеш ин ҷо `status: MessageStatus.sent` гузошта мешуд —
         // яъне барнома ДУРӮҒ мегуфт. Паём нарасида буд, вале дар
@@ -794,6 +815,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         if (idx >= 0) { _messages[idx] = msg; } else { _messages.add(msg); }
       });
       _scrollBottom();
+    } on ContentRejection catch (r) {
+      if (mounted) {
+        setState(() =>
+            _messages.removeWhere((m) => m.id == optimistic.id));
+        await showContentRejection(context, r);
+      }
     } catch (_) {
       if (mounted) {
         setState(() =>

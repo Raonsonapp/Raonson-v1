@@ -2,6 +2,7 @@
 import 'dart:convert';
 import '../../core/api/api_client.dart';
 import 'group_model.dart';
+import '../../core/moderation/content_policy.dart';
 
 class GroupRepository {
   final _api = ApiClient.instance;
@@ -65,8 +66,14 @@ class GroupRepository {
     try {
       final r = await _api.post('/groups/$groupId/messages',
           body: {'text': text, 'type': type, 'mediaUrl': mediaUrl});
-      if (r.statusCode >= 400) return null;
+      if (r.statusCode >= 400) {
+        final rejection = ContentPolicy.fromResponse(r.statusCode, r.body);
+        if (rejection != null) throw rejection;
+        return null;
+      }
       return GroupMessage.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+    } on ContentRejection {
+      rethrow;
     } catch (_) {
       return null;
     }

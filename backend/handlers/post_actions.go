@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"raonson/utils"
 	"strings"
 	"context"
 	"net/http"
@@ -215,7 +214,8 @@ func UpdatePostCaption(c *gin.Context) {
 	// Ҳамон қоидаҳои сохтани пост. Пеш таҳрир модератсияро давр мезад:
 	// матни бегуноҳ нашр мешуд ва баъд ба таҳқир иваз мешуд.
 	b.Caption = clampRunes(b.Caption, 2200)
-	if !captionAllowed(c, b.Caption) {
+	modReq, mod, modOK := captionAllowed(c, "post", b.Caption)
+	if !modOK {
 		return
 	}
 	var oldCaption string
@@ -231,11 +231,17 @@ func UpdatePostCaption(c *gin.Context) {
 		return
 	}
 
+	held := holdIfNeeded(myID, modReq, pid, mod)
+
 	// Cache-ро тоза кун
 	// Калидҳои воқеии кэши лента (feed:<id>:<mode>:<page>) — пеш
 	// калиди нодуруст пок мешуд ва пости нав то 30 сония дида намешуд.
 	invalidateFeedCache(myID)
 	mw.InvalidateUserCache(myID)
+	if held {
+		c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption, "pendingReview": true})
+		return
+	}
 
 	// Танҳо зикрҳои НАВ огоҳ мешаванд — пеш ҳар таҳрир ба ҳамаи
 	// зикршудагон боз push мефиристод (спам бо таҳрири такрорӣ).
@@ -373,22 +379,18 @@ func setInterest(pid, uid string, want bool) {
 	}
 }
 
-// captionAllowed — модератсияи матн (ҳамон қоидаҳои сохтан).
-func captionAllowed(c *gin.Context, text string) bool {
-	if text == "" {
-		return true
+// captionAllowed — модератсияи матни таҳриршуда (ҳамон қоидаҳои сохтан).
+//
+// ok=false — 403 аллакай фиристода шуд. Пас аз навсозии МУВАФФАҚ
+// holdIfNeeded(uid, req, id, out)-ро ҷеғ занед: мӯҳтавои бегонаро
+// набояд пеш аз санҷиши соҳибият пинҳон кард.
+func captionAllowed(c *gin.Context, surface, text string) (modRequest, modOutcome, bool) {
+	r := modRequest{Surface: surface, Texts: []string{text}, AI: true}
+	if strings.TrimSpace(text) == "" {
+		return r, modOutcome{}, ensureNotSuspended(c, mw.UID(c))
 	}
-	if flagged, cats := utils.ModerateText(context.Background(), text); flagged {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Матн қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
-		return false
-	}
-	if !moderateText(text) {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Матн аз тарафи AI рад шуд. Лутфан онро тағйир диҳед."})
-		return false
-	}
-	return true
+	out, ok := screenContent(c, mw.UID(c), r)
+	return r, out, ok
 }
 
 // newMentions — @номҳое, ки дар матни нав ҳастанд, вале дар кӯҳна набуданд.

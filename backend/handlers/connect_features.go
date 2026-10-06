@@ -449,7 +449,8 @@ func UpdateReelCaption(c *gin.Context) {
 		return
 	}
 	b.Caption = clampRunes(b.Caption, 2200)
-	if !captionAllowed(c, b.Caption) {
+	modReq, mod, modOK := captionAllowed(c, "reel", b.Caption)
+	if !modOK {
 		return
 	}
 	res, err := db.Pool.Exec(context.Background(),
@@ -459,7 +460,11 @@ func UpdateReelCaption(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found or not owner"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption})
+	held := holdIfNeeded(myID, modReq, rid, mod)
+	if held {
+		mw.InvalidateUserCache(myID)
+	}
+	c.JSON(http.StatusOK, gin.H{"updated": true, "caption": b.Caption, "pendingReview": held})
 }
 
 // ═══════════════════════ STORY REPLY ═══════════════════════
@@ -491,6 +496,12 @@ func ReplyStory(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Ҷавобҳо хомӯш карда шудаанд"})
 		return
 	}
+	modReq := modRequest{Surface: "message", Texts: []string{b.Text}}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
+	queueReview(myID, modReq, sid, mod, false)
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO story_replies(story_id, from_user_id, text) VALUES($1,$2,$3)`,
 		sid, myID, b.Text)

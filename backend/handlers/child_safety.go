@@ -452,6 +452,17 @@ a:hover{text-decoration:underline}
 <li>Promotion of drugs or illegal activities</li>
 </ul>
 
+<h2>Raonson — барномаи оилавӣ: 18+ манъ аст</h2>
+<p>Дар Raonson мӯҳтавои 18+, порнографӣ, ҷинсӣ, урён ва қабеҳ дар ҳеҷ ҷо иҷозат дода намешавад: пост, Reels, сторис, шарҳ, паёмҳои чат, профил (bio) ва линкҳо. Мӯҳтаво ПЕШ аз нашр худкор санҷида мешавад; мӯҳтавои вайронкунанда нашр намешавад («Ин мӯҳтаво қоидаҳои Raonson-ро вайрон мекунад»).</p>
+<ul>
+<li>Ҳар кӯшиши нашри мӯҳтавои 18+ — як огоҳӣ (strike)</li>
+<li>3 огоҳӣ дар 30 рӯз — нашр ба муддати 7 рӯз маҳдуд мешавад</li>
+<li>Мӯҳтавои ҷинсӣ бо иштироки кӯдакон — маҳдудкунии фаврӣ ва санҷиши модератор</li>
+<li>Мӯҳтавои шубҳанок то санҷиши модератор пинҳон мемонад</li>
+<li>Ҳисобҳое, ки қасдан чунин мӯҳтаво мефиристанд, аз ҷониби модератор абадан баста мешаванд</li>
+</ul>
+<p>Raonson is a family app: no 18+, pornographic, sexual, nude or obscene content (including links to adult sites) is allowed anywhere. Content is checked before it is published; 3 strikes in 30 days restrict publishing for 7 days, and deliberate violators are permanently banned by a moderator.</p>
+
 <h2>4. Intellectual Property</h2>
 <p>Only post content that you own or have permission to use. Copyright violations will result in content removal and account restrictions.</p>
 

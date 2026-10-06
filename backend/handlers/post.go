@@ -59,18 +59,6 @@ func CreatePost(c *gin.Context) {
 	if b.Collaborators == nil {
 		b.Collaborators = []string{}
 	}
-	if flagged, cats := utils.ModerateText(context.Background(), b.Caption); flagged {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Тавсиф қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
-		return
-	}
-
-	if b.Caption != "" && !moderateText(b.Caption) {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Матни пост аз тарафи AI рад шуд. Лутфан мӯҳтаворо тағйир диҳед."})
-		return
-	}
-
 	if b.AutoDM != nil {
 		if msg := b.AutoDM.normalize(); msg != "" {
 			c.JSON(http.StatusBadRequest, gin.H{"message": msg})
@@ -84,6 +72,22 @@ func CreatePost(c *gin.Context) {
 	// Ҳадди медиа ва номҳо — пеш маҳдуд набуд.
 	if len(b.Media) > 10 || len(b.TaggedUsers) > 20 || len(b.Collaborators) > 5 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Аз ҳад зиёд: то 10 медиа, 20 нишон, 5 ҳамкор"})
+		return
+	}
+
+	// Модератсия ПЕШ аз нашр: тавсиф, линкҳо, расм ва видео.
+	modReq := modRequest{Surface: "post", AI: true,
+		Texts: []string{b.Caption, b.Location, b.ProductName}}
+	if b.AutoDM != nil {
+		modReq.Texts = append(modReq.Texts, b.AutoDM.Message, b.AutoDM.Link)
+	}
+	for _, m := range b.Media {
+		u, _ := m["url"].(string)
+		t, _ := m["type"].(string)
+		modReq.Media = append(modReq.Media, modMedia{URL: u, Video: t == "video"})
+	}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
 		return
 	}
 
@@ -167,6 +171,21 @@ func CreatePost(c *gin.Context) {
 	if err := tx.Commit(context.Background()); err != nil {
 		// Пеш хатои commit нодида гирифта мешуд ва 201 бармегашт.
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
+		return
+	}
+
+	// Шубҳанок: пинҳон то тасдиқи admin (муаллиф мебинад, дигарон не).
+	if holdIfNeeded(myID, modReq, postID, mod) {
+		invalidateFeedCache(myID)
+		mw.InvalidateUserCache(myID)
+		if b.AutoDM != nil {
+			saveAutoDM("post", postID, myID, *b.AutoDM)
+		}
+		// Зикрҳо, ҳамкорон ва сигнали сокет НАМЕРАВАНД — то тасдиқ
+		// касе набояд дар бораи мӯҳтавои пинҳон хабар гирад.
+		c.JSON(http.StatusCreated, gin.H{"_id": postID, "caption": b.Caption,
+			"pendingReview": true,
+			"message": "Пост то санҷиши модератор пинҳон аст"})
 		return
 	}
 

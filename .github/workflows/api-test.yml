@@ -301,6 +301,48 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
         run: python3 backend/testing/api_recover.py
 
+      # Модератсия: сервери ДУЮМ бо provider-и расми қалбакӣ (stub-и
+      # маҳаллӣ дар 127.0.0.1:8096, ки худи санҷиш мекушояд). Ҳеҷ калиди
+      # ҳақиқӣ нест: provider ва Safe Browsing ба stub ишора мекунанд.
+      # Сервери асосӣ (8099) бе provider мемонад — ҳолати «расм
+      # санҷида намешавад, ба навбати admin меравад» ҳам санҷида мешавад.
+      - name: Сервери дуюм барои модератсияи расм
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+          JWT_SECRET: ci-only-not-a-real-secret
+          JWT_REFRESH_SECRET: ci-only-not-a-real-secret-2
+          PORT: '8097'
+          GIN_MODE: debug
+          RATE_LIMIT_MULTIPLIER: '50'
+          MODERATION_IMAGE_URL: http://127.0.0.1:8096/hf
+          MEDIA_ALLOWED_HOSTS: 127.0.0.1:8096
+          MEDIA_ALLOW_HTTP: '1'
+          SAFE_BROWSING_KEY: ci-stub-not-a-real-key
+          MODERATION_SAFE_BROWSING_URL: http://127.0.0.1:8096/sb
+        run: |
+          sudo apt-get install -y -qq ffmpeg > /dev/null 2>&1 || true
+          /tmp/raonson-server > /tmp/server-mod.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8097/health > /dev/null 2>&1; then
+              echo "сервери дуюм тайёр"; exit 0
+            fi
+            sleep 2
+          done
+          tail -50 /tmp/server-mod.log
+          exit 1
+
+      # 18+ / дашном / линкҳо → 403; шубҳанок → пинҳон; 3 огоҳӣ →
+      # маҳдудкунӣ; admin: навбат, тасдиқ, барқарорсозӣ, бан; расм ва
+      # кадрҳои видео тавассути classifier-и қалбакӣ.
+      - name: Санҷиши модератсия
+        env:
+          BASE: http://127.0.0.1:8099
+          IMG_BASE: http://127.0.0.1:8097
+          MOD_STUB_PORT: '8096'
+          SUFFIX: ci${{ github.run_number }}
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+        run: python3 backend/testing/api_moderation.py
+
       # Майдонҳое, ки барнома мехонад, воқеан аз сервер меоянд.
       - name: Санҷиши мувофиқати маълумот
         env:
@@ -318,3 +360,7 @@ jobs:
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log
+
+      - name: Log-и сервери модератсия
+        if: always()
+        run: tail -60 /tmp/server-mod.log || true

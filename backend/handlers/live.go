@@ -7,7 +7,6 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
-	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -182,8 +181,8 @@ func LiveComment(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Эфир ёфт нашуд"})
 		return
 	}
-	if flagged, _ := utils.ModerateText(context.Background(), text); flagged {
-		c.JSON(http.StatusForbidden, gin.H{"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад"})
+	if _, ok := screenContent(c, myID, modRequest{Surface: "live_comment",
+		Texts: []string{text}, AI: true}); !ok {
 		return
 	}
 	if _, err := db.Pool.Exec(context.Background(),

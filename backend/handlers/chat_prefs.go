@@ -75,6 +75,11 @@ func EditMessage(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Паёмро танҳо дар 15 дақиқаи аввал таҳрир кардан мумкин аст"})
 		return
 	}
+	modReq := modRequest{Surface: "message", Texts: []string{text}}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
 
 	var editedAt time.Time
 	if err := db.Pool.QueryRow(context.Background(), `
@@ -84,6 +89,7 @@ func EditMessage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Таҳрир нашуд"})
 		return
 	}
+	queueReview(myID, modReq, msgID, mod, false)
 
 	payload := map[string]interface{}{
 		"messageId": msgID, "chatId": chatID, "text": text, "editedAt": editedAt,

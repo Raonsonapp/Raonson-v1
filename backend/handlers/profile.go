@@ -297,6 +297,7 @@ func UpdateProfile(c *gin.Context) {
 			return
 		}
 	}
+	profileMod := modRequest{Surface: "bio", AI: true}
 	// links → re-serialize to JSON string; cap at 20 links.
 	var bioLinksStr *string
 	if b.Links != nil {
@@ -316,6 +317,46 @@ func UpdateProfile(c *gin.Context) {
 			s := string(raw)
 			bioLinksStr = &s
 		}
+	}
+	// Модератсияи профил: bio, ном, линкҳо, аватар ва муқова.
+	// Танҳо майдонҳое, ки воқеан ИВАЗ мешаванд — танзими «ҳисоби
+	// пӯшида» ё сабти такрории ҳамон аватар набояд аз санҷиш гузарад
+	// (ва навбати admin-ро пур накунад).
+	var curBio, curName, curWeb, curLoc, curUser, curAvatar, curCover, curLinks string
+	db.Pool.QueryRow(context.Background(), `
+		SELECT COALESCE(bio,''), COALESCE(full_name,''), COALESCE(website,''),
+		       COALESCE(location,''), COALESCE(username,''), COALESCE(avatar,''),
+		       COALESCE(cover_url,''), COALESCE(bio_links::text,'')
+		FROM users WHERE id=$1`, myID).
+		Scan(&curBio, &curName, &curWeb, &curLoc, &curUser, &curAvatar, &curCover, &curLinks)
+	changed := func(p *string, cur string) bool { return p != nil && *p != "" && *p != cur }
+	for _, f := range []struct {
+		p   *string
+		cur string
+	}{{b.Bio, curBio}, {b.FullName, curName}, {b.Website, curWeb},
+		{b.Location, curLoc}, {b.Username, curUser}} {
+		if changed(f.p, f.cur) {
+			profileMod.Texts = append(profileMod.Texts, *f.p)
+		}
+	}
+	if b.Links != nil && bioLinksStr != nil && *bioLinksStr != curLinks {
+		for _, l := range *b.Links {
+			profileMod.Texts = append(profileMod.Texts, l.Title, l.URL)
+		}
+	}
+	if changed(b.Avatar, curAvatar) {
+		profileMod.Media = append(profileMod.Media, modMedia{URL: *b.Avatar})
+	}
+	if changed(b.CoverUrl, curCover) {
+		profileMod.Media = append(profileMod.Media, modMedia{URL: *b.CoverUrl})
+	}
+	var profileOut modOutcome
+	if len(profileMod.Texts) > 0 || len(profileMod.Media) > 0 {
+		out, ok := screenContent(c, myID, profileMod)
+		if !ok {
+			return
+		}
+		profileOut = out
 	}
 	_, err := db.Pool.Exec(context.Background(), `
 		UPDATE users SET
@@ -347,6 +388,7 @@ func UpdateProfile(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
+	queueReview(myID, profileMod, myID, profileOut, false)
 	// Кэшро нест кун
 	mw.CacheDel("profile:me:"+myID)
 	mw.InvalidateUserCache(myID)
@@ -394,6 +436,14 @@ func SetNote(c *gin.Context) {
 	text := b.Note
 	if len([]rune(text)) > 60 {
 		text = string([]rune(text)[:60])
+	}
+	if text != "" {
+		modReq := modRequest{Surface: "note", Texts: []string{text}, AI: true}
+		mod, modOK := screenContent(c, myID, modReq)
+		if !modOK {
+			return
+		}
+		queueReview(myID, modReq, myID, mod, false)
 	}
 
 	var (

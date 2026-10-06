@@ -81,6 +81,28 @@ func UpdateUser(c *gin.Context) {
 			gin.H{"message": "Username can only be changed once every 14 days"})
 		return
 	}
+	// Модератсия: bio, ном ва аватар (танҳо агар иваз шаванд).
+	var curBio, curUser, curAvatar string
+	db.Pool.QueryRow(context.Background(), `SELECT COALESCE(bio,''), COALESCE(username,''),
+		COALESCE(avatar,'') FROM users WHERE id=$1`, myID).Scan(&curBio, &curUser, &curAvatar)
+	modReq := modRequest{Surface: "bio", AI: true}
+	if b.Bio != nil && *b.Bio != "" && *b.Bio != curBio {
+		modReq.Texts = append(modReq.Texts, clampRunes(*b.Bio, 150))
+	}
+	if b.Username != nil && *b.Username != "" && *b.Username != curUser {
+		modReq.Texts = append(modReq.Texts, *b.Username)
+	}
+	if b.Avatar != nil && *b.Avatar != "" && *b.Avatar != curAvatar {
+		modReq.Media = append(modReq.Media, modMedia{URL: *b.Avatar})
+	}
+	var mod modOutcome
+	if len(modReq.Texts) > 0 || len(modReq.Media) > 0 {
+		out, ok := screenContent(c, myID, modReq)
+		if !ok {
+			return
+		}
+		mod = out
+	}
 	_, err := db.Pool.Exec(context.Background(), `
 		UPDATE users SET
 		  bio        = COALESCE($1, bio),
@@ -99,6 +121,7 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
+	queueReview(myID, modReq, myID, mod, false)
 	mw.CacheDel("profile:me:"+myID)
 	mw.InvalidateUserCache(myID)
 	u, _ := getUserByID(myID)

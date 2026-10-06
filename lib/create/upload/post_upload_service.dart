@@ -14,6 +14,7 @@ import '../../core/api/api_client.dart';
 import '../../core/notifications/upload_notifier.dart';
 import '../../core/utils/media_compressor.dart';
 import 'upload_manager.dart';
+import '../../core/moderation/content_policy.dart';
 
 /// Ratio-и аслии медиаро ҳисоб мекунад (расм ё видео) — то дар база нигоҳ
 /// дошта шавад ва ҳангоми намоиш формат нигоҳ дошта шавад.
@@ -51,8 +52,16 @@ class UploadState {
   final double progress;  // 0..1
   final bool   done;
   final bool   error;
+  /// Сабаби хато барои корбар (масалан «Ин мӯҳтаво қоидаҳои
+  /// Raonson-ро вайрон мекунад»). null — хатои умумӣ.
+  final String? message;
+  /// Сервер мӯҳтаворо рад кард (на хатои шабака).
+  final bool   rejected;
+  /// Пост қабул шуд, вале то санҷиши модератор пинҳон аст.
+  final bool   pendingReview;
   const UploadState(
-      {required this.thumb, this.progress = 0, this.done = false, this.error = false});
+      {required this.thumb, this.progress = 0, this.done = false, this.error = false,
+       this.message, this.rejected = false, this.pendingReview = false});
 }
 
 class PostUploadService {
@@ -130,18 +139,30 @@ class PostUploadService {
         if (autoDm != null) 'autoDm': autoDm.toJson(),
       });
       if (res.statusCode >= 400) {
+        final rejection = ContentPolicy.fromResponse(res.statusCode, res.body);
+        if (rejection != null) throw rejection;
         throw Exception(_msg(res.body, res.statusCode));
       }
+      var pending = false;
+      try {
+        pending = (jsonDecode(res.body) as Map)['pendingReview'] == true;
+      } catch (_) {}
 
-      state.value = UploadState(thumb: file, progress: 1.0, done: true);
+      state.value = UploadState(thumb: file, progress: 1.0, done: true,
+          pendingReview: pending,
+          message: pending ? 'Пост то санҷиши модератор пинҳон аст' : null);
       notifier.done(nid);
       onPublished?.call();
       await Future.delayed(const Duration(seconds: 2));
       if (state.value?.done == true) state.value = null;
-    } catch (_) {
+    } catch (e) {
       notifier.failed(nid);
-      state.value = UploadState(thumb: file, error: true);
-      await Future.delayed(const Duration(seconds: 4));
+      final rejection = ContentPolicy.fromError(e);
+      state.value = UploadState(thumb: file, error: true,
+          rejected: rejection != null,
+          message: rejection?.message);
+      // Сабаби радро корбар бояд хонда тавонад — дарозтар мемонад.
+      await Future.delayed(Duration(seconds: rejection != null ? 8 : 4));
       if (state.value?.error == true) state.value = null;
     }
   }

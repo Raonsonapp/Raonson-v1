@@ -12,6 +12,7 @@ import 'package:heroicons_flutter/heroicons_flutter.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
 import 'client_errors_screen.dart';
+import 'moderation_screen.dart';
 import 'recovery_requests_screen.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
@@ -239,6 +240,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
+          // Модератсия: навбати мӯҳтавои шубҳанок, огоҳиҳо ва маҳдудкунӣ.
+          IconButton(
+            key: const Key('admin-moderation'),
+            tooltip: 'Модератсия',
+            icon: const Icon(HeroiconsOutline.shieldExclamation,
+                color: Colors.amber),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ModerationScreen())),
+          ),
           IconButton(
             tooltip: tr('ui.096b78c734'),
             icon: Icon(AppIcons.flag_outlined,

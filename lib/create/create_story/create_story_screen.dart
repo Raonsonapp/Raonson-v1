@@ -13,6 +13,7 @@ import '../../stories/story_seen_sync.dart';
 import '../../core/services/user_session.dart';
 import '../upload/upload_manager.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/moderation/content_policy.dart';
 
 class CreateStoryScreen extends StatefulWidget {
   final File? initialFile;
@@ -100,6 +101,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
               onProgress: (f) => report(phase(0.3, 0.9, f)));
           if (mediaUrl.isNotEmpty) break;
         } catch (e) {
+          // Расми 18+ — такрор кардан бефоида аст.
+          if (ContentPolicy.fromError(e) != null) rethrow;
           lastErr = e;
           if (i < 2) await Future.delayed(Duration(seconds: 2 * (i + 1)));
         }
@@ -124,7 +127,11 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         // Пештар танҳо «🎵 ном» дар `caption` мерафт.
         if (song != null && song.isNotEmpty) 'song': song.toJson(),
       });
-      if (res.statusCode >= 400) throw Exception('Story хато ${res.statusCode}');
+      if (res.statusCode >= 400) {
+        final rejection = ContentPolicy.fromResponse(res.statusCode, res.body);
+        if (rejection != null) throw rejection;
+        throw Exception('Story хато ${res.statusCode}');
+      }
       // Story-и нав нашр шуд — cache-и disk-и story-ро пок мекунем, то дар
       // навбати оянда StoryRepository stori-и куҳнаро зикр накунад.
       // WebSocket "story:new" аллакай ба StoryController хабар медиҳад, ки
@@ -136,7 +143,11 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       notifier.failed(nid);
-      if (mounted) setState(() { _isUploading = false; _error = e.toString().replaceAll('Exception: ', ''); });
+      if (mounted) {
+        setState(() { _isUploading = false; _error = ContentPolicy.friendlyError(e); });
+        final rejection = ContentPolicy.fromError(e);
+        if (rejection != null) await showContentRejection(context, rejection);
+      }
     }
   }
 

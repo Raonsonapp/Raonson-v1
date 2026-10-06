@@ -307,6 +307,15 @@ func dispatch(cl *client, raw []byte) {
 			r := []rune(p.Text)
 			p.Text = string(r[:1000])
 		}
+		// Модератсия: ҳамон санҷиши REST (ниг. handlers/moderation.go).
+		// Манъшуда сабт намешавад; фиристанда хабар мегирад.
+		if ModerateChatText != nil && !ModerateChatText(cl.userID, p.Text) {
+			emit(cl.userID, "chat:rejected", map[string]interface{}{
+				"chatId": p.ChatID, "code": "content_blocked",
+				"message": "Ин мӯҳтаво қоидаҳои Raonson-ро вайрон мекунад",
+			})
+			return
+		}
 		var msgID string
 		var createdAt interface{}
 		db.Pool.QueryRow(context.Background(),
@@ -495,6 +504,11 @@ func EmitToUser(userID, event string, data interface{}) { emit(userID, event, da
 // `sockets`-ро import мекунад, пас баръакс ҳалқаи вобастагӣ мешуд.
 // `main` онро васл мекунад.
 var OnMissedCall func(toUserID, fromUserID, callType string)
+
+// ModerateChatText — санҷиши матни паёми сокет (false — манъ).
+// Аз handlers гузошта мешавад: sockets наметавонад handlers-ро import
+// кунад (ҳалқаи вобастагӣ).
+var ModerateChatText func(uid, text string) bool
 
 // isOnline мегӯяд, ки оё корбар пайвасти зинда дорад.
 func isOnline(userID string) bool {

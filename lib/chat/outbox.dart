@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'chat_repository.dart';
+import '../core/moderation/content_policy.dart';
 
 // ══════════════════════════════════════════════════════════════════
 //  Навбати паёмҳои нафиристода.
@@ -119,6 +120,12 @@ class Outbox {
   final StreamController<String> _sent = StreamController<String>.broadcast();
   Stream<String> get onSent => _sent.stream;
 
+  /// Паёми рад шуда (мӯҳтаво қоидаҳоро вайрон мекунад) — аз навбат
+  /// хориҷ мешавад: такрор ҳамон 403-ро медод.
+  final StreamController<(String, ContentRejection)> _rejected =
+      StreamController<(String, ContentRejection)>.broadcast();
+  Stream<(String, ContentRejection)> get onRejected => _rejected.stream;
+
   StreamSubscription? _netSub;
   Timer? _retryTimer;
   bool _draining = false;
@@ -227,6 +234,9 @@ class Outbox {
             clientId: m.clientId,
           );
           _sent.add(m.clientId);
+        } on ContentRejection catch (r) {
+          debugPrint('[Outbox] ${m.clientId}: рад шуд — ${r.code}');
+          _rejected.add((m.clientId, r));
         } catch (e) {
           debugPrint('[Outbox] ${m.clientId}: $e');
           keep.add(m.bumpAttempt());

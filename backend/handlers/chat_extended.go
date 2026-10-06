@@ -217,6 +217,18 @@ func SendMessageExt(c *gin.Context) {
 		}
 	}
 
+	// Модератсия ПЕШ аз фиристодан: матн, линкҳо, расм ва видео.
+	// Шубҳанок — фиристода мешавад ва ба навбати admin меравад
+	// (паёми хусусиро «пинҳон» кардан маъно надорад).
+	modReq := modRequest{Surface: "message", Texts: []string{body.Text}}
+	if body.MediaURL != "" && (msgType == "image" || msgType == "video") {
+		modReq.Media = []modMedia{{URL: body.MediaURL, Video: msgType == "video"}}
+	}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
+
 	var replyToPtr *string
 	if body.ReplyToID != "" {
 		replyToPtr = &body.ReplyToID
@@ -273,6 +285,7 @@ func SendMessageExt(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Send failed"})
 		return
 	}
+	queueReview(myID, modReq, msgID, mod, false)
 
 	// Fetch full message to return
 	msg, err := fetchMessageByID(msgID, myID)
