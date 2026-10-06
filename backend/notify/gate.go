@@ -160,6 +160,19 @@ func budgetLeft(c Counter, userID string, now time.Time) bool {
 	return true
 }
 
+// budgetBucket — ҳадди соатӣ барои ҳар гурӯҳи танзим ҷудо аст.
+//
+// ⚠️ Пеш ҳадди 10 push дар соат барои ҲАМА намудҳо якҷоя буд: даҳ
+// лайк дар як соат — ва обунаи нав, шарҳ ё зикр дигар ба телефон
+// намерасид («касе обуна шуд ва хабар наомад»). Акнун селоби лайк
+// танҳо лайкҳоро бозмедорад.
+func budgetBucket(k Kind) string {
+	if key := RuleFor(k).PrefKey; key != "" {
+		return key
+	}
+	return "other"
+}
+
 // Gate дарвозаи пурраро месозад.
 //
 // Ҷавоб: иҷозат ва сабаби рад (барои ташхис дар
@@ -185,7 +198,7 @@ func Gate(db push.DB, c Counter, now func() time.Time) func(
 		if p.InQuietHours(now()) {
 			return false, "quiet_hours"
 		}
-		if !budgetLeft(c, userID, now()) {
+		if !budgetLeft(c, userID+":"+budgetBucket(k), now()) {
 			return false, "rate_limit"
 		}
 		return true, ""

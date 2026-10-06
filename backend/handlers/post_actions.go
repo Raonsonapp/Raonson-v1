@@ -339,6 +339,8 @@ func GetPostStats(c *gin.Context) {
 		"shares":        shares,
 		"fromFollowers": fromFollowers,
 		"fromOthers":    fromOthers,
+		// «Обуначиён аз ин пост» — танҳо соҳиб мебинад (санҷиш дар боло).
+		"follows": followsFromContent(c.Request.Context(), myID, "post", pid),
 	})
 }
 

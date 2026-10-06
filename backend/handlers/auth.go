@@ -103,6 +103,11 @@ func Register(c *gin.Context) {
 	refreshSecret := mw.RefreshSecret()
 
 	recordLogin(id, c)
+	if b.Phone != "" {
+		// «… аз мухотибони шумо ҳамроҳ шуд» — танҳо ба онҳое, ки розигӣ
+		// додаанд (ниг. contacts_join.go).
+		announceContactJoined(id)
+	}
 
 	// Даъват: як бор ва танҳо дар сервер. Хато сабт мешавад, вале
 	// бақайдгирии муваффақро вайрон намекунад.
@@ -421,6 +426,7 @@ func VerifyPhoneOTP(c *gin.Context) {
 		}
 		db.Pool.Exec(context.Background(),
 			`UPDATE users SET phone=$1, updated_at=NOW() WHERE id=$2`, phone, uid)
+		announceContactJoined(uid)
 	}
 	c.JSON(http.StatusOK, gin.H{"verified": true})
 }

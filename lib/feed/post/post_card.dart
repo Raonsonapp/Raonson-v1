@@ -29,6 +29,7 @@ import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
 import '../../create/auto_dm_sheet.dart';
 import '../../core/services/user_session.dart';
+import '../../core/services/follow_service.dart';
 import '../../core/services/view_tracker.dart';
 import '../comments/comments_screen.dart';
 import '../../promote/promote_screen.dart';
@@ -993,6 +994,32 @@ class _PostCardState extends State<PostCard>
     setState(() => _song = song);
   }
 
+  Widget _headerFollow(PostModel post) =>
+      ValueListenableBuilder<Map<String, bool>>(
+        valueListenable: FollowService.instance.states,
+        builder: (_, __, ___) {
+          final uid = post.user.id;
+          if (FollowService.instance.resolve(uid, post.user.isFollowing)) {
+            return const SizedBox.shrink();
+          }
+          final requested = FollowService.instance.isRequested(uid);
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => FollowService.instance.toggle(uid, false,
+                source: FollowSource.post(post.id)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Text(requested ? '• ${tr('common.requested')}' : '• Пайравӣ',
+                  style: TextStyle(
+                      color: requested
+                          ? AppColors.textSecondary
+                          : const Color(0xFF0095F6),
+                      fontSize: 14, fontWeight: FontWeight.w600)),
+            ),
+          );
+        },
+      );
+
   Future<void> _showStats() async {
     final res = await ApiClient.instance.get('/posts/${widget.post.id}/stats');
     if (!mounted) return;
@@ -1005,6 +1032,8 @@ class _PostCardState extends State<PostCard>
     final saves    = (b['saves']    ?? 0) as int;
     final shares   = (b['shares']   ?? _shareCount) as int;
     final followers = (b['fromFollowers'] ?? 0) as int;
+    // Чанд нафар маҳз аз ҳамин пост обуна шуданд (ва ҳоло ҳам обуначӣ).
+    final follows   = (b['follows'] ?? 0) as int;
     final others    = (b['fromOthers']    ?? 0) as int;
     final total     = followers + others;
     final fPct      = total > 0 ? (followers / total * 100).round() : 0;
@@ -1033,6 +1062,8 @@ class _PostCardState extends State<PostCard>
             _BigStat('💬', comments, 'Шарҳҳо'),
             _BigStat('🔁', shares,   'Улашиш'),
           ]),
+          const SizedBox(height: 16),
+          _FollowsFromPost(follows),
           const SizedBox(height: 24),
           _SectionTitle('Аудитория'),
           const SizedBox(height: 12),
@@ -1515,6 +1546,10 @@ class _PostCardState extends State<PostCard>
                         fontSize: 14, color: AppColors.textPrimary)))),
                 if (post.user.isVerified) ...[ const SizedBox(width: 4),
                   const VerifiedBadge(size: 15) ],
+                // «• Пайравӣ» — мисли Instagram, барои ҳисобе, ки ҳанӯз
+                // обуна нестӣ. Обуна аз ин ҷо ба омори пост меравад
+                // («Обуначиён аз ин пост»).
+                if (!_isOwner && post.user.followKnown) _headerFollow(post),
                 // Соавтор (2 user 1 публикатсия) — мисли Instagram
                 // Ном аз `collaboratorUsers` — пеш шиносаи хоми корбар
                 // (ID) навишта мешуд.
@@ -2118,6 +2153,27 @@ class _BigStat extends StatelessWidget {
       Text(label, textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.textTertiary, fontSize: 10)),
     ])));
+}
+
+/// «Обуначиён аз ин пост: N» — танҳо соҳиб мебинад (сервер 403 медиҳад
+/// ба дигарон). Мисли Instagram Insights → «Follows».
+class _FollowsFromPost extends StatelessWidget {
+  final int count;
+  const _FollowsFromPost(this.count);
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(color: AppColors.card,
+        borderRadius: BorderRadius.circular(12)),
+    child: Row(children: [
+      Icon(AppIcons.person_add_rounded, color: const Color(0xFF00D084), size: 22),
+      const SizedBox(width: 10),
+      Expanded(child: Text('Обуначиён аз ин пост',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14))),
+      Text('$count', style: TextStyle(color: AppColors.textPrimary,
+          fontSize: 18, fontWeight: FontWeight.w800)),
+    ]),
+  );
 }
 
 class _AudienceBar extends StatelessWidget {

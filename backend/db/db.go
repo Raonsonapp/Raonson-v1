@@ -1233,6 +1233,15 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, RecoverySchema); err != nil {
 		log.Fatalf("❌ Recovery migration failed: %v", err)
 	}
+	// Манбаи обуна, мухотибони хешшуда ва «Раҳмат».
+	if _, err := Pool.Exec(ctx, socialSchema); err != nil {
+		log.Fatalf("❌ Social migration failed: %v", err)
+	}
+	// Ҳисобҳои мавҷуда кайҳо ҳамроҳ шудаанд — ивази рақамашон набояд
+	// «аз мухотибони шумо ҳамроҳ шуд» гӯяд.
+	runBackfill(ctx, "contacts_announced_existing_v1", []string{
+		`UPDATE users SET contacts_announced=TRUE WHERE contacts_announced=FALSE`,
+	})
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

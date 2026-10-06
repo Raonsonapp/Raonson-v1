@@ -1911,7 +1911,8 @@ class _FeedCardState extends State<_FeedCard> {
                 ],
                 const SizedBox(width: 10),
                 _FollowChip(userId: widget.item.postData!.user.id,
-                    following: widget.item.postData!.user.isFollowing),
+                    following: widget.item.postData!.user.isFollowing,
+                    source: FollowSource.post(widget.item.postData!.id)),
               ]),
               // Суруди пост — пеш аз explore ҳеҷ гоҳ намехонд.
               if (_hasSong) ...[
@@ -1964,7 +1965,11 @@ class _FeedCardState extends State<_FeedCard> {
                   ],
                   const SizedBox(width: 10),
                   _FollowChip(userId: (u['_id'] ?? u['id'] ?? '').toString(),
-                      following: u['isFollowing'] == true),
+                      following: u['isFollowing'] == true,
+                      source: FollowSource.reel(
+                          (widget.item.reelData!['_id'] ??
+                                  widget.item.reelData!['id'] ?? '')
+                              .toString())),
                 ]),
                 if (caption.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -2043,7 +2048,9 @@ class _FollowChip extends StatelessWidget {
   /// Ҳолати сервер — вагарна касе, ки аллакай обуна будӣ, «Пайравӣ»
   /// менамуд, ҳол он ки дар reels «обуна шуд» буд.
   final bool following;
-  const _FollowChip({this.userId = '', this.following = false});
+  /// Пост/рилси Explore, ки аз он обуна шуданд (омори соҳиб).
+  final FollowSource? source;
+  const _FollowChip({this.userId = '', this.following = false, this.source});
 
   bool get _isMe =>
       userId.isEmpty || userId == (UserSession.userId ?? '__none__');
@@ -2058,7 +2065,8 @@ class _FollowChip extends StatelessWidget {
         final following =
             FollowService.instance.resolve(userId, this.following);
         return GestureDetector(
-          onTap: () => FollowService.instance.toggle(userId, following),
+          onTap: () => FollowService.instance
+              .toggle(userId, following, source: source),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(

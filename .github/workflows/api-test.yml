@@ -315,6 +315,16 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_consistency.py
 
+      # Огоҳиномаҳо: ҳар ҳодиса (обуна, дархост, лайк, шарҳ, ҷавоб, зикр,
+      # Reels, сторис, ҳамкорӣ, лайки шарҳ) — дақиқан як огоҳинома ба
+      # гирандаи дуруст; ба худ ва басташуда — не. «Мухотибон ҳамроҳ
+      # шуданд» (розигӣ, хеш, хомӯш), «Обуначиён аз ин пост», «Раҳмат».
+      - name: Санҷиши огоҳиномаҳо ва мухотибон
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_notifications.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

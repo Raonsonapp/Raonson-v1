@@ -1445,6 +1445,8 @@ class _ReelItemState extends State<_ReelItem> {
           _statRow('💬 Шарҳ',
               '${s['comments'] ?? widget.reel.commentsCount}'),
           _statRow('🔖 Захира', '${s['saves'] ?? 0}'),
+          // Чанд нафар маҳз аз ҳамин Reel обуна шуданд.
+          _statRow('➕ Обуначиён аз ин Reel', '${s['follows'] ?? 0}'),
           _statRow('📤 Мубодила',
               '${s['shares'] ?? widget.reel.sharesCount}'),
           _statRow(
@@ -2078,7 +2080,8 @@ class _ReelItemState extends State<_ReelItem> {
                             const SizedBox(width: 10),
                             GestureDetector(
                               onTap: () => FollowService.instance
-                                  .toggle(reel.user.id, false),
+                                  .toggle(reel.user.id, false,
+                                      source: FollowSource.reel(reel.id)),
                               child: Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 5),

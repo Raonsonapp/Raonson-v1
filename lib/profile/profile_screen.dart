@@ -18,6 +18,7 @@ import 'saved_collections_screen.dart';
 import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
+import '../thanks/thanks_screen.dart';
 import '../core/content_sync.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
@@ -705,6 +706,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       );
                     }).toList()),
                 ),
+
+              // ── «РАҲМАТ» — ташаккурномаҳо ба ин одам ─────────────────
+              ThanksChip(key: ValueKey('thx_${user.id}'), userId: user.id,
+                  username: user.username, isMe: _isMe),
 
               // ── HIGHLIGHTS ──────────────────────────────────────────
               const SizedBox(height: 12),
