@@ -12,6 +12,7 @@ import 'creator_offers_screen.dart';
 import 'marketplace_models.dart';
 import 'marketplace_repository.dart';
 import 'marketplace_widgets.dart';
+import '../core/error/friendly_error.dart';
 
 class CreatorMarketplaceScreen extends StatefulWidget {
   const CreatorMarketplaceScreen({super.key});
@@ -48,7 +49,7 @@ class _CreatorMarketplaceScreenState extends State<CreatorMarketplaceScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e);
         _loading = false;
       });
     }
@@ -307,7 +308,7 @@ class _CreatorProfileEditorState extends State<CreatorProfileEditor> {
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      showMarketplaceToast(context, e.toString(), error: true);
+      showMarketplaceToast(context, friendlyError(e), error: true);
       setState(() => _busy = false);
     }
   }

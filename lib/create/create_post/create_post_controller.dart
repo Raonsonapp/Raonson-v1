@@ -15,6 +15,7 @@ import '../../core/api/api_client.dart';
 import '../../app/app_config.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/error/friendly_error.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -156,7 +157,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       if (res.statusCode >= 400) throw Exception('Пост хато ${res.statusCode}');
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      if (mounted) setState(() { _isUploading = false; _error = e.toString().replaceAll('Exception: ', ''); });
+      if (mounted) setState(() { _isUploading = false; _error = friendlyError(e); });
     }
   }
 
@@ -662,7 +663,7 @@ class _MusicPanelState extends State<_MusicPanel> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = 'Хато: $e'; _loading = false; });
+      setState(() { _error = friendlyError(e); _loading = false; });
     }
   }
 

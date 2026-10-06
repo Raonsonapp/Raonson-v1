@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/notifications/upload_notifier.dart';
+import '../core/storage/offline_cache.dart';
 import '../core/storage/token_storage.dart';
 import '../create/upload/upload_manager.dart';
 import '../models/message_model.dart';
@@ -13,15 +14,20 @@ import '../models/message_model.dart';
 class ChatRepository {
   final ApiClient _api = ApiClient.instance;
 
-  static const _inboxKey   = 'chat_inbox_cache';
-  static const _cacheTTL   = Duration(hours: 12);
+  /// Кэши inbox дар [OfflineCache] — ба корбари воридшуда баста аст ва
+  /// «куҳна» намешавад: бе интернет ҳамеша рӯйхати охирин нишон дода
+  /// мешавад (пеш баъди 12 соат кэш партофта мешуд → «Паёме нест»).
+  static const _inboxName  = 'chat_inbox';
+  static const _inboxMax   = 60;
+  /// Калиди куҳнаи бе-корбар — танҳо барои тоза кардан.
+  static const _legacyInboxKey = 'chat_inbox_cache';
 
-  // Пас аз иваз кардани аккаунт: чатҳои корбари куҳнаро аз disk cache
-  // тоза мекунем, то ки inbox-и корбари нав пок бошад.
+  // Пас аз иваз кардани аккаунт: кэши куҳнаи бе-корбарро тоза мекунем.
+  // Кэши нав аз рӯи корбар ҷудост ва нигоҳ дошта мешавад.
   static Future<void> clearAllCaches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_inboxKey);
+      await prefs.remove(_legacyInboxKey);
       // Кэши кӯҳнаи паёмҳо аз рӯи peerId буд (байни аккаунтҳо омехта
       // мешуд) — калидҳои боқимондаашро пок мекунем. Кэши нав (chat_msgs_v2_)
       // аз рӯи chatId аст ва ба аккаунт вобаста, пас нигоҳ дошта мешавад.
@@ -37,27 +43,34 @@ class ChatRepository {
   Future<List<MessageModel>> getInboxChats() async {
     // 1. Cache аввал
     final cached = await _loadInbox();
-    if (cached != null) {
+    if (cached != null && cached.isNotEmpty) {
       _refreshInboxBackground();
       return cached;
     }
     // 2. Network
-    return _fetchInbox();
+    return (await fetchInboxFresh())?.chats ?? [];
   }
 
   /// Танҳо кэши диск (бе шабака) — барои фавран нишон додани inbox.
   Future<List<MessageModel>?> loadCachedInbox() => _loadInbox();
 
-  /// Inbox аз шабака (ва кэш нав мешавад). `null` = хатои шабака.
+  /// Хатои охирини [fetchInboxFresh] — барои матни фаҳмо дар экран.
+  Object? lastInboxError;
+
+  /// Inbox аз шабака (ва кэш нав мешавад). `null` = хатои шабака
+  /// (сабаб дар [lastInboxError]).
   ///
   /// ⚠️ Пеш `getInboxChats` кэши то 12-соатаро бармегардонд ва навсозии
   /// фонӣ натиҷаро ба экран намерасонд — бейҷи «2» баъди хондан ҳам
   /// аз кэш бармегашт. Акнун контроллер баъди кэш ҲАМЕША инро мегирад.
   Future<({List<MessageModel> chats, int? totalUnread})?> fetchInboxFresh() async {
+    lastInboxError = null;
     try {
-      final res = await _api.getRequest(ApiEndpoints.chat)
-          .timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400) return null;
+      final res = await _api.getRequest(ApiEndpoints.chat);
+      if (res.statusCode >= 400) {
+        lastInboxError = ApiException(res.statusCode, res.body);
+        return null;
+      }
       final body = jsonDecode(res.body);
       final List raw = body is List ? body : (body['chats'] ?? []);
       final total = body is Map ? (body['totalUnread'] as num?)?.toInt() : null;
@@ -68,55 +81,32 @@ class ChatRepository {
           if (m.peer.username.isNotEmpty) out.add(m);
         } catch (err) { debugPrint('[Chat] parse: $err'); }
       }
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_inboxKey, jsonEncode({
-        'time': DateTime.now().millisecondsSinceEpoch,
-        'data': raw,
-      }));
+      await OfflineCache.put(_inboxName, raw, maxItems: _inboxMax);
       return (chats: out, totalUnread: total);
-    } catch (_) { return null; }
+    } catch (e) {
+      lastInboxError = e;
+      return null;
+    }
   }
 
   Future<List<MessageModel>?> _loadInbox() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_inboxKey);
-      if (raw == null) return null;
-      final payload = jsonDecode(raw) as Map<String, dynamic>;
-      final age = DateTime.now().millisecondsSinceEpoch - (payload['time'] as int);
-      if (age > _cacheTTL.inMilliseconds) return null;
-      final list = payload['data'] as List;
-      return list.map((e) => MessageModel.fromJson(e as Map<String,dynamic>)).toList();
-    } catch (_) { return null; }
-  }
-
-  Future<List<MessageModel>> _fetchInbox() async {
-    try {
-      final res = await _api.getRequest(ApiEndpoints.chat)
-          .timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400) return [];
-      final body = jsonDecode(res.body);
-      final List raw = body is List ? body : (body['chats'] ?? []);
+      final c = await OfflineCache.get(_inboxName);
+      if (c == null || c.data is! List) return null;
       final out = <MessageModel>[];
-      for (final e in raw) {
+      for (final e in c.data as List) {
         try {
-          final m = MessageModel.fromJson(e as Map<String, dynamic>);
+          final m = MessageModel.fromJson(Map<String, dynamic>.from(e as Map));
           if (m.peer.username.isNotEmpty) out.add(m);
-        } catch (err) { debugPrint('[Chat] parse: $err'); }
+        } catch (_) {}
       }
-      // Кэшга сақла
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_inboxKey, jsonEncode({
-        'time': DateTime.now().millisecondsSinceEpoch,
-        'data': raw,
-      }));
       return out;
-    } catch (_) { return []; }
+    } catch (_) { return null; }
   }
 
   void _refreshInboxBackground() {
     Future.delayed(const Duration(milliseconds: 800), () async {
-      try { await _fetchInbox(); } catch (_) {}
+      try { await fetchInboxFresh(); } catch (_) {}
     });
   }
 
@@ -124,8 +114,7 @@ class ChatRepository {
   Future<List<MessageModel>> fetchInboxPage(int page, {int limit = 30}) async {
     try {
       final res = await _api
-          .getRequest('${ApiEndpoints.chat}?page=$page&limit=$limit')
-          .timeout(const Duration(seconds: 8));
+          .getRequest('${ApiEndpoints.chat}?page=$page&limit=$limit');
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
       final List raw = body is List ? body : (body['chats'] ?? []);
@@ -213,8 +202,7 @@ class ChatRepository {
     final myId = await _myIdFast();
     if (myId.isNotEmpty && peerId.isNotEmpty) return localChatId(myId, peerId);
     try {
-      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId')
-          .timeout(const Duration(seconds: 8));
+      final cr = await _api.getRequest('${ApiEndpoints.chat}/with/$peerId');
       if (cr.statusCode >= 400) return null;
       return (jsonDecode(cr.body) as Map)['chatId']?.toString();
     } catch (_) { return null; }
@@ -225,8 +213,7 @@ class ChatRepository {
   Future<List<MessageModel>?> fetchLatest(String chatId) async {
     try {
       final myId = await _myIdFast();
-      final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages')
-          .timeout(const Duration(seconds: 8));
+      final mr = await _api.getRequest('${ApiEndpoints.chat}/$chatId/messages');
       if (mr.statusCode >= 400) return null;
       final body = jsonDecode(mr.body);
       final List data = body is Map ? (body['messages'] ?? []) : body as List;
@@ -247,8 +234,7 @@ class ChatRepository {
     try {
       final myId = await _myIdFast();
       final mr = await _api
-          .getRequest('${ApiEndpoints.chat}/$chatId/messages?page=$page&limit=$limit')
-          .timeout(const Duration(seconds: 8));
+          .getRequest('${ApiEndpoints.chat}/$chatId/messages?page=$page&limit=$limit');
       if (mr.statusCode >= 400) return [];
       final body = jsonDecode(mr.body);
       final List data = body is Map ? (body['messages'] ?? []) : body as List;
@@ -307,7 +293,7 @@ class ChatRepository {
 
   Future<Map<String, dynamic>?> getMyProfile() async {
     try {
-      final r = await _api.get('/profile/me').timeout(const Duration(seconds: 8));
+      final r = await _api.get('/profile/me');
       if (r.statusCode != 200) return null;
       final b = jsonDecode(r.body) as Map<String, dynamic>;
       return (b['user'] ?? b) as Map<String, dynamic>;
@@ -332,12 +318,7 @@ class ChatRepository {
   }
 
   // ── Дархостҳои паём: қабул / нест кардан ────────────────────────
-  Future<void> clearInboxCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_inboxKey);
-    } catch (_) {}
-  }
+  Future<void> clearInboxCache() => OfflineCache.remove(_inboxName);
 
   Future<bool> acceptRequest(String peerId) async {
     try {

@@ -1,3 +1,4 @@
+import '../widgets/stale_data_banner.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart' show AuthorizationStatus;
@@ -62,8 +63,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     await NotificationPermissionSheet.ask(context);
   }
 
+  /// Шабака нашуд — огоҳиҳои охирин аз кэш нишон дода мешаванд.
+  bool _stale = false;
+
+  /// Аввал кэш (фавран, бе интернет), баъд шабака.
   Future<void> _load() async {
-    setState(() { _loading = true; _hasError = false; });
+    setState(() {
+      _loading = _notifications.isEmpty;
+      _hasError = false;
+    });
+    if (_notifications.isEmpty) {
+      final cached = await _repo.cachedNotifications();
+      if (!mounted) return;
+      if (cached != null && cached.isNotEmpty && _notifications.isEmpty) {
+        setState(() { _notifications = cached; _loading = false; });
+      }
+    }
     try {
       final data = await _repo.fetchNotifications();
       if (!mounted) return;
@@ -73,13 +88,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _unreadCount = (data['unreadCount'] as int?) ?? 0;
         _hasMore = _notifications.length >= NotificationsRepository.pageSize;
         _loading = false;
+        _stale = false;
       });
       _repo.markAllAsRead().catchError((_) {});
       NotificationBadgeController.instance.reset();
       NotificationService.markRead();
     } catch (_) {
       if (!mounted) return;
-      setState(() { _loading = false; _hasError = true; });
+      setState(() {
+        _loading = false;
+        _hasError = true;
+        _stale = _notifications.isNotEmpty;
+        _hasMore = false;
+      });
     }
   }
 
@@ -263,13 +284,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
         ],
       ),
-      body: _loading
-          ? const _NotifSkeleton()
-          : _hasError && _notifications.isEmpty
-              ? _buildError()
-              : _notifications.isEmpty
-                  ? _buildEmpty()
-                  : _buildGroupedList(),
+      body: Column(children: [
+        StaleDataBanner(visible: _stale && !_loading, onRetry: _load),
+        Expanded(
+          child: _loading
+              ? const _NotifSkeleton()
+              : _hasError && _notifications.isEmpty
+                  ? _pullable(_buildError())
+                  : _notifications.isEmpty
+                      ? _pullable(_buildEmpty())
+                      : _buildGroupedList(),
+        ),
+      ]),
     );
   }
 
@@ -365,6 +391,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ]),
     );
   }
+
+  /// Ҳолати холӣ/хато низ бо кашидан ба поён нав мешавад.
+  Widget _pullable(Widget child) => RefreshIndicator(
+        onRefresh: _load,
+        color: AppColors.textPrimary,
+        backgroundColor: AppColors.bg,
+        child: LayoutBuilder(builder: (_, c) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: c.maxHeight),
+            child: child),
+        )),
+      );
 
   Widget _buildEmpty() {
     return Center(

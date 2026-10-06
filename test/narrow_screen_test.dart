@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:raonson/core/content_sync.dart';
+import 'package:raonson/core/storage/offline_cache.dart';
 import 'package:raonson/chat/inbox/chat_list_screen.dart';
 import 'package:raonson/chat/room/message_bubble.dart';
 import 'package:raonson/core/analytics/analytics_service.dart';
@@ -85,6 +86,7 @@ Widget _scaled(Widget child) => MaterialApp(
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    OfflineCache.viewerId = () => 'me1';
     StorySeenSync.instance.clear();
     ContentSync.instance.clear();
   });
@@ -228,8 +230,9 @@ void main() {
       ],
     };
     SharedPreferences.setMockInitialValues({
-      'profile_cache_uX': jsonEncode({'time': now, 'data': user}),
-      'profile_posts_uX': jsonEncode({'time': now, 'data': [
+      // Кэши офлайн (OfflineCache) — ба корбари ворид баста аст.
+      'oc1:me1:profile:uX': jsonEncode({'t': now, 'd': user}),
+      'oc1:me1:profile_posts:uX': jsonEncode({'t': now, 'd': [
         for (var i = 0; i < 6; i++) {..._longPost().toJson(), '_id': 'pp$i'},
       ]}),
     });
@@ -249,9 +252,9 @@ void main() {
     await _narrow(t);
     final now = DateTime.now();
     SharedPreferences.setMockInitialValues({
-      'chat_inbox_cache': jsonEncode({
-        'time': now.millisecondsSinceEpoch,
-        'data': [
+      'oc1:me1:chat_inbox': jsonEncode({
+        't': now.millisecondsSinceEpoch,
+        'd': [
           for (var i = 0; i < 4; i++) {
             '_id': 'm$i', 'chatId': 'c$i',
             'text': 'Паёми охирини хеле дароз ' * 6,

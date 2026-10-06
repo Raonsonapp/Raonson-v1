@@ -26,6 +26,7 @@ import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../auth_repository.dart';
 import '../../feed_ai/interests_onboarding_screen.dart';
+import '../../core/error/friendly_error.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -342,7 +343,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
       return true;
     } catch (e) {
-      _err(e.toString().replaceAll('Exception:', '').trim());
+      _err(friendlyError(e));
       return false;
     }
   }

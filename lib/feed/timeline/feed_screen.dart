@@ -1,3 +1,4 @@
+import '../../widgets/stale_data_banner.dart';
 import '../../core/ads/ad_eligibility.dart';
 import '../../core/ads/ad_slot_layout.dart';
 import '../../core/ads/feed_ad_card.dart';
@@ -365,23 +366,9 @@ class _FeedBody extends StatelessWidget {
     }
 
     // ── Offline banner ─────────────────────────────────────────
-    final offlineBanner = feedCtrl.isOffline
-        ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            color: AppColors.card,
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(AppIcons.wifi_off, color: AppColors.textFaint, size: 14),
-              const SizedBox(width: 6),
-              Text(tr('feed.offlineBanner'),
-                style: TextStyle(color: AppColors.textFaint, fontSize: 12)),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => feedCtrl.refresh(),
-                child: Text(tr('common.retry'),
-                  style: const TextStyle(color: AppColors.neonBlue,
-                      fontSize: 12, fontWeight: FontWeight.w600))),
-            ]))
-        : const SizedBox.shrink();
+    final offlineBanner = StaleDataBanner(
+        visible: feedCtrl.isOffline && state.posts.isNotEmpty,
+        onRetry: () => feedCtrl.refresh());
 
     // ── Empty state ─────────────────────────────────────────────
     if (!state.isLoading && state.posts.isEmpty && !state.hasError) {
@@ -449,7 +436,8 @@ class _FeedBody extends StatelessWidget {
                   Icon(AppIcons.cloud_off_outlined,
                       size: 64, color: AppColors.dividerFaint),
                   const SizedBox(height: 16),
-                  Text(tr('common.noConnection'),
+                  Text(state.errorMessage ?? tr('common.noConnection'),
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: AppColors.textFaint, fontSize: 16)),
                   const SizedBox(height: 8),
                   Text(tr('common.checkInternet'),

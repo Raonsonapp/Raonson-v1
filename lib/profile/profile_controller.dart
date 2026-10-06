@@ -5,6 +5,7 @@ import 'dart:async';
 
 import '../core/api/api_client.dart';
 import '../core/content_events.dart';
+import '../core/error/friendly_error.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
@@ -58,49 +59,93 @@ class ProfileController extends ChangeNotifier {
     return [...pinned, ...unpinned];
   }
 
+  /// Шабака нашуд, вале профил аз кэш нишон дода шудааст →
+  /// баннери хурди «Офлайн — маълумоти охирин» (на экрани хато).
+  bool isStale = false;
+
+  /// Сервер гуфт, ки корбар нест (404) — на хатои шабака.
+  bool notFound = false;
+
+  void _applySnapshot(ProfileSnapshot s) {
+    profile    = s.profile;
+    posts      = s.posts;
+    reels      = s.reels;
+    highlights = s.highlights;
+    for (final p in posts) { p.primeSync(); }
+    for (final r in reels) { r.primeSync(); }
+  }
+
+  /// Мисли Instagram/Telegram: аввал маълумоти охирин аз кэш (фавран,
+  /// ҳатто бе интернет), баъд шабака. Хатои шабака кэшро пок НАМЕКУНАД:
+  /// экрани «Корбар ёфт нашуд» танҳо вақте ки кэш умуман нест.
   Future<void> loadProfile() async {
-    isLoading = true;
+    final hadData = profile != null;
+    if (!hadData) {
+      final snap = await _repo.loadCachedSnapshot(userId, byUsername: byUsername);
+      if (_disposed) return;
+      if (snap != null && profile == null) _applySnapshot(snap);
+    }
+    // Скелет танҳо вақте ки чизе барои нишон додан нест; навсозии
+    // pull-to-refresh экранро бо скелет иваз намекунад.
+    isLoading = profile == null;
     notifyListeners();
     try {
-      final resolvedId = byUsername
-          ? await _repo.getUserIdByUsername(userId)
-          : userId;
-      profile    = await _repo.getProfile(resolvedId);
-      if (profile != null && !isOwnProfile) {
-        FollowService.instance
-            .primeRequested(profile!.id, profile!.followRequestSent);
+      var resolvedId = profile?.id.isNotEmpty == true ? profile!.id : userId;
+      if (byUsername && profile == null) {
+        resolvedId = await _repo.getUserIdByUsername(userId);
       }
-      posts      = await _repo.getUserPosts(profile?.id ?? userId);
-      reels      = await _repo.getUserReels(profile?.id ?? userId,
-          onFresh: _onFreshReels);
-      highlights = await _repo.getHighlights(profile?.id ?? userId);
+      final fresh = await _repo.fetchProfile(
+          userId == 'me' ? 'me' : resolvedId);
+      if (_disposed) return;
+      profile = fresh;
+      if (!isOwnProfile) {
+        FollowService.instance
+            .primeRequested(fresh.id, fresh.followRequestSent);
+      }
+      final uid = fresh.id.isNotEmpty ? fresh.id : resolvedId;
+      final results = await Future.wait([
+        _repo.fetchUserPosts(userId == 'me' ? 'me' : uid),
+        _repo.fetchUserReels(uid),
+        _repo.fetchHighlights(uid),
+      ]);
+      if (_disposed) return;
+      final freshPosts = results[0] as List<PostModel>?;
+      final freshReels = results[1] as List<ReelModel>?;
+      final freshHl    = results[2] as List<HighlightModel>?;
+      if (freshPosts != null) {
+        posts = freshPosts;
+        // Саҳифа пурра → шояд боз ҳаст (ниг. loadMorePosts).
+        postsHasMore = posts.length >= ProfileRepository.profilePageSize;
+      }
+      if (freshReels != null) {
+        reels = freshReels;
+        reelsHasMore = reels.length >= ProfileRepository.profilePageSize;
+      }
+      if (freshHl != null) highlights = freshHl;
       // Плиткаҳои профил рақамҳоро аз ContentSync мехонанд.
       for (final p in posts) { p.primeSync(); }
       for (final r in reels) { r.primeSync(); }
-      // Саҳифаи пурра → шояд боз ҳаст (ниг. loadMorePosts).
-      postsHasMore = posts.length >= ProfileRepository.profilePageSize;
-      reelsHasMore = reels.length >= ProfileRepository.profilePageSize;
-      error      = null;
+      // Як қисм нашуд → маълумоти он аз кэш аст.
+      isStale = freshPosts == null || freshReels == null;
+      notFound = false;
+      error = null;
+    } on ProfileNotFoundException {
+      if (_disposed) return;
+      notFound = true;
+      profile = null;
+      isStale = false;
+      error = null;
     } catch (e) {
-      error = e.toString();
+      if (_disposed) return;
+      if (profile != null) {
+        // Кэш дар экран мемонад — танҳо баннери хурд.
+        isStale = true;
+        error = null;
+      } else {
+        error = friendlyError(e);
+      }
     }
     isLoading = false;
-    notifyListeners();
-  }
-
-  /// Рӯйхати нави сервер баъди кэш — тамошо/лайкҳо ҳамон рақамҳое
-  /// мешаванд, ки дар Explore ва Reels.
-  void _onFreshReels(List<ReelModel> fresh) {
-    if (_disposed) return;
-    // Саҳифаҳои иловагии аллакай боршуда гум нашаванд.
-    if (reels.length > fresh.length) {
-      final ids = fresh.map((r) => r.id).toSet();
-      fresh = [...fresh, ...reels.skip(fresh.length).where((r) => !ids.contains(r.id))];
-    } else {
-      reelsHasMore = fresh.length >= ProfileRepository.profilePageSize;
-    }
-    reels = fresh;
-    for (final r in reels) { r.primeSync(); }
     notifyListeners();
   }
 
@@ -357,7 +402,7 @@ class ProfileController extends ChangeNotifier {
     notifyListeners();
     try { await _repo.deleteHighlight(id); }
     catch (_) {
-      highlights = await _repo.getHighlights(profile?.id ?? userId);
+      highlights = await _repo.fetchHighlights(profile?.id ?? userId) ?? highlights;
       notifyListeners();
     }
   }

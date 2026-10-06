@@ -13,6 +13,7 @@ import '../../stories/story_seen_sync.dart';
 import '../../core/services/user_session.dart';
 import '../upload/upload_manager.dart';
 import '../../core/i18n/strings.dart';
+import '../../core/error/friendly_error.dart';
 
 class CreateStoryScreen extends StatefulWidget {
   final File? initialFile;
@@ -136,7 +137,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       notifier.failed(nid);
-      if (mounted) setState(() { _isUploading = false; _error = e.toString().replaceAll('Exception: ', ''); });
+      if (mounted) setState(() { _isUploading = false; _error = friendlyError(e); });
     }
   }
 

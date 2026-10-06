@@ -54,6 +54,7 @@ import '../verification/verification_screen.dart';
 import '../core/ads/ads_debug_screen.dart';
 import '../discover/discover_screen.dart';
 import '../wellbeing/time_spent_screen.dart';
+import '../core/error/friendly_error.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -1117,7 +1118,7 @@ class _CPState extends State<ChangePasswordScreen> {
             _err = b['message']?.toString() ?? 'Хатогӣ ${res.statusCode}');
       }
     } catch (e) {
-      if (mounted) setState(() => _err = e.toString());
+      if (mounted) setState(() => _err = friendlyError(e));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

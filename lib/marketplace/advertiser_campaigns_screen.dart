@@ -9,6 +9,7 @@ import 'campaign_detail_screen.dart';
 import 'marketplace_models.dart';
 import 'marketplace_repository.dart';
 import 'marketplace_widgets.dart';
+import '../core/error/friendly_error.dart';
 
 class AdvertiserCampaignsScreen extends StatefulWidget {
   const AdvertiserCampaignsScreen({super.key});
@@ -36,7 +37,7 @@ class _AdvertiserCampaignsScreenState extends State<AdvertiserCampaignsScreen> {
       setState(() => _campaigns = list);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 
@@ -200,7 +201,7 @@ class _CreateCampaignScreenState extends State<CreateCampaignScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      showMarketplaceToast(context, e.toString(), error: true);
+      showMarketplaceToast(context, friendlyError(e), error: true);
       setState(() => _busy = false);
     }
   }
