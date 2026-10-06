@@ -9,7 +9,6 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
-	"raonson/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,17 +28,6 @@ func AddComment(c *gin.Context) {
 		return
 	}
 	b.Text = clampRunes(b.Text, 1000)
-	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
-		return
-	}
-
-	if !moderateText(b.Text) {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Шарҳи шумо аз тарафи AI рад шуд. Лутфан матнро тағйир диҳед."})
-		return
-	}
 
 	var exists, commentsOff bool
 	db.Pool.QueryRow(context.Background(),
@@ -75,13 +63,22 @@ func AddComment(c *gin.Context) {
 		}
 	}
 
+	// Модератсия (18+, дашном, линкҳо) — пас аз санҷишҳои арзон.
+	modReq := modRequest{Surface: "comment", Texts: []string{b.Text}, AI: true}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
+
 	// ⚠️ Калимаҳои пинҳони СОҲИБИ ПОСТ, на нависанда.
 	//
 	// Шарҳ РАД НАМЕШАВАД — он пинҳон мешавад. Агар рад мешуд,
 	// нависанда фавран мефаҳмид ва роҳи гузаштанро меҷуст.
 	// Корбари маҳдудшуда (restrict) — ҳамин тавр: танҳо худаш мебинад.
-	hidden := restricted || containsHiddenWord(b.Text,
+	ownerHidden := restricted || containsHiddenWord(b.Text,
 		hiddenWordsOf(context.Background(), postOwner))
+	// Шубҳанок — пинҳон то тасдиқи admin.
+	hidden := ownerHidden || mod.Hold
 
 	var cid string
 	var createdAt interface{}
@@ -94,6 +91,7 @@ func AddComment(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Шарҳ сабт нашуд"})
 		return
 	}
+	queueReview(myID, modReq, cid, mod, mod.Hold && !ownerHidden)
 
 	// Шарҳи пинҳон ба ҳисоб намеравад ва огоҳинома намедиҳад —
 	// вагарна соҳиб маҳз ҳамон чизеро мебинад, ки пинҳон кардан
@@ -346,7 +344,8 @@ func EditComment(c *gin.Context) {
 	b.Text = clampRunes(b.Text, 1000)
 	// Таҳрир ҳам модератсия ва калимаҳои пинҳони соҳиби постро мегузарад —
 	// пеш шарҳи бегуноҳро баъд ба таҳқир иваз кардан мумкин буд.
-	if !captionAllowed(c, b.Text) {
+	modReq, mod, modOK := captionAllowed(c, "comment", b.Text)
+	if !modOK {
 		return
 	}
 	var postOwner string
@@ -378,11 +377,14 @@ func EditComment(c *gin.Context) {
 			})
 			return
 		}
+		modReq.Surface = "reel_comment"
 	}
+	held := holdIfNeeded(myID, modReq, cid, mod)
 
 	c.JSON(http.StatusOK, gin.H{
-		"updated": true,
-		"text":    b.Text,
+		"updated":       true,
+		"text":          b.Text,
+		"pendingReview": held,
 	})
 }
 
@@ -782,9 +784,16 @@ func CreateReel(c *gin.Context) {
 		}
 	}
 	b.Caption = clampRunes(b.Caption, 2200)
-	if flagged, cats := utils.ModerateText(context.Background(), b.Caption); flagged {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Тавсиф қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
+	// Модератсия ПЕШ аз нашр: тавсиф + видео (кадрҳо) + муқова.
+	// Нусхаи сифати паст (videoUrlLow) ҳамон видео аст — алоҳида
+	// санҷида намешавад.
+	modReq := modRequest{Surface: "reel", AI: true, Texts: []string{b.Caption},
+		Media: []modMedia{{URL: b.VideoURL, Video: true}, {URL: b.ThumbnailURL}}}
+	if b.AutoDM != nil {
+		modReq.Texts = append(modReq.Texts, b.AutoDM.Message, b.AutoDM.Link)
+	}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
 		return
 	}
 	audio := b.Audio.clean()
@@ -802,6 +811,8 @@ func CreateReel(c *gin.Context) {
 		return
 	}
 
+	held := holdIfNeeded(myID, modReq, rid, mod)
+
 	// Садоро дар реестр сабт мекунем — то «Ин садоро истифода бар»
 	// ва рӯйхати садоҳои маъмул кор кунад.
 	registerAudio(context.Background(), audio, myID)
@@ -813,6 +824,7 @@ func CreateReel(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": rid, "videoUrl": b.VideoURL, "videoUrlLow": b.VideoURLLow,
 		"thumbnailUrl": b.ThumbnailURL,
+		"pendingReview": held,
 		"caption":      b.Caption, "likesCount": 0, "viewsCount": 0,
 		"audio": gin.H{
 			"id": audio.ID, "title": audio.Title, "artist": audio.Artist,
@@ -1042,11 +1054,6 @@ func AddReelComment(c *gin.Context) {
 		return
 	}
 	b.Text = clampRunes(b.Text, 1000)
-	if flagged, cats := utils.ModerateText(context.Background(), b.Text); flagged {
-		c.JSON(http.StatusForbidden, gin.H{
-			"message": "Шарҳ қоидаҳои ҷамъиятиро вайрон мекунад", "categories": cats})
-		return
-	}
 	// Пеш ин ҷо на мавҷудияти Reel, на блок, на ҳисоби пӯшида, на
 	// калимаҳои пинҳон санҷида мешуд — ҳамаи он чи шарҳи пост дошт.
 	var commentsOff bool
@@ -1072,8 +1079,14 @@ func AddReelComment(c *gin.Context) {
 			return
 		}
 	}
-	hidden := restricted || containsHiddenWord(b.Text,
+	modReq := modRequest{Surface: "reel_comment", Texts: []string{b.Text}, AI: true}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
+	ownerHidden := restricted || containsHiddenWord(b.Text,
 		hiddenWordsOf(context.Background(), owner))
+	hidden := ownerHidden || mod.Hold
 	var cid string
 	if err := db.Pool.QueryRow(context.Background(),
 		`INSERT INTO reel_comments(reel_id,user_id,text,parent_id,hidden)
@@ -1082,6 +1095,7 @@ func AddReelComment(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Шарҳ сабт нашуд"})
 		return
 	}
+	queueReview(myID, modReq, cid, mod, mod.Hold && !ownerHidden)
 	if hidden {
 		c.JSON(http.StatusCreated, newCommentJSON(cid, b.Text, b.ParentID, myID))
 		return

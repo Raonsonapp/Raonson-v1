@@ -1,0 +1,257 @@
+# ══════════════════════════════════════════════════════════════════
+#  Raonson — рӯйхати калимаҳои манъшуда (18+, порнография, дашном).
+#
+#  Формат:  категория|намуна
+#
+#  Категорияҳо:
+#    minors     — мӯҳтавои ҷинсӣ бо иштироки кӯдакон. Фавран BLOCK,
+#                 ҳисоб муваққатан маҳдуд мешавад ва admin месанҷад.
+#    sexual     — порнография / мӯҳтавои ҷинсии ошкор. BLOCK + огоҳӣ (strike).
+#    profanity  — дашноми қабеҳ (мат). BLOCK, вале strike НАМЕДИҲАД.
+#    suggestive — шубҳанок (метавонад бегуноҳ бошад: «nude» ранги лаб,
+#                 «sex» дар анкета). REVIEW — мӯҳтавои оммавӣ то
+#                 тасдиқи admin пинҳон мемонад.
+#
+#  Намуна (пас аз нормализатсия: ҳарфи хурд, ӯ→у, ӣ→и, ҳ→х, ҷ→ч,
+#  қ→к, ғ→г, ё→е, й→и; дар забони форсӣ ي→ی, ك→ک):
+#    калима      — танҳо калимаи пурра («sex» ≠ «essex», «sextant»)
+#    калима*     — калима бо ин сар мешавад («fuck*» → fucking)
+#    *калима*    — дар дохили калима ҳам («*porn*» → pornhub)
+#    ибора аз чанд калима — пайдарпай; ҳар калима метавонад * дошта бошад.
+#
+#  Ҳар намуна дар ҳамон шакле, ки дар матн навишта мешавад (бе leet):
+#  «p0rn», «p o r n», «pоrn» (о-и кириллӣ) худкор ба «porn» мерасанд.
+#  Калимаҳои 1–2 ҳарфа (масалан форсии «کس» = «кас/шахс») ҚАСДАН нестанд —
+#  хатари манъи бегуноҳ хеле калон аст.
+# ══════════════════════════════════════════════════════════════════
+
+# ── Кӯдакон (severe) ─────────────────────────────────────────────
+minors|child porn*
+minors|childporn*
+minors|kiddie porn*
+minors|kiddieporn*
+minors|kid porn*
+minors|kidporn*
+minors|preteen sex*
+minors|underage porn*
+minors|underage sex*
+minors|pedo porn*
+minors|lolicon*
+minors|shotacon*
+minors|детск* порн*
+minors|детск* секс*
+minors|порно с детьми
+minors|порно с малолет*
+minors|секс с детьми
+minors|секс с малолет*
+minors|малолетк* порн*
+minors|порнографияи кудакон
+minors|порнои кудакон
+minors|порно бо кудакон
+minors|секс бо кудакон
+minors|پورن کودک*
+minors|سکس با کودک*
+minors|سکس کودک*
+
+# ── Порнография / ҷинсӣ — English ────────────────────────────────
+sexual|*porn*
+sexual|xvideo*
+sexual|xnxx*
+sexual|xhamster*
+sexual|redtube*
+sexual|youporn*
+sexual|brazzers*
+sexual|onlyfans*
+sexual|hentai*
+sexual|blowjob*
+sexual|handjob*
+sexual|cumshot*
+sexual|creampie*
+sexual|gangbang*
+sexual|dildo*
+sexual|camgirl*
+sexual|sexcam*
+sexual|sextape*
+sexual|sex tape*
+sexual|sex video*
+sexual|sex vid*
+sexual|sex chat*
+sexual|sexchat*
+sexual|free sex
+sexual|have sex
+sexual|nudes
+sexual|send nudes
+sexual|erotica
+sexual|erotic video*
+sexual|erotic photo*
+sexual|deepthroat*
+suggestive|masturbat*
+suggestive|orgasm*
+sexual|orgy
+sexual|orgies
+sexual|threesome*
+sexual|milf*
+suggestive|horny
+sexual|naked girls
+sexual|naked women
+sexual|nude girls
+sexual|nude photos
+sexual|nude pics
+sexual|xxx video*
+sexual|xxx videos
+sexual|adult video*
+
+# ── Порнография / ҷинсӣ — Русский ────────────────────────────────
+sexual|*порн*
+sexual|порево
+suggestive|эротик*
+sexual|эротическ* видео
+sexual|эротическ* фото*
+sexual|секс видео
+sexual|секс-видео
+sexual|секс чат*
+sexual|сексвидео
+sexual|секс знакомств*
+sexual|интим услуг*
+sexual|минет*
+sexual|дрочит*
+sexual|дрочка
+sexual|подрочи*
+sexual|трахать*
+sexual|трахаться
+sexual|трахнуть
+sexual|трахнул*
+sexual|трахают
+sexual|выебать
+sexual|голые девушки
+sexual|голые девочки
+sexual|голые бабы
+sexual|голая девушка
+suggestive|сиськи
+suggestive|мастурб*
+suggestive|оргазм*
+sexual|оргия
+sexual|хентай*
+sexual|секс за деньги
+profanity|шлюх*
+suggestive|проститутк*
+suggestive|вебкам*
+
+# ── Ҷинсӣ — Тоҷикӣ (кириллӣ ва лотинӣ) ──────────────────────────
+sexual|алокаи чинси
+sexual|видеои урён
+sexual|видеои бараxна
+sexual|видеои барахна
+sexual|духтарони урён
+sexual|духтарони барахна
+sexual|сурати урён
+sexual|акси урён
+suggestive|фохиша
+suggestive|фохишахо
+suggestive|фохишаги
+sexual|kus kun*
+
+# ── Ҷинсӣ — Форсӣ ────────────────────────────────────────────────
+sexual|*پورن*
+suggestive|سکسی
+sexual|فیلم سکس*
+sexual|فیلم سوپر
+sexual|عکس سکس*
+profanity|جنده*
+suggestive|فاحشه*
+
+# ── Дашноми қабеҳ (profanity, бе strike) ─────────────────────────
+profanity|fuck*
+profanity|*fucker*
+profanity|*fucking*
+profanity|cunt
+profanity|cunts
+profanity|whore*
+profanity|slut*
+profanity|bitch
+profanity|bitches
+profanity|dickhead*
+profanity|cocksucker*
+profanity|хуй
+profanity|хуя
+profanity|хую
+profanity|хуе*
+profanity|хуйн*
+profanity|нахуй
+profanity|нахер
+profanity|похуй*
+profanity|пизд*
+profanity|*пиздец*
+profanity|ебать
+profanity|ебал*
+profanity|ебан*
+profanity|ебло
+profanity|ебу
+profanity|ебет
+profanity|заеба*
+profanity|заебис*
+profanity|наеба*
+profanity|уебок
+profanity|уебан*
+profanity|долбоеб*
+profanity|бля
+profanity|блядь
+profanity|блядск*
+profanity|бляд*
+profanity|сука
+profanity|суки
+profanity|мудак*
+profanity|пидор*
+profanity|пидар*
+profanity|гандон*
+profanity|залупа*
+profanity|кус
+profanity|кусат
+profanity|кусмодар*
+profanity|кусумодар*
+profanity|кусу модар*
+profanity|кир
+profanity|кирам
+profanity|чалаб
+profanity|чаляб
+profanity|кунпаро*
+profanity|کیر
+profanity|کسکش*
+profanity|کس کش
+profanity|کیری
+profanity|کونی
+
+# ── Шубҳанок (review) ────────────────────────────────────────────
+suggestive|sex
+suggestive|sexy
+suggestive|xxx
+suggestive|nsfw
+suggestive|nude
+suggestive|naked
+suggestive|boobs
+suggestive|pussy
+suggestive|anal
+suggestive|erotic
+suggestive|секс
+suggestive|секси
+suggestive|голая
+suggestive|голые
+suggestive|интим
+suggestive|эскорт
+suggestive|урён
+suggestive|барахна
+suggestive|seks
+suggestive|سکس
+
+# ── Истисноҳо (allow) ────────────────────────────────────────────
+# Калимаҳое, ки намунаҳои боло ба онҳо нодуруст мерасиданд.
+# Токенҳои ба ин намунаҳо мувофиқ пеш аз санҷиш хориҷ мешаванд.
+allow|*foodporn*
+allow|food porn*
+allow|*earthporn*
+allow|earth porn*
+allow|*cityporn*
+allow|*skyporn*
+allow|*carporn*
+allow|*natureporn*
+allow|*roomporn*

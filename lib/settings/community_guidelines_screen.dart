@@ -28,6 +28,10 @@ class CommunityGuidelinesScreen extends StatelessWidget {
           const SizedBox(height: 20),
           _section(tr('guidelines.section1Title'),
             tr('guidelines.section1Text')),
+          // Сиёсати оилавӣ — аввал ва намоён: 18+ дар ҳеҷ ҷо.
+          _familyPolicy(),
+          _section(tr('guidelines.enforcementTitle'),
+            tr('guidelines.enforcementText')),
           _section(tr('guidelines.section2Title'), null, bullets: [
             tr('guidelines.section2Bullet1'),
             tr('guidelines.section2Bullet2'),
@@ -93,6 +97,48 @@ class CommunityGuidelinesScreen extends StatelessWidget {
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           ],
         )),
+      ]),
+    );
+  }
+
+  Widget _familyPolicy() {
+    return Container(
+      key: const Key('guidelines-family-policy'),
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF3040).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFF3040).withOpacity(0.35)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(AppIcons.error_outline, color: Color(0xFFFF3040), size: 22),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(tr('guidelines.familyTitle'),
+                style: TextStyle(color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700, fontSize: 15)),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Text(tr('guidelines.familyText'),
+            style: TextStyle(color: AppColors.textSecondary,
+                fontSize: 14, height: 1.5)),
+        for (final k in const [
+          'guidelines.familyBullet1', 'guidelines.familyBullet2',
+          'guidelines.familyBullet3', 'guidelines.familyBullet4',
+          'guidelines.familyBullet5',
+        ])
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 6),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('• ', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              Expanded(child: Text(tr(k),
+                  style: TextStyle(color: AppColors.textSecondary,
+                      fontSize: 14, height: 1.4))),
+            ]),
+          ),
       ]),
     );
   }

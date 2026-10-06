@@ -1242,6 +1242,10 @@ func migrate() {
 	runBackfill(ctx, "contacts_announced_existing_v1", []string{
 		`UPDATE users SET contacts_announced=TRUE WHERE contacts_announced=FALSE`,
 	})
+	// Модератсияи пеш аз нашр: навбати admin, огоҳиҳо, маҳдудкунӣ.
+	if _, err := Pool.Exec(ctx, moderationSchema); err != nil {
+		log.Fatalf("❌ Moderation migration failed: %v", err)
+	}
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

@@ -14,6 +14,7 @@ import (
 	"raonson/db"
 	"raonson/handlers"
 	"raonson/jobs"
+	"raonson/moderation"
 	mw "raonson/middleware"
 	"raonson/sockets"
 	"raonson/utils"
@@ -45,6 +46,9 @@ func main() {
 
 	db.Init()
 	mw.InitRedis()
+	// Модератсия: дар log мегӯяд, кадом provider-ҳо фаъоланд ва чӣ
+	// бе онҳо санҷида намешавад.
+	moderation.LogStartup()
 	jobs.StartJobs()
 	handlers.StartScheduledMessages() // паёмҳои вақтбандишуда
 	handlers.StartScheduledPosts()    // постҳои вақтбандишуда: зикрҳо дар вақти нашр
@@ -129,6 +133,9 @@ func main() {
 				// набудани TWILIO_* аст. Бе ин сатр инро танҳо аз
 				// log фаҳмидан мумкин буд.
 				"otp": utils.OTPChannelsReady(),
+				// Модератсия: номи provider-и расм (холӣ — расм
+				// санҷида намешавад), шумораи калимаҳо ва доменҳо.
+				"moderation": moderation.CurrentStatus(),
 			},
 		})
 	})
@@ -685,6 +692,14 @@ func main() {
 		ad.POST("/reports/resolve", handlers.AdminResolveReport)
 		ad.GET("/reports/count",    handlers.AdminReportCount)
 		ad.GET("/client-errors",    handlers.AdminClientErrors)
+		// Модератсия: навбати санҷиш, огоҳиҳо, маҳдудкунӣ ва бан.
+		ad.GET("/moderation/queue",               handlers.AdminModerationQueue)
+		ad.POST("/moderation/queue/:id/approve",  handlers.AdminModerationApprove)
+		ad.POST("/moderation/queue/:id/remove",   handlers.AdminModerationRemove)
+		ad.POST("/moderation/queue/:id/ban",      handlers.AdminModerationBan)
+		ad.GET("/moderation/users/:id/strikes",   handlers.AdminModerationStrikes)
+		ad.POST("/moderation/users/:id/restore",  handlers.AdminModerationRestore)
+		ad.POST("/moderation/users/:id/ban",      handlers.AdminModerationBanUser)
 		ad.DELETE("/client-errors", handlers.AdminClearClientErrors)
 
 		// Creator Marketplace — интиқолҳои дастӣ ва омори молиявӣ.

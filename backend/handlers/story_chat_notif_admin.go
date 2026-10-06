@@ -231,6 +231,23 @@ func CreateStory(c *gin.Context) {
 		song = &songInfo{}
 	}
 
+	// Модератсия ПЕШ аз нашр: медиа (расм/видео) ва матнҳо.
+	b.Caption = clampRunes(b.Caption, 2200)
+	modReq := modRequest{Surface: "story", AI: true, Texts: []string{b.Caption},
+		Media: []modMedia{{URL: b.MediaURL, Video: b.MediaType == "video"}}}
+	if b.Poll != nil {
+		modReq.Texts = append(modReq.Texts, b.Poll.Question, b.Poll.OptionA, b.Poll.OptionB)
+	}
+	if b.Sticker != nil {
+		// Стикери линк ва матни савол/викторина ҳам.
+		modReq.Texts = append(modReq.Texts, b.Sticker.Prompt, b.Sticker.URL)
+		modReq.Texts = append(modReq.Texts, b.Sticker.Options...)
+	}
+	mod, modOK := screenContent(c, myID, modReq)
+	if !modOK {
+		return
+	}
+
 	// Танҳо мундариҷаи МАВҶУД паҳн мешавад — вагарна стори ба ҷои
 	// нест мебурд.
 	sharedPost := existingID(ctx0(), "posts", b.SharedPostID)
@@ -248,6 +265,17 @@ func CreateStory(c *gin.Context) {
 		song.Title, song.Artist, song.URL, song.ArtURL,
 		song.TrackMs, song.StartMs, song.EndMs,
 		sharedPost, sharedReel, b.SharedStoryID, sharedStoryUser).Scan(&sid)
+	// Шубҳанок: сторис то тасдиқи admin пинҳон — на сигнал, на огоҳинома.
+	if holdIfNeeded(myID, modReq, sid, mod) {
+		saveSticker(sid, sticker)
+		mw.InvalidateUserCache(myID)
+		c.JSON(http.StatusCreated, gin.H{
+			"_id": sid, "mediaUrl": b.MediaURL, "mediaType": b.MediaType,
+			"caption": b.Caption, "audience": b.Audience, "pendingReview": true,
+			"message": "Сторис то санҷиши модератор пинҳон аст",
+		})
+		return
+	}
 	if sid != "" && sharedStoryOwner != "" {
 		notify(sharedStoryOwner, myID, "story_reshared", sid)
 		pushNotify(sharedStoryOwner, myID, "story_reshared", sid, "сториси шуморо ба сториси худ илова кард")

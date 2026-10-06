@@ -14,9 +14,9 @@ class UploadProgressBar extends StatelessWidget {
       builder: (_, s, __) {
         if (s == null) return const SizedBox.shrink();
         final String label = s.error
-            ? 'Нашр нашуд'
+            ? (s.message ?? 'Нашр нашуд')
             : s.done
-                ? 'Нашр шуд'
+                ? (s.message ?? 'Нашр шуд')
                 : 'Бор мешавад...';
         return Container(
           color: const Color(0xFF0A0A0A),
@@ -33,6 +33,9 @@ class UploadProgressBar extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(label,
+                    key: const Key('upload-progress-label'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         color: s.error ? const Color(0xFFFF3040) : Colors.white,
                         fontSize: 13, fontWeight: FontWeight.w500)),

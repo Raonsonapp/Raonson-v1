@@ -70,7 +70,14 @@ func SendThanks(c *gin.Context) {
 		c.JSON(http.StatusTooManyRequests, gin.H{"message": "Имрӯз раҳмат бисёр шуд — фардо боз"})
 		return
 	}
-	if !captionAllowed(c, text) {
+	// Ҳамон модератсияи шарҳҳо. «Раҳмат»-и шубҳанок пинҳон нашр
+	// намешавад — корбар матнро иваз мекунад.
+	modReq, mod, modOK := captionAllowed(c, "thanks", text)
+	if !modOK {
+		return
+	}
+	if mod.Hold {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"message": "Ин матнро нашр карда намешавад. Лутфан онро иваз кунед"})
 		return
 	}
 	var id string
@@ -83,6 +90,7 @@ func SendThanks(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Сабт нашуд"})
 		return
 	}
+	queueReview(myID, modReq, id, mod, false)
 	notify(toID, myID, "thanks", toID)
 	pushNotify(toID, myID, "thanks", toID, "")
 	c.JSON(http.StatusCreated, gin.H{"_id": id, "text": text, "new": fresh})

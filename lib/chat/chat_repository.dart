@@ -10,6 +10,7 @@ import '../core/storage/offline_cache.dart';
 import '../core/storage/token_storage.dart';
 import '../create/upload/upload_manager.dart';
 import '../models/message_model.dart';
+import '../core/moderation/content_policy.dart';
 
 class ChatRepository {
   final ApiClient _api = ApiClient.instance;
@@ -284,7 +285,13 @@ class ChatRepository {
         if (sendAt != null) 'sendAt': sendAt.toUtc().toIso8601String(),
       },
     ).timeout(const Duration(seconds: 30));
-    if (res.statusCode >= 400) throw Exception('Send error');
+    if (res.statusCode >= 400) {
+      // Мӯҳтаво рад шуд (18+, линки манъшуда) ё ҳисоб маҳдуд аст —
+      // такрор кардан бефоида аст: экран инро ба корбар нишон медиҳад.
+      final rejection = ContentPolicy.fromResponse(res.statusCode, res.body);
+      if (rejection != null) throw rejection;
+      throw Exception('Send error');
+    }
     final raw = jsonDecode(res.body) as Map<String, dynamic>;
     // Паёми вақтбандишуда ҳанӯз «фиристода» нест — ба кэш намегузорем.
     if (sendAt == null) appendToCache(cid, raw);
@@ -370,8 +377,11 @@ class ChatRepository {
         notifier.done(nid, announce: false);
       }
       return url;
-    } catch (_) {
+    } catch (e) {
       notifier.failed(nid);
+      // Расм/видеои 18+ — сервер онро ҳатто нигоҳ намедорад.
+      final rejection = ContentPolicy.fromError(e);
+      if (rejection != null) throw rejection;
       return null;
     }
   }

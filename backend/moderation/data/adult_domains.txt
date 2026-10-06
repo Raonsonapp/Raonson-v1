@@ -1,0 +1,142 @@
+# ══════════════════════════════════════════════════════════════════
+#  Raonson — доменҳои 18+ (порнография, вебкам, эскорт).
+#
+#  Як домен дар як сатр. Зердоменҳо худкор дохиланд:
+#  «pornhub.com» → «www.pornhub.com», «rt.pornhub.com».
+#  Ғайр аз ин рӯйхат эвристика ҳам кор мекунад (ниг. links.go):
+#  TLD-ҳои .xxx .porn .sex .adult ва калимаҳо дар номи домен.
+#
+#  Рӯйхатро метавон бе тағйири код дароз кард; сервер онро ҳангоми
+#  сохтан (go:embed) мегирад.
+# ══════════════════════════════════════════════════════════════════
+
+# ── Tube-сайтҳо ──
+pornhub.com
+pornhub.org
+pornhubpremium.com
+xvideos.com
+xvideos2.com
+xvideos.red
+xnxx.com
+xnxx.tv
+xhamster.com
+xhamster.desi
+xhamster2.com
+xhamsterlive.com
+redtube.com
+youporn.com
+tube8.com
+spankbang.com
+eporner.com
+beeg.com
+tnaflix.com
+empflix.com
+drtuber.com
+txxx.com
+hclips.com
+hdzog.com
+upornia.com
+voyeurhit.com
+porn.com
+porntrex.com
+youjizz.com
+motherless.com
+porn300.com
+pornone.com
+hqporner.com
+4tube.com
+fuq.com
+sunporno.com
+ixxx.com
+pornmd.com
+xxxbunker.com
+porndig.com
+pornhat.com
+porngo.com
+pornky.com
+anysex.com
+sexvid.xxx
+xozilla.com
+ok.xxx
+vjav.com
+javhd.com
+javlibrary.com
+missav.com
+jable.tv
+thisvid.com
+heavy-r.com
+efukt.com
+cliphunter.com
+nuvid.com
+sleazyneasy.com
+porntube.com
+pornerbros.com
+alphaporno.com
+gotporn.com
+tubegalore.com
+xbabe.com
+fapster.xxx
+pornpics.com
+sex.com
+imagefap.com
+fapello.com
+erome.com
+thothub.to
+coomer.su
+kemono.su
+# ── Студияҳо ва обунаҳо ──
+brazzers.com
+realitykings.com
+bangbros.com
+naughtyamerica.com
+mofos.com
+digitalplayground.com
+teamskeet.com
+evilangel.com
+kink.com
+vixen.com
+blacked.com
+tushy.com
+onlyfans.com
+fansly.com
+manyvids.com
+clips4sale.com
+iwantclips.com
+# ── Вебкам ──
+chaturbate.com
+stripchat.com
+bongacams.com
+livejasmin.com
+cam4.com
+camsoda.com
+myfreecams.com
+flirt4free.com
+imlive.com
+streamate.com
+cams.com
+jerkmate.com
+# ── Хентай / расмҳо ──
+nhentai.net
+e-hentai.org
+exhentai.org
+hanime.tv
+hentaihaven.xxx
+rule34.xxx
+rule34.paheal.net
+gelbooru.com
+hentai2read.com
+# ── Русзабон ──
+pornolab.net
+porno365.com
+pornochaturbate.com
+rusporn.tv
+porno-hd.club
+sex-studentki.live
+ebalovo.porn
+xxxi.porn
+yourporn.sexy
+# ── Мулоқот / эскорт ──
+adultfriendfinder.com
+ashleymadison.com
+escortdirectory.com
+eurogirlsescort.com
