@@ -25,8 +25,11 @@ android {
 
     defaultConfig {
         applicationId = "com.raonson.app"
-        // Google Play барои ҳимояи худкор (automatic protection) SDK 24+ талаб мекунад.
-        minSdk = 24
+        // ⚠️ 23 мемонад. SDK 24 танҳо барои «ҳимояи худкор»-и Play лозим
+        // буд, вале ~1150 дастгоҳи Android 6-ро аз навсозӣ маҳрум мекард ва
+        // Play релизро рад кард («корбарони мавҷуда навсозӣ карда
+        // наметавонанд»). Ҳимояи худкорро дар Play Console хомӯш кунед.
+        minSdk = 23
         targetSdk = 36
 
         // versionCode худкор аз CI (APP_VERSION_CODE) — ҳамеша беназир ва
