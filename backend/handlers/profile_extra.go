@@ -40,6 +40,7 @@ func scanFeedPosts(rows interface {
 		var price float64
 		var currency, productName, shopWhatsapp, shopPhone string
 		var isFollowing bool
+		var locationID string
 		if err := rows.Scan(&pid, &cap, &likes, &comms, &createdAt,
 			&uid, &uname, &uavatar, &verified, &media, &liked, &saved, &pinned,
 			&musicTitle, &musicArtist,
@@ -48,7 +49,7 @@ func scanFeedPosts(rows interface {
 			&hideLikes, &commentsOff, &shares,
 			&isProduct, &price, &currency, &productName,
 			&contactRaonson, &shopWhatsapp, &shopPhone, &isFollowing,
-			&views); err != nil {
+			&views, &locationID); err != nil {
 			continue
 		}
 		posts = append(posts, gin.H{
@@ -63,6 +64,8 @@ func scanFeedPosts(rows interface {
 			"song": songJSON(musicTitle, musicArtist, musicArt, musicURL,
 				musicTrackMs, musicStartMs, musicEndMs),
 			"location": location, "taggedUsers": tagged,
+			// id-и ҷой — матни «Ҷой» ба саҳифаи ҷой мебарад.
+			"locationId": locationID,
 			"collaborators": collaborators,
 			"sharesCount": shares,
 			"isProduct": isProduct, "price": price, "currency": currency,
@@ -111,7 +114,8 @@ var feedPostCols = `
 	       EXISTS(SELECT 1 FROM follows fo WHERE fo.follower_id=$1::text AND fo.following_id=u.id),
 	       -- Тамошо: ҲАМОН рақам, ки Explore ва /posts/:id/stats медиҳанд
 	       -- (COUNT(post_views)). Пеш профил ва лента умуман views надоштанд.
-	       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id)
+	       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
+	       COALESCE(p.location_id,'')
 	FROM posts p JOIN users u ON u.id=p.user_id `
 
 // GET /profile/saved — постҳои нигоҳдошташуда (Sev)

@@ -122,6 +122,8 @@ class AppIcons {
   static const IconData location_on = HeroiconsOutline.mapPin;
   static const IconData location_on_outlined = HeroiconsOutline.mapPin;
   static const IconData lock_open_rounded = HeroiconsOutline.lockOpen;
+  /// «Ҷойи ҳозираи ман» — тирчаи навигатсия, мисли Instagram.
+  static const IconData my_location = HeroiconsOutline.paperAirplane;
   static const IconData lock_outline_rounded = HeroiconsOutline.lockClosed;
   static const IconData logout_rounded = HeroiconsOutline.arrowRightStartOnRectangle;
   static const IconData mark_email_read_outlined = HeroiconsOutline.envelope;

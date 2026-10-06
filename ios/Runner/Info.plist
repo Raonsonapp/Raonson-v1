@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Raonson ҷойи шуморо танҳо вақте мепурсад, ки шумо «Ҷойи ҳозираи ман»-ро пахш мекунед ё ҷойгиршавиро дар чат мефиристед — то ҷойи наздиктаринро барои пост пешниҳод кунад. Координатаҳои дақиқи шумо нашр намешаванд.</string>
 </dict>
 </plist>

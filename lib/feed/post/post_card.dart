@@ -32,6 +32,7 @@ import '../../core/services/user_session.dart';
 import '../../core/services/follow_service.dart';
 import '../../core/services/view_tracker.dart';
 import '../comments/comments_screen.dart';
+import '../location/location_screen.dart';
 import '../../promote/promote_screen.dart';
 import '../../shop/buy_sheet.dart';
 import '../../ai/ai_tools.dart';
@@ -1584,9 +1585,15 @@ class _PostCardState extends State<PostCard>
                     paused: FeedAudio.instance.muted.value,
                   ),
                 ),
-              // Локация — агар бошад
+              // Локация — агар бошад. Пахш → саҳифаи ҷой (мисли Instagram).
               if (post.location.isNotEmpty)
-                Padding(
+                GestureDetector(
+                  key: const ValueKey('post-location'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => LocationScreen(
+                          placeId: post.locationId, name: post.location))),
+                  child: Padding(
                   padding: const EdgeInsets.only(bottom: 1),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(AppIcons.location_on_outlined,
@@ -1599,7 +1606,7 @@ class _PostCardState extends State<PostCard>
                         style: TextStyle(
                             color: AppColors.timeColor, fontSize: 11))),
                   ]),
-                ),
+                )),
               Text(_timeAgo(post.createdAt),
                   style: TextStyle(color: AppColors.timeColor, fontSize: 12.5)),
             ],

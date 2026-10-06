@@ -19,6 +19,8 @@ import '../../ai/ai_tools.dart';
 import '../../core/i18n/strings.dart';
 import '../../widgets/mention_suggestions.dart';
 import '../auto_dm_sheet.dart';
+import '../location_picker/location_picker_screen.dart';
+import '../../core/places/place.dart';
 
 // ─────────────────────────────────────────────
 // DATA MODELS
@@ -130,6 +132,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _publish(File capturedFile, String caption,
       {SongInfo? song,
       String location = '',
+      String locationId = '',
       List<String> taggedUsers = const [],
       List<String> collaborators = const [],
       String altText = '',
@@ -148,6 +151,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       // ном ва хонанда мерафтанд — бе суроға пост ҳеҷ гоҳ намехонд.
       song: song,
       location: location,
+      locationId: locationId,
       taggedUsers: taggedUsers,
       collaborators: collaborators,
       scheduledAt: scheduledAt,
@@ -223,7 +227,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 class _PostEditor extends StatefulWidget {
   final File media; final bool isVideo, isUploading;
   final void Function(File, String,
-      {SongInfo? song, String location,
+      {SongInfo? song, String location, String locationId,
        List<String> taggedUsers, List<String> collaborators,
        String altText, AutoDmDraft? autoDm}) onPublish;
   final VoidCallback onCancel; final String? errorMessage;
@@ -256,7 +260,8 @@ class _PostEditorState extends State<_PostEditor> {
   Color  _bgColor    = Colors.black;
 
   SongInfo? _song;
-  String _location = '';
+  /// Ҷойи интихобшуда (null — бе ҷой). id холӣ — ҷойи дастӣ.
+  Place? _place;
   /// Тавсифи расм барои нобиноён (TalkBack), мисли Instagram.
   String _altText = '';
   /// Паёми худкор ба Direct аз рӯи калимаи шарҳ.
@@ -486,7 +491,8 @@ class _PostEditorState extends State<_PostEditor> {
         .toList();
     if (widget.isVideo) {
       widget.onPublish(widget.media, caption,
-          song: _song, location: _location,
+          song: _song, location: _place?.name ?? '',
+          locationId: _place?.id ?? '',
           taggedUsers: tagged, collaborators: _collaborators,
           altText: _altText, autoDm: _autoDm);
     } else {
@@ -496,7 +502,8 @@ class _PostEditorState extends State<_PostEditor> {
           _mentions.isNotEmpty || _drawPoints.isNotEmpty || _filterIndex != 0;
       final fileToPost = hasOverlays ? await _captureCanvas() : widget.media;
       widget.onPublish(fileToPost, caption,
-          song: _song, location: _location,
+          song: _song, location: _place?.name ?? '',
+          locationId: _place?.id ?? '',
           taggedUsers: tagged, collaborators: _collaborators,
           altText: _altText, autoDm: _autoDm);
     }
@@ -561,44 +568,17 @@ class _PostEditorState extends State<_PostEditor> {
     );
   }
 
-  // ── Ҷойгиршавӣ (геолокатсия) — мисли Instagram ──────────────
-  void _showLocationDialog() {
-    final ctrl = TextEditingController(text: _location);
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1C1C1E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(children: [
-          Icon(AppIcons.location_on, color: Color(0xFFFF3040), size: 20),
-          SizedBox(width: 8),
-          Text(tr('ui.552d7f2fe4'), style: TextStyle(color: Colors.white)),
-        ]),
-        content: TextField(
-          controller: ctrl, autofocus: true,
-          style: TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: tr('ui.4a26403e50'),
-            hintStyle: TextStyle(color: Colors.white38),
-            enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF0095F6))),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
-              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
-          TextButton(
-              onPressed: () {
-                setState(() => _location = ctrl.text.trim());
-                Navigator.pop(context);
-              },
-              child: Text(tr('ui.d4a317a798'),
-                  style: TextStyle(color: Color(0xFF0095F6), fontWeight: FontWeight.bold))),
-        ],
-      ),
-    );
+  String _placeLabel() {
+    final n = _place?.name ?? '';
+    if (n.isEmpty) return tr('ui.be7de29b97');
+    return n.length > 14 ? '${n.substring(0, 13)}…' : n;
+  }
+
+  // ── Ҷой — мисли Instagram: рӯйхати ҷойҳо, ҷустуҷӯ ва «Ҷойи ҳозираи ман».
+  Future<void> _showLocationDialog() async {
+    final r = await showLocationPicker(context, current: _place);
+    if (!mounted || r == null) return; // баста шуд — бетағйир
+    setState(() => _place = r.place);
   }
 
   void _showTextDialog() {
@@ -968,8 +948,9 @@ class _PostEditorState extends State<_PostEditor> {
                 _ToolBtn(icon: AppIcons.group_add_outlined,  label: tr('ui.b65b33d102'),
                   isActive: _collaborators.isNotEmpty,
                   onTap: () { setState(() => _tool = _Tool.none); _showCollaboratorDialog(); }),
-                _ToolBtn(icon: AppIcons.location_on_outlined, label: tr('ui.be7de29b97'),
-                  isActive: _location.isNotEmpty,
+                _ToolBtn(icon: AppIcons.location_on_outlined,
+                  label: _placeLabel(),
+                  isActive: _place != null,
                   onTap: () { setState(() => _tool = _Tool.none); _showLocationDialog(); }),
                 if (!widget.isVideo)
                   _ToolBtn(icon: AppIcons.accessibility_new_rounded, label: 'Alt text',

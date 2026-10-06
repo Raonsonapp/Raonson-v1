@@ -1246,6 +1246,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, moderationSchema); err != nil {
 		log.Fatalf("❌ Moderation migration failed: %v", err)
 	}
+	// «Ҷой»-и сохтории пост (id-и ҷой + координатаҳои ҷой).
+	if _, err := Pool.Exec(ctx, placesSchema); err != nil {
+		log.Fatalf("❌ Places migration failed: %v", err)
+	}
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

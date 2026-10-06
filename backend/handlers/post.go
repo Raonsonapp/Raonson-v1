@@ -30,6 +30,8 @@ func CreatePost(c *gin.Context) {
 		// худ мехонд ва суроғааш умуман сабт намешуд.
 		Song          *songInfo                `json:"song"`
 		Location      string                   `json:"location"`
+		// id-и ҷой аз рӯйхати /places (ихтиёрӣ; барномаҳои кӯҳна танҳо матн).
+		LocationID    string                   `json:"locationId"`
 		TaggedUsers   []string                 `json:"taggedUsers"`
 		Collaborators []string                 `json:"collaborators"`
 		// Shopping (маҳсулот барои фуруш)
@@ -114,18 +116,22 @@ func CreatePost(c *gin.Context) {
 	}
 	song.clean()
 
+	// «Ҷой»: матн + id ва координатаҳои ХУДИ ҶОЙ (на GPS-и корбар).
+	locName, locID, locLat, locLon := resolvePostLocation(b.Location, b.LocationID)
+
 	var postID string
 	if err = tx.QueryRow(context.Background(),
 		`INSERT INTO posts(user_id,caption,music_title,music_artist,music_url,music_art,
 		                   music_track_ms,music_start_ms,music_end_ms,
-		                   location,tagged_users,collaborators,scheduled_at)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+		                   location,tagged_users,collaborators,scheduled_at,
+		                   location_id,location_lat,location_lon)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
 		// Ҳамкорон холӣ оғоз мешаванд: ном танҳо пас аз розигии
 		// худи одам ба пост баста мешавад (ниг. collab.go).
 		myID, b.Caption, song.Title, song.Artist, song.URL, song.ArtURL,
 		song.TrackMs, song.StartMs, song.EndMs,
-		b.Location, b.TaggedUsers,
-		[]string{}, scheduledAt).Scan(&postID); err != nil {
+		locName, b.TaggedUsers,
+		[]string{}, scheduledAt, locID, locLat, locLon).Scan(&postID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
 		return
 	}
@@ -243,7 +249,8 @@ wsPost := gin.H{
 	"musicArtist":   song.Artist,
 	"song": songJSON(song.Title, song.Artist, song.ArtURL, song.URL,
 		song.TrackMs, song.StartMs, song.EndMs),
-	"location":      b.Location,
+	"location":      locName,
+	"locationId":    locID,
 	"taggedUsers":   b.TaggedUsers,
 	// Ҷавоб вазъи ВОҚЕИИ пост аст: даъватҳо ҳанӯз тасдиқ нашудаанд.
 	"collaborators": []string{},
@@ -418,7 +425,8 @@ func GetPost(c *gin.Context) {
 		salePct = 0
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"location": extra["location"], "taggedUsers": extra["taggedUsers"],
+		"location": extra["location"], "locationId": extra["locationId"],
+		"taggedUsers": extra["taggedUsers"],
 		"collaborators": extra["collaborators"], "collaboratorUsers": extra["collaboratorUsers"],
 		"isPinned": extra["isPinned"],
 		"_id": pid2, "caption": cap, "likesCount": likes, "commentsCount": comms,
