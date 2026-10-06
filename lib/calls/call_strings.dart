@@ -26,6 +26,9 @@ class CallStrings {
       'channel': 'Зангҳо',
       'channelDesc': 'Зангҳои воридотӣ ва аздастрафта',
       'unknown': 'Корбар',
+      'minimize': 'Хурд кардан',
+      'returnToCall': 'Бозгашт ба занг',
+      'swap': 'Иваз кардан',
     },
     'ru': {
       'voice': 'Аудиозвонок',
@@ -39,6 +42,9 @@ class CallStrings {
       'channel': 'Звонки',
       'channelDesc': 'Входящие и пропущенные звонки',
       'unknown': 'Пользователь',
+      'minimize': 'Свернуть',
+      'returnToCall': 'Вернуться к звонку',
+      'swap': 'Поменять местами',
     },
     'en': {
       'voice': 'Voice call',
@@ -52,6 +58,9 @@ class CallStrings {
       'channel': 'Calls',
       'channelDesc': 'Incoming and missed calls',
       'unknown': 'User',
+      'minimize': 'Minimize',
+      'returnToCall': 'Return to call',
+      'swap': 'Swap',
     },
   };
 

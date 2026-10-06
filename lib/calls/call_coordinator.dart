@@ -22,6 +22,7 @@ import '../chat/room/call_screen.dart';
 import '../core/services/socket_service.dart';
 import '../core/webrtc_service.dart';
 import '../models/user_model.dart';
+import 'active_call.dart';
 import 'call_dedupe.dart';
 import 'call_payload.dart';
 import 'call_strings.dart';
@@ -111,6 +112,8 @@ class CallCoordinator {
     } else {
       await nav.push(route);
     }
+    // Экран метавонад «хурд» шуда бошад (ҳубобча) — занг ҳанӯз идома дорад.
+    await ActiveCallController.instance.whenIdle();
     // Гуфтугӯ тамом — ҳолати плагин тоза, то дар оғози оянда «қабул
     // шуда» ҳисоб нашавад.
     await CallkitBridge.end(c.callId);

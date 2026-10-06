@@ -10,6 +10,7 @@ import '../../models/user_model.dart';
 import '../../widgets/avatar.dart';
 import '../../widgets/verified_badge.dart';
 import 'chat_room_screen.dart';
+import '../../calls/active_call.dart' show ActiveCallController;
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
@@ -72,6 +73,12 @@ class _NewChatScreenState extends State<NewChatScreen> {
   Future<void> _openChat(UserModel user) async {
     // Режими занг — мисли тугмаи «занги нав»-и Instagram.
     if (widget.callType != null) {
+      final active = ActiveCallController.instance;
+      if (active.isActive) {
+        Navigator.pop(context);
+        active.restore();
+        return;
+      }
       final myId = await TokenStorage.getUserId() ?? '';
       WebRTCService().notifyIncoming(
         toUserId:     user.id,

@@ -25,6 +25,7 @@ import '../unread/chat_unread_store.dart';
 import 'chat_theme.dart';
 import 'chat_room_app_bar.dart';
 import 'message_input.dart';
+import '../../calls/active_call.dart' show ActiveCallController;
 import 'call_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
@@ -1020,6 +1021,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   }
 
   Future<void> _startCall(CallType type) async {
+    // Гуфтугӯ аллакай идома дорад (ҳубобча) — ба он бармегардем, на
+    // занги дуюм.
+    final active = ActiveCallController.instance;
+    if (active.isActive) {
+      active.restore();
+      return;
+    }
     final myId   = await TokenStorage.getUserId() ?? '';
     final myData = await _repo.getMyProfile();
     _signal.notifyIncoming(

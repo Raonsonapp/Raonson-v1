@@ -1,24 +1,29 @@
-import 'dart:async';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../app/app_theme.dart';
+import '../../calls/active_call.dart';
+import '../../calls/call_strings.dart';
+import '../../calls/snap_tile.dart';
 import '../../models/user_model.dart';
 import '../../widgets/avatar.dart';
-import '../../core/agora_service.dart';
-import '../../core/webrtc_service.dart';
 import '../../core/ui/app_icons.dart';
-import '../chat_repository.dart';
 import '../../core/i18n/strings.dart';
 
-enum CallType { voice, video }
+export '../../calls/active_call.dart' show CallType;
 
+/// Экрани пурраи гуфтугӯ.
+///
+/// Ҳолати занг (Agora, вақтсанҷ, оҳанг) дар [ActiveCallController] аст,
+/// на дар State — бинобар ин экран метавонад «хурд» шавад (тугма ё
+/// ишораи «ақиб») ва занг дар ҳубобчаи болои барнома идома ёбад.
 class CallScreen extends StatefulWidget {
   final UserModel peer;
   final CallType  callType;
   final bool      isIncoming;
   final bool      peerIsOnline;
+
+  /// Барои тест; пешфарз — [ActiveCallController.instance].
+  final ActiveCallController? controller;
 
   const CallScreen({
     super.key,
@@ -26,6 +31,7 @@ class CallScreen extends StatefulWidget {
     required this.callType,
     this.isIncoming   = false,
     this.peerIsOnline = true,
+    this.controller,
   });
 
   @override
@@ -33,18 +39,11 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
-  final _agora  = AgoraService();
-  final _signal = WebRTCService();
-  final _player = AudioPlayer();
-  final _repo   = ChatRepository();
-
-  int    _seconds = 0;
-  Timer? _timer;
-  bool   _everConnected = false; // ягон бор пайваст шуд?
-  bool   _logged        = false; // паёми занг сабт шуд?
-  // Занг аллакай қатъ шуд? — то sendEnd/leaveCall ду бор (аз _endCall ва
-  // dispose) фиристода нашавад.
-  bool   _hungUp        = false;
+  late final ActiveCallController _ctl =
+      widget.controller ?? ActiveCallController.instance;
+  CallSession? _session;
+  bool _closing   = false; // pop аллакай рафт
+  bool _minimizing = false; // худи ин экран занги хурдшударо мегузорад
 
   late AnimationController _pulseCtrl;
   late Animation<double>   _pulseAnim;
@@ -65,190 +64,86 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       ..forward();
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
 
-    _agora.addListener(_onAgoraChange);
-    _signal.onCallEnded    = _onRemoteEnded;
-    _signal.onCallDeclined = _onDeclined;
-
-    // Caller side only — play outgoing ring
-    if (!widget.isIncoming) _playOutgoingRing();
-    _joinAgora();
-  }
-
-  // ── AUDIO ──
-
-  Future<void> _playOutgoingRing() async {
-    try {
-      // ringback.wav — «туут… туут» барои зангзананда, на оҳанги занги
-      // воридотӣ: одам бояд фарқ кунад, ки ӯ занг мезанад ё ба ӯ.
-      await _player.setReleaseMode(ReleaseMode.loop);
-      await _player.setVolume(0.7);
-      await _player.play(AssetSource('sounds/ringback.wav'));
-    } catch (e) {
-      debugPrint('[CallScreen] audio error: $e');
+    if (_ctl.isActiveFor(widget.peer.id)) {
+      // Аз ҳубобча баргашт — ҳамон гуфтугӯ.
+      _session = _ctl.session;
+      if (_ctl.minimized) _ctl.restore(push: false);
+    } else {
+      final s = CallSession(
+        peer:         widget.peer,
+        type:         widget.callType,
+        isIncoming:   widget.isIncoming,
+        peerIsOnline: widget.peerIsOnline,
+      );
+      _session = s;
+      _ctl.start(s);
+    }
+    _ctl.addListener(_onCall);
+    // Масалан AGORA_APP_ID нест — сессия ҳамон дам тамом шуд.
+    if (_session!.ended) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onCall());
     }
   }
 
-  Future<void> _playConnectSound() async {
-    try {
-      // connect.wav = short "connected" beep — plays once
-      await _player.setReleaseMode(ReleaseMode.release);
-      await _player.play(AssetSource('sounds/connect.wav'));
-    } catch (e) {
-      debugPrint('[CallScreen] connect sound error: $e');
-    }
-  }
-
-  Future<void> _stopRing() async {
-    try { await _player.stop(); } catch (_) {}
-  }
-
-  // ── AGORA ──
-
-  void _onAgoraChange() {
-    if (_agora.remoteJoined) _everConnected = true;
-    if (!mounted) return;
-    if (_agora.error != null) {
-      _failAndClose('Занг пайваст нашуд (${_agora.error}).');
+  void _onCall() {
+    if (!mounted || _closing) return;
+    final s = _session;
+    if (s != null && s.ended) {
+      _close(s.endMessage);
       return;
-    }
-    if (_agora.remoteJoined && _timer == null) {
-      _stopRing().then((_) => _playConnectSound());
-      _startTimer();
     }
     setState(() {});
   }
 
-  Future<void> _joinAgora() async {
-    if (kAgoraAppId.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(tr('ui.cce2a178f1')),
-            backgroundColor: Colors.red, duration: Duration(seconds: 3)));
-        Navigator.pop(context);
-      }
+  void _close(String? message) {
+    if (_closing) return;
+    _closing = true;
+    if (message != null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+          content: Text(message), backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3)));
+    }
+    final route = ModalRoute.of(context);
+    final nav = Navigator.of(context);
+    if (route == null || route.isCurrent) {
+      nav.pop();
+    } else if (route.isActive) {
+      nav.removeRoute(route);
+    }
+  }
+
+  /// Тугмаи «хурд кардан» ва ишораи «ақиб»: занг идома меёбад.
+  void _minimize() {
+    if (_closing) return;
+    if (!_ctl.isActive || _ctl.session != _session) {
+      _close(null);
       return;
     }
-    final cred = await AgoraService.callCredentials(widget.peer.id);
-    if (!mounted) return;
-    if (cred == null) {
-      _failAndClose('Занг пайваст нашуд. Интернетро санҷед.');
-      return;
-    }
-    await _agora.joinCall(channelName: cred.channel, token: cred.token,
-        isVideo: widget.callType == CallType.video);
-    // Экран ҳангоми пайвастшавӣ пӯшида шуд — Agora-ро боз тарк мекунем,
-    // вагарна микрофон/камера дар замина кор мекунанд.
-    if (!mounted || _hungUp) {
-      _agora.leaveCall();
-      return;
-    }
-    if (widget.isIncoming) _signal.sendAnswered(widget.peer.id);
-    // Агар дар 60 сония касе ҷавоб надиҳад — мисли Instagram қатъ мешавад.
-    _noAnswer = Timer(const Duration(seconds: 60), () {
-      if (mounted && !_connected) _endCall();
-    });
+    _minimizing = true;
+    _closing = true;
+    _ctl.minimize();
+    Navigator.of(context).pop();
   }
-
-  Timer? _noAnswer;
-  bool _failed = false;
-
-  void _failAndClose(String msg) {
-    if (_failed || !mounted) return;
-    _failed = true;
-    _stopRing();
-    _hangUp();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg), backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3)));
-    Navigator.pop(context);
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _seconds++);
-    });
-  }
-
-  String get _timeLabel {
-    final m = (_seconds ~/ 60).toString().padLeft(2, '0');
-    final s = (_seconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  String get _statusText {
-    if (_connected)           return _timeLabel;
-    if (widget.isIncoming)    return 'Пайваст мешавад...';
-    return widget.peerIsOnline ? 'Пайваст мешавад...' : 'Занг мезанад...';
-  }
-
-  // ── CALL ACTIONS ──
-
-  // Танҳо тарафи зангзананда (на қабулкунанда) як паёми занг ба чат сабт
-  // мекунад — то ҳарду тараф онро бубинанд (мисли Instagram).
-  void _logCall() {
-    if (_logged || widget.isIncoming) return;
-    _logged = true;
-    final kind   = widget.callType == CallType.video ? 'video' : 'audio';
-    final status = _everConnected ? 'ended' : 'missed';
-    _repo.sendMessage(
-      toUserId:  widget.peer.id,
-      text:      '$status:$kind:$_seconds',
-      mediaType: 'call',
-    ).then((_) {}, onError: (_) {});
-  }
-
-  // Як нуқтаи ягонаи қатъ: end-ро ба ҳамсӯҳбат мефиристад ва Agora-ро тарк
-  // мекунад. Бо _hungUp муҳофизат шудааст, то аз dispose такрор нашавад.
-  void _hangUp({bool notifyPeer = true}) {
-    if (_hungUp) return;
-    _hungUp = true;
-    if (notifyPeer) _signal.sendEnd(widget.peer.id);
-    _agora.leaveCall();
-  }
-
-  bool _closing = false;
 
   Future<void> _endCall() async {
     if (_closing) return; // тугма + back ҳамзамон — як бор pop
-    _closing = true;
-    _logCall();
-    _hangUp();
-    await _stopRing();
-    if (mounted) Navigator.pop(context);
+    await _ctl.endCall();
+    // _onCall худаш pop мекунад; агар сессия аллакай тамом буд:
+    if (mounted && !_closing) _close(null);
   }
 
-  void _onRemoteEnded() {
-    _logCall();
-    _stopRing();
-    // Ҳамсӯҳбат худаш қатъ кард — end-ро баргардондан лозим нест.
-    _hangUp(notifyPeer: false);
-    if (mounted) Navigator.pop(context);
-  }
-
-  void _onDeclined() {
-    _logCall();
-    _stopRing();
-    _hangUp(notifyPeer: false);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(tr('ui.30bcc62c44'))));
-    Navigator.pop(context);
-  }
-
-  bool get _connected => _agora.remoteJoined;
+  bool get _connected => _ctl.connected && _ctl.session == _session;
+  String get _statusText => _ctl.statusText;
 
   @override
   void dispose() {
-    _logCall(); // safety net — агар бо роҳи дигар пӯшида шавад
-    // Агар экран бе _endCall пӯшида шавад, занг набояд дар замина боқӣ монад.
-    _hangUp();
+    _ctl.removeListener(_onCall);
+    // Экран бе «хурд кардан» пӯшида шуд — занг набояд дар замина боқӣ монад.
+    final s = _session;
+    if (!_minimizing && s != null && !s.ended && _ctl.session == s) {
+      _ctl.endCall();
+    }
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    _agora.removeListener(_onAgoraChange);
-    _signal.onCallEnded    = null;
-    _signal.onCallDeclined = null;
-    _player.dispose();
-    _timer?.cancel();
-    _noAnswer?.cancel();
     _pulseCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();
@@ -256,11 +151,11 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   // ══════════════════════════════ BUILD ══════════════════════════════
 
-  // Ишораи «back»-и система зангро дуруст қатъ мекунад (на танҳо экранро).
+  // Ишораи «back»-и система зангро хурд мекунад (мисли WhatsApp), на қатъ.
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: false,
-    onPopInvoked: (didPop) { if (!didPop) _endCall(); },
+    onPopInvoked: (didPop) { if (!didPop) _minimize(); },
     child: Scaffold(
       backgroundColor: AppColors.bg,
       body: FadeTransition(
@@ -268,6 +163,13 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
         child: widget.callType == CallType.video ? _buildVideo() : _buildVoice(),
       ),
     ),
+  );
+
+  Widget _minimizeBtn() => IconButton(
+    key: const Key('call_minimize'),
+    tooltip: CallStrings.t('minimize'),
+    icon: Icon(AppIcons.keyboard_arrow_down_rounded, color: AppColors.textPrimary),
+    onPressed: _minimize,
   );
 
   // ══════════════════ VOICE UI ══════════════════
@@ -280,7 +182,11 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       ),
     ),
     child: SafeArea(child: Column(children: [
-      const SizedBox(height: 60),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Padding(padding: const EdgeInsets.all(8), child: _minimizeBtn()),
+      ),
+      const SizedBox(height: 4),
       Text(_statusText,
           style: TextStyle(
               color: AppColors.textPrimary.withOpacity(0.65), fontSize: 16, letterSpacing: 1.2)),
@@ -312,17 +218,17 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
           _Btn(
-            icon:   _agora.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
-            label:  _agora.muted ? 'Кушо' : 'Бандош',
-            active: _agora.muted,
-            onTap:  _agora.toggleMute,
+            icon:   _ctl.engine.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
+            label:  _ctl.engine.muted ? 'Кушо' : 'Бандош',
+            active: _ctl.engine.muted,
+            onTap:  _ctl.toggleMute,
           ),
           _EndBtn(onTap: _endCall),
           _Btn(
-            icon:   _agora.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_down_rounded,
+            icon:   _ctl.engine.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_down_rounded,
             label:  tr('ui.ce3cad995c'),
-            active: _agora.speakerOn,
-            onTap:  _agora.toggleSpeaker,
+            active: _ctl.engine.speakerOn,
+            onTap:  _ctl.toggleSpeaker,
           ),
         ]),
       ),
@@ -332,91 +238,123 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   // ══════════════════ VIDEO UI ══════════════════
 
-  Widget _buildVideo() => Stack(children: [
-    Positioned.fill(
-      child: _connected && _agora.remoteUid != null && _agora.engine != null
-          ? AgoraVideoView(
-              controller: VideoViewController.remote(
-                rtcEngine:  _agora.engine!,
-                canvas:     VideoCanvas(uid: _agora.remoteUid!),
-                connection: RtcConnection(channelId: _agora.channelId),
-              ),
-            )
-          : Container(
-              decoration: const BoxDecoration(gradient: LinearGradient(
-                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: [Color(0xFF050914), Color(0xFF0D1B3E)],
-              )),
-              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ScaleTransition(scale: _pulseAnim,
-                    child: Avatar(imageUrl: widget.peer.avatar, size: 120, glowBorder: true)),
-                const SizedBox(height: 16),
-                Text(_statusText,
-                    style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
-              ])),
-            ),
-    ),
+  /// Баландии панели тугмаҳои поён (32 + 70 + 6 + матн + 52).
+  static const double controlBarHeight = 180;
+  static const Size selfTileSize = Size(100, 140);
 
-    if (!_agora.cameraOff && _agora.engine != null)
-      Positioned(right: 16, top: 90,
-        child: Container(
-          width: 100, height: 140,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.textFaint),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 16)],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AgoraVideoView(
-              controller: VideoViewController(
-                rtcEngine: _agora.engine!,
-                canvas: const VideoCanvas(uid: 0),
-              ),
-            ),
-          ),
+  bool get _remoteVisible =>
+      _connected && _ctl.engine.remoteUid != null && _ctl.engine.hasVideo;
+  bool get _localVisible => !_ctl.engine.cameraOff && _ctl.engine.hasVideo;
+
+  Widget _remoteOrPlaceholder(String tag, {required bool big}) => _remoteVisible
+      ? _ctl.engine.remoteView(tag)
+      : Container(
+          decoration: const BoxDecoration(gradient: LinearGradient(
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [Color(0xFF050914), Color(0xFF0D1B3E)],
+          )),
+          child: Center(child: big
+              ? Column(mainAxisSize: MainAxisSize.min, children: [
+                  ScaleTransition(scale: _pulseAnim,
+                      child: Avatar(imageUrl: widget.peer.avatar, size: 120, glowBorder: true)),
+                  const SizedBox(height: 16),
+                  Text(_statusText,
+                      style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
+                ])
+              : Avatar(imageUrl: widget.peer.avatar, size: 48, glowBorder: false)),
+        );
+
+  Widget _localOrPlaceholder(String tag) => _localVisible
+      ? _ctl.engine.localView(tag)
+      : Container(
+          color: const Color(0xFF050914),
+          alignment: Alignment.center,
+          child: Icon(AppIcons.videocam_off_rounded, color: AppColors.textTertiary),
+        );
+
+  Widget _buildVideo() {
+    final selfBig = _ctl.selfIsBig;
+    // Пеш аз «хурд»: худ дар тасвири хурд (агар камера хомӯш бошад —
+    // мисли пештар тасвири хурд нест).
+    final showSmall = selfBig || _localVisible;
+    final pad = MediaQuery.paddingOf(context);
+    return Stack(children: [
+      Positioned.fill(
+        child: KeyedSubtree(
+          key: const Key('call_big_view'),
+          child: selfBig
+              ? _localOrPlaceholder('big')
+              : _remoteOrPlaceholder('big', big: true),
         ),
       ),
 
-    SafeArea(child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(children: [
-        IconButton(
-          icon: Icon(AppIcons.arrow_back, color: AppColors.textPrimary),
-          onPressed: _endCall,
+      if (showSmall)
+        Positioned.fill(
+          child: SnapTile(
+            key: const Key('call_self_tile'),
+            size: selfTileSize,
+            insets: EdgeInsets.fromLTRB(pad.left + 16, pad.top + 72,
+                pad.right + 16, controlBarHeight + 8),
+            initialCorner: SnapCorner.topRight,
+            onTap: _ctl.toggleSwap,
+            child: Semantics(
+              button: true,
+              label: CallStrings.t('swap'),
+              child: Container(
+                key: const Key('call_small_view'),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.textFaint),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 16)],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: selfBig
+                      ? _remoteOrPlaceholder('small', big: false)
+                      : _localOrPlaceholder('small'),
+                ),
+              ),
+            ),
+          ),
         ),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Text(widget.peer.username,
-              style: TextStyle(
-                  color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
-          Text(_statusText,
-              style: TextStyle(color: AppColors.textPrimary.withOpacity(0.6), fontSize: 13)),
-        ])),
-        const SizedBox(width: 48),
-      ]),
-    )),
 
-    Positioned(bottom: 0, left: 0, right: 0,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 32, 16, 52),
-        decoration: BoxDecoration(gradient: LinearGradient(
-          begin: Alignment.bottomCenter, end: Alignment.topCenter,
-          colors: [Colors.black.withOpacity(0.88), Colors.transparent],
-        )),
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          _Btn(icon: _agora.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
-              label: tr('ui.485bf9ddc4'), active: _agora.muted, onTap: _agora.toggleMute),
-          _Btn(icon: _agora.cameraOff ? AppIcons.videocam_off_rounded : AppIcons.videocam_rounded,
-              label: tr('ui.a71a775fd9'), active: _agora.cameraOff, onTap: _agora.toggleCamera),
-          _EndBtn(onTap: _endCall),
-          _Btn(icon: AppIcons.flip_camera_ios_rounded,
-              label: tr('ui.05a19ea7d3'), active: false, onTap: _agora.flipCamera),
-          _Btn(icon: _agora.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_off_rounded,
-              label: tr('ui.ce3cad995c'), active: _agora.speakerOn, onTap: _agora.toggleSpeaker),
+      SafeArea(child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: [
+          _minimizeBtn(),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Text(widget.peer.username,
+                style: TextStyle(
+                    color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
+            Text(_statusText,
+                style: TextStyle(color: AppColors.textPrimary.withOpacity(0.6), fontSize: 13)),
+          ])),
+          const SizedBox(width: 48),
         ]),
+      )),
+
+      Positioned(bottom: 0, left: 0, right: 0,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 32, 16, 52),
+          decoration: BoxDecoration(gradient: LinearGradient(
+            begin: Alignment.bottomCenter, end: Alignment.topCenter,
+            colors: [Colors.black.withOpacity(0.88), Colors.transparent],
+          )),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+            _Btn(icon: _ctl.engine.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
+                label: tr('ui.485bf9ddc4'), active: _ctl.engine.muted, onTap: _ctl.toggleMute),
+            _Btn(icon: _ctl.engine.cameraOff ? AppIcons.videocam_off_rounded : AppIcons.videocam_rounded,
+                label: tr('ui.a71a775fd9'), active: _ctl.engine.cameraOff, onTap: _ctl.toggleCamera),
+            _EndBtn(onTap: _endCall),
+            _Btn(icon: AppIcons.flip_camera_ios_rounded,
+                label: tr('ui.05a19ea7d3'), active: false, onTap: _ctl.flipCamera),
+            _Btn(icon: _ctl.engine.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_off_rounded,
+                label: tr('ui.ce3cad995c'), active: _ctl.engine.speakerOn, onTap: _ctl.toggleSpeaker),
+          ]),
+        ),
       ),
-    ),
-  ]);
+    ]);
+  }
 
   Widget _ring(double s, double o) => Container(
     width: s, height: s,
@@ -446,7 +384,7 @@ class _Btn extends StatelessWidget {
   final String       label;
   final bool         active;
   final VoidCallback onTap;
-  _Btn({required this.icon, required this.label,
+  const _Btn({required this.icon, required this.label,
       required this.active, required this.onTap});
 
   @override
