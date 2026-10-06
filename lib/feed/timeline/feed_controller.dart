@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
+import '../../core/error/friendly_error.dart';
 import '../../models/post_model.dart';
 import '../../core/services/socket_service.dart';
 import '../feed_repository.dart';
@@ -135,15 +136,17 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
     _state = _state.copyWith(isLoading: true, hasError: false);
     notifyListeners();
 
+    var fromCache = false;
     try {
       // FeedRepository аввал кэш медиҳад → ФАВРАН
       final posts = await _repository.fetchFeed(
         limit: _limit, page: _page, mode: _mode);
+      fromCache = _repository.lastFromCache;
       _isOffline = false;
       _state = _state.copyWith(
         isLoading: false,
         posts: posts,
-        hasMore: posts.length >= _limit,
+        hasMore: !fromCache && posts.length >= _limit,
         hasError: false,
         errorMessage: null,
       );
@@ -152,16 +155,19 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
         isLoading: false, hasMore: false, hasError: true,
         errorMessage: 'Лутфан дубора ворид шавед');
       onUnauthorized?.call();
-    } catch (_) {
-      // ✅ Хато → offline mode, кэш нишон деҳ
+    } catch (e) {
+      // Кэш умуман нест ва шабака нашуд → экрани хато (на «лента холист»).
       _isOffline = true;
       _state = _state.copyWith(
         isLoading: false,
-        hasError: false, // хато нишон надеҳ — content нишон деҳ
+        hasError: _state.posts.isEmpty,
+        errorMessage: friendlyError(e),
         hasMore: false,
       );
     }
     notifyListeners();
+    // Кэш нишон дода шуд → дар фон аз шабака нав мекунем (мисли Instagram).
+    if (fromCache) await refresh(silent: true);
   }
 
   Future<void> loadMore() async {
@@ -183,24 +189,41 @@ class FeedController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  Future<void> refresh() async {
+  /// [silent] — бе спиннер (навсозии фонӣ баъди нишон додани кэш).
+  Future<void> refresh({bool silent = false}) async {
     _page = 1;
     _pending.clear();
-    _state = _state.copyWith(isRefreshing: true, hasError: false);
-    notifyListeners();
+    if (!silent) {
+      _state = _state.copyWith(isRefreshing: true, hasError: false);
+      notifyListeners();
+    }
     try {
       final posts = await _repository.fetchFeed(
         limit: _limit, page: _page, forceRefresh: true, mode: _mode);
-      _isOffline = false;
-      _state = _state.copyWith(
-        isRefreshing: false, posts: posts,
-        hasMore: posts.length >= _limit,
-        hasError: false, errorMessage: null);
-    } catch (_) {
+      // Repository ҳангоми хатои шабака кэшро бармегардонад.
+      _isOffline = _repository.lastFromCache;
+      if (_isOffline && silent) {
+        // Кэш аллакай дар экран аст — танҳо баннер.
+      } else {
+        _state = _state.copyWith(
+          isRefreshing: false, posts: posts,
+          hasMore: !_isOffline && posts.length >= _limit,
+          hasError: false, errorMessage: null);
+      }
+      if (!_isOffline) {
+        for (final p in posts) { p.primeSync(); }
+      }
+    } on UnauthorizedException {
+      _state = _state.copyWith(isRefreshing: false);
+      onUnauthorized?.call();
+    } catch (e) {
       _isOffline = true;
       _state = _state.copyWith(
-        isRefreshing: false, hasError: false);
+        isRefreshing: false,
+        hasError: _state.posts.isEmpty,
+        errorMessage: friendlyError(e));
     }
+    _state = _state.copyWith(isRefreshing: false);
     notifyListeners();
   }
 

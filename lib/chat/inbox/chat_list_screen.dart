@@ -18,6 +18,7 @@ import '../chat_repository.dart';
 import '../../models/message_model.dart';
 import '../../models/note_model.dart';
 import '../../widgets/avatar.dart';
+import '../../widgets/stale_data_banner.dart';
 import '../../app/app_theme.dart';
 import '../../core/services/chat_lock_service.dart';
 import '../chat_pin_screen.dart';
@@ -341,86 +342,115 @@ class _ChatView extends StatelessWidget {
                 ]),
               ),
 
+            // Шабака нашуд → рӯйхати охирин аз кэш (мисли Telegram).
+            StaleDataBanner(
+                visible: ctrl.isStale && !ctrl.isLoading,
+                onRetry: () => ctrl.loadChats()),
+
             // ── Chat list ────────────────────────────────────
+            // Ҳар ҳолат (холӣ, хато, рӯйхат) бо кашидан ба поён нав мешавад
+            // — мисли Instagram. Пеш «Паёме нест» ва экрани хато
+            // RefreshIndicator надоштанд.
             Expanded(
               child: ctrl.isLoading
                   ? _SkeletonList()
-                  : ctrl.error != null && ctrl.chats.isEmpty
-                      ? Center(
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(AppIcons.wifi_off_rounded,
-                                color: AppColors.textFaint, size: 44),
-                            const SizedBox(height: 12),
-                            Text(tr('ui.491ea2cedb'),
-                                style: TextStyle(color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w600, fontSize: 15)),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: () => ctrl.loadChats(),
-                              icon: const Icon(AppIcons.refresh_rounded, size: 18),
-                              label: Text(tr('ui.602fab7c97')),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.neonBlue,
-                                foregroundColor: AppColors.textPrimary,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 10)),
-                            ),
-                          ]))
-                      : ctrl.chats.isEmpty
-                          ? Center(
-                              child: Text(
-                                ctrl.query.isNotEmpty
-                                    ? 'Натиҷае нест'
-                                    : ctrl.tab == ChatTab.requests
-                                        ? 'Дархости паём нест'
-                                        : 'Паёме нест',
-                                style: TextStyle(color: AppColors.textFaint),
-                              ))
-                          : RefreshIndicator(
-                          color: AppColors.neonBlue,
-                          backgroundColor: AppColors.card,
-                          onRefresh: () => ctrl.loadChats(),
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (n) {
-                              if (n.metrics.pixels >=
-                                  n.metrics.maxScrollExtent - 200) {
-                                context
-                                    .read<ChatListController>()
-                                    .loadMoreChats();
-                              }
-                              return false;
-                            },
-                            child: ListView.builder(
-                              controller: scrollCtrl,
-                              itemCount: ctrl.chats.length +
-                                  (ctrl.isLoadingMore ? 1 : 0),
-                              addAutomaticKeepAlives: false,
-                              itemBuilder: (_, i) {
-                                if (i >= ctrl.chats.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: Center(
-                                      child: SizedBox(
-                                        width: 22, height: 22,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.neonBlue),
-                                      ),
-                                    ),
-                                  );
-                                }
-                                return _ChatTile(chat: ctrl.chats[i]);
-                              },
-                            ),
-                          ),
-                        ),
+                  : RefreshIndicator(
+                      color: AppColors.neonBlue,
+                      backgroundColor: AppColors.card,
+                      onRefresh: () => ctrl.loadChats(),
+                      child: ctrl.error != null && ctrl.chats.isEmpty
+                          ? _FillScroll(child: Column(
+                              mainAxisSize: MainAxisSize.min, children: [
+                              Icon(AppIcons.wifi_off_rounded,
+                                  color: AppColors.textFaint, size: 44),
+                              const SizedBox(height: 12),
+                              Text(ctrl.error!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600, fontSize: 15)),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () => ctrl.loadChats(),
+                                icon: const Icon(AppIcons.refresh_rounded, size: 18),
+                                label: Text(tr('ui.602fab7c97')),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.neonBlue,
+                                  foregroundColor: AppColors.textPrimary,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 10)),
+                              ),
+                            ]))
+                          : ctrl.chats.isEmpty
+                              ? _FillScroll(child: Text(
+                                  ctrl.query.isNotEmpty
+                                      ? 'Натиҷае нест'
+                                      : ctrl.tab == ChatTab.requests
+                                          ? 'Дархости паём нест'
+                                          : 'Паёме нест',
+                                  style: TextStyle(color: AppColors.textFaint),
+                                ))
+                              : NotificationListener<ScrollNotification>(
+                                  onNotification: (n) {
+                                    if (n.metrics.pixels >=
+                                        n.metrics.maxScrollExtent - 200) {
+                                      context
+                                          .read<ChatListController>()
+                                          .loadMoreChats();
+                                    }
+                                    return false;
+                                  },
+                                  child: ListView.builder(
+                                    controller: scrollCtrl,
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    itemCount: ctrl.chats.length +
+                                        (ctrl.isLoadingMore ? 1 : 0),
+                                    addAutomaticKeepAlives: false,
+                                    itemBuilder: (_, i) {
+                                      if (i >= ctrl.chats.length) {
+                                        return const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 16),
+                                          child: Center(
+                                            child: SizedBox(
+                                              width: 22, height: 22,
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: AppColors.neonBlue),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      return _ChatTile(chat: ctrl.chats[i]);
+                                    },
+                                  ),
+                                ),
+                    ),
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Мундариҷаи кӯтоҳ дар марказ, ки бо вуҷуди ин ғелонда мешавад —
+/// то RefreshIndicator дар ҳолати холӣ/хато ҳам кор кунад.
+class _FillScroll extends StatelessWidget {
+  final Widget child;
+  const _FillScroll({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (_, c) => SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: c.maxHeight),
+        child: Center(child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: child)),
+      ),
+    ));
   }
 }
 

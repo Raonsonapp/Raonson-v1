@@ -3,6 +3,7 @@ import '../../core/api/api_client.dart';
 import '../../core/music/song_info.dart';
 import '../../models/user_model.dart';
 import '../profile_repository.dart';
+import '../../core/error/friendly_error.dart';
 
 class EditProfileController extends ChangeNotifier {
   final ProfileRepository _repo =
@@ -42,7 +43,7 @@ class EditProfileController extends ChangeNotifier {
       originalSong = _original.bioSong;
       error = null;
     } catch (e) {
-      error = e.toString();
+      error = friendlyError(e);
     }
 
     isLoading = false;
@@ -75,7 +76,7 @@ class EditProfileController extends ChangeNotifier {
       );
       return true;
     } catch (e) {
-      error = e.toString();
+      error = friendlyError(e);
       return false;
     } finally {
       isSaving = false;

@@ -17,6 +17,7 @@ import '../../core/ui/app_icons.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/music/music_picker.dart';
 import '../../models/note_model.dart';
+import '../../core/error/friendly_error.dart';
 
 class CreateReelScreen extends StatefulWidget {
   final File? initialFile;
@@ -326,7 +327,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       if (mounted) {
         setState(() {
           _busy     = false;
-          _error    = e.toString().replaceAll('Exception: ', '');
+          _error    = friendlyError(e);
           _status   = '';
           _progress = 0;
         });

@@ -16,6 +16,7 @@ import '../core/api/api_client.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import '../profile/profile_screen.dart';
+import '../core/error/friendly_error.dart';
 
 /// Тренди як мавзӯъ.
 class TrendItem {
@@ -114,7 +115,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString().replaceAll('Exception: ', '');
+        _error = friendlyError(e);
         _loading = false;
       });
     }

@@ -10,6 +10,7 @@ import 'campaign_analytics_screen.dart';
 import 'marketplace_models.dart';
 import 'marketplace_repository.dart';
 import 'marketplace_widgets.dart';
+import '../core/error/friendly_error.dart';
 
 class CampaignDetailScreen extends StatefulWidget {
   final String campaignId;
@@ -38,7 +39,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       setState(() => _detail = d);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 
@@ -55,7 +56,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       showMarketplaceToast(context, okMessage);
     } catch (e) {
       if (!mounted) return;
-      showMarketplaceToast(context, e.toString(), error: true);
+      showMarketplaceToast(context, friendlyError(e), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -90,7 +91,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      showMarketplaceToast(context, e.toString(), error: true);
+      showMarketplaceToast(context, friendlyError(e), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

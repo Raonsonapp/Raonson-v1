@@ -9,6 +9,7 @@ import '../core/ads/ad_eligibility.dart';
 import '../core/ads/sponsored_ads.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
+import '../core/storage/offline_cache.dart';
 
 class AppState extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -110,6 +111,8 @@ class AppState extends ChangeNotifier {
     await AnalyticsService.instance.flush();
     await TokenStorage.clearTokens();
     ApiClient.instance.setAuthToken(null);
+    // Кэши офлайни корбари баромада (чатҳо, лента, профилҳо) пок мешавад.
+    await OfflineCache.clearViewer();
     await UserSession.clear();
     // Корбари навбатӣ VIP-и пешинаро мерос намегирад.
     await VipService.instance.setVip(false);

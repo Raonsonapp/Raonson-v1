@@ -1,4 +1,7 @@
+import 'dart:io' show SocketException;
+
 import 'package:flutter/foundation.dart';
+import '../../core/error/friendly_error.dart';
 import '../chat_repository.dart';
 import '../../models/message_model.dart';
 import '../unread/chat_unread_store.dart';
@@ -153,6 +156,7 @@ class ChatListController extends ChangeNotifier {
       final cached = await _repository.loadCachedInbox();
       if (cached != null && cached.isNotEmpty && _chats.isEmpty) {
         _chats = _withLocalUnread(cached, DateTime(2000));
+        _primeRings(_chats);
         _applyFilter();
       }
     }
@@ -167,18 +171,34 @@ class ChatListController extends ChangeNotifier {
         _hasMore = _chats.length >= _pageSize;
         _applyFilter();
         _unread.setTotal(fresh.totalUnread);
+        _stale = false;
         debugPrint('[Inbox] loaded ${_chats.length} chats');
-      } else if (_chats.isEmpty) {
-        _error = 'network';
+      } else {
+        _onFailure(_repository.lastInboxError);
       }
     } catch (e) {
       debugPrint('[Inbox] ERROR: $e');
-      if (_chats.isEmpty) _error = e.toString();
+      _onFailure(e);
     } finally {
       _loading = false;
       notifyListeners();
     }
   }
+
+  /// Шабака нашуд: агар рӯйхати охирин дар экран бошад — танҳо баннери
+  /// хурд; вагарна экрани хато бо матни фаҳмо (на `e.toString()`).
+  void _onFailure(Object? e) {
+    if (_chats.isNotEmpty) {
+      _stale = true;
+    } else {
+      _error = friendlyError(e ?? const SocketException('offline'));
+    }
+  }
+
+  bool _stale = false;
+
+  /// «Офлайн — маълумоти охирин»: рӯйхат аз кэш аст.
+  bool get isStale => _stale;
 
   /// Бейҷи умумӣ — ҷамъи хонданашудаҳо дар чатҳои асосӣ (на дархостҳо,
   /// на хомӯш). Сервер ҳамин қоидаро дорад (`totalUnread`).

@@ -8,6 +8,7 @@ import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import '../profile/profile_screen.dart';
 import 'ai_feed_repository.dart';
+import '../core/error/friendly_error.dart';
 
 class FindPeopleScreen extends StatefulWidget {
   const FindPeopleScreen({super.key});
@@ -49,7 +50,7 @@ class _FindPeopleScreenState extends State<FindPeopleScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e);
         _busy = false;
       });
     }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../core/api/api_client.dart';
+import '../core/storage/offline_cache.dart';
 import '../models/notification_model.dart';
 
 class NotificationsRepository {
@@ -14,6 +15,9 @@ class NotificationsRepository {
     // Пеш хатои сервер (401/500) ҳамчун «огоҳинома нест» нишон дода мешуд.
     if (res.statusCode >= 400) throw ApiException(res.statusCode, res.body);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (page == 1) {
+      await OfflineCache.put(_cacheName, data['notifications'] ?? const []);
+    }
     final list = (data['notifications'] as List? ?? [])
         .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -21,6 +25,21 @@ class NotificationsRepository {
       'notifications': list,
       'unreadCount': data['unreadCount'] ?? 0,
     };
+  }
+
+  static const _cacheName = 'notifications';
+
+  /// Огоҳиҳои охирин аз кэш (бе шабака) — барои офлайн.
+  Future<List<NotificationModel>?> cachedNotifications() async {
+    final c = await OfflineCache.get(_cacheName);
+    if (c == null || c.data is! List) return null;
+    final out = <NotificationModel>[];
+    for (final e in c.data as List) {
+      try {
+        out.add(NotificationModel.fromJson(Map<String, dynamic>.from(e as Map)));
+      } catch (_) {}
+    }
+    return out;
   }
 
   Future<void> markAsRead(String id) async {

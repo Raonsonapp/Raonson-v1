@@ -1,3 +1,5 @@
+import '../../core/error/friendly_error.dart';
+import '../../widgets/stale_data_banner.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -64,6 +66,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
   List<MessageModel> _messages = [];
   ChatTheme _theme = ChatThemes.all.first;
   bool   _loading     = true;
+  /// Шабака нашуд — паёмҳои охирин аз кэш нишон дода мешаванд.
+  bool   _stale       = false;
   bool   _isPeerTyping = false;
   String _chatId      = '';
   String _myId        = '';
@@ -309,10 +313,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     final fresh = await _repo.fetchLatest(_chatId);
     if (!mounted) return;
     if (fresh == null) {
-      // Хатои шабака: кэш (агар буд) дар экран мемонад.
-      if (_loading) setState(() => _loading = false);
+      // Хатои шабака: кэш (агар буд) дар экран мемонад + баннери хурд.
+      setState(() { _loading = false; _stale = true; });
       return;
     }
+    if (_stale) _stale = false;
     final pending = _messages.where((m) => m.isOptimistic).toList();
     final freshIds = fresh.map((m) => m.id).toSet();
     setState(() {
@@ -953,7 +958,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         _messages = _messages.map((m) => m.id == msg.id ? before : m).toList();
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', ''))));
+          content: Text(friendlyError(e))));
     }
   }
 
@@ -1063,6 +1068,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             : null,
         child: Column(
         children: [
+          StaleDataBanner(
+              visible: _stale && !_loading,
+              message: _messages.isEmpty ? tr('net.offline') : null,
+              onRetry: _load),
           // Messages list
           Expanded(
             child: _loading

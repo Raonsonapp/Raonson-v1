@@ -6,6 +6,8 @@ import '../core/content_sync.dart';
 import '../core/services/user_session.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
+import '../core/i18n/strings.dart';
+import '../core/storage/offline_cache.dart';
 import '../models/user_model.dart';
 import '../stories/story_seen_sync.dart';
 import '../models/post_model.dart';
@@ -16,24 +18,31 @@ class ProfileRepository {
   final ApiClient _api;
   ProfileRepository(this._api);
 
-  static const _diskCacheTTL = Duration(hours: 24);
-
   /// Андозаи саҳифа — ҳамон пешфарзи сервер (GetUserPosts/GetUserReels).
   static const profilePageSize = 24;
   /// Андозаи саҳифаи обуначиён/обунаҳо (followPage дар сервер).
   static const followPageSize = 50;
 
+  /// Чанд калиди профил дар кэши офлайн нигоҳ дошта мешавад (4 калид
+  /// барои ҳар профил: сарлавҳа, постҳо, reels, highlights → ~25 профил).
+  static const _profileGroupMax = 100;
+
   /// 'me' барои ҳар аккаунт як чиз нест — калидро бо id-и воқеӣ
   /// месозем, вагарна баъд аз иваз кардани аккаунт профили корбари
-  /// қаблӣ то 24 соат бармегашт.
+  /// қаблӣ бармегашт. Худи [OfflineCache] низ ба корбари ворид баста аст.
   String _scope(String id) =>
       id == 'me' ? (UserSession.userId ?? 'me') : id;
 
-  String _profileKey(String id) => 'profile_cache_${_scope(id)}';
-  String _postsKey(String id)   => 'profile_posts_${_scope(id)}';
-  String _reelsKey(String id)   => 'profile_reels_${_scope(id)}';
+  String _profileKey(String id) => 'profile:${_scope(id)}';
+  String _postsKey(String id)   => 'profile_posts:${_scope(id)}';
+  String _reelsKey(String id)   => 'profile_reels:${_scope(id)}';
+  String _hlKey(String id)      => 'profile_hl:${_scope(id)}';
+  String _aliasKey(String username) =>
+      'profile_alias:${username.toLowerCase()}';
 
-  /// Ҳамаи cache-и профилҳоро тоза мекунад (ҳангоми иваз кардани аккаунт).
+  /// Кэши куҳнаи (бе корбар) профилҳоро тоза мекунад (ҳангоми иваз
+  /// кардани аккаунт). Кэши нав ([OfflineCache]) аз рӯи корбар ҷудост ва
+  /// нигоҳ дошта мешавад — то бе интернет профил холӣ набошад.
   static Future<void> clearAllCaches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -47,44 +56,94 @@ class ProfileRepository {
     } catch (_) {}
   }
 
-  Future<void> _save(String key, dynamic data) async {
+  Future<void> _save(String key, dynamic data, {int maxItems = 60}) async {
     // Вақти гирифтан ба ҳар унсур навишта мешавад: вагарна рӯйхати аз
     // кэш хондашуда «нав» ҳисоб мешуд ва лайки навтари корбарро дар
     // экранҳои дигар бармегардонд (ниг. ContentSync.prime).
     ContentSync.stampAll(data);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(key, jsonEncode({
-        'time': DateTime.now().millisecondsSinceEpoch,
-        'data': data,
-      }));
-    } catch (_) {}
+    await OfflineCache.put(key, data,
+        maxItems: maxItems, group: 'profile', groupMax: _profileGroupMax);
   }
 
-  Future<dynamic> _load(String key) async {
+  Future<dynamic> _load(String key) async => (await OfflineCache.get(key))?.data;
+
+  // ── Офлайн: ҳамаи профил аз кэш (бе шабака) ────────────────────
+  /// Профили кэшшуда — барои фавран нишон додан ҳангоми кушодан, ҳатто
+  /// бе интернет. `null` — ин профил ҳанӯз дида нашудааст.
+  Future<ProfileSnapshot?> loadCachedSnapshot(String userIdOrName,
+      {bool byUsername = false}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(key);
-      if (raw == null) return null;
-      final payload = jsonDecode(raw) as Map<String, dynamic>;
-      final age = DateTime.now().millisecondsSinceEpoch - (payload['time'] as int);
-      if (age > _diskCacheTTL.inMilliseconds) return null;
-      return payload['data'];
-    } catch (_) { return null; }
-  }
-
-  // ✅ Cache аввал → baъд network
-  Future<UserModel> getProfile(String userId) async {
-    final path = userId == 'me' ? '/profile/me'
-        : _isUUID(userId) ? '/users/$userId' : '/profile/$userId';
-    final cacheKey = _profileKey(userId);
-
-    final cached = await _load(cacheKey);
-    if (cached != null) {
-      _refreshProfile(path, cacheKey);
-      return _primeRing(cached as Map<String, dynamic>);
+      var id = userIdOrName;
+      if (byUsername) {
+        final alias = await _load(_aliasKey(userIdOrName));
+        if (alias is String && alias.isNotEmpty) id = alias;
+      }
+      final pj = await _load(_profileKey(id));
+      if (pj is! Map) return null;
+      final user = _primeRing(Map<String, dynamic>.from(pj));
+      final uid = user.id.isNotEmpty ? user.id : id;
+      List<T> list<T>(dynamic raw, T Function(Map<String, dynamic>) f) =>
+          raw is List
+              ? raw.whereType<Map>()
+                  .map((e) => f(Map<String, dynamic>.from(e))).toList()
+              : <T>[];
+      return ProfileSnapshot(
+        profile: user,
+        posts: list(await _load(_postsKey(uid)) ?? await _load(_postsKey(id)),
+            PostModel.fromJson),
+        reels: list(await _load(_reelsKey(uid)), ReelModel.fromJson),
+        highlights: list(await _load(_hlKey(uid)), HighlightModel.fromJson),
+      );
+    } catch (_) {
+      return null;
     }
-    return _fetchProfile(path, cacheKey);
+  }
+
+  String _profilePath(String userId) => userId == 'me' ? '/profile/me'
+      : _isUUID(userId) ? '/users/$userId' : '/profile/$userId';
+
+  /// Профил аз шабака. Хато (шабака/сервер) ПАРТОФТА мешавад, то
+  /// контроллер кэшро нигоҳ дорад; 404 → [ProfileNotFoundException].
+  Future<UserModel> fetchProfile(String userId) async {
+    final res = await _api.get(_profilePath(userId));
+    if (res.statusCode == 404) throw const ProfileNotFoundException();
+    if (res.statusCode >= 400) throw ApiException(res.statusCode, res.body);
+    final body = jsonDecode(res.body);
+    final j = (body is Map && body.containsKey('user')) ? body['user'] : body;
+    if (j is! Map<String, dynamic>) throw const FormatException('profile');
+    ContentSync.stamp(j);
+    final user = _primeRing(j);
+    await _save(_profileKey(userId), j);
+    if (user.id.isNotEmpty && user.id != _scope(userId)) {
+      await _save(_profileKey(user.id), j);
+    }
+    if (user.username.isNotEmpty && user.id.isNotEmpty) {
+      await OfflineCache.put(_aliasKey(user.username), user.id,
+          group: 'profile', groupMax: _profileGroupMax);
+    }
+    // `/profile/me` постҳоро ҳам дорад — як дархост камтар.
+    if (body is Map && body['posts'] is List) {
+      _lastMePosts = body['posts'] as List;
+    }
+    return user;
+  }
+
+  List? _lastMePosts;
+
+  // ✅ Cache аввал → баъд network (барои экранҳои дигар, масалан таҳрир).
+  Future<UserModel> getProfile(String userId) async {
+    final cached = await _load(_profileKey(userId));
+    if (cached is Map<String, dynamic>) {
+      Future.delayed(const Duration(milliseconds: 800), () async {
+        try { await fetchProfile(userId); } catch (_) {}
+      });
+      return _primeRing(cached);
+    }
+    try {
+      return await fetchProfile(userId);
+    } on ProfileNotFoundException {
+      throw Exception(tr('ui.4b2790adcd'));
+    }
   }
 
   /// Ҳалқаи сторис дар сарлавҳаи профил — аз ҳамон манбаи умумӣ
@@ -94,22 +153,6 @@ class ProfileRepository {
     final u = UserModel.fromJson(j);
     StorySeenSync.instance.primeUser(u, fetchedAt: ContentSync.fetchedAtOf(j));
     return u;
-  }
-
-  Future<UserModel> _fetchProfile(String path, String cacheKey) async {
-    final res = await _api.get(path).timeout(const Duration(seconds: 8));
-    if (res.statusCode >= 400) throw Exception('Корбар ёфт нашуд');
-    final body = jsonDecode(res.body);
-    final j = (body is Map && body.containsKey('user')) ? body['user'] : body;
-    ContentSync.stamp(j);
-    await _save(cacheKey, j);
-    return _primeRing(j as Map<String, dynamic>);
-  }
-
-  void _refreshProfile(String path, String cacheKey) {
-    Future.delayed(const Duration(milliseconds: 800), () async {
-      try { await _fetchProfile(path, cacheKey); } catch (_) {}
-    });
   }
 
   Future<bool> isUsernameTaken(String username, String currentUsername) async {
@@ -145,43 +188,31 @@ class ProfileRepository {
     }
   }
 
-  Future<List<PostModel>> getUserPosts(String userId) async {
-    final cacheKey = _postsKey(userId);
-    final cached = await _load(cacheKey);
-    if (cached != null) {
-      _refreshPosts(userId, cacheKey);
-      return (cached as List)
-          .map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
-    }
-    return _fetchPosts(userId, cacheKey);
-  }
-
-  Future<List<PostModel>> _fetchPosts(String userId, String cacheKey) async {
+  /// Саҳифаи аввали постҳо аз шабака; `null` — шабака/сервер нашуд
+  /// (кэш дар экран мемонад, на рӯйхати холӣ).
+  Future<List<PostModel>?> fetchUserPosts(String userId) async {
     try {
-      if (userId == 'me') {
-        final res = await _api.get('/profile/me').timeout(const Duration(seconds: 8));
-        if (res.statusCode >= 400) return [];
-        final body = jsonDecode(res.body);
-        if (body is Map && body.containsKey('posts')) {
-          final list = body['posts'] as List;
-          await _save(cacheKey, list);
-          return list.map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
+      List raw;
+      final me = _lastMePosts;
+      if (userId == 'me' || (userId == UserSession.userId && me != null)) {
+        if (me != null) {
+          raw = me;
+        } else {
+          final res = await _api.get('/profile/me');
+          if (res.statusCode >= 400) return null;
+          final body = jsonDecode(res.body);
+          raw = (body is Map && body['posts'] is List) ? body['posts'] as List : [];
         }
-        return [];
+      } else {
+        final res = await _api.get('/users/$userId/posts');
+        if (res.statusCode >= 400) return null;
+        final body = jsonDecode(res.body);
+        raw = body is List ? body : (body['posts'] ?? []) as List;
       }
-      final res = await _api.get('/users/$userId/posts').timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400) return [];
-      final body = jsonDecode(res.body);
-      final raw  = body is List ? body : (body['posts'] ?? []) as List;
-      await _save(cacheKey, raw);
+      _lastMePosts = null;
+      await _save(_postsKey(userId), raw, maxItems: profilePageSize * 2);
       return raw.map((e) => PostModel.fromJson(e as Map<String,dynamic>)).toList();
-    } catch (_) { return []; }
-  }
-
-  void _refreshPosts(String userId, String cacheKey) {
-    Future.delayed(const Duration(milliseconds: 800), () async {
-      try { await _fetchPosts(userId, cacheKey); } catch (_) {}
-    });
+    } catch (_) { return null; }
   }
 
   /// Саҳифаи навбатии постҳои профил (бе кэш). Саҳифаи аввал — аз
@@ -194,8 +225,7 @@ class ProfileRepository {
       {required int page, int limit = profilePageSize}) async {
     try {
       final res = await _api.get('/users/$userId/posts',
-          query: {'page': '$page', 'limit': '$limit'})
-          .timeout(const Duration(seconds: 8));
+          query: {'page': '$page', 'limit': '$limit'});
       if (res.statusCode >= 400) return null;
       final body = jsonDecode(res.body);
       final raw  = body is List ? body : (body['posts'] ?? []) as List;
@@ -209,8 +239,7 @@ class ProfileRepository {
       {required int page, int limit = profilePageSize}) async {
     try {
       final res = await _api.get('/users/$userId/reels',
-          query: {'page': '$page', 'limit': '$limit'})
-          .timeout(const Duration(seconds: 8));
+          query: {'page': '$page', 'limit': '$limit'});
       if (res.statusCode >= 400) return null;
       final body = jsonDecode(res.body);
       final raw  = body is List ? body : (body['reels'] ?? []) as List;
@@ -221,7 +250,7 @@ class ProfileRepository {
 
   Future<List<PostModel>> getTaggedPosts(String userId) async {
     try {
-      final res = await _api.get('/users/$userId/tagged').timeout(const Duration(seconds: 8));
+      final res = await _api.get('/users/$userId/tagged');
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
       final list = body is List ? body : (body['posts'] ?? []) as List;
@@ -229,58 +258,32 @@ class ProfileRepository {
     } catch (_) { return []; }
   }
 
-  /// [onFresh] — рӯйхати нави сервер, вақте аввал кэш баргардонда шуд.
-  ///
-  /// ⚠️ Пеш ҷавоби нав танҳо ба диск навишта мешуд ва экран то кушодани
-  /// навбатӣ рақамҳои кэши куҳнаро (то 24 соат) нишон медод: як видео
-  /// дар Explore 8 тамошо, дар профил 5.
-  Future<List<ReelModel>> getUserReels(String userId,
-      {void Function(List<ReelModel> fresh)? onFresh}) async {
-    final cacheKey = _reelsKey(userId);
-    final cached = await _load(cacheKey);
-    if (cached != null) {
-      _refreshReels(userId, cacheKey, onFresh);
-      return (cached as List)
-          .map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
-    }
-    return _fetchReels(userId, cacheKey);
-  }
-
-  Future<List<ReelModel>> _fetchReels(String userId, String cacheKey) async {
-    return (await _tryFetchReels(userId, cacheKey)) ?? [];
-  }
-
-  /// null — шабака/сервер ҷавоб надод (on кэшро иваз накунем).
-  Future<List<ReelModel>?> _tryFetchReels(String userId, String cacheKey) async {
+  /// Reels-и профил аз шабака; `null` — шабака/сервер нашуд.
+  Future<List<ReelModel>?> fetchUserReels(String userId) async {
     try {
-      final res = await _api.get('/users/$userId/reels').timeout(const Duration(seconds: 8));
+      final res = await _api.get('/users/$userId/reels');
       if (res.statusCode >= 400) return null;
       final body = jsonDecode(res.body);
       final raw  = body is List ? body : (body['reels'] ?? []) as List;
-      await _save(cacheKey, raw);
+      await _save(_reelsKey(userId), raw, maxItems: profilePageSize * 2);
       return raw.map((e) => ReelModel.fromJson(e as Map<String,dynamic>)).toList();
     } catch (_) { return null; }
   }
 
-  void _refreshReels(String userId, String cacheKey,
-      void Function(List<ReelModel>)? onFresh) {
-    Future.delayed(const Duration(milliseconds: 800), () async {
-      try {
-        final fresh = await _tryFetchReels(userId, cacheKey);
-        if (fresh != null) onFresh?.call(fresh);
-      } catch (_) {}
-    });
-  }
-
-  Future<List<HighlightModel>> getHighlights(String userId) async {
+  /// Highlights аз шабака; `null` — шабака/сервер нашуд.
+  Future<List<HighlightModel>?> fetchHighlights(String userId) async {
     try {
-      final res = await _api.get('/highlights/$userId').timeout(const Duration(seconds: 8));
-      if (res.statusCode >= 400) return [];
+      final res = await _api.get('/highlights/$userId');
+      if (res.statusCode >= 400) return null;
       final body = jsonDecode(res.body);
       final list = body is List ? body : (body['highlights'] ?? []) as List;
+      await _save(_hlKey(userId), list, maxItems: 40);
       return list.map((e) => HighlightModel.fromJson(e as Map<String,dynamic>)).toList();
-    } catch (_) { return []; }
+    } catch (_) { return null; }
   }
+
+  Future<List<HighlightModel>> getHighlights(String userId) async =>
+      await fetchHighlights(userId) ?? [];
 
   // `…Ok`: рад кардани сервер хато аст — тугма ба ҳолати пешина бармегардад.
   Future<void> follow(String uid)    async => _api.postOk(ApiEndpoints.follow(uid));
@@ -291,25 +294,42 @@ class ProfileRepository {
       _api.post('/posts/$postId/pin', body: {'pin': pin});
   Future<void> deletePost(String postId) async => _api.delete('/posts/$postId');
 
-  Future<List<UserModel>> getFollowers(String uid,
-      {int page = 1, int limit = followPageSize}) async {
-    final res = await _api.get('/users/$uid/followers',
+  String _followKey(String uid, bool followers) =>
+      '${followers ? 'followers' : 'following'}:$uid';
+
+  /// Саҳифаи аввали обуначиён/обунаҳо аз кэш (бе шабака).
+  Future<List<UserModel>?> cachedFollowList(String uid,
+      {required bool followers}) async {
+    final raw = await _load(_followKey(uid, followers));
+    if (raw is! List) return null;
+    return raw.whereType<Map>()
+        .map((e) => UserModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  /// Хатои шабака/сервер ПАРТОФТА мешавад: пеш 500 ҳамчун «рӯйхат
+  /// холист» нишон дода мешуд.
+  Future<List<UserModel>> _followPage(String uid, bool followers,
+      int page, int limit) async {
+    final kind = followers ? 'followers' : 'following';
+    final res = await _api.get('/users/$uid/$kind',
         query: {'page': '$page', 'limit': '$limit'});
-    if (res.statusCode >= 400) return [];
+    if (res.statusCode >= 400) throw ApiException(res.statusCode, res.body);
     final body = jsonDecode(res.body);
-    final list = body is List ? body : (body['followers'] ?? []) as List;
+    final list = body is List ? body : (body[kind] ?? []) as List;
+    if (page == 1) {
+      await _save(_followKey(uid, followers), list, maxItems: limit);
+    }
     return list.map((e) => UserModel.fromJson(e as Map<String,dynamic>)).toList();
   }
 
+  Future<List<UserModel>> getFollowers(String uid,
+      {int page = 1, int limit = followPageSize}) =>
+      _followPage(uid, true, page, limit);
+
   Future<List<UserModel>> getFollowing(String uid,
-      {int page = 1, int limit = followPageSize}) async {
-    final res = await _api.get('/users/$uid/following',
-        query: {'page': '$page', 'limit': '$limit'});
-    if (res.statusCode >= 400) return [];
-    final body = jsonDecode(res.body);
-    final list = body is List ? body : (body['following'] ?? []) as List;
-    return list.map((e) => UserModel.fromJson(e as Map<String,dynamic>)).toList();
-  }
+      {int page = 1, int limit = followPageSize}) =>
+      _followPage(uid, false, page, limit);
 
   bool _isUUID(String s) =>
       RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
@@ -328,6 +348,27 @@ class ProfileRepository {
   }
 }
 
+/// Ҳамаи профил аз кэши офлайн.
+class ProfileSnapshot {
+  final UserModel profile;
+  final List<PostModel> posts;
+  final List<ReelModel> reels;
+  final List<HighlightModel> highlights;
+  const ProfileSnapshot({
+    required this.profile,
+    this.posts = const [],
+    this.reels = const [],
+    this.highlights = const [],
+  });
+}
+
+/// Сервер гуфт, ки чунин корбар нест (404) — на хатои шабака.
+class ProfileNotFoundException implements Exception {
+  const ProfileNotFoundException();
+  @override
+  String toString() => 'ProfileNotFoundException';
+}
+
 // ── Extension methods — called by ProfileController ──────────────────────
 extension ProfileRepositoryExt on ProfileRepository {
 
@@ -336,8 +377,7 @@ extension ProfileRepositoryExt on ProfileRepository {
       {int page = 1, int limit = ProfileRepository.profilePageSize}) async {
     try {
       final res = await _api.get('/profile/saved',
-          query: {'page': '$page', 'limit': '$limit'})
-          .timeout(const Duration(seconds: 8));
+          query: {'page': '$page', 'limit': '$limit'});
       if (res.statusCode >= 400) return [];
       final body = jsonDecode(res.body);
       final list = body is List

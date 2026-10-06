@@ -8,6 +8,7 @@ import '../../core/storage/token_storage.dart';
 import '../../core/services/user_session.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
+import '../../core/error/friendly_error.dart';
 
 class RegisterState {
   final String username;
@@ -130,7 +131,7 @@ class RegisterController extends ChangeNotifier {
     } catch (e) {
       _state = _state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception:', '').trim(),
+        error: friendlyError(e),
       );
       notifyListeners();
       return false;

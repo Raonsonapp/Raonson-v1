@@ -11,6 +11,7 @@ import '../core/ui/app_icons.dart';
 import 'marketplace_models.dart';
 import 'marketplace_repository.dart';
 import 'marketplace_widgets.dart';
+import '../core/error/friendly_error.dart';
 
 class CampaignAnalyticsScreen extends StatefulWidget {
   final String campaignId;
@@ -39,7 +40,7 @@ class _CampaignAnalyticsScreenState extends State<CampaignAnalyticsScreen> {
       setState(() => _data = d);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 

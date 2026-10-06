@@ -12,6 +12,7 @@ import '../app/app_theme.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import 'ai_feed_repository.dart';
+import '../core/error/friendly_error.dart';
 
 /// Варақаи «Чаро инро мебинам?».
 Future<void> showWhyThisSheet(
@@ -54,7 +55,7 @@ class _WhyThisSheetState extends State<_WhyThisSheet> {
       setState(() => _exp = e);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 

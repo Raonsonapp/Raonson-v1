@@ -1,3 +1,5 @@
+import '../../core/error/friendly_error.dart';
+import '../../widgets/stale_data_banner.dart';
 import 'dart:async';
 import '../../models/story_model.dart';
 import '../../stories/story_seen_sync.dart';
@@ -73,18 +75,54 @@ class _ReelsVM extends ChangeNotifier {
   bool _friendsFilter = false;
   bool get friendsFilter => _friendsFilter;
 
-  Future<void> load() async {
+  /// Шабака нашуд — Reels-и охирин аз кэш нишон дода мешаванд.
+  bool isStale = false;
+
+  /// [force] — pull-to-refresh: аз шабака, на аз кэши хотира.
+  Future<void> load({bool force = false}) async {
     loading = true;
     error = null;
     notifyListeners();
+    var fromCache = false;
     try {
-      reels = await _repo.fetchReels(
-          page: 1, smart: !_friendsFilter, friends: _friendsFilter);
+      final list = await _repo.fetchReels(
+          page: 1, smart: !_friendsFilter, friends: _friendsFilter,
+          forceRefresh: force);
+      fromCache = _repo.lastFromCache;
+      if (list.isNotEmpty || reels.isEmpty || !fromCache) reels = list;
       _page = 1;
+      isStale = fromCache && force;
     } catch (e) {
-      error = e.toString();
+      // Матни фаҳмо, на `TimeoutException after 0:00:08…`.
+      if (reels.isEmpty) {
+        error = friendlyError(e);
+      } else {
+        isStale = true;
+      }
     }
     loading = false;
+    notifyListeners();
+    if (fromCache && !force) _revalidate();
+  }
+
+  /// Reels аз кэш нишон дода шуданд → дар фон аз шабака. Рӯйхати дар
+  /// экран бударо иваз намекунем (видеои ҷорӣ қатъ намешавад) — reels-и
+  /// нав ба охир илова мешаванд.
+  Future<void> _revalidate() async {
+    try {
+      final fresh = await _repo.fetchReels(
+          page: 1, smart: !_friendsFilter, friends: _friendsFilter,
+          forceRefresh: true);
+      if (_repo.lastFromCache) {
+        isStale = true;
+      } else {
+        isStale = false;
+        final ids = reels.map((r) => r.id).toSet();
+        reels = [...reels, ...fresh.where((r) => !ids.contains(r.id))];
+      }
+    } catch (_) {
+      isStale = true;
+    }
     notifyListeners();
   }
 
@@ -261,7 +299,7 @@ class _ReelsViewState extends State<_ReelsView> {
       ctrl.dispose();
     }
     _preloaded.clear();
-    await vm.load();
+    await vm.load(force: true);
     if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(0);
   }
 
@@ -299,7 +337,7 @@ class _ReelsViewState extends State<_ReelsView> {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(
                       builder: (_) => const CreateReelScreen()))
-                  .then((ok) { if (ok == true && mounted) vm.load(); });
+                  .then((ok) { if (ok == true && mounted) vm.load(force: true); });
             }),
           ListTile(
             leading: const Icon(AppIcons.link_rounded, color: Colors.white),
@@ -359,7 +397,7 @@ class _ReelsViewState extends State<_ReelsView> {
       });
       if (res.statusCode >= 400) throw Exception();
       if (mounted) {
-        vm.load();
+        vm.load(force: true);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(tr('reels.reelAdded')), backgroundColor: Colors.green));
       }
@@ -488,7 +526,8 @@ class _ReelsViewState extends State<_ReelsView> {
                 child: const Icon(AppIcons.video_collection_outlined,
                     color: Colors.white, size: 38)),
             const SizedBox(height: 20),
-            Text(tr('reels.noReels'),
+            Text(vm.error ?? tr('reels.noReels'),
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -497,9 +536,9 @@ class _ReelsViewState extends State<_ReelsView> {
             if (vm.error != null)
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(vm.error!,
+                  child: Text(tr('common.checkInternet'),
                       style: const TextStyle(
-                          color: Colors.redAccent, fontSize: 13),
+                          color: Colors.white38, fontSize: 14),
                       textAlign: TextAlign.center))
             else
               Text(tr('reels.beFirstToPost'),
@@ -511,7 +550,7 @@ class _ReelsViewState extends State<_ReelsView> {
                         MaterialPageRoute(
                             builder: (_) => const CreateReelScreen()))
                     .then((ok) {
-                  if (ok == true && context.mounted) vm.load();
+                  if (ok == true && context.mounted) vm.load(force: true);
                 }),
                 child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -540,7 +579,8 @@ class _ReelsViewState extends State<_ReelsView> {
       extendBody: true,
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.black,
-      body: RefreshIndicator(
+      body: Stack(children: [
+      RefreshIndicator(
         key: _refreshKey,
         color: Colors.white,
         backgroundColor: Colors.black54,
@@ -596,6 +636,18 @@ class _ReelsViewState extends State<_ReelsView> {
         },
       ),
       ),
+      // Шабака нашуд → Reels-и охирин аз кэш; баннери хурди шаффоф.
+      Positioned(
+        left: 0, right: 0,
+        top: MediaQuery.of(context).padding.top + 52,
+        child: IgnorePointer(
+          ignoring: !vm.isStale,
+          child: StaleDataBanner(
+              visible: vm.isStale, overlay: true,
+              onRetry: () => _refreshKey.currentState?.show()),
+        ),
+      ),
+      ]),
     );
   }
 }

@@ -13,6 +13,7 @@ import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import 'ai_feed_repository.dart';
 import 'find_people_screen.dart';
+import '../core/error/friendly_error.dart';
 
 class AiFeedScreen extends StatefulWidget {
   const AiFeedScreen({super.key});
@@ -48,7 +49,7 @@ class _AiFeedScreenState extends State<AiFeedScreen> {
       setState(() => _prefs = p);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 
@@ -74,7 +75,7 @@ class _AiFeedScreenState extends State<AiFeedScreen> {
       );
       await _load();
     } catch (e) {
-      _toast(e.toString());
+      _toast(friendlyError(e));
     }
   }
 
@@ -83,7 +84,7 @@ class _AiFeedScreenState extends State<AiFeedScreen> {
       await _repo.setTopicScore(t.slug, score);
       await _load();
     } catch (e) {
-      _toast(e.toString());
+      _toast(friendlyError(e));
     }
   }
 
@@ -100,7 +101,7 @@ class _AiFeedScreenState extends State<AiFeedScreen> {
       // 422 = «нафаҳмидам» — ин хатои система нест.
       _toast(e.statusCode == 422 ? tr('aifeed.notUnderstood') : e.message);
     } catch (e) {
-      _toast(e.toString());
+      _toast(friendlyError(e));
     }
     if (mounted) setState(() => _applying = false);
   }
@@ -138,7 +139,7 @@ class _AiFeedScreenState extends State<AiFeedScreen> {
       await _load();
       _toast(tr('aifeed.resetDone'));
     } catch (e) {
-      _toast(e.toString());
+      _toast(friendlyError(e));
     }
   }
 

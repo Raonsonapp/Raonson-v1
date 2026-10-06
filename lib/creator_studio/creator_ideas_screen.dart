@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import 'creator_studio_repository.dart';
+import '../core/error/friendly_error.dart';
 
 class CreatorIdeasScreen extends StatefulWidget {
   const CreatorIdeasScreen({super.key});
@@ -42,7 +43,7 @@ class _CreatorIdeasScreenState extends State<CreatorIdeasScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyError(e);
         _busy = false;
       });
     }

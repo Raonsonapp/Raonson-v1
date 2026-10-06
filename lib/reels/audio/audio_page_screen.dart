@@ -15,6 +15,7 @@ import '../../core/api/api_client.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../create/create_reel/create_reel_screen.dart';
+import '../../core/error/friendly_error.dart';
 
 /// Садо ҳамчун объект — ҳамон чизе, ки сервер бармегардонад.
 class ReelAudio {
@@ -92,7 +93,7 @@ class _AudioPageScreenState extends State<AudioPageScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+      setState(() => _error = friendlyError(e));
     }
   }
 

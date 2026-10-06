@@ -8,6 +8,7 @@ import '../core/ui/app_icons.dart';
 import 'marketplace_models.dart';
 import 'marketplace_repository.dart';
 import 'marketplace_widgets.dart';
+import '../core/error/friendly_error.dart';
 
 class CreatorOffersScreen extends StatefulWidget {
   const CreatorOffersScreen({super.key});
@@ -34,7 +35,7 @@ class _CreatorOffersScreenState extends State<CreatorOffersScreen> {
       setState(() => _offers = list);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 
@@ -162,7 +163,7 @@ class _OfferDetailScreenState extends State<OfferDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      showMarketplaceToast(context, e.toString(), error: true);
+      showMarketplaceToast(context, friendlyError(e), error: true);
     }
   }
 

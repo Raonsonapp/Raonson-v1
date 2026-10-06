@@ -27,6 +27,7 @@ import '../models/user_model.dart';
 import '../reels/single_reel_screen.dart';
 import '../chat/room/chat_room_screen.dart';
 import '../widgets/verified_badge.dart';
+import '../widgets/stale_data_banner.dart';
 import '../widgets/account_switcher.dart';
 import '../widgets/avatar.dart' show StoryRingFrame;
 import '../stories/story_open.dart';
@@ -37,6 +38,7 @@ import 'highlight_viewer.dart';
 import 'highlights_row.dart';
 import 'profile_controller.dart';
 import 'profile_repository.dart';
+import '../core/storage/offline_cache.dart';
 import 'profile_skeleton.dart';
 import 'share_profile_sheet.dart';
 import '../settings/settings_screen.dart';
@@ -456,23 +458,46 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     final user = _ctrl.profile;
     if (user == null) {
+      // Танҳо вақте ки кэш умуман нест. Матни хом (`TimeoutException…`)
+      // ҳеҷ гоҳ нишон дода намешавад — танҳо матни фаҳмо.
+      final notFound = _ctrl.notFound || _ctrl.error == null;
       return Scaffold(
         backgroundColor: AppColors.bg,
         appBar: AppBar(backgroundColor: AppColors.bg, elevation: 0,
-            leading: BackButton(color: AppColors.textPrimary)),
-        body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(AppIcons.person_off_rounded, size: 56, color: AppColors.textFaint),
-          const SizedBox(height: 12),
-          Text(tr('ui.4b2790adcd'),
-              style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
-          if (_ctrl.error != null)
-            Padding(padding: const EdgeInsets.all(12),
-                child: Text(_ctrl.error!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 12))),
-          TextButton(onPressed: _ctrl.loadProfile,
-              child: Text(tr('ui.040311f9a0'),
-                  style: TextStyle(color: AppColors.neonBlue))),
-        ])));
+            leading: Navigator.canPop(context)
+                ? BackButton(color: AppColors.textPrimary) : null),
+        body: RefreshIndicator(
+          color: AppColors.neonBlue,
+          backgroundColor: AppColors.card,
+          onRefresh: _ctrl.loadProfile,
+          child: LayoutBuilder(builder: (_, c) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: c.maxHeight),
+              child: Center(child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(notFound ? AppIcons.person_off_rounded
+                                : AppIcons.wifi_off_rounded,
+                      size: 56, color: AppColors.textFaint),
+                  const SizedBox(height: 12),
+                  Text(notFound ? tr('ui.4b2790adcd') : _ctrl.error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textTertiary, fontSize: 15)),
+                  if (!notFound) ...[
+                    const SizedBox(height: 6),
+                    Text(tr('common.checkInternet'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
+                  ],
+                  TextButton(onPressed: _ctrl.loadProfile,
+                      child: Text(tr('ui.040311f9a0'),
+                          style: const TextStyle(color: AppColors.neonBlue))),
+                ]),
+              )),
+            ),
+          )),
+        ));
     }
 
     final avatarUrl = user.avatar.isNotEmpty
@@ -557,6 +582,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                           onPressed: _otherMenu),
                 ]),
               )),
+
+              // Шабака нашуд → маълумоти охирин аз кэш (мисли Instagram).
+              StaleDataBanner(
+                  visible: _ctrl.isStale,
+                  onRetry: () => _refreshKey.currentState?.show()),
 
               // ── COVER BANNER (Pro) ──────────────────────────────────
               if (user.coverUrl.isNotEmpty)
@@ -1259,20 +1289,32 @@ class _ULS extends State<_UserListSheet> {
       ? _repo.getFollowers(widget.userId, page: page)
       : _repo.getFollowing(widget.userId, page: page);
 
+  /// Аввал кэш (фавран, бе интернет), баъд шабака.
   Future<void> _load() async {
-    if (!_loading) setState(() { _loading = true; _failed = false; });
-    try {
-      final list = await _page(1);
-      if (!mounted) return;
-      setState(() {
-        _list = list; _loading = false; _failed = false;
-        _hasMore = list.length >= ProfileRepository.followPageSize;
-      });
-    } catch (_) {
-      // Пеш хатои шабака скелетро то абад мечархонд.
-      if (mounted) setState(() { _loading = false; _failed = true; });
-    }
+    if (_list.isEmpty && !_loading) setState(() { _loading = true; _failed = false; });
+    final out = await loadCacheFirst<List<UserModel>>(
+      hasData: _list.isNotEmpty,
+      readCache: () => _repo.cachedFollowList(widget.userId,
+          followers: widget.isFollowers),
+      fetch: () => _page(1),
+      onData: (list, {required fromCache}) {
+        if (!mounted) return;
+        setState(() {
+          _list = list; _loading = false;
+          _hasMore = !fromCache && list.length >= ProfileRepository.followPageSize;
+        });
+      },
+    );
+    if (!mounted) return;
+    // Пеш хатои шабака скелетро то абад мечархонд.
+    setState(() {
+      _loading = false;
+      _failed = out.isFailed;
+      _stale = out.isStale;
+    });
   }
+
+  bool _stale = false;
 
   Future<void> _loadMore() async {
     if (!_hasMore || _loadingMore || _loading) return;
@@ -1336,6 +1378,7 @@ class _ULS extends State<_UserListSheet> {
           ),
         ),
         const SizedBox(height: 6),
+        StaleDataBanner(visible: _stale && !_loading, onRetry: _load),
         Expanded(child: _loading
             ? _UserListSkeleton()
             : _failed && _list.isEmpty
@@ -1345,12 +1388,18 @@ class _ULS extends State<_UserListSheet> {
                         ? 'Натиҷае нест'
                         : tr('profile.emptyYet', {'what': widget.title.toLowerCase()}),
                     style: TextStyle(color: AppColors.textFaint, fontSize: 14)))
-                : NotificationListener<ScrollNotification>(
+                : RefreshIndicator(
+                  color: AppColors.neonBlue,
+                  backgroundColor: AppColors.card,
+                  onRefresh: _load,
+                  child: NotificationListener<ScrollNotification>(
                   onNotification: (n) {
                     if (_query.isEmpty && n.metrics.extentAfter < 600) _loadMore();
                     return false;
                   },
-                  child: ListView.builder(itemCount: list.length, itemBuilder: (_, i) {
+                  child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: list.length, itemBuilder: (_, i) {
                     final u = list[i];
                     return ListTile(
                       leading: CircleAvatar(radius: 22,
@@ -1381,7 +1430,7 @@ class _ULS extends State<_UserListSheet> {
                         Navigator.push(context, MaterialPageRoute(
                             builder: (_) => ProfileScreen(userId: u.id)));
                       });
-                  }))),
+                  })))),
       ]));
   }
 }

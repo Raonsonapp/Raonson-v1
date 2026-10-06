@@ -1,5 +1,7 @@
 // lib/search/search_screen.dart
 // 100% Instagram-style: Explore → Recent → Results → Reels Feed
+import '../core/storage/offline_cache.dart';
+import '../widgets/stale_data_banner.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -175,70 +177,99 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
+  /// Explore-и охирин барои офлайн (ба корбар баста, ниг. OfflineCache).
+  static const _exploreCacheName = 'explore';
+  bool _exploreStale = false;
+
+  List<_ExploreItem> _exploreItemsFrom(Map<String, dynamic> body) {
+    // Reel-ҳо Map-и хом мемонанд — вақти гирифтанро ба онҳо менависем
+    // (ниг. ContentSync.prime: рӯйхати куҳна лайки навро пахш накунад).
+    ContentSync.stampAll(body['reels']);
+
+    final items = <_ExploreItem>[];
+
+    // Posts
+    for (final p in (body['posts'] as List? ?? [])) {
+      final post = PostModel.fromJson(p as Map<String, dynamic>);
+      // Ҳалқаи сториси муаллиф — ҳамон манбаи Home/Reels/профил.
+      StorySeenSync.instance.primeUser(post.user, fetchedAt: post.fetchedAt);
+      if (post.mediaUrl.isNotEmpty) {
+        items.add(_ExploreItem(
+          id:      post.id,
+          url:     post.mediaUrl,
+          type:    post.mediaType == 'video' ? _ItemType.video : _ItemType.image,
+          isMulti: post.media.length > 1,
+          isProduct: post.isProduct,
+          // Сервер `viewsCount` мефиристад; пеш ҷои он лайкҳо нишон
+          // дода мешуданд (ва барои «лайкҳо пинҳон» 0).
+          views:   post.viewsCount,
+          postData: post,
+        ));
+      }
+    }
+
+    // Reels
+    for (final r in (body['reels'] as List? ?? [])) {
+      final rm = r as Map<String, dynamic>;
+      StorySeenSync.instance.primeJson(rm['user'] as Map?,
+          fetchedAt: ContentSync.fetchedAtOf(rm));
+      final thumb = rm['thumbnailUrl']?.toString() ?? '';
+      final video = rm['videoUrl']?.toString() ?? '';
+      if (video.isEmpty && thumb.isEmpty) continue;
+      items.add(_ExploreItem(
+        id:    rm['_id']?.toString() ?? '',
+        url:   thumb,          // метавонад холӣ бошад
+        videoUrl: video,
+        type:  _ItemType.reel,
+        views: (rm['viewsCount'] as num?)?.toInt()
+            ?? (rm['views'] as num?)?.toInt() ?? 0,
+        reelData: rm,
+      ));
+    }
+
+    return items;
+  }
+
+  /// Аввал Explore-и охирин аз кэш (фавран, бе интернет), баъд шабака.
+  /// Шабака нашуд → грид мемонад + баннери хурд; «Натиҷае нест» танҳо
+  /// вақте ки воқеан ҳеҷ чиз нест.
   Future<void> _loadExplore() async {
-    setState(() => _exploreLoading = true);
-    try {
-      final res = await ApiClient.instance.get('/explore');
-      if (res.statusCode == 200 && mounted) {
+    setState(() => _exploreLoading = _exploreItems.isEmpty);
+    final out = await loadCacheFirst<List<_ExploreItem>>(
+      hasData: _exploreItems.isNotEmpty,
+      readCache: () async {
+        final c = await OfflineCache.get(_exploreCacheName);
+        if (c?.data is! Map) return null;
+        return _exploreItemsFrom(Map<String, dynamic>.from(c!.data as Map));
+      },
+      fetch: () async {
+        final res = await ApiClient.instance.get('/explore');
+        if (res.statusCode >= 400) throw ApiException(res.statusCode, res.body);
         final body = jsonDecode(res.body) as Map<String, dynamic>;
-        // Reel-ҳо Map-и хом мемонанд — вақти гирифтанро ба онҳо менависем
-        // (ниг. ContentSync.prime: рӯйхати куҳна лайки навро пахш накунад).
-        ContentSync.stampAll(body['reels']);
-
-        final items = <_ExploreItem>[];
-
-        // Posts
-        for (final p in (body['posts'] as List? ?? [])) {
-          final post = PostModel.fromJson(p as Map<String, dynamic>);
-          // Ҳалқаи сториси муаллиф — ҳамон манбаи Home/Reels/профил.
-          StorySeenSync.instance.primeUser(post.user, fetchedAt: post.fetchedAt);
-          if (post.mediaUrl.isNotEmpty) {
-            items.add(_ExploreItem(
-              id:      post.id,
-              url:     post.mediaUrl,
-              type:    post.mediaType == 'video' ? _ItemType.video : _ItemType.image,
-              isMulti: post.media.length > 1,
-              isProduct: post.isProduct,
-              // Сервер `viewsCount` мефиристад; пеш ҷои он лайкҳо нишон
-              // дода мешуданд (ва барои «лайкҳо пинҳон» 0).
-              views:   post.viewsCount,
-              postData: post,
-            ));
-          }
-        }
-
-        // Reels
-        for (final r in (body['reels'] as List? ?? [])) {
-          final rm = r as Map<String, dynamic>;
-          StorySeenSync.instance.primeJson(rm['user'] as Map?,
-              fetchedAt: ContentSync.fetchedAtOf(rm));
-          final thumb = rm['thumbnailUrl']?.toString() ?? '';
-          final video = rm['videoUrl']?.toString() ?? '';
-          if (video.isEmpty && thumb.isEmpty) continue;
-          items.add(_ExploreItem(
-            id:    rm['_id']?.toString() ?? '',
-            url:   thumb,          // метавонад холӣ бошад
-            videoUrl: video,
-            type:  _ItemType.reel,
-            views: (rm['viewsCount'] as num?)?.toInt()
-                ?? (rm['views'] as num?)?.toInt() ?? 0,
-            reelData: rm,
-          ));
-        }
-
+        // Вақти гирифтан бо худи постҳо дар кэш меравад — кэши куҳна
+        // лайки навтарро дар экранҳои дигар пахш намекунад.
+        ContentSync.stampAll(body['posts']);
+        final items = _exploreItemsFrom(body);
+        OfflineCache.put(_exploreCacheName, {
+          'posts': (body['posts'] as List? ?? []).take(40).toList(),
+          'reels': (body['reels'] as List? ?? []).take(40).toList(),
+        });
         // Shuffle for variety
-        items.shuffle();
-
+        return items..shuffle();
+      },
+      onData: (items, {required fromCache}) {
+        if (!mounted) return;
         setState(() {
           _exploreItems   = items;
           _exploreLoading = false;
         });
-      } else {
-        if (mounted) setState(() => _exploreLoading = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _exploreLoading = false);
-    }
+      },
+    );
+    if (!mounted) return;
+    setState(() {
+      _exploreLoading = false;
+      _exploreStale = out.error != null;
+    });
   }
 
   // ── search logic ─────────────────────────────────────────────────
@@ -570,6 +601,10 @@ class _SearchScreenState extends State<SearchScreen>
           onCancel:   _cancelSearch,
         ),
         const LiveRail(), // «Live ҳозир» — дар search (на home)
+        StaleDataBanner(
+            visible: _exploreStale && !_exploreLoading,
+            message: _exploreItems.isEmpty ? tr('net.offline') : null,
+            onRetry: _loadExplore),
         Expanded(
           child: _exploreLoading
               ? _SkeletonGrid()
@@ -579,6 +614,7 @@ class _SearchScreenState extends State<SearchScreen>
                   backgroundColor: AppColors.bg,
                   child: _ExploreGrid(
                     controller: _scroll,
+                    emptyText: _exploreStale ? tr('common.checkInternet') : null,
                     items:   _exploreItems,
                     onTap:   _openExploreAt,
                     onLongPress: _showExplorePreview,
@@ -999,22 +1035,32 @@ class _ExploreGrid extends StatelessWidget {
   /// Видеои плитка кушода нашуд.
   final void Function(String id)? onBroken;
   final ScrollController? controller;
+  /// Матни ҳолати холӣ (пешфарз «Натиҷае нест»; бе интернет — дигар).
+  final String? emptyText;
   const _ExploreGrid({required this.items, required this.onTap,
-      this.onLongPress, this.onBroken, this.controller});
+      this.onLongPress, this.onBroken, this.controller, this.emptyText});
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(AppIcons.explore_outlined,
-              size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
-          const SizedBox(height: 12),
-          Text(tr('common.noResults'),
-              style: TextStyle(
-                  color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
-        ]),
-      );
+      // Ғелонда мешавад — то кашидан ба поён (RefreshIndicator) кор кунад.
+      return LayoutBuilder(builder: (_, c) => SingleChildScrollView(
+        controller: controller,
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: c.maxHeight),
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(AppIcons.explore_outlined,
+                  size: 52, color: AppColors.textPrimary.withOpacity(0.1)),
+              const SizedBox(height: 12),
+              Text(emptyText ?? tr('common.noResults'),
+                  style: TextStyle(
+                      color: AppColors.textPrimary.withOpacity(0.3), fontSize: 14)),
+            ]),
+          ),
+        ),
+      ));
     }
 
     // Гриди quilted — айнан мисли Instagram Explore (ҳуҷайраҳои баланди reel).

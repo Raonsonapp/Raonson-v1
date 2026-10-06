@@ -4,6 +4,7 @@ import '../core/firebase_init.dart';
 import '../core/storage/token_storage.dart';
 import 'auth_repository.dart';
 import '../core/services/user_session.dart';
+import '../core/storage/offline_cache.dart';
 
 class AuthService {
   final AuthRepository _repository;
@@ -98,6 +99,8 @@ class AuthService {
     await _tokenStorage.clear();
     ApiClient.instance.setAuthToken(null);
     ApiClient.instance.setRefreshToken(null);
+    // Кэши офлайни корбари баромада (чатҳо, лента, профилҳо) пок мешавад.
+    await OfflineCache.clearViewer();
     UserSession.clear();
   }
 

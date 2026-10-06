@@ -9,6 +9,7 @@ import '../core/utils/time_ago.dart';
 import 'marketplace_models.dart';
 import 'marketplace_repository.dart';
 import 'marketplace_widgets.dart';
+import '../core/error/friendly_error.dart';
 
 class CreatorEarningsScreen extends StatefulWidget {
   const CreatorEarningsScreen({super.key});
@@ -47,7 +48,7 @@ class _CreatorEarningsScreenState extends State<CreatorEarningsScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 

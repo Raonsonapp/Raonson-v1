@@ -14,6 +14,7 @@ import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import 'creator_ideas_screen.dart';
 import 'creator_studio_repository.dart';
+import '../core/error/friendly_error.dart';
 
 class CreatorStudioScreen extends StatefulWidget {
   const CreatorStudioScreen({super.key});
@@ -50,7 +51,7 @@ class _CreatorStudioScreenState extends State<CreatorStudioScreen> {
       setState(() => _progress = p);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() => _error = friendlyError(e));
     }
   }
 
