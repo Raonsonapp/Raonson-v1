@@ -3,6 +3,7 @@ import '../models/notification_model.dart';
 import '../widgets/avatar.dart';
 import '../app/app_theme.dart';
 import '../core/api/api_client.dart';
+import '../core/services/follow_service.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/r_icon.dart';
 
@@ -31,12 +32,18 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'like':
       case 'reel_like':
       case 'note_reaction':
+      case 'comment_like':
+      case 'reel_comment_like':
       case 'story_like': return const Color(0xFFFF3040);
       case 'comment':
       case 'reel_comment': return const Color(0xFF0095F6);
-      case 'reply': return const Color(0xFF7C4DFF);
+      case 'reply':
+      case 'reel_reply': return const Color(0xFF7C4DFF);
+      case 'thanks': return const Color(0xFFE0A100);
       case 'mention': return const Color(0xFF00BCD4);
       case 'follow':
+      case 'follow_accepted':
+      case 'contact_joined':
       case 'follow_request': return const Color(0xFF00D084);
       case 'story_view':
       case 'story_poll':
@@ -54,10 +61,15 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'like':
       case 'reel_like':
       case 'note_reaction':
+      case 'comment_like':
+      case 'reel_comment_like':
       case 'story_like':
         return RIcon.like(filled: true, size: 11, color: AppColors.textPrimary);
+      case 'thanks':
+        return const Text('🤲', style: TextStyle(fontSize: 10));
       case 'comment':
       case 'reel_comment':
+      case 'reel_reply':
       case 'reply':
       case 'story_answer':
         return RIcon.comment(size: 11, color: AppColors.textPrimary);
@@ -80,6 +92,8 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'collab_invite':
       case 'collab_accepted': return AppIcons.group_add_outlined;
       case 'follow':
+      case 'follow_accepted':
+      case 'contact_joined':
       case 'follow_request': return AppIcons.person_add_rounded;
       case 'story_view': return AppIcons.remove_red_eye_rounded;
       case 'story_poll':
@@ -92,6 +106,42 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'password_changed': return AppIcons.lock_outline_rounded;
       default: return AppIcons.notifications_rounded;
     }
+  }
+
+  // «Пайравии мутақобил» / «Пайравӣ» — мисли Instagram/TikTok: дар
+  // огоҳиномаи обуна ва «аз мухотибони шумо ҳамроҳ шуд».
+  bool get _showFollowBack =>
+      (notification.type == 'follow' || notification.type == 'contact_joined') &&
+      (notification.fromUser?.id ?? '').isNotEmpty;
+
+  Widget _followBackAction() {
+    final u = notification.fromUser!;
+    return ValueListenableBuilder<Map<String, bool>>(
+      valueListenable: FollowService.instance.states,
+      builder: (_, __, ___) {
+        final following = FollowService.instance.resolve(u.id, u.isFollowing);
+        final requested = FollowService.instance.isRequested(u.id);
+        final label = following
+            ? 'Пайравӣ шуд'
+            : requested
+                ? 'Дархост'
+                : notification.type == 'follow' ? 'Пайравии мутақобил' : 'Пайравӣ';
+        final filled = !following && !requested;
+        // Экрани танг (320dp, ҳарфи калон): тугма хурд мешавад, на
+        // аз сатр берун мебарояд.
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 112),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: _requestButton(
+                label,
+                filled ? const Color(0xFF0095F6) : AppColors.card,
+                filled ? Colors.white : AppColors.textPrimary,
+                () => FollowService.instance.toggle(u.id, following)),
+          ),
+        );
+      },
+    );
   }
 
   // Қабул/Рад-и дархости пайравӣ — мисли friends_screen.
@@ -265,6 +315,10 @@ class _NotificationItemState extends State<NotificationItem> {
           if (notification.type == 'follow_request') ...[
             const SizedBox(width: 8),
             _requestActions(),
+          ],
+          if (_showFollowBack) ...[
+            const SizedBox(width: 8),
+            _followBackAction(),
           ],
           if (notification.type == 'collab_invite') ...[
             const SizedBox(width: 8),

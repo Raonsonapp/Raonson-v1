@@ -21,6 +21,7 @@ import '../auth/password/recovery_status.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../core/api/api_client.dart';
+import '../friends/friends_screen.dart' show contactsJoinedLabel;
 import '../core/i18n/strings.dart';
 import '../core/ui/tajikshop_brand.dart';
 import '../core/services/user_session.dart';
@@ -759,10 +760,62 @@ class _NotifState extends State<NotificationsScreen> {
   bool _creator         = true;
   bool _achievements    = true;
 
+  // «Ба ман хабар деҳ, вақте ки мухотибонам ҳамроҳ мешаванд».
+  // Розигӣ танҳо аз экрани «Дӯстон → Контактҳо» дода мешавад.
+  bool _contactsConsent = false;
+  bool _contactsNotify  = false;
+  int  _contactsStored  = 0;
+
   @override
   void initState() {
     super.initState();
     _load();
+    _loadContacts();
+  }
+
+  Future<void> _loadContacts() async {
+    try {
+      final res = await ApiClient.instance.get('/contacts/settings');
+      if (res.statusCode != 200 || !mounted) return;
+      final b = jsonDecode(res.body) as Map<String, dynamic>;
+      setState(() {
+        _contactsConsent = b['consent'] == true;
+        _contactsNotify  = b['notifyJoined'] == true;
+        _contactsStored  = (b['stored'] as num?)?.toInt() ?? 0;
+      });
+    } catch (_) {/* танзими ихтиёрӣ */}
+  }
+
+  Future<void> _setContactsNotify(bool v) async {
+    if (!_contactsConsent) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(
+          'Аввал дар «Дӯстон → Контактҳо» мухотибонро пайваст кунед')));
+      return;
+    }
+    setState(() => _contactsNotify = v);
+    try {
+      await ApiClient.instance.putOk('/contacts/settings',
+          body: {'notifyJoined': v});
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _contactsNotify = !v);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Танзимот нигоҳ дошта нашуд. Боз кӯшиш кунед.')));
+    }
+  }
+
+  Future<void> _forgetContacts() async {
+    try {
+      await ApiClient.instance.deleteOk('/contacts');
+      if (!mounted) return;
+      setState(() {
+        _contactsConsent = false;
+        _contactsNotify = false;
+        _contactsStored = 0;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Мухотибон аз сервер нест карда шуданд')));
+    } catch (_) {}
   }
 
   Future<void> _load() async {
@@ -926,6 +979,26 @@ class _NotifState extends State<NotificationsScreen> {
                   onChanged: (v) {
                     setState(() => _achievements = v); _save(() => _achievements = !v);
                   }),
+              const _ThinDiv(),
+              _SwTile(icon: AppIcons.person_add_rounded,
+                  title: contactsJoinedLabel,
+                  sub: _contactsConsent
+                      ? 'Мухотибони нигоҳдошта (хеш): $_contactsStored'
+                      : 'Барои фаъол кардан мухотибонро дар «Дӯстон» пайваст кунед',
+                  value: _contactsNotify,
+                  onChanged: _setContactsNotify),
+              if (_contactsConsent)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 60),
+                    child: TextButton(
+                      onPressed: _forgetContacts,
+                      child: const Text('Мухотибонро аз сервер нест кардан',
+                          style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                    ),
+                  ),
+                ),
               Divider(color: AppColors.dividerFaint, height: 28, indent: 16, endIndent: 16),
               _SwTile(icon: AppIcons.notifications_rounded,
                   title: tr('ui.f694047b90'), sub: 'Огоҳиҳои телефонӣ',

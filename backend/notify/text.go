@@ -71,6 +71,31 @@ var bodies = map[Kind]map[Lang]string{
 		RU: "упомянул(а) вас в комментарии к Reels",
 		EN: "mentioned you in a Reels comment",
 	},
+	CommentLike: {
+		TJ: "шарҳи шуморо писандид",
+		RU: "понравился ваш комментарий",
+		EN: "liked your comment",
+	},
+	ReelCommentLike: {
+		TJ: "шарҳи шуморо дар Reel писандид",
+		RU: "понравился ваш комментарий к Reels",
+		EN: "liked your comment on a reel",
+	},
+	ReelCommentReply: {
+		TJ: "ба шарҳи шумо дар Reel ҷавоб дод",
+		RU: "ответил(а) на ваш комментарий к Reels",
+		EN: "replied to your comment on a reel",
+	},
+	ContactJoined: {
+		TJ: "аз мухотибони шумо ба Raonson ҳамроҳ шуд",
+		RU: "из ваших контактов присоединился(ась) к Raonson",
+		EN: "from your contacts joined Raonson",
+	},
+	Thanks: {
+		TJ: "ба шумо «Раҳмат» гуфт 🤲",
+		RU: "сказал(а) вам «Спасибо» 🤲",
+		EN: "said \"Thank you\" to you 🤲",
+	},
 	Mention: {
 		TJ: "шуморо зикр кард",
 		RU: "упомянул(а) вас",
@@ -322,11 +347,15 @@ func Link(k Kind, targetID, actorName string) string {
 		if targetID != "" {
 			return "/post/" + targetID
 		}
-	case ReelLike, ReelReply, ReelMention:
+	case CommentLike:
+		if targetID != "" {
+			return "/post/" + targetID
+		}
+	case ReelLike, ReelReply, ReelMention, ReelCommentLike, ReelCommentReply:
 		if targetID != "" {
 			return "/reel/" + targetID
 		}
-	case Follow, FollowRequest, FollowAccepted:
+	case Follow, FollowRequest, FollowAccepted, ContactJoined, Thanks:
 		if actorName != "" {
 			return "/profile/" + actorName
 		}

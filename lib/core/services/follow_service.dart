@@ -17,6 +17,21 @@ bool isFollowRequested(String body) {
   }
 }
 
+/// Манбаи обуна: корти пост, рилс, Explore ё шарҳҳои ҳамон пост.
+///
+/// Сервер онро танҳо вақте қабул мекунад, ки пост/рилс аз они ҳамон
+/// касе бошад, ки ба ӯ обуна мешаванд.
+class FollowSource {
+  final String kind; // 'post' | 'reel'
+  final String id;
+  const FollowSource._(this.kind, this.id);
+  const FollowSource.post(String id) : this._('post', id);
+  const FollowSource.reel(String id) : this._('reel', id);
+
+  Map<String, dynamic>? toJson() =>
+      id.isEmpty ? null : {'sourceKind': kind, 'sourceId': id};
+}
+
 class FollowService {
   FollowService._();
   static final FollowService instance = FollowService._();
@@ -96,7 +111,11 @@ class FollowService {
   /// нест. Пеш тугма «Пайравӣ шуд» мешуд ва ҳамин тавр мемонд, гӯё
   /// корбар аллакай обуна бошад. Акнун «Дархост» нишон дода мешавад ва
   /// пахши дубора дархостро бекор мекунад (мисли Instagram).
-  Future<bool> toggle(String userId, bool currentlyFollowing) async {
+  ///
+  /// [source] — аз куҷо обуна шуд (пост ё Reel), барои омори соҳиб
+  /// «Обуначиён аз ин пост». Танҳо ҳангоми обуна фиристода мешавад.
+  Future<bool> toggle(String userId, bool currentlyFollowing,
+      {FollowSource? source}) async {
     if (_inFlight.contains(userId)) return currentlyFollowing;
     final cancelRequest = !currentlyFollowing && _requested.contains(userId);
     _inFlight.add(userId);
@@ -109,7 +128,8 @@ class FollowService {
       // бастани ҳисоб) хато ҳисоб намешуд ва дар экран «Обуна шуд»
       // мемонд, ҳол он ки дар сервер ҳеҷ чиз нашуда буд.
       if (next) {
-        final res = await ApiClient.instance.postOk('/follow/$userId');
+        final res = await ApiClient.instance
+            .postOk('/follow/$userId', body: source?.toJson());
         requested = isFollowRequested(res.body);
       } else {
         await ApiClient.instance.deleteOk('/follow/$userId');

@@ -1095,10 +1095,19 @@ func GetNotifications(c *gin.Context) {
 
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT n.id,n.type,n.target_id,n.read,n.created_at,
-		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false)
+		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),
+		       -- Барои тугмаи «Пайравии мутақобил» дар огоҳиномаи обуна.
+		       EXISTS(SELECT 1 FROM follows f
+		               WHERE f.follower_id=$1 AND f.following_id=u.id)
 		FROM notifications n
 		LEFT JOIN users u ON u.id=n.from_user_id
 		WHERE n.user_id=$1
+		  -- Огоҳиномае, ки ПЕШ аз бастан омада буд, баъди бастан
+		  -- дар рӯйхат намемонад (мисли Instagram).
+		  AND (n.from_user_id IS NULL OR NOT EXISTS (
+		       SELECT 1 FROM blocks b
+		        WHERE (b.blocker_id=$1 AND b.blocked_id=n.from_user_id)
+		           OR (b.blocker_id=n.from_user_id AND b.blocked_id=$1)))
 		ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset)
 	if err != nil {
@@ -1111,16 +1120,17 @@ func GetNotifications(c *gin.Context) {
 	for rows.Next() {
 		var nid, ntype string
 		var targetID, uid, uname, uavatar *string
-		var read, verified bool
+		var read, verified, following bool
 		var createdAt interface{}
 		rows.Scan(&nid, &ntype, &targetID, &read, &createdAt,
-			&uid, &uname, &uavatar, &verified)
+			&uid, &uname, &uavatar, &verified, &following)
 		n := gin.H{"_id": nid, "type": ntype, "read": read, "createdAt": createdAt}
 		if targetID != nil { n["targetId"] = *targetID }
 		if uid != nil {
 			n["fromUser"] = gin.H{
 				"_id": *uid, "username": *uname,
 				"avatar": *uavatar, "verified": verified,
+				"isFollowing": following,
 			}
 		}
 		notifs = append(notifs, n)

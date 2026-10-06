@@ -22,6 +22,9 @@ func FindUsersByContacts(c *gin.Context) {
 
 	var body struct {
 		Phones []string `json:"phones"` // ["992901234567", "+992901234567", ...]
+		// Розигии ошкор: мухотибон (танҳо ҳамчун хеш) нигоҳ дошта
+		// шаванд, то вақте яке аз онҳо ҳамроҳ шавад, хабар ояд.
+		Consent bool `json:"consent"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || len(body.Phones) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "phones array required"})
@@ -53,6 +56,9 @@ func FindUsersByContacts(c *gin.Context) {
 				cleaned = append(cleaned, n)
 			}
 		}
+	}
+	if body.Consent {
+		storeContactHashes(context.Background(), myID, cleaned)
 	}
 	if len(cleaned) == 0 {
 		c.JSON(http.StatusOK, gin.H{"users": []gin.H{}})

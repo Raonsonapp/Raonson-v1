@@ -323,6 +323,7 @@ func toggleCommentLike(c *gin.Context, cid string) {
 				`UPDATE comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
 			db.Pool.Exec(context.Background(),
 				`UPDATE reel_comments SET likes_count=likes_count+1 WHERE id=$1`, cid)
+			notifyCommentLike(cid, author, myID)
 		}
 	}
 	mw.InvalidateUserCache(myID)
@@ -407,6 +408,13 @@ func FollowUser(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
 		return
 	}
+	// Манбаи обуна (ихтиёрӣ): аз кадом пост/Reel обуна шуд — барои
+	// омори «Обуначиён аз ин пост». Бадани холӣ ҳам дуруст аст.
+	var src struct {
+		SourceKind string `json:"sourceKind"`
+		SourceID   string `json:"sourceId"`
+	}
+	_ = c.ShouldBindJSON(&src)
 	var alreadyFollowing bool
 	db.Pool.QueryRow(context.Background(),
 		`SELECT EXISTS(SELECT 1 FROM follows WHERE follower_id=$1::text AND following_id=$2::text)`,
@@ -419,6 +427,7 @@ func FollowUser(c *gin.Context) {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO follow_requests(requester_id,target_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
 			myID, targetID)
+		recordFollowSource(myID, targetID, src.SourceKind, src.SourceID)
 		notify(targetID, myID, "follow_request", myID)
 		pushNotify(targetID, myID, "follow_request", myID, "мехоҳад обуна шавад")
 		c.JSON(http.StatusOK, gin.H{"requested": true})
@@ -439,6 +448,7 @@ func FollowUser(c *gin.Context) {
 		`UPDATE users SET followers_count=followers_count+1 WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET following_count=following_count+1 WHERE id=$1`, myID)
+	recordFollowSource(myID, targetID, src.SourceKind, src.SourceID)
 	notify(targetID, myID, "follow", myID)
 
 	// Cache-и middleware-и ду корбарро пок мекунем, то ҳисоби followers/
@@ -478,6 +488,11 @@ func UnfollowUser(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"following": false})
 		return
 	}
+	// Манбаи обуна бо худи обуна меравад: обунаи дубора аз пости дигар
+	// бояд ба ҳамон пост ҳисоб шавад, на ба кӯҳна.
+	db.Pool.Exec(context.Background(),
+		`DELETE FROM follow_sources WHERE follower_id=$1 AND followee_id=$2`,
+		myID, targetID)
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET followers_count=GREATEST(followers_count-1,0) WHERE id=$1`, targetID)
 	db.Pool.Exec(context.Background(),
@@ -519,6 +534,20 @@ func AcceptRequest(c *gin.Context) {
 	notify(rid, myID, "follow_accepted", myID)
 	pushNotify(rid, myID, "follow_accepted", myID, "")
 
+	// Мисли Instagram: дархост дар рӯйхати соҳиб ба «… ба шумо обуна
+	// шуд» табдил меёбад. Пеш сатри «дархост» бо тугмаҳои Қабул/Рад
+	// абадӣ мемонд, гарчанде дархост дигар набуд.
+	db.Pool.Exec(context.Background(), `
+		UPDATE notifications SET type='follow', read=TRUE
+		 WHERE user_id=$1 AND from_user_id=$2 AND type='follow_request'
+		   AND NOT EXISTS (SELECT 1 FROM notifications n2
+		        WHERE n2.user_id=$1 AND n2.from_user_id=$2 AND n2.type='follow')`,
+		myID, rid)
+	db.Pool.Exec(context.Background(), `
+		DELETE FROM notifications
+		 WHERE user_id=$1 AND from_user_id=$2 AND type='follow_request'`,
+		myID, rid)
+
 	c.JSON(http.StatusOK, gin.H{"accepted": true})
 }
 
@@ -526,8 +555,15 @@ func AcceptRequest(c *gin.Context) {
 func RejectRequest(c *gin.Context) {
 	rid := c.Param("id")
 	myID := mw.UID(c)
-	db.Pool.Exec(context.Background(),
-		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`, rid, myID)
+	if tag, err := db.Pool.Exec(context.Background(),
+		`DELETE FROM follow_requests WHERE requester_id=$1::text AND target_id=$2::text`,
+		rid, myID); err == nil && tag.RowsAffected() > 0 {
+		// Дархости радшуда дар рӯйхат бо тугмаҳои Қабул/Рад намемонад.
+		db.Pool.Exec(context.Background(), `
+			DELETE FROM notifications
+			 WHERE user_id=$1 AND from_user_id=$2 AND type='follow_request'`,
+			myID, rid)
+	}
 	c.JSON(http.StatusOK, gin.H{"rejected": true})
 }
 
@@ -1054,6 +1090,17 @@ func AddReelComment(c *gin.Context) {
 		`UPDATE reels SET comments_count=comments_count+1 WHERE id=$1`, rid)
 	notify(owner, myID, "reel_comment", rid)
 	pushNotify(owner, myID, "reel_comment", rid, "ба Reel-и шумо шарҳ гузошт")
+	// Ҷавоб — муаллифи шарҳи волид ҳам мефаҳмад (мисли шарҳи пост).
+	// Пеш танҳо соҳиби Reel хабар мегирифт.
+	if b.ParentID != "" {
+		var parentOwner string
+		db.Pool.QueryRow(context.Background(),
+			`SELECT user_id FROM reel_comments WHERE id=$1`, b.ParentID).Scan(&parentOwner)
+		if parentOwner != "" && parentOwner != myID && parentOwner != owner {
+			notify(parentOwner, myID, "reel_reply", rid)
+			pushNotify(parentOwner, myID, "reel_reply", rid, "")
+		}
+	}
 	notifyMentions(myID, "reel_mention", rid, b.Text, "шуморо дар шарҳи Reel зикр кард")
 	maybeAutoDM("reel", rid, owner, myID, b.Text)
 	mw.InvalidateUserCache(myID)

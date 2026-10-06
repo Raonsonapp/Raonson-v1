@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../core/api/api_client.dart';
 import '../app/app_theme.dart';
+import '../core/services/notification_badge_controller.dart';
 
 // ── Notification badge ValueNotifier ────────────────────────────────
 class NotificationService {
@@ -10,6 +11,9 @@ class NotificationService {
   static Timer? _timer;
 
   static void startPolling() {
+    // Сокет ҳар огоҳиномаи навро фавран мефиристад — бейҷи дил ҳам
+    // бояд бо он якхела бошад (пеш то 30 сония дер мемонд).
+    NotificationBadgeController.onChanged = (c) => unreadCount.value = c;
     _timer?.cancel();
     _fetchCount();
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => _fetchCount());
@@ -29,6 +33,7 @@ class NotificationService {
         final body = jsonDecode(res.body);
         final count = (body['count'] ?? body['unreadCount'] ?? 0) as int;
         unreadCount.value = count;
+        NotificationBadgeController.instance.setCount(count);
       }
     } catch (_) {}
   }

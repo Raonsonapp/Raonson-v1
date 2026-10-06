@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"raonson/db"
+	ntf "raonson/notify"
+	"raonson/sockets"
 )
 
 // mentionRe як @username-ро аз матн ҷудо мекунад (2..30 аломат: ҳарф, рақам, _ ё .).
@@ -65,27 +67,63 @@ func notifyMentions(fromID, ntype, targetID, text, bodyTmpl string) {
 //   - Дар background иҷро мешавад, то ҷавоби лайк/коммент/обуна тезтар бошад
 //     (дар миқёси калон барнома шах намешавад).
 //   - Барои ҳамон (гиранда, фиристанда, навъ, объект) дубликат намесозад.
+//   - Барномаи кушодаро фавран огоҳ мекунад (сокет `notification:new`).
 func notify(userID, fromID, ntype, targetID string) {
 	if userID == "" || userID == fromID {
 		return
 	}
-	go func() {
-		// Push аллакай блокро месанҷид, вале сатри огоҳинома не —
-		// басташуда дар рӯйхати «Огоҳиномаҳо» ҳамоно пайдо мешуд.
-		if IsBlockedBetween(userID, fromID) {
-			return
-		}
-		ct, err := db.Pool.Exec(context.Background(), `
-			UPDATE notifications
-			   SET created_at=NOW(), read=FALSE, is_read=FALSE
-			 WHERE user_id=$1 AND from_user_id=$2 AND type=$3
-			   AND COALESCE(target_id,'')=COALESCE($4,'')`,
-			userID, fromID, ntype, targetID)
-		if err == nil && ct.RowsAffected() > 0 {
-			return
-		}
-		db.Pool.Exec(context.Background(), `
+	go notifySync(userID, fromID, ntype, targetID)
+}
+
+// notifySync — ҳамон notify, вале дар ҳамин goroutine (барои ҷойҳое,
+// ки аллакай дар background ҳастанд). true — сатр навишта/нав шуд.
+func notifySync(userID, fromID, ntype, targetID string) bool {
+	if userID == "" || userID == fromID {
+		return false
+	}
+	// Push аллакай блокро месанҷид, вале сатри огоҳинома не —
+	// басташуда дар рӯйхати «Огоҳиномаҳо» ҳамоно пайдо мешуд.
+	if IsBlockedBetween(userID, fromID) {
+		return false
+	}
+	ct, err := db.Pool.Exec(context.Background(), `
+		UPDATE notifications
+		   SET created_at=NOW(), read=FALSE, is_read=FALSE
+		 WHERE user_id=$1 AND from_user_id=$2 AND type=$3
+		   AND COALESCE(target_id,'')=COALESCE($4,'')`,
+		userID, fromID, ntype, targetID)
+	if err != nil || ct.RowsAffected() == 0 {
+		if _, err := db.Pool.Exec(context.Background(), `
 			INSERT INTO notifications(user_id, from_user_id, type, target_id)
-			VALUES($1,$2,$3,$4)`, userID, fromID, ntype, targetID)
-	}()
+			VALUES($1,$2,$3,$4)`, userID, fromID, ntype, targetID); err != nil {
+			return false
+		}
+	}
+	emitNotifNew(userID, ntype)
+	return true
+}
+
+// emitNotifNew барномаи КУШОДАРО огоҳ мекунад: бейҷ ва рӯйхат.
+//
+// ⚠️ Барнома кайҳо ба `notification:new` гӯш медод (бейҷи навбари
+// поён), вале сервер онро ҲЕҶ ГОҲ намефиристод. Барои ҳамин касе
+// обуна мешуд — ва то бозкушоии барнома ҳеҷ нишона пайдо намешуд.
+// Шумораи нахондашуда ҳамроҳ меравад, то барнома худаш ҳисоб накунад
+// (ду манбаъ — ду рақам).
+func emitNotifNew(userID, ntype string) {
+	var unread int
+	db.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND read=FALSE`,
+		userID).Scan(&unread)
+	sockets.EmitToUser(userID, "notification:new", map[string]interface{}{
+		"type": ntype, "unreadCount": unread,
+	})
+}
+
+func init() {
+	// Огоҳиномаҳое, ки бевосита аз қабати notify навишта мешаванд
+	// (ҷамъбасти ҳафта, реклама) ҳам барномаи кушодаро огоҳ кунанд.
+	ntf.OnRowWritten = func(userID string, k ntf.Kind) {
+		emitNotifNew(userID, string(k))
+	}
 }

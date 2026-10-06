@@ -11,6 +11,10 @@ import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
 import '../marketplace/marketplace_widgets.dart' show ErrorState;
 
+/// Матни розигӣ/танзим — дар диалоги мухотибон ва дар «Танзимот».
+const contactsJoinedLabel =
+    'Ба ман хабар деҳ, вақте ки мухотибонам ҳамроҳ мешаванд';
+
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
 
@@ -125,27 +129,49 @@ class _FriendsScreenState extends State<FriendsScreen>
     if (_loadingContacts) return;
 
     if (!mounted) return;
+    // Розигии ОШКОР: ҷустуҷӯ ва «хабар деҳ…» ду чизи ҷудоанд. Бе қайд
+    // рақамҳо танҳо барои ҷустуҷӯ истифода мешаванд ва нигоҳ дошта
+    // намешаванд (backend/handlers/contacts_join.go).
+    var notifyJoined = true;
     final proceed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(tr('ui.debaed5e5d'),
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: Text(
-          'Raonson рақамҳои телефони контактҳои шуморо бо сервер муқоиса мекунад, '
-          'то дӯстони шуморо пайдо кунад. Рақамҳо нигоҳ дошта намешаванд.',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text(tr('ui.debaed5e5d'),
+              style: TextStyle(color: AppColors.textPrimary)),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(
+              'Raonson рақамҳои телефони контактҳои шуморо бо сервер муқоиса '
+              'мекунад, то дӯстони шуморо пайдо кунад. Рақамҳо ба ҳеҷ кас '
+              'нишон дода намешаванд.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: notifyJoined,
+              onChanged: (v) => setD(() => notifyJoined = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(contactsJoinedLabel,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13.5)),
+              subtitle: Text(
+                  'Рақамҳо танҳо ҳамчун хеши рамзгузошта нигоҳ дошта мешаванд. '
+                  'Дар «Танзимот → Огоҳиҳо» хомӯш ё нест карда метавонед.',
+                  style: TextStyle(color: AppColors.textFaint, fontSize: 11.5)),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textFaint)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(tr('ui.56236958eb'), style: TextStyle(color: AppColors.neonBlue)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(tr('ui.47ba09d086'), style: TextStyle(color: AppColors.textFaint)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(tr('ui.56236958eb'), style: TextStyle(color: AppColors.neonBlue)),
-          ),
-        ],
       ),
     );
     if (proceed != true) return;
@@ -177,7 +203,8 @@ class _FriendsScreenState extends State<FriendsScreen>
 
       // 2. Рақамҳоро ба сервер фиристем → корбарони мувофиқро бармегардонад
       final res = await ApiClient.instance
-          .post('/users/find-by-contacts', body: {'phones': phones.toList()})
+          .post('/users/find-by-contacts',
+              body: {'phones': phones.toList(), 'consent': notifyJoined})
           .timeout(Duration(seconds: 12));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);

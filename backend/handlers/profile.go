@@ -127,6 +127,9 @@ func ChangePhone(c *gin.Context) {
 		return
 	}
 	mw.CacheDel("profile:me:" + myID)
+	if phone != "" {
+		announceContactJoined(myID)
+	}
 	c.JSON(http.StatusOK, gin.H{"phone": phone})
 }
 

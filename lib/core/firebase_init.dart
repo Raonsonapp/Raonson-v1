@@ -34,6 +34,7 @@ import 'links/deep_links.dart';
 import 'notifications/active_chat.dart';
 import 'notifications/notification_channels.dart';
 import 'notifications/upload_notifier.dart';
+import 'services/notification_badge_controller.dart';
 
 // Background/terminated.
 //
@@ -221,6 +222,11 @@ class FirebaseInit {
     if (call != null) {
       CallCoordinator.instance.onPushIncoming(call);
       return;
+    }
+    // Огоҳиномаи иҷтимоӣ дар барномаи кушода — бейҷ фавран нав шавад
+    // (паём бейҷи худро дар чат дорад).
+    if (msg.data['type']?.toString() != 'message') {
+      NotificationBadgeController.instance.refresh();
     }
     final n = msg.notification;
     if (n == null) return;

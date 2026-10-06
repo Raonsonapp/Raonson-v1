@@ -58,6 +58,9 @@ func pushNotify(userID, fromID, ntype, targetID, body string) {
 		ActorID:  fromID,
 		Kind:     ntf.Kind(ntype),
 		TargetID: targetID,
+		// Ҳар паём/шарҳ — ҳодисаи нав; обунаи дубора — баъди як соат
+		// боз хабар. Пеш калид абадӣ буд (ниг. ntf.RepeatSuffix).
+		DedupeSuffix: ntf.RepeatSuffix(ntf.Kind(ntype), time.Now()),
 	})
 }
 

@@ -17,6 +17,10 @@ class UserModel {
   /// Ҷонишинҳо — «she/her», «ӯ» (мисли Instagram).
   final String  pronouns;
   final bool    isFollowing;
+  /// Сервер `isFollowing`-ро воқеан фиристод (на пешфарзи `false`).
+  /// Бе ин тугмаи «Пайравӣ» дар корти пост ба касе, ки аллакай обуна
+  /// ҳастӣ, пайдо мешуд.
+  final bool    followKnown;
   final bool    isBlocked;
   /// Дар «Дӯстдоштаҳо»-и ман аст (мисли Instagram Favorites).
   final bool    isFavorite;
@@ -48,6 +52,7 @@ class UserModel {
     this.website,
     this.pronouns          = '',
     this.isFollowing       = false,
+    this.followKnown       = false,
     this.isBlocked         = false,
     this.isFavorite        = false,
     this.followRequestSent = false,
@@ -87,6 +92,7 @@ class UserModel {
     website:          j['website']?.toString(),
     pronouns:         j['pronouns']?.toString() ?? '',
     isFollowing:      j['isFollowing']       == true,
+    followKnown:      j['isFollowing'] is bool,
     isBlocked:        j['isBlocked']         == true,
     isFavorite:       j['isFavorite']        == true,
     followRequestSent:j['followRequestSent'] == true,
@@ -167,6 +173,7 @@ class UserModel {
     followingCount:  followingCount  ?? this.followingCount,
     bio:             bio             ?? this.bio,
     isFollowing:     isFollowing     ?? this.isFollowing,
+    followKnown:     isFollowing != null || followKnown,
     isBlocked:       isBlocked       ?? this.isBlocked,
     isFavorite:      isFavorite      ?? this.isFavorite,
     followRequestSent: followRequestSent ?? this.followRequestSent,

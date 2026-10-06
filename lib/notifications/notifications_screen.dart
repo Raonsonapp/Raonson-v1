@@ -23,6 +23,8 @@ import '../core/services/notification_badge_controller.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import 'notification_badge.dart';
+import '../core/services/user_session.dart';
+import '../thanks/thanks_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -143,7 +145,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'comment':
       case 'reply':
       case 'mention':
+      case 'comment_like':
         await _openPost(n.targetId);
+        break;
+      case 'thanks':
+        // «Раҳмат» дар профили ХУДИ ман аст.
+        final me = UserSession.userId ?? '';
+        if (me.isNotEmpty) {
+          Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ThanksScreen(userId: me, username: '')));
+        }
         break;
       case 'collab_accepted':
         await _openPost(n.targetId);
@@ -151,6 +162,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'reel_like':
       case 'reel_comment':
       case 'reel_mention':
+      case 'reel_comment_like':
+      case 'reel_reply':
         await _openReel(n.targetId);
         break;
       case 'collab_invite':
@@ -165,6 +178,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'follow':
       case 'follow_request':
       case 'follow_accepted':
+      case 'contact_joined':
       case 'story_addyours':
       case 'gift':
       case 'recommended_creator':

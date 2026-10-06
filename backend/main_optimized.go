@@ -403,6 +403,16 @@ func main() {
 	}
 	r.POST("/unfollow/:id", auth, handlers.UnfollowUser)
 
+	// Мухотибон: розигӣ ва «хабар деҳ, вақте мухотибонам ҳамроҳ мешаванд».
+	r.GET("/contacts/settings", auth, rl100, handlers.GetContactSettings)
+	r.PUT("/contacts/settings", auth, rl20, handlers.UpdateContactSettings)
+	r.DELETE("/contacts", auth, rl20, handlers.DeleteContacts)
+
+	// «Раҳмат» — ташаккурномаи кӯтоҳ дар профил.
+	r.GET("/users/:id/thanks", auth, rl100, handlers.GetThanks)
+	r.POST("/users/:id/thanks", auth, rl20, handlers.SendThanks)
+	r.DELETE("/thanks/:id", auth, rl20, handlers.DeleteThanks)
+
 	re := r.Group("/reels", auth, rl100)
 	{
 		re.GET("/",              cache3s, handlers.GetReels)

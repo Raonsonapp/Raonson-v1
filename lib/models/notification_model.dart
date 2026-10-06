@@ -29,6 +29,17 @@ class NotificationModel {
       case 'mention': return 'шуморо зикр кард';
       case 'follow': return 'шуморо пайравӣ кард';
       case 'follow_request': return 'дархости пайравӣ фиристод';
+      // Пеш ин навъҳо ба «бо шумо амал кард»-и умумӣ меафтоданд.
+      case 'follow_accepted': return 'дархости пайравии шуморо қабул кард';
+      case 'comment_like': return 'шарҳи шуморо писандид';
+      case 'reel_comment_like': return 'шарҳи шуморо дар Reels писандид';
+      case 'reel_reply': return 'ба шарҳи шумо дар Reels ҷавоб дод';
+      case 'contact_joined': return 'аз мухотибони шумо ба Raonson ҳамроҳ шуд';
+      case 'thanks': return 'ба шумо «Раҳмат» гуфт 🤲';
+      case 'gift': return 'ба шумо ситора тӯҳфа кард ⭐';
+      case 'story_addyours': return 'ба «Навбати ту»-и шумо ҳамроҳ шуд';
+      case 'referral_joined': return 'бо даъвати шумо ҳамроҳ шуд';
+      case 'recommended_creator': return '— шояд ба шумо писанд ояд';
       case 'reel_like': return 'Reels-атро писанд кард';
       case 'reel_comment': return 'ба Reels-ат шарҳ навишт';
       case 'story_like': return 'Сторисататро писанд кард';

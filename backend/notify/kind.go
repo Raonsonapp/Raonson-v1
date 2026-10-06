@@ -5,6 +5,11 @@
 // вагарна ҳар handler қоидаи худро месохт.
 package notify
 
+import (
+	"strconv"
+	"time"
+)
+
 // Kind — намуди огоҳинома.
 type Kind string
 
@@ -24,6 +29,16 @@ const (
 	Mention        Kind = "mention"
 	// Зикр дар шарҳи Reel — линкаш /reel/, на /post/ (пеш «линк дастнорас»).
 	ReelMention Kind = "reel_mention"
+	// Лайки шарҳ (мисли Instagram «шарҳи шуморо писандид»). TargetID —
+	// пост ё Reel, ки шарҳ дар он аст.
+	CommentLike     Kind = "comment_like"
+	ReelCommentLike Kind = "reel_comment_like"
+	// Ҷавоб ба шарҳ дар Reel — линкаш /reel/ (Reply ба /post/ мебарад).
+	ReelCommentReply Kind = "reel_reply"
+	// Касе аз мухотибони телефони шумо ба Raonson ҳамроҳ шуд (TikTok).
+	ContactJoined Kind = "contact_joined"
+	// «Раҳмат» — ташаккурномаи кӯтоҳ, ки дар профил мемонад.
+	Thanks Kind = "thanks"
 
 	// Чат.
 	Message Kind = "message"
@@ -132,6 +147,14 @@ var rules = map[Kind]Rule{
 	FollowAccepted: {Normal, ChannelSocial, "followers", false},
 	Mention:        {Normal, ChannelSocial, "mentions", false},
 	ReelMention:    {Normal, ChannelSocial, "mentions", false},
+	// Лайки шарҳ — мисли лайк: ҷамъ мешавад ва бо «likes» хомӯш мешавад.
+	CommentLike:      {Normal, ChannelSocial, "likes", true},
+	ReelCommentLike:  {Normal, ChannelSocial, "likes", true},
+	ReelCommentReply: {Normal, ChannelSocial, "comments", false},
+	// Аҳамияти паст: хабари хуш, вале таъхирпазир. Танзими алоҳида
+	// (users.contacts_join_notify) пеш аз сохтани сатр санҷида мешавад.
+	ContactJoined: {Low, ChannelSocial, "followers", false},
+	Thanks:        {Normal, ChannelSocial, "mentions", false},
 
 	// Паём ҳеҷ гоҳ ҷамъ ё таъхир намешавад.
 	Message: {High, ChannelMessages, "messages", false},
@@ -176,6 +199,31 @@ var rules = map[Kind]Rule{
 
 	RecommendedCreator: {Low, ChannelDiscovery, "recommendations", false},
 	TrendingTopic:      {Low, ChannelDiscovery, "recommendations", false},
+}
+
+// RepeatSuffix муайян мекунад, ки оё ҳамон ҳодиса (ҳамон одам, ҳамон
+// объект) метавонад push-и ДУЮМ диҳад.
+//
+// ⚠️ Пеш калиди дедупликатсия абадӣ буд. Натиҷа: паёми Direct танҳо
+// ПАЁМИ АВВАЛИ ҳар чат ба телефон мерасид (TargetID = chatID ҳамеша
+// якхела); шарҳи дуюми ҳамон одам ба ҳамон пост хомӯш буд; обуна →
+// бекор → обунаи дубора ҳеҷ гоҳ push намедод. Ин маҳз шикояти «касе
+// обуна шуд ва хабар наомад» буд.
+//
+// Ҷавоб: "" — як бор абадӣ (лайк: бекор/лайки дубора садо нест);
+// нишони соат — дар як соат як бор (обуна/бекор/обуна спам нест, вале
+// обунаи дубора баъдтар боз хабар медиҳад); нишони ягона — ҳар ҳодиса
+// нав аст (ҳар паём, ҳар шарҳ).
+func RepeatSuffix(k Kind, now time.Time) string {
+	switch k {
+	case Message, Comment, Reply, ReelReply, ReelCommentReply, StoryReply,
+		StoryAnswer, Gift, Order, EffectSale:
+		return "n" + strconv.FormatInt(now.UnixNano(), 36)
+	case Follow, FollowRequest, FollowAccepted, Mention, ReelMention,
+		StoryMention, Thanks, CollabInvite:
+		return "h" + now.UTC().Format("2006010215")
+	}
+	return ""
 }
 
 // RuleFor қоидаи намудро мегирад.

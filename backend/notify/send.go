@@ -137,15 +137,25 @@ func blocked(ctx context.Context, db push.DB, userID, actorID string) bool {
 	return yes
 }
 
+// OnRowWritten пас аз навиштани сатри огоҳинома даъват мешавад.
+//
+// Барномаи КУШОДА бояд фавран бифаҳмад (бейҷ, рӯйхат) — бе ин бейҷ
+// танҳо баъди бозкушоӣ нав мешуд. Ин ҷо callback аст, на даъвати
+// мустақими сокет, то пакет аз `sockets` вобаста нашавад.
+var OnRowWritten func(userID string, k Kind)
+
 func writeRow(ctx context.Context, db push.DB, e Event) {
 	var actor any
 	if e.ActorID != "" {
 		actor = e.ActorID
 	}
-	db.Exec(ctx, `
+	_, err := db.Exec(ctx, `
 		INSERT INTO notifications(user_id, from_user_id, type, target_id)
 		VALUES ($1,$2,$3,$4)`,
 		e.UserID, actor, string(e.Kind), e.TargetID)
+	if err == nil && OnRowWritten != nil {
+		OnRowWritten(e.UserID, e.Kind)
+	}
 }
 
 func mark(ctx context.Context, db push.DB, key, status, reason string) {

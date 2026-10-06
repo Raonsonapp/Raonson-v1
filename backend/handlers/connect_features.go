@@ -374,6 +374,8 @@ func GetReelStats(c *gin.Context) {
 		"saves":      saves,
 		"shares":     shares, // пеш сахткод 0 буд, гарчанде reel_shares ҳаст
 		"avgWatchMs": avgWatchMs,
+		// «Обуначиён аз ин Reel» — танҳо соҳиб (санҷиш дар боло).
+		"follows": followsFromContent(c.Request.Context(), myID, "reel", rid),
 	})
 }
 

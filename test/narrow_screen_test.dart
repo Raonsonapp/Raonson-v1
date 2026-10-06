@@ -118,6 +118,7 @@ void main() {
     const types = [
       'like', 'comment', 'follow', 'follow_request', 'collab_invite',
       'story_mention', 'order', 'gift', 'note_reaction', 'mention',
+      'contact_joined', 'thanks', 'comment_like', 'follow_accepted',
     ];
     await t.pumpWidget(_scaled(Scaffold(body: ListView(children: [
       for (final ty in types)
