@@ -18,6 +18,7 @@ import '../../core/ui/app_icons.dart';
 import '../../ai/ai_tools.dart';
 import '../../core/i18n/strings.dart';
 import '../../widgets/mention_suggestions.dart';
+import '../../widgets/hashtag_suggestions.dart';
 import '../auto_dm_sheet.dart';
 import '../location_picker/location_picker_screen.dart';
 import '../../core/places/place.dart';
@@ -850,6 +851,8 @@ class _PostEditorState extends State<_PostEditor> {
                   ),
                   // «@eh» дар тавсиф → пешниҳоди корбарон (мисли Instagram).
                   MentionSuggestions(controller: _captionCtrl),
+                  // «#ду» → «#душанбе · 1.2K пост».
+                  HashtagSuggestions(controller: _captionCtrl),
                   Align(
                     alignment: Alignment.centerRight,
                     child: Padding(

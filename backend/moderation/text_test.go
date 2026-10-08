@@ -211,3 +211,16 @@ func TestCheckAllMergesStrictest(t *testing.T) {
 		t.Fatalf("сахттарин бояд ғолиб шавад: %+v", v)
 	}
 }
+
+func TestHashtagBlocked(t *testing.T) {
+	for _, tag := range []string{"porn", "#PornHub", "xvideos", "sex_video", "onlyfans_tj", "horny"} {
+		if !HashtagBlocked(tag) {
+			t.Errorf("#%s бояд пинҳон бошад", tag)
+		}
+	}
+	for _, tag := range []string{"душанбе", "foodporn", "essex", "travel", "", "ҳисор"} {
+		if HashtagBlocked(tag) {
+			t.Errorf("#%s набояд пинҳон бошад", tag)
+		}
+	}
+}

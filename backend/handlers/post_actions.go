@@ -230,6 +230,7 @@ func UpdatePostCaption(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Post not found or not owner"})
 		return
 	}
+	syncContentHashtags(context.Background(), db.Pool, "post", pid, b.Caption)
 
 	held := holdIfNeeded(myID, modReq, pid, mod)
 

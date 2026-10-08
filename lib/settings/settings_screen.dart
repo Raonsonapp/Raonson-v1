@@ -56,6 +56,7 @@ import '../core/ads/ads_debug_screen.dart';
 import '../discover/discover_screen.dart';
 import '../wellbeing/time_spent_screen.dart';
 import '../core/error/friendly_error.dart';
+import '../feed/hashtag/followed_hashtags_screen.dart';
 
 /// Theme label in the active language.
 String _themeLabel(ThemeMode m) =>
@@ -693,6 +694,15 @@ class _PrivacyState extends State<PrivacyScreen> {
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
                         builder: (_) => const HiddenWordsScreen())),
+              ),
+              const _ThinDiv(),
+              // Хештегҳои обунашуда — рӯйхат бо «Бекор кардан».
+              _NavTile(
+                icon:  AppIcons.tag_rounded,
+                title: tr('hashtag.followed'),
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const FollowedHashtagsScreen())),
               ),
               const _ThinDiv(),
               _SwTile(

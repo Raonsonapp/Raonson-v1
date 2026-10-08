@@ -15,6 +15,8 @@ import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/links/deep_links.dart';
+import '../../widgets/hashtag_suggestions.dart';
+import '../../widgets/linked_text.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -402,10 +404,14 @@ class _ReelCommentsSheetState extends State<_ReelCommentsSheet> {
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13)),
-                            subtitle: Text((c['text'] ?? '').toString(),
+                            subtitle: LinkedText((c['text'] ?? '').toString(),
                                 style: const TextStyle(color: Colors.white)),
                           );
                         }),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: HashtagSuggestions(controller: _ctrl),
           ),
           Padding(
             padding: const EdgeInsets.all(10),

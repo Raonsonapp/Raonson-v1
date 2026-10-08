@@ -50,6 +50,7 @@ import '../../core/i18n/strings.dart';
 import '../../core/utils/time_ago.dart';
 import '../../feed_ai/why_this_sheet.dart';
 import '../../core/ui/r_icon.dart';
+import '../../widgets/linked_text.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -1432,47 +1433,11 @@ class _PostCardState extends State<PostCard>
   }
 
   // ── Caption spans — #hashtag ва @mention клик мешаванд ───────
-  List<InlineSpan> _captionSpans(String text) {
-    final spans = <InlineSpan>[];
-    final words = text.split(' ');
-    for (final word in words) {
-      if (word.startsWith('#') && word.length > 1) {
-        final tag = word.replaceAll(RegExp(r'[^\w]'), '');
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: GestureDetector(
-            onTap: () => Navigator.pushNamed(
-              context, '/hashtag', arguments: tag),
-            child: Text('$word ',
-              style: const TextStyle(
-                color: AppColors.neonBlue,
-                fontSize: 14, fontWeight: FontWeight.w600)),
-          ),
-        ));
-      } else if (word.startsWith('@') && word.length > 1) {
-        final username = word.substring(1)
-            .replaceAll(RegExp(r'[^\w]'), '');
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: GestureDetector(
-            onTap: () => Navigator.pushNamed(
-              context, '/profile-by-username',
-              arguments: username),
-            child: Text('$word ',
-              style: const TextStyle(
-                color: AppColors.neonBlue, fontSize: 14)),
-          ),
-        ));
-      } else {
-        spans.add(TextSpan(
-          text: '$word ',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 14)));
-      }
-    }
-    return spans;
-  }
+  //
+  // Пеш `split(' ')` + `[^\w]` буд: «#сафар» (тоҷикӣ) ба саҳифаи холӣ
+  // мебурд ва «#a\n#b» як хештег мешуд. Акнун — қоидаи ягона бо сервер.
+  List<InlineSpan> _captionSpans(String text) => linkedSpans(context, text,
+      style: TextStyle(color: AppColors.textPrimary, fontSize: 14));
 
   // ── Like count animated counter ───────────────────────────────
   Widget _animatedLikeCount() {

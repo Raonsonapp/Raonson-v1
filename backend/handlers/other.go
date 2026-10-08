@@ -5,7 +5,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"strings"
 
 	"raonson/db"
 	mw "raonson/middleware"
@@ -695,30 +694,10 @@ func Search(c *gin.Context) {
 	}
 
 	// Хэштегҳо — аз caption-ҳо ҷамъ мешаванд (то tab-и «Тегҳо» холӣ намонад).
-	hq := strings.TrimPrefix(strings.TrimSpace(c.Query("q")), "#")
-	hashtags := []gin.H{}
-	if hq != "" {
-		hRows, _ := db.Pool.Query(context.Background(), `
-			SELECT tag, COUNT(*) AS cnt FROM (
-			  SELECT lower(m[1]) AS tag
-			  FROM posts p JOIN users hu ON hu.id=p.user_id,
-			       regexp_matches(p.caption, '#(\w+)', 'g') AS m
-			  WHERE p.caption ILIKE $1
-			    AND COALESCE(hu.is_private,false)=FALSE
-			) t
-			WHERE tag LIKE $2
-			GROUP BY tag ORDER BY cnt DESC LIMIT 15`,
-			"%#"+hq+"%", strings.ToLower(hq)+"%")
-		if hRows != nil {
-			for hRows.Next() {
-				var tag string
-				var cnt int
-				hRows.Scan(&tag, &cnt)
-				hashtags = append(hashtags, gin.H{"tag": tag, "count": cnt})
-			}
-			hRows.Close()
-		}
-	}
+	// Пеш аз caption-ҳо бо `#(\w+)` ҷамъ мешуданд: ҳарфҳои тоҷикӣ гум
+	// мешуданд, Reels дохил набуданд ва барнома `postsCount` мехонд, ки
+	// сервер намефиристод (ҳамеша «0 пост»). Акнун — ҳамон /hashtags/search.
+	hashtags := searchTags(c.Request.Context(), myID, c.Query("q"), 15)
 
 	c.JSON(http.StatusOK, gin.H{
 		"users": users, "posts": posts, "reels": reels, "hashtags": hashtags,
@@ -811,6 +790,7 @@ func CreateReel(c *gin.Context) {
 		return
 	}
 
+	syncContentHashtags(context.Background(), db.Pool, "reel", rid, b.Caption)
 	held := holdIfNeeded(myID, modReq, rid, mod)
 
 	// Садоро дар реестр сабт мекунем — то «Ин садоро истифода бар»
@@ -976,6 +956,7 @@ func DeleteReel(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found"})
 		return
 	}
+	dropContentHashtags("reel", rid)
 	for _, q := range []string{
 		`DELETE FROM reel_comment_likes WHERE comment_id IN (SELECT id FROM reel_comments WHERE reel_id=$1)`,
 		`DELETE FROM comment_likes WHERE comment_id IN (SELECT id FROM reel_comments WHERE reel_id=$1)`,

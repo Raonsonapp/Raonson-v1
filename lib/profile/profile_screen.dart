@@ -52,6 +52,7 @@ import '../core/links/deep_links.dart';
 import '../verification/verification_screen.dart';
 import '../navigation/bottom_nav/bottom_nav_controller.dart';
 import 'package:provider/provider.dart';
+import '../widgets/linked_text.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -646,7 +647,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 Padding(
                   padding: EdgeInsets.fromLTRB(16,
                       (user.fullName ?? '').isNotEmpty ? 4 : 12, 16, 0),
-                  child: Text(user.bio!, style: TextStyle(
+                  // #хештег ва @зикр дар bio зер мешаванд (мисли Instagram).
+                  child: LinkedText(user.bio!, style: TextStyle(
                       color: AppColors.textPrimary, fontSize: 13.5, height: 1.45))),
 
               // ── WEBSITE ─────────────────────────────────────────────

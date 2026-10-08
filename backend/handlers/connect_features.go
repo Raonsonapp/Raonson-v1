@@ -5,8 +5,6 @@ package handlers
 //  reel report/not-interest/stats/comment-like/reply, story reply, notif prefs)
 
 import (
-	"strings"
-	"regexp"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -14,7 +12,9 @@ import (
 	"net/http"
 
 	"raonson/db"
+	"raonson/hashtags"
 	mw "raonson/middleware"
+	"raonson/moderation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -241,22 +241,36 @@ func GetBlockedUsers(c *gin.Context) {
 // GET /posts/hashtag/:tag
 func HashtagPosts(c *gin.Context) {
 	myID := mw.UID(c)
-	tag := c.Param("tag")
 	page := clampPage(toInt(c.Query("page"), 1))
 	limit := clampLimit(toInt(c.Query("limit"), 24))
 	offset := (page - 1) * limit
-	// Хэштеги пурра: «#сафар» бо «#сафарнома» омехта намешавад.
-	pattern := "#" + regexp.QuoteMeta(strings.TrimPrefix(tag, "#")) + `([^[:alnum:]_]|$)`
+	// Шакли кӯҳна (танҳо постҳо) — барномаҳои насбшуда. Барномаи нав
+	// /hashtags/:tag/top|recent-ро истифода мебарад (постҳо + Reels).
+	//
+	// Пеш регекс `caption ~* '#tag'` буд: «\w»/[:alnum:] ҳарфҳои тоҷикиро
+	// дуруст намегирифт ва ҳар дархост тамоми ҷадвалро скан мекард. Акнун
+	// ҳамон индекс ва қоидаи ягонаи backend/hashtags.
+	tag, ok := hashtags.Normalize(c.Param("tag"))
+	if !ok {
+		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
+		return
+	}
+	if moderation.HashtagBlocked(tag) {
+		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}, "hidden": true,
+			"notice": HashtagHiddenNotice})
+		return
+	}
 	rows, err := db.Pool.Query(context.Background(),
 		feedPostCols+`
-		WHERE p.caption ~* $2 AND COALESCE(p.hidden,false)=false
+		JOIN content_hashtags ch ON ch.content_kind='post' AND ch.content_id=p.id AND ch.tag=$2
+		WHERE COALESCE(p.hidden,false)=false
 		  AND COALESCE(p.archived,false)=false
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
-		  -- Ҳаштаг — кашф аст: танҳо ҳисобҳои кушода (мисли Instagram).
-		  -- Пеш постҳои ҳисоби пӯшида дар саҳифаи ҳаштаг ба ҳама буданд.
-		  AND `+publicAuthorSQL("p.user_id", "u", "$1")+`
+		  -- Ҳамон қоидаи намоёнӣ, ки лента дорад: бастан, манъшуда,
+		  -- ҳисоби пӯшида танҳо ба обуначиён.
+		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
 		ORDER BY p.created_at DESC LIMIT $3 OFFSET $4`,
-		myID, pattern, limit, offset)
+		myID, tag, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"posts": []gin.H{}})
 		return
@@ -462,6 +476,7 @@ func UpdateReelCaption(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Reel not found or not owner"})
 		return
 	}
+	syncContentHashtags(context.Background(), db.Pool, "reel", rid, b.Caption)
 	held := holdIfNeeded(myID, modReq, rid, mod)
 	if held {
 		mw.InvalidateUserCache(myID)
