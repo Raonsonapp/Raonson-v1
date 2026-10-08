@@ -11,6 +11,7 @@ import (
 
 	"raonson/db"
 	mw "raonson/middleware"
+	"raonson/places"
 
 	"github.com/gin-gonic/gin"
 )
@@ -133,6 +134,18 @@ func validateSticker(in stickerInput, now time.Time) (*stickerClean, error) {
 		out.URL = u.String()
 		if out.Prompt == "" {
 			out.Prompt = u.Host
+		}
+	case "location":
+		// «📍 Ҷой» — мисли Instagram. Ном ҳатмист; id аз рӯйхати places
+		// (link_url) ихтиёрист — бе он ҷойи дастӣ. id-и нодуруст → ҷойи
+		// дастӣ бо ҳамон ном (на хато).
+		if out.Prompt == "" {
+			return nil, errBadSticker
+		}
+		if p := places.Get(strings.TrimSpace(in.URL)); p != nil {
+			out.URL = p.ID
+		} else if p := places.MatchExact(out.Prompt); p != nil {
+			out.URL = p.ID
 		}
 	case "addyours":
 		// Мавзӯъ аз худи занҷир гирифта мешавад (saveSticker), агар
@@ -340,6 +353,8 @@ func attachSticker(storyID, viewerID, ownerID string, out gin.H) {
 		st["endsAt"] = endsAt
 	case "link":
 		st["url"] = linkURL
+	case "location":
+		st["placeId"] = linkURL
 	case "addyours":
 		if chainID == "" {
 			chainID = storyID

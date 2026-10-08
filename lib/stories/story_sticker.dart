@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../core/api/api_client.dart';
 import '../core/utils/server_time.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../feed/location/location_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════
 //  Стикерҳои сторис — мисли Instagram.
@@ -18,6 +19,7 @@ import 'package:url_launcher/url_launcher.dart';
 //    slider    — слайдери эмодзи 0..100 (ҷавоб як бор, баъд миёна)
 //    countdown — ҳисоби баръакс
 //    addyours  — «Навбати ту» (Add Yours): занҷири сторисҳо бо як мавзӯъ
+//    location  — «📍 Ҷой»: зер мешавад → саҳифаи ҷой (url = id-и ҷой)
 //
 //  Сервер ҳамаи қоидаҳоро худаш месанҷад (ниг. story_stickers.go);
 //  ин ҷо танҳо намоиш ва фиристодан.
@@ -48,7 +50,7 @@ class StorySticker {
   // ҳисоби баръакс
   final DateTime? endsAt;
 
-  // линк
+  // линк; барои «location» — id-и ҷой аз рӯйхат ('' — ҷойи дастӣ)
   final String url;
 
   // «Навбати ту»
@@ -84,7 +86,8 @@ class StorySticker {
   static StorySticker? fromJson(dynamic j) {
     if (j is! Map) return null;
     final kind = (j['kind'] ?? '').toString();
-    if (!const {'question', 'quiz', 'slider', 'countdown', 'link', 'addyours'}.contains(kind)) {
+    if (!const {'question', 'quiz', 'slider', 'countdown', 'link', 'addyours',
+        'location'}.contains(kind)) {
       return null;
     }
     double d(dynamic v) => v is num ? v.toDouble() : 0.5;
@@ -110,7 +113,7 @@ class StorySticker {
       answered: j['answered'] == true,
       answersCount: i(j['answersCount']) ?? 0,
       endsAt: parseServerTime(j['endsAt']),
-      url: (j['url'] ?? '').toString(),
+      url: (j['url'] ?? j['placeId'] ?? '').toString(),
       chainId: (j['chainId'] ?? '').toString(),
       participants: i(j['participants']) ?? 0,
       joined: j['joined'] == true,
@@ -340,6 +343,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
         'slider' => _slider(card),
         'question' => _question(card),
         'link' => _link(),
+        'location' => _location(),
         'addyours' => _addYours(card),
         _ => _countdown(card),
       },
@@ -574,6 +578,43 @@ class _StoryStickerViewState extends State<StoryStickerView> {
                       color: Color(0xFF0095F6),
                       fontSize: 15,
                       fontWeight: FontWeight.w700)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  /// «📍 Ҷой» — мисли Instagram: зер мешавад ва саҳифаи ҷой кушода мешавад.
+  Widget _location() {
+    return Center(
+      child: GestureDetector(
+        key: const ValueKey('story-location-sticker'),
+        onTap: () async {
+          widget.onPause();
+          await Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => LocationScreen(placeId: _s.url, name: _s.prompt)));
+          widget.onResume();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(
+                color: Colors.black.withOpacity(0.25), blurRadius: 12)],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(AppIcons.location_on, color: Color(0xFFB4308C), size: 20),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(_s.prompt.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Color(0xFFB4308C),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800)),
             ),
           ]),
         ),

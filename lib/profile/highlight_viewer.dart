@@ -174,15 +174,15 @@ class _HighlightViewerState extends State<HighlightViewer>
               margin: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
-          _tile(ctx, AppIcons.download_rounded, 'Зеркашӣ', _download),
-          _tile(ctx, AppIcons.share_outlined, 'Мубодила', _share),
+          _tile(ctx, AppIcons.download_rounded, tr('highlight.download'), _download),
+          _tile(ctx, AppIcons.share_outlined, tr('highlight.share'), _share),
           if (widget.isOwner) ...[
             _tile(ctx, AppIcons.drive_file_rename_outline_rounded,
-                'Номивазкунӣ', _rename),
+                tr('highlight.rename'), _rename),
             _tile(ctx, AppIcons.hide_image_outlined,
-                'Ин расмро аз актуалӣ нест кун', _removeItem),
+                tr('highlight.removeItem'), _removeItem),
             _tile(ctx, AppIcons.delete_outline_rounded,
-                'Актуалиро нест кун', _deleteHighlight, color: Colors.redAccent),
+                tr('highlight.delete'), _deleteHighlight, color: Colors.redAccent),
           ],
           const SizedBox(height: 8),
         ]),
@@ -378,11 +378,11 @@ class _HighlightViewerState extends State<HighlightViewer>
 
   Widget _buildVideo() {
     if (_videoFailed) {
-      return const Center(
+      return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(AppIcons.videocam_off_rounded, color: Colors.white54, size: 40),
           SizedBox(height: 10),
-          Text('Видео кушода нашуд',
+          Text(tr('video.failed'),
               style: TextStyle(color: Colors.white70, fontSize: 14)),
         ]),
       );

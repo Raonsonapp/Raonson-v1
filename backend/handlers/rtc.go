@@ -100,7 +100,9 @@ func LiveToken(c *gin.Context) {
 		return
 	}
 	isHost := hostID == me
-	if !isHost && IsBlockedBetween(me, hostID) {
+	// Ҳамон қоидаи RequireVisible: бастан ВА ҳисоби пӯшида (пеш танҳо
+	// бастан санҷида мешуд — ғайриобуна эфири ҳисоби пӯшидаро медид).
+	if ok, _ := CanSeeProfileContent(me, hostID); !isHost && !ok {
 		c.JSON(http.StatusNotFound, gin.H{"message": "эфир ёфт нашуд"})
 		return
 	}

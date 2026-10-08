@@ -15,6 +15,7 @@ import '../../core/ui/app_icons.dart';
 import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/links/deep_links.dart';
+import 'reel_location_chip.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -232,6 +233,7 @@ class _ReelControlsState extends State<ReelControls> {
                 const VerifiedBadge(size: 14, color: Colors.white),
               ],
             ]),
+            ReelLocationChip(reel: reel),
             if (reel.caption.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(reel.caption,
@@ -251,7 +253,7 @@ class _ReelControlsState extends State<ReelControls> {
                       ? (reel.audioArtist.isNotEmpty
                           ? '${reel.audioTitle} • ${reel.audioArtist}'
                           : reel.audioTitle)
-                      : 'Аудиои оригиналӣ',
+                      : tr('audio.originalAudio'),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),

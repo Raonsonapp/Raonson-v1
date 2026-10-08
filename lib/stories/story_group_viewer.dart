@@ -2,6 +2,7 @@
 // Multi-story group viewer — мисли Instagram
 // Groups = List<List<StoryModel>>, navigate between users with swipe
 
+import '../profile/add_to_highlight_sheet.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -603,48 +604,16 @@ class _SingleGroupViewerState extends State<_SingleGroupViewer>
     overlay.insert(entry);
   }
 
-  // Сторисро ба «Актуальный» (highlights) илова мекунад.
+  // Сторисро ба «Актуальный» (highlights) илова мекунад — ба актуалии
+  // МАВҶУДА ё нав (мисли Instagram). Пеш ҳамеша актуалии нав сохта мешуд.
   Future<void> _addToHighlight() async {
     _pause();
-    final ctrl = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(tr('ui.f34e8f52dd'), style: TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          maxLength: 16,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: tr('ui.6e3af58aa6'),
-            hintStyle: TextStyle(color: Colors.white38),
-            counterStyle: TextStyle(color: Colors.white24),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context),
-              child: Text(tr('ui.47ba09d086'), style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-              child: Text(tr('ui.d4a317a798'), style: TextStyle(color: AppColors.neonBlue))),
-        ],
-      ),
-    );
-    ctrl.dispose();
-    if (name == null || name.isEmpty) { _resume(); return; }
-    try {
-      final res = await ApiClient.instance.post('/highlights/', body: {
-        'title': name,
-        'coverUrl': _current.mediaUrl,
-        'storyIds': [_current.id],
-        'items': [
-          {'url': _current.mediaUrl, 'type': _current.mediaType, 'storyId': _current.id}
-        ],
-      });
-      if (res.statusCode >= 400) throw Exception();
-      _toast(tr('story.addedTo', {'name': name}));
-    } catch (_) { _toast('Хато'); }
+    final name = await showAddToHighlightSheet(context,
+        storyId: _current.id,
+        mediaUrl: _current.mediaUrl,
+        mediaType: _current.mediaType);
+    if (!mounted) return;
+    if (name != null) _toast(tr('story.addedTo', {'name': name}));
     _resume();
   }
 

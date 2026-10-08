@@ -80,7 +80,8 @@ void main() {
     test('видеои вайрон спиннери абадӣ намедиҳад', () {
       expect('.catchError((Object e) { _onVideoError('.allMatches(src).length,
           2, reason: 'ҳарду роҳи боркунӣ хаторо гирифта наметавонанд');
-      expect(src, contains("'Видео кушода нашуд'"));
+      // Матн акнун тарҷума мешавад (tr), на тоҷикии сахт.
+      expect(src, contains("tr('video.failed')"));
     });
 
     test('Reel-и вайрон ба сервер хабар медиҳад', () {
@@ -89,19 +90,20 @@ void main() {
     });
   });
 
-  group('экрани обуна — ҳеҷ чизи «барои намоиш»', () {
-    test('нишони «скоро» дигар нест', () {
-      final s = _read('lib/subscription/subscription_screen.dart');
-      expect(s.contains("tr('ui.0ba9823f99')"), isFalse,
-          reason: 'функсияҳои набуда боз бо «скоро» таблиғ мешаванд');
-      expect(s, contains('List<_Group> get _liveGroups'));
-    });
-
-    test('Loyalty Program ҳамчун фаъол нишон дода намешавад', () {
-      final s = _read('lib/subscription/subscription_screen.dart');
-      final i = s.indexOf('const Set<String> _kAvailable');
-      expect(s.substring(i).contains("'Loyalty Program'"), isFalse,
-          reason: 'дар ягон ҷои код вуҷуд надорад');
+  // Экрани «Обуна» ҳеҷ ҷо кушода намешуд (ягон Navigator.push набуд) ва
+  // функсияҳои набударо таблиғ мекард — ҳазф шуд, мисли
+  // create_post_controller.dart-и истифоданашуда.
+  group('коди мурда ҳазф шуд', () {
+    test('SubscriptionScreen ва CreatePostController дигар нестанд', () {
+      expect(File('lib/subscription/subscription_screen.dart').existsSync(), isFalse);
+      expect(File('lib/create/create_post/create_post_controller.dart').existsSync(),
+          isFalse);
+      for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
+        if (!f.path.endsWith('.dart')) continue;
+        final s = f.readAsStringSync();
+        expect(s.contains('SubscriptionScreen'), isFalse, reason: f.path);
+        expect(s.contains('create_post_controller'), isFalse, reason: f.path);
+      }
     });
   });
 }

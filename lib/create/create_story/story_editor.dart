@@ -1,3 +1,4 @@
+import '../location_picker/location_picker_screen.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -165,6 +166,7 @@ class _StoryEditorState extends State<StoryEditor> {
         'countdown' => 'Ҳисоб ✓',
         'link'      => 'Линк ✓',
         'addyours'  => 'Навбати ту ✓',
+        'location'  => '📍 ${_sticker?['prompt'] ?? ''}',
         _           => 'Интерактив',
       };
 
@@ -177,13 +179,14 @@ class _StoryEditorState extends State<StoryEditor> {
       builder: (ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 10),
-          for (final e in const [
+          for (final e in [
             ['question', '❓', 'Савол — «Аз ман пурсед»'],
             ['quiz', '🧠', 'Викторина'],
             ['slider', '😍', 'Слайдери эмодзи'],
             ['countdown', '⏳', 'Ҳисоби баръакс'],
             ['link', '🔗', 'Линк'],
             ['addyours', '📸', 'Навбати ту — занҷири сторис'],
+            ['location', '📍', tr('ui.be7de29b97')],
           ])
             ListTile(
               leading: Text(e[1], style: const TextStyle(fontSize: 24)),
@@ -203,6 +206,18 @@ class _StoryEditorState extends State<StoryEditor> {
     );
     if (kind == null || !mounted) return;
     if (kind == 'remove') { setState(() => _sticker = null); return; }
+    if (kind == 'location') {
+      // Ҳамон интихобкунандаи ҷой, ки пост ва Reels доранд.
+      final r = await showLocationPicker(context);
+      final place = r?.place;
+      if (place == null || !mounted) return;
+      setState(() => _sticker = {
+            'kind': 'location', 'prompt': place.name,
+            if (!place.isCustom) 'url': place.id,
+            'x': 0.5, 'y': 0.3,
+          });
+      return;
+    }
     final s = await _stickerDialog(kind);
     if (s != null && mounted) setState(() => _sticker = s);
   }

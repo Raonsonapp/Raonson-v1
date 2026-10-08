@@ -155,6 +155,11 @@
 	CREATE INDEX IF NOT EXISTS idx_reels_created ON reels(created_at DESC);
 	-- Сифати паст (480p) барои интернети суст — пахши адаптивӣ.
 	ALTER TABLE reels ADD COLUMN IF NOT EXISTS video_url_low TEXT DEFAULT '';
+	-- «Ҷой»-и Reels (ниг. db/places_schema.go).
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS location      TEXT DEFAULT '';
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS location_id   TEXT DEFAULT '';
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS location_lat  DOUBLE PRECISION;
+	ALTER TABLE reels ADD COLUMN IF NOT EXISTS location_lon  DOUBLE PRECISION;
 
 	CREATE TABLE IF NOT EXISTS reel_likes (
 		user_id TEXT NOT NULL,

@@ -20,6 +20,8 @@ class ReelModel {
   final String    audioArtist;   // ← нав
   final String    audioId;       // ← нав: барои audio bar
   final String    location;      // ← нав
+  /// Ҷой аз рӯйхати places (саҳифаи ҷой); холӣ — ҷойи дастӣ.
+  final String    locationId;
   final List<String> taggedUsers;// ← нав
   final DateTime? createdAt;     // ← нав
   final bool      hideLikes;        // лайкҳо пинҳонанд
@@ -44,6 +46,7 @@ class ReelModel {
     this.audioArtist   = '',
     this.audioId       = '',
     this.location      = '',
+    this.locationId    = '',
     this.taggedUsers   = const [],
     this.createdAt,
     this.hideLikes        = false,
@@ -86,6 +89,7 @@ class ReelModel {
     String?    audioArtist,
     String?    audioId,
     String?    location,
+    String?    locationId,
     List<String>? taggedUsers,
     DateTime?  createdAt,
     bool?      hideLikes,
@@ -109,6 +113,7 @@ class ReelModel {
       audioArtist:   audioArtist   ?? this.audioArtist,
       audioId:       audioId       ?? this.audioId,
       location:      location      ?? this.location,
+      locationId:    locationId    ?? this.locationId,
       taggedUsers:   taggedUsers   ?? this.taggedUsers,
       createdAt:     createdAt     ?? this.createdAt,
       hideLikes:        hideLikes        ?? this.hideLikes,
@@ -144,6 +149,7 @@ class ReelModel {
       audioArtist:   (audio['artist'] ?? json['audioArtist'] ?? '').toString(),
       audioId:       (audio['id']     ?? json['audioId']     ?? '').toString(),
       location:      (json['location'] ?? '').toString(),
+      locationId:    (json['locationId'] ?? '').toString(),
       taggedUsers:   rawTagged.map((e) => e.toString()).toList(),
       createdAt:     json['createdAt'] != null
           ? parseServerTime(json['createdAt'])
@@ -173,6 +179,7 @@ class ReelModel {
     // Ҳамон шакле, ки сервер медиҳад ва fromJson аввал мехонад.
     'audio': {'id': audioId, 'title': audioTitle, 'artist': audioArtist},
     'location':     location,
+    'locationId':   locationId,
     'taggedUsers':  taggedUsers,
     'createdAt':    createdAt?.toIso8601String(),
     'hideLikes':        hideLikes,

@@ -1207,6 +1207,17 @@ func ExploreGrid(c *gin.Context) {
 	// Кэш гум нашуд: худи роҳ `cache30s`-ро дорад ва он калиди
 	// ҲАР КОРБАРРО ҷудо мекунад (ниг. middleware/redis.go).
 	myID := mw.UID(c)
+	// Саҳифабандии воқеӣ. Пеш ҳар саҳифа ҳамон 40 пост + 20 reel буд
+	// (`page` нодида гирифта мешуд) ва барнома онҳоро омехта мекард —
+	// /explore?page=2 айнан ҳамон чиз буд ва лента «тамом» намешуд.
+	//
+	// seed — калиди ҷаласаи барнома: тартиб дар дохили як ҷаласа
+	// УСТУВОР аст (саҳифаҳо такрор надоранд), вале ҷаласаи нав тартиби
+	// дигар мебинад. Бе seed — тартиби маъмулият (лайкҳо, сипас нав).
+	page := clampPage(toInt(c.Query("page"), 1))
+	seed := exploreSeed(c.Query("seed"))
+	postOff := (page - 1) * explorePostsPerPage
+	reelOff := (page - 1) * exploreReelsPerPage
 
 	pRows, _ := db.Pool.Query(context.Background(), `
 		SELECT p.id, p.likes_count, COALESCE(p.comments_count,0), p.created_at,
@@ -1239,7 +1250,13 @@ func ExploreGrid(c *gin.Context) {
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  -- Мисли Instagram: дар explore ТАНҲО ҳисобҳои кушода.
 		  AND `+publicAuthorSQL("p.user_id", "u", "$1")+`
-		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 40`, myID)
+		  -- «Ба ман шавқовар нест» ва корбари хомӯшшуда дар кашф ҳам нест.
+		  AND NOT EXISTS (SELECT 1 FROM post_not_interested pni
+		                   WHERE pni.post_id=p.id AND pni.user_id=$1::text)
+		  AND NOT EXISTS (SELECT 1 FROM muted_users mu
+		                   WHERE mu.user_id=$1::text AND mu.muted_id=p.user_id)
+		ORDER BY `+exploreOrderSQL("p.id", "p.likes_count", "p.comments_count", "p.created_at", "$2")+`
+		LIMIT $3 OFFSET $4`, myID, seed, explorePostsPerPage, postOff)
 	posts := []gin.H{}
 	if pRows != nil {
 		defer pRows.Close()
@@ -1328,7 +1345,12 @@ func ExploreGrid(c *gin.Context) {
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE COALESCE(u.banned,false)=FALSE AND COALESCE(r.media_missing,false)=FALSE
 		  AND `+publicAuthorSQL("r.user_id", "u", "$1")+`
-		ORDER BY r.likes_count DESC LIMIT 20`, myID)
+		  AND NOT EXISTS (SELECT 1 FROM reel_not_interested rni
+		                   WHERE rni.reel_id=r.id AND rni.user_id=$1::text)
+		  AND NOT EXISTS (SELECT 1 FROM muted_users mu
+		                   WHERE mu.user_id=$1::text AND mu.muted_id=r.user_id)
+		ORDER BY `+exploreOrderSQL("r.id", "r.likes_count", "r.comments_count", "r.created_at", "$2")+`
+		LIMIT $3 OFFSET $4`, myID, seed, exploreReelsPerPage, reelOff)
 	reels := []gin.H{}
 	if rRows != nil {
 		defer rRows.Close()
@@ -1360,7 +1382,13 @@ func ExploreGrid(c *gin.Context) {
 			})
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"posts": posts, "reels": reels})
+	attachReelLocations(reels)
+	c.JSON(http.StatusOK, gin.H{
+		"posts": posts, "reels": reels,
+		"page": page, "seed": seed,
+		// Ягон навъ саҳифаи пурра дод — шояд боз ҳаст.
+		"hasMore": len(posts) == explorePostsPerPage || len(reels) == exploreReelsPerPage,
+	})
 }
 
 // POST /upload
