@@ -1,3 +1,4 @@
+import '../drafts/drafts_store.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -21,6 +22,8 @@ import '../../core/error/friendly_error.dart';
 import '../../core/moderation/content_policy.dart';
 import '../../widgets/hashtag_suggestions.dart';
 import '../../widgets/mention_suggestions.dart';
+import '../../core/places/place.dart';
+import '../location_picker/location_picker_screen.dart';
 
 class CreateReelScreen extends StatefulWidget {
   final File? initialFile;
@@ -63,6 +66,53 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
 
   bool get _hasAudio => _audioId.isNotEmpty && _audioTitle.isNotEmpty;
 
+  /// «Ҷой» — мисли пост (пеш Reels ҷой надошт).
+  Place? _place;
+
+  Future<void> _pickPlace() async {
+    final r = await showLocationPicker(context, current: _place);
+    if (!mounted || r == null) return; // баста шуд — бетағйир
+    setState(() => _place = r.place);
+  }
+
+  /// Сатри ҷой: интихоб, тағйир ё тоза кардан.
+  Widget _locationRow() => Material(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          key: const ValueKey('reel-location-row'),
+          borderRadius: BorderRadius.circular(12),
+          onTap: _busy ? null : _pickPlace,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(children: [
+              Icon(AppIcons.location_on,
+                  color: _place == null ? Colors.white70 : AppColors.red, size: 18),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _place?.name ?? tr('place.add'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: _place == null ? Colors.white54 : Colors.white,
+                      fontSize: 14),
+                ),
+              ),
+              if (_place != null)
+                GestureDetector(
+                  onTap: _busy ? null : () => setState(() => _place = null),
+                  child: const Icon(AppIcons.close,
+                      color: Colors.white54, size: 18),
+                )
+              else
+                const Icon(HeroiconsOutline.chevronRight,
+                    color: Colors.white38, size: 18),
+            ]),
+          ),
+        ),
+      );
+
   @override
   void initState() {
     super.initState();
@@ -75,7 +125,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
     if (widget.initialFile != null) {
       _file = widget.initialFile;
     } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _pick());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _start());
     }
   }
 
@@ -166,8 +216,80 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
 
   Future<void> _pick() async {
     final xf = await ImagePicker().pickVideo(source: ImageSource.gallery);
-    if (xf == null) { if (mounted) Navigator.pop(context); return; }
+    // «Иваз кардани видео»-и бекоршуда экранро набояд пӯшад.
+    if (xf == null) { if (mounted && _file == null) Navigator.pop(context); return; }
     if (mounted) setState(() { _file = File(xf.path); _error = null; });
+  }
+
+  // ── Лоиҳаҳо (мисли Instagram) ─────────────────────────────────
+  /// Лоиҳае, ки ҳозир кушода аст (баъди нашр нест мешавад).
+  String? _draftId;
+
+  /// Оғоз: агар лоиҳа бошад — «Галерея» ё «Лоиҳаҳо».
+  Future<void> _start() async {
+    final drafts = await DraftsStore.instance.list(DraftKind.reel);
+    if (!mounted) return;
+    if (drafts.isEmpty) return _pick();
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const SizedBox(height: 10),
+        ListTile(
+          leading: const Icon(AppIcons.video_library_outlined, color: Colors.white),
+          title: Text(tr('reels.fromGallery'), style: const TextStyle(color: Colors.white)),
+          onTap: () => Navigator.pop(ctx, 'gallery'),
+        ),
+        ListTile(
+          key: const ValueKey('reel-open-drafts'),
+          leading: const Icon(AppIcons.edit_outlined, color: Colors.white),
+          title: Text(tr('draft.openN', {'n': drafts.length}),
+              style: const TextStyle(color: Colors.white)),
+          onTap: () => Navigator.pop(ctx, 'drafts'),
+        ),
+        const SizedBox(height: 8),
+      ])),
+    );
+    if (!mounted) return;
+    if (choice == 'gallery') return _pick();
+    if (choice != 'drafts') { Navigator.pop(context); return; }
+    final d = await pickDraft(context, drafts);
+    if (!mounted) return;
+    if (d == null) return _start();
+    setState(() {
+      _file = File(d.mediaPath);
+      _caption.text = d.caption;
+      _place = d.place;
+      _draftId = d.id;
+    });
+  }
+
+  /// Баромадан бо видеои интихобшуда → «Лоиҳаро нигоҳ дорем?».
+  Future<void> _close() async {
+    if (_busy) return;
+    if (_file == null) { Navigator.pop(context); return; }
+    final r = await askSaveDraft(context);
+    if (!mounted || r == null) return;
+    if (r == 'save') {
+      try {
+        await DraftsStore.instance.save(
+            kind: DraftKind.reel, media: _file!, isVideo: true,
+            caption: _caption.text.trim(), place: _place, replaceId: _draftId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(tr('draft.saved'))));
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(tr('common.failedRetry'))));
+        }
+        return;
+      }
+    }
+    if (mounted) Navigator.pop(context);
   }
 
   /// Ҳолати пешрафтро нав мекунад. Bor kardan дароз аст — агар корбар
@@ -183,8 +305,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
   Widget _autoDmRow() {
     final d = _autoDm;
     final sub = d == null
-        ? 'Ба шарҳ бо калимаи шумо — паём ба Direct'
-        : (d.anyWord ? 'Ба ҳар шарҳ' : 'Калимаҳо: ${d.keywords.join(', ')}');
+        ? tr('autodm.sub')
+        : (d.anyWord ? tr('autodm.anyComment') : tr('autodm.words', {'words': d.keywords.join(', ')}));
     return Material(
       color: const Color(0xFF111111),
       borderRadius: BorderRadius.circular(12),
@@ -206,7 +328,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Паёми худкор ба Direct',
+                Text(tr('autodm.title'),
                     style: TextStyle(color: Colors.white, fontSize: 14,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
@@ -227,7 +349,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
 
     final token = ApiClient.instance.authToken ?? '';
     if (token.isEmpty) {
-      setState(() => _error = 'Токен нест — барномаро баред');
+      setState(() => _error = tr('reel.noToken'));
       return;
     }
 
@@ -235,7 +357,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       _busy     = true;
       _error    = null;
       _progress = 0.05;
-      _status   = 'Видео фишурда мешавад...';
+      _status   = tr('reel.compressing');
     });
 
     // «Reel бор мешавад… 45%» дар пардаи огоҳиномаҳо — ҳамон рақамҳои
@@ -257,7 +379,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       // ── 1. Compress (сифати баланд ~720p) + upload ────────────
       final high = await MediaCompressor.compressVideo(_file!,
           onProgress: (f) => report(phase(0.05, 0.35, f)));
-      _setProgress('Видео бор мешавад...', 0.35);
+      _setProgress(tr('reel.uploading'), 0.35);
       report(0.35);
       final videoUrl = await UploadManager().uploadFile(high,
           onProgress: (f) => report(phase(0.35, 0.65, f)));
@@ -267,7 +389,7 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       // best-effort: агар нашавад, танҳо сифати баланд мемонад.
       String videoUrlLow = '';
       try {
-        _setProgress('Барои интернети суст омода мешавад...', 0.65);
+        _setProgress(tr('reel.preparingLow'), 0.65);
         report(0.65);
         final low = await MediaCompressor.compressVideoLow(_file!);
         if (low != null) {
@@ -280,14 +402,14 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       // best-effort: агар нашавад, grid placeholder нишон медиҳад.
       String thumbnailUrl = '';
       try {
-        _setProgress('Тасвири пешнамоиш сохта мешавад...', 0.75);
+        _setProgress(tr('reel.thumb'), 0.75);
         report(0.75);
         final thumb = await MediaCompressor.generateVideoThumbnail(_file!);
         if (thumb != null) thumbnailUrl = await UploadManager().uploadFile(thumb);
       } catch (_) {}
 
       // ── 2. POST /reels (БЕ slash!) ────────────────────────────
-      _setProgress('Reel сохта мешавад...', 0.9);
+      _setProgress(tr('reel.creating'), 0.9);
       report(0.9);
 
       final res = await http.post(
@@ -301,6 +423,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
           if (videoUrlLow.isNotEmpty) 'videoUrlLow': videoUrlLow,
           if (thumbnailUrl.isNotEmpty) 'thumbnailUrl': thumbnailUrl,
           'caption' : _caption.text.trim(),
+          if (_place != null) 'location': _place!.name,
+          if (_place != null && !_place!.isCustom) 'locationId': _place!.id,
           // Садо танҳо вақте фиристода мешавад, ки воқеан интихоб шуда
           // бошад — вагарна сервер сатри холии садо сабт мекунад.
           if (_autoDm != null) 'autoDm': _autoDm!.toJson(),
@@ -325,6 +449,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
       }
 
       notifier.done(nid);
+      // Лоиҳаи нашршуда дигар лозим нест.
+      if (_draftId != null) DraftsStore.instance.delete(_draftId!);
       if (mounted) Navigator.of(context).pop(true);
 
     } catch (e) {
@@ -345,14 +471,18 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      // Тугмаи «Бозгашт»-и система ҳам лоиҳаро пешниҳод мекунад.
+      canPop: _file == null && !_busy,
+      onPopInvoked: (didPop) { if (!didPop) _close(); },
+      child: Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(AppIcons.close, color: Colors.white),
-          onPressed: _busy ? null : () => Navigator.pop(context)),
+          onPressed: _busy ? null : _close),
         title: Text(tr('ui.13b9c2f7ed'),
             style: TextStyle(color: Colors.white,
                 fontWeight: FontWeight.bold)),
@@ -468,6 +598,8 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
             const SizedBox(height: 12),
             _audioRow(),
             const SizedBox(height: 10),
+            _locationRow(),
+            const SizedBox(height: 10),
             _autoDmRow(),
 
             // ── Error ──────────────────────────────────────────
@@ -532,6 +664,6 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
             ),
           ),
       ]),
-    );
+    ));
   }
 }

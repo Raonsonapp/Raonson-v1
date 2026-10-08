@@ -1,5 +1,6 @@
 // lib/search/search_screen.dart
 // 100% Instagram-style: Explore → Recent → Results → Reels Feed
+import 'explore_paging.dart';
 import '../core/storage/offline_cache.dart';
 import '../widgets/stale_data_banner.dart';
 import 'dart:async';
@@ -106,6 +107,7 @@ class _SearchScreenState extends State<SearchScreen>
     _tabs = TabController(length: 4, vsync: this);
     _loadHistory();
     _loadExplore();
+    _scroll.addListener(_onExploreScroll);
     AnalyticsService.instance.logEvent(AnalyticsEvents.searchView);
 
     _focus.addListener(() {
@@ -186,12 +188,24 @@ class _SearchScreenState extends State<SearchScreen>
   static const _exploreCacheName = 'explore';
   bool _exploreStale = false;
 
-  List<_ExploreItem> _exploreItemsFrom(Map<String, dynamic> body) {
+  /// Саҳифабандии Explore (seed-и ҷаласа, саҳифаҳо бе такрор).
+  final ExplorePager _pager = ExplorePager();
+
+  void _onExploreScroll() {
+    if (_mode != _Mode.idle || !_scroll.hasClients) return;
+    if (_scroll.position.extentAfter < 1200) _loadMoreExplore();
+  }
+
+  /// [start] — индекси умумии плиткаи аввали ин саҳифа (барои ҷойи
+  /// reels дар ҳуҷайраҳои баланд).
+  List<_ExploreItem> _exploreItemsFrom(Map<String, dynamic> body,
+      {int start = 0}) {
     // Reel-ҳо Map-и хом мемонанд — вақти гирифтанро ба онҳо менависем
     // (ниг. ContentSync.prime: рӯйхати куҳна лайки навро пахш накунад).
     ContentSync.stampAll(body['reels']);
 
     final items = <_ExploreItem>[];
+    final reelItems = <_ExploreItem>[];
 
     // Posts
     for (final p in (body['posts'] as List? ?? [])) {
@@ -221,7 +235,7 @@ class _SearchScreenState extends State<SearchScreen>
       final thumb = rm['thumbnailUrl']?.toString() ?? '';
       final video = rm['videoUrl']?.toString() ?? '';
       if (video.isEmpty && thumb.isEmpty) continue;
-      items.add(_ExploreItem(
+      reelItems.add(_ExploreItem(
         id:    rm['_id']?.toString() ?? '',
         url:   thumb,          // метавонад холӣ бошад
         videoUrl: video,
@@ -232,7 +246,7 @@ class _SearchScreenState extends State<SearchScreen>
       ));
     }
 
-    return items;
+    return interleaveExplore(start, items, reelItems);
   }
 
   /// Аввал Explore-и охирин аз кэш (фавран, бе интернет), баъд шабака.
@@ -240,6 +254,9 @@ class _SearchScreenState extends State<SearchScreen>
   /// вақте ки воқеан ҳеҷ чиз нест.
   Future<void> _loadExplore() async {
     setState(() => _exploreLoading = _exploreItems.isEmpty);
+    // Ҷаласаи нав: seed-и нав ва саҳифаи 1 (ниг. ExplorePager).
+    _pager.reset();
+    _pager.loading = true;
     final out = await loadCacheFirst<List<_ExploreItem>>(
       hasData: _exploreItems.isNotEmpty,
       readCache: () async {
@@ -248,9 +265,12 @@ class _SearchScreenState extends State<SearchScreen>
         return _exploreItemsFrom(Map<String, dynamic>.from(c!.data as Map));
       },
       fetch: () async {
-        final res = await ApiClient.instance.get('/explore');
+        final res = await ApiClient.instance
+            .get('/explore', query: _pager.queryFor(1));
         if (res.statusCode >= 400) throw ApiException(res.statusCode, res.body);
         final body = jsonDecode(res.body) as Map<String, dynamic>;
+        _pager.page = 1;
+        _pager.hasMore = body['hasMore'] == true;
         // Вақти гирифтан бо худи постҳо дар кэш меравад — кэши куҳна
         // лайки навтарро дар экранҳои дигар пахш намекунад.
         ContentSync.stampAll(body['posts']);
@@ -259,22 +279,55 @@ class _SearchScreenState extends State<SearchScreen>
           'posts': (body['posts'] as List? ?? []).take(40).toList(),
           'reels': (body['reels'] as List? ?? []).take(40).toList(),
         });
-        // Shuffle for variety
-        return items..shuffle();
+        // Тартибро сервер аз рӯи seed медиҳад — омехтани дубора
+        // саҳифаҳоро вайрон мекард.
+        return items;
       },
       onData: (items, {required fromCache}) {
         if (!mounted) return;
+        _pager.replaceSeen(items.map((e) => e.id));
         setState(() {
           _exploreItems   = items;
           _exploreLoading = false;
         });
       },
     );
+    _pager.loading = false;
+    if (out.error != null) _pager.hasMore = false;
     if (!mounted) return;
     setState(() {
       _exploreLoading = false;
       _exploreStale = out.error != null;
     });
+  }
+
+  /// Саҳифаи навбатии Explore ҳангоми ғелондан ба поён.
+  Future<void> _loadMoreExplore() async {
+    if (_pager.loading || !_pager.hasMore || _pager.page < 1) return;
+    _pager.loading = true;
+    final seed = _pager.seed;
+    try {
+      final next = _pager.page + 1;
+      final res = await ApiClient.instance
+          .get('/explore', query: _pager.queryFor(next))
+          .timeout(const Duration(seconds: 12));
+      if (res.statusCode >= 400) throw ApiException(res.statusCode, res.body);
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      // Дар ин миён «аз нав кашидан» шуд — саҳифаи ҷаласаи кӯҳна лозим нест.
+      if (seed != _pager.seed) return;
+      ContentSync.stampAll(body['posts']);
+      final items = _pager.fresh(
+          _exploreItemsFrom(body, start: _exploreItems.length), (e) => e.id);
+      _pager.page = next;
+      _pager.hasMore = body['hasMore'] == true;
+      if (mounted && items.isNotEmpty) {
+        setState(() => _exploreItems = [..._exploreItems, ...items]);
+      }
+    } catch (_) {
+      // Шабака нашуд — ғелондани навбатӣ боз кӯшиш мекунад.
+    } finally {
+      if (seed == _pager.seed) _pager.loading = false;
+    }
   }
 
   // ── search logic ─────────────────────────────────────────────────
@@ -498,18 +551,18 @@ class _SearchScreenState extends State<SearchScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Ҳазф кардан?',
+        title: Text(tr('explore.deleteTitle'),
             style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Ин публикатсия барои ҳама нест мешавад.',
+        content: Text(tr('explore.deleteBody'),
             style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Бекор',
+              child: Text(tr('common.cancel'),
                   style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Ҳазф',
+              child: Text(tr('explore.delete'),
                   style: TextStyle(color: AppColors.red))),
         ],
       ),
@@ -533,7 +586,7 @@ class _SearchScreenState extends State<SearchScreen>
       // Ҳазф нашуд — рӯйхатро аз сервер аз нав мегирем, то экран
       // ҳақиқатро нишон диҳад, на тахмини моро.
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ҳазф нашуд')));
+          SnackBar(content: Text(tr('explore.deleteFailed'))));
       _loadExplore();
     }
   }
@@ -1267,13 +1320,13 @@ class _ExplorePreviewDialog extends StatelessWidget {
                 ),
               ),
               // Action row (мисли Instagram menu)
-              _act(AppIcons.open_in_full_rounded, 'Кушодан', onOpen),
+              _act(AppIcons.open_in_full_rounded, tr('archive.open'), onOpen),
               if (onProfile != null)
                 _act(AppIcons.person_outline_rounded,
-                    'Профили @$authorName', onProfile!),
-              _act(AppIcons.share_outlined, 'Паҳн кардан', onShare),
+                    tr('explore.profileOf', {'name': authorName}), onProfile!),
+              _act(AppIcons.share_outlined, tr('explore.share'), onShare),
               if (onDelete != null)
-                _act(AppIcons.delete_outline_rounded, 'Ҳазф кардан',
+                _act(AppIcons.delete_outline_rounded, tr('explore.deleteAction'),
                     onDelete!, danger: true),
             ]),
           ),
@@ -1653,25 +1706,25 @@ class _FeedCardState extends State<_FeedCard> {
                   color: AppColors.textFaint,
                   borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 10),
-          _menuTile(AppIcons.share_outlined, 'Паҳн кардан', () {
+          _menuTile(AppIcons.share_outlined, tr('explore.share'), () {
             Navigator.pop(ctx);
             Share.share(DeepLinks.share(
                 _isReel ? DeepLinkKind.reel : DeepLinkKind.post, _id));
           }),
           if (authorName.isNotEmpty)
-            _menuTile(AppIcons.person_outline_rounded, 'Профили @$authorName',
+            _menuTile(AppIcons.person_outline_rounded, tr('explore.profileOf', {'name': authorName}),
                 () {
               Navigator.pop(ctx);
               Navigator.push(context, MaterialPageRoute(
                   builder: (_) => ProfileScreen(userId: authorId)));
             }),
           if (isMine)
-            _menuTile(AppIcons.delete_outline_rounded, 'Ҳазф кардан', () {
+            _menuTile(AppIcons.delete_outline_rounded, tr('explore.deleteAction'), () {
               Navigator.pop(ctx);
               _deleteMine();
             }, danger: true)
           else
-            _menuTile(AppIcons.flag_outlined, 'Шикоят', () {
+            _menuTile(AppIcons.flag_outlined, tr('explore.report'), () {
               Navigator.pop(ctx);
               _report();
             }, danger: true),
@@ -1705,8 +1758,8 @@ class _FeedCardState extends State<_FeedCard> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(ok
-            ? 'Шикоят фиристода шуд'
-            : 'Шикоят фиристода нашуд. Боз кӯшиш кунед.')));
+            ? tr('report.sent')
+            : tr('report.failed'))));
   }
 
   Future<void> _deleteMine() async {
@@ -1714,18 +1767,18 @@ class _FeedCardState extends State<_FeedCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        title: Text('Ҳазф кардан?',
+        title: Text(tr('explore.deleteTitle'),
             style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Ин барои ҳама нест мешавад.',
+        content: Text(tr('explore.deleteBody'),
             style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Бекор',
+              child: Text(tr('common.cancel'),
                   style: TextStyle(color: AppColors.textTertiary))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Ҳазф', style: TextStyle(color: AppColors.red))),
+              child: Text(tr('explore.delete'), style: TextStyle(color: AppColors.red))),
         ],
       ),
     );
@@ -1739,7 +1792,7 @@ class _FeedCardState extends State<_FeedCard> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ҳазф нашуд')));
+            SnackBar(content: Text(tr('explore.deleteFailed'))));
       }
     }
   }
@@ -1803,7 +1856,7 @@ class _FeedCardState extends State<_FeedCard> {
                           Icon(AppIcons.videocam_off_rounded,
                               color: AppColors.textSecondary, size: 34),
                           const SizedBox(height: 8),
-                          Text('Видео кушода нашуд',
+                          Text(tr('video.failed'),
                               style: TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 13)),
@@ -2094,9 +2147,9 @@ class _FollowChip extends StatelessWidget {
               border: Border.all(color: AppColors.textSecondary),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(following ? 'Пайравӣ шуд'
+            child: Text(following ? tr('follow.following')
                     : FollowService.instance.isRequested(userId)
-                        ? tr('common.requested') : 'Пайравӣ',
+                        ? tr('common.requested') : tr('follow.follow'),
                 style: TextStyle(color: AppColors.textPrimary,
                     fontSize: 12, fontWeight: FontWeight.w600)),
           ),
@@ -2461,8 +2514,8 @@ class _UserRowState extends State<_UserRow> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: AppColors.textPrimary))
                     : Text(
-                        _following ? 'Пайрав'
-                            : _requested ? tr('common.requested') : 'Пайравӣ',
+                        _following ? tr('follow.followingShort')
+                            : _requested ? tr('common.requested') : tr('follow.follow'),
                         style: TextStyle(
                           color: _following || _requested
                               ? AppColors.textTertiary : AppColors.textPrimary,

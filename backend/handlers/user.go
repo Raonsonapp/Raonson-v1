@@ -383,6 +383,7 @@ func GetUserReels(c *gin.Context) {
 			}, hasStory, unseenStory),
 		})
 	}
+	attachReelLocations(out)
 	c.JSON(http.StatusOK, out)
 }
 

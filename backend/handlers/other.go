@@ -751,6 +751,9 @@ func CreateReel(c *gin.Context) {
 		ThumbnailURL string     `json:"thumbnailUrl"`
 		Audio        AudioInput `json:"audio"`
 		AutoDM       *AutoDMInput `json:"autoDm"`
+		// «Ҷой» — мисли пост: матн ва/ё id аз рӯйхати places.
+		Location   string `json:"location"`
+		LocationID string `json:"locationId"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || b.VideoURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "videoUrl is required"})
@@ -766,7 +769,7 @@ func CreateReel(c *gin.Context) {
 	// Модератсия ПЕШ аз нашр: тавсиф + видео (кадрҳо) + муқова.
 	// Нусхаи сифати паст (videoUrlLow) ҳамон видео аст — алоҳида
 	// санҷида намешавад.
-	modReq := modRequest{Surface: "reel", AI: true, Texts: []string{b.Caption},
+	modReq := modRequest{Surface: "reel", AI: true, Texts: []string{b.Caption, b.Location},
 		Media: []modMedia{{URL: b.VideoURL, Video: true}, {URL: b.ThumbnailURL}}}
 	if b.AutoDM != nil {
 		modReq.Texts = append(modReq.Texts, b.AutoDM.Message, b.AutoDM.Link)
@@ -776,14 +779,17 @@ func CreateReel(c *gin.Context) {
 		return
 	}
 	audio := b.Audio.clean()
+	locName, locID, locLat, locLon := resolvePostLocation(b.Location, b.LocationID)
 
 	var rid string
 	if err := db.Pool.QueryRow(context.Background(),
 		`INSERT INTO reels(user_id,caption,video_url,video_url_low,thumbnail_url,
-		                   audio_id,audio_title,audio_artist,audio_cover,audio_url)
-		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+		                   audio_id,audio_title,audio_artist,audio_cover,audio_url,
+		                   location,location_id,location_lat,location_lon)
+		 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
 		myID, b.Caption, b.VideoURL, b.VideoURLLow, b.ThumbnailURL,
-		audio.ID, audio.Title, audio.Artist, audio.CoverURL, audio.PreviewURL).Scan(&rid); err != nil {
+		audio.ID, audio.Title, audio.Artist, audio.CoverURL, audio.PreviewURL,
+		locName, locID, locLat, locLon).Scan(&rid); err != nil {
 		// Пеш хато нодида гирифта мешуд ва 201 бо `_id: ""` бармегашт —
 		// барнома «нашр шуд» мегуфт, ҳол он ки Reel сабт нашуда буд.
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Reel сабт нашуд"})
@@ -806,6 +812,7 @@ func CreateReel(c *gin.Context) {
 		"thumbnailUrl": b.ThumbnailURL,
 		"pendingReview": held,
 		"caption":      b.Caption, "likesCount": 0, "viewsCount": 0,
+		"location": locName, "locationId": locID,
 		"audio": gin.H{
 			"id": audio.ID, "title": audio.Title, "artist": audio.Artist,
 			"coverUrl": audio.CoverURL, "previewUrl": audio.PreviewURL,
@@ -836,6 +843,10 @@ func GetReels(c *gin.Context) {
 		FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE COALESCE(r.media_missing,false)=FALSE
 		  AND `+visibleAuthorSQL("r.user_id", "u", "$1")+`
+		  -- «Ба ман шавқовар нест»: пеш танҳо лентаи smart онро
+		  -- мепартофт — дар лентаи «Дӯстон» ва дар fallback reel боз меомад.
+		  AND NOT EXISTS (SELECT 1 FROM reel_not_interested rni
+		                   WHERE rni.reel_id=r.id AND rni.user_id=$1::text)
 		  AND ($4 = FALSE OR EXISTS (
 		    SELECT 1 FROM follows f2
 		    WHERE f2.follower_id=$1::text AND f2.following_id=r.user_id))
@@ -870,6 +881,7 @@ func GetReels(c *gin.Context) {
 				"verified": verified, "isFollowing": following}, hasStory, unseenStory),
 		})
 	}
+	attachReelLocations(reels)
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
 }
 
@@ -1156,12 +1168,15 @@ func GetReelByID(c *gin.Context) {
 	// Садо ва шумораи паҳн — пеш Reel-и аз паём, сторис ё огоҳинома
 	// кушодашуда садояшро гум мекард («оригинал садо») ва паҳн 0 буд.
 	var audioID, audioTitle, audioArtist, audioCover string
+	var location, locationID string
 	var shares int
 	db.Pool.QueryRow(context.Background(), `
 		SELECT COALESCE(audio_id,''), COALESCE(audio_title,''), COALESCE(audio_artist,''),
 		       COALESCE(audio_cover,''),
-		       (SELECT COUNT(*) FROM reel_shares WHERE reel_id=$1)
-		FROM reels WHERE id=$1`, rid).Scan(&audioID, &audioTitle, &audioArtist, &audioCover, &shares)
+		       (SELECT COUNT(*) FROM reel_shares WHERE reel_id=$1),
+		       COALESCE(location,''), COALESCE(location_id,'')
+		FROM reels WHERE id=$1`, rid).Scan(&audioID, &audioTitle, &audioArtist, &audioCover, &shares,
+		&location, &locationID)
 	c.JSON(http.StatusOK, gin.H{
 		"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 		"thumbnailUrl": thumb, "caption": capt,
@@ -1169,6 +1184,7 @@ func GetReelByID(c *gin.Context) {
 		"isLiked": liked, "isSaved": saved, "createdAt": createdAt,
 		"hideLikes": hideLikes, "commentsDisabled": commentsOff,
 		"sharesCount": shares,
+		"location": location, "locationId": locationID,
 		"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
 		"user": putStoryRing(gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 			"verified": verified, "isFollowing": following}, hasStory, unseenStory),

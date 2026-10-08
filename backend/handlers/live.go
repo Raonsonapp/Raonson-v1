@@ -194,13 +194,43 @@ func LiveComment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+// liveHostVisible — ҳости эфир (фаъол ё баста), агар тамошобин ӯро
+// дида тавонад: ҳамон қоидаи LiveToken ва RequireVisible (бастан ва
+// ҳисоби пӯшида). Шарҳҳо пас аз анҷоми эфир ҳам хонда мешаванд, вале
+// ҳеҷ гоҳ ба касе, ки худи ҳостро дида наметавонад.
+func liveHostVisible(streamID, viewer string) string {
+	var host string
+	db.Pool.QueryRow(context.Background(),
+		`SELECT host_id FROM live_streams WHERE id=$1`, streamID).Scan(&host)
+	if host == "" {
+		return ""
+	}
+	if ok, _ := CanSeeProfileContent(viewer, host); !ok {
+		return ""
+	}
+	return host
+}
+
 // GET /live/:id/comments → 50 шарҳи охирин
+//
+// ⚠️ Пеш ин роҳ ҳеҷ чизро намесанҷид: бо id-и эфир шарҳҳои эфири
+// ҳисоби пӯшида ё ҳосте, ки маро бастааст, хонда мешуданд.
 func LiveComments(c *gin.Context) {
 	id := c.Param("id")
+	me := mw.UID(c)
+	if liveHostVisible(id, me) == "" {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Эфир ёфт нашуд", "comments": []gin.H{}})
+		return
+	}
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT c.id, c.text, u.username, COALESCE(u.avatar,'')
 		FROM live_comments c JOIN users u ON u.id=c.user_id
-		WHERE c.stream_id=$1 ORDER BY c.created_at DESC LIMIT 50`, id)
+		WHERE c.stream_id=$1
+		  -- Шарҳи касе, ки бо ман дар бастан аст, нишон дода намешавад.
+		  AND NOT EXISTS (SELECT 1 FROM blocks b
+		       WHERE (b.blocker_id=$2::text AND b.blocked_id=c.user_id)
+		          OR (b.blocker_id=c.user_id AND b.blocked_id=$2::text))
+		ORDER BY c.created_at DESC LIMIT 50`, id, me)
 	out := []gin.H{}
 	if err == nil {
 		defer rows.Close()

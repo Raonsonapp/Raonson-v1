@@ -69,9 +69,14 @@ func cleanOldAdSessions() {
 	}
 }
 
+// cleanExpiredStories — сторисҳои гузашта як сол дар «Бойгонӣ»-и
+// соҳиб мемонанд (мисли Instagram; барои актуалӣ аз онҳо интихоб
+// карда мешавад). Пеш баъди 1 соат нест мешуданд ва бойгонии сторис
+// ғайриимкон буд. Ҳамаи роҳҳои тамошобин мӯҳлатро худашон месанҷанд
+// (expires_at > NOW(), canSeeStory).
 func cleanExpiredStories() {
 	res, _ := db.Pool.Exec(context.Background(),
-		`DELETE FROM stories WHERE expires_at < NOW() - INTERVAL '1 hour'`)
+		`DELETE FROM stories WHERE expires_at < NOW() - INTERVAL '365 days'`)
 	if res.RowsAffected() > 0 {
 		log.Printf("[Job] deleted %d expired stories", res.RowsAffected())
 	}

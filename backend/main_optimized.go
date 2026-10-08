@@ -213,6 +213,8 @@ func main() {
 		u.GET("/suggestions",           cache5m, handlers.GetSuggestions)
 		u.GET("/suggested",             handlers.GetSuggestedUsers)
 		u.GET("/blocked",               handlers.GetBlockedUsers)
+		u.GET("/muted",                 handlers.GetMutedUsers)
+		u.GET("/restricted",            handlers.GetRestrictedUsers)
 		u.GET("/favorites",             handlers.GetFavorites)
 		u.POST("/:id/favorite",         handlers.ToggleFavorite)
 		u.POST("/:id/block",            handlers.BlockUser)
@@ -287,8 +289,10 @@ func main() {
 		pl.GET("/search",     handlers.SearchPlaces)
 		pl.GET("/nearest",    handlers.NearestPlace)
 		pl.GET("/text/posts", cache3s, handlers.PlaceTextPosts)
+		pl.GET("/text/reels", cache3s, handlers.PlaceTextReels)
 		pl.GET("/:id",        handlers.GetPlace)
 		pl.GET("/:id/posts",  cache3s, handlers.PlacePosts)
+		pl.GET("/:id/reels",  cache3s, handlers.PlaceReels)
 	}
 
 	// ── HASHTAGS (мисли Instagram) ──────────────────────────────
@@ -498,12 +502,20 @@ func main() {
 		st.POST("/:id/report", handlers.ReportStory)
 	}
 
+	// ── БОЙГОНӢ: постҳо (барқароркунӣ) ва сторисҳои гузашта ──
+	ar := r.Group("/archive", auth, rl100)
+	{
+		ar.GET("/posts",   handlers.GetArchivedPosts)
+		ar.GET("/stories", handlers.GetArchivedStories)
+	}
+
 	// ── HIGHLIGHTS (Актуальный) ──
 	hl := r.Group("/highlights", auth, rl100)
 	{
 		hl.POST("/",       handlers.CreateHighlight)
 		hl.GET("/:id",     cache3s, handlers.GetHighlights)
 		hl.PATCH("/:id",   handlers.UpdateHighlight)
+		hl.POST("/:id/stories", handlers.AddStoryToHighlight)
 		hl.DELETE("/:id",  handlers.DeleteHighlight)
 	}
 

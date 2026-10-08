@@ -4,6 +4,7 @@ import '../core/api/api_endpoints.dart';
 import '../core/storage/offline_cache.dart';
 import '../models/reel_model.dart';
 import '../core/services/follow_service.dart';
+import 'reels_feed/reel_removal.dart';
 
 class ReelsRepository {
   final ApiClient _api;
@@ -18,6 +19,14 @@ class ReelsRepository {
   static const _diskCacheName = 'reels';
   static const _diskCacheMax  = 30;
 
+  /// «Ба ман шавқовар нест» дар ҳамин ҷаласа. Сервер онҳоро дигар
+  /// намефиристад, вале кэши хотира/диск ва ҷавобҳои дар роҳ буда
+  /// метавонистанд reel-ро баргардонанд.
+  static final Set<String> hiddenIds = <String>{};
+
+  static List<ReelModel> _visible(List<ReelModel> list) =>
+      withoutHidden(list, hiddenIds, (r) => r.id);
+
   /// Натиҷаи охирини [fetchReels] аз кэш буд (на аз шабака).
   bool lastFromCache = false;
 
@@ -26,6 +35,7 @@ class ReelsRepository {
   static void clearAllCaches() {
     _memCache = null;
     _memCacheTime = null;
+    hiddenIds.clear();
   }
 
   bool get _memCacheValid =>
@@ -57,14 +67,14 @@ class ReelsRepository {
     // ── Page 1: cache аввал (кэш танҳо барои лентаи умумӣ) ───────
     // Навсозии фонӣ дар экран аст (бо натиҷа ба экран, на танҳо ба диск).
     if (page == 1 && !friends && !forceRefresh) {
-      if (_memCacheValid) return _memCache!;
+      if (_memCacheValid) return _visible(_memCache!);
 
       final disk = await _loadFromDisk();
       if (disk != null && disk.isNotEmpty) {
         _memCache     = disk;
         _memCacheTime = DateTime.now();
         lastFromCache = true;
-        return disk; // ← ФАВРАН!
+        return _visible(disk); // ← ФАВРАН!
       }
     }
 
@@ -112,12 +122,12 @@ class ReelsRepository {
       if (page == 1 && !friends) {
         if (_memCache != null && _memCache!.isNotEmpty) {
           lastFromCache = true;
-          return _memCache!;
+          return _visible(_memCache!);
         }
         final disk = await _loadFromDisk();
         if (disk != null && disk.isNotEmpty) {
           lastFromCache = true;
-          return disk;
+          return _visible(disk);
         }
       }
       rethrow;
@@ -130,8 +140,8 @@ class ReelsRepository {
   List<ReelModel> _parse(dynamic body) {
     final List list = body is Map
         ? (body['reels'] ?? body['data'] ?? []) : body as List;
-    final reels = list.map((e) =>
-        ReelModel.fromJson(e as Map<String, dynamic>)).toList();
+    final reels = _visible(list.map((e) =>
+        ReelModel.fromJson(e as Map<String, dynamic>)).toList());
     for (final r in reels) {
       FollowService.instance.prime(r.user.id, r.user.isFollowing,
           fetchedAt: r.fetchedAt ?? DateTime.now());
@@ -165,9 +175,21 @@ class ReelsRepository {
     } catch (_) {}
   }
 
-  Future<void> markNotInterested(String reelId) async {
-    try { await _api.post('${ApiEndpoints.reels}/$reelId/not_interest'); }
-    catch (_) {}
+  /// «Ба ман шавқовар нест»: фавран аз кэш (хотира ва диск) мебарояд ва
+  /// дар ҷаласа дигар нишон дода намешавад; сервер онро абадан сабт
+  /// мекунад (POST /reels/:id/not_interest).
+  Future<bool> markNotInterested(String reelId) async {
+    hiddenIds.add(reelId);
+    if (_memCache != null) {
+      _memCache = _visible(_memCache!);
+      _saveToDisk(_memCache!);
+    }
+    try {
+      final res = await _api.post('${ApiEndpoints.reels}/$reelId/not_interest');
+      return res.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<Map<String, dynamic>?> fetchStats(String reelId) async {

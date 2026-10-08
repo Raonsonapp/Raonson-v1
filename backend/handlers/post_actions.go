@@ -100,7 +100,11 @@ func TogglePostArchive(c *gin.Context) {
 	var arch bool
 	err := db.Pool.QueryRow(context.Background(),
 		`UPDATE posts SET archived = NOT COALESCE(archived,false)
-		 WHERE id=$1 AND user_id=$2 RETURNING archived`, pid, myID).Scan(&arch)
+		 WHERE id=$1 AND user_id=$2
+		   -- Пинҳоншуда аз ҷониби модератсия ё маҳсули «ҳазфшуда» бо
+		   -- фармоиш (archived+hidden) аз бойгонӣ барқарор намешавад.
+		   AND COALESCE(hidden,false)=FALSE
+		 RETURNING archived`, pid, myID).Scan(&arch)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"message": "Танҳо соҳиб"})
 		return

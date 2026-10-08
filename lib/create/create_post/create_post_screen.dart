@@ -1,3 +1,4 @@
+import '../drafts/drafts_store.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -63,6 +64,36 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   bool   _publishing = false; // муҳофиз аз ду бор зеркунӣ
   String?_error;
 
+  // ── Лоиҳаҳо (мисли Instagram) ──
+  String? _draftId;
+  String  _draftCaption = '';
+  Place?  _draftPlace;
+
+  /// Баромадан аз муҳаррир → «Лоиҳаро нигоҳ дорем?».
+  Future<void> _close(String caption, Place? place) async {
+    if (_file == null) { Navigator.pop(context); return; }
+    final r = await askSaveDraft(context);
+    if (!mounted || r == null) return;
+    if (r == 'save') {
+      try {
+        await DraftsStore.instance.save(
+            kind: DraftKind.post, media: _file!, isVideo: _isVideo,
+            caption: caption, place: place, replaceId: _draftId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(tr('draft.saved'))));
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(tr('common.failedRetry'))));
+        }
+        return;
+      }
+    }
+    if (mounted) Navigator.pop(context);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +106,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickFromGallery() async {
+    final drafts = await DraftsStore.instance.list(DraftKind.post);
+    if (!mounted) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: const Color(0xFF1A1A1A),
@@ -108,10 +141,35 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           subtitle: Text(tr('ui.2b827fba21'),
               style: TextStyle(color: Colors.white38, fontSize: 12)),
           onTap: () => Navigator.pop(_, 'video')),
+        if (drafts.isNotEmpty)
+          ListTile(
+            key: const ValueKey('post-open-drafts'),
+            leading: Container(width: 44, height: 44,
+              decoration: const BoxDecoration(
+                  color: Color(0xFF3A3A3C), shape: BoxShape.circle),
+              child: const Icon(AppIcons.edit_outlined, color: Colors.white, size: 22)),
+            title: Text(tr('draft.openN', {'n': drafts.length}),
+                style: const TextStyle(color: Colors.white, fontSize: 16,
+                    fontWeight: FontWeight.w500)),
+            onTap: () => Navigator.pop(_, 'drafts')),
         const SizedBox(height: 12),
       ])));
     if (!mounted) return;
     if (choice == null) { Navigator.pop(context); return; }
+    if (choice == 'drafts') {
+      final d = await pickDraft(context, drafts);
+      if (!mounted) return;
+      if (d == null) return _pickFromGallery();
+      setState(() {
+        _file = File(d.mediaPath);
+        _isVideo = d.isVideo;
+        _draftId = d.id;
+        _draftCaption = d.caption;
+        _draftPlace = d.place;
+        _error = null;
+      });
+      return;
+    }
     XFile? xf;
     if (choice == 'image') {
       xf = await ImagePicker().pickImage(
@@ -159,6 +217,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       altText: altText,
       autoDm: autoDm,
     );
+    // Лоиҳаи нашршуда дигар лозим нест.
+    if (_draftId != null) DraftsStore.instance.delete(_draftId!);
     if (mounted) Navigator.of(context).pop(true);
   }
 
@@ -217,7 +277,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
     return _PostEditor(
       media: _file!, isVideo: _isVideo, isUploading: _isUploading,
-      onPublish: _publish, onCancel: () => Navigator.pop(context),
+      onPublish: _publish, onClose: _close,
+      initialCaption: _draftCaption, initialPlace: _draftPlace,
       errorMessage: _error);
   }
 }
@@ -231,10 +292,14 @@ class _PostEditor extends StatefulWidget {
       {SongInfo? song, String location, String locationId,
        List<String> taggedUsers, List<String> collaborators,
        String altText, AutoDmDraft? autoDm}) onPublish;
-  final VoidCallback onCancel; final String? errorMessage;
+  /// Баромадан (тавсиф ва ҷой — барои лоиҳа).
+  final void Function(String caption, Place? place) onClose;
+  final String? errorMessage;
+  final String initialCaption; final Place? initialPlace;
   const _PostEditor({required this.media, required this.isVideo,
     required this.isUploading, required this.onPublish,
-    required this.onCancel, this.errorMessage});
+    required this.onClose, this.errorMessage,
+    this.initialCaption = '', this.initialPlace});
   @override State<_PostEditor> createState() => _PostEditorState();
 }
 
@@ -426,6 +491,8 @@ class _PostEditorState extends State<_PostEditor> {
   @override
   void initState() {
     super.initState();
+    _captionCtrl.text = widget.initialCaption;
+    _place = widget.initialPlace;
     if (widget.isVideo) { _initVideo(); }
     else { _detectBgColor(); _loadCommunityFilters(); }
   }
@@ -707,7 +774,15 @@ class _PostEditorState extends State<_PostEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      // «Бозгашт»-и система ҳам лоиҳаро пешниҳод мекунад.
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop && !widget.isUploading) {
+          widget.onClose(_captionCtrl.text.trim(), _place);
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
         onPanStart: _tool == _Tool.draw ? _onDrawStart : null,
@@ -907,7 +982,8 @@ class _PostEditorState extends State<_PostEditor> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(children: [
               IconButton(icon: const Icon(AppIcons.arrow_back_ios_new, color: Colors.white, size: 24),
-                onPressed: widget.isUploading ? null : widget.onCancel),
+                onPressed: widget.isUploading ? null
+                    : () => widget.onClose(_captionCtrl.text.trim(), _place)),
               const Spacer(),
               if (_tool == _Tool.draw && _drawPoints.isNotEmpty)
                 IconButton(icon: const Icon(AppIcons.undo, color: Colors.white),
@@ -991,7 +1067,7 @@ class _PostEditorState extends State<_PostEditor> {
               ]))),
         ]),
       ),
-    );
+    ));
   }
 
   Widget _buildMedia() {

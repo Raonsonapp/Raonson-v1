@@ -2,14 +2,22 @@
 class HighlightItem {
   final String url;
   final String type; // "image" | "video"
-  const HighlightItem({required this.url, this.type = 'image'});
+  /// Сторисе, ки ин унсур аз он аст ('' — расми аз галерея). Пеш ҳангоми
+  /// таҳрир (PATCH items) гум мешуд.
+  final String storyId;
+  const HighlightItem({required this.url, this.type = 'image', this.storyId = ''});
 
   factory HighlightItem.fromJson(Map<String, dynamic> j) => HighlightItem(
         url:  (j['url'] ?? '').toString(),
         type: (j['type'] ?? 'image').toString(),
+        storyId: (j['storyId'] ?? '').toString(),
       );
 
-  Map<String, dynamic> toJson() => {'url': url, 'type': type};
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'type': type,
+        if (storyId.isNotEmpty) 'storyId': storyId,
+      };
 }
 
 class HighlightModel {

@@ -46,6 +46,8 @@ import '../../core/ui/app_icons.dart';
 import '../../core/music/feed_audio.dart';
 import '../audio/audio_page_screen.dart';
 import '../player/reel_gestures.dart';
+import '../player/reel_location_chip.dart';
+import 'reel_removal.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 import '../../core/ui/r_icon.dart';
 import '../../widgets/linked_text.dart';
@@ -219,6 +221,12 @@ class _ReelsVM extends ChangeNotifier {
 
   void markNotInterested(String id) {
     _repo.markNotInterested(id);
+    reels = reels.where((r) => r.id != id).toList();
+    notifyListeners();
+  }
+
+  /// Reel-и худам ҳазф шуд — танҳо аз рӯйхат (на «шавқовар нест»).
+  void removeLocal(String id) {
     reels = reels.where((r) => r.id != id).toList();
     notifyListeners();
   }
@@ -440,6 +448,39 @@ class _ReelsViewState extends State<_ReelsView> {
         duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
   }
 
+  /// Reel аз лента мебарояд ва ФАВРАН reel-и навбатӣ бозӣ мекунад.
+  ///
+  /// Плеерҳои пешакӣ бо индекс нигоҳ дошта мешаванд — бе
+  /// [shiftAfterRemoval] reel-и навбатӣ плеери ҳамин видеои
+  /// пинҳоншударо мегирифт ва он бозӣ карданро идома медод.
+  void _removeReel(_ReelsVM vm, String id, {bool deleted = false}) {
+    final i = vm.reels.indexWhere((r) => r.id == id);
+    if (i < 0) return;
+    final gone = shiftAfterRemoval(_preloaded, i);
+    if (gone != null) {
+      gone.pause();
+      // Виҷети кӯҳна дар ҳамин фрейм ҳанӯз ба он ишора мекунад.
+      WidgetsBinding.instance.addPostFrameCallback((_) => gone.dispose());
+    }
+    if (deleted) {
+      vm.removeLocal(id);
+    } else {
+      vm.markNotInterested(id);
+    }
+    if (vm.reels.isEmpty) return;
+    final last = _adPlan.pageCount(vm.reels.length) - 1;
+    if (_currentPage > last) {
+      _currentPage = last;
+      if (_pageCtrl.hasClients) _pageCtrl.jumpToPage(last);
+    }
+    final ri = _adPlan.reelIndexAt(_currentPage);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _preloadAhead(ri, vm);
+      if (ri >= vm.reels.length - 3) vm.loadMore();
+    });
+  }
+
   void _preloadAhead(int current, _ReelsVM vm) {
     for (int j = current + 1; j <= current + 3; j++) {
       if (j >= vm.reels.length) break;
@@ -615,9 +656,9 @@ class _ReelsViewState extends State<_ReelsView> {
           onMuteToggle: vm.toggleMute,
           onToggleFilter: vm.toggleFilter,
           onAddReel: () => _showReelCreateOptions(vm),
-          onDelete: () => vm.markNotInterested(vm.reels[i].id),
+          onDelete: () => _removeReel(vm, vm.reels[i].id, deleted: true),
           onNotInterested: () {
-            vm.markNotInterested(vm.reels[i].id);
+            _removeReel(vm, vm.reels[i].id);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content:
                     Text(tr('reels.reelHiddenAlgoUpdated')),
@@ -1069,8 +1110,8 @@ class _ReelItemState extends State<_ReelItem> {
       final allowed = await widget.onDownload();
       if (allowed && mounted) {
         if (_isEmbed) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Видеои беруна (YouTube ва ғ.) зеркашӣ намешавад')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(tr('reels.embedNoDownload'))));
         } else {
           // Бо тамғаи Raonson ва @муаллиф (мисли TikTok).
           await saveContentWithFeedback(context,
@@ -1102,7 +1143,7 @@ class _ReelItemState extends State<_ReelItem> {
           Navigator.pop(context);
           _editCaption();
         }),
-        _menuItem(AppIcons.chat_bubble_outline, 'Паёми худкор ба Direct',
+        _menuItem(AppIcons.chat_bubble_outline, tr('autodm.title'),
             () {
           Navigator.pop(context);
           openAutoDmSettings(context, 'reel', widget.reel.id);
@@ -1307,7 +1348,7 @@ class _ReelItemState extends State<_ReelItem> {
       ContentSync.instance.report(widget.reel.id, caption: before);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Тавсиф сабт нашуд')));
+            SnackBar(content: Text(tr('reels.captionNotSaved'))));
       }
     }
     if (!_paused && mounted) _ctrl?.play();
@@ -1439,19 +1480,19 @@ class _ReelItemState extends State<_ReelItem> {
             style: TextStyle(
                 color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _statRow('👁 Тамошошуд',
+          _statRow(tr('reels.statViews'),
               '${s['views'] ?? widget.reel.viewsCount}'),
           _statRow(
-              '❤ Лайк', '${s['likes'] ?? widget.reel.likesCount}'),
-          _statRow('💬 Шарҳ',
+              tr('reels.statLikes'), '${s['likes'] ?? widget.reel.likesCount}'),
+          _statRow(tr('reels.statComments'),
               '${s['comments'] ?? widget.reel.commentsCount}'),
-          _statRow('🔖 Захира', '${s['saves'] ?? 0}'),
+          _statRow(tr('reels.statSaves'), '${s['saves'] ?? 0}'),
           // Чанд нафар маҳз аз ҳамин Reel обуна шуданд.
-          _statRow('➕ Обуначиён аз ин Reel', '${s['follows'] ?? 0}'),
-          _statRow('📤 Мубодила',
+          _statRow(tr('reels.statFollows'), '${s['follows'] ?? 0}'),
+          _statRow(tr('reels.statShares'),
               '${s['shares'] ?? widget.reel.sharesCount}'),
           _statRow(
-              '⏱ Миёнаи тамошо',
+              tr('reels.statAvgWatch'),
               '${s['avgWatchMs'] != null ? (s['avgWatchMs'] / 1000).toStringAsFixed(1) + " сон" : "—"}'),
         ]),
         actions: [
@@ -1532,7 +1573,7 @@ class _ReelItemState extends State<_ReelItem> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
-            interested ? 'Алгоритм навшуд ✓' : 'Рилс пинҳон шуд'),
+            interested ? tr('reels.algoUpdated') : tr('reels.hidden')),
         backgroundColor:
             interested ? Colors.green : Colors.grey[800],
         duration: Duration(seconds: 2)));
@@ -1541,11 +1582,11 @@ class _ReelItemState extends State<_ReelItem> {
 
   Future<void> _report() async {
     final reasons = [
-      {'key': 'spam', 'label': 'Спам'},
-      {'key': 'violence', 'label': 'Зӯроварӣ'},
-      {'key': 'adult', 'label': 'Мӯҳтавои калонсолон'},
-      {'key': 'hate', 'label': 'Нафрат'},
-      {'key': 'other', 'label': 'Дигар'},
+      {'key': 'spam', 'label': tr('report.spam')},
+      {'key': 'violence', 'label': tr('report.violence')},
+      {'key': 'adult', 'label': tr('report.adult')},
+      {'key': 'hate', 'label': tr('report.hate')},
+      {'key': 'other', 'label': tr('report.other')},
     ];
     final reason = await showDialog<String>(
       context: context,
@@ -1582,8 +1623,8 @@ class _ReelItemState extends State<_ReelItem> {
               content: Text(tr('ui.0741b6783e')),
               backgroundColor: Colors.green,
               duration: const Duration(seconds: 2))
-          : const SnackBar(
-              content: Text('Шикоят фиристода нашуд. Боз кӯшиш кунед.')));
+          : SnackBar(
+              content: Text(tr('report.failed'))));
     }
     if (!_paused) _ctrl?.play();
   }
@@ -1845,14 +1886,14 @@ class _ReelItemState extends State<_ReelItem> {
             ]))),
 
         if (_videoFailed)
-          const Center(
+          Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Icon(AppIcons.videocam_off_rounded, color: Colors.white54, size: 44),
               SizedBox(height: 10),
-              Text('Видео кушода нашуд',
+              Text(tr('video.failed'),
                   style: TextStyle(color: Colors.white70, fontSize: 14)),
               SizedBox(height: 4),
-              Text('Ба Reel-и навбатӣ гузаред',
+              Text(tr('reels.goNext'),
                   style: TextStyle(color: Colors.white38, fontSize: 12)),
             ]),
           ),
@@ -1895,7 +1936,7 @@ class _ReelItemState extends State<_ReelItem> {
                   onTap: widget.onToggleFilter,
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Text(
-                        widget.friendsFilter ? 'Дӯстон' : 'Рилсҳо',
+                        widget.friendsFilter ? tr('reels.friends') : tr('reels.reels'),
                         style: const TextStyle(
                             color: Colors.white, fontSize: 17,
                             fontWeight: FontWeight.bold,
@@ -1905,7 +1946,7 @@ class _ReelItemState extends State<_ReelItem> {
                         style: TextStyle(color: Colors.white54, fontSize: 15)),
                     const SizedBox(width: 6),
                     Text(
-                        widget.friendsFilter ? 'Рилсҳо' : 'Дӯстон',
+                        widget.friendsFilter ? tr('reels.reels') : tr('reels.friends'),
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 15,
                             shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
@@ -1935,7 +1976,7 @@ class _ReelItemState extends State<_ReelItem> {
                   isLiked: _cs.liked ?? false,
                   // Лайкҳо пинҳонанд ва бинанда соҳиб нест → калима, на рақам.
                   count: (_hideLikes && !_isOwner)
-                      ? 'Лайкҳо'
+                      ? tr('reels.likesWord')
                       : _fmt(_cs.likesCount ?? 0),
                   onTap: widget.onLike),
               const SizedBox(height: 22),
@@ -2066,6 +2107,8 @@ class _ReelItemState extends State<_ReelItem> {
                         },
                       ),
                   ]),
+                  // «Ҷой» — зер мешавад → саҳифаи ҷой (мисли Instagram).
+                  ReelLocationChip(reel: reel, onOpen: () => _ctrl?.pause()),
                   if (_caption.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     _CaptionWidget(
@@ -2133,7 +2176,7 @@ class _CaptionWidget extends StatelessWidget {
                 child: Padding(
                     padding: const EdgeInsets.only(top: 3),
                     child: Text(
-                        expanded ? 'камтар' : 'бештар',
+                        expanded ? tr('common.less') : tr('common.more'),
                         style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 13.5,
@@ -2191,7 +2234,7 @@ class _AudioBarState extends State<_AudioBar>
   Widget build(BuildContext context) {
     // Музика → ном • хонанда; вагарна «Аудиои оригиналӣ» (мисли Instagram)
     final displayText = widget.title.trim().isEmpty
-        ? 'Аудиои оригиналӣ'
+        ? tr('audio.originalAudio')
         : (widget.artist.isNotEmpty
             ? '${widget.title} — ${widget.artist}'
             : widget.title);

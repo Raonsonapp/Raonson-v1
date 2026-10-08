@@ -34,6 +34,8 @@ import '../learn/learn_screen.dart';
 import '../effects/effects_screen.dart';
 import '../profile/edit/edit_profile_screen.dart';
 import 'account_screens.dart';
+import 'managed_users_screen.dart';
+import '../profile/archive_screen.dart';
 import 'legal_screens.dart';
 import 'insights_screen.dart';
 import 'seller_dashboard_screen.dart';
@@ -132,8 +134,8 @@ class SettingsScreen extends StatelessWidget {
               // «Вақти шумо» — мисли Instagram (Your activity).
               _NavTile(
                 icon:  AppIcons.schedule_rounded,
-                title: 'Вақти шумо',
-                sub:   'Вақт дар барнома, ҳадди рӯзона, танаффус',
+                title: tr('set.yourTime'),
+                sub:   tr('set.yourTimeSub'),
                 onTap: () => _go(ctx, const TimeSpentScreen()),
               ),
 
@@ -220,25 +222,31 @@ class SettingsScreen extends StatelessWidget {
               _NavTile(
                 icon:  AppIcons.chat_bubble_rounded,
                 title: tr('ui.5fae95bc45'),
-                sub:   'Ба муштариён худкор ҷавоб диҳед',
+                sub:   tr('set.autoReplySub'),
                 onTap: () => _go(ctx, const AutoReplyScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.lock_outline_rounded,
                 title: tr('ui.7c49e29a8b'),
-                sub:   'Чатҳоро бо PIN муҳофизат кунед',
+                sub:   tr('set.chatPinSub'),
                 onTap: () => _go(ctx, const ChatPinScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.star_rounded,
                 title: tr('ui.f2d1504d89'),
-                sub:   'Рӯйхати дӯстони наздик барои сторис',
+                sub:   tr('set.closeFriendsSub'),
                 onTap: () => _go(ctx, const CloseFriendsScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.archive_outlined,
+                title: tr('archive.title'),
+                sub:   tr('archive.settingsSub'),
+                onTap: () => _go(ctx, const ArchiveScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.schedule_rounded,
                 title: tr('ui.9d39abf489'),
-                sub:   'Постҳои дар вақти муайян нашршаванда (Pro)',
+                sub:   tr('set.scheduledSub'),
                 onTap: () => _go(ctx, const ScheduledPostsScreen()),
               ),
 
@@ -309,11 +317,11 @@ class SettingsScreen extends StatelessWidget {
                 builder: (_, isTj, __) {
                   if (!isTj) return const SizedBox.shrink();
                   return Column(children: [
-                    _Hdr('Дигар'),
+                    _Hdr(tr('report.other')),
                     _NavTile(
                       icon:  AppIcons.movie_filter_outlined,
                       title: tr('ui.7337e416da'),
-                      sub:   'Тамошои аниме · 480p ройгон, 720p/1080p VIP',
+                      sub:   tr('set.animeSub'),
                       onTap: () => _go(ctx, const AnimeScreen()),
                     ),
                   ]);
@@ -321,7 +329,7 @@ class SettingsScreen extends StatelessWidget {
               ),
 
               // ── LEARN ─────────────────────────────────────────────
-              _Hdr('Омӯзиш'),
+              _Hdr(tr('set.learning')),
               _NavTile(
                 icon:  AppIcons.code_rounded,
                 title: tr('ui.b4a5166e98'),
@@ -331,50 +339,50 @@ class SettingsScreen extends StatelessWidget {
               _NavTile(
                 icon:  AppIcons.bolt_rounded,
                 title: tr('ui.f8bb40968b'),
-                sub:   'Эффектҳоро истифода баред ё худатон созед',
+                sub:   tr('set.effectsSub'),
                 onTap: () => _go(ctx, const EffectsScreen()),
               ),
 
               // ── ABOUT ─────────────────────────────────────────────
-              _Hdr('Маълумот'),
+              _Hdr(tr('set.info')),
               _NavTile(
                 icon:  AppIcons.public_rounded,
                 title: tr('ui.a83e1c07cf'),
-                sub:   'Хабарҳои ҷаҳон аз манбаъҳои боэътимод',
+                sub:   tr('set.newsSub'),
                 onTap: () => _go(ctx, const NewsScreen()),
               ),
               _NavTile(
                 icon:  AppIcons.info_outline_rounded,
                 title: tr('ui.ded3854cce'),
-                sub:   'Версия, муаллиф ва маълумот',
+                sub:   tr('set.aboutSub'),
                 onTap: () => _go(ctx, const AboutScreen()),
               ),
               const _ThinDiv(),
               _NavTile(
                 icon:  AppIcons.privacy_tip_outlined,
                 title: tr('ui.04b1f79cc0'),
-                sub:   'Маълумот дар бораи ҳифзи маълумотҳо',
+                sub:   tr('set.privacyPolicySub'),
                 onTap: () => _go(ctx, const PrivacyPolicyPage()),
               ),
               const _ThinDiv(),
               _NavTile(
                 icon:  AppIcons.description_outlined,
                 title: tr('ui.ff5f014e89'),
-                sub:   'Қоидаҳои истифодаи барнома',
+                sub:   tr('set.termsSub'),
                 onTap: () => _go(ctx, const TermsOfServicePage()),
               ),
               const _ThinDiv(),
               _NavTile(
                 icon:  AppIcons.people_outline_rounded,
                 title: 'Community Guidelines',
-                sub:   'Қоидаҳои ҷомеа',
+                sub:   tr('set.guidelinesSub'),
                 onTap: () => _go(ctx, const CommunityGuidelinesScreen()),
               ),
               const _ThinDiv(),
               _NavTile(
                 icon:  AppIcons.security_outlined,
                 title: 'Child Safety Standards',
-                sub:   'Ҳифзи кӯдакон дар платформа',
+                sub:   tr('set.childSafetySub'),
                 onTap: () => _go(ctx, const ChildSafetyScreen()),
               ),
               const _ThinDiv(),
@@ -460,8 +468,8 @@ class SettingsScreen extends StatelessWidget {
           if (ok) {
             ctx.read<AppState>().logout();
           } else {
-            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                content: Text('Аккаунт нест нашуд. Боз кӯшиш кунед.')));
+            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                content: Text(tr('set.deleteAccountFailed'))));
           }
         },
       ),
@@ -643,8 +651,8 @@ class _PrivacyState extends State<PrivacyScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => apply(!val));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Танзимот нигоҳ дошта нашуд. Боз кӯшиш кунед.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('set.saveFailed'))));
     }
   }
 
@@ -652,16 +660,16 @@ class _PrivacyState extends State<PrivacyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _appBar(context, 'Махфият'),
+      appBar: _appBar(context, tr('privacy.title')),
       body: _loading
           ? const _SettingsSkeleton()
           : _loadError
-          ? ErrorState(message: 'Танзимот бор нашуд', onRetry: _load)
+          ? ErrorState(message: tr('set.loadFailed'), onRetry: _load)
           : ListView(children: [
               _SwTile(
                 icon:  AppIcons.lock_outline_rounded,
                 title: tr('ui.6e40f6471d'),
-                sub:   'Танҳо пайравони тасдиқшуда мӯҳтаворо мебинанд',
+                sub:   tr('set.privateSub'),
                 value: _private,
                 onChanged: (v) {
                   _sync('isPrivate', v, (x) => _private = x);
@@ -680,6 +688,24 @@ class _PrivacyState extends State<PrivacyScreen> {
               ),
               const _ThinDiv(),
               _NavTile(
+                icon:  AppIcons.notifications_off_outlined,
+                title: tr('privacy.muted'),
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const ManagedUsersScreen(
+                            kind: ManagedList.muted))),
+              ),
+              const _ThinDiv(),
+              _NavTile(
+                icon:  AppIcons.do_not_disturb_on_outlined,
+                title: tr('privacy.restricted'),
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (_) => const ManagedUsersScreen(
+                            kind: ManagedList.restricted))),
+              ),
+              const _ThinDiv(),
+              _NavTile(
                 icon:  AppIcons.star_rounded,
                 title: tr('ui.f2d1504d89'),
                 onTap: () => Navigator.push(context,
@@ -690,7 +716,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               // Калимаҳои пинҳон — шарҳи нохуш пинҳон мешавад, на рад.
               _NavTile(
                 icon:  AppIcons.privacy_tip_outlined,
-                title: 'Калимаҳои пинҳон',
+                title: tr('set.hiddenWords'),
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
                         builder: (_) => const HiddenWordsScreen())),
@@ -708,7 +734,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               _SwTile(
                 icon:  AppIcons.access_time_rounded,
                 title: tr('ui.be98cc80d6'),
-                sub:   'Ба дигарон нишон деҳ, ки шумо онлайн ҳастед',
+                sub:   tr('set.activitySub'),
                 value: _activityStatus,
                 onChanged: (v) {
                   _sync('activityStatus', v, (x) => _activityStatus = x);
@@ -718,7 +744,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               _SwTile(
                 icon:  AppIcons.chat_bubble_outline_rounded,
                 title: tr('ui.36b8f19277'),
-                sub:   'Ба ҳама иҷозати шарҳ диҳ',
+                sub:   tr('set.commentsSub'),
                 value: _allowComments,
                 onChanged: (v) {
                   _sync('allowComments', v, (x) => _allowComments = x);
@@ -728,7 +754,7 @@ class _PrivacyState extends State<PrivacyScreen> {
               _SwTile(
                 icon:  AppIcons.alternate_email_rounded,
                 title: tr('ui.7bf9d8c3cf'),
-                sub:   'Кӣ метавонад шуморо зикр кунад',
+                sub:   tr('set.mentionsSub'),
                 value: _allowMentions,
                 onChanged: (v) {
                   _sync('allowMentions', v, (x) => _allowMentions = x);
@@ -799,8 +825,8 @@ class _NotifState extends State<NotificationsScreen> {
 
   Future<void> _setContactsNotify(bool v) async {
     if (!_contactsConsent) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(
-          'Аввал дар «Дӯстон → Контактҳо» мухотибонро пайваст кунед')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+          tr('set.contactsFirst'))));
       return;
     }
     setState(() => _contactsNotify = v);
@@ -810,8 +836,8 @@ class _NotifState extends State<NotificationsScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _contactsNotify = !v);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Танзимот нигоҳ дошта нашуд. Боз кӯшиш кунед.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('set.saveFailed'))));
     }
   }
 
@@ -824,8 +850,8 @@ class _NotifState extends State<NotificationsScreen> {
         _contactsNotify = false;
         _contactsStored = 0;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Мухотибон аз сервер нест карда шуданд')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('set.contactsDeleted'))));
     } catch (_) {}
   }
 
@@ -874,8 +900,8 @@ class _NotifState extends State<NotificationsScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(revert);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Танзимот нигоҳ дошта нашуд. Боз кӯшиш кунед.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('set.saveFailed'))));
     }
   }
 
@@ -942,11 +968,11 @@ class _NotifState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _appBar(context, 'Огоҳиҳо'),
+      appBar: _appBar(context, tr('set.notifications')),
       body: _loading
           ? const _SettingsSkeleton()
           : _loadError
-          ? ErrorState(message: 'Танзимот бор нашуд', onRetry: _load)
+          ? ErrorState(message: tr('set.loadFailed'), onRetry: _load)
           : ListView(children: [
               _SwTile(icon: AppIcons.favorite_rounded,
                   title: tr('ui.a12587206f'), value: _likes,
@@ -995,7 +1021,7 @@ class _NotifState extends State<NotificationsScreen> {
                   title: contactsJoinedLabel,
                   sub: _contactsConsent
                       ? 'Мухотибони нигоҳдошта (хеш): $_contactsStored'
-                      : 'Барои фаъол кардан мухотибонро дар «Дӯстон» пайваст кунед',
+                      : tr('set.contactsEnableHint'),
                   value: _contactsNotify,
                   onChanged: _setContactsNotify),
               if (_contactsConsent)
@@ -1005,14 +1031,14 @@ class _NotifState extends State<NotificationsScreen> {
                     padding: const EdgeInsets.only(left: 60),
                     child: TextButton(
                       onPressed: _forgetContacts,
-                      child: const Text('Мухотибонро аз сервер нест кардан',
+                      child: Text(tr('set.contactsDelete'),
                           style: TextStyle(color: Colors.redAccent, fontSize: 13)),
                     ),
                   ),
                 ),
               Divider(color: AppColors.dividerFaint, height: 28, indent: 16, endIndent: 16),
               _SwTile(icon: AppIcons.notifications_rounded,
-                  title: tr('ui.f694047b90'), sub: 'Огоҳиҳои телефонӣ',
+                  title: tr('ui.f694047b90'), sub: tr('set.pushSub'),
                   value: _push,
                   onChanged: (v) { setState(() => _push = v); _save(() => _push = !v); }),
               const _ThinDiv(),
@@ -1091,7 +1117,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
     final s = _status;
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _appBar(context, 'Амният'),
+      appBar: _appBar(context, tr('set.security')),
       body: ListView(children: [
         _NavTile(
           icon:  AppIcons.lock_outline_rounded,
@@ -1164,15 +1190,15 @@ class _CPState extends State<ChangePasswordScreen> {
     final cnf  = _new2Ctrl.text.trim();
 
     if (old.isEmpty || nw.isEmpty || cnf.isEmpty) {
-      setState(() => _err = 'Ҳамаи майдонҳоро пур кунед');
+      setState(() => _err = tr('set.fillAll'));
       return;
     }
     if (nw.length < 8) {
-      setState(() => _err = 'Рамзи нав ҳадди аққал 8 аломат');
+      setState(() => _err = tr('set.pwMin'));
       return;
     }
     if (nw != cnf) {
-      setState(() => _err = 'Рамзҳо мувофиқат намекунанд');
+      setState(() => _err = tr('set.pwMismatch'));
       return;
     }
 
@@ -1246,15 +1272,15 @@ class _CPState extends State<ChangePasswordScreen> {
         padding: EdgeInsets.all(20),
         child: Column(children: [
           _PwField(
-              ctrl: _oldCtrl, hint: 'Рамзи кӯҳна',
+              ctrl: _oldCtrl, hint: tr('set.pwOld'),
               show: _s1, onToggle: () => setState(() => _s1 = !_s1)),
           const SizedBox(height: 14),
           _PwField(
-              ctrl: _new1Ctrl, hint: 'Рамзи нав (ҳадди аққал 8)',
+              ctrl: _new1Ctrl, hint: tr('set.pwNew'),
               show: _s2, onToggle: () => setState(() => _s2 = !_s2)),
           const SizedBox(height: 14),
           _PwField(
-              ctrl: _new2Ctrl, hint: 'Рамзи навро такрор кун',
+              ctrl: _new2Ctrl, hint: tr('set.pwRepeat'),
               show: _s3, onToggle: () => setState(() => _s3 = !_s3)),
           if (_err != null) ...[
             const SizedBox(height: 14),
@@ -1333,8 +1359,8 @@ class _SessState extends State<SessionsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(ok
-            ? 'Аз ҳамаи дастгоҳҳои ДИГАР баромад шуд. Ин дастгоҳ дар система мемонад.'
-            : 'Сессияҳо баста нашуданд. Боз кӯшиш кунед.')));
+            ? tr('set.sessionsClosed')
+            : tr('set.sessionsFailed'))));
     if (ok) _load();
   }
 
@@ -1356,7 +1382,7 @@ class _SessState extends State<SessionsScreen> {
           TextButton(
               onPressed: _revokeAll,
               // Ин дастгоҳ бо токени нав мемонад — танҳо ДИГАРОН берун мешаванд.
-              child: Text('Дигаронро бандед',
+              child: Text(tr('set.closeOthers'),
                   style: TextStyle(
                       color: Colors.redAccent, fontSize: 13))),
         ],
@@ -1364,14 +1390,14 @@ class _SessState extends State<SessionsScreen> {
       body: _loading
           ? const _SettingsSkeleton()
           : _sessions.isEmpty
-              ? const _EmptyHint('Сессияҳо нест')
+              ? _EmptyHint(tr('set.noSessions'))
               : ListView.separated(
                   itemCount: _sessions.length,
                   separatorBuilder: (_, __) => const _ThinDiv(),
                   itemBuilder: (_, i) {
                     final s       = _sessions[i];
                     final device  =
-                        s['device']?.toString() ?? 'Дастгоҳ';
+                        s['device']?.toString() ?? tr('set.device');
                     final ip      =
                         s['ip']?.toString() ?? '';
                     final current =
@@ -1460,11 +1486,11 @@ class _BUSState extends State<BlockedUsersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _appBar(context, 'Блокшудагон'),
+      appBar: _appBar(context, tr('set.blocked')),
       body: _loading
           ? const _SettingsSkeleton()
           : _users.isEmpty
-              ? const _EmptyHint('Ягон корбари блокшуда нест')
+              ? _EmptyHint(tr('set.noBlocked'))
               : ListView.separated(
                   itemCount: _users.length,
                   separatorBuilder: (_, __) => const _ThinDiv(),
@@ -1507,7 +1533,7 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: _appBar(context, 'Дар бораи барнома'),
+      appBar: _appBar(context, tr('set.about')),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 24),
         children: [
@@ -1578,14 +1604,14 @@ class AboutScreen extends StatelessWidget {
           const SizedBox(height: 18),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(children: const [
+            child: Column(children: [
               _AboutValue(icon: AppIcons.group_add_outlined, title: 'Пайваст шав',
                   text: 'Бо дӯстон аз тамоми ҷаҳон'),
               _AboutValue(icon: AppIcons.chat_bubble_outline, title: 'Муошират кун',
                   text: 'Паёмҳои фаврӣ, овоз ва видео'),
               _AboutValue(icon: AppIcons.smart_display_outlined, title: 'Илҳом бигир',
                   text: 'Постҳо, наворҳо ва лаҳзаҳои зебо'),
-              _AboutValue(icon: AppIcons.privacy_tip_outlined, title: 'Амният',
+              _AboutValue(icon: AppIcons.privacy_tip_outlined, title: tr('set.security'),
                   text: 'Ҳифзи махфият ва бехатарӣ'),
             ]),
           ),

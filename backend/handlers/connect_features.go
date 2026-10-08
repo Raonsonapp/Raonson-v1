@@ -335,6 +335,9 @@ func MarkReelNotInterested(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`INSERT INTO reel_not_interested(reel_id, user_id)
 		 VALUES($1,$2) ON CONFLICT DO NOTHING`, rid, myID)
+	// Лентаи smart барои ҳар корбар кэш мешавад — бе пок кардан ҳамин
+	// reel дар саҳифаи навбатӣ боз меомад.
+	invalidateReelFeedCache(myID)
 	c.JSON(http.StatusOK, gin.H{"not_interested": true})
 }
 
@@ -345,6 +348,7 @@ func MarkReelInterested(c *gin.Context) {
 	rid := c.Param("id")
 	db.Pool.Exec(context.Background(),
 		`DELETE FROM reel_not_interested WHERE reel_id=$1 AND user_id=$2`, rid, myID)
+	invalidateReelFeedCache(myID)
 	c.JSON(http.StatusOK, gin.H{"interested": true})
 }
 
@@ -568,4 +572,13 @@ func UpdateNotifPrefs(c *gin.Context) {
 	db.Pool.Exec(context.Background(),
 		`UPDATE users SET notif_prefs=$1::jsonb WHERE id=$2`, string(jb), myID)
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// invalidateReelFeedCache — лентаҳои reels-и корбар (smart ва оддӣ).
+func invalidateReelFeedCache(userID string) {
+	mw.LocalDelPrefix("smartreels:" + userID + ":")
+	// Калиди воқеӣ насли мундариҷаро дар охир дорад (ниг. GetSmartReels).
+	mw.CacheDel("smartreels:"+userID+":1"+mw.ContentEpoch(),
+		"smartreels:"+userID+":1", "smartreels:"+userID+":2")
+	mw.InvalidateUserCache(userID)
 }
