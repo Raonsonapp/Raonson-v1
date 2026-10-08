@@ -495,3 +495,17 @@ func checkText(ctx context.Context, text string, useAI bool) Verdict {
 	ai.Categories = mergeCats(ai.Categories, nil)
 	return Merge(v, ai)
 }
+
+// HashtagBlocked — хештеги манъшуда (18+, дашном, шубҳанок)? Ҳамон
+// рӯйхати data/keywords.txt, ки тавсифҳоро месанҷад. Саҳифаи чунин
+// хештег холӣ мемонад (мисли Instagram), ва он дар ҷустуҷӯ, тренд ва
+// хештегҳои алоқаманд нишон дода намешавад.
+//
+// «_» калимаҳоро ҷудо мекунад: «#sex_video» ҳам манъ аст.
+func HashtagBlocked(tag string) bool {
+	tag = strings.TrimPrefix(strings.TrimSpace(tag), "#")
+	if tag == "" {
+		return false
+	}
+	return verdictFromHits(ScanText(tag)).Action != Allow
+}

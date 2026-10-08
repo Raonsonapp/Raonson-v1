@@ -291,6 +291,21 @@ func main() {
 		pl.GET("/:id/posts",  cache3s, handlers.PlacePosts)
 	}
 
+	// ── HASHTAGS (мисли Instagram) ──────────────────────────────
+	// Бе кэш: ҳолати «Обуна», лайк ва бастан фавран иваз мешаванд;
+	// дархостҳо аз индекси content_hashtags мехонанд.
+	ht := r.Group("/hashtags", auth, rl100)
+	{
+		ht.GET("/search",       handlers.SearchHashtags)
+		ht.GET("/trending",     handlers.TrendingHashtags)
+		ht.GET("/following",    handlers.FollowedHashtags)
+		ht.GET("/:tag",         handlers.GetHashtag)
+		ht.GET("/:tag/top",     handlers.HashtagTop)
+		ht.GET("/:tag/recent",  handlers.HashtagRecent)
+		ht.POST("/:tag/follow",   handlers.FollowHashtag)
+		ht.DELETE("/:tag/follow", handlers.UnfollowHashtag)
+	}
+
 	// ── POSTS ────────────────────────────────────────────────────
 	po := r.Group("/posts", auth, rl100)
 	{

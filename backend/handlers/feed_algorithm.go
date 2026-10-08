@@ -125,6 +125,9 @@ func GetSmartFeed(c *gin.Context) {
 		       WHERE ct.content_type='post' AND ct.content_id = p.id
 		     ), 0)
 		   + COALESCE(cp.score, 0) * 40
+		   -- Хештеги обунашуда (мисли Instagram): тақвияти сабук — аз
+		   -- обуна ба одам (100) хеле камтар, то лентаи обунаҳо боло монад.
+		   + CASE WHEN ht.ok IS TRUE THEN 25 ELSE 0 END
 		   + CASE WHEN COALESCE(fp.prefer_following,FALSE)
 		               AND f.following_id IS NOT NULL THEN 30 ELSE 0 END
 		   -- «Камтар тавсия» танҳо мӯҳтавои беруни обунаро ҷарима мекунад.
@@ -141,6 +144,12 @@ func GetSmartFeed(c *gin.Context) {
 		  WHERE ff.follower_id=$1
 		    AND ff.following_id = ANY(COALESCE(p.collaborators,'{}'))
 		  LIMIT 1) fc ON TRUE
+		-- Пост хештеги обунашудаи корбарро дорад?
+		LEFT JOIN LATERAL (
+		  SELECT TRUE AS ok FROM content_hashtags ch
+		  JOIN hashtag_follows hf ON hf.tag = ch.tag AND hf.user_id = $1
+		  WHERE ch.content_kind = 'post' AND ch.content_id = p.id
+		  LIMIT 1) ht ON TRUE
 		LEFT JOIN post_views  pv ON pv.post_id=p.id AND pv.user_id=$1
 		LEFT JOIN paff        pa ON pa.creator_id=p.user_id
 		LEFT JOIN feed_creator_prefs cp
@@ -169,6 +178,10 @@ func GetSmartFeed(c *gin.Context) {
 		      AND p.created_at > NOW() - INTERVAL '7 days')
 		    OR
 		    (p.likes_count >= 3 AND p.created_at > NOW() - INTERVAL '3 days')
+		    OR
+		    -- Постҳои маъмули хештегҳои обунашуда (≥1 лайк, 7 рӯз).
+		    (ht.ok IS TRUE AND p.likes_count >= 1
+		      AND p.created_at > NOW() - INTERVAL '7 days')
 		  )
 		ORDER BY score DESC, p.created_at DESC
 		LIMIT $2 OFFSET $3`,

@@ -135,6 +135,8 @@ func CreatePost(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
 		return
 	}
+	// Хештегҳо — дар ҳамон транзаксия: пост бе индекси хештег намемонад.
+	syncContentHashtags(context.Background(), tx, "post", postID, b.Caption)
 
 	for i, m := range b.Media {
 		url, _ := m["url"].(string)
@@ -501,6 +503,7 @@ func DeletePost(c *gin.Context) {
 	// Сатрҳои вобаста — пеш абадан мемонданд (огоҳиномаҳо ба пости нест
 	// ишора мекарданд, папкаҳо муқоваи холӣ нишон медоданд).
 	if !hasOrders {
+		dropContentHashtags("post", pid)
 		for _, q := range []string{
 			`DELETE FROM post_media WHERE post_id=$1`,
 			`DELETE FROM comment_likes WHERE comment_id IN (SELECT id FROM comments WHERE post_id=$1)`,

@@ -23,6 +23,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/utils/time_ago.dart';
 import '../../core/ui/r_icon.dart';
+import '../../widgets/hashtag_suggestions.dart';
+import '../../widgets/linked_text.dart';
 
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
@@ -552,6 +554,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
               ]),
             ),
 
+          // «#ду» → «#душанбе · 1.2K пост» (мисли Instagram).
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: HashtagSuggestions(
+                controller: _ctrl, textColor: AppColors.textPrimary),
+          ),
           // Emoji quick-reaction row (мисли Instagram)
           SizedBox(
             height: 38,
@@ -951,7 +959,8 @@ class _CommentItemState extends State<_CommentItem> {
             ]),
             const SizedBox(height: 2),
             // Матни коммент — ЗЕРИ ном (мисли Instagram)
-            Text(c.text,
+            // #хештег ва @зикр дар шарҳ зер мешаванд (мисли Instagram).
+            LinkedText(c.text,
                 style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
             if (_translated != null) ...[
               const SizedBox(height: 4),

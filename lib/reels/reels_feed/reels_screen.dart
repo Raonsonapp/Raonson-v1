@@ -48,6 +48,7 @@ import '../audio/audio_page_screen.dart';
 import '../player/reel_gestures.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 import '../../core/ui/r_icon.dart';
+import '../../widgets/linked_text.dart';
 
 class ReelsScreen extends StatelessWidget {
   final bool isActive;
@@ -1768,58 +1769,14 @@ class _ReelItemState extends State<_ReelItem> {
     return n > 0 ? '$n' : '';
   }
 
-  List<InlineSpan> _buildCaptionSpans(String text) {
-    final spans = <InlineSpan>[];
-    final words = text.split(' ');
-    for (final word in words) {
-      if (word.startsWith('#') && word.length > 1) {
-        final tag = word.replaceAll(RegExp(r'[^\w]'), '');
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: GestureDetector(
-              onTap: () => Navigator.pushNamed(context, '/hashtag',
-                  arguments: tag),
-              child: Text('$word ',
-                  style: const TextStyle(
-                      color: AppColors.neonBlue,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      shadows: [
-                        Shadow(blurRadius: 4, color: Colors.black)
-                      ]))),
-        ));
-      } else if (word.startsWith('@') && word.length > 1) {
-        final username =
-            word.substring(1).replaceAll(RegExp(r'[^\w]'), '');
-        spans.add(WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: GestureDetector(
-              onTap: () => Navigator.pushNamed(
-                  context, '/profile-by-username',
-                  arguments: username),
-              child: Text('$word ',
-                  style: const TextStyle(
-                      color: AppColors.neonBlue,
-                      fontSize: 14,
-                      shadows: [
-                        Shadow(blurRadius: 4, color: Colors.black)
-                      ]))),
-        ));
-      } else {
-        spans.add(TextSpan(
-            text: '$word ',
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                shadows: [
-                  Shadow(blurRadius: 4, color: Colors.black)
-                ])));
-      }
-    }
-    return spans;
-  }
+  // Хештег ва зикр — ҳамон қоидаи ягона (core/hashtags), мисли пост.
+  // Пеш «#сафар» (тоҷикӣ) ба саҳифаи холӣ мебурд.
+  List<InlineSpan> _buildCaptionSpans(String text) => linkedSpans(context, text,
+      style: const TextStyle(color: Colors.white, fontSize: 14,
+          shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+      linkStyle: const TextStyle(color: AppColors.neonBlue, fontSize: 14,
+          fontWeight: FontWeight.w600,
+          shadows: [Shadow(blurRadius: 4, color: Colors.black)]));
 
   @override
   Widget build(BuildContext context) {

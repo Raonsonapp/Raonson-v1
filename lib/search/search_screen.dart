@@ -43,6 +43,11 @@ import '../core/music/music_bar.dart';
 import '../shop/buy_sheet.dart';
 import '../live/live_rail.dart';
 import '../reels/player/reel_gestures.dart';
+import '../core/hashtags/hashtag_parser.dart' show compactCount;
+import '../core/hashtags/hashtag_repository.dart';
+import '../widgets/hashtag_suggestions.dart';
+import '../widgets/linked_text.dart';
+import 'trending_hashtags_row.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  MAIN SCREEN
@@ -298,8 +303,23 @@ class _SearchScreenState extends State<SearchScreen>
     setState(() { _searching = true; _error = null; });
     await SearchHistory.add(q);
     await _loadHistory();
-    await Future.wait([_searchBackend(q), _searchMusic(q)]);
+    // «#…» — корбар хештег мекобад: таби «Хештегҳо» (мисли Instagram).
+    if (q.startsWith('#') && _tabs.index != 3) _tabs.index = 3;
+    await Future.wait([_searchBackend(q), _searchMusic(q), _searchHashtags(q)]);
     if (mounted) setState(() => _searching = false);
+  }
+
+  /// Таби «Хештегҳо» — /hashtags/search (пешванд, аз рӯи истифода, бо
+  /// шумораи постҳо + Reels). Ҷавоби /search ҳамчун захира мемонад.
+  Future<void> _searchHashtags(String q) async {
+    try {
+      final found = await HashtagRepository.instance.search(q);
+      if (!mounted || q != _lastQ) return;
+      setState(() => _hashtags = [
+            for (final h in found)
+              {'tag': h.tag, 'postsCount': h.count, 'following': h.following},
+          ]);
+    } catch (_) {}
   }
 
   Future<void> _searchBackend(String q) async {
@@ -601,6 +621,7 @@ class _SearchScreenState extends State<SearchScreen>
           onCancel:   _cancelSearch,
         ),
         const LiveRail(), // «Live ҳозир» — дар search (на home)
+        const TrendingHashtagsRow(), // «Трендҳо» — хештегҳои боло раванда
         StaleDataBanner(
             visible: _exploreStale && !_exploreLoading,
             message: _exploreItems.isEmpty ? tr('net.offline') : null,
@@ -2303,7 +2324,8 @@ class _HashtagTab extends StatelessWidget {
       itemBuilder: (_, i) {
         final h   = hashtags[i] as Map<String, dynamic>;
         final tag = h['tag']?.toString() ?? '';
-        final cnt = (h['postsCount'] as num?)?.toInt() ?? 0;
+        // Пеш сервер танҳо "count" мефиристод ва ин ҷо ҳамеша «0 пост» буд.
+        final cnt = ((h['postsCount'] ?? h['count']) as num?)?.toInt() ?? 0;
         return InkWell(
           onTap: tag.isEmpty
               ? null
@@ -2326,7 +2348,7 @@ class _HashtagTab extends StatelessWidget {
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 2),
-                Text(trn('count.posts', cnt),
+                Text(tr('hashtag.postsCount', {'n': compactCount(cnt)}),
                     style: TextStyle(
                         color: AppColors.textFaint, fontSize: 12)),
               ]),
@@ -2782,10 +2804,15 @@ class _ExploreCommentsSheetState extends State<_ExploreCommentsSheet> {
                             title: Text((u['username'] ?? '').toString(),
                                 style: TextStyle(color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w600, fontSize: 13)),
-                            subtitle: Text((c['text'] ?? '').toString(),
+                            subtitle: LinkedText((c['text'] ?? '').toString(),
                                 style: TextStyle(color: AppColors.textPrimary)),
                           );
                         }),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: HashtagSuggestions(
+                controller: _ctrl, textColor: AppColors.textPrimary),
           ),
           Padding(
             padding: const EdgeInsets.all(10),

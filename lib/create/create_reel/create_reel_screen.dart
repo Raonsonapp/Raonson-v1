@@ -19,6 +19,8 @@ import '../../core/music/music_picker.dart';
 import '../../models/note_model.dart';
 import '../../core/error/friendly_error.dart';
 import '../../core/moderation/content_policy.dart';
+import '../../widgets/hashtag_suggestions.dart';
+import '../../widgets/mention_suggestions.dart';
 
 class CreateReelScreen extends StatefulWidget {
   final File? initialFile;
@@ -459,6 +461,9 @@ class _CreateReelScreenState extends State<CreateReelScreen> {
                 counterStyle: const TextStyle(color: Colors.white24),
               ),
             ),
+            // «@eh» ва «#ду» дар тавсифи Reel — мисли пост.
+            MentionSuggestions(controller: _caption),
+            HashtagSuggestions(controller: _caption),
 
             const SizedBox(height: 12),
             _audioRow(),

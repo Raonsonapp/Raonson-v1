@@ -1250,6 +1250,11 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, placesSchema); err != nil {
 		log.Fatalf("❌ Places migration failed: %v", err)
 	}
+	// Хештегҳо: индекси пост/Reel, обуна (ниг. hashtag_schema.go).
+	if _, err := Pool.Exec(ctx, hashtagSchema); err != nil {
+		log.Fatalf("❌ Hashtag migration failed: %v", err)
+	}
+	backfillHashtags(ctx)
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

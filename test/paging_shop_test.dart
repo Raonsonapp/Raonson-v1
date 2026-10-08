@@ -143,9 +143,12 @@ void main() {
     });
 
     test('ҳаштаг саҳифаи навбатиро мехонад', () {
+      // Грид дар экран, дархости саҳифа дар репозиторий (постҳо + Reels).
       final src = _read('lib/feed/hashtag/hashtag_screen.dart');
       expect(src, contains('_loadMore'));
-      expect(src, contains("'page': '\$page'"));
+      expect(src, contains('_fetch(_page + 1)'));
+      final repo = _read('lib/core/hashtags/hashtag_repository.dart');
+      expect(repo, contains("'page': '\$page'"));
     });
 
     test('гурӯҳ: паёмҳои кӯҳна ва хатои фиристодан', () {
