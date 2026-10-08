@@ -195,7 +195,12 @@ class _ChatView extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: Column(
+        // Экрани паст (телефони хурд, уфуқӣ, клавиатура): ёддоштҳо, Ёрдамчии
+        // AI ва эзоҳи дархостҳо пинҳон мешаванд, то рӯйхати чатҳо ҷой дошта
+        // бошад. Пеш сарлавҳа 76px аз ҳудуд мебаромад (санҷиши эмулятор).
+        child: LayoutBuilder(builder: (context, box) {
+        final compact = box.maxHeight < 560;
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── AppBar ──────────────────────────────────────
@@ -290,7 +295,7 @@ class _ChatView extends StatelessWidget {
             ),
 
             // ── Notes row ────────────────────────────────────
-            if (ctrl.query.isEmpty) ...[
+            if (ctrl.query.isEmpty && !compact) ...[
               _NotesRow(
                 myAvatar:  myAvatar,
                 myNote:    notes.myNote,
@@ -304,7 +309,7 @@ class _ChatView extends StatelessWidget {
             ],
 
             // ── AI Ёрдамчӣ (ChatGPT) ──────────────────────────
-            if (ctrl.query.isEmpty && ctrl.tab == ChatTab.primary)
+            if (ctrl.query.isEmpty && ctrl.tab == ChatTab.primary && !compact)
               const _AiAssistantTile(),
 
             // ── Tab header ───────────────────────────────────
@@ -317,7 +322,7 @@ class _ChatView extends StatelessWidget {
             const SizedBox(height: 4),
 
             // ── Requests info banner ─────────────────────────
-            if (ctrl.query.isEmpty && ctrl.tab == ChatTab.requests)
+            if (ctrl.query.isEmpty && ctrl.tab == ChatTab.requests && !compact)
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 padding: const EdgeInsets.all(12),
@@ -428,7 +433,8 @@ class _ChatView extends StatelessWidget {
                     ),
             ),
           ],
-        ),
+        );
+        }),
       ),
     );
   }
