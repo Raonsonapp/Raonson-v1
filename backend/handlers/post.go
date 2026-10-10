@@ -611,6 +611,13 @@ func TogglePostSave(c *gin.Context) {
 	if saved {
 		db.Pool.Exec(context.Background(),
 			`DELETE FROM post_saves WHERE post_id=$1::text AND user_id=$2::text`, pid, myID)
+		// Мисли Instagram: аз захира баровардан — аз ҳамаи папкаҳо низ.
+		// Пеш пост дар папка «ятим» мемонд: шумора ва муқова онро
+		// ҳисоб мекарданд, вале кушодани папка онро нишон намедод.
+		db.Pool.Exec(context.Background(), `
+			DELETE FROM saved_collection_items i USING saved_collections sc
+			 WHERE i.collection_id = sc.id AND sc.user_id = $2::text AND i.post_id = $1::text`,
+			pid, myID)
 	} else {
 		db.Pool.Exec(context.Background(),
 			`INSERT INTO post_saves(post_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, pid, myID)

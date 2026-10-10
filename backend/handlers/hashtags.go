@@ -22,6 +22,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"raonson/db"
@@ -54,13 +55,37 @@ func dropContentHashtags(kind, id string) {
 // tagCond — шарт бар `ch` (масалан "ch.tag = $2"), viewer — параметри
 // тамошобин. public=true — танҳо ҳисобҳои кушода (тренд — кашфи умумӣ).
 func taggedVisibleSQL(tagCond, viewer string, public bool) string {
+	return taggedVisibleLimited(tagCond, viewer, public, "")
+}
+
+// taggedVisibleLimited — ҳамон, вале ҳар шоха (постҳо, Reels) бо
+// [limit]-и худ аз индекси (tag, created_at DESC) навтаринҳоро мегирад.
+// Бе ин барои 25 пости «Нав» ҳамаи мӯҳтавои хештег (масалан 30 000
+// пост) хонда ва тартиб дода мешуд (~0.7 с дар базаи санҷишӣ).
+// limit — ифодаи SQL (масалан "$3::int + $4::int" — бе ::int Postgres
+// навъи «unknown + unknown»-ро муайян карда наметавонад); "" — бе маҳдудият.
+func taggedVisibleLimited(tagCond, viewer string, public bool, limit string) string {
+	tail := func(alias string) string {
+		if limit == "" {
+			return ""
+		}
+		return `
+	   ORDER BY ch.created_at DESC, ` + alias + `.id DESC LIMIT ` + limit
+	}
+	open, close := "", ""
+	if limit != "" {
+		open, close = "(", ")"
+	}
 	author := visibleAuthorSQL
 	if public {
 		author = publicAuthorSQL
 	}
-	return `
+	return open + `
 	  SELECT 'post'::text AS kind, p.id AS id, p.user_id AS user_id, ch.tag AS tag,
-	         p.created_at AS created_at,
+	         -- ch.created_at = created_at-и пост (hashtags.Sync), вале аз
+	         -- индекси (tag, created_at DESC) хонда мешавад: «Нав» бо LIMIT
+	         -- тамоми мӯҳтавои хештегро намехонад.
+	         ch.created_at AS created_at,
 	         COALESCE(p.likes_count,0)::float8 AS likes,
 	         COALESCE(p.comments_count,0)::float8 AS comments,
 	         0::float8 AS views
@@ -71,9 +96,9 @@ func taggedVisibleSQL(tagCond, viewer string, public bool) string {
 	     AND COALESCE(p.hidden,false) = FALSE
 	     AND COALESCE(p.archived,false) = FALSE
 	     AND (p.scheduled_at IS NULL OR p.scheduled_at <= NOW())
-	     AND ` + author("p.user_id", "u", viewer) + `
+	     AND ` + author("p.user_id", "u", viewer) + tail("p") + close + `
 	  UNION ALL
-	  SELECT 'reel'::text, r.id, r.user_id, ch.tag, r.created_at,
+	  ` + open + `SELECT 'reel'::text, r.id, r.user_id, ch.tag, ch.created_at,
 	         COALESCE(r.likes_count,0)::float8,
 	         COALESCE(r.comments_count,0)::float8,
 	         COALESCE(r.views_count,0)::float8
@@ -82,7 +107,21 @@ func taggedVisibleSQL(tagCond, viewer string, public bool) string {
 	    JOIN users u ON u.id = r.user_id
 	   WHERE ch.content_kind = 'reel' AND ` + tagCond + `
 	     AND COALESCE(r.media_missing,false) = FALSE
-	     AND ` + author("r.user_id", "u", viewer)
+	     AND ` + author("r.user_id", "u", viewer) + tail("r") + close
+}
+
+// topHashtagCandidates — «Беҳтарин» аз ҳамин қадар навтарин интихоб
+// мешавад. Хол бо синну сол зуд кам мешавад (÷√соат), пас мӯҳтавои
+// кӯҳнатар ба ҳар ҳол поён аст; бе ин маҳдудият ҳар саҳифаи «Беҳтарин»
+// тамоми мӯҳтавои хештегро (масалан 30 000 пост) мехонд ва ҳисоб мекард.
+const topHashtagCandidates = 3000
+
+// topCandidateCond — шарти ch барои «Беҳтарин» (tag — параметри SQL).
+func topCandidateCond(tag string) string {
+	return `ch.tag = ` + tag + ` AND (ch.content_kind, ch.content_id) IN (
+	    SELECT c2.content_kind, c2.content_id FROM content_hashtags c2
+	     WHERE c2.tag = ` + tag + `
+	     ORDER BY c2.created_at DESC LIMIT ` + strconv.Itoa(topHashtagCandidates) + `)`
 }
 
 // tagParam — :tag-и URL → шакли муқаррарӣ. false — 400 фиристода шуд.
@@ -195,8 +234,14 @@ func hashtagGrid(c *gin.Context, top bool) {
 		         / POWER(GREATEST(EXTRACT(EPOCH FROM (NOW() - v.created_at)), 0)/3600 + 2, 0.5) DESC,
 		         v.created_at DESC, v.id DESC`
 	}
+	// «Нав»: ҳар шоха танҳо (саҳифа × андоза) навтаринро мехонад.
+	// «Беҳтарин»: аз 3000 навтарини хештег (ниг. topCandidateCond).
+	src := taggedVisibleLimited("ch.tag = $2", "$1", false, "$3::int + $4::int")
+	if top {
+		src = taggedVisibleSQL(topCandidateCond("$2"), "$1", false)
+	}
 	rows, err := db.Pool.Query(ctx, `
-		SELECT v.kind, v.id FROM (`+taggedVisibleSQL("ch.tag = $2", "$1", false)+`) v
+		SELECT v.kind, v.id FROM (`+src+`) v
 		ORDER BY `+order+`
 		LIMIT $3 OFFSET $4`, myID, tag, limit+1, (page-1)*limit)
 	if err != nil {

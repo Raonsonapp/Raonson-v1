@@ -144,7 +144,7 @@ func GetSavedPosts(c *gin.Context) {
 		  WHERE i.collection_id = $4::text AND i.post_id = p.id
 		    AND sc.user_id = $1::text))
 		  -- Муаллиф баъдтар ҳисобро пӯшид ё маро баст — пост пинҳон.
-		  AND `+visibleAuthorSQL("p.user_id", "u", "$1")+`
+		  AND `+savedPostVisibleSQL+`
 		ORDER BY p.created_at DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset, coll)
 	if err != nil {
@@ -153,6 +153,14 @@ func GetSavedPosts(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"posts": scanFeedPosts(rows), "page": page, "limit": limit})
 }
+
+// savedPostVisibleSQL — пости захирашуда (p, u; тамошобин $1) ҳоло ба
+// ман намоён аст? Пеш «Захирашуда» постҳои пинҳони модератсия, бойгонии
+// муаллиф ва вақтбандии ҳанӯз нашрнашударо ҳам нишон медод.
+var savedPostVisibleSQL = `COALESCE(p.hidden,false) = FALSE
+	  AND (COALESCE(p.archived,false) = FALSE OR p.user_id = $1::text)
+	  AND (p.scheduled_at IS NULL OR p.scheduled_at <= NOW() OR p.user_id = $1::text)
+	  AND ` + visibleAuthorSQL("p.user_id", "u", "$1")
 
 // GET /users/:id/tagged — постҳое ки корбар дар онҳо зикр (@) шудааст
 func GetTaggedPosts(c *gin.Context) {
@@ -275,18 +283,27 @@ func CreateHighlight(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
 		return
 	}
-	if b.StoryIDs == nil {
-		b.StoryIDs = []string{}
-	}
-	if b.Items == nil {
-		b.Items = []map[string]interface{}{}
-	}
-	// Cover-ро аз items-и аввал мегирем, агар надода бошанд.
-	if b.CoverURL == "" && len(b.Items) > 0 {
-		if u, ok := b.Items[0]["url"].(string); ok {
-			b.CoverURL = u
+	b.Title = clampRunes(strings.TrimSpace(b.Title), maxHighlightTitle)
+	// storyIds-и бе items (барномаҳои кӯҳна) ҳам унсур мешаванд.
+	for _, sid := range b.StoryIDs {
+		found := false
+		for _, it := range b.Items {
+			if s, _ := it["storyId"].(string); s == sid {
+				found = true
+				break
+			}
+		}
+		if !found && strings.TrimSpace(sid) != "" {
+			b.Items = append(b.Items, map[string]interface{}{"storyId": sid})
 		}
 	}
+	// Танҳо сторисҳои худам (на пинҳон/несткарда); суроға аз сервер.
+	items, storyIDs, fresh := sanitizeHighlightItems(c.Request.Context(), myID, b.Items, nil)
+	if !screenHighlight(c, b.Title, fresh) {
+		return
+	}
+	b.Items, b.StoryIDs = items, storyIDs
+	b.CoverURL = coverFor(b.CoverURL, b.Items)
 	itemsJSON, _ := json.Marshal(b.Items)
 	var id string
 	// ⚠️ `string(itemsJSON)`, на `itemsJSON`.
@@ -336,19 +353,64 @@ func UpdateHighlight(c *gin.Context) {
 	// Ҳамон сабаб: pgx `[]byte`-ро БАЙТ мешуморад. Бо `nil` кор
 	// мекард (NULL мешуд), вале бо қимати ҳақиқӣ не — яъне
 	// тағйири «Актуальный» низ хомӯш меафтод.
+	ctx := c.Request.Context()
+	var curTitle, curCover string
+	var curRaw []byte
+	if err := db.Pool.QueryRow(ctx, `
+		SELECT COALESCE(title,''), COALESCE(cover_url,''), COALESCE(items,'[]'::jsonb)
+		  FROM highlights WHERE id=$1 AND user_id=$2::text`, id, myID).
+		Scan(&curTitle, &curCover, &curRaw); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Ёфт нашуд"})
+		return
+	}
+	cur := []map[string]interface{}{}
+	json.Unmarshal(curRaw, &cur)
+	prev := map[string]bool{}
+	for _, it := range cur {
+		if u, _ := it["url"].(string); u != "" {
+			prev[u] = true
+		}
+	}
+	newTitle := ""
+	if b.Title != nil {
+		t := clampRunes(strings.TrimSpace(*b.Title), maxHighlightTitle)
+		b.Title = &t
+		if t != curTitle {
+			newTitle = t
+		}
+	}
+	items := cur
 	var itemsJSON *string
+	var storyIDs []string
+	var fresh []modMedia
 	if b.Items != nil {
-		raw, _ := json.Marshal(*b.Items)
+		items, storyIDs, fresh = sanitizeHighlightItems(ctx, myID, *b.Items, prev)
+	}
+	if !screenHighlight(c, newTitle, fresh) {
+		return
+	}
+	if b.Items != nil {
+		raw, _ := json.Marshal(items)
 		str := string(raw)
 		itemsJSON = &str
 	}
-	tag, err := db.Pool.Exec(context.Background(), `
+	// Муқова танҳо яке аз унсурҳои худи актуалӣ.
+	if b.CoverURL != nil || b.Items != nil {
+		want := curCover
+		if b.CoverURL != nil {
+			want = *b.CoverURL
+		}
+		cv := coverFor(want, items)
+		b.CoverURL = &cv
+	}
+	tag, err := db.Pool.Exec(ctx, `
 		UPDATE highlights SET
 		  title     = COALESCE($1, title),
 		  cover_url = COALESCE($2, cover_url),
-		  items     = COALESCE($3::jsonb, items)
+		  items     = COALESCE($3::jsonb, items),
+		  story_ids = CASE WHEN $3::jsonb IS NULL THEN story_ids ELSE $6::text[] END
 		WHERE id=$4 AND user_id=$5::text`,
-		b.Title, b.CoverURL, itemsJSON, id, myID)
+		b.Title, b.CoverURL, itemsJSON, id, myID, storyIDs)
 	if err != nil {
 		log.Printf("[UpdateHighlight] %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
@@ -400,14 +462,24 @@ func RemoveMyTag(c *gin.Context) {
 // GET /collections — рӯйхати папкаҳо бо шумора ва расми муқова.
 func GetCollections(c *gin.Context) {
 	myID := mw.UID(c)
+	// Шумора ва муқова танҳо аз постҳое, ки дар худи папка намоёнанд
+	// (ниг. savedPostVisibleSQL) — пеш пости несткардаи модератсия ё
+	// ҳисоби баъдтар пӯшидашуда муқоваи папка мемонд.
 	rows, err := db.Pool.Query(context.Background(), `
+		WITH vis AS (
+		  SELECT i.collection_id, i.post_id, i.added_at
+		    FROM saved_collection_items i
+		    JOIN saved_collections sc ON sc.id = i.collection_id AND sc.user_id = $1::text
+		    JOIN post_saves s ON s.post_id = i.post_id AND s.user_id = $1::text
+		    JOIN posts p ON p.id = i.post_id
+		    JOIN users u ON u.id = p.user_id
+		   WHERE `+savedPostVisibleSQL+`)
 		SELECT sc.id, sc.name,
-		       (SELECT COUNT(*) FROM saved_collection_items i
-		         WHERE i.collection_id = sc.id),
-		       COALESCE((SELECT m.url FROM saved_collection_items i2
-		         JOIN post_media m ON m.post_id = i2.post_id
-		        WHERE i2.collection_id = sc.id
-		        ORDER BY i2.added_at DESC, m.position ASC LIMIT 1), '')
+		       (SELECT COUNT(*) FROM vis WHERE vis.collection_id = sc.id),
+		       COALESCE((SELECT m.url FROM vis
+		         JOIN post_media m ON m.post_id = vis.post_id
+		        WHERE vis.collection_id = sc.id
+		        ORDER BY vis.added_at DESC, m.position ASC LIMIT 1), '')
 		FROM saved_collections sc
 		WHERE sc.user_id = $1::text
 		ORDER BY sc.created_at DESC`, myID)
@@ -447,6 +519,28 @@ func CreateCollection(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"_id": id, "name": name, "count": 0, "cover": ""})
+}
+
+// PATCH /collections/:id {name} — номи папкаро иваз мекунад.
+func RenameCollection(c *gin.Context) {
+	myID := mw.UID(c)
+	var b struct{ Name string `json:"name"` }
+	name := ""
+	if c.ShouldBindJSON(&b) == nil {
+		name = clampRunes(strings.TrimSpace(b.Name), 40)
+	}
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Номи папка лозим аст"})
+		return
+	}
+	ct, err := db.Pool.Exec(c.Request.Context(),
+		`UPDATE saved_collections SET name=$1 WHERE id=$2 AND user_id=$3::text`,
+		name, c.Param("id"), myID)
+	if err != nil || ct.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Папка ёфт нашуд"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"_id": c.Param("id"), "name": name})
 }
 
 // DELETE /collections/:id — папкаро нест мекунад (постҳо захира мемонанд).

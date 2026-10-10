@@ -163,7 +163,8 @@ func GetComments(c *gin.Context) {
 		SELECT c.id, c.text, c.likes_count, c.created_at, COALESCE(c.parent_id,''),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM comment_likes cl WHERE cl.comment_id=c.id AND cl.user_id=$2),
-		       `+storyRingCols("u.id", "$2")+`
+		       `+storyRingCols("u.id", "$2")+`,
+		       c.pinned_at IS NOT NULL
 		FROM comments c JOIN users u ON u.id=c.user_id
 		WHERE c.post_id=$1
 		  -- ⚠️ Шарҳи пинҳон танҳо ба НАВИСАНДАИ он намоён аст.
@@ -172,7 +173,14 @@ func GetComments(c *gin.Context) {
 		  -- намебинанд. Маҳз ҳамин фарқи «пинҳон» аз «рад» аст:
 		  -- агар ӯ мефаҳмид, роҳи гузаштанро меҷуст.
 		  AND (COALESCE(c.hidden,false) = FALSE OR c.user_id = $2::text)
-		ORDER BY c.created_at DESC LIMIT $3 OFFSET $4`,
+		  -- Шарҳи касе, ки ман бастаам (ё ӯ маро), намоён нест — мисли
+		  -- Instagram. Пеш бастан шарҳҳои ӯро дар зери постҳо мегузошт.
+		  AND NOT EXISTS (SELECT 1 FROM blocks bk
+		       WHERE (bk.blocker_id=$2::text AND bk.blocked_id=c.user_id)
+		          OR (bk.blocker_id=c.user_id AND bk.blocked_id=$2::text))
+		-- Часпонидашудаҳо аввал (ниг. pinned_comments.go).
+		ORDER BY (c.pinned_at IS NOT NULL) DESC, c.pinned_at DESC, c.created_at DESC
+		LIMIT $3 OFFSET $4`,
 		postID, myID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get comments failed"})
@@ -185,13 +193,13 @@ func GetComments(c *gin.Context) {
 		var cid, text, uid, uname, uavatar string
 		var parentID string
 		var likes int
-		var verified, liked, hasStory, unseenStory bool
+		var verified, liked, hasStory, unseenStory, pinned bool
 		var createdAt interface{}
 		rows.Scan(&cid, &text, &likes, &createdAt, &parentID, &uid, &uname, &uavatar, &verified, &liked,
-			&hasStory, &unseenStory)
+			&hasStory, &unseenStory, &pinned)
 		comments = append(comments, gin.H{
 			"_id": cid, "text": text, "liked": liked, "likesCount": likes,
-			"createdAt": createdAt, "parentId": parentID,
+			"createdAt": createdAt, "parentId": parentID, "pinned": pinned,
 			"user": putStoryRing(gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 				"verified": verified}, hasStory, unseenStory),
 		})
@@ -1008,11 +1016,16 @@ func GetReelComments(c *gin.Context) {
 		       COALESCE(rc.parent_id,''),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       EXISTS(SELECT 1 FROM comment_likes cl
-		              WHERE cl.comment_id=rc.id AND cl.user_id=$2)
+		              WHERE cl.comment_id=rc.id AND cl.user_id=$2),
+		       rc.pinned_at IS NOT NULL
 		FROM reel_comments rc JOIN users u ON u.id=rc.user_id
 		WHERE rc.reel_id=$1
 		  AND (COALESCE(rc.hidden,false) = FALSE OR rc.user_id = $2::text)
-		ORDER BY rc.created_at DESC LIMIT $3 OFFSET $4`,
+		  AND NOT EXISTS (SELECT 1 FROM blocks bk
+		       WHERE (bk.blocker_id=$2::text AND bk.blocked_id=rc.user_id)
+		          OR (bk.blocker_id=rc.user_id AND bk.blocked_id=$2::text))
+		ORDER BY (rc.pinned_at IS NOT NULL) DESC, rc.pinned_at DESC, rc.created_at DESC
+		LIMIT $3 OFFSET $4`,
 		rid, myID, limit, offset)
 	comments := []gin.H{}
 	if rows != nil {
@@ -1020,13 +1033,13 @@ func GetReelComments(c *gin.Context) {
 		for rows.Next() {
 			var cid, text, parentID, uid, uname, uavatar string
 			var likes int
-			var verified, liked bool
+			var verified, liked, pinned bool
 			var createdAt interface{}
 			rows.Scan(&cid, &text, &likes, &createdAt, &parentID,
-				&uid, &uname, &uavatar, &verified, &liked)
+				&uid, &uname, &uavatar, &verified, &liked, &pinned)
 			comments = append(comments, gin.H{
 				"_id": cid, "text": text, "liked": liked, "likesCount": likes,
-				"createdAt": createdAt, "parentId": parentID,
+				"createdAt": createdAt, "parentId": parentID, "pinned": pinned,
 				"user": gin.H{"_id": uid, "username": uname, "avatar": uavatar, "verified": verified},
 			})
 		}

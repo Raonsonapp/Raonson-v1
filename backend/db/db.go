@@ -1255,6 +1255,10 @@ func migrate() {
 		log.Fatalf("❌ Hashtag migration failed: %v", err)
 	}
 	backfillHashtags(ctx)
+	// Шарҳҳои часпонидашуда (ниг. pinned_comments_schema.go).
+	if _, err := Pool.Exec(ctx, pinnedCommentsSchema); err != nil {
+		log.Fatalf("❌ Pinned comments migration failed: %v", err)
+	}
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

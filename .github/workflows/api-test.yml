@@ -390,6 +390,16 @@ jobs:
           SUFFIX: ci${{ github.run_number }}
         run: python3 backend/testing/api_complete.py
 
+      # Аудит: актуалӣ ва Auto-DM аз модератсия мегузаранд, шарҳи
+      # басташудагон пинҳон, «Захирашуда» бе пости бойгонӣ/несткарда,
+      # папкаҳо (ном, баровардан), шарҳҳои часпонидашуда.
+      - name: Санҷиши аудит
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+        run: python3 backend/testing/api_audit.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

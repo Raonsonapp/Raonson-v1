@@ -573,6 +573,7 @@ func holdContent(surface, id string) bool {
 		if err != nil || tag.RowsAffected() == 0 {
 			return false
 		}
+		unpinOnHide(ctx, "comments", id)
 		db.Pool.Exec(ctx, `UPDATE posts SET comments_count=GREATEST(comments_count-1,0)
 			WHERE id=(SELECT post_id FROM comments WHERE id=$1)`, id)
 		return true
@@ -581,6 +582,7 @@ func holdContent(surface, id string) bool {
 		if err != nil || tag.RowsAffected() == 0 {
 			return false
 		}
+		unpinOnHide(ctx, "reel_comments", id)
 		db.Pool.Exec(ctx, `UPDATE reels SET comments_count=GREATEST(comments_count-1,0)
 			WHERE id=(SELECT reel_id FROM reel_comments WHERE id=$1)`, id)
 		return true
@@ -631,6 +633,8 @@ func removeContent(surface, id string) {
 		db.Pool.Exec(ctx, `UPDATE reels SET mod_hold=TRUE, media_missing=TRUE WHERE id=$1`, id)
 	case "story":
 		db.Pool.Exec(ctx, `UPDATE stories SET expires_at=NOW(), mod_hold_until=NULL WHERE id=$1`, id)
+		// Сториси несткарда дар актуалӣ ҳам намемонад.
+		dropStoryFromHighlights(ctx, id)
 	case "comment", "reel_comment":
 		holdContent(surface, id)
 	case "message", "group_message":
