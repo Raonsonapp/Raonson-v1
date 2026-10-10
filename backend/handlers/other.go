@@ -582,7 +582,10 @@ func Search(c *gin.Context) {
 
 	// Users
 	uRows, _ := db.Pool.Query(context.Background(), `
-		SELECT id,username,avatar,verified,bio,followers_count,
+		SELECT id,username,avatar,verified,bio,
+		       -- Ҳамон рақами сарлавҳаи профил (COUNT(follows), ниг.
+		       -- userSelectSQL), на сутуни ҳисобшудаи followers_count.
+		       (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id),
 		       `+storyRingCols("u.id", "$2")+`
 		FROM users u WHERE username ILIKE $1 AND banned=FALSE
 		  -- Бастагон дар ҷустуҷӯ пайдо намешаванд (ҳар ду тараф).
@@ -607,90 +610,56 @@ func Search(c *gin.Context) {
 		uRows.Close()
 	}
 
-	// Posts
-	pRows, _ := db.Pool.Query(context.Background(), `
-		SELECT p.id, COALESCE(p.caption,''), p.likes_count, p.comments_count, p.created_at,
-		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
-		       COALESCE(p.music_title,''), COALESCE(p.music_artist,''),
-		       COALESCE(p.music_url,''), COALESCE(p.music_art,''),
-		       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
-		       COALESCE(p.music_end_ms,0),
-		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
-		                ORDER BY m.position),'[]'::json)
-		        FROM post_media m WHERE m.post_id=p.id),
-		       (SELECT COUNT(*) FROM post_views pv WHERE pv.post_id=p.id),
-		       `+storyRingCols("u.id", "$2")+`
-		FROM posts p JOIN users u ON u.id=p.user_id
+	// Постҳо ва Reels — ҲАМОН шакле, ки лента / Explore / профил медиҳанд.
+	//
+	// ⚠️ Пеш ҷустуҷӯ шакли худро дошт: бе liked/saved/hideLikes/sharesCount
+	// (ва Reels бе commentsCount). Клиент майдонҳои нестро 0/false мехонд
+	// ва онҳоро ҳамчун маълумоти нави сервер дар ҳамаи экранҳо мегузошт —
+	// пас аз ҷустуҷӯ лайки ман «гум» мешуд ва шарҳҳо 0 мешуданд; «лайкҳо
+	// пинҳон» ҳам дар ҷустуҷӯ рақами воқеиро нишон медод.
+	ctx := c.Request.Context()
+	posts := []gin.H{}
+	if ids := searchIDs(ctx, `
+		SELECT p.id FROM posts p JOIN users u ON u.id=p.user_id
 		WHERE p.caption ILIKE $1
 		  -- Ҷустуҷӯ — кашф аст: танҳо ҳисобҳои кушода, мисли Instagram.
 		  AND `+publicAuthorSQL("p.user_id", "u", "$2")+`
 		  AND COALESCE(p.hidden,false)=FALSE
 		  AND COALESCE(p.archived,false)=FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
-		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 20`, like, myID)
-	posts := []gin.H{}
-	if pRows != nil {
-		for pRows.Next() {
-			var pid, cap, uid, uname, uavatar string
-			var likes, comms int
-			var verified bool
-			var createdAt, media interface{}
-			// Натиҷаи ҷустуҷӯ кушода мешавад — пас он бояд ҳамон
-			// маълумотро дошта бошад, ки лента дорад.
-			var mTitle, mArtist, mURL, mArt string
-			var mTrackMs, mStartMs, mEndMs int
-			var views int64
-			var hasStory, unseenStory bool
-			pRows.Scan(&pid, &cap, &likes, &comms, &createdAt, &uid, &uname, &uavatar, &verified,
-				&mTitle, &mArtist, &mURL, &mArt, &mTrackMs, &mStartMs, &mEndMs, &media,
-				&views, &hasStory, &unseenStory)
-			posts = append(posts, gin.H{
-				"_id": pid, "caption": cap, "likesCount": likes,
-				"commentsCount": comms, "createdAt": createdAt, "media": nilToEmpty(media),
-				"musicTitle": mTitle, "musicArtist": mArtist,
-				"song": songJSON(mTitle, mArtist, mArt, mURL,
-					mTrackMs, mStartMs, mEndMs),
-				// Тамошо — ҳамон COUNT(post_views), ки Explore ва профил медиҳанд.
-				"viewsCount": views, "views": views,
-				"user": putStoryRing(gin.H{"_id": uid, "username": uname,
-					"avatar": uavatar, "verified": verified}, hasStory, unseenStory),
-			})
+		ORDER BY p.likes_count DESC, p.created_at DESC LIMIT 20`, like, myID); len(ids) > 0 {
+		if pr, err := db.Pool.Query(ctx, feedPostCols+` WHERE p.id = ANY($2::text[])`,
+			myID, ids); err == nil {
+			byID := map[string]gin.H{}
+			for _, p := range scanFeedPosts(pr) {
+				id, _ := p["_id"].(string)
+				byID[id] = p
+			}
+			for _, id := range ids {
+				if p := byID[id]; p != nil {
+					posts = append(posts, p)
+				}
+			}
 		}
-		pRows.Close()
 	}
 
-	// Reels
-	rRows, _ := db.Pool.Query(context.Background(), `
-		SELECT r.id,r.video_url,r.caption,COALESCE(r.views_count,0),r.likes_count,r.created_at,
-		       COALESCE(r.thumbnail_url,''),
-		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
-		       `+storyRingCols("u.id", "$2")+`
-		FROM reels r JOIN users u ON u.id=r.user_id
+	reels := []gin.H{}
+	if ids := searchIDs(ctx, `
+		SELECT r.id FROM reels r JOIN users u ON u.id=r.user_id
 		WHERE r.caption ILIKE $1
 		  -- Пеш ин ҷо ҳеҷ филтр набуд: Reels-и ҳисобҳои пӯшида,
 		  -- бастагон ва видеоҳои нестшуда дар ҷустуҷӯ меомаданд.
 		  AND `+publicAuthorSQL("r.user_id", "u", "$2")+`
 		  AND COALESCE(r.media_missing,false)=FALSE
-		ORDER BY r.views_count DESC, r.likes_count DESC LIMIT 10`, like, myID)
-	reels := []gin.H{}
-	if rRows != nil {
-		for rRows.Next() {
-			var rid, vurl, cap string
-			var views, likes int
-			var createdAt interface{}
-			var thumb, uid, uname, uavatar string
-			var verified, hasStory, unseenStory bool
-			rRows.Scan(&rid, &vurl, &cap, &views, &likes, &createdAt,
-				&thumb, &uid, &uname, &uavatar, &verified, &hasStory, &unseenStory)
-			reels = append(reels, gin.H{
-				"_id": rid, "videoUrl": vurl, "caption": cap, "thumbnailUrl": thumb,
-				"views": views, "viewsCount": views, "likesCount": likes, "createdAt": createdAt,
-				"user": putStoryRing(gin.H{"_id": uid, "id": uid, "username": uname,
-					"avatar": uavatar, "verified": verified}, hasStory, unseenStory),
-			})
+		ORDER BY r.views_count DESC, r.likes_count DESC LIMIT 10`, like, myID); len(ids) > 0 {
+		byID := reelsByIDs(ctx, myID, ids)
+		for _, id := range ids {
+			if r := byID[id]; r != nil {
+				delete(r, "kind")
+				reels = append(reels, r)
+			}
 		}
-		rRows.Close()
+		attachReelLocations(reels)
 	}
 
 	// Хэштегҳо — аз caption-ҳо ҷамъ мешаванд (то tab-и «Тегҳо» холӣ намонад).
@@ -712,7 +681,10 @@ func SearchUsers(c *gin.Context) {
 		return
 	}
 	rows, _ := db.Pool.Query(context.Background(), `
-		SELECT id,username,avatar,verified,bio,followers_count,
+		SELECT id,username,avatar,verified,bio,
+		       -- Ҳамон рақами сарлавҳаи профил (COUNT(follows), ниг.
+		       -- userSelectSQL), на сутуни ҳисобшудаи followers_count.
+		       (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id),
 		       `+storyRingCols("u.id", "$2")+`
 		FROM users u WHERE username ILIKE $1 AND banned=FALSE
 		  AND NOT EXISTS (SELECT 1 FROM blocks vb
@@ -882,6 +854,7 @@ func GetReels(c *gin.Context) {
 		})
 	}
 	attachReelLocations(reels)
+	attachReelShares(reels)
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
 }
 
@@ -1208,4 +1181,22 @@ func newCommentJSON(cid, text, parentID, uid string) gin.H {
 		"createdAt": time.Now().UTC().Format(time.RFC3339),
 		"user":      commentAuthor(uid),
 	}
+}
+
+// searchIDs — id-ҳои натиҷа бо тартиби худ ($1 — LIKE, $2 — тамошобин).
+func searchIDs(ctx context.Context, query, like, myID string) []string {
+	rows, err := db.Pool.Query(ctx, query, like, myID)
+	if err != nil {
+		log.Printf("[Search] %v", err)
+		return nil
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }

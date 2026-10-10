@@ -40,17 +40,41 @@ def find(obj, id_):
             if r is not None: return r
     return None
 
+CROWDED = object(); crowded = set()
+def get_item(tok, p, id_):
+    # /explore аз рӯи лайкҳо мураттаб ва саҳифабандӣ дорад. Дар БД-и
+    # муштараки санҷишҳо (ҳазорҳо пости бо лайкҳои зиёд) мундариҷаи нав
+    # метавонад дар 15 саҳифаи аввал набошад — он гоҳ Explore барои ин
+    # санҷиш «дастнорас» (на «MISSING») ҳисоб мешавад ва ҷудо гуфта мешавад.
+    if p != "/explore":
+        st, r = call("GET", p, tok=tok)
+        x = find(r, id_)
+        # Лентаҳои мураттаб (лента, smart, Reels) низ дар БД-и пур метавонанд
+        # ин мундариҷаро дар саҳифаи аввал надошта бошанд.
+        if x is None and p.split("?")[0] in ("/posts/", "/posts/smart-feed", "/reels/", "/reels/smart"):
+            crowded.add(id_); return CROWDED
+        return x
+    for pg in range(1, 16):
+        st, r = call("GET", f"/explore?page={pg}", tok=tok)
+        x = find(r, id_)
+        if x is not None: return x
+        if not isinstance(r, dict) or not r.get("hasMore"): return None
+    crowded.add(id_)
+    return CROWDED
+
 def views(tok, kind, id_):
     out = {}
     paths = ([("feed", "/posts/?limit=50"), ("smart", "/posts/smart-feed?limit=50"),
               ("profile", f"/users/{A}/posts"), ("profileMe", "/profile/me") if tok == tA else ("profileU", f"/profile/ya{S}"),
-              ("explore", "/explore"), ("single", f"/posts/{id_}")]
+              ("explore", "/explore"), ("single", f"/posts/{id_}"),
+              ("search", "/search/?q=" + urllib.parse.quote(f"якхела {S}"))]
              if kind == "post" else
              [("reels", "/reels/?limit=50"), ("smart", "/reels/smart?limit=50"),
-              ("profile", f"/users/{A}/reels"), ("explore", "/explore"), ("single", f"/reels/{id_}")])
+              ("profile", f"/users/{A}/reels"), ("explore", "/explore"), ("single", f"/reels/{id_}"),
+              ("search", "/search/?q=" + urllib.parse.quote(f"reel якхела {S}"))])
     for name, p in paths:
-        st, r = call("GET", p, tok=tok)
-        x = find(r, id_)
+        x = get_item(tok, p, id_)
+        if x is CROWDED: continue
         if x is None: out[name] = None; continue
         u = x.get("user") or {}
         out[name] = (x.get("likesCount", x.get("likes")), x.get("commentsCount", x.get("comments")),
@@ -67,7 +91,7 @@ def same(label, v, idx, expect=None, skip_none=True):
     ok(label, good, vals)
 
 # ── ПОСТ ──
-st, p = call("POST", "/posts/", {"caption": "якхела", "media": [{"url": IMG, "type": "image"}]}, tA); pid = p["_id"]
+st, p = call("POST", "/posts/", {"caption": f"якхела {S}", "media": [{"url": IMG, "type": "image"}]}, tA); pid = p["_id"]
 call("POST", f"/posts/{pid}/like", tok=tB); call("POST", f"/posts/{pid}/like", tok=tC)
 call("POST", f"/posts/{pid}/comments", {"text": "1"}, tB)
 call("POST", f"/follow/{A}", tok=tB)
@@ -96,7 +120,7 @@ v = views(tB, "post", pid)
 same("пост: аз нав фаъол — 1 дар ҳама ҷо", v, 0, 1)
 
 # ── REEL ──
-st, r = call("POST", "/reels/", {"videoUrl": VID, "caption": "reel якхела"}, tA); rid = r.get("_id")
+st, r = call("POST", "/reels/", {"videoUrl": VID, "caption": f"reel якхела {S}"}, tA); rid = r.get("_id")
 ok("reel сохта шуд", rid, r)
 call("POST", f"/reels/{rid}/like", tok=tB); call("POST", f"/reels/{rid}/like", tok=tC)
 call("POST", f"/reels/{rid}/comments", {"text": "x"}, tC)
@@ -136,8 +160,8 @@ def views_of(tok, kind, id_, q=""):
               ("search", sq)])
     out = {}
     for name, p in paths:
-        st, r = call("GET", p, tok=tok)
-        x = find(r, id_)
+        x = get_item(tok, p, id_)
+        if x is CROWDED: continue
         if x is None: out[name] = None; continue
         out[name] = (x.get("viewsCount"), x.get("views"))
     return out
@@ -152,7 +176,7 @@ def views_same(label, v, expect):
        both and uniq == {expect} and set(present) == need, v)
 
 # Reel-и нав, то рақамҳо аз сифр оғоз шаванд.
-st, r2 = call("POST", "/reels/", {"videoUrl": VID, "caption": "тамошо якхела"}, tA); rid2 = r2.get("_id")
+st, r2 = call("POST", "/reels/", {"videoUrl": VID, "caption": f"тамошо якхела {S}"}, tA); rid2 = r2.get("_id")
 st, v1 = call("POST", f"/reels/{rid2}/view", tok=tB)                 # B: профил → reel
 call("POST", f"/reels/{rid2}/view", tok=tB)                          # такрор — ҳисоб намешавад
 st, w1 = call("POST", f"/reels/{rid2}/watch", {"watchMs": 3000, "completed": False}, tC)  # C: лентаи Reels
@@ -164,18 +188,18 @@ ok("reel: такрор ҳисоб намешавад (3 бинанда → 3)", 
 # Explore аз рӯи лайк мураттаб аст (LIMIT 20) — лайкҳо, то reel он ҷо бошад.
 for t in (tB, tC, tD, tF): call("POST", f"/reels/{rid2}/like", tok=t)
 # E ҳеҷ гоҳ ин reel-ро надидааст (smart онро пинҳон намекунад) ва кэш надорад.
-v = views_of(tE, "reel", rid2, "тамошо якхела")
+v = views_of(tE, "reel", rid2, f"тамошо якхела {S}")
 views_same("reel: тамошоҳо дар /reels, smart, профил, explore, ҷустуҷӯ, ягона — 3", v, 3)
 st, stt = call("GET", f"/reels/{rid2}/stats", tok=tA)
 ok("reel: омори соҳиб ҳамон 3", stt.get("views") == 3, stt)
 
 # Пост: тамошо дар explore == омори соҳиб; такрор ҳисоб намешавад.
-st, p2 = call("POST", "/posts/", {"caption": "тамошои пост", "media": [{"url": IMG, "type": "image"}]}, tA)
+st, p2 = call("POST", "/posts/", {"caption": f"тамошои пост {S}", "media": [{"url": IMG, "type": "image"}]}, tA)
 pid2 = p2["_id"]
 call("POST", f"/posts/view/{pid2}", tok=tB); call("POST", f"/posts/view/{pid2}", tok=tB)
 call("POST", "/posts/view-batch", {"postIds": [pid2]}, tC)
 for t in (tB, tC, tD, tE): call("POST", f"/posts/{pid2}/like", tok=t)  # explore аз рӯи лайк
-v = views_of(tF, "post", pid2, "тамошои пост")
+v = views_of(tF, "post", pid2, f"тамошои пост {S}")
 st, pst = call("GET", f"/posts/{pid2}/stats", tok=tA)
 # Пеш танҳо Explore рақам дошт; профил ва пости кушодашуда умуман
 # views надоштанд, ва ҷустуҷӯ ба ҷои он лайкҳоро нишон медод.
@@ -185,6 +209,113 @@ ok("пост: омори соҳиб ҳамон 2", pst.get("views") == 2, pst)
 st, me = call("GET", "/profile/me", tok=tA)
 x = find(me, pid2)
 ok("пост: /profile/me — ҳамон 2", x is not None and x.get("viewsCount") == 2 and x.get("views") == 2, x)
+
+# ── КЭШИ ГАРМ: тамошо/лайк/обуна баъди он ки экранҳо аллакай кушода буданд ──
+# ⚠️ Шикояти соҳиб: «дар Explore тамошо меафзояд, дар профил 5 мемонад».
+# Санҷиши боло бо корбаре буд, ки кэш надошт. Ин ҷо G ва A аввал ҳамаи
+# экранҳоро мекушоянд (кэши ҷавобҳо гарм мешавад: профил 3с, explore ва
+# ҷустуҷӯ 30с), баъд бинандаи нав тамошо мекунад ва ФАВРАН ҳамон экранҳо
+# бояд рақами навро диҳанд — на рақами кэшшуда.
+tG, G = user(f"yg{S}", "+992900890107"); tH, H = user(f"yh{S}", "+992900890108")
+tI, I = user(f"yi{S}", "+992900890109")
+
+def owner_views(kind, id_):
+    # Соҳиб: профили худ (ҷадвал + /profile/me) ва ягона.
+    paths = ([("profile", f"/users/{A}/reels"), ("single", f"/reels/{id_}")] if kind == "reel" else
+             [("profile", f"/users/{A}/posts"), ("profileMe", "/profile/me"), ("single", f"/posts/{id_}")])
+    out = {}
+    for name, p in paths:
+        st, r = call("GET", p, tok=tA)
+        x = find(r, id_)
+        out[name] = None if x is None else (x.get("viewsCount"), x.get("views"))
+    return out
+
+def all_same(label, vs, expect):
+    flat = {}
+    for who, v in vs.items():
+        for k, t in v.items():
+            flat[f"{who}.{k}"] = t
+    missing = [k for k, t in flat.items() if t is None]
+    vals = {t for t in flat.values() if t is not None}
+    ok(label, not missing and vals == {(expect, expect)}, flat)
+
+before_r = views_of(tG, "reel", rid2, f"тамошо якхела {S}"); before_ro = owner_views("reel", rid2)
+before_p = views_of(tG, "post", pid2, f"тамошои пост {S}"); before_po = owner_views("post", pid2)
+all_same("кэши гарм: reel пеш аз тамошои нав — 3 дар ҳама ҷо", {"G": before_r, "A": before_ro}, 3)
+all_same("кэши гарм: пост пеш аз тамошои нав — 2 дар ҳама ҷо", {"G": before_p, "A": before_po}, 2)
+st, hv = call("POST", f"/reels/{rid2}/view", tok=tH)
+st, iw = call("POST", f"/reels/{rid2}/watch", {"watchMs": 1200, "completed": False}, tI)
+ok("reel: ҷавоби /view ва /watch рақами навро медиҳад (4, 5)",
+   hv.get("viewsCount") == 4 and iw.get("viewsCount") == 5, (hv, iw))
+# Бе sleep: «фавран» маънои дархости навбатиро дорад.
+all_same("кэши гарм: reel баъди 2 тамошои нав — 5 ФАВРАН дар ҳама ҷо (G ва соҳиб)",
+         {"G": views_of(tG, "reel", rid2, f"тамошо якхела {S}"), "A": owner_views("reel", rid2)}, 5)
+st, pv = call("POST", f"/posts/view/{pid2}", tok=tH)
+ok("пост: /posts/view рақами навро медиҳад (3)", pv.get("viewsCount") == 3 and pv.get("views") == 3, pv)
+all_same("кэши гарм: пост баъди /posts/view — 3 ФАВРАН дар ҳама ҷо (G ва соҳиб)",
+         {"G": views_of(tG, "post", pid2, f"тамошои пост {S}"), "A": owner_views("post", pid2)}, 3)
+st, pb = call("POST", "/posts/view-batch", {"postIds": [pid2]}, tI)
+ok("пост: /posts/view-batch рақамҳоро медиҳад (4)", (pb.get("views") or {}).get(pid2) == 4, pb)
+all_same("кэши гарм: пост баъди 2 тамошои нав — 4 ФАВРАН дар ҳама ҷо (G ва соҳиб)",
+         {"G": views_of(tG, "post", pid2, f"тамошои пост {S}"), "A": owner_views("post", pid2)}, 4)
+st, stt = call("GET", f"/reels/{rid2}/stats", tok=tA)
+ok("кэши гарм: омори reel-и соҳиб ҳамон 5", stt.get("views") == 5, stt)
+st, pst = call("GET", f"/posts/{pid2}/stats", tok=tA)
+ok("кэши гарм: омори пости соҳиб ҳамон 4", pst.get("views") == 4, pst)
+
+# Лайк / шарҳ / паҳн / сабт бо кэши гарм — экранҳо аввал кушода, баъд амал.
+def counters(tok, kind, id_):
+    paths = ([("reels", "/reels/?limit=50"), ("profile", f"/users/{A}/reels"),
+              ("explore", "/explore"), ("single", f"/reels/{id_}")] if kind == "reel" else
+             [("profile", f"/users/{A}/posts"), ("profileU", f"/profile/ya{S}"),
+              ("explore", "/explore"), ("single", f"/posts/{id_}")])
+    out = {}
+    for name, p in paths:
+        x = get_item(tok, p, id_)
+        if x is CROWDED: continue
+        out[name] = None if x is None else (x.get("likesCount"), x.get("commentsCount"), x.get("sharesCount"))
+    return out
+for kind, id_, base in (("reel", rid2, "/reels"), ("post", pid2, "/posts")):
+    b0 = counters(tG, kind, id_)
+    call("POST", f"{base}/{id_}/like", tok=tH)
+    call("POST", f"{base}/{id_}/comments", {"text": "гарм"}, tH)
+    call("POST", f"{base}/{id_}/share", tok=tH)
+    call("POST", f"{base}/{id_}/save", tok=tH)
+    b1 = counters(tG, kind, id_)
+    present = {k: t for k, t in b1.items() if t is not None}
+    grew = all(b0.get(k) is None or (all(isinstance(a, int) and isinstance(b, int) and a == b + 1 for a, b in zip(t, b0[k])))
+               for k, t in present.items())
+    ok(f"кэши гарм: {kind} лайк/шарҳ/паҳн +1 ФАВРАН дар ҳама ҷо",
+       len(present) >= 3 and len({t for t in present.values()}) == 1 and grew, (b0, b1))
+
+# Обуначиён / обунаҳо / шумораи постҳо дар сарлавҳаи профил (кэши гарм).
+def header(tok):
+    out = {}
+    for name, p in (("profileU", f"/profile/ya{S}"), ("users", f"/users/{A}")):
+        st, r = call("GET", p, tok=tok)
+        u = r.get("user", r) if isinstance(r, dict) else {}
+        out[name] = (u.get("followersCount"), u.get("followingCount"), u.get("postsCount"))
+    st, r = call("GET", "/profile/me", tok=tA)
+    u = r.get("user", r) if isinstance(r, dict) else {}
+    out["me"] = (u.get("followersCount"), u.get("followingCount"), u.get("postsCount"))
+    return out
+h0 = header(tG)
+call("POST", f"/follow/{A}", tok=tI)
+h1 = header(tG)
+ok("кэши гарм: обуначиён +1 ФАВРАН дар /profile, /users ва /profile/me",
+   len({t for t in h1.values()}) == 1 and all(h1[k][0] == h0[k][0] + 1 for k in h1), (h0, h1))
+# Ҷустуҷӯи корбарон ҳамон рақами обуначиёнро медиҳад, ки сарлавҳаи профил.
+fc = {}
+for name, p in (("search", f"/search/?q=ya{S}"), ("searchUsers", f"/search/users?q=ya{S}")):
+    st, r = call("GET", p, tok=tG)
+    lst = r.get("users", []) if isinstance(r, dict) else (r if isinstance(r, list) else [])
+    hit = [u for u in lst if (u.get("_id") or u.get("id")) == A]
+    fc[name] = hit[0].get("followersCount") if hit else None
+ok("обуначиён: ҷустуҷӯ == сарлавҳаи профил", set(fc.values()) == {h1["profileU"][0]}, (fc, h1))
+call("POST", f"/follow/{A}", tok=tI); call("DELETE", f"/follow/{A}", tok=tI)
+h2 = header(tG)
+ok("кэши гарм: бекор кардани обуна −1 ФАВРАН дар ҳама ҷо",
+   len({t for t in h2.values()}) == 1 and all(h2[k][0] == h0[k][0] for k in h2), (h0, h2))
 
 # ── ОБУНА аз Reels баъди «бозкушоӣ» ─────────────────────────────────
 # Клиент баъди бозкушоӣ маълумоти навро аз сервер мегирад: он бояд
@@ -200,6 +331,8 @@ ok("обуна: /reels/ user.isFollowing=true", x is not None and (x.get("user")
 
 bad = [x for x in res if not x[0]]
 print()
+if crowded:
+    print(f"  ℹ️  Explore пур аст (БД-и муштарак): {len(crowded)} id дар 15 саҳифа набуд — танҳо дигар экранҳо санҷида шуданд")
 for g_, n_, d in res: print(("  ✅ " if g_ else "  ❌ ") + n_ + ("" if g_ else f"\n       → {d}"))
 print(f"\n{len(res) - len(bad)}/{len(res)} гузашт")
 sys.exit(1 if bad else 0)

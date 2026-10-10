@@ -95,9 +95,14 @@ class HashtagPage {
       if (raw is! Map) continue;
       final m = Map<String, dynamic>.from(raw);
       try {
-        items.add(m['kind'] == 'reel'
+        final item = m['kind'] == 'reel'
             ? HashtagItem.reel(ReelModel.fromJson(m))
-            : HashtagItem.post(PostModel.fromJson(m)));
+            : HashtagItem.post(PostModel.fromJson(m));
+        // Рақамҳо (тамошо, лайк…) ба манбаи умумӣ — плиткаи хештег,
+        // профил ва Explore ҳамон рақамро нишон медиҳанд.
+        item.post?.primeSync();
+        item.reel?.primeSync();
+        items.add(item);
       } catch (_) {}
     }
     return HashtagPage(items,

@@ -25,8 +25,22 @@
 //          бармегардонд.
 //     Агар `fetchedAt` маълум набошад (модели дастӣ сохташуда), prime
 //     танҳо холигиро пур мекунад — мисли FollowService.prime.
+//
+// Тамошоҳо (`viewsCount`) қоидаи худро доранд (ниг. [ContentSync.reportViews]):
+//   • тамошо дар сервер ҳеҷ гоҳ кам намешавад, пас рақами КАЛОНТАР
+//     ҳамеша қабул мешавад (аз ҳар манбаъ, бе grace-и лайк);
+//   • рақами ХУРДТАР танҳо аз маълумоте, ки аз охирин рақами маълум
+//     НАВТАР гирифта шудааст (масалан ҳисоби бинанда ҳазф шуд);
+//   • кэши диск ва рӯйхати кӯҳна ҳеҷ гоҳ рақами навро паст намекунанд.
+//
+// ⚠️ Чаро: профил reel-ро бо 5 тамошо як бор бор мекард ва плитка
+// `r.viewsCount`-и ҳамон моделро нишон медод. Explore ва ҷустуҷӯ ҳар
+// дафъа аз нав бор мешуданд ва 8 нишон медоданд — профил то абад 5.
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+
+import 'local_activity.dart';
 
 @immutable
 class ContentState {
@@ -40,6 +54,8 @@ class ContentState {
   // Матни пост: баъди таҳрир дар ҳамаи экранҳо фавран нав мешавад
   // (пеш танҳо дар профил, дар лента баъди соатҳо, дар Explore — ҳеҷ).
   final String? caption;
+  /// Шумораи тамошо (reel: views_count; пост: COUNT(post_views)).
+  final int? viewsCount;
 
   const ContentState({
     this.liked,
@@ -50,6 +66,7 @@ class ContentState {
     this.hideLikes,
     this.commentsOff,
     this.caption,
+    this.viewsCount,
   });
 
   /// Майдонҳои маълуми [o] болои ҳамин мегузоранд (null = «номаълум»).
@@ -62,6 +79,7 @@ class ContentState {
         hideLikes:     o.hideLikes     ?? hideLikes,
         commentsOff:   o.commentsOff   ?? commentsOff,
         caption:       o.caption       ?? caption,
+        viewsCount:    o.viewsCount    ?? viewsCount,
       );
 
   @override
@@ -74,16 +92,17 @@ class ContentState {
       other.sharesCount == sharesCount &&
       other.hideLikes == hideLikes &&
       other.commentsOff == commentsOff &&
-      other.caption == caption;
+      other.caption == caption &&
+      other.viewsCount == viewsCount;
 
   @override
   int get hashCode => Object.hash(liked, likesCount, saved, commentsCount,
-      sharesCount, hideLikes, commentsOff, caption);
+      sharesCount, hideLikes, commentsOff, caption, viewsCount);
 
   @override
   String toString() => 'ContentState(liked: $liked, likes: $likesCount, '
       'saved: $saved, comments: $commentsCount, shares: $sharesCount, '
-      'hideLikes: $hideLikes, commentsOff: $commentsOff)';
+      'views: $viewsCount, hideLikes: $hideLikes, commentsOff: $commentsOff)';
 }
 
 class ContentSync {
@@ -111,6 +130,8 @@ class ContentSync {
   final Map<String, ValueNotifier<ContentState?>> _byId = {};
   final Map<String, DateTime> _localAt  = {};
   final Map<String, DateTime> _serverAt = {};
+  // Кай рақами ҷории тамошо маълум шуд (ниг. қоидаи тамошо дар боло).
+  final Map<String, DateTime> _viewsAt  = {};
 
   ContentState? get(String id) => states.value[id];
 
@@ -131,6 +152,7 @@ class ContentSync {
   }) {
     if (id.isEmpty) return;
     _localAt[id] = clock();
+    LocalActivity.bump();
     _merge(id, ContentState(
       liked: liked, likesCount: _nonNeg(likesCount), saved: saved,
       commentsCount: _nonNeg(commentsCount), sharesCount: _nonNeg(sharesCount),
@@ -142,9 +164,11 @@ class ContentSync {
   void prime(String id, {
     bool? liked, int? likesCount, bool? saved, int? commentsCount,
     int? sharesCount, bool? hideLikes, bool? commentsOff, String? caption,
-    DateTime? fetchedAt,
+    int? viewsCount, DateTime? fetchedAt,
   }) {
     if (id.isEmpty) return;
+    // Тамошо — қоидаи худ, новобаста аз лайк (ниг. боло).
+    _primeViews(id, viewsCount, fetchedAt);
     if (fetchedAt == null) {
       if (states.value.containsKey(id)) return;
     } else {
@@ -159,6 +183,45 @@ class ContentSync {
       commentsCount: _nonNeg(commentsCount), sharesCount: _nonNeg(sharesCount),
       hideLikes: hideLikes, commentsOff: commentsOff, caption: caption,
     ));
+  }
+
+  /// Сервер баъди ҳисоби тамошо рақами ҷориро баргардонд (POST /view,
+  /// /watch, /posts/view, /posts/view-batch) ё экрани омор онро нав
+  /// гирифт. Ин рақами навтарин аст — дар ҳамаи экранҳо фавран.
+  void reportViews(String id, int? views) {
+    if (id.isEmpty || views == null || views < 0) return;
+    _viewsAt[id] = clock();
+    _merge(id, ContentState(viewsCount: views));
+  }
+
+  /// Ҷавоби хоми POST /view, /watch ё /posts/view → [reportViews].
+  void reportViewsBody(String id, String body) {
+    try {
+      reportViews(id, viewsFromJson(jsonDecode(body)));
+    } catch (_) {/* ҷавоби бе рақам — сервери кӯҳна */}
+  }
+
+  /// Рақами тамошо аз ҷавоби сервер (`viewsCount` ё `views`).
+  static int? viewsFromJson(Object? body) {
+    if (body is! Map) return null;
+    final v = body['viewsCount'] ?? body['views'];
+    return v is num ? v.toInt() : null;
+  }
+
+  void _primeViews(String id, int? views, DateTime? fetchedAt) {
+    if (views == null || views < 0) return;
+    final cur = states.value[id]?.viewsCount;
+    final at  = _viewsAt[id];
+    final accept = cur == null ||
+        views > cur ||
+        // Хурдтар — танҳо аз маълумоти навтар аз рақами ҷорӣ.
+        (views < cur && fetchedAt != null && at != null && fetchedAt.isAfter(at));
+    if (fetchedAt != null && (at == null || fetchedAt.isAfter(at)) &&
+        (accept || views == cur)) {
+      _viewsAt[id] = fetchedAt;
+    }
+    if (!accept || views == cur) return;
+    _merge(id, ContentState(viewsCount: views));
   }
 
   /// Prime аз initState/didUpdateWidget: хабар додани виҷетҳои дигар
@@ -179,6 +242,7 @@ class ContentSync {
   void clear() {
     _localAt.clear();
     _serverAt.clear();
+    _viewsAt.clear();
     for (final n in _byId.values) {
       n.value = null;
     }

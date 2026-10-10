@@ -14,6 +14,8 @@ import '../../app/app_theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/content_sync.dart';
+import '../../widgets/synced_content.dart';
 import '../../create/create_reel/create_reel_screen.dart';
 import '../../core/error/friendly_error.dart';
 
@@ -91,6 +93,12 @@ class _AudioPageScreenState extends State<AudioPageScreen> {
             .map((e) => e.cast<String, dynamic>())
             .toList();
       });
+      // Танҳо тамошо (ҷавоб шакли кӯтоҳ дорад — лайк/шарҳи пурра не).
+      final now = DateTime.now();
+      for (final r in _reels) {
+        ContentSync.instance.prime((r['_id'] ?? '').toString(),
+            viewsCount: (r['viewsCount'] as num?)?.toInt(), fetchedAt: now);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = friendlyError(e));
@@ -319,29 +327,29 @@ class _AudioPageScreenState extends State<AudioPageScreen> {
                 fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => Container(color: AppColors.card),
               ),
+            // Ҳамон нишон (чашм) ва рақам (ContentSync), ки дар профил ва
+            // Explore. Пеш ин ҷо ▶ буд — гӯё метрикаи дигар.
             Positioned(
               left: 6,
               bottom: 6,
-              child: Row(children: [
-                Icon(AppIcons.play_arrow_rounded,
-                    size: 14, color: Colors.white),
-                const SizedBox(width: 3),
-                Text(_compact(views),
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600)),
-              ]),
+              child: SyncedViews(
+                id: (r['_id'] ?? '').toString(),
+                fallback: views,
+                builder: (_, v) => Row(children: [
+                  Icon(AppIcons.remove_red_eye_rounded,
+                      size: 13, color: Colors.white),
+                  const SizedBox(width: 3),
+                  Text(formatCount(v),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600)),
+                ]),
+              ),
             ),
           ]);
         },
       ),
     );
-  }
-
-  static String _compact(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
-    return '$n';
   }
 }

@@ -394,8 +394,12 @@ func ViewStory(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"viewed": true})
 		return
 	}
-	db.Pool.Exec(context.Background(),
+	tag, err := db.Pool.Exec(context.Background(),
 		`INSERT INTO story_views(story_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, sid, myID)
+	// Бинандаи НАВ → шумораи бинандагон дар /stories (кэш 3с) иваз шуд.
+	if err == nil && tag.RowsAffected() > 0 {
+		bumpOnNewView()
+	}
 	c.JSON(http.StatusOK, gin.H{"viewed": true})
 }
 

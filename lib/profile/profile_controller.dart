@@ -15,6 +15,7 @@ import 'profile_repository.dart';
 import '../create/upload/upload_manager.dart';
 import 'highlight_model.dart';
 import '../core/notifications/upload_notifier.dart';
+import '../core/ui/refresh_on_return.dart';
 
 class ProfileController extends ChangeNotifier {
   final String userId;
@@ -66,6 +67,21 @@ class ProfileController extends ChangeNotifier {
   /// Сервер гуфт, ки корбар нест (404) — на хатои шабака.
   bool notFound = false;
 
+  /// Кай профил охирин бор аз шабака омад (ниг. [refreshIfStale]).
+  final FreshnessGate freshness = FreshnessGate();
+  bool _inFlight = false;
+
+  /// Навсозии хомӯш ҳангоми баргаштан ба профил (таб, pop, resume).
+  ///
+  /// ⚠️ Пеш таби профил дар `Offstage` як бор бор мешуд ва то
+  /// pull-to-refresh-и дастӣ рақамҳо (тамошо, обуначиён…) ҳамон мемонданд.
+  /// Скелет нишон дода намешавад; рақамҳо аз ContentSync иваз мешаванд.
+  Future<void> refreshIfStale({bool force = false}) async {
+    if (_disposed || _inFlight) return;
+    if (!force && !freshness.isStale) return;
+    await loadProfile();
+  }
+
   void _applySnapshot(ProfileSnapshot s) {
     profile    = s.profile;
     posts      = s.posts;
@@ -79,6 +95,15 @@ class ProfileController extends ChangeNotifier {
   /// ҳатто бе интернет), баъд шабака. Хатои шабака кэшро пок НАМЕКУНАД:
   /// экрани «Корбар ёфт нашуд» танҳо вақте ки кэш умуман нест.
   Future<void> loadProfile() async {
+    _inFlight = true;
+    try {
+      await _loadProfile();
+    } finally {
+      _inFlight = false;
+    }
+  }
+
+  Future<void> _loadProfile() async {
     final hadData = profile != null;
     if (!hadData) {
       final snap = await _repo.loadCachedSnapshot(userId, byUsername: byUsername);
@@ -127,6 +152,7 @@ class ProfileController extends ChangeNotifier {
       for (final r in reels) { r.primeSync(); }
       // Як қисм нашуд → маълумоти он аз кэш аст.
       isStale = freshPosts == null || freshReels == null;
+      if (!isStale) freshness.markFetched();
       notFound = false;
       error = null;
     } on ProfileNotFoundException {

@@ -15,6 +15,7 @@ import '../navigation/bottom_nav/bottom_nav_scaffold.dart';
 import '../core/analytics/analytics_observer.dart';
 import '../core/music/feed_audio.dart';
 import '../core/ui/app_icons.dart';
+import '../core/ui/refresh_on_return.dart';
 
 /// Navigator-и умумӣ.
 ///
@@ -81,6 +82,8 @@ class RaonsonApp extends StatelessWidget {
                   _analyticsObserver,
                   ErrorReporter.observer,
                   _audioFocusObserver,
+                  // Баргаштан ба экран → навсозии хомӯш (профил, Explore).
+                  appRouteObserver,
                 ],
               );
             },

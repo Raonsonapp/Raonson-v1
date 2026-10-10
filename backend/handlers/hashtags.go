@@ -304,6 +304,11 @@ func reelsByIDs(ctx context.Context, myID string, ids []string) map[string]gin.H
 				"verified": verified, "isFollowing": following}, hasStory, unseenStory),
 		}
 	}
+	list := make([]gin.H, 0, len(out))
+	for _, r := range out {
+		list = append(list, r)
+	}
+	attachReelShares(list)
 	return out
 }
 

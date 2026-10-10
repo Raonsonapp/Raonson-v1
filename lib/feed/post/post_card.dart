@@ -1028,7 +1028,17 @@ class _PostCardState extends State<PostCard>
     final b = res.statusCode < 400
         ? jsonDecode(res.body) as Map<String, dynamic>
         : <String, dynamic>{};
-    final views    = (b['views']    ?? 0) as int;
+    // Омор — рақамҳои навтарини сервер → ҳамон рақамҳо дар ҳамаи экранҳо.
+    final id = widget.post.id;
+    if (res.statusCode < 400) {
+      int? n(Object? v) => v is num ? v.toInt() : null;
+      ContentSync.instance.reportViews(id, n(b['views']));
+      ContentSync.instance.prime(id,
+          likesCount: n(b['likes']), commentsCount: n(b['comments']),
+          sharesCount: n(b['shares']), fetchedAt: DateTime.now());
+    }
+    final views    = (b['views'] ??
+        ContentSync.instance.get(id)?.viewsCount ?? widget.post.viewsCount) as int;
     final likes    = (b['likes']    ?? _likeCount) as int;
     final comments = (b['comments'] ?? _commentCount) as int;
     final saves    = (b['saves']    ?? 0) as int;

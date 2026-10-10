@@ -58,7 +58,8 @@ class ReelModel {
   ContentState get syncState => ContentState(
         liked: isLiked, likesCount: likesCount, saved: isSaved,
         commentsCount: commentsCount, sharesCount: sharesCount,
-        hideLikes: hideLikes, commentsOff: commentsDisabled);
+        hideLikes: hideLikes, commentsOff: commentsDisabled,
+        viewsCount: viewsCount);
 
   /// Маълумоти серверии ин reel-ро ба ContentSync медиҳад.
   void primeSync() {
@@ -66,7 +67,7 @@ class ReelModel {
         liked: isLiked, likesCount: likesCount, saved: isSaved,
         commentsCount: commentsCount, sharesCount: sharesCount,
         hideLikes: hideLikes, commentsOff: commentsDisabled,
-        caption: caption, fetchedAt: fetchedAt);
+        caption: caption, viewsCount: viewsCount, fetchedAt: fetchedAt);
     // Ҳалқаи сториси муаллиф — ҳамон манбаъ барои ҳамаи экранҳо.
     StorySeenSync.instance.primeUser(user, fetchedAt: fetchedAt);
   }

@@ -31,6 +31,9 @@ import '../core/ui/video_frame.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../models/post_model.dart';
+import '../models/reel_model.dart';
+import '../core/ui/refresh_on_return.dart';
+import '../widgets/synced_content.dart';
 import '../models/user_model.dart';
 import '../profile/profile_screen.dart';
 import '../widgets/avatar.dart';
@@ -60,7 +63,7 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, RefreshOnReturn<SearchScreen> {
   // Controllers
   final _ctrl  = TextEditingController();
   final _focus = FocusNode();
@@ -125,11 +128,57 @@ class _SearchScreenState extends State<SearchScreen>
     super.didChangeDependencies();
     if (_scrollToTopNotifier == null) {
       try {
-        _scrollToTopNotifier =
-            context.read<BottomNavController>().scrollToTopNotifier;
+        final nav = context.read<BottomNavController>();
+        _scrollToTopNotifier = nav.scrollToTopNotifier;
         _scrollToTopNotifier!.addListener(_onScrollToTop);
+        _nav = nav..addListener(_onNavChanged);
       } catch (_) {}
     }
+  }
+
+  // ── Навсозии хомӯш ҳангоми баргаштан ─────────────────────────────
+  // Таб дар Offstage зинда мемонад; рақамҳои гриди Explore ва натиҷаҳои
+  // ҷустуҷӯ бе ин то «аз нав кашидан» куҳна мемонданд.
+  BottomNavController? _nav;
+  final FreshnessGate _exploreFreshness = FreshnessGate();
+  final FreshnessGate _searchFreshness  = FreshnessGate();
+
+  void _onNavChanged() {
+    if (mounted && _nav?.currentIndex == 3) notifyShown();
+  }
+
+  @override
+  bool get isShownForRefresh =>
+      super.isShownForRefresh && (_nav == null || _nav!.currentIndex == 3);
+
+  @override
+  void onReturn() {
+    if (_mode == _Mode.idle) {
+      _exploreFreshness.maybeRun(_refreshExploreCounts);
+    } else if (_mode == _Mode.result && _lastQ.isNotEmpty) {
+      final q = _lastQ;
+      _searchFreshness.maybeRun(() => _searchBackend(q));
+    }
+  }
+
+  /// Ҳамон саҳифаи 1 (ҳамон seed — тартиби грид иваз намешавад); танҳо
+  /// рақамҳо ба ContentSync мераванд ва плиткаҳо худашон нав мешаванд.
+  Future<void> _refreshExploreCounts() async {
+    if (_pager.seed.isEmpty || _exploreItems.isEmpty || _pager.loading) return;
+    try {
+      final res = await ApiClient.instance
+          .get('/explore', query: _pager.queryFor(1))
+          .timeout(const Duration(seconds: 12));
+      if (res.statusCode >= 400) return;
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      ContentSync.stampAll(body['posts']);
+      ContentSync.stampAll(body['reels']);
+      primeSearchResults(
+          [for (final p in (body['posts'] as List? ?? []))
+            PostModel.fromJson(p as Map<String, dynamic>)],
+          body['reels'] as List? ?? const []);
+      _exploreFreshness.markFetched();
+    } catch (_) {/* шабака — дафъаи дигар */}
   }
 
   // Зарбаи дубора ба таби Ҷустуҷӯ: грид ба боло, дар боло → Explore-и нав.
@@ -144,6 +193,7 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void dispose() {
     _scrollToTopNotifier?.removeListener(_onScrollToTop);
+    _nav?.removeListener(_onNavChanged);
     _ctrl.dispose();
     _focus.dispose();
     _scroll.dispose();
@@ -210,8 +260,10 @@ class _SearchScreenState extends State<SearchScreen>
     // Posts
     for (final p in (body['posts'] as List? ?? [])) {
       final post = PostModel.fromJson(p as Map<String, dynamic>);
-      // Ҳалқаи сториси муаллиф — ҳамон манбаи Home/Reels/профил.
-      StorySeenSync.instance.primeUser(post.user, fetchedAt: post.fetchedAt);
+      // Рақамҳо (тамошо, лайк…) ва ҳалқаи сториси муаллиф — ба манбаи
+      // умумӣ, то плиткаи Explore ва профил ҳамон рақамро нишон диҳанд.
+      // Кэши куҳнаи диск рақами навро паст намекунад (ниг. ContentSync).
+      post.primeSync();
       if (post.mediaUrl.isNotEmpty) {
         items.add(_ExploreItem(
           id:      post.id,
@@ -230,8 +282,7 @@ class _SearchScreenState extends State<SearchScreen>
     // Reels
     for (final r in (body['reels'] as List? ?? [])) {
       final rm = r as Map<String, dynamic>;
-      StorySeenSync.instance.primeJson(rm['user'] as Map?,
-          fetchedAt: ContentSync.fetchedAtOf(rm));
+      ReelModel.fromJson(rm).primeSync();
       final thumb = rm['thumbnailUrl']?.toString() ?? '';
       final video = rm['videoUrl']?.toString() ?? '';
       if (video.isEmpty && thumb.isEmpty) continue;
@@ -294,6 +345,7 @@ class _SearchScreenState extends State<SearchScreen>
     );
     _pager.loading = false;
     if (out.error != null) _pager.hasMore = false;
+    if (out.isFresh) _exploreFreshness.markFetched();
     if (!mounted) return;
     setState(() {
       _exploreLoading = false;
@@ -396,9 +448,10 @@ class _SearchScreenState extends State<SearchScreen>
         for (final u in _users) {
           StorySeenSync.instance.primeUser(u, fetchedAt: now);
         }
-        for (final p in _posts) {
-          StorySeenSync.instance.primeUser(p.user, fetchedAt: p.fetchedAt);
-        }
+        // Натиҷаҳо ҳамон шакли лента/Explore-ро доранд (ниг. backend
+        // Search) — рақамҳояшон ба манбаи умумӣ.
+        primeSearchResults(_posts, _reels);
+        _searchFreshness.markFetched();
       }
     } catch (e) {
       if (mounted && q == _lastQ) {
@@ -1223,31 +1276,41 @@ class _ExploreCell extends StatelessWidget {
                 color: AppColors.textPrimary, size: 15,
                 shadows: [Shadow(blurRadius: 6, color: AppColors.bg)]),
           ),
-        // Views counter (bottom-left) — shown if > 0
-        if (item.views > 0)
-          Positioned(
-            bottom: 5, left: 5,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(AppIcons.remove_red_eye_rounded,
-                  fill: 1, color: AppColors.textPrimary, size: 11,
-                  shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
-              const SizedBox(width: 3),
-              Text(_fmtViews(item.views),
-                  style: TextStyle(
-                    color: AppColors.textPrimary, fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    shadows: [Shadow(blurRadius: 4, color: AppColors.bg)],
-                  )),
-            ]),
+        // Тамошо (поён-чап) — аз ContentSync: ҳамон рақаме, ки профил,
+        // ҷустуҷӯ ва Reels нишон медиҳанд (на нусхаи ҳамин рӯйхат).
+        Positioned(
+          bottom: 5, left: 5,
+          child: SyncedViews(
+            id: item.id,
+            fallback: item.views,
+            builder: (_, views) => views <= 0
+                ? const SizedBox.shrink()
+                : Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(AppIcons.remove_red_eye_rounded,
+                        fill: 1, color: AppColors.textPrimary, size: 11,
+                        shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
+                    const SizedBox(width: 3),
+                    Text(formatCount(views),
+                        style: TextStyle(
+                          color: AppColors.textPrimary, fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          shadows: [Shadow(blurRadius: 4, color: AppColors.bg)],
+                        )),
+                  ]),
           ),
+        ),
       ]),
     );
   }
+}
 
-  static String _fmtViews(int v) {
-    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000)    return '${(v / 1000).toStringAsFixed(v >= 10000 ? 0 : 1)}K';
-    return '$v';
+/// Рақамҳои натиҷаҳои ҷустуҷӯ → ContentSync (ниг. [_SearchScreenState]).
+void primeSearchResults(List<PostModel> posts, List<dynamic> reels) {
+  for (final p in posts) {
+    p.primeSync();
+  }
+  for (final r in reels) {
+    if (r is Map<String, dynamic>) ReelModel.fromJson(r).primeSync();
   }
 }
 
@@ -1555,9 +1618,15 @@ class _FeedCardState extends State<_FeedCard> {
   void _trackView() {
     if (_viewTracked) return;
     _viewTracked = true;
+    final id = _id;
     ApiClient.instance
-        .post(_isReel ? '/reels/$_id/view' : '/posts/view/$_id')
-        .then((_) {}, onError: (_) {});
+        .post(_isReel ? '/reels/$id/view' : '/posts/view/$id')
+        .then((res) {
+      // Рақами нав аз сервер → плиткаи Explore, профил ва ҷустуҷӯ якхела.
+      if (res.statusCode < 400) {
+        ContentSync.instance.reportViewsBody(id, res.body);
+      }
+    }, onError: (_) {});
   }
 
   Future<void> _initVideo() async {

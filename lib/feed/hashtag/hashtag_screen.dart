@@ -15,6 +15,7 @@ import '../../core/hashtags/hashtag_repository.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/video_frame.dart';
+import '../../widgets/synced_content.dart';
 import '../../reels/single_reel_screen.dart';
 import '../post/post_detail_screen.dart';
 
@@ -421,19 +422,25 @@ class _Cell extends StatelessWidget {
             child: Icon(AppIcons.collections_rounded, color: Colors.white, size: 16,
                 shadows: [Shadow(blurRadius: 6, color: Colors.black54)]),
           ),
-        if (views > 0)
-          Positioned(
-            bottom: 5, left: 5,
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(AppIcons.remove_red_eye_rounded, color: Colors.white, size: 11,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)]),
-              const SizedBox(width: 3),
-              Text(compactCount(views),
-                  style: const TextStyle(color: Colors.white, fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
-            ]),
+        // Тамошо аз ContentSync — ҳамон рақами профил ва Explore.
+        Positioned(
+          bottom: 5, left: 5,
+          child: SyncedViews(
+            id: item.id,
+            fallback: views,
+            builder: (_, v) => v <= 0
+                ? const SizedBox.shrink()
+                : Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(AppIcons.remove_red_eye_rounded, color: Colors.white, size: 11,
+                        shadows: [Shadow(blurRadius: 4, color: Colors.black54)]),
+                    const SizedBox(width: 3),
+                    Text(formatCount(v),
+                        style: const TextStyle(color: Colors.white, fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            shadows: [Shadow(blurRadius: 4, color: Colors.black54)])),
+                  ]),
           ),
+        ),
       ]),
     );
   }

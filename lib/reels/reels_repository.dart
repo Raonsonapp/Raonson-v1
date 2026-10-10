@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../core/api/api_client.dart';
+import '../core/content_sync.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/storage/offline_cache.dart';
 import '../models/reel_model.dart';
@@ -168,10 +169,14 @@ class ReelsRepository {
   }) async {
     try {
       // POST /reels/:id/watch — калидҳо ДАҚИҚ мувофиқи backend: watchMs, completed.
-      await _api.post('${ApiEndpoints.reels}/$reelId/watch', body: {
+      final res = await _api.post('${ApiEndpoints.reels}/$reelId/watch', body: {
         'watchMs':   watchMs,
         'completed': durationMs > 0 && watchMs >= (durationMs * 0.9).round(),
       }).timeout(const Duration(seconds: 5));
+      // Тамошо ҳисоб шуд → рақами нав дар ҳамаи экранҳо.
+      if (res.statusCode < 400) {
+        ContentSync.instance.reportViewsBody(reelId, res.body);
+      }
     } catch (_) {}
   }
 

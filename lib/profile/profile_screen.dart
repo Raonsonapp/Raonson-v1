@@ -19,7 +19,6 @@ import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../thanks/thanks_screen.dart';
-import '../core/content_sync.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
@@ -53,6 +52,8 @@ import '../verification/verification_screen.dart';
 import '../navigation/bottom_nav/bottom_nav_controller.dart';
 import 'package:provider/provider.dart';
 import '../widgets/linked_text.dart';
+import '../widgets/synced_content.dart';
+import '../core/ui/refresh_on_return.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -64,7 +65,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RefreshOnReturn<ProfileScreen> {
   late final ProfileController _ctrl;
   late       TabController      _tab;
 
@@ -114,6 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   final _nestedKey   = GlobalKey<NestedScrollViewState>();
   final _refreshKey  = GlobalKey<RefreshIndicatorState>();
   ValueNotifier<int>? _retapNotifier;
+  BottomNavController? _nav;
 
   @override
   void didChangeDependencies() {
@@ -123,7 +125,28 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (nav == null || _retapNotifier == nav.scrollToTopNotifier) return;
     _retapNotifier?.removeListener(_onRetap);
     _retapNotifier = nav.scrollToTopNotifier..addListener(_onRetap);
+    _nav?.removeListener(_onNavChanged);
+    _nav = nav..addListener(_onNavChanged);
   }
+
+  /// Ин ҳамон таби «Профил»-и навбари поён аст (на профили кушодашуда).
+  bool get _isTab =>
+      _nav != null && widget.userId == 'me' &&
+      (ModalRoute.of(context)?.isFirst ?? false);
+
+  @override
+  bool get isShownForRefresh =>
+      super.isShownForRefresh && (!_isTab || _nav!.currentIndex == 4);
+
+  /// Ба таби профил баргаштем → навсозии хомӯш.
+  void _onNavChanged() {
+    if (mounted && _isTab && _nav!.currentIndex == 4) notifyShown();
+  }
+
+  // Баргаштан ба профил (таб, пӯшидани саҳифаи боло, resume) — агар
+  // маълумот аз 15 сония куҳнатар бошад, бе скелет аз нав мегирем.
+  @override
+  void onReturn() => _ctrl.refreshIfStale();
 
   void _onRetap() {
     if (!mounted || widget.userId != 'me') return;
@@ -150,6 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void dispose() {
     _retapNotifier?.removeListener(_onRetap);
+    _nav?.removeListener(_onNavChanged);
     _outerScroll.dispose();
     _ctrl.removeListener(_onCtrl);
     _ctrl.dispose();
@@ -807,13 +831,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         body: locked
             ? const _PrivateAccountView()
             : TabBarView(controller: _tab, children: [
-          _onNearEnd(_ctrl.loadMorePosts, _PostGrid(
+          _onNearEnd(_ctrl.loadMorePosts, ProfilePostGrid(
               posts:       _ctrl.sortedPosts,
               isMe:        _isMe,
               owner:       _ctrl.profile,
               onLongPress: _postMenu,
               onRemoved:   (id) => _ctrl.removePostById(id))),
-          _onNearEnd(_ctrl.loadMoreReels, _ReelGrid(reels: _ctrl.reels)),
+          _onNearEnd(_ctrl.loadMoreReels, ProfileReelGrid(reels: _ctrl.reels)),
           _TaggedGrid(ctrl: _ctrl),
           if (_isMe) _onNearEnd(_ctrl.loadMoreSaved, _SavedGrid(ctrl: _ctrl)),
         ]),
@@ -1046,19 +1070,14 @@ Widget _onNearEnd(Future<void> Function() loadMore, Widget child) =>
     );
 
 // ─── Post Grid ─────────────────────────────────────────────────────────
-class _PostGrid extends StatelessWidget {
+class ProfilePostGrid extends StatelessWidget {
   final List<PostModel> posts;
   final bool isMe;
   final UserModel? owner;
   final void Function(PostModel) onLongPress;
   final void Function(String id)? onRemoved;
-  const _PostGrid({required this.posts, required this.isMe,
+  const ProfilePostGrid({super.key, required this.posts, required this.isMe,
       required this.onLongPress, this.owner, this.onRemoved});
-  String _f(int v) {
-    if (v >= 1000000) return '${(v/1e6).toStringAsFixed(1)}M';
-    if (v >= 1000)    return '${(v/1000).toStringAsFixed(1)}K';
-    return '$v';
-  }
   @override
   Widget build(BuildContext context) {
     if (posts.isEmpty) {
@@ -1099,43 +1118,23 @@ class _PostGrid extends StatelessWidget {
               Positioned(top: 6, left: 6, child: Icon(
                   AppIcons.push_pin_rounded, color: AppColors.textPrimary, size: 15,
                   shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
-            // Рақам аз ContentSync: лайке, ки дар Home/Reels/Explore
-            // шуд, дар плиткаи профил ҳам фавран нав мешавад; «лайкҳо
-            // пинҳон» барои бегона — рақам намоён нест.
-            ValueListenableBuilder<ContentState?>(
-              valueListenable: ContentSync.instance.watch(p.id),
-              builder: (_, __, ___) {
-                final s = ContentSync.instance.view(p.id, ContentState(
-                    likesCount: p.likesCount, hideLikes: p.hideLikes));
-                if ((s.hideLikes ?? false) && !isMe) {
-                  return const SizedBox.shrink();
-                }
-                return Positioned(bottom: 5, left: 5,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(AppIcons.remove_red_eye_rounded,
-                    fill: 1, color: AppColors.textPrimary, size: 11,
-                    shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
-                const SizedBox(width: 2),
-                Text(_f(s.likesCount ?? 0), style: TextStyle(
-                    color: AppColors.textPrimary, fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
-              ]));
-              }),
+            // Тамошо аз ContentSync — ҳамон рақаме, ки Explore, ҷустуҷӯ
+            // ва пости кушодашуда нишон медиҳанд.
+            //
+            // ⚠️ Пеш ин ҷо зери нишони ЧАШМ шумораи ЛАЙКҲО буд — пост дар
+            // профил «2», дар Explore «7» (тамошо) нишон медод.
+            Positioned(bottom: 5, left: 5,
+              child: SyncedViews(id: p.id, fallback: p.viewsCount,
+                builder: (_, views) => _TileCount(views))),
           ]));
       });
   }
 }
 
 // ─── Reel Grid ─────────────────────────────────────────────────────────
-class _ReelGrid extends StatelessWidget {
+class ProfileReelGrid extends StatelessWidget {
   final List<ReelModel> reels;
-  const _ReelGrid({required this.reels});
-  String _f(int v) {
-    if (v >= 1000000) return '${(v/1e6).toStringAsFixed(1)}M';
-    if (v >= 1000)    return '${(v/1000).toStringAsFixed(1)}K';
-    return '$v';
-  }
+  const ProfileReelGrid({super.key, required this.reels});
   // Placeholder-и оддӣ (бе icon дар мобайн) — мисли Instagram, вақте
   // ки thumbnail ҳанӯз нест. Icon-и reels танҳо дар кунҷи боло мемонад.
   Widget _reelPlaceholder() => Container(color: AppColors.card);
@@ -1173,18 +1172,30 @@ class _ReelGrid extends StatelessWidget {
           Positioned(top: 6, right: 6, child: SvgPicture.asset(
               'assets/icons/nav_reels.svg', width: 16, height: 16,
               colorFilter: ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn))),
+          // ⚠️ Сабаби «дар профил 5 мемонад»: пеш `r.viewsCount` —
+          // рақами ҳамон лаҳзае, ки профил бор шуд. Акнун аз ContentSync:
+          // тамошое, ки дар Explore/ҷустуҷӯ/Reels ҳисоб шуд, фавран ин ҷо.
           Positioned(bottom: 5, left: 5,
-            child: Row(children: [
-              Icon(AppIcons.remove_red_eye_rounded, fill: 1, color: AppColors.textPrimary,
-                  size: 11, shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
-              const SizedBox(width: 3),
-              Text(_f(r.viewsCount), style: TextStyle(
-                  color: AppColors.textPrimary, fontSize: 11, fontWeight: FontWeight.bold,
-                  shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
-            ])),
+            child: SyncedViews(id: r.id, fallback: r.viewsCount,
+                builder: (_, views) => _TileCount(views))),
         ]));
       });
   }
+}
+
+/// Чашм + шумораи тамошо дар кунҷи плитка (постҳо ва Reels якхела).
+class _TileCount extends StatelessWidget {
+  final int views;
+  const _TileCount(this.views);
+  @override
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(AppIcons.remove_red_eye_rounded, fill: 1, color: AppColors.textPrimary,
+            size: 11, shadows: [Shadow(blurRadius: 4, color: AppColors.bg)]),
+        const SizedBox(width: 3),
+        Text(formatCount(views), style: TextStyle(
+            color: AppColors.textPrimary, fontSize: 11, fontWeight: FontWeight.bold,
+            shadows: [Shadow(blurRadius: 4, color: AppColors.bg)])),
+      ]);
 }
 
 // ─── Tagged Grid ────────────────────────────────────────────────────────

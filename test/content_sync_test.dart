@@ -217,7 +217,11 @@ void main() {
     places.forEach((path, name) {
       test(name, () {
         final src = File(path).readAsStringSync();
-        expect(src, contains('ContentSync.instance'), reason: path);
+        // Мустақим ё бо виҷети умумӣ (SyncedViews/SyncedContent).
+        expect(src.contains('ContentSync.instance') ||
+                src.contains('SyncedViews(') ||
+                src.contains('SyncedContent('),
+            isTrue, reason: path);
       });
     });
 

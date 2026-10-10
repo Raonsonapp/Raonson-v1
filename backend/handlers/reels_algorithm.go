@@ -219,6 +219,7 @@ func GetSmartReels(c *gin.Context) {
 	}
 
 	attachReelLocations(reels)
+	attachReelShares(reels)
 	result := gin.H{
 		"reels": reels, "page": page,
 		"limit": limit, "algo": "instagram_style",

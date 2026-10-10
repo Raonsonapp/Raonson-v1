@@ -1472,6 +1472,17 @@ class _ReelItemState extends State<_ReelItem> {
     final stats = await repo.fetchStats(widget.reel.id);
     if (!mounted) return;
     final s = stats ?? {};
+    // Омор — рақамҳои навтарини сервер: ҳамон рақамҳо дар ҳамаи экранҳо.
+    // Бе омор (шабака нашуд) — рақамҳои умумии ContentSync, на модели куҳна.
+    final id = widget.reel.id;
+    int? n(Object? v) => v is num ? v.toInt() : null;
+    if (stats != null) {
+      ContentSync.instance.reportViews(id, n(s['views']));
+      ContentSync.instance.prime(id,
+          likesCount: n(s['likes']), commentsCount: n(s['comments']),
+          sharesCount: n(s['shares']), fetchedAt: DateTime.now());
+    }
+    final cs = ContentSync.instance.view(id, widget.reel.syncState);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -1481,16 +1492,16 @@ class _ReelItemState extends State<_ReelItem> {
                 color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _statRow(tr('reels.statViews'),
-              '${s['views'] ?? widget.reel.viewsCount}'),
+              '${s['views'] ?? cs.viewsCount ?? 0}'),
           _statRow(
-              tr('reels.statLikes'), '${s['likes'] ?? widget.reel.likesCount}'),
+              tr('reels.statLikes'), '${s['likes'] ?? cs.likesCount ?? 0}'),
           _statRow(tr('reels.statComments'),
-              '${s['comments'] ?? widget.reel.commentsCount}'),
+              '${s['comments'] ?? cs.commentsCount ?? 0}'),
           _statRow(tr('reels.statSaves'), '${s['saves'] ?? 0}'),
           // Чанд нафар маҳз аз ҳамин Reel обуна шуданд.
           _statRow(tr('reels.statFollows'), '${s['follows'] ?? 0}'),
           _statRow(tr('reels.statShares'),
-              '${s['shares'] ?? widget.reel.sharesCount}'),
+              '${s['shares'] ?? cs.sharesCount ?? 0}'),
           _statRow(
               tr('reels.statAvgWatch'),
               '${s['avgWatchMs'] != null ? (s['avgWatchMs'] / 1000).toStringAsFixed(1) + " сон" : "—"}'),

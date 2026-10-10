@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../api/api_client.dart';
+import '../local_activity.dart';
 
 /// Ҷавоби POST /follow/:id: `{"requested": true}` — ҳисоби пӯшида,
 /// дархост фиристода шуд, обуна ҳанӯз нест.
@@ -81,6 +82,8 @@ class FollowService {
   /// ҳолат аллакай буд, unfollow-и профил дар reels «обуна» мемонд.
   void report(String userId, bool following) {
     if (userId.isEmpty) return;
+    // Шумораи обунаҳо/обуначиён дар профил иваз шуд (ниг. LocalActivity).
+    LocalActivity.bump();
     if (states.value[userId] == following) {
       _at[userId] = DateTime.now();
       return;

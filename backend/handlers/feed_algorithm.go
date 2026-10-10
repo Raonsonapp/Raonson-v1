@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -269,14 +268,19 @@ func GetSmartFeed(c *gin.Context) {
 // POST /posts/:id/view — track viewed posts (for feed dedup)
 func TrackPostView(c *gin.Context) {
 	pid := c.Param("id")
-	myID := mw.UID(c)
-	db.Pool.Exec(context.Background(),
-		`INSERT INTO post_views(user_id,post_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,
-		myID, pid)
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	// Ҷавоб рақами ҷорӣ дорад — клиент онро дар ҳамаи экранҳо мегузорад
+	// (ниг. ContentSync.reportViews). Ниг. countPostViews.
+	counts, err := countPostViews(c.Request.Context(), mw.UID(c), []string{pid})
+	if n, ok := counts[pid]; ok && err == nil {
+		c.JSON(http.StatusOK, gin.H{"ok": true, "views": n, "viewsCount": n})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": err == nil})
 }
 
-// POST /posts/view-batch — батчи дидашавӣ (то 50 пост якбора)
+// POST /posts/view-batch — батчи дидашавӣ (то 50 пост якбора).
+// Ҷавоб: {"views": {postId: рақами ҷорӣ}} — ҳамон рақаме, ки ҳамаи
+// экранҳо нишон медиҳанд.
 func TrackPostViewBatch(c *gin.Context) {
 	myID := mw.UID(c)
 	var b struct {
@@ -289,19 +293,8 @@ func TrackPostViewBatch(c *gin.Context) {
 	if len(b.PostIDs) > 50 {
 		b.PostIDs = b.PostIDs[:50]
 	}
-	// Single batch INSERT — 1 round-trip instead of N
-	query := "INSERT INTO post_views(user_id,post_id) VALUES "
-	args := []interface{}{myID}
-	for i, pid := range b.PostIDs {
-		if i > 0 {
-			query += ","
-		}
-		query += fmt.Sprintf("($1,$%d)", i+2)
-		args = append(args, pid)
-	}
-	query += " ON CONFLICT DO NOTHING"
-	db.Pool.Exec(context.Background(), query, args...)
-	c.JSON(http.StatusOK, gin.H{"ok": true, "count": len(b.PostIDs)})
+	counts, err := countPostViews(c.Request.Context(), myID, b.PostIDs)
+	c.JSON(http.StatusOK, gin.H{"ok": err == nil, "count": len(b.PostIDs), "views": counts})
 }
 
 // isFollowingSQLResult — ман ба ӯ обунаам?

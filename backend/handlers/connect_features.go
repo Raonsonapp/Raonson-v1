@@ -135,7 +135,8 @@ func GetSuggestedUsers(c *gin.Context) {
 
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false), COALESCE(u.bio,''),
-		       u.followers_count
+		       -- Ҳамон рақами сарлавҳаи профил (COUNT(follows)).
+		       (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id)
 		FROM users u
 		WHERE u.id <> $1
 		  AND COALESCE(u.banned,false) = FALSE

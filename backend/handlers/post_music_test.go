@@ -47,6 +47,13 @@ func TestEveryPostResponseCarriesMusic(t *testing.T) {
 		}
 		checked++
 
+		// Пост аз сохтори умумӣ (`feedPostCols` + `scanFeedPosts`, ки
+		// худашон дар profile_extra.go санҷида мешаванд) — музика ҳаст.
+		if name != "profile_extra.go" && strings.Contains(src, "feedPostCols") &&
+			strings.Contains(src, "scanFeedPosts(") {
+			continue
+		}
+
 		if !strings.Contains(src, "music_title") {
 			t.Errorf("%s ҷавоби пост месозад, вале сутунҳои музикаро "+
 				"намепурсад — суруд дар ин экран нопадид мешавад", name)

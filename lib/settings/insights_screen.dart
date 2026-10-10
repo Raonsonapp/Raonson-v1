@@ -7,6 +7,8 @@ import 'package:shimmer/shimmer.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
 import '../core/api/api_client.dart';
+import '../core/content_sync.dart';
+import '../widgets/synced_content.dart';
 import '../core/i18n/strings.dart';
 
 class InsightsScreen extends StatefulWidget {
@@ -26,6 +28,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
     _load();
   }
 
+  /// Рақамҳои навтарини сервер → ContentSync (ҳамон рақам дар профил ва
+  /// Explore; дар ин ҷо ҳам аз ҳамон манбаъ хонда мешавад).
+  static void _primeTop(Map<String, dynamic> d) {
+    final now = DateTime.now();
+    for (final key in const ['topPosts', 'topReels']) {
+      for (final e in (d[key] as List? ?? const [])) {
+        if (e is! Map) continue;
+        int? n(Object? v) => v is num ? v.toInt() : null;
+        ContentSync.instance.prime((e['id'] ?? '').toString(),
+            likesCount: n(e['likes']), commentsCount: n(e['comments']),
+            viewsCount: n(e['views']), fetchedAt: now);
+      }
+    }
+  }
+
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
@@ -33,6 +50,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
           .timeout(const Duration(seconds: 15));
       if (r.statusCode < 400) {
         _data = jsonDecode(r.body) as Map<String, dynamic>;
+        _primeTop(_data!);
       } else {
         _error = 'Омор бор нашуд';
       }
@@ -193,14 +211,19 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
                     color: Colors.black54,
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(isReel ? AppIcons.remove_red_eye_rounded
-                                  : AppIcons.favorite_rounded,
-                          fill: 1, color: Colors.white, size: 12),
-                      const SizedBox(width: 3),
-                      Text(_fmt(isReel ? views : likes),
-                          style: const TextStyle(color: Colors.white, fontSize: 11)),
-                    ]),
+                    child: SyncedContent(
+                      id: (m['id'] ?? '').toString(),
+                      base: ContentState(likesCount: likes, viewsCount: views),
+                      builder: (_, cs) => Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(isReel ? AppIcons.remove_red_eye_rounded
+                                    : AppIcons.favorite_rounded,
+                            fill: 1, color: Colors.white, size: 12),
+                        const SizedBox(width: 3),
+                        Text(formatCount(isReel ? (cs.viewsCount ?? views)
+                                                : (cs.likesCount ?? likes)),
+                            style: const TextStyle(color: Colors.white, fontSize: 11)),
+                      ]),
+                    ),
                   ),
                 ),
               ]),

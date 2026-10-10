@@ -111,7 +111,8 @@ class PostModel {
   ContentState get syncState => ContentState(
         liked: liked, likesCount: likesCount, saved: saved,
         commentsCount: commentsCount, sharesCount: sharesCount,
-        hideLikes: hideLikes, commentsOff: commentsDisabled);
+        hideLikes: hideLikes, commentsOff: commentsDisabled,
+        viewsCount: viewsCount);
 
   /// Маълумоти серверии ин постро ба ContentSync медиҳад. Рӯйхати
   /// куҳна амали навтари корбарро пахш намекунад (ниг. ContentSync).
@@ -120,7 +121,7 @@ class PostModel {
         liked: liked, likesCount: likesCount, saved: saved,
         commentsCount: commentsCount, sharesCount: sharesCount,
         hideLikes: hideLikes, commentsOff: commentsDisabled,
-        caption: caption, fetchedAt: fetchedAt);
+        caption: caption, viewsCount: viewsCount, fetchedAt: fetchedAt);
     // Ҳалқаи сториси муаллиф — ҳамон манбаъ барои ҳамаи экранҳо.
     StorySeenSync.instance.primeUser(user, fetchedAt: fetchedAt);
   }

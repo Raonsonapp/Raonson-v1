@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/api/api_client.dart';
+import '../core/content_sync.dart';
 import '../core/analytics/analytics_service.dart';
 import '../core/analytics/analytics_events.dart';
 import '../models/reel_model.dart';
@@ -25,9 +26,14 @@ class _SingleReelScreenState extends State<SingleReelScreen> {
     AnalyticsService.instance.logEvent(AnalyticsEvents.reelView,
         params: {'reelId': widget.reel.id});
     // Ҳисоби бинандаҳо (1 бор аз ҳар user — backend dedup мекунад)
-    ApiClient.instance
-        .post('/reels/${widget.reel.id}/view')
-        .then((_) {}, onError: (_) {});
+    // Сервер рақами навро бармегардонад → ҳамон рақам дар профил,
+    // Explore ва ҷустуҷӯ фавран (ниг. ContentSync.reportViews).
+    final id = widget.reel.id;
+    ApiClient.instance.post('/reels/$id/view').then((res) {
+      if (res.statusCode < 400) {
+        ContentSync.instance.reportViewsBody(id, res.body);
+      }
+    }, onError: (_) {});
   }
 
   @override

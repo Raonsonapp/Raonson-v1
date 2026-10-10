@@ -1,5 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
+
+import '../content_sync.dart';
 import '../api/api_client.dart';
+
+/// `{"views": {id: n}}` → ContentSync.
+void reportBatchViews(String body) {
+  try {
+    final views = (jsonDecode(body) as Map)['views'];
+    if (views is! Map) return;
+    views.forEach((id, n) {
+      if (n is num) ContentSync.instance.reportViews('$id', n.toInt());
+    });
+  } catch (_) {}
+}
 
 class ViewTracker {
   ViewTracker._();
@@ -20,9 +34,12 @@ class ViewTracker {
     final batch = _pending.toList();
     _pending.clear();
     try {
-      await ApiClient.instance.post('/posts/view-batch', body: {
+      final res = await ApiClient.instance.post('/posts/view-batch', body: {
         'postIds': batch,
       });
+      // Сервер рақами ҷории ҳар постро медиҳад — ҳамон рақам дар
+      // профил, Explore ва ҷустуҷӯ (ниг. ContentSync.reportViews).
+      if (res.statusCode < 400) reportBatchViews(res.body);
     } catch (_) {}
   }
 }

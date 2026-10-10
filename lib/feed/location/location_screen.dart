@@ -9,6 +9,7 @@ import '../../core/i18n/strings.dart';
 import '../../core/places/place.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/video_frame.dart';
+import '../../widgets/synced_content.dart';
 import '../../models/post_model.dart';
 import '../../models/reel_model.dart';
 import '../../reels/single_reel_screen.dart';
@@ -124,6 +125,9 @@ class _LocationScreenState extends State<LocationScreen> {
     try {
       final reels = await _reelPage(1);
       if (!mounted) return;
+      for (final r in reels) {
+        r.primeSync();
+      }
       setState(() {
         _reels = reels;
         _reelsHasMore = reels.length >= _pageSize;
@@ -307,18 +311,28 @@ class _LocationScreenState extends State<LocationScreen> {
                       Positioned(
                         left: 6,
                         bottom: 6,
-                        child: Row(children: [
-                          const Icon(AppIcons.play_arrow_rounded,
-                              color: Colors.white, size: 16),
-                          Text('${r.viewsCount}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  shadows: [
-                                    Shadow(blurRadius: 4, color: Colors.black)
-                                  ])),
-                        ]),
+                        // Ҳамон нишон (чашм) ва ҳамон рақам (ContentSync),
+                        // ки профил ва Explore доранд.
+                        child: SyncedViews(
+                          id: r.id,
+                          fallback: r.viewsCount,
+                          builder: (_, v) => Row(children: [
+                            const Icon(AppIcons.remove_red_eye_rounded,
+                                color: Colors.white, size: 12,
+                                shadows: [
+                                  Shadow(blurRadius: 4, color: Colors.black)
+                                ]),
+                            const SizedBox(width: 3),
+                            Text(formatCount(v),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    shadows: [
+                                      Shadow(blurRadius: 4, color: Colors.black)
+                                    ])),
+                          ]),
+                        ),
                       ),
                     ]),
                   );
