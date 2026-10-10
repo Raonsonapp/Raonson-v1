@@ -178,6 +178,22 @@ func SetAutoDM(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": msg})
 		return
 	}
+	// Паёми худкор ба ДМ-и бегонаҳо меравад — ҳамон модератсияи паём.
+	// Пеш он бе санҷиш сабт мешуд: матни дашномдор ё линки 18+ аз
+	// модератсияи чат мегузашт, ҳатто аз корбари маҳдудшуда.
+	r := modRequest{Surface: "auto_dm", Texts: []string{b.Message, b.Link}}
+	out, ok := screenContent(c, me, r)
+	if !ok {
+		return
+	}
+	if out.Hold {
+		queueReview(me, r, kind+":"+id, out, false)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"message": "Ин паёмро фиристодан мумкин нест. Лутфан онро иваз кунед",
+			"code":    "content_review"})
+		return
+	}
+	queueReview(me, r, kind+":"+id, out, false)
 	if err := saveAutoDM(kind, id, me, b); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Сабт нашуд"})
 		return
@@ -261,6 +277,14 @@ func maybeAutoDM(kind, contentID, owner, commenter, text string) {
 			return
 		}
 		if !autoDMMatches(text, kw, anyWord) || IsBlockedBetween(owner, commenter) {
+			return
+		}
+		// Соҳиби маҳдудшуда ё бандор паём фиристода наметавонад — паёми
+		// худкор ҳам не.
+		var barred bool
+		db.Pool.QueryRow(ctx, `SELECT COALESCE(banned,false) OR COALESCE(suspended_until > NOW(), false)
+			FROM users WHERE id=$1`, owner).Scan(&barred)
+		if barred {
 			return
 		}
 		var recent int

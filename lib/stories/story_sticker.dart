@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import '../core/i18n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:raonson/core/ui/app_icons.dart';
 import 'package:heroicons_flutter/heroicons_flutter.dart';
@@ -143,12 +144,12 @@ class StorySticker {
 
 /// Боқимондаи вақт ба шакли «2р 05:10:03».
 String countdownLabel(Duration left) {
-  if (left.isNegative || left == Duration.zero) return 'Анҷом ёфт';
+  if (left.isNegative || left == Duration.zero) return tr('sticker.ended');
   final d = left.inDays;
   final h = (left.inHours % 24).toString().padLeft(2, '0');
   final m = (left.inMinutes % 60).toString().padLeft(2, '0');
   final s = (left.inSeconds % 60).toString().padLeft(2, '0');
-  return d > 0 ? '$dр $h:$m:$s' : '$h:$m:$s';
+  return d > 0 ? '${tr('sticker.daysShort', {'d': d})} $h:$m:$s' : '$h:$m:$s';
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -222,12 +223,12 @@ class _StoryStickerViewState extends State<StoryStickerView> {
           .post('/stories/${widget.storyId}/sticker/respond', body: body);
       final b = jsonDecode(res.body);
       if (res.statusCode >= 400) {
-        _toast((b is Map ? b['message'] : null)?.toString() ?? 'Нашуд');
+        _toast((b is Map ? b['message'] : null)?.toString() ?? tr('sticker.failed'));
         return null;
       }
       return b is Map<String, dynamic> ? b : null;
     } catch (_) {
-      _toast('Хатои шабака');
+      _toast(tr('sticker.networkError'));
       return null;
     } finally {
       _busy = false;
@@ -299,15 +300,15 @@ class _StoryStickerViewState extends State<StoryStickerView> {
               maxLines: 3,
               minLines: 1,
               style: const TextStyle(color: Colors.black),
-              decoration: const InputDecoration(
-                  hintText: 'Ҷавоби худро нависед…',
-                  hintStyle: TextStyle(color: Colors.black38)),
+              decoration: InputDecoration(
+                  hintText: tr('sticker.answerHint'),
+                  hintStyle: const TextStyle(color: Colors.black38)),
             ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                   onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-                  child: const Text('Фиристодан')),
+                  child: Text(tr('sticker.send'))),
             ),
           ]),
         ),
@@ -318,7 +319,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
       final b = await _respond({'answer': text});
       if (b != null && mounted) {
         setState(() => _s = _s.copyWith(answered: true));
-        _toast('Ҷавоб фиристода шуд');
+        _toast(tr('sticker.answerSent'));
       }
     }
     widget.onResume();
@@ -372,7 +373,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
           const SizedBox(height: 6),
         ],
         if (answered && total > 0)
-          Text('$total ҷавоб',
+          Text(tr('sticker.answersN', {'n': total}),
               style: const TextStyle(color: Colors.black54, fontSize: 11)),
       ]),
     );
@@ -495,7 +496,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
           );
         }),
         if (locked && _s.responses > 0)
-          Text('Миёна: ${_s.average ?? 0}% · ${_s.responses} ҷавоб',
+          Text(tr('sticker.sliderAverage', {'avg': _s.average ?? 0, 'n': _s.responses}),
               style: const TextStyle(color: Colors.black54, fontSize: 11)),
       ]),
     );
@@ -518,10 +519,10 @@ class _StoryStickerViewState extends State<StoryStickerView> {
                 borderRadius: BorderRadius.circular(12)),
             child: Text(
               _s.isOwner
-                  ? 'Ҷавобҳо: ${_s.answersCount}'
+                  ? tr('sticker.answersCount', {'n': _s.answersCount})
                   : _s.answered
-                      ? 'Ҷавоби шумо фиристода шуд ✓'
-                      : 'Барои ҷавоб занед',
+                      ? tr('sticker.yourAnswerSent')
+                      : tr('sticker.tapToAnswer'),
               style: const TextStyle(color: Colors.black54, fontSize: 13),
             ),
           ),
@@ -544,13 +545,13 @@ class _StoryStickerViewState extends State<StoryStickerView> {
                 final go = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Кушодани линк'),
+                    title: Text(tr('sticker.openLink')),
                     content: Text(uri.toString()),
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Бекор')),
+                          child: Text(tr('sticker.cancel'))),
                       TextButton(onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Кушодан')),
+                          child: Text(tr('sticker.open'))),
                     ],
                   ),
                 );
@@ -629,8 +630,8 @@ class _StoryStickerViewState extends State<StoryStickerView> {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: card,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text('НАВБАТИ ТУ',
-            style: TextStyle(color: Color(0xFF8E8E93), fontSize: 11,
+        Text(tr('sticker.addYoursTitle'),
+            style: const TextStyle(color: Color(0xFF8E8E93), fontSize: 11,
                 fontWeight: FontWeight.w800, letterSpacing: 1.2)),
         const SizedBox(height: 6),
         _title(_s.prompt),
@@ -658,7 +659,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
                 ]),
               ),
             const SizedBox(width: 6),
-            Text(n == 1 ? '1 иштирокчӣ' : '$n иштирокчӣ',
+            Text(n == 1 ? tr('sticker.participantsOne') : tr('sticker.participantsN', {'n': n}),
                 style: const TextStyle(color: Color(0xFF3A3A3C),
                     fontSize: 13, fontWeight: FontWeight.w600)),
             if (n > 0)
@@ -679,7 +680,7 @@ class _StoryStickerViewState extends State<StoryStickerView> {
               ),
               icon: Icon(_s.joined ? HeroiconsOutline.check : HeroiconsOutline.plus,
                   size: 18),
-              label: Text(_s.joined ? 'Боз илова кардан' : 'Навбати ман'),
+              label: Text(tr(_s.joined ? 'sticker.addAgain' : 'sticker.myTurn')),
             ),
           ),
         ],
@@ -740,9 +741,9 @@ Future<void> showStickerAnswers(BuildContext context, String storyId) {
             list = (jsonDecode(snap.data!.body) as Map)['answers'] as List? ?? [];
           } catch (_) {}
           if (list.isEmpty) {
-            return const Center(
-                child: Text('Ҳанӯз ҷавоб нест',
-                    style: TextStyle(color: Colors.black54)));
+            return Center(
+                child: Text(tr('sticker.noAnswers'),
+                    style: const TextStyle(color: Colors.black54)));
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -756,7 +757,7 @@ Future<void> showStickerAnswers(BuildContext context, String storyId) {
                   : a['value'] != null
                       ? '${a['value']}%'
                       : a['choice'] != null
-                          ? 'Варианти ${(a['choice'] as num) + 1}'
+                          ? tr('sticker.optionN', {'n': (a['choice'] as num) + 1})
                           : '';
               return ListTile(
                 contentPadding: EdgeInsets.zero,

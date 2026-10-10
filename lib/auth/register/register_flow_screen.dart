@@ -232,12 +232,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 setDlg(() { verifying = true; dlgError = null; });
                 try {
                   final ok = await _authRepo.verifyPhoneOtp(phone, otp);
+                  // Диалог метавонад дар вақти санҷиш баста шуда бошад.
+                  if (!ctx.mounted) return;
                   if (ok) {
                     Navigator.pop(ctx, true);
                   } else {
                     setDlg(() { verifying = false; dlgError = 'Рамз нодуруст'; });
                   }
                 } catch (_) {
+                  if (!ctx.mounted) return;
                   setDlg(() { verifying = false; dlgError = 'Хато'; });
                 }
               },

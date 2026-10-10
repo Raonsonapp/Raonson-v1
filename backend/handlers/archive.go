@@ -106,15 +106,18 @@ func AddStoryToHighlight(c *gin.Context) {
 		return
 	}
 	ctx := context.Background()
-	// Танҳо сторисҳои ХУДАМ (ҳатто гузашта — аз бойгонӣ).
-	var url, mtype string
-	if err := db.Pool.QueryRow(ctx,
-		`SELECT media_url, COALESCE(media_type,'image') FROM stories
-		 WHERE id::text=$1 AND user_id=$2::text`, b.StoryID, myID).
-		Scan(&url, &mtype); err != nil {
+	if !ensureNotSuspended(c, myID) {
+		return
+	}
+	// Танҳо сторисҳои ХУДАМ (ҳатто гузашта — аз бойгонӣ), ки модератсия
+	// пинҳон ё нест накардааст (ниг. highlight_guard.go).
+	b.StoryID = strings.TrimSpace(b.StoryID)
+	m, ok := allowedHighlightStories(ctx, myID, []string{b.StoryID})[b.StoryID]
+	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Сторис ёфт нашуд"})
 		return
 	}
+	url, mtype := m.url, m.kind
 	var itemsRaw []byte
 	var storyIDs []string
 	if err := db.Pool.QueryRow(ctx,

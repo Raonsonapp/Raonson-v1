@@ -271,6 +271,7 @@ func main() {
 		col.GET("",                    handlers.GetCollections)
 		col.POST("",                   handlers.CreateCollection)
 		col.DELETE("/:id",             handlers.DeleteCollection)
+		col.PATCH("/:id",              handlers.RenameCollection)
 		col.POST("/:id/posts",         handlers.AddPostToCollection)
 		col.DELETE("/:id/posts/:postId", handlers.RemovePostFromCollection)
 	}
@@ -418,6 +419,7 @@ func main() {
 	r.DELETE("/comments/:id",    auth, rl100, handlers.DeleteComment)
 	r.PUT("/comments/:id",       auth, rl100, handlers.EditComment)
 	r.POST("/comments/:id/like", auth, rl100, handlers.ToggleCommentLike)
+	r.POST("/comments/:id/pin",  auth, rl100, handlers.TogglePinComment)
 	r.POST("/comments/:id/report", auth, rl20, handlers.ReportComment)
 
 	li := r.Group("/likes", auth, rl100)
@@ -479,6 +481,7 @@ func main() {
 		re.GET("/:id/stats",         handlers.GetReelStats)
 		re.POST("/:id/comments/:commentId/like",  handlers.LikeReelComment)
 		re.POST("/:id/comments/:commentId/reply", handlers.ReplyReelComment)
+		re.POST("/:id/comments/:commentId/pin",   handlers.TogglePinReelComment)
 		re.PUT("/:id/caption",    handlers.UpdateReelCaption)
 	}
 

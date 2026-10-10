@@ -26,6 +26,13 @@ import '../../core/ui/r_icon.dart';
 import '../../widgets/hashtag_suggestions.dart';
 import '../../widgets/linked_text.dart';
 
+/// Часпонидашудаҳо аввал (тартиби дигарон бетағйир) — ҳамон тартиби
+/// сервер (GET шарҳҳо).
+List<CommentModel> sortPinnedFirst(List<CommentModel> list) => [
+      ...list.where((c) => c.pinned),
+      ...list.where((c) => !c.pinned),
+    ];
+
 class CommentsScreen extends StatefulWidget {
   final PostModel post;
   final List<CommentModel> comments;
@@ -230,7 +237,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       parentId:   parentId,
       user: UserModel(
         id:             UserSession.userId   ?? '',
-        username:       UserSession.username ?? 'шумо',
+        username:       UserSession.username ?? tr('comment.you'),
         avatar:         UserSession.avatar   ?? '',
         verified:       false,
         isPrivate:      false,
@@ -304,15 +311,41 @@ class _CommentsScreenState extends State<CommentsScreen> {
   void _onEdit(CommentModel comment, String newText) {
     setState(() {
       final idx = _comments.indexWhere((c) => c.id == comment.id);
-      if (idx >= 0) {
-        _comments[idx] = CommentModel(
-          id: comment.id, postId: comment.postId,
-          user: comment.user, text: newText,
-          liked: comment.liked, likesCount: comment.likesCount,
-          createdAt: comment.createdAt, parentId: comment.parentId,
-        );
-      }
+      if (idx >= 0) _comments[idx] = _comments[idx].copyWith(text: newText);
     });
+  }
+
+  /// Часпондан / аз часп баровардан (танҳо соҳиби пост/Reel, танҳо
+  /// шарҳи асосӣ). Часпонидашудаҳо дар болои рӯйхат — мисли сервер.
+  Future<void> _togglePin(CommentModel comment) async {
+    final path = widget.targetType == 'reel'
+        ? '/reels/${widget.post.id}/comments/${comment.id}/pin'
+        : '/comments/${comment.id}/pin';
+    try {
+      final res = await ApiClient.instance.post(path);
+      if (!mounted) return;
+      if (res.statusCode == 409) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(tr('comment.pinLimit')),
+            duration: const Duration(seconds: 2)));
+        return;
+      }
+      if (res.statusCode >= 400) throw Exception('pin ${res.statusCode}');
+      final b = jsonDecode(res.body);
+      final pinned = b is Map && b['pinned'] == true;
+      setState(() {
+        _comments = [
+          for (final c in _comments)
+            c.id == comment.id ? c.copyWith(pinned: pinned) : c
+        ];
+        _comments = sortPinnedFirst(_comments);
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(tr('common.failedRetry')),
+          duration: const Duration(seconds: 2)));
+    }
   }
 
   void _startReply(CommentModel comment) {
@@ -367,8 +400,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
     }
     if (!mounted) return;
     final msg = res == '__NOT_CONFIGURED__'
-        ? 'AI ҳанӯз танзим нашудааст.'
-        : (res.isEmpty ? 'Ҷамъбаст нашуд, дубора кӯшиш кунед.' : res);
+        ? tr('comment.aiNotConfigured')
+        : (res.isEmpty ? tr('comment.summaryFailed') : res);
     showModalBottomSheet(
       context: context, backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
@@ -407,7 +440,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 0, 12, 8),
         child: Row(children: [
           Expanded(child: Text(
-            'Шарҳҳо${_comments.isNotEmpty ? " (${_comments.length})" : ""}',
+            _comments.isNotEmpty
+                ? tr('comment.titleCount', {'n': _comments.length})
+                : tr('comment.title'),
             maxLines: 1, overflow: TextOverflow.ellipsis,
             style: TextStyle(color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold, fontSize: 16))),
@@ -507,6 +542,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
                             onEdit:   (t) => _onEdit(c, t),
                             onReply:  () => _startReply(c),
                             canModerate: _iOwnPost,
+                            canPin: _iOwnPost && !isReply && c.parentId.isEmpty,
+                            onTogglePin: () => _togglePin(c),
                           ),
                         );
                       },
@@ -526,7 +563,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.dividerFaint))),
-            child: Text('Шарҳҳо барои ин публикатсия хомӯш карда шудаанд',
+            child: Text(tr('comment.disabled'),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
           ),
@@ -546,7 +583,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 Icon(AppIcons.reply_rounded, color: AppColors.neonBlue, size: 16),
                 const SizedBox(width: 6),
                 Expanded(child: Text(
-                  'Ҷавоб ба @${_replyTo!.user.username}',
+                  tr('comment.replyingTo', {'user': _replyTo!.user.username}),
                   style: TextStyle(color: AppColors.neonBlue, fontSize: 12))),
                 GestureDetector(
                   onTap: () => setState(() => _replyTo = null),
@@ -608,7 +645,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   decoration: InputDecoration(
                     hintText: _replyTo != null
                         ? tr('comments.replyTo', {'user': _replyTo!.user.username})
-                        : 'Шарҳ нависед...',
+                        : tr('comment.writeHint'),
                     hintStyle: TextStyle(color: AppColors.textFaint),
                     border: InputBorder.none),
                 ),
@@ -672,7 +709,12 @@ class _CommentItem extends StatefulWidget {
     required this.onEdit,
     required this.onReply,
     this.canModerate = false,
+    this.canPin = false,
+    this.onTogglePin,
   });
+  /// Соҳиби пост: «Часпондан» / «Аз часп баровардан» дар меню.
+  final bool canPin;
+  final VoidCallback? onTogglePin;
 
   @override
   State<_CommentItem> createState() => _CommentItemState();
@@ -760,6 +802,7 @@ class _CommentItemState extends State<_CommentItem> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
+          ..._pinTile(),
           ListTile(
             leading: const Icon(AppIcons.delete_outline, color: Colors.redAccent, size: 22),
             title: Text(tr('ui.bffaabdbc0'),
@@ -775,6 +818,21 @@ class _CommentItemState extends State<_CommentItem> {
       )),
     );
   }
+
+  List<Widget> _pinTile() => [
+        if (widget.canPin && widget.onTogglePin != null)
+          ListTile(
+            key: const Key('comment-pin'),
+            leading: Icon(AppIcons.push_pin_outlined,
+                color: AppColors.textPrimary, size: 22),
+            title: Text(
+                tr(widget.comment.pinned ? 'comment.unpin' : 'comment.pin'),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+            onTap: () {
+              Navigator.pop(context);
+              widget.onTogglePin!();
+            }),
+      ];
 
   void _failSnack() {
     if (!mounted) return;
@@ -794,6 +852,7 @@ class _CommentItemState extends State<_CommentItem> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
+          ..._pinTile(),
           if (widget.canModerate)
             ListTile(
               leading: const Icon(AppIcons.delete_outline,
@@ -943,6 +1002,16 @@ class _CommentItemState extends State<_CommentItem> {
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (c.pinned) ...[
+              Row(key: const Key('comment-pinned-label'), children: [
+                Icon(AppIcons.push_pin_outlined,
+                    color: AppColors.textFaint, size: 12),
+                const SizedBox(width: 3),
+                Text(tr('comment.pinnedBy'),
+                    style: TextStyle(color: AppColors.textFaint, fontSize: 11)),
+              ]),
+              const SizedBox(height: 2),
+            ],
             // Ном (бо галочка) — болои сатр
             Row(children: [
               Flexible(
@@ -1002,7 +1071,7 @@ class _CommentItemState extends State<_CommentItem> {
                         child: CircularProgressIndicator(
                             strokeWidth: 1.5, color: AppColors.textTertiary))
                     : Text(
-                        _translated != null ? 'Пинҳон кардани тарҷума' : 'Тарҷума кардан',
+                        tr(_translated != null ? 'comment.hideTranslation' : 'comment.translate'),
                         style: TextStyle(
                             color: AppColors.textTertiary, fontSize: 12,
                             fontWeight: FontWeight.w600)),

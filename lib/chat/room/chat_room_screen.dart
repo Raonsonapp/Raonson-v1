@@ -887,7 +887,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Тарҷума', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        title: Text(tr('chat.translateTitle'), style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
         content: FutureBuilder(
           future: ApiClient.instance.post('/ai/translate',
               body: {'text': msg.text, 'targetLang': lang}),
@@ -896,7 +896,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               return const SizedBox(height: 60,
                   child: Center(child: CircularProgressIndicator()));
             }
-            String out = 'Тарҷума ҳоло дастрас нест';
+            String out = tr('chat.translateUnavailable');
             try {
               final r = snap.data!;
               final b = jsonDecode(r.body) as Map;
@@ -912,7 +912,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
             ]);
           },
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Пӯшидан'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('chat.close')))],
       ),
     );
   }
@@ -927,12 +927,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       _scrollBottom();
       final l = at;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-          '🕒 Паём дар ${l.day}.${l.month.toString().padLeft(2, '0')} '
-          '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')} фиристода мешавад')));
+          tr('chat.scheduledFor', {'time':
+              '${l.day}.${l.month.toString().padLeft(2, '0')} '
+              '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}'}))));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Вақтбандӣ нашуд')));
+          SnackBar(content: Text(tr('chat.scheduleFailed'))));
     }
   }
 
@@ -943,7 +944,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Таҳрири паём',
+        title: Text(tr('chat.editTitle'),
             style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
         content: TextField(
           controller: ctrl,
@@ -955,10 +956,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Бекор')),
+              child: Text(tr('chat.cancel'))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('Нигоҳ доштан')),
+              child: Text(tr('chat.save'))),
         ],
       ),
     );
@@ -976,7 +977,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
       final res = await ApiClient.instance
           .put('/chat/messages/${msg.id}', body: {'text': text});
       if (res.statusCode >= 400) {
-        String why = 'Таҳрир нашуд';
+        String why = tr('chat.editFailed');
         try { why = (jsonDecode(res.body) as Map)['message']?.toString() ?? why; } catch (_) {}
         throw Exception(why);
       }
@@ -1226,8 +1227,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     setState(() => _vanish = !_vanish);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_vanish
-            ? '👻 Vanish mode: паёмҳои нав баъди дидан ва бастани чат нопадид мешаванд'
-            : 'Vanish mode хомӯш шуд'),
+            ? tr('chat.vanishOn')
+            : tr('chat.vanishOff')),
         duration: const Duration(seconds: 3)));
   }
 

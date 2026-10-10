@@ -29,6 +29,7 @@ Future<void> shareDeepLink(
   } catch (_) {
     // Агар share sheet кушода нашуд, ҳадди ақал линкро нусха мекунем,
     // то амали корбар беҷавоб намонад.
+    if (!context.mounted) return;
     await copyDeepLink(context, kind: kind, id: id);
   }
 }

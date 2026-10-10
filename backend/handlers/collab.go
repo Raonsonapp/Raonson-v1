@@ -113,6 +113,8 @@ func GetPendingCollabs(c *gin.Context) {
 		JOIN posts p ON p.id = i.post_id
 		JOIN users u ON u.id = p.user_id
 		WHERE i.user_id=$1 AND i.status='pending'
+		  -- Пости интизори модератсия ё несткарда даъват нест.
+		  AND COALESCE(p.hidden,false)=FALSE
 		  AND NOT EXISTS (SELECT 1 FROM blocks b
 		        WHERE (b.blocker_id=$1 AND b.blocked_id=p.user_id)
 		           OR (b.blocker_id=p.user_id AND b.blocked_id=$1))

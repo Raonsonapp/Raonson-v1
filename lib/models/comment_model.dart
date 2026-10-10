@@ -10,6 +10,8 @@ class CommentModel {
   final int likesCount;
   final DateTime createdAt;
   final String parentId; // '' = root comment, else id of parent comment
+  /// Соҳиби пост/Reel шарҳро часпонидааст (то 3, дар болои рӯйхат).
+  final bool pinned;
 
   const CommentModel({
     required this.id,
@@ -20,6 +22,7 @@ class CommentModel {
     this.likesCount = 0,
     required this.createdAt,
     this.parentId = '',
+    this.pinned = false,
   });
 
   bool get isLiked => liked;
@@ -32,16 +35,17 @@ class CommentModel {
     return '${diff.inDays}d';
   }
 
-  CommentModel copyWith({bool? liked, int? likesCount}) {
+  CommentModel copyWith({bool? liked, int? likesCount, bool? pinned, String? text}) {
     return CommentModel(
       id: id,
       postId: postId,
       user: user,
-      text: text,
+      text: text ?? this.text,
       liked: liked ?? this.liked,
       likesCount: likesCount ?? this.likesCount,
       createdAt: createdAt,
       parentId: parentId,
+      pinned: pinned ?? this.pinned,
     );
   }
 
@@ -60,6 +64,7 @@ class CommentModel {
           : (json['likesCount'] ?? 0),
       createdAt: parseServerTime(json['createdAt']) ?? DateTime.now(),
       parentId: (json['parentId'] ?? json['parent_id'] ?? '').toString(),
+      pinned: json['pinned'] == true,
     );
   }
 }
