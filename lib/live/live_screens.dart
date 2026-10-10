@@ -70,7 +70,7 @@ class _LiveListState extends State<LiveListScreen> {
         );
       },
     );
-    if (title == null) return;
+    if (title == null || !mounted) return;
     await Navigator.push(context, MaterialPageRoute(
         builder: (_) => LiveBroadcastScreen(title: title)));
     _load();

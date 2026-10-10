@@ -251,6 +251,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ])),
     );
     if (choice == 'schedule') {
+      if (!mounted) return '';
       final now = DateTime.now();
       final date = await showDatePicker(
         context: context, initialDate: now.add(const Duration(hours: 1)),
