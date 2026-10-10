@@ -23,6 +23,7 @@ import 'core/services/server_wakeup_service.dart';
 import 'core/firebase_init.dart';
 import 'core/error_reporter.dart';
 import 'wellbeing/usage_tracker.dart';
+import 'core/sso/sso_deep_link_observer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -128,6 +129,11 @@ Future<void> main() async {
     );
   };
   UsageTracker.instance.start();
+
+  // `raonson://sso?code=…` аз TajikShop, вақте барнома кушода аст. ПЕШ
+  // аз runApp сабт мешавад, то пеш аз WidgetsApp URI-и пурраро бинад
+  // (WidgetsApp схема ва host-ро мепартояд).
+  WidgetsBinding.instance.addObserver(SsoDeepLinkObserver(appNavigatorKey));
 
   // `AppRestartScope` — ҳангоми гузариш ба аккаунти дигар тамоми
   // дарахти виҷет аз нав сохта мешавад. Бе ин экранҳои аллакай

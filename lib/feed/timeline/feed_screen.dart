@@ -34,6 +34,7 @@ import '../../widgets/avatar.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
+import '../../settings/connected_accounts_screen.dart' show openTajikshopApp;
 import 'mode_feed_screen.dart';
 import '../../shop/shop_screen.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
@@ -221,6 +222,8 @@ class _FeedShellState extends State<_FeedShell> {
               GestureDetector(
                 onTap: () => Navigator.push(ctx,
                     MaterialPageRoute(builder: (_) => const ShopScreen())),
+                // Пахши дароз — барномаи TajikShop бо ҳамин ҳисоб.
+                onLongPress: () => openTajikshopApp(ctx),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(

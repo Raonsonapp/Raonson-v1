@@ -135,5 +135,18 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- SSO: «TajikShop-ро кушоед» — tajikshop://sso?code=… Бе ин
+             Android 11+ барномаи TajikShop-ро аз мо пинҳон медорад
+             (package visibility) ва санҷиши «насб шудааст?» дурӯғ мегӯяд. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tajikshop"/>
+        </intent>
+        <package android:name="com.tajikshop.app"/>
+        <!-- Агар TajikShop насб набошад — Play Store / браузер. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

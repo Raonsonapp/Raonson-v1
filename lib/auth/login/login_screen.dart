@@ -9,6 +9,9 @@ import 'login_controller.dart';
 import '../../app/app_theme.dart';
 import '../../core/i18n/strings.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/sso/tajikshop_sso.dart';
+import '../../core/ui/tajikshop_brand.dart';
+import '../sso/tajikshop_sign_in_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -46,7 +49,17 @@ class _LoginViewState extends State<_LoginView> {
     final ok = await ctrl.login();
     if (!mounted) return;
     if (ok) {
+      final messenger = ScaffoldMessenger.of(context);
       context.read<AppState>().login();
+      // «Ин почта аллакай дар Raonson ҳаст»: корбар акнун бо рамзи худ
+      // ворид шуд — пайванди TajikShop-ро тасдиқ мекунем.
+      TajikshopSso.instance.completePendingLink().then((r) {
+        if (r == null) return;
+        messenger.showSnackBar(SnackBar(
+            content: Text(r.outcome == SsoOutcome.linked
+                ? tr('sso.linked')
+                : r.message)));
+      });
       // Агар ин экран аз дохили барнома кушода шуда бошад (илова кардани
       // аккаунт), онро мебандем — вагарна корбар дар экрани login мемонад.
       final nav = Navigator.of(context);
@@ -102,6 +115,8 @@ class _LoginViewState extends State<_LoginView> {
                 ),
                 const SizedBox(height: 28),
 
+                const TajikshopPendingBanner(),
+
                 AuthField(
                   controller: _idCtrl,
                   hint: tr('auth.idHint'),
@@ -148,6 +163,37 @@ class _LoginViewState extends State<_LoginView> {
                   label: tr('auth.loginButton'),
                   loading: state.isLoading,
                   onTap: () => _submit(ctrl),
+                ),
+                const SizedBox(height: 14),
+
+                // Як ҳисоб бо TajikShop: TajikShop кушода мешавад ва
+                // корбарро бо ҳамон ҳисоб бармегардонад.
+                OutlinedButton(
+                  key: const Key('sso-sign-in-with-tajikshop'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    side: BorderSide(
+                        color: TajikshopBrand.primary.withOpacity(0.6)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => showTajikshopSignInSheet(context),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(AppIcons.storefront_rounded,
+                          color: TajikshopBrand.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(tr('sso.signInWith'),
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 28),
 

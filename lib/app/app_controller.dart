@@ -26,6 +26,8 @@ import '../discover/discover_screen.dart';
 import '../core/links/pending_invite.dart';
 import '../core/links/deep_link_resolver_screen.dart';
 import '../chat/group/groups_list_screen.dart';
+import '../core/sso/tajikshop_sso.dart';
+import '../auth/sso/tajikshop_sign_in_screen.dart';
 
 class AppController {
   final AppState appState;
@@ -131,6 +133,17 @@ class AppController {
             HashtagScreen(hashtag: settings.arguments as String? ?? ''));
 
       default:
+        // TajikShop → Raonson: `raonson://sso?code=…` (оғози сард — URI
+        // ҳамчун роҳи аввал меояд; барнома кушода бошад, онро
+        // SsoDeepLinkObserver мегирад). Коди аллакай коркардшуда (масалан
+        // баъди restartApp) дубора фиристода намешавад.
+        final ssoCode = TajikshopSso.codeFromRoute(settings.name);
+        if (ssoCode != null) {
+          if (TajikshopSso.instance.wasHandled(ssoCode)) {
+            return _page(const _DismissScreen());
+          }
+          return _page(TajikshopSignInScreen(code: ssoCode));
+        }
         // Линки чуқур: Flutter URI-ро ҳамчун номи роҳ мерасонад.
         // Ҳамон onGenerateRoute истифода мешавад — routing-и дуюм нест.
         final link = DeepLinks.parse(settings.name ?? '');

@@ -24,6 +24,7 @@ import '../core/api/api_client.dart';
 import '../friends/friends_screen.dart' show contactsJoinedLabel;
 import '../core/i18n/strings.dart';
 import '../core/ui/tajikshop_brand.dart';
+import 'connected_accounts_screen.dart';
 import '../core/services/user_session.dart';
 import '../core/services/account_manager.dart';
 import '../core/services/region_service.dart';
@@ -110,6 +111,13 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('account.changePassword'),
                 onTap: () => _go(ctx, const ChangePasswordScreen()),
               ),
+              // Як ҳисоб бо TajikShop (мисли Instagram ↔ Facebook).
+              _NavTile(
+                icon:  AppIcons.link_rounded,
+                title: tr('sso.title'),
+                sub:   tr('sso.settingsSub'),
+                onTap: () => _go(ctx, const ConnectedAccountsScreen()),
+              ),
               _NavTile(
                 icon:  AppIcons.email_outlined,
                 title: tr('account.email'),
@@ -150,6 +158,12 @@ class SettingsScreen extends StatelessWidget {
                   Flexible(child: FittedBox(fit: BoxFit.scaleDown,
                       child: TajikshopBrand.poweredBy())),
                 ]),
+              ),
+              _NavTile(
+                icon:  AppIcons.open_in_new_rounded,
+                title: tr('sso.openApp'),
+                sub:   tr('sso.openAppSub'),
+                onTap: () => openTajikshopApp(ctx),
               ),
               _NavTile(
                 icon:  AppIcons.storefront_rounded,
@@ -1163,7 +1177,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
 //  CHANGE PASSWORD SCREEN
 // ════════════════════════════════════════════════════════════════════
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+  const ChangePasswordScreen({super.key, this.firstPassword = false});
+
+  /// Ҳисоби аз TajikShop сохташуда ҳанӯз рамз надорад — «рамзи кӯҳна»
+  /// пурсида намешавад (сервер инро худаш месанҷад).
+  final bool firstPassword;
   @override
   State<ChangePasswordScreen> createState() => _CPState();
 }
@@ -1189,7 +1207,7 @@ class _CPState extends State<ChangePasswordScreen> {
     final nw   = _new1Ctrl.text.trim();
     final cnf  = _new2Ctrl.text.trim();
 
-    if (old.isEmpty || nw.isEmpty || cnf.isEmpty) {
+    if ((old.isEmpty && !widget.firstPassword) || nw.isEmpty || cnf.isEmpty) {
       setState(() => _err = tr('set.fillAll'));
       return;
     }
@@ -1271,10 +1289,12 @@ class _CPState extends State<ChangePasswordScreen> {
       body: SingleChildScrollView(
         padding: EdgeInsets.all(20),
         child: Column(children: [
-          _PwField(
-              ctrl: _oldCtrl, hint: tr('set.pwOld'),
-              show: _s1, onToggle: () => setState(() => _s1 = !_s1)),
-          const SizedBox(height: 14),
+          if (!widget.firstPassword) ...[
+            _PwField(
+                ctrl: _oldCtrl, hint: tr('set.pwOld'),
+                show: _s1, onToggle: () => setState(() => _s1 = !_s1)),
+            const SizedBox(height: 14),
+          ],
           _PwField(
               ctrl: _new1Ctrl, hint: tr('set.pwNew'),
               show: _s2, onToggle: () => setState(() => _s2 = !_s2)),

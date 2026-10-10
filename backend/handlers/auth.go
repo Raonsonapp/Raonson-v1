@@ -268,7 +268,10 @@ func ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Корбар ёфт нашуд"})
 		return
 	}
-	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.OldPassword)) != nil {
+	// Ҳисоби аз TajikShop сохташуда (SSO) рамз надорад — рамзи аввалро
+	// бе «рамзи кӯҳна» гузоштан мумкин аст (мисли «Create password»-и
+	// Instagram барои ҳисоби Facebook).
+	if hash != "" && bcrypt.CompareHashAndPassword([]byte(hash), []byte(b.OldPassword)) != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"message": "Рамзи кӯҳна нодуруст аст"})
 		return
 	}

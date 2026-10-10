@@ -343,6 +343,43 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
         run: python3 backend/testing/api_moderation.py
 
+      # SSO бо TajikShop: сервери СЕЮМ бо калиди шарики санҷишӣ, ки ба
+      # TajikShop-и ҚАЛБАКӢ (127.0.0.1:8095, худи санҷиш мекушояд) ишора
+      # мекунад. Калиди ҳақиқӣ ин ҷо нест ва набояд бошад. Сервери асосӣ
+      # (8099) бе калид мемонад — ҷавоби 503 ҳам санҷида мешавад.
+      - name: Сервери сеюм барои SSO бо TajikShop
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+          JWT_SECRET: ci-only-not-a-real-secret
+          JWT_REFRESH_SECRET: ci-only-not-a-real-secret-2
+          PORT: '8098'
+          GIN_MODE: debug
+          RATE_LIMIT_MULTIPLIER: '50'
+          TAJIKSHOP_API: http://127.0.0.1:8095/api/v1
+          SSO_PARTNER_KEY: ci-test-key
+        run: |
+          /tmp/raonson-server > /tmp/server-sso.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8098/health > /dev/null 2>&1; then
+              echo "сервери SSO тайёр"; exit 0
+            fi
+            sleep 2
+          done
+          tail -50 /tmp/server-sso.log
+          exit 1
+
+      # Ҳисоби нав, вуруди такрорӣ, почтаи банд → link_required (худкор
+      # пайваст намешавад), пайванд/ҷудо, гузариш ба TajikShop бо
+      # ротатсияи refresh, ҳисоби баста, калиди нодуруст → 503.
+      - name: Санҷиши SSO бо TajikShop
+        env:
+          SSO_BASE: http://127.0.0.1:8098
+          BASE: http://127.0.0.1:8099
+          FAKE_TS_PORT: '8095'
+          SUFFIX: ci${{ github.run_number }}
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+        run: python3 backend/testing/api_sso.py
+
       # Майдонҳое, ки барнома мехонад, воқеан аз сервер меоянд.
       - name: Санҷиши мувофиқати маълумот
         env:
@@ -407,3 +444,7 @@ jobs:
       - name: Log-и сервери модератсия
         if: always()
         run: tail -60 /tmp/server-mod.log || true
+
+      - name: Log-и сервери SSO
+        if: always()
+        run: tail -60 /tmp/server-sso.log || true

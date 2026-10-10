@@ -19,7 +19,11 @@ import '../widgets/verified_badge.dart';
 //  ИВАЗ КАРДАНИ USERNAME
 // ════════════════════════════════════════════════════════════════════
 class ChangeUsernameScreen extends StatefulWidget {
-  const ChangeUsernameScreen({super.key});
+  const ChangeUsernameScreen({super.key, this.intro});
+
+  /// Матни болои майдон — масалан баъди сохтани ҳисоб аз TajikShop
+  /// («номи корбарро интихоб кунед»).
+  final String? intro;
   @override
   State<ChangeUsernameScreen> createState() => _ChangeUsernameState();
 }
@@ -74,6 +78,12 @@ class _ChangeUsernameState extends State<ChangeUsernameScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (widget.intro != null) ...[
+            Text(widget.intro!,
+                style: TextStyle(
+                    color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
+            const SizedBox(height: 14),
+          ],
           TextField(
             controller: _ctrl,
             autofocus: true,

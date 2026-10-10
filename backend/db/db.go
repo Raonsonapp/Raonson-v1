@@ -1233,6 +1233,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, RecoverySchema); err != nil {
 		log.Fatalf("❌ Recovery migration failed: %v", err)
 	}
+	// Як ҳисоб барои Raonson ва TajikShop (ниг. sso_schema.go).
+	if _, err := Pool.Exec(ctx, SSOSchema); err != nil {
+		log.Fatalf("❌ SSO migration failed: %v", err)
+	}
 	// Манбаи обуна, мухотибони хешшуда ва «Раҳмат».
 	if _, err := Pool.Exec(ctx, socialSchema); err != nil {
 		log.Fatalf("❌ Social migration failed: %v", err)

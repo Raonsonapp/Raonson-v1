@@ -6,6 +6,7 @@ import '../app/app_theme.dart';
 import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import '../core/ui/tajikshop_brand.dart';
+import '../settings/connected_accounts_screen.dart' show openTajikshopApp;
 import '../widgets/avatar.dart';
 import '../models/user_model.dart';
 import '../core/services/user_session.dart';
@@ -73,6 +74,14 @@ class _ShopScreenState extends State<ShopScreen> {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         title: TajikshopBrand.logo(size: 24),
         actions: [
+          // Барномаи TajikShop бо ҳамин ҳисоб (бе парол).
+          IconButton(
+            key: const Key('shop-open-tajikshop'),
+            icon: Icon(AppIcons.open_in_new_rounded,
+                color: AppColors.textPrimary),
+            tooltip: tr('sso.openApp'),
+            onPressed: () => openTajikshopApp(context),
+          ),
           IconButton(
             icon: Icon(AppIcons.history_rounded, color: AppColors.textPrimary),
             tooltip: tr('shop.orders'),

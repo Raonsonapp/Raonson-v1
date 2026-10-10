@@ -224,6 +224,8 @@ func deleteAccount(uid string) error {
 		`DELETE FROM notifications WHERE user_id=$1 OR from_user_id=$1`,
 		`DELETE FROM push_tokens WHERE user_id=$1`,
 		`DELETE FROM login_sessions WHERE user_id=$1`,
+		// Пайванд бо TajikShop ва token-и рамзгузоришудаи он.
+		`DELETE FROM external_accounts WHERE user_id=$1`,
 		`DELETE FROM orders WHERE buyer_id=$1 OR seller_id=$1`,
 		`DELETE FROM gifts WHERE from_user_id=$1 OR to_user_id=$1`,
 		`DELETE FROM promotions WHERE user_id=$1`,

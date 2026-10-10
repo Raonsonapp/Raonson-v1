@@ -201,8 +201,21 @@ func main() {
 		// роҳ вуҷуд надоштанд — пас онҳо 404 мегирифтанд.
 		a.POST("/verify-email",     auth, rl20, handlers.SendEmailVerify)
 		a.POST("/verify-otp",       auth, rl20, handlers.VerifyEmailOTP)
+		// Як ҳисоб бо TajikShop (ниг. handlers/sso_tajikshop.go). Код
+		// якдафъаина аст; лимит — аз рӯи IP (ё корбар, агар ворид бошад).
+		rlSSO := mw.RateLimit(20, 60)
+		a.POST("/sso/tajikshop",      mw.OptionalAuth(), rlSSO, handlers.TajikshopSSOLogin)
+		a.POST("/sso/tajikshop/link", auth, rlSSO, handlers.TajikshopSSOLink)
 		a.GET("/sessions",     auth, handlers.GetSessions)        // таърихи воридшавӣ
 		a.POST("/revoke-all",  auth, handlers.RevokeAllSessions)  // тоза кардани таърих
+	}
+
+	// ── TajikShop: ҳисобҳои пайвастшуда ва гузариш бе парол ──────
+	sg := r.Group("/sso/tajikshop", auth)
+	{
+		sg.GET("/status",   rl100, handlers.TajikshopSSOStatus)
+		sg.DELETE("/link",  rl20, handlers.TajikshopSSOUnlink)
+		sg.POST("/handoff", mw.RateLimit(30, 60), handlers.TajikshopSSOHandoff)
 	}
 
 	// ── USERS ────────────────────────────────────────────────────
