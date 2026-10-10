@@ -99,6 +99,22 @@ func Init() {
 
 func migrate() {
 	ctx := context.Background()
+	// Як муҳоҷират дар як вақт. Ду нусхаи сервер (насби нав дар ҳоле ки
+	// кӯҳна ҳанӯз кор мекунад, ё чанд сервер дар CI) якбора ҳамон
+	// ALTER/CREATE-ҳоро иҷро мекарданд ва Postgres «deadlock detected»
+	// медод — сервер ба кор намедаромад. Қулфи advisory дар пайвасти
+	// алоҳида то охири муҳоҷират нигоҳ дошта мешавад; нусхаи дуюм
+	// интизор мешавад ва баъд ҳама чизро аллакай тайёр меёбад.
+	if conn, err := Pool.Acquire(ctx); err == nil {
+		if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(727001)`); err == nil {
+			defer func() {
+				conn.Exec(context.Background(), `SELECT pg_advisory_unlock(727001)`)
+				conn.Release()
+			}()
+		} else {
+			conn.Release()
+		}
+	}
 	sql := `
 	CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
