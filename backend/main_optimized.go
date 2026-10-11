@@ -52,6 +52,7 @@ func main() {
 	jobs.StartJobs()
 	handlers.StartScheduledMessages() // паёмҳои вақтбандишуда
 	handlers.StartScheduledPosts()    // постҳои вақтбандишуда: зикрҳо дар вақти нашр
+	handlers.StartRenditionWorkers()  // HLS-и Reels дар фон (ffmpeg, 1–2 ҳамзамон)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -721,8 +722,17 @@ func main() {
 	r.POST("/upload/video",  auth, upl, uplAbuse, handlers.UploadToR2)
 	r.POST("/media/upload",  auth, upl, uplAbuse, handlers.UploadToR2)
 
+	// Анбори маҳаллӣ — ТАНҲО барои санҷиш (MEDIA_LOCAL_DIR, на release).
+	if handlers.LocalMediaEnabled() {
+		r.GET("/media-local/*path", handlers.ServeLocalMedia)
+		r.HEAD("/media-local/*path", handlers.ServeLocalMedia)
+	}
+
 	ad := r.Group("/admin", auth, admin)
 	{
+		// HLS-и Reels: ҳолати навбат ва backfill-и маҳдуд (≤200 дар як даъват).
+		ad.GET("/reels/renditions",           handlers.AdminRenditionStatus)
+		ad.POST("/reels/renditions/backfill", handlers.AdminBackfillRenditions)
 		ad.GET("/stats",        handlers.AdminStats)
 		ad.POST("/test-email",  handlers.AdminTestEmail)
 		// «Кӯмак лозим»: дархостҳои барқарорсозии ҳисоб.

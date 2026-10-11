@@ -132,5 +132,6 @@ func placeReelsQuery(c *gin.Context, where string, args ...interface{}) {
 	}
 	attachReelLocations(out)
 	attachReelShares(out)
+	attachReelPlayback(out)
 	c.JSON(http.StatusOK, gin.H{"reels": out})
 }

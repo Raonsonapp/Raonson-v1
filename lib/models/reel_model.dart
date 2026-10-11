@@ -8,6 +8,12 @@ class ReelModel {
   final String    videoUrl;
   final String    videoUrlLow;   // ← сифати паст (480p) барои интернети суст
   final String    thumbnailUrl;  // ← нав
+  /// HLS (240p/480p/720p, адаптивӣ) — сервер дар фон месозад; холӣ → MP4.
+  final String    hlsUrl;
+  /// Танҳо зинаи пасттарини HLS (Data Saver / истодани такрорӣ).
+  final String    hlsLowUrl;
+  /// 2 сонияи аввал, хурд — то видеои асл бор шавад.
+  final String    previewUrl;
   final String    caption;
   final UserModel user;
   final int       likesCount;
@@ -34,6 +40,9 @@ class ReelModel {
     required this.videoUrl,
     this.videoUrlLow   = '',
     this.thumbnailUrl  = '',
+    this.hlsUrl        = '',
+    this.hlsLowUrl     = '',
+    this.previewUrl    = '',
     required this.caption,
     required this.user,
     required this.likesCount,
@@ -78,6 +87,9 @@ class ReelModel {
     String?    videoUrl,
     String?    videoUrlLow,
     String?    thumbnailUrl,
+    String?    hlsUrl,
+    String?    hlsLowUrl,
+    String?    previewUrl,
     String?    caption,
     UserModel? user,
     int?       likesCount,
@@ -102,6 +114,9 @@ class ReelModel {
       videoUrl:      videoUrl      ?? this.videoUrl,
       videoUrlLow:   videoUrlLow   ?? this.videoUrlLow,
       thumbnailUrl:  thumbnailUrl  ?? this.thumbnailUrl,
+      hlsUrl:        hlsUrl        ?? this.hlsUrl,
+      hlsLowUrl:     hlsLowUrl     ?? this.hlsLowUrl,
+      previewUrl:    previewUrl    ?? this.previewUrl,
       caption:       caption       ?? this.caption,
       user:          user          ?? this.user,
       likesCount:    likesCount    ?? this.likesCount,
@@ -134,6 +149,9 @@ class ReelModel {
       videoUrl:      (json['videoUrl'] ?? json['video_url'] ?? '').toString(),
       videoUrlLow:   (json['videoUrlLow'] ?? json['video_url_low'] ?? '').toString(),
       thumbnailUrl:  (json['thumbnailUrl'] ?? json['thumbnail'] ?? '').toString(),
+      hlsUrl:        (json['hlsUrl'] ?? json['hls_url'] ?? '').toString(),
+      hlsLowUrl:     (json['hlsLowUrl'] ?? json['hls_low_url'] ?? '').toString(),
+      previewUrl:    (json['previewUrl'] ?? json['preview_url'] ?? '').toString(),
       caption:       (json['caption'] ?? '').toString(),
       user: json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
@@ -167,6 +185,9 @@ class ReelModel {
     'videoUrl':     videoUrl,
     'videoUrlLow':  videoUrlLow,
     'thumbnailUrl': thumbnailUrl,
+    'hlsUrl':       hlsUrl,
+    'hlsLowUrl':    hlsLowUrl,
+    'previewUrl':   previewUrl,
     'caption':      caption,
     'likesCount':   likesCount,
     'commentsCount':commentsCount,

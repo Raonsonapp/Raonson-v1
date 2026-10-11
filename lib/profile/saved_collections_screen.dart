@@ -14,6 +14,7 @@ import '../core/i18n/strings.dart';
 import '../core/ui/app_icons.dart';
 import '../models/post_model.dart';
 import '../feed/post/post_detail_screen.dart';
+import '../reels/offline/offline_reels_screen.dart';
 
 class SavedCollection {
   final String id;
@@ -202,7 +203,7 @@ class _CollectionsRowState extends State<CollectionsRow> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        itemCount: _items.length + 1,
+        itemCount: _items.length + 2,
         itemBuilder: (_, i) {
           if (i == 0) {
             return _tile(
@@ -212,7 +213,17 @@ class _CollectionsRowState extends State<CollectionsRow> {
               label: tr('ui.38179692b6'),
             );
           }
-          final c = _items[i - 1];
+          if (i == 1) {
+            // Reels-и боргирифта барои тамошо бе интернет.
+            return _tile(
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const OfflineReelsScreen())),
+              child: Icon(AppIcons.download_rounded,
+                  color: AppColors.textSecondary, size: 24),
+              label: tr('offline.title'),
+            );
+          }
+          final c = _items[i - 2];
           return _tile(
             onTap: () => _open(c),
             onLongPress: () => _options(c),

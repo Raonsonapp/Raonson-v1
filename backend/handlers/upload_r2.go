@@ -143,7 +143,8 @@ func UploadToR2(c *gin.Context) {
 	// Пештар боркунӣ бо калиди ХОЛӢ давом мекард: сервер танҳо дар
 	// log менавишт. Корбар хатои норавшани S3 мегирифт ё пости бе
 	// акс месохт ва сабаб маълум намешуд.
-	if ok, missing := r2Configured(); !ok {
+	local, localOK := localMedia()
+	if ok, missing := r2Configured(); !ok && !localOK {
 		log.Printf("[R2] танзим нашудааст: %s", missing)
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"error":   "Захираи файл танзим нашудааст",
@@ -197,6 +198,27 @@ func UploadToR2(c *gin.Context) {
 	}
 
 	key := fmt.Sprintf("%s/%s%s", folder, uuid.New().String(), ext)
+
+	if ok, _ := r2Configured(); !ok && localOK {
+		// Танҳо dev/санҷиш: файл дар диск (ниг. localMedia).
+		tmp, err := os.CreateTemp("", "upl-*")
+		if err == nil {
+			tmp.Write(data)
+			tmp.Close()
+			defer os.Remove(tmp.Name())
+		}
+		url, perr := "", err
+		if err == nil {
+			url, perr = local.Put(c.Request.Context(), key, tmp.Name(), contentType)
+		}
+		if perr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload failed"})
+			return
+		}
+		recordUpload(uid, url, contentType, verdict)
+		c.JSON(http.StatusOK, gin.H{"url": url})
+		return
+	}
 
 	cl := getR2Client()
 	cl64 := int64(len(data))

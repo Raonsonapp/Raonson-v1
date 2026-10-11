@@ -226,6 +226,76 @@ ok("сториси бегона илова намешавад", st == 404, (st, 
 st, r = call("POST", f"/highlights/{hid}/stories", {"storyId": sid2}, tB)
 ok("ба актуалии бегона илова намешавад", st == 404, (st, r))
 
+# ═══ 8. Reels HLS: нусхаҳои адаптивӣ дар фон ═══════════════════════
+# Видеои воқеӣ бор мешавад → reel → коргар HLS месозад → hlsUrl кор мекунад.
+# Бе ffmpeg дар мошини санҷиш ё бе анбор (R2 / MEDIA_LOCAL_DIR) → SKIP.
+import shutil, subprocess, tempfile, uuid as _uuid
+def _upload(path, tok):
+    bnd = "----rn" + _uuid.uuid4().hex
+    data = open(path, "rb").read()
+    body = (f"--{bnd}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"v.mp4\"\r\n"
+            f"Content-Type: video/mp4\r\n\r\n").encode() + data + f"\r\n--{bnd}--\r\n".encode()
+    req = urllib.request.Request(B + "/upload/video", data=body, method="POST")
+    req.add_header("Content-Type", "multipart/form-data; boundary=" + bnd)
+    req.add_header("Authorization", "Bearer " + tok)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r: return r.status, json.loads(r.read().decode() or "{}")
+    except urllib.error.HTTPError as e: return e.code, e.read().decode()[:200]
+    except Exception as e: return 0, str(e)
+def _get(url):
+    try:
+        with urllib.request.urlopen(url, timeout=30) as r: return r.status, r.read()
+    except urllib.error.HTTPError as e: return e.code, b""
+    except Exception as e: return 0, str(e).encode()
+if not shutil.which("ffmpeg"):
+    print("  ⏭  HLS: ffmpeg дар мошини санҷиш нест — SKIP")
+else:
+    tmpd = tempfile.mkdtemp(); vid = os.path.join(tmpd, "v.mp4")
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", "testsrc2=size=720x1280:rate=30:duration=3",
+                    "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-shortest", vid], check=True)
+    st, up = _upload(vid, tA)
+    if st == 503:
+        print("  ⏭  HLS: анбор танзим нашудааст (R2 / MEDIA_LOCAL_DIR) — SKIP")
+    else:
+        vurl = up.get("url") if isinstance(up, dict) else None
+        ok("видео бор шуд", st == 200 and vurl, (st, up))
+        st, rl = call("POST", "/reels/", {"videoUrl": vurl, "caption": f"hls {S}"}, tA)
+        hrid = rl.get("_id") if isinstance(rl, dict) else None
+        ok("reel фавран нашр шуд (интизори ffmpeg нест)", st == 201 and hrid and rl.get("renditionsReady") is False, (st, rl))
+        r, waited = {}, 0
+        while waited < 120:
+            st, r = call("GET", f"/reels/{hrid}", tok=tB)
+            if isinstance(r, dict) and (r.get("renditionsReady") or r.get("renditionStatus") in ("failed", "skipped")): break
+            time.sleep(2); waited += 2
+        ok("reel дар охир renditionsReady=true", isinstance(r, dict) and r.get("renditionsReady") is True,
+           (waited, r.get("renditionStatus") if isinstance(r, dict) else r))
+        hls = (r or {}).get("hlsUrl") or ""
+        ok("hlsUrl → master.m3u8 зери reels/<id>/hls/", f"/reels/{hrid}/hls/" in hls and hls.endswith("/master.m3u8"), hls)
+        st, m = _get(hls) if hls else (0, b"")
+        m = m.decode(errors="replace")
+        ok("master.m3u8 дастрас ва 3 зина дорад", st == 200 and m.count("#EXT-X-STREAM-INF") == 3, (st, m[:200]))
+        base = hls[:-len("master.m3u8")]
+        st, pl = _get(base + "240p/index.m3u8"); pl = pl.decode(errors="replace")
+        ok("плейлисти 240p — VOD, сегментҳои 2 с", st == 200 and "#EXT-X-ENDLIST" in pl and "#EXT-X-TARGETDURATION:2" in pl, (st, pl[:200]))
+        st, seg = _get(base + "240p/seg_000.ts")
+        ok("сегменти аввал дастрас", st == 200 and len(seg) > 1000, (st, len(seg)))
+        st, pv = _get((r or {}).get("previewUrl") or "")
+        ok("preview.mp4 (2 с) дастрас ва хурд", st == 200 and 0 < len(pv) < 200_000, (st, len(pv)))
+        ok("hlsLowUrl → зинаи 240p", ((r or {}).get("hlsLowUrl") or "").endswith("/240p/index.m3u8"), (r or {}).get("hlsLowUrl"))
+        ok("видеои асл ба +faststart иваз шуд", (r or {}).get("videoUrl") != vurl and "/mp4/" in ((r or {}).get("videoUrl") or ""), (r or {}).get("videoUrl"))
+        time.sleep(3.5)  # cache3s
+        st, lst = call("GET", "/reels/?limit=100", tok=tB)
+        x = next((e for e in (lst.get("reels") if isinstance(lst, dict) else []) or [] if e.get("_id") == hrid), {})
+        ok("/reels рӯйхат hlsUrl ва renditionsReady дорад", x.get("hlsUrl") == hls and x.get("renditionsReady") is True, x.get("hlsUrl"))
+        # Видеои берунӣ ба навбат намеояд, reel бо MP4 кор мекунад.
+        st, rl = call("POST", "/reels/", {"videoUrl": VID, "caption": f"ext {S}"}, tA)
+        st, r = call("GET", f"/reels/{rl.get('_id')}", tok=tA)
+        ok("суроғаи берунӣ → навбат нест, hlsUrl холӣ", r.get("renditionStatus") == "none" and r.get("hlsUrl") == "", (r.get("renditionStatus"), r.get("hlsUrl")))
+    shutil.rmtree(tmpd, ignore_errors=True)
+
 passed = sum(1 for p, _, _ in res if p)
 for p, n, d in res:
     print(("  ✅ " if p else "  ❌ ") + n + ("" if p else "  → " + d))

@@ -16,6 +16,8 @@ import '../app/app_state.dart';
 import '../app/app_settings.dart';
 import '../app/app_theme.dart';
 import 'hidden_words_screen.dart';
+import 'data_usage_screen.dart';
+import '../core/services/data_saver.dart';
 import '../auth/verification/email_verify_screen.dart';
 import '../auth/password/recovery_status.dart';
 import '../core/analytics/analytics_service.dart';
@@ -271,6 +273,15 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('appearance.theme'),
                 sub:   _themeLabel(s.theme),
                 onTap: () => _go(ctx, const AppearanceScreen()),
+              ),
+
+              // ── DATA USAGE ────────────────────────────────────────
+              _Hdr(tr('section.dataUsage')),
+              _NavTile(
+                icon:  AppIcons.download_rounded,
+                title: tr('data.saver'),
+                sub:   dataSaverLabel(DataSaver.instance.mode),
+                onTap: () => _go(ctx, const DataUsageScreen()),
               ),
 
               // ── LANGUAGE ──────────────────────────────────────────
