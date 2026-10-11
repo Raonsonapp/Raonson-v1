@@ -1387,6 +1387,7 @@ func ExploreGrid(c *gin.Context) {
 		}
 	}
 	attachReelLocations(reels)
+	attachReelPlayback(reels)
 	c.JSON(http.StatusOK, gin.H{
 		"posts": posts, "reels": reels,
 		"page": page, "seed": seed,

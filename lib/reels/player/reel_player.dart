@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../models/reel_model.dart';
-import '../../core/services/network_quality.dart';
+import '../playback/reel_playback.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
 import '../../widgets/embed_player.dart';
@@ -58,13 +58,14 @@ class _ReelPlayerState extends State<ReelPlayer> {
     // Embed файли видео нест — VideoPlayer онро ҳеҷ гоҳ кушода наметавонад
     // (спиннери абадӣ); ҳамон EmbedPlayer-и reels_screen истифода мешавад.
     if (_isEmbed) return;
-    final url = NetworkQuality.pick(
-        widget.reel.videoUrl, widget.reel.videoUrlLow);
-    if (url.isEmpty) {
+    // HLS (адаптивӣ) → MP4-и паст/баланд аз рӯи суръат (ниг. PlaybackPolicy).
+    final choice = ReelPlayback.choose(widget.reel);
+    if (choice == null) {
       _failed = true;
       return;
     }
-    final c = VideoPlayerController.networkUrl(Uri.parse(url));
+    ReelPlayback.setActive(widget.reel.id);
+    final c = ReelPlayback.controllerFor(widget.reel, choice);
     _videoController = c;
     c.initialize().then((_) {
       if (!mounted) return;
@@ -81,7 +82,7 @@ class _ReelPlayerState extends State<ReelPlayer> {
 
   @override
   void dispose() {
-    _videoController?.dispose();
+    ReelPlayback.release(_videoController);
     super.dispose();
   }
 

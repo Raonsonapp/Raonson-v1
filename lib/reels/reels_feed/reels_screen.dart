@@ -19,6 +19,10 @@ import '../../core/services/user_session.dart';
 import '../../core/services/follow_service.dart';
 import '../../core/content_sync.dart';
 import '../../core/services/network_quality.dart';
+import '../../core/services/data_saver.dart';
+import '../playback/playback_policy.dart';
+import '../playback/reel_playback.dart';
+import '../offline/offline_reels.dart';
 import '../../widgets/embed_player.dart';
 import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
@@ -261,9 +265,20 @@ class _ReelsViewState extends State<_ReelsView> {
     if (mounted) setState(() {});
   }
 
+  /// Шабака тез/суст шуд ё Data Saver иваз шуд → нақшаи пешбор аз нав.
+  void _onNetChange() {
+    if (!mounted) return;
+    final vm = context.read<_ReelsVM>();
+    if (vm.reels.isEmpty) return;
+    _preloadAhead(_adPlan.reelIndexAt(_currentPage), vm);
+  }
+
   @override
   void initState() {
     super.initState();
+    ReelPlayback.init();
+    NetworkQuality.changes.addListener(_onNetChange);
+    DataSaver.instance.addListener(_onNetChange);
     FeedAudio.instance.focusRoute.addListener(_onFocus);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     // SDK (бо розигӣ; барои VIP худаш ҳеҷ кор намекунад).
@@ -304,8 +319,9 @@ class _ReelsViewState extends State<_ReelsView> {
     _currentPage = 0;
     _initialPreloadDone = false;
     _adPlan.reset();
+    _planTimer?.cancel();
     for (final ctrl in _preloaded.values) {
-      ctrl.dispose();
+      ReelPlayback.release(ctrl);
     }
     _preloaded.clear();
     await vm.load(force: true);
@@ -315,10 +331,13 @@ class _ReelsViewState extends State<_ReelsView> {
   @override
   void dispose() {
     FeedAudio.instance.focusRoute.removeListener(_onFocus);
+    NetworkQuality.changes.removeListener(_onNetChange);
+    DataSaver.instance.removeListener(_onNetChange);
+    _planTimer?.cancel();
     _retapNotifier?.removeListener(_onRetap);
     _pageCtrl.dispose();
     for (final ctrl in _preloaded.values) {
-      ctrl.dispose();
+      ReelPlayback.release(ctrl);
     }
     _preloaded.clear();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -424,8 +443,8 @@ class _ReelsViewState extends State<_ReelsView> {
     // Дар саҳифаи реклама видеои навбатӣ ҳамон `reelIndexAt` аст.
     final ri = _adPlan.reelIndexAt(i);
     if (ri >= vm.reels.length - 3) vm.loadMore();
+    // Нақша (пешбор + озод кардани плеерҳои дур) — баъди аниматсияи swipe.
     _preloadAhead(isAd ? ri - 1 : ri, vm);
-    _disposeOld(ri);
     // Пештар ин ҷо ҳар 5 рилс рекламаи томэкранӣ мебаромад ва видео
     // то «X» дида намешуд. Акнун реклама саҳифаи оддист, ки корбар
     // фавран мегузарад.
@@ -460,7 +479,7 @@ class _ReelsViewState extends State<_ReelsView> {
     if (gone != null) {
       gone.pause();
       // Виҷети кӯҳна дар ҳамин фрейм ҳанӯз ба он ишора мекунад.
-      WidgetsBinding.instance.addPostFrameCallback((_) => gone.dispose());
+      WidgetsBinding.instance.addPostFrameCallback((_) => ReelPlayback.release(gone));
     }
     if (deleted) {
       vm.removeLocal(id);
@@ -481,15 +500,52 @@ class _ReelsViewState extends State<_ReelsView> {
     });
   }
 
+  Timer? _planTimer;
+
+  /// Пешбор мисли TikTok, вале бо ҳадди декодерҳо:
+  ///  • то 2 reel-и навбатӣ плеери омода доранд (Data Saver → 1;
+  ///    интернети суст → ҳеҷ, ҳама суръат ба reel-и ҷорӣ);
+  ///  • плеерҳои берун аз нақша озод мешаванд (≤3 зинда);
+  ///  • муқова ва preview-и хурд пешакӣ гирифта мешаванд.
+  /// Кӯтоҳ интизор: reel-и қаблӣ ҳанӯз дар аниматсияи swipe намоён аст.
   void _preloadAhead(int current, _ReelsVM vm) {
-    for (int j = current + 1; j <= current + 3; j++) {
-      if (j >= vm.reels.length) break;
-      if (_preloaded.containsKey(j)) continue;
+    _planTimer?.cancel();
+    _planTimer = Timer(const Duration(milliseconds: 450), () {
+      if (mounted) _applyPlan(current, vm);
+    });
+  }
+
+  void _applyPlan(int current, _ReelsVM vm) {
+    if (vm.reels.isEmpty) return;
+    final plan = PreloadPlanner.plan(
+      current: current,
+      count: vm.reels.length,
+      slow: ReelPlayback.slow,
+      dataSaver: ReelPlayback.dataSaver,
+      playable: (j) =>
+          !EmbedUtils.isEmbed(vm.reels[j].videoUrl) &&
+          (vm.reels[j].videoUrl.isNotEmpty || vm.reels[j].hlsUrl.isNotEmpty),
+    );
+    for (final k in plan.evict(_preloaded.keys.toList(), current).toList()) {
+      ReelPlayback.release(_preloaded.remove(k));
+    }
+    for (final j in plan.prefetchPreview) {
       final reel = vm.reels[j];
-      if (EmbedUtils.isEmbed(reel.videoUrl)) continue;
-      final url = NetworkQuality.pick(reel.videoUrl, reel.videoUrlLow);
-      if (url.isEmpty) continue;
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+      ReelPlayback.prefetchPreview(reel);
+      if (reel.thumbnailUrl.isNotEmpty) {
+        precacheImage(
+            ResizeImage(CachedNetworkImageProvider(reel.thumbnailUrl), width: 720),
+            context)
+            .catchError((Object _) {});
+      }
+    }
+    for (final j in plan.preload) {
+      if (_preloaded.containsKey(j)) continue;
+      if (ReelPlayback.liveCount >= PreloadPlanner.maxLive) break;
+      final reel = vm.reels[j];
+      final choice = ReelPlayback.choose(reel);
+      if (choice == null) continue;
+      final ctrl = ReelPlayback.controllerFor(reel, choice);
       _preloaded[j] = ctrl;
       ctrl.initialize().then((_) {
         // Swipe-и тез метавонад ин controller-ро пеш аз тайёр шуданаш
@@ -503,13 +559,12 @@ class _ReelsViewState extends State<_ReelsView> {
     }
   }
 
-  void _disposeOld(int current) {
-    final toRemove =
-        _preloaded.keys.where((k) => (k - current).abs() > 3).toList();
-    for (final k in toRemove) {
-      _preloaded[k]?.dispose();
-      _preloaded.remove(k);
-    }
+  /// Reel плеери пешакиро бо сифати пасттар иваз кард — кӯҳнаро озод мекунем.
+  void _dropPreload(int i) {
+    final c = _preloaded.remove(i);
+    if (c == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) => ReelPlayback.release(c));
+    if (mounted) setState(() {});
   }
 
   void _preloadFirst(_ReelsVM vm) {
@@ -517,9 +572,11 @@ class _ReelsViewState extends State<_ReelsView> {
     final reel = vm.reels[0];
     if (EmbedUtils.isEmbed(reel.videoUrl)) return;
     if (_preloaded.containsKey(0)) return;
-    final url = NetworkQuality.pick(reel.videoUrl, reel.videoUrlLow);
-    if (url.isEmpty) return;
-    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+    final choice = ReelPlayback.choose(reel);
+    if (choice == null) return;
+    // Reel-и аввал — фаъол: прокси ба он суръати пурра медиҳад.
+    ReelPlayback.setActive(reel.id);
+    final ctrl = ReelPlayback.controllerFor(reel, choice);
     _preloaded[0] = ctrl;
     ctrl.initialize().then((_) {
       if (!mounted || !identical(_preloaded[0], ctrl)) return;
@@ -651,6 +708,7 @@ class _ReelsViewState extends State<_ReelsView> {
           isMuted: vm.isMuted,
           friendsFilter: vm.friendsFilter,
           preloadCtrl: _preloaded[i],
+          onDropPreload: () => _dropPreload(i),
           onLike: () => vm.toggleLike(vm.reels[i].id),
           onSave: () => vm.toggleSave(vm.reels[i].id),
           onMuteToggle: vm.toggleMute,
@@ -756,6 +814,8 @@ class _ReelItem extends StatefulWidget {
   final bool isMuted;
   final bool friendsFilter;
   final VideoPlayerController? preloadCtrl;
+  /// Плеери пешакӣ дигар лозим нест (reel ба сифати пасттар гузашт).
+  final VoidCallback? onDropPreload;
   final VoidCallback onLike;
   final VoidCallback onSave;
   final VoidCallback onMuteToggle;
@@ -773,6 +833,7 @@ class _ReelItem extends StatefulWidget {
     required this.isMuted,
     required this.friendsFilter,
     this.preloadCtrl,
+    this.onDropPreload,
     required this.onLike,
     required this.onSave,
     required this.onMuteToggle,
@@ -800,7 +861,8 @@ class _ReelItemState extends State<_ReelItem> {
 
   void _onVideoError(Object e, VideoPlayerController c) {
     debugPrint('[Reel] видео кушода нашуд: $e');
-    if (!mounted || _ctrl != c) return;
+    if (!mounted || _ctrl != c || _retryTimer != null) return;
+    if (_scheduleRetry(c)) return; // бо таъхир, на ҳалқаи тез
     setState(() => _videoFailed = true);
     // Сервер худаш анборро месанҷад; агар файл воқеан нест бошад,
     // Reel барои ҳама пинҳон мешавад (ниг. media_check.go).
@@ -812,8 +874,23 @@ class _ReelItemState extends State<_ReelItem> {
   bool _showHeart = false;
   bool _following = false;
   bool _captionExpanded = false;
+  /// Нишони боргирӣ — танҳо агар видео > 400 мс истад (ниг. StallMonitor).
   bool _isBuffering = false;
   bool _downloading = false; // ← НАВ
+
+  // ── Пахш дар интернети суст ─────────────────────────────────
+  PlaybackChoice? _choice; // манбаи ҳозира (HLS / MP4)
+  int _level = 0; // чанд бор сифат паст шуд
+  bool _direct = false; // прокси хато дод → бевосита аз CDN
+  bool _switching = false;
+  bool _firstFrame = false; // то кадри аввал муқова намоён аст
+  final StallMonitor _stall = StallMonitor();
+  final RetryBackoff _backoff = RetryBackoff();
+  Timer? _stallTimer;
+  Timer? _retryTimer;
+  Timer? _previewTimer;
+  VideoPlayerController? _preview; // 2 с, то видеои асл тайёр шавад
+  bool _previewReady = false;
   // Лайк/захира/шарҳ/пинҳонӣ — на нусхаи маҳаллӣ, балки ContentSync:
   // амале, ки дар Home/Explore шуд, ин ҷо ҳам фавран намоён аст.
   ContentState get _cs =>
@@ -892,49 +969,168 @@ class _ReelItemState extends State<_ReelItem> {
   bool get _isEmbed => EmbedUtils.isEmbed(widget.reel.videoUrl);
 
   void _initVideo() {
-    if (widget.reel.videoUrl.isEmpty) return;
+    if (widget.reel.videoUrl.isEmpty && widget.reel.hlsUrl.isEmpty) return;
     if (_isEmbed) return;
+    if (widget.isActive) {
+      ReelPlayback.setActive(widget.reel.id);
+      _schedulePreview();
+    }
     if (widget.preloadCtrl != null) {
       _ctrl = widget.preloadCtrl;
+      _choice = ReelPlayback.choose(widget.reel);
       if (_ctrl!.value.isInitialized) {
-        _ctrl!.setLooping(true);
-        _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
-        if (widget.isActive) {
-          _ctrl!.play();
-          _startWatchTimer();
-        }
-        setState(() => _initialized = true);
-        _addBufferListener();
+        _onReady(_ctrl!);
       } else {
+        // initialize()-ро лента аллакай оғоз кардааст — дубора НЕ
+        // (даъвати дуюм плеери дуюми платформаро месохт).
         final pc = _ctrl!;
-        pc.initialize().then((_) {
+        ReelPlayback.whenInitialized(pc).then((_) {
           if (!mounted || _ctrl != pc) return;
-          _ctrl!.setLooping(true);
-          _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
-          if (widget.isActive) {
-            _ctrl!.play();
-            _startWatchTimer();
-          }
-          if (mounted) setState(() => _initialized = true);
-          _addBufferListener();
+          _onReady(pc);
         }).catchError((Object e) { _onVideoError(e, pc); });
       }
       return;
     }
-    final c = VideoPlayerController.networkUrl(Uri.parse(
-        NetworkQuality.pick(widget.reel.videoUrl, widget.reel.videoUrlLow)));
+    _openOwn();
+  }
+
+  /// Плеери худи ин reel: HLS → зинаи паст → MP4 (ниг. PlaybackPolicy).
+  void _openOwn() {
+    final choice = ReelPlayback.choose(widget.reel, level: _level);
+    if (choice == null) return;
+    _choice = choice;
+    _level = choice.level;
+    final c = ReelPlayback.controllerFor(widget.reel, choice, direct: _direct);
     _ctrl = c;
     c.initialize().then((_) {
         if (!mounted || _ctrl != c) return;
-        _ctrl!.setLooping(true);
-        _ctrl!.setVolume(widget.isMuted ? 0.0 : 1.0);
-        if (widget.isActive) {
-          _ctrl!.play();
-          _startWatchTimer();
-        }
-        if (mounted) setState(() => _initialized = true);
-        _addBufferListener();
+        _onReady(c);
       }).catchError((Object e) { _onVideoError(e, c); });
+  }
+
+  void _onReady(VideoPlayerController c) {
+    c.setLooping(true);
+    c.setVolume(widget.isMuted ? 0.0 : 1.0);
+    // Бозгашт ба reel-и дидашуда — аз ҳамон ҷо.
+    final at = ReelPlayback.resume.take(widget.reel.id);
+    if (at != null && at < c.value.duration) c.seekTo(at);
+    if (widget.isActive) {
+      c.play();
+      _startWatchTimer();
+    }
+    if (mounted) setState(() => _initialized = true);
+    _addBufferListener();
+  }
+
+  /// Хато → кӯшиши нав бо таъхири афзоянда (1 с, 2 с, 4 с…): аввал бе
+  /// прокси, баъд сифати пасттар. false → кӯшишҳо тамом.
+  bool _scheduleRetry(VideoPlayerController failed) {
+    final delay = _backoff.next();
+    if (delay == null) return false;
+    final attempt = _backoff.attempts;
+    _retryTimer = Timer(delay, () {
+      _retryTimer = null;
+      if (!mounted || _ctrl != failed) return;
+      failed.removeListener(_onVideoUpdate);
+      _releaseCtrl(failed);
+      if (attempt == 1 && ReelPlayback.proxy != null) {
+        _direct = true;
+      } else if (_level + 1 < ReelPlayback.levels(widget.reel)) {
+        _level++;
+      }
+      setState(() {
+        _ctrl = null;
+        _initialized = false;
+      });
+      _openOwn();
+    });
+    return true;
+  }
+
+  void _releaseCtrl(VideoPlayerController c) {
+    if (identical(c, widget.preloadCtrl)) {
+      widget.onDropPreload?.call();
+    } else {
+      ReelPlayback.release(c);
+    }
+  }
+
+  /// Видео зуд-зуд ё дароз меистад → ба сифати пасттар (HLS-и паст ё
+  /// MP4-и паст) аз ҳамон сония мегузарем, бе экрани сиёҳ.
+  Future<void> _downgrade() async {
+    final old = _ctrl;
+    if (old == null || _switching) return;
+    final next = ReelPlayback.choose(widget.reel, level: _level + 1);
+    if (next == null || next.level <= _level || next.url == _choice?.url) return;
+    _switching = true;
+    final c = ReelPlayback.controllerFor(widget.reel, next, direct: _direct);
+    try {
+      await c.initialize();
+    } catch (_) {
+      ReelPlayback.release(c);
+      _switching = false;
+      return;
+    }
+    if (!mounted || _ctrl != old) {
+      ReelPlayback.release(c);
+      _switching = false;
+      return;
+    }
+    await c.seekTo(old.value.position);
+    c.setLooping(true);
+    c.setVolume(widget.isMuted ? 0.0 : 1.0);
+    if (widget.isActive && !_paused) c.play();
+    old.removeListener(_onVideoUpdate);
+    if (!mounted) {
+      ReelPlayback.release(c);
+      _switching = false;
+      return;
+    }
+    setState(() {
+      _ctrl = c;
+      _choice = next;
+      _level = next.level;
+    });
+    c.addListener(_onVideoUpdate);
+    _releaseCtrl(old);
+    _stall
+      ..reset()
+      ..markStarted();
+    _switching = false;
+  }
+
+  void _schedulePreview() {
+    _previewTimer?.cancel();
+    if (_firstFrame || _preview != null || widget.reel.previewUrl.isEmpty) return;
+    // Агар видеои асл дар 350 мс кадр надиҳад — preview-и кэшшуда.
+    _previewTimer = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted || _firstFrame || !widget.isActive || _preview != null) return;
+      final p = ReelPlayback.previewController(widget.reel);
+      if (p == null) return;
+      _preview = p;
+      p.initialize().then((_) {
+        if (!mounted || _preview != p || _firstFrame) {
+          if (_preview == p) _dropPreview();
+          return;
+        }
+        p.setVolume(0);
+        p.setLooping(true);
+        p.play();
+        setState(() => _previewReady = true);
+      }).catchError((Object _) {
+        if (_preview == p) _dropPreview();
+      });
+    });
+  }
+
+  void _dropPreview() {
+    _previewTimer?.cancel();
+    final p = _preview;
+    if (p == null) return;
+    _preview = null;
+    if (mounted && _previewReady) setState(() => _previewReady = false);
+    _previewReady = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) => ReelPlayback.release(p));
   }
 
   void _addBufferListener() {
@@ -942,11 +1138,55 @@ class _ReelItemState extends State<_ReelItem> {
   }
 
   void _onVideoUpdate() {
-    if (!mounted || _ctrl == null) return;
-    final buffering = _ctrl!.value.isBuffering;
-    if (buffering != _isBuffering) {
-      setState(() => _isBuffering = buffering);
+    final c = _ctrl;
+    if (!mounted || c == null) return;
+    final v = c.value;
+    if (v.hasError && !_switching) {
+      _onVideoError(Exception(v.errorDescription ?? 'playback error'), c);
+      return;
     }
+    if (!_firstFrame && v.isPlaying && v.position > Duration.zero) {
+      _firstFrame = true;
+      _backoff.reset();
+      _stall.markStarted();
+      _dropPreview();
+      setState(() {});
+    }
+    final now = DateTime.now();
+    final stalled = v.isBuffering && widget.isActive && !_paused;
+    final downgrade = _stall.onBuffering(stalled, now);
+    if (stalled) {
+      // Таймер: нишон баъд аз 400 мс; истодани дароз → сифати паст.
+      _stallTimer ??= Timer.periodic(
+          const Duration(milliseconds: 100), (_) => _tickStall());
+    } else {
+      _stallTimer?.cancel();
+      _stallTimer = null;
+    }
+    _syncIndicator(now);
+    if (downgrade) _downgrade();
+  }
+
+  void _tickStall() {
+    if (!mounted) return;
+    final now = DateTime.now();
+    if (_stall.stuck(now)) _downgrade();
+    _syncIndicator(now);
+    if (!_stall.buffering) {
+      _stallTimer?.cancel();
+      _stallTimer = null;
+    }
+  }
+
+  void _syncIndicator(DateTime now) {
+    final show = _stall.indicatorVisible(now);
+    if (show != _isBuffering) setState(() => _isBuffering = show);
+  }
+
+  void _saveResume() {
+    final c = _ctrl;
+    if (c == null || !_initialized) return;
+    ReelPlayback.resume.save(widget.reel.id, c.value.position, c.value.duration);
   }
 
   void _startWatchTimer() {
@@ -1002,12 +1242,16 @@ class _ReelItemState extends State<_ReelItem> {
     if (widget.isActive && !old.isActive) {
       // Бозгашт ба ҳамин reel — бозӣ мекунад, пас нишони ▶ набояд монад.
       _paused = false; // build баъди didUpdateWidget худкор меояд
+      ReelPlayback.setActive(widget.reel.id);
+      _schedulePreview();
       _ctrl?.setVolume(widget.isMuted ? 0.0 : 1.0);
       _ctrl?.play();
       _startWatchTimer();
     } else if (!widget.isActive && old.isActive) {
       _sendWatchTime();
+      _saveResume();
       _ctrl?.pause();
+      _dropPreview();
     }
   }
 
@@ -1015,9 +1259,16 @@ class _ReelItemState extends State<_ReelItem> {
   void dispose() {
     _syncNote.removeListener(_onSync);
     _sendWatchTime();
+    _saveResume();
+    _stallTimer?.cancel();
+    _retryTimer?.cancel();
+    _previewTimer?.cancel();
+    final p = _preview;
+    _preview = null;
+    ReelPlayback.release(p);
     _ctrl?.removeListener(_onVideoUpdate);
     if (widget.preloadCtrl == null || widget.preloadCtrl != _ctrl) {
-      _ctrl?.dispose();
+      ReelPlayback.release(_ctrl);
     }
     super.dispose();
   }
@@ -1278,11 +1529,33 @@ class _ReelItemState extends State<_ReelItem> {
           },
           color: AppColors.neonBlue,
         ),
+        if (!_isEmbed)
+          _menuItem(AppIcons.download_done_rounded, tr('offline.save'), () {
+            Navigator.pop(context);
+            _saveOffline();
+          }),
         const SizedBox(height: 8),
       ])),
     ).then((_) {
       if (!_paused) _ctrl?.play();
     });
+  }
+
+  /// Нусха дар хотираи барнома (на галерея) — Танзимот → Reels-и офлайн.
+  Future<void> _saveOffline() async {
+    final store = OfflineReels.instance;
+    await store.load();
+    if (store.has(widget.reel.id)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('offline.already'))));
+      }
+      return;
+    }
+    final ok = await store.download(widget.reel);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? tr('offline.saved') : tr('offline.failed'))));
   }
 
   Widget _handle() => Container(
@@ -1859,24 +2132,43 @@ class _ReelItemState extends State<_ReelItem> {
         if (_isEmbed)
           // Видеои берунӣ (Aparat/YouTube) дар WebView
           EmbedPlayer(url: widget.reel.videoUrl)
-        else if (_initialized && _ctrl != null)
-          FittedBox(
-              fit: BoxFit.cover,
-              child: SizedBox(
-                  width: _ctrl!.value.size.width,
-                  height: _ctrl!.value.size.height,
-                  child: VideoPlayer(_ctrl!)))
-        else if (reel.thumbnailUrl.isNotEmpty)
-          CachedNetworkImage(
-              imageUrl: reel.thumbnailUrl,
-              fit: BoxFit.cover,
-              memCacheWidth: 720,
-              width: double.infinity,
-              height: double.infinity,
-              errorWidget: (_, __, ___) =>
-                  Container(color: AppColors.bg))
-        else
-          Container(color: AppColors.bg),
+        else ...[
+          if (_initialized && _ctrl != null)
+            FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                    width: _ctrl!.value.size.width,
+                    height: _ctrl!.value.size.height,
+                    child: VideoPlayer(_ctrl!))),
+          // Муқова то КАДРИ АВВАЛ (на то initialize): ҳеҷ экрани сиёҳ.
+          if (reel.thumbnailUrl.isNotEmpty)
+            IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: _firstFrame ? 0 : 1,
+                duration: const Duration(milliseconds: 180),
+                child: CachedNetworkImage(
+                    imageUrl: reel.thumbnailUrl,
+                    fit: BoxFit.cover,
+                    memCacheWidth: 720,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorWidget: (_, __, ___) =>
+                        Container(color: AppColors.bg)),
+              ),
+            )
+          else if (!_initialized)
+            Container(color: AppColors.bg),
+          // Preview-и 2-сонияӣ, то видеои асл дар интернети суст бор шавад.
+          if (_previewReady && _preview != null && !_firstFrame)
+            IgnorePointer(
+              child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                      width: _preview!.value.size.width,
+                      height: _preview!.value.size.height,
+                      child: VideoPlayer(_preview!))),
+            ),
+        ],
 
         const DecoratedBox(
             decoration: BoxDecoration(

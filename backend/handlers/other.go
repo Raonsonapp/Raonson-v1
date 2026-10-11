@@ -668,6 +668,7 @@ func Search(c *gin.Context) {
 			}
 		}
 		attachReelLocations(reels)
+		attachReelPlayback(reels)
 	}
 
 	// Хэштегҳо — аз caption-ҳо ҷамъ мешаванд (то tab-и «Тегҳо» холӣ намонад).
@@ -785,12 +786,15 @@ func CreateReel(c *gin.Context) {
 	if b.AutoDM != nil {
 		saveAutoDM("reel", rid, myID, *b.AutoDM)
 	}
+	// HLS дар фон: нашр интизори ffmpeg намешавад (ниг. reel_renditions.go).
+	EnqueueReelRendition(context.Background(), rid, b.VideoURL)
 	mw.CacheDel("smartreels:"+myID+":1", "smartreels:"+myID+":2", "explore:grid")
 	mw.InvalidateUserCache(myID)
 	c.JSON(http.StatusCreated, gin.H{
 		"_id": rid, "videoUrl": b.VideoURL, "videoUrlLow": b.VideoURLLow,
 		"thumbnailUrl": b.ThumbnailURL,
 		"pendingReview": held,
+		"hlsUrl": "", "hlsLowUrl": "", "previewUrl": "", "renditionsReady": false,
 		"caption":      b.Caption, "likesCount": 0, "viewsCount": 0,
 		"location": locName, "locationId": locID,
 		"audio": gin.H{
@@ -863,6 +867,7 @@ func GetReels(c *gin.Context) {
 	}
 	attachReelLocations(reels)
 	attachReelShares(reels)
+	attachReelPlayback(reels)
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
 }
 
@@ -1163,7 +1168,7 @@ func GetReelByID(c *gin.Context) {
 		       COALESCE(location,''), COALESCE(location_id,'')
 		FROM reels WHERE id=$1`, rid).Scan(&audioID, &audioTitle, &audioArtist, &audioCover, &shares,
 		&location, &locationID)
-	c.JSON(http.StatusOK, gin.H{
+	one := gin.H{
 		"_id": rid, "videoUrl": vurl, "videoUrlLow": vurlLow,
 		"thumbnailUrl": thumb, "caption": capt,
 		"viewsCount": views, "views": views, "likesCount": likes, "commentsCount": comms,
@@ -1174,7 +1179,11 @@ func GetReelByID(c *gin.Context) {
 		"audio": reelAudioJSON(audioID, audioTitle, audioArtist, audioCover, uname),
 		"user": putStoryRing(gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 			"verified": verified, "isFollowing": following}, hasStory, unseenStory),
-	})
+	}
+	attachReelPlayback([]gin.H{one})
+	// Ҳолати навбат — барои ташхис ва санҷиши API.
+	one["renditionStatus"] = reelRenditionStatus(c.Request.Context(), rid)
+	c.JSON(http.StatusOK, one)
 }
 
 // commentAuthor — муаллифи шарҳ барои ҷавоби фаврӣ.

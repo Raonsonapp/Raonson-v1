@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import '../app/app_theme.dart';
 import '../core/ui/app_icons.dart';
+import '../core/services/data_saver.dart';
 
 // Instagram: портрет то 4:5 (0.8) … пейзаж то 1.91:1. Ин ҳудуд ҳамаи
 // таносубҳои маъмул (1:1, 4:5, 3:4, 9:16, 16:9)-ро дар бар мегирад.
@@ -180,10 +181,15 @@ class _VideoViewState extends State<_VideoView> {
   VideoPlayerController? _ctrl;
   bool _ready = false, _paused = false, _error = false;
 
+  /// Data Saver + интернети мобилӣ: видео худ ба худ сар намешавад —
+  /// корбар зарба мезанад (мисли Instagram «Data Saver»).
+  bool _tapped = false;
+  bool get _blocked => !_tapped && DataSaver.instance.blockHomeAutoplay;
+
   @override
   void initState() {
     super.initState();
-    if (widget.isActive) _init();
+    if (widget.isActive && !_blocked) _init();
   }
 
   Future<void> _init() async {
@@ -208,7 +214,7 @@ class _VideoViewState extends State<_VideoView> {
     super.didUpdateWidget(old);
     // Deferred init: if widget just became active and controller was never created
     if (widget.isActive && _ctrl == null && !_error) {
-      _init();
+      if (!_blocked) _init();
       return;
     }
     if (!_ready || _ctrl == null) return;
@@ -224,6 +230,17 @@ class _VideoViewState extends State<_VideoView> {
       return Container(color: AppColors.surface,
         child: Center(child: Icon(AppIcons.play_circle_outline,
             color: AppColors.textFaint, size: 48)));
+    }
+    if (_ctrl == null && _blocked) {
+      return GestureDetector(
+        onTap: () {
+          setState(() => _tapped = true);
+          _init();
+        },
+        child: Container(color: AppColors.surface,
+          child: Center(child: Icon(AppIcons.play_circle_outline_rounded,
+              color: AppColors.textSecondary, size: 56))),
+      );
     }
     if (!_ready || _ctrl == null) {
       return Container(color: AppColors.surface,
