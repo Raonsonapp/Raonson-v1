@@ -1279,6 +1279,10 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, pinnedCommentsSchema); err != nil {
 		log.Fatalf("❌ Pinned comments migration failed: %v", err)
 	}
+	// Даъватнома, пурсиш, «Савол ба ман», мактуб ба оянда, чаленҷ.
+	if _, err := Pool.Exec(ctx, featuresSchema); err != nil {
+		log.Fatalf("❌ Features migration failed: %v", err)
+	}
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

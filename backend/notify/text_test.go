@@ -121,7 +121,8 @@ func TestLinksUseKnownPrefixes(t *testing.T) {
 	// мебарад, на ба як чиз. Даъват пеш ба худи ПОСТ мебурд, вале
 	// он ҷо тугмаи қабул нест — одам ҳанӯз ҳамкор нашудааст.
 	known := []string{"/post/", "/reel/", "/profile/", "/topic/",
-		"/collab-invites"}
+		"/collab-invites", "/event/", "/capsule/", "/challenge/",
+		"/questions"}
 	for _, k := range AllKinds() {
 		l := Link(k, "obj1", "ali")
 		if l == "" {
@@ -147,8 +148,15 @@ func TestLinkTargets(t *testing.T) {
 		Follow:   "/profile/ali",
 		// Ба ҷои ҚАБУЛ мебарад, на ба пост: гиранда ҳанӯз ҳамкор
 		// нест ва дар пост ҳеҷ тугмаи қабул намебинад.
-		CollabInvite:  "/collab-invites",
-		TrendingTopic: "/topic/obj1",
+		CollabInvite:    "/collab-invites",
+		TrendingTopic:   "/topic/obj1",
+		EventInvite:     "/event/obj1",
+		EventReminder:   "/event/obj1",
+		PostPollVote:    "/post/obj1",
+		QAQuestion:      "/questions",
+		QAAnswer:        "/profile/ali",
+		CapsuleUnlocked: "/capsule/obj1",
+		ChallengeWin:    "/challenge/obj1",
 	}
 	for k, want := range cases {
 		if got := Link(k, "obj1", "ali"); got != want {

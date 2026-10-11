@@ -256,6 +256,7 @@ func GetSmartFeed(c *gin.Context) {
 
 	attachCollabUsers(posts)
 	attachSalePct(posts)
+	attachPollFlags(posts)
 	result := gin.H{"posts": posts, "page": page, "limit": limit, "algo": "smart"}
 	if page <= 2 {
 		if b, err := json.Marshal(result); err == nil {

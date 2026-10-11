@@ -577,6 +577,9 @@ func holdContent(surface, id string) bool {
 		db.Pool.Exec(ctx, `UPDATE posts SET comments_count=GREATEST(comments_count-1,0)
 			WHERE id=(SELECT post_id FROM comments WHERE id=$1)`, id)
 		return true
+	case "event", "event_photo", "question", "qa_answer", "capsule", "challenge":
+		// Имкониятҳои нав (ниг. features_hold.go).
+		q = featureHoldSQL(surface, true)
 	case "reel_comment":
 		tag, err := db.Pool.Exec(ctx, `UPDATE reel_comments SET hidden=TRUE WHERE id=$1 AND COALESCE(hidden,false)=FALSE`, id)
 		if err != nil || tag.RowsAffected() == 0 {
@@ -616,6 +619,8 @@ func releaseContent(surface, id string) {
 			db.Pool.Exec(ctx, `UPDATE reels SET comments_count=comments_count+1
 				WHERE id=(SELECT reel_id FROM reel_comments WHERE id=$1)`, id)
 		}
+	case "event", "event_photo", "question", "qa_answer", "capsule", "challenge":
+		db.Pool.Exec(ctx, featureHoldSQL(surface, false), id)
 	}
 	mw.BumpContentEpoch()
 }
@@ -641,6 +646,8 @@ func removeContent(surface, id string) {
 		db.Pool.Exec(ctx, `UPDATE messages SET is_deleted=TRUE, text='', media_url=NULL, updated_at=NOW() WHERE id=$1`, id)
 	case "bio":
 		db.Pool.Exec(ctx, `UPDATE users SET bio='', website='' WHERE id=$1`, id)
+	case "event", "event_photo", "question", "qa_answer", "capsule", "challenge":
+		db.Pool.Exec(ctx, featureHoldSQL(surface, true), id)
 	}
 	mw.BumpContentEpoch()
 }

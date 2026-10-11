@@ -89,6 +89,27 @@ const (
 	// Кашфиёт.
 	RecommendedCreator Kind = "recommended_creator"
 	TrendingTopic      Kind = "trending_topic"
+
+	// «Даъватнома» — чорабинӣ (тӯй, зодрӯз, вохӯрӣ).
+	EventInvite   Kind = "event_invite"   // шуморо даъват кард
+	EventRSVP     Kind = "event_rsvp"     // ба даъвати шумо ҷавоб дод
+	EventReminder Kind = "event_reminder" // ёдрасӣ: 1 рӯз / 2 соат пеш
+	EventUpdate   Kind = "event_update"   // вақт/ҷой иваз шуд ё бекор шуд
+
+	// Пурсиш дар пост.
+	PostPollVote Kind = "post_poll_vote"
+
+	// «Савол ба ман». Савол БЕ муаллиф меояд: беном бошад ё не, номи
+	// савoлдиҳанда дар огоҳинома нест (танҳо дар қуттии саволҳо).
+	QAQuestion Kind = "qa_question"
+	QAAnswer   Kind = "qa_answer"
+
+	// «Мактуб ба оянда».
+	CapsuleSealed   Kind = "capsule_sealed"   // ба шумо мактуб навишт
+	CapsuleUnlocked Kind = "capsule_unlocked" // мактуб кушода шуд
+
+	// «Чаленҷ» — ғолиб шудед.
+	ChallengeWin Kind = "challenge_win"
 )
 
 // Priority — аҳамияти огоҳинома.
@@ -199,6 +220,23 @@ var rules = map[Kind]Rule{
 
 	RecommendedCreator: {Low, ChannelDiscovery, "recommendations", false},
 	TrendingTopic:      {Low, ChannelDiscovery, "recommendations", false},
+
+	// Даъват ба тӯй ва ёдрасии он хомӯш карда намешаванд: одам
+	// худаш даъватро интизор аст. Ҷавобҳо ҷамъ мешаванд.
+	EventInvite:   {Normal, ChannelSocial, "", false},
+	EventRSVP:     {Normal, ChannelSocial, "", true},
+	EventReminder: {Normal, ChannelSocial, "", false},
+	EventUpdate:   {Normal, ChannelSocial, "", false},
+
+	PostPollVote: {Normal, ChannelSocial, "likes", true},
+
+	QAQuestion: {Normal, ChannelSocial, "messages", false},
+	QAAnswer:   {Normal, ChannelSocial, "comments", false},
+
+	CapsuleSealed:   {Normal, ChannelSocial, "mentions", false},
+	CapsuleUnlocked: {Normal, ChannelSocial, "", false},
+
+	ChallengeWin: {Low, ChannelCreator, "achievements", false},
 }
 
 // RepeatSuffix муайян мекунад, ки оё ҳамон ҳодиса (ҳамон одам, ҳамон
@@ -217,7 +255,7 @@ var rules = map[Kind]Rule{
 func RepeatSuffix(k Kind, now time.Time) string {
 	switch k {
 	case Message, Comment, Reply, ReelReply, ReelCommentReply, StoryReply,
-		StoryAnswer, Gift, Order, EffectSale:
+		StoryAnswer, Gift, Order, EffectSale, EventUpdate:
 		return "n" + strconv.FormatInt(now.UnixNano(), 36)
 	case Follow, FollowRequest, FollowAccepted, Mention, ReelMention,
 		StoryMention, Thanks, CollabInvite:
