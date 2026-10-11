@@ -16,11 +16,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var translateLangNames = map[string]string{
-	"tj": "Tajik",
-	"ru": "Russian",
-	"en": "English",
-}
 
 // POST /ai/hashtags — {"caption": "...", "imageUrl": "..."} → {"hashtags": [...]}
 func SuggestHashtags(c *gin.Context) {
@@ -123,31 +118,7 @@ func GenerateBio(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bio": bio})
 }
 
-// POST /ai/translate — {"text": "...", "targetLang": "tj|ru|en"} → {"translated": "..."}
-func TranslateComment(c *gin.Context) {
-	if !utils.OpenAIEnabled() {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"message": "AI хизмат танзим нашудааст"})
-		return
-	}
-	var b struct {
-		Text       string `json:"text"`
-		TargetLang string `json:"targetLang"`
-	}
-	if err := c.ShouldBindJSON(&b); err != nil || b.Text == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "text лозим аст"})
-		return
-	}
-	lang := translateLangNames[b.TargetLang]
-	if lang == "" {
-		lang = "English"
-	}
-	translated, err := utils.TranslateText(context.Background(), b.Text, lang)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"message": "Тарҷума ноком шуд"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"translated": translated})
-}
+// POST /ai/translate — ниг. translate.go (Translate).
 
 // POST /ai/search — {"query": "видеоҳои Тоҷикистон дар бораи футбол"}
 // AI Search: GPT дархостро ба калидвожа + навъи мӯҳтаво + давраи вақт
@@ -204,7 +175,7 @@ func AiSearch(c *gin.Context) {
 			       COALESCE(p.music_track_ms,0), COALESCE(p.music_start_ms,0),
 			       COALESCE(p.music_end_ms,0),
 			       (SELECT COALESCE(json_agg(
-			                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''))
+			                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'durationMs',COALESCE(m.duration_ms,0),'waveform',COALESCE(m.waveform,''),'cover',COALESCE(m.cover,''))
 			                ORDER BY m.position),'[]'::json)
 			        FROM post_media m WHERE m.post_id=p.id)
 			FROM posts p JOIN users u ON u.id=p.user_id

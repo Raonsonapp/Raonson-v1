@@ -1227,7 +1227,7 @@ func ExploreGrid(c *gin.Context) {
 		SELECT p.id, p.likes_count, COALESCE(p.comments_count,0), p.created_at,
 		       COALESCE(p.caption,''),
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
+		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0),'durationMs',COALESCE(m.duration_ms,0),'waveform',COALESCE(m.waveform,''),'cover',COALESCE(m.cover,''))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),

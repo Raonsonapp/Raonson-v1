@@ -48,11 +48,13 @@ func GetShop(c *gin.Context) {
 		  AND COALESCE(p.archived,FALSE)=FALSE
 		  AND (p.scheduled_at IS NULL OR p.scheduled_at <= now())
 		  AND ($3 = '' OR p.product_category = $3)
+		  -- Маҳсулоти як фурӯшанда (профили тиҷоратӣ → «Маҳсулот»).
+		  AND ($5 = '' OR p.user_id = $5)
 		  -- Пеш маҳсулоти ҳисобҳои пӯшида (бо телефон, WhatsApp ва GPS),
 		  -- басташуда ва бастакунандагон ҳам дар мағоза меомад.
 		  AND `+publicAuthorSQL("p.user_id", "u", "$4")+`
 		ORDER BY p.featured DESC, p.created_at DESC LIMIT $1 OFFSET $2`,
-		limit, offset, category, mw.UID(c))
+		limit, offset, category, mw.UID(c), strings.TrimSpace(c.Query("seller")))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "shop failed"})
 		return

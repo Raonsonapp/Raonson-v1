@@ -89,6 +89,11 @@ const (
 	// Кашфиёт.
 	RecommendedCreator Kind = "recommended_creator"
 	TrendingTopic      Kind = "trending_topic"
+
+	// «Кӯмаки фаврӣ»: дархости хун ба донори мувофиқ дар ҳамон шаҳр
+	// ва ҷавоби одам ба дархост (ба муаллиф).
+	HelpBlood    Kind = "help_blood"
+	HelpResponse Kind = "help_response"
 )
 
 // Priority — аҳамияти огоҳинома.
@@ -199,6 +204,11 @@ var rules = map[Kind]Rule{
 
 	RecommendedCreator: {Low, ChannelDiscovery, "recommendations", false},
 	TrendingTopic:      {Low, ChannelDiscovery, "recommendations", false},
+
+	// Донор худаш розигӣ дод (ва дар танзимоти донор хомӯш мекунад);
+	// дархости хун таъхирнопазир аст. Ҷамъ намешавад.
+	HelpBlood:    {High, ChannelSocial, "", false},
+	HelpResponse: {High, ChannelSocial, "messages", false},
 }
 
 // RepeatSuffix муайян мекунад, ки оё ҳамон ҳодиса (ҳамон одам, ҳамон

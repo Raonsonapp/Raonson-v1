@@ -36,6 +36,16 @@ func NormalizeLang(s string) Lang {
 //
 // {actor} — номи корбар, {n} — шумораи одамони дигар дар гурӯҳ.
 var bodies = map[Kind]map[Lang]string{
+	HelpBlood: {
+		TJ: "ба донори хун ниёз дорад — гурӯҳи хуни шумо мувофиқ аст",
+		RU: "нужен донор крови — ваша группа крови подходит",
+		EN: "needs a blood donor — your blood group matches",
+	},
+	HelpResponse: {
+		TJ: "ба дархости кӯмаки шумо ҷавоб дод",
+		RU: "откликнулся(ась) на вашу просьбу о помощи",
+		EN: "responded to your help request",
+	},
 	Like: {
 		TJ: "пости шуморо писандид",
 		RU: "понравился ваш пост",
@@ -378,6 +388,10 @@ func Link(k Kind, targetID, actorName string) string {
 	case TrendingTopic:
 		if targetID != "" {
 			return "/topic/" + targetID
+		}
+	case HelpBlood, HelpResponse:
+		if targetID != "" {
+			return "/help/" + targetID
 		}
 	case RecommendedCreator:
 		if actorName != "" {
