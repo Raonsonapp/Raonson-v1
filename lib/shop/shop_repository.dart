@@ -120,10 +120,13 @@ class Product {
 class ShopRepository {
   final _api = ApiClient.instance;
 
-  Future<List<Product>> getProducts({String category = ''}) async {
+  Future<List<Product>> getProducts({String category = '', String seller = ''}) async {
     try {
-      final r = await _api.get('/shop',
-          query: category.isEmpty ? null : {'category': category});
+      final q = <String, String>{
+        if (category.isNotEmpty) 'category': category,
+        if (seller.isNotEmpty) 'seller': seller,
+      };
+      final r = await _api.get('/shop', query: q.isEmpty ? null : q);
       if (r.statusCode >= 400) return [];
       final body = jsonDecode(r.body);
       final list = (body['products'] ?? []) as List;

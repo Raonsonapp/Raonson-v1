@@ -11,6 +11,8 @@ import 'create_post/create_post_screen.dart';
 import 'create_reel/create_reel_screen.dart';
 import 'create_story/create_story_screen.dart';
 import '../live/live_screens.dart';
+import '../voice/create_voice_post_screen.dart';
+import '../help/help_screens.dart' show CreateHelpScreen;
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
 
@@ -234,12 +236,24 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Color(0xFF1A1A1A))),
         ),
-        child: Row(
+        // Ҳафт банд дар 320dp ҷой намегиранд — варақ мешавад.
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
+          child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _modeTab('Публикатсия', CreateMode.post),
             _modeTab('Сторис', CreateMode.story),
             _modeTab('Reels', CreateMode.reel),
+
+            // «Овоз» — пости овозӣ то 60 сония (галерея лозим нест).
+            _screenTab(tr('voice.title'), const CreateVoicePostScreen(),
+                key: 'create-voice'),
+            // «Кӯмак» — дархости хун, гумшуда/ёфтшуда, кӯмаки фаврӣ.
+            _screenTab(tr('help.new'), const CreateHelpScreen(),
+                key: 'create-help'),
 
             // Пахши зинда.
             //
@@ -253,6 +267,26 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
             _liveTab(),
           ],
         ),
+        ),
+        ),
+      ),
+    );
+  }
+
+  /// Банде, ки экрани ҷудогона мекушояд (мисли Live).
+  Widget _screenTab(String label, Widget screen, {required String key}) {
+    return GestureDetector(
+      key: ValueKey(key),
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => screen)),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Text(label,
+            style: const TextStyle(
+                color: Colors.white38,
+                fontWeight: FontWeight.w500,
+                fontSize: 15)),
       ),
     );
   }

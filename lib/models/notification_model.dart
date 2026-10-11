@@ -55,6 +55,8 @@ class NotificationModel {
       case 'message': return 'паём фиристод';
       case 'effect_sale': return 'эффекти шуморо харид';
       case 'order': return 'маҳсули шуморо фармоиш дод';
+      case 'help_blood': return 'ба донори хун ниёз дорад — гурӯҳи хуни шумо мувофиқ аст 🩸';
+      case 'help_response': return 'ба дархости кӯмаки шумо ҷавоб дод';
       case 'collab_invite': return 'шуморо ба ҳамкорӣ дар пост даъват кард';
       case 'collab_accepted': return 'даъвати ҳамкориро қабул кард — пост дар ҳарду профил аст';
       case 'story_reshared': return 'сторисатро ба сториси худ илова кард';

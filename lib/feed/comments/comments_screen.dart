@@ -9,7 +9,9 @@ import '../../models/user_model.dart';
 import '../../core/api/api_client.dart';
 import '../../core/content_sync.dart';
 import '../../core/services/user_session.dart';
-import '../../app/app_settings.dart';
+import '../../core/features/feature_flags.dart';
+import '../../core/translate/translate_service.dart';
+import '../../widgets/translate_toggle.dart' show isTranslatable, translateErrorText;
 import '../../app/app_theme.dart';
 import '../../widgets/verified_badge.dart';
 import '../../widgets/avatar.dart' show StoryRingFrame;
@@ -734,23 +736,15 @@ class _CommentItemState extends State<_CommentItem> {
       return;
     }
     setState(() => _translating = true);
-    try {
-      final res = await ApiClient.instance.post('/ai/translate', body: {
-        'text': widget.comment.text,
-        'targetLang': AppSettingsState.instance.lang,
-      });
-      if (res.statusCode < 400) {
-        final b = jsonDecode(res.body);
-        if (mounted) setState(() => _translated = (b['translated'] ?? '').toString());
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(tr('ui.72ba9efd82')), duration: Duration(seconds: 2)));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(tr('ui.cb51d52751')), duration: Duration(seconds: 2)));
-      }
+    // Ягона хидмати тарҷума (POST /translate, кэш, забони барнома).
+    final r = await TranslateService.instance.translate(widget.comment.text);
+    if (!mounted) return;
+    if (r.isOk) {
+      setState(() => _translated = r.text);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(translateErrorText(r.error)),
+          duration: const Duration(seconds: 2)));
     }
     if (mounted) setState(() => _translating = false);
   }
@@ -765,6 +759,10 @@ class _CommentItemState extends State<_CommentItem> {
     super.initState();
     _liked     = widget.comment.liked;
     _likeCount = widget.comment.likesCount;
+    // Тугмаи «Тарҷума» танҳо бо провайдер (парчами сервер).
+    if (!FeatureFlags.current.value.translate) {
+      FeatureFlags.ensureLoaded().then((_) { if (mounted) setState(() {}); });
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -1063,7 +1061,8 @@ class _CommentItemState extends State<_CommentItem> {
                         color: AppColors.textTertiary, fontSize: 12,
                         fontWeight: FontWeight.w600)),
               ),
-              // ── Тарҷума кардан (OpenAI) ─────────────────────
+              // ── Тарҷума кардан — танҳо агар сервер провайдер дорад ──
+              if (FeatureFlags.current.value.translate && isTranslatable(c.text))
               GestureDetector(
                 onTap: _translating ? null : _toggleTranslate,
                 child: _translating

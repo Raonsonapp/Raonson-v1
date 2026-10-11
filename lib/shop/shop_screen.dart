@@ -18,7 +18,9 @@ import 'sell_screen.dart';
 import 'orders_screen.dart';
 
 class ShopScreen extends StatefulWidget {
-  const ShopScreen({super.key});
+  /// Танҳо маҳсулоти як фурӯшанда (аз профили тиҷоратӣ); холӣ — ҳама.
+  final String sellerId;
+  const ShopScreen({super.key, this.sellerId = ''});
   @override
   State<ShopScreen> createState() => _ShopScreenState();
 }
@@ -37,7 +39,7 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final p = await _repo.getProducts(category: _category);
+    final p = await _repo.getProducts(category: _category, seller: widget.sellerId);
     if (!mounted) return;
     setState(() {
       _products = p;

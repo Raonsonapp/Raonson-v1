@@ -3,6 +3,8 @@
 // Only uses: flutter, provider, shared_preferences — all in pubspec.yaml
 // NO unused imports. NO missing classes. ZERO errors.
 
+import '../business/business_screens.dart' show BusinessSettingsScreen;
+import '../help/help_screens.dart' show HelpBoardScreen, DonorSettingsScreen;
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -170,6 +172,26 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('shop.sellerPanel'),
                 sub:   tr('shop.sellerPanelSub'),
                 onTap: () => _go(ctx, const SellerDashboardScreen()),
+              ),
+              // ── Профили тиҷоратӣ: соатҳо, суроға, тугмаҳо, омор ──
+              _NavTile(
+                icon:  AppIcons.business_center_rounded,
+                title: tr('biz.title'),
+                sub:   tr('biz.entrySub'),
+                onTap: () => _go(ctx, const BusinessSettingsScreen()),
+              ),
+              // ── «Кӯмаки фаврӣ» ва донори хун ──
+              _NavTile(
+                icon:  AppIcons.volunteer_activism_rounded,
+                title: tr('help.title'),
+                sub:   tr('help.entrySub'),
+                onTap: () => _go(ctx, const HelpBoardScreen()),
+              ),
+              _NavTile(
+                icon:  AppIcons.bloodtype_rounded,
+                title: tr('help.donor'),
+                sub:   tr('help.donorSub'),
+                onTap: () => _go(ctx, const DonorSettingsScreen()),
               ),
               // ── Кашфи имрӯз ──
               _NavTile(

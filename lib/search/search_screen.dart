@@ -1,5 +1,7 @@
 // lib/search/search_screen.dart
 // 100% Instagram-style: Explore → Recent → Results → Reels Feed
+import '../voice/voice_post_player.dart' show VoiceTile;
+import 'discover_shortcuts.dart';
 import 'explore_paging.dart';
 import '../core/storage/offline_cache.dart';
 import '../widgets/stale_data_banner.dart';
@@ -728,6 +730,8 @@ class _SearchScreenState extends State<SearchScreen>
         ),
         const LiveRail(), // «Live ҳозир» — дар search (на home)
         const TrendingHashtagsRow(), // «Трендҳо» — хештегҳои боло раванда
+        // «Кӯмаки фаврӣ» ва «Тиҷорат» аз рӯи категория.
+        const DiscoverShortcutsRow(),
         StaleDataBanner(
             visible: _exploreStale && !_exploreLoading,
             message: _exploreItems.isEmpty ? tr('net.offline') : null,
@@ -1244,6 +1248,10 @@ class _ExploreCell extends StatelessWidget {
         // Пеш ин ҳамеша `CachedNetworkImage` буд. Барои reel-и бе
         // тасвир сервер суроғаи ВИДЕО-ро медод, расм кушода намешуд
         // ва плитка комилан СИЁҲ мемонд.
+        // «Овоз»: файли садо расм нест — плиткаи мавҷ.
+        if (item.postData?.isVoice == true)
+          VoiceTile(media: item.postData!.media.first)
+        else
         VideoFrame(
           thumbUrl: item.url,
           videoUrl: item.videoUrl,

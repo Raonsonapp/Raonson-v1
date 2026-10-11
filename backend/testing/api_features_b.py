@@ -168,8 +168,9 @@ ok("вилоят ба ҷои шаҳр → 400", st == 400 and r.get("code") == "
 st, h1 = call("POST", "/help", blood, tA)
 H1 = (h1 or {}).get("_id") if isinstance(h1, dict) else None
 ok("дархости хун сохта шуд", st == 201 and H1, (st, h1))
-ok("танҳо донорҳои мувофиқи Душанбе огоҳ шуданд (O- ва A+, на Хуҷанд, на басташуда)",
-   (h1 or {}).get("notifiedCount") == 2, h1)
+# Дар базаи муштарак донорҳои санҷишҳои пешина ҳам ҳастанд — шахсан
+# дар поён санҷида мешавад, кӣ огоҳ шуд ва кӣ не.
+ok("донорҳои мувофиқи Душанбе огоҳ шуданд (≥ 2)", (h1 or {}).get("notifiedCount", 0) >= 2, h1)
 ok("гурӯҳи хун муқаррарӣ, шаҳр бо ном", h1.get("bloodGroup") == "A+" and (h1.get("city") or {}).get("name"), h1)
 ok("донори O- огоҳинома гирифт", has_notif(tB, "help_blood", H1, A), H1)
 ok("донори A+ огоҳинома гирифт", has_notif(tC, "help_blood", H1), H1)

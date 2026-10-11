@@ -128,6 +128,8 @@ class PostModel {
 
   String get mediaUrl  => media.isNotEmpty ? media.first['url']  ?? '' : '';
   String get mediaType => media.isNotEmpty ? media.first['type'] ?? 'image' : 'image';
+  /// Пости овозӣ («Овоз»).
+  bool   get isVoice   => mediaType == 'audio';
 
   PostModel copyWith({
     String? id, UserModel? user, String? caption,
@@ -191,6 +193,14 @@ class PostModel {
         // Тавсифи расм барои нобиноён (Alt text).
         if ((map['alt'] ?? '').toString().isNotEmpty)
           'alt': map['alt'].toString(),
+        // «Овоз»: давомнокӣ, мавҷ ("12,40,…") ва муқова.
+        // Аз сервер адад, аз кэши диск сатр меояд.
+        if ((num.tryParse('${map['durationMs'] ?? ''}') ?? 0) > 0)
+          'durationMs': num.parse('${map['durationMs']}').toInt().toString(),
+        if ((map['waveform'] ?? '').toString().isNotEmpty)
+          'waveform': map['waveform'].toString(),
+        if ((map['cover'] ?? '').toString().isNotEmpty)
+          'cover': map['cover'].toString(),
       };
     }).toList();
 
