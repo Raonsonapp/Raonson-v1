@@ -1283,6 +1283,11 @@ func migrate() {
 	if _, err := Pool.Exec(ctx, renditionsSchema); err != nil {
 		log.Fatalf("❌ Renditions migration failed: %v", err)
 	}
+	// Кӯмаки фаврӣ, пости овозӣ, тарҷума, профили тиҷоратӣ
+	// (ниг. features_b_schema.go).
+	if _, err := Pool.Exec(ctx, featuresBSchema); err != nil {
+		log.Fatalf("❌ Features-B migration failed: %v", err)
+	}
 	// Индексҳо аз рӯи EXPLAIN-и дархостҳои воқеӣ.
 	if _, err := Pool.Exec(ctx, indexSchema); err != nil {
 		// pg_trgm метавонад дар баъзе муҳит дастрас набошад —

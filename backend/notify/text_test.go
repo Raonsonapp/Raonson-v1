@@ -121,7 +121,7 @@ func TestLinksUseKnownPrefixes(t *testing.T) {
 	// мебарад, на ба як чиз. Даъват пеш ба худи ПОСТ мебурд, вале
 	// он ҷо тугмаи қабул нест — одам ҳанӯз ҳамкор нашудааст.
 	known := []string{"/post/", "/reel/", "/profile/", "/topic/",
-		"/collab-invites"}
+		"/collab-invites", "/help/"}
 	for _, k := range AllKinds() {
 		l := Link(k, "obj1", "ali")
 		if l == "" {

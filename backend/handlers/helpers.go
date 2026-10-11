@@ -34,7 +34,8 @@ const userSelectSQL = `
 	       COALESCE(cover_url,''), COALESCE(bio_links,''),
 	       COALESCE(activity_status,true), COALESCE(allow_comments,true),
 	       COALESCE(allow_mentions,true), COALESCE(two_factor,false),
-	       COALESCE(pronouns,''), COALESCE(bio_song::text,'')
+	       COALESCE(pronouns,''), COALESCE(bio_song::text,''),
+	       COALESCE(is_business,false), COALESCE(business_category,'')
 	FROM users`
 
 func scanFullUser(row pgx.Row) (gin.H, error) {
@@ -55,6 +56,8 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		allowMentions, twoFactor        bool
 		pronouns                        string
 		bioSong                         string
+		isBusiness                      bool
+		businessCategory                string
 	)
 	err := row.Scan(
 		&id, &username, &avatar, &bio, &verified, &isPrivate, &role,
@@ -67,6 +70,7 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		&coverUrl, &bioLinks,
 		&activityStatus, &allowComments, &allowMentions, &twoFactor,
 		&pronouns, &bioSong,
+		&isBusiness, &businessCategory,
 	)
 	if err != nil {
 		log.Printf("[scanFullUser] error: %v", err)
@@ -97,6 +101,8 @@ func scanFullUser(row pgx.Row) (gin.H, error) {
 		"website": website, "location": location,
 		"fullName": fullName, "phone": phone,
 		"coverUrl": coverUrl, "links": links, "pronouns": pronouns,
+		// Профили тиҷоратӣ: тафсилот аз GET /business/:id.
+		"isBusiness": isBusiness, "businessCategory": businessCategory,
 		// Суруди профил сабт мешуд, вале ҳеҷ гоҳ бар намегашт.
 		"bioSong": jsonOrNil(bioSong),
 		"activityStatus": activityStatus, "allowComments": allowComments,

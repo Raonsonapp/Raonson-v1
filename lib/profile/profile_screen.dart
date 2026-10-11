@@ -1,6 +1,9 @@
 // lib/profile/profile_screen.dart — Part 1 FIXED
 
 // NO qr_flutter. Share via share_plus.
+import '../business/business_screens.dart' show BusinessHeader;
+import '../voice/voice_post_player.dart' show VoiceTile;
+import '../widgets/translate_toggle.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -672,8 +675,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                   padding: EdgeInsets.fromLTRB(16,
                       (user.fullName ?? '').isNotEmpty ? 4 : 12, 16, 0),
                   // #хештег ва @зикр дар bio зер мешаванд (мисли Instagram).
-                  child: LinkedText(user.bio!, style: TextStyle(
-                      color: AppColors.textPrimary, fontSize: 13.5, height: 1.45))),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min, children: [
+                    LinkedText(user.bio!, style: TextStyle(
+                        color: AppColors.textPrimary, fontSize: 13.5, height: 1.45)),
+                    // «Тарҷума кардан» — bio-и одами дигар (бе провайдер пинҳон).
+                    if (!_isMe) TranslateToggle(text: user.bio!),
+                  ])),
+
+              // ── ПРОФИЛИ ТИҶОРАТӢ: категория, «Кушода ҳозир», алоқа ──
+              if (user.isBusiness)
+                BusinessHeader(key: ValueKey('biz_${user.id}'), user: user, isMe: _isMe),
 
               // ── WEBSITE ─────────────────────────────────────────────
               if ((user.website ?? '').isNotEmpty)
@@ -1103,7 +1115,9 @@ class ProfilePostGrid extends StatelessWidget {
                   onPostDeleted: (post) => onRemoved?.call(post.id)))),
           onLongPress: isMe ? () => onLongPress(p) : null,
           child: Stack(fit: StackFit.expand, children: [
-            url.isNotEmpty
+            p.isVoice
+                ? VoiceTile(media: p.media.first)
+                : url.isNotEmpty
                 ? CachedNetworkImage(imageUrl: url, fit: BoxFit.cover, memCacheWidth: 450,
                     placeholder: (_, __) => Container(color: AppColors.card),
                     errorWidget: (_, __, ___) => Container(color: AppColors.card))

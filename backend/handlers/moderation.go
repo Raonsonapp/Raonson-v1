@@ -586,6 +586,9 @@ func holdContent(surface, id string) bool {
 		db.Pool.Exec(ctx, `UPDATE reels SET comments_count=GREATEST(comments_count-1,0)
 			WHERE id=(SELECT reel_id FROM reel_comments WHERE id=$1)`, id)
 		return true
+	case "help":
+		// «Кӯмаки фаврӣ»: дархост то тасдиқи admin аз тахта пинҳон.
+		q = `UPDATE help_requests SET hidden=TRUE WHERE id=$1`
 	default:
 		return false
 	}
@@ -616,6 +619,8 @@ func releaseContent(surface, id string) {
 			db.Pool.Exec(ctx, `UPDATE reels SET comments_count=comments_count+1
 				WHERE id=(SELECT reel_id FROM reel_comments WHERE id=$1)`, id)
 		}
+	case "help":
+		db.Pool.Exec(ctx, `UPDATE help_requests SET hidden=FALSE WHERE id=$1 AND status<>'removed'`, id)
 	}
 	mw.BumpContentEpoch()
 }
@@ -641,6 +646,8 @@ func removeContent(surface, id string) {
 		db.Pool.Exec(ctx, `UPDATE messages SET is_deleted=TRUE, text='', media_url=NULL, updated_at=NOW() WHERE id=$1`, id)
 	case "bio":
 		db.Pool.Exec(ctx, `UPDATE users SET bio='', website='' WHERE id=$1`, id)
+	case "help":
+		db.Pool.Exec(ctx, `UPDATE help_requests SET hidden=TRUE, status='removed' WHERE id=$1`, id)
 	}
 	mw.BumpContentEpoch()
 }

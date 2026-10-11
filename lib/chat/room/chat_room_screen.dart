@@ -1,3 +1,5 @@
+import '../../core/features/feature_flags.dart';
+import '../../core/translate/translate_service.dart';
 import '../../core/error/friendly_error.dart';
 import '../../widgets/stale_data_banner.dart';
 import 'dart:async';
@@ -34,7 +36,6 @@ import '../../core/ui/report_dialog.dart';
 import '../../core/i18n/strings.dart';
 import '../share/share_to_chat_row.dart';
 import '../../core/utils/server_time.dart';
-import '../../app/app_settings.dart';
 import '../../core/moderation/content_policy.dart';
 
 // ─────────────────────────────────────────────────────────────────
@@ -120,6 +121,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     WidgetsBinding.instance.addObserver(this);
     _listenOutbox();
     _init();
+    FeatureFlags.ensureLoaded().then((_) { if (mounted) setState(() {}); });
   }
 
   @override
@@ -880,30 +882,22 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
     }
   }
 
-  /// Тарҷумаи паём ба забони барнома.
+  /// Тарҷумаи паём ба забони барнома (ягона хидмат: POST /translate).
   Future<void> _onTranslate(MessageModel msg) async {
-    final lang = AppSettingsState.instance.lang;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: Text(tr('chat.translateTitle'), style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
-        content: FutureBuilder(
-          future: ApiClient.instance.post('/ai/translate',
-              body: {'text': msg.text, 'targetLang': lang}),
+        content: FutureBuilder<TranslateResult>(
+          future: TranslateService.instance.translate(msg.text),
           builder: (_, snap) {
-            if (!snap.hasData && !snap.hasError) {
+            if (!snap.hasData) {
               return const SizedBox(height: 60,
                   child: Center(child: CircularProgressIndicator()));
             }
-            String out = tr('chat.translateUnavailable');
-            try {
-              final r = snap.data!;
-              final b = jsonDecode(r.body) as Map;
-              if (r.statusCode < 400 && (b['translated'] ?? '').toString().isNotEmpty) {
-                out = b['translated'].toString();
-              }
-            } catch (_) {}
+            final r = snap.data!;
+            final out = r.isOk ? r.text : tr('chat.translateUnavailable');
             return Column(mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(msg.text, style: TextStyle(color: AppColors.textFaint, fontSize: 13)),
@@ -1334,7 +1328,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen>
               onReport: () => _onReportMessage(msg),
               onEdit:   () => _onEdit(msg),
               onForward: () => _onForward(msg),
-              onTranslate: () => _onTranslate(msg),
+              // Бе провайдери тарҷума (парчами сервер) — банди меню нест.
+              onTranslate: FeatureFlags.current.value.translate
+                  ? () => _onTranslate(msg) : null,
               onCallBack: () {
                 final p = msg.text.split(':');
                 final isVid = p.length > 1 && p[1] == 'video';

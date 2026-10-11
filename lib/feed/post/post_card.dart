@@ -42,7 +42,6 @@ import '../../core/services/media_saver.dart';
 import '../../profile/saved_collections_screen.dart';
 import '../../app/app_theme.dart';
 import '../../app/app_config.dart';
-import '../../app/app_settings.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/ui/tajikshop_brand.dart';
 import '../../core/ui/report_dialog.dart';
@@ -51,6 +50,8 @@ import '../../core/utils/time_ago.dart';
 import '../../feed_ai/why_this_sheet.dart';
 import '../../core/ui/r_icon.dart';
 import '../../widgets/linked_text.dart';
+import '../../widgets/translate_toggle.dart';
+import '../../voice/voice_post_player.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -1611,7 +1612,10 @@ class _PostCardState extends State<PostCard>
               setState(() => _showHeart = true);
               _heartCtrl.forward(from: 0);
             },
-            child: MediaCarousel(media: post.media, isActive: _hasFocus),
+            // «Овоз»: плеери садо бо мавҷ; ду бор пахш — лайк, мисли расм.
+            child: post.mediaType == 'audio'
+                ? VoicePostPlayer(media: post.media.first, postId: post.id)
+                : MediaCarousel(media: post.media, isActive: _hasFocus),
           ),
 
           // ── Нишони одамони зикршуда ─────────────────────────
@@ -1844,29 +1848,6 @@ class _CaptionWidget extends StatefulWidget {
 class _CaptionWidgetState extends State<_CaptionWidget> {
   static const int _maxLines = 3;
 
-  // ── Тарҷумаи тавсиф (OpenAI) ─────────────────────────────────────
-  String? _translated;
-  bool    _translating = false;
-
-  Future<void> _toggleTranslate() async {
-    if (_translated != null) {
-      setState(() => _translated = null);
-      return;
-    }
-    setState(() => _translating = true);
-    try {
-      final res = await ApiClient.instance.post('/ai/translate', body: {
-        'text': widget.caption,
-        'targetLang': AppSettingsState.instance.lang,
-      });
-      if (res.statusCode < 400) {
-        final b = jsonDecode(res.body);
-        if (mounted) setState(() => _translated = (b['translated'] ?? '').toString());
-      }
-    } catch (_) {}
-    if (mounted) setState(() => _translating = false);
-  }
-
   bool _needsTruncation(BuildContext context) {
     final tp = TextPainter(
       text: TextSpan(children: [
@@ -1904,49 +1885,30 @@ class _CaptionWidgetState extends State<_CaptionWidget> {
           ...widget.spans,
         ]),
       ),
-      if (_translated != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(_translated!,
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13.5,
-                  fontStyle: FontStyle.italic)),
-        ),
-      // Wrap, на Row: «...бештар нишон деҳ» + «Тарҷума кардан» дар экрани
-      // хурд ба як сатр намегунҷиданд.
-      Wrap(spacing: 0, children: [
-        if (needsMore)
-          GestureDetector(
-            onTap: widget.onToggle,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: Text(
-                widget.expanded ? 'камтар нишон деҳ' : '...бештар нишон деҳ',
-                style: TextStyle(
-                  color: AppColors.grey,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w500,
-                )),
-            ),
-          ),
-        if (needsMore) const SizedBox(width: 12),
+      if (needsMore)
         GestureDetector(
-          onTap: _translating ? null : _toggleTranslate,
+          onTap: widget.onToggle,
           child: Padding(
             padding: const EdgeInsets.only(top: 3),
-            child: _translating
-                ? SizedBox(width: 12, height: 12,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 1.5, color: AppColors.grey))
-                : Text(
-                    _translated != null ? 'Пинҳон кардани тарҷума' : 'Тарҷума кардан',
-                    style: TextStyle(
-                        color: AppColors.grey,
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500)),
+            child: Text(
+              widget.expanded ? 'камтар нишон деҳ' : '...бештар нишон деҳ',
+              style: TextStyle(
+                color: AppColors.grey,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+              )),
           ),
         ),
-      ]),
+      // «Тарҷума кардан» — ягона тугма барои тавсиф, шарҳ, паём ва bio
+      // (сервер: POST /translate; бе провайдер — пинҳон).
+      TranslateToggle(
+        text: widget.caption,
+        fontSize: 13.5,
+        padding: const EdgeInsets.only(top: 3),
+        resultStyle: TextStyle(
+            color: AppColors.textSecondary, fontSize: 13.5,
+            fontStyle: FontStyle.italic),
+      ),
     ]);
   }
 }

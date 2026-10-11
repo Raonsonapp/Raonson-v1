@@ -37,6 +37,9 @@ class UserModel {
   /// Суруди профил (мисли Instagram). Пеш дар «Таҳрири профил» интихоб
   /// ва дар сервер сабт мешуд, вале ҳеҷ ҷо нишон дода намешуд.
   final SongInfo bioSong;
+  /// Профили тиҷоратӣ (тафсилот — GET /business/:id).
+  final bool    isBusiness;
+  final String  businessCategory;
 
   const UserModel({
     required this.id,
@@ -63,6 +66,8 @@ class UserModel {
     this.coverUrl          = '',
     this.links             = const [],
     this.bioSong           = SongInfo.none,
+    this.isBusiness        = false,
+    this.businessCategory  = '',
   });
 
   String get avatarUrl => avatar;
@@ -106,6 +111,8 @@ class UserModel {
     bioSong:          j['bioSong'] is Map
         ? SongInfo.fromJson((j['bioSong'] as Map).cast<String, dynamic>())
         : SongInfo.none,
+    isBusiness:       j['isBusiness'] == true,
+    businessCategory: j['businessCategory']?.toString() ?? '',
   );
 
   static List<Map<String, String>> _parseLinks(dynamic raw) {
@@ -184,6 +191,8 @@ class UserModel {
     coverUrl:        coverUrl        ?? this.coverUrl,
     links:           links           ?? this.links,
     bioSong:         bioSong         ?? this.bioSong,
+    isBusiness:      isBusiness,
+    businessCategory: businessCategory,
   );
 
   static int _int(dynamic v) => (v as num?)?.toInt() ?? 0;

@@ -228,4 +228,15 @@ class AppIcons {
   static const IconData wifi_off = HeroiconsOutline.signalSlash;
   static const IconData wifi_off_rounded = HeroiconsOutline.signalSlash;
   static const IconData wifi_rounded = HeroiconsOutline.wifi;
+  // «Кӯмаки фаврӣ» ва «Профили тиҷоратӣ» — дар Heroicons нестанд.
+  static const IconData bloodtype_rounded = Symbols.bloodtype_rounded;
+  static const IconData volunteer_activism_rounded = Symbols.volunteer_activism_rounded;
+  static const IconData pets_rounded = Symbols.pets_rounded;
+  static const IconData directions_rounded = Symbols.directions_rounded;
+  static const IconData person_search_rounded = HeroiconsOutline.userCircle;
+  static const IconData id_card_rounded = HeroiconsOutline.identification;
+  static const IconData found_item_rounded = HeroiconsOutline.archiveBoxArrowDown;
+  static const IconData warning_rounded = HeroiconsOutline.exclamationTriangle;
+  static const IconData clock_rounded = HeroiconsOutline.clock;
+  static const IconData remove_rounded = HeroiconsOutline.minus;
 }

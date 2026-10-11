@@ -1,3 +1,4 @@
+import '../help/help_screens.dart' show HelpRequestScreen;
 import '../widgets/stale_data_banner.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -212,6 +213,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'story_mention':
       case 'note_reaction':
         _openProfile(n.fromUser?.id);
+        break;
+      // «Кӯмаки фаврӣ»: дархости хун (донор) ва ҷавоб ба дархост (муаллиф).
+      case 'help_blood':
+      case 'help_response':
+        if ((n.targetId ?? '').isNotEmpty) {
+          Navigator.push(context, MaterialPageRoute(
+              builder: (_) => HelpRequestScreen(id: n.targetId!)));
+        }
         break;
       case 'order':
         try {

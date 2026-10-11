@@ -76,7 +76,10 @@ func loadPostPreview(ctx context.Context, id string) (previewData, bool) {
 	d := previewData{Kind: "post", ID: id}
 	err := db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(p.caption,''), u.username, COALESCE(u.avatar,''),
-		       COALESCE(m.url,''), COALESCE(m.type,'image'),
+		       -- Пости овозӣ: дар корти пешнамоиш муқова (ё аватар), на файли садо.
+		       CASE WHEN m.type='audio' THEN COALESCE(NULLIF(m.cover,''), u.avatar, '')
+		            ELSE COALESCE(m.url,'') END,
+		       CASE WHEN m.type='audio' THEN 'image' ELSE COALESCE(m.type,'image') END,
 		       COALESCE(p.likes_count,0), COALESCE(p.comments_count,0)
 		FROM posts p
 		JOIN users u ON u.id = p.user_id

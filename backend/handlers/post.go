@@ -77,6 +77,18 @@ func CreatePost(c *gin.Context) {
 		return
 	}
 
+	// «Овоз»: як файли садо, то 60 сония (ниг. voice_post.go).
+	voice, isVoice, vmsg := parseVoiceMedia(b.Media)
+	if vmsg != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": vmsg, "code": "voice_invalid"})
+		return
+	}
+	if isVoice && b.IsProduct {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Пости овозӣ маҳсул буда наметавонад",
+			"code": "voice_invalid"})
+		return
+	}
+
 	// Модератсия ПЕШ аз нашр: тавсиф, линкҳо, расм ва видео.
 	modReq := modRequest{Surface: "post", AI: true,
 		Texts: []string{b.Caption, b.Location, b.ProductName}}
@@ -86,6 +98,13 @@ func CreatePost(c *gin.Context) {
 	for _, m := range b.Media {
 		u, _ := m["url"].(string)
 		t, _ := m["type"].(string)
+		if t == "audio" {
+			// Садо ба classifier-и расм намеравад; муқова — меравад.
+			if voice.Cover != "" {
+				modReq.Media = append(modReq.Media, modMedia{URL: voice.Cover})
+			}
+			continue
+		}
 		modReq.Media = append(modReq.Media, modMedia{URL: u, Video: t == "video"})
 	}
 	mod, modOK := screenContent(c, myID, modReq)
@@ -147,6 +166,14 @@ func CreatePost(c *gin.Context) {
 		// Instagram. То 100 ҳарф.
 		alt, _ := m["alt"].(string)
 		alt = clampRunes(strings.TrimSpace(alt), 100)
+		if isVoice {
+			tx.Exec(context.Background(),
+				`INSERT INTO post_media(post_id,url,type,position,aspect_ratio,alt_text,
+				                       duration_ms,waveform,cover)
+				 VALUES($1,$2,'audio',$3,$4,$5,$6,$7,$8)`,
+				postID, voice.URL, i, ar, alt, voice.DurationMs, voice.Waveform, voice.Cover)
+			continue
+		}
 		tx.Exec(context.Background(),
 			`INSERT INTO post_media(post_id,url,type,position,aspect_ratio,alt_text)
 			 VALUES($1,$2,$3,$4,$5,$6)`,
@@ -362,7 +389,7 @@ func GetPost(c *gin.Context) {
 		       p.comments_count, p.created_at,
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
+		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0),'durationMs',COALESCE(m.duration_ms,0),'waveform',COALESCE(m.waveform,''),'cover',COALESCE(m.cover,''))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id),
 		       EXISTS(SELECT 1 FROM post_likes WHERE post_id=p.id AND user_id=$2::text),
@@ -453,7 +480,7 @@ func GetScheduledPosts(c *gin.Context) {
 	rows, err := db.Pool.Query(context.Background(), `
 		SELECT p.id, COALESCE(p.caption,''), p.scheduled_at,
 		       (SELECT COALESCE(json_agg(
-		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0))
+		                json_build_object('url',m.url,'type',m.type,'alt',COALESCE(m.alt_text,''),'aspectRatio',COALESCE(m.aspect_ratio,0),'durationMs',COALESCE(m.duration_ms,0),'waveform',COALESCE(m.waveform,''),'cover',COALESCE(m.cover,''))
 		                ORDER BY m.position),'[]'::json)
 		        FROM post_media m WHERE m.post_id=p.id)
 		FROM posts p

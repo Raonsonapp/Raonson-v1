@@ -310,6 +310,40 @@ func main() {
 		pl.GET("/:id/reels",  cache3s, handlers.PlaceReels)
 	}
 
+	// ── ПАРЧАМҲО: кадом функсияҳо дар ин сервер фаъоланд ─────────
+	r.GET("/features", mw.OptionalAuth(), rl100, handlers.GetFeatures)
+
+	// ── ТАРҶУМА: тавсиф, шарҳ, паём, bio (кэш + ҳадди корбар) ─────
+	r.POST("/translate", auth, rl100, handlers.Translate)
+
+	// ── «КӮМАКИ ФАВРӢ»: дархости хун, гумшуда/ёфтшуда, кӯмак ──────
+	hb := r.Group("/help", auth, rl100)
+	{
+		hb.GET("",                handlers.ListHelpRequests)
+		hb.POST("",               rl20, handlers.CreateHelpRequest)
+		hb.GET("/donor/me",       handlers.GetHelpDonor)
+		hb.PUT("/donor/me",       rl20, handlers.SetHelpDonor)
+		hb.DELETE("/donor/me",    handlers.DeleteHelpDonor)
+		hb.GET("/:id",            handlers.GetHelpRequest)
+		hb.POST("/:id/respond",   rl20, handlers.RespondHelpRequest)
+		hb.POST("/:id/resolve",   handlers.ResolveHelpRequest)
+		hb.POST("/:id/report",    rl20, handlers.ReportHelpRequest)
+		hb.DELETE("/:id",         handlers.DeleteHelpRequest)
+	}
+
+	// ── ПРОФИЛИ ТИҶОРАТӢ ────────────────────────────────────────
+	bz := r.Group("/business", auth, rl100)
+	{
+		bz.GET("/categories",      handlers.GetBusinessCategories)
+		bz.GET("/search",          handlers.SearchBusinesses)
+		bz.GET("/me",              handlers.GetMyBusiness)
+		bz.PUT("/me",              rl20, handlers.UpdateMyBusiness)
+		bz.DELETE("/me",           handlers.DisableMyBusiness)
+		bz.GET("/me/insights",     handlers.GetBusinessInsights)
+		bz.GET("/:userId",         handlers.GetBusiness)
+		bz.POST("/:userId/tap",    handlers.TapBusiness)
+	}
+
 	// ── HASHTAGS (мисли Instagram) ──────────────────────────────
 	// Бе кэш: ҳолати «Обуна», лайк ва бастан фавран иваз мешаванд;
 	// дархостҳо аз индекси content_hashtags мехонанд.
@@ -613,7 +647,8 @@ func main() {
 	ai := r.Group("/ai", auth, rl100)
 	{
 		ai.POST("/hashtags", handlers.SuggestHashtags)
-		ai.POST("/translate", handlers.TranslateComment)
+		// Барномаҳои кӯҳна ({text, targetLang}) — ҳамон /translate.
+		ai.POST("/translate", handlers.Translate)
 		ai.POST("/assistant", handlers.AiAssistant)
 		ai.POST("/post-creator", handlers.GeneratePost)
 		ai.POST("/comment-suggest", handlers.SuggestPostComment)

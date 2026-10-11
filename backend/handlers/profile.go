@@ -122,7 +122,10 @@ func ChangePhone(c *gin.Context) {
 		return
 	}
 	if _, err := db.Pool.Exec(context.Background(),
-		`UPDATE users SET phone=$1 WHERE id=$2`, phone, myID); err != nil {
+		// Рақами нав бе рамз тасдиқшуда нест (ниг. «Кӯмаки фаврӣ»).
+		`UPDATE users SET phone=$1,
+		        phone_verified_at = CASE WHEN COALESCE(phone,'')=$1 THEN phone_verified_at END
+		  WHERE id=$2`, phone, myID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Update failed"})
 		return
 	}
@@ -371,6 +374,11 @@ func UpdateProfile(c *gin.Context) {
 		  location   = COALESCE($6, location),
 		  full_name  = COALESCE($7, full_name),
 		  phone      = COALESCE($8, phone),
+		  -- Рақами нав бе рамз тасдиқшуда нест («Кӯмаки фаврӣ»).
+		  phone_verified_at = CASE WHEN $8::text IS NULL OR $8::text = COALESCE(phone,'')
+		                           THEN phone_verified_at END,
+		  -- Ҳисоби пӯшида тиҷоратӣ буда наметавонад (ниг. business.go).
+		  is_business = CASE WHEN COALESCE($3::boolean,false) THEN FALSE ELSE is_business END,
 		  bio_song   = COALESCE($10::jsonb, bio_song),
 		  cover_url  = COALESCE($12, cover_url),
 		  bio_links  = COALESCE($13, bio_links),

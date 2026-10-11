@@ -16,6 +16,7 @@
 //  Занг (type=incoming_call) data-only меояд ва огоҳинома НЕСТ: он ба
 //  экрани пурраи занг меравад (lib/calls), на ба banner.
 // ════════════════════════════════════════════════════════════════════
+import '../help/help_screens.dart' show HelpRequestScreen;
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -282,6 +283,13 @@ class FirebaseInit {
     // даъват «кор намекунад».
     if (link == '/collab-invites') {
       nav.pushNamed(link);
+      return;
+    }
+
+    // «Кӯмаки фаврӣ»: /help/<id> — экрани дархост.
+    if (link.startsWith('/help/') && link.length > 6) {
+      nav.push(MaterialPageRoute(
+          builder: (_) => HelpRequestScreen(id: link.substring(6))));
       return;
     }
 

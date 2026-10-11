@@ -40,6 +40,8 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'reply':
       case 'reel_reply': return const Color(0xFF7C4DFF);
       case 'thanks': return const Color(0xFFE0A100);
+      case 'help_blood':
+      case 'help_response': return const Color(0xFFE53935);
       case 'mention': return const Color(0xFF00BCD4);
       case 'follow':
       case 'follow_accepted':
