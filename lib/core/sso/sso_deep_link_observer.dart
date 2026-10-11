@@ -27,7 +27,9 @@ class SsoDeepLinkObserver with WidgetsBindingObserver {
     final nav = navigatorKey.currentState;
     if (nav == null) return false;
     nav.push(MaterialPageRoute(
-        builder: (_) => TajikshopSignInScreen(code: code)));
+        builder: (_) => TajikshopSignInScreen(
+            code: code,
+            state: TajikshopSso.stateFromUri(routeInformation.uri))));
     return true;
   }
 }

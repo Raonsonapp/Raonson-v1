@@ -378,8 +378,14 @@ void main() {
       expect(find.textContaining('Ба Raonson гузаред'), findsOneWidget);
       await t.tap(find.byKey(const Key('sso-open-tajikshop')));
       await t.pumpAndSettle();
-      expect(opened.map((u) => u.toString()),
-          ['tajikshop://', TajikshopSso.playStore]);
+      // Як зарба: TajikShop-ро бо `sso/authorize` ва state мекушояд;
+      // насб нест → Play Store.
+      expect(opened, hasLength(2));
+      expect(opened[0].scheme, 'tajikshop');
+      expect(opened[0].path, '/authorize');
+      expect(opened[0].queryParameters['app'], 'raonson');
+      expect(opened[0].queryParameters['state'], isNotEmpty);
+      expect(opened[1].toString(), TajikshopSso.playStore);
     });
   });
 

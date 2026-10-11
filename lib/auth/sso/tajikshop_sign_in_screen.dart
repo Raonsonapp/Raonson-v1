@@ -29,11 +29,15 @@ class TajikshopSignInScreen extends StatefulWidget {
   const TajikshopSignInScreen({
     super.key,
     required this.code,
+    this.state,
     this.isSignedIn,
     this.onSession,
   });
 
   final String code;
+
+  /// `state` аз линк (агар бошад) — бо нигоҳдошта санҷида мешавад.
+  final String? state;
 
   /// Корбар ҳоло дар Raonson ворид аст? (пешфарз: AppState, баъди оғоз).
   final Future<bool> Function()? isSignedIn;
@@ -93,6 +97,15 @@ class _TajikshopSignInScreenState extends State<TajikshopSignInScreen> {
       return;
     }
     _sso.markHandled(widget.code);
+    if (!await _sso.verifyState(widget.state)) {
+      if (!mounted) return;
+      setState(() {
+        _result = const SsoResult(
+            SsoOutcome.failed, 400, {'code': 'state_mismatch'});
+        _phase = _Phase.error;
+      });
+      return;
+    }
     final signedIn = await (widget.isSignedIn ?? _defaultSignedIn)();
     final intent = signedIn && await _sso.consumeLinkIntent();
     final r = await _sso.repo.signIn(widget.code, link: intent);
@@ -344,7 +357,8 @@ Future<void> showTajikshopSignInSheet(BuildContext context) {
                   foregroundColor: Colors.white),
               onPressed: () {
                 Navigator.pop(sheet);
-                TajikshopSso.instance.openPlain();
+                // Як зарба: TajikShop розигӣ мепурсад ва бо код бармегардонад.
+                TajikshopSso.instance.openAuthorize();
               },
               child: Text(tr('sso.openTajikshop')),
             ),

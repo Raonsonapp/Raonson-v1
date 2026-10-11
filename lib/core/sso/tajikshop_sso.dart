@@ -16,6 +16,7 @@
 // ════════════════════════════════════════════════════════════════════
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -115,6 +116,8 @@ class SsoResult {
         return tr('sso.err.passwordRequired');
       case 'network':
         return tr('account.err.network');
+      case 'state_mismatch':
+        return tr('sso.err.stateMismatch');
     }
     final m = (body['message'] ?? '').toString();
     return m.isNotEmpty ? m : tr('sso.error');
@@ -306,6 +309,20 @@ class TajikshopSso {
     return _codeRe.hasMatch(code) ? code : null;
   }
 
+  /// `state` аз `raonson://sso?code=…&state=…` (null — набуд ё нодуруст).
+  static String? stateFromUri(Uri uri) {
+    final s = (uri.queryParameters['state'] ?? '').trim();
+    return _stateRe.hasMatch(s) ? s : null;
+  }
+
+  static String? stateFromRoute(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final uri = Uri.tryParse(raw.trim());
+    return uri == null ? null : stateFromUri(uri);
+  }
+
+  static final _stateRe = RegExp(r'^[A-Za-z0-9_-]{8,128}$');
+
   static String? codeFromRoute(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     final uri = Uri.tryParse(raw.trim());
@@ -378,6 +395,51 @@ class TajikshopSso {
       await p.remove(_intentKey);
       return DateTime.now().millisecondsSinceEpoch - at <
           intentTtl.inMilliseconds;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── «Бо TajikShop ворид шавед» бо як зарба (state) ──
+  //
+  // Raonson `tajikshop://sso/authorize?app=raonson&state=<тасодуфӣ>`-ро
+  // мекушояд ва state-ро 10 дақиқа нигоҳ медорад. TajikShop онро ба
+  // `raonson://sso?code=…&state=…` бармегардонад. Агар state омада бошад,
+  // вале бо нигоҳдошта мувофиқ набошад — линкро барномаи бегона кушодааст
+  // (масалан, то корбарро ба ҳисоби дигар ворид кунад) ва рад мешавад.
+  // Линк бе state (корбар аз худи TajikShop оғоз кард) мисли пеш кор мекунад.
+  static const _stateKey = 'sso_tajikshop_state';
+
+  Future<bool> openAuthorize() async {
+    final rnd = Random.secure();
+    final state = base64Url
+        .encode(List<int>.generate(24, (_) => rnd.nextInt(256)))
+        .replaceAll('=', '');
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setString(
+          _stateKey, '$state|${DateTime.now().millisecondsSinceEpoch}');
+    } catch (_) {}
+    return openLink(
+        '$tajikshopScheme://sso/authorize?app=$raonsonScheme&state=$state',
+        playStore);
+  }
+
+  /// null state → true (бе state). Бо state → танҳо агар мувофиқ ва зинда
+  /// бошад; ҳар ҳолат як бор истифода мешавад.
+  Future<bool> verifyState(String? state) async {
+    if (state == null) return true;
+    try {
+      final p = await SharedPreferences.getInstance();
+      final saved = p.getString(_stateKey);
+      await p.remove(_stateKey);
+      if (saved == null) return false;
+      final parts = saved.split('|');
+      if (parts.length != 2) return false;
+      final at = int.tryParse(parts[1]) ?? 0;
+      final fresh = DateTime.now().millisecondsSinceEpoch - at <
+          intentTtl.inMilliseconds;
+      return fresh && parts[0] == state;
     } catch (_) {
       return false;
     }

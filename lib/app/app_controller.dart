@@ -142,7 +142,9 @@ class AppController {
           if (TajikshopSso.instance.wasHandled(ssoCode)) {
             return _page(const _DismissScreen());
           }
-          return _page(TajikshopSignInScreen(code: ssoCode));
+          return _page(TajikshopSignInScreen(
+              code: ssoCode,
+              state: TajikshopSso.stateFromRoute(settings.name)));
         }
         // Линки чуқур: Flutter URI-ро ҳамчун номи роҳ мерасонад.
         // Ҳамон onGenerateRoute истифода мешавад — routing-и дуюм нест.
