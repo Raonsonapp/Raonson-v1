@@ -13,6 +13,7 @@ import 'create_story/create_story_screen.dart';
 import '../live/live_screens.dart';
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
+import 'create_more_sheet.dart';
 
 enum CreateMode { post, story, reel }
 
@@ -234,7 +235,10 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Color(0xFF1A1A1A))),
         ),
-        child: Row(
+        // Панҷ таб дар экрани танг ғунҷоиш надоранд — варақзананда.
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _modeTab('Публикатсия', CreateMode.post),
@@ -251,7 +255,10 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
             // Дар Instagram Live маҳз ҳамин ҷо, дар қатори
             // Пост/Стори/Reels аст.
             _liveTab(),
+            // Даъватнома, «Мактуб ба оянда», «Чаленҷ».
+            _moreTab(),
           ],
+        ),
         ),
       ),
     );
@@ -271,6 +278,23 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Text('Live',
             style: TextStyle(
+                color: Colors.white38,
+                fontWeight: FontWeight.w500,
+                fontSize: 15)),
+      ),
+    );
+  }
+
+  /// «Бештар» — имкониятҳое, ки галерея лозим надоранд.
+  Widget _moreTab() {
+    return GestureDetector(
+      key: const ValueKey('create-more'),
+      onTap: () => showCreateMoreSheet(context),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Text(tr('feat.more'),
+            style: const TextStyle(
                 color: Colors.white38,
                 fontWeight: FontWeight.w500,
                 fontSize: 15)),

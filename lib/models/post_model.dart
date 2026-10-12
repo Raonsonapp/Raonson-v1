@@ -54,6 +54,8 @@ class PostModel {
   /// Тахфифи фаъол (Flash Sale), 0–90. Сервер фармоишро бо нархи
   /// тахфифӣ сабт мекунад — «Харид» бояд ҳамонро нишон диҳад.
   final int          salePct;
+  /// Пост пурсиш/викторина дорад (ҳолат — PostPollCard).
+  final bool         hasPoll;
 
   /// Кай ин маълумот аз сервер гирифта шуд. ContentSync бо ин мефаҳмад,
   /// ки рӯйхати куҳна амали навтари корбарро пахш накунад.
@@ -90,6 +92,7 @@ class PostModel {
     this.shopWhatsapp   = '',
     this.shopPhone      = '',
     this.salePct        = 0,
+    this.hasPoll        = false,
     this.fetchedAt,
   });
 
@@ -144,6 +147,7 @@ class PostModel {
     bool? isProduct, double? price, String? currency, String? productName,
     bool? contactRaonson, String? shopWhatsapp, String? shopPhone,
     int? salePct,
+    bool? hasPoll,
     DateTime? fetchedAt,
   }) => PostModel(
     id:            id            ?? this.id,
@@ -176,6 +180,7 @@ class PostModel {
     shopWhatsapp:   shopWhatsapp   ?? this.shopWhatsapp,
     shopPhone:      shopPhone      ?? this.shopPhone,
     salePct:        salePct        ?? this.salePct,
+    hasPoll:        hasPoll        ?? this.hasPoll,
     fetchedAt:      fetchedAt      ?? this.fetchedAt,
   );
 
@@ -250,6 +255,7 @@ class PostModel {
       shopWhatsapp:   (json['shopWhatsapp'] ?? '').toString(),
       shopPhone:      (json['shopPhone'] ?? '').toString(),
       salePct:        ((json['salePct'] as num?)?.toInt() ?? 0).clamp(0, 90),
+      hasPoll:        json['hasPoll'] == true,
       // Кэши диск вақти аслиро нигоҳ медорад; ҷавоби нав — ҳозир.
       fetchedAt:      ContentSync.fetchedAtOf(json) ?? DateTime.now(),
     );
@@ -277,6 +283,7 @@ class PostModel {
     'productName': productName, 'contactRaonson': contactRaonson,
     'shopWhatsapp': shopWhatsapp, 'shopPhone': shopPhone,
     'salePct': salePct,
+    'hasPoll': hasPoll,
     if (fetchedAt != null)
       ContentSync.fetchedAtKey: fetchedAt!.millisecondsSinceEpoch,
     'user': {'_id':user.id,'username':user.username,'avatar':user.avatar,

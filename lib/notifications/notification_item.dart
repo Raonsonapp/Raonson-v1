@@ -104,6 +104,16 @@ class _NotificationItemState extends State<NotificationItem> {
       case 'effect_sale': return AppIcons.bolt_rounded;
       case 'order': return AppIcons.storefront_rounded;
       case 'password_changed': return AppIcons.lock_outline_rounded;
+      case 'event_invite':
+      case 'event_rsvp':
+      case 'event_reminder':
+      case 'event_update': return AppIcons.event_rounded;
+      case 'post_poll_vote': return AppIcons.poll_rounded;
+      case 'qa_question':
+      case 'qa_answer': return AppIcons.question_rounded;
+      case 'capsule_sealed':
+      case 'capsule_unlocked': return AppIcons.capsule_rounded;
+      case 'challenge_win': return AppIcons.challenge_rounded;
       default: return AppIcons.notifications_rounded;
     }
   }

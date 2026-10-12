@@ -52,6 +52,7 @@ import '../core/hashtags/hashtag_repository.dart';
 import '../widgets/hashtag_suggestions.dart';
 import '../widgets/linked_text.dart';
 import 'trending_hashtags_row.dart';
+import '../challenges/challenge_screens.dart';
 
 // ════════════════════════════════════════════════════════════════════
 //  MAIN SCREEN
@@ -728,6 +729,7 @@ class _SearchScreenState extends State<SearchScreen>
         ),
         const LiveRail(), // «Live ҳозир» — дар search (на home)
         const TrendingHashtagsRow(), // «Трендҳо» — хештегҳои боло раванда
+        const ChallengesRow(), // «Чаленҷҳо» — мусобиқаҳои фаъол
         StaleDataBanner(
             visible: _exploreStale && !_exploreLoading,
             message: _exploreItems.isEmpty ? tr('net.offline') : null,

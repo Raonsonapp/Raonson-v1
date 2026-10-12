@@ -1,3 +1,4 @@
+import '../core/i18n/strings.dart';
 import '../core/utils/server_time.dart';
 import 'user_model.dart';
 import '../core/utils/time_ago.dart';
@@ -61,6 +62,17 @@ class NotificationModel {
       case 'reel_mention': return 'шуморо дар шарҳи Reel зикр кард';
       // Огоҳии амниятӣ (fromUser — худи корбар).
       case 'password_changed': return 'рамзи ҳисобро иваз кард. Агар шумо набудед, фавран рамзро барқарор кунед.';
+      // Имкониятҳои нав (матн дар strings_features.dart).
+      case 'event_invite': return tr('notif.eventInvite');
+      case 'event_rsvp': return tr('notif.eventRsvp');
+      case 'event_reminder': return tr('notif.eventReminder');
+      case 'event_update': return tr('notif.eventUpdate');
+      case 'post_poll_vote': return tr('notif.pollVote');
+      case 'qa_question': return tr('notif.qaQuestion');
+      case 'qa_answer': return tr('notif.qaAnswer');
+      case 'capsule_sealed': return tr('notif.capsuleSealed');
+      case 'capsule_unlocked': return tr('notif.capsuleUnlocked');
+      case 'challenge_win': return tr('notif.challengeWin');
       default: return 'бо шумо амал кард';
     }
   }

@@ -26,6 +26,10 @@ import '../core/ui/app_icons.dart';
 import 'notification_badge.dart';
 import '../core/services/user_session.dart';
 import '../thanks/thanks_screen.dart';
+import '../events/events_screens.dart';
+import '../qa/qa_screens.dart';
+import '../capsules/capsule_screens.dart';
+import '../challenges/challenge_screens.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -212,6 +216,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case 'story_mention':
       case 'note_reaction':
         _openProfile(n.fromUser?.id);
+        break;
+      case 'post_poll_vote':
+        await _openPost(n.targetId);
+        break;
+      case 'event_invite':
+      case 'event_rsvp':
+      case 'event_reminder':
+      case 'event_update':
+        if ((n.targetId ?? '').isNotEmpty) {
+          Navigator.push(context, MaterialPageRoute(
+              builder: (_) => EventDetailScreen(eventId: n.targetId!)));
+        }
+        break;
+      case 'qa_question':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const QAInboxScreen()));
+        break;
+      case 'qa_answer':
+        _openProfile(n.fromUser?.id);
+        break;
+      case 'capsule_sealed':
+      case 'capsule_unlocked':
+        if ((n.targetId ?? '').isNotEmpty) {
+          Navigator.push(context, MaterialPageRoute(
+              builder: (_) => CapsuleDetailScreen(capsuleId: n.targetId!)));
+        }
+        break;
+      case 'challenge_win':
+        if ((n.targetId ?? '').isNotEmpty) {
+          Navigator.push(context, MaterialPageRoute(
+              builder: (_) => ChallengeDetailScreen(challengeId: n.targetId!)));
+        }
         break;
       case 'order':
         try {

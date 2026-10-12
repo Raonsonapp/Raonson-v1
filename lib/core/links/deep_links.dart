@@ -12,7 +12,12 @@
 // ════════════════════════════════════════════════════════════════════
 
 /// Навъи мӯҳтавои линк.
-enum DeepLinkKind { profile, post, reel, topic, referral, group, unknown }
+enum DeepLinkKind {
+  profile, post, reel, topic, referral, group,
+  // Даъватнома, «Мактуб ба оянда», «Чаленҷ».
+  event, capsule, challenge,
+  unknown,
+}
 
 /// Натиҷаи таҷзия.
 class DeepLink {
@@ -21,7 +26,10 @@ class DeepLink {
   /// Шиноса: username барои профил, id барои пост/рилс, slug барои мавзӯъ.
   final String id;
 
-  const DeepLink(this.kind, this.id);
+  /// Сегменти иловагӣ: коди даъвати мизбон (`/event/<id>/<code>`).
+  final String extra;
+
+  const DeepLink(this.kind, this.id, [this.extra = '']);
 
   bool get isValid => kind != DeepLinkKind.unknown && id.isNotEmpty;
 
@@ -69,6 +77,9 @@ class DeepLinks {
     DeepLinkKind.referral: 'invite',
     // Даъват ба гурӯҳ: `/l/g/<token>` (ниг. groupInvite).
     DeepLinkKind.group: 'g',
+    DeepLinkKind.event: 'event',
+    DeepLinkKind.capsule: 'capsule',
+    DeepLinkKind.challenge: 'challenge',
   };
 
   /// Линки берунӣ барои мубодила.
@@ -79,8 +90,11 @@ class DeepLinks {
   ///
   /// Барои пост ва рилс линки САҲИФАИ ПЕШНАМОИШ дода мешавад, то
   /// дар чати гиранда видео ва аксбардор бароянд — на сатри урён.
-  static String share(DeepLinkKind kind, String id) {
+  static String share(DeepLinkKind kind, String id, {String extra = ''}) {
     if (id.isEmpty) return webBase;
+    if (extra.isNotEmpty) {
+      return '${share(kind, id)}/${Uri.encodeComponent(extra)}';
+    }
     final preview = _previewPaths[kind];
     if (preview != null) {
       return '$previewBase/$preview/${Uri.encodeComponent(id)}';
@@ -99,10 +113,11 @@ class DeepLinks {
       '$webBase/g/${Uri.encodeComponent(token)}';
 
   /// Линки дохилии барнома (барои тест ва QR).
-  static String appLink(DeepLinkKind kind, String id) {
+  static String appLink(DeepLinkKind kind, String id, {String extra = ''}) {
     final path = _paths[kind];
     if (path == null || id.isEmpty) return '$scheme://';
-    return '$scheme://$path/${Uri.encodeComponent(id)}';
+    final tail = extra.isEmpty ? '' : '/${Uri.encodeComponent(extra)}';
+    return '$scheme://$path/${Uri.encodeComponent(id)}$tail';
   }
 
   /// URI ё роҳро ба DeepLink табдил медиҳад.
@@ -158,7 +173,10 @@ class DeepLinks {
     }
 
     if (id.isEmpty) return const DeepLink(DeepLinkKind.unknown, '');
-    return DeepLink(kind, id);
+    final extra = i + 2 < segments.length
+        ? Uri.decodeComponent(segments[i + 2])
+        : '';
+    return DeepLink(kind, id, extra);
   }
 
   /// Роҳи дохилии барнома барои onGenerateRoute.
@@ -176,6 +194,12 @@ class DeepLinks {
         return '/reel';
       case DeepLinkKind.topic:
         return '/topic';
+      case DeepLinkKind.event:
+        return '/event';
+      case DeepLinkKind.capsule:
+        return '/capsule';
+      case DeepLinkKind.challenge:
+        return '/challenge';
       case DeepLinkKind.referral:
       case DeepLinkKind.group:
       case DeepLinkKind.unknown:

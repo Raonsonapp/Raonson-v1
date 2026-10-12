@@ -2,6 +2,7 @@
 // Загрузкаи фонӣ — баъди «Нашр» корбар фавран ба Home бармегардад,
 // бор кардан дар фон давом мекунад ва progress дар боли Home нишон дода
 // мешавад (мисли Instagram). Корбар метавонад дар ин ҳол видео бинад ва ғ.
+import '../../polls/post_poll.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -89,6 +90,7 @@ class PostUploadService {
     String scheduledAt = '', // ISO-8601 — агар холӣ набошад, ба нақша гирифта мешавад
     String altText = '',     // тавсифи расм барои нобиноён
     AutoDmDraft? autoDm,     // паёми худкор ба Direct аз рӯи калимаи шарҳ
+    PollDraft? poll,         // пурсиш ё викторина (ихтиёрӣ)
   }) async {
     // Огоҳиномаи системавӣ («Пост бор мешавад… 45%») ҳамон рақамеро
     // нишон медиҳад, ки навори дохили барнома.
@@ -140,6 +142,7 @@ class PostUploadService {
         'collaborators': collaborators,
         if (scheduledAt.isNotEmpty) 'scheduledAt': scheduledAt,
         if (autoDm != null) 'autoDm': autoDm.toJson(),
+        if (poll != null) 'poll': poll.toJson(),
       });
       if (res.statusCode >= 400) {
         final rejection = ContentPolicy.fromResponse(res.statusCode, res.body);
