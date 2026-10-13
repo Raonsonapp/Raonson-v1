@@ -36,7 +36,7 @@ android {
         // афзоянда, то дигар "version code already used" набошад.
         versionCode = (System.getenv("APP_VERSION_CODE")?.toIntOrNull()) ?: 100
         // Номи версия аз pubspec.yaml (`version: 1.3.0+…`) — як ҷо иваз мешавад.
-        versionName = System.getenv("APP_VERSION_NAME") ?: flutter.versionName
+        versionName = System.getenv("APP_VERSION_NAME") ?: flutter.versionName()
     }
 
     compileOptions {
