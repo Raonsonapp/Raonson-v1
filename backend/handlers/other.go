@@ -867,6 +867,7 @@ func GetReels(c *gin.Context) {
 	}
 	attachReelLocations(reels)
 	attachReelShares(reels)
+	attachReelSaves(reels)
 	attachReelPlayback(reels)
 	c.JSON(http.StatusOK, gin.H{"reels": reels, "page": page, "limit": limit})
 }
@@ -1180,6 +1181,7 @@ func GetReelByID(c *gin.Context) {
 		"user": putStoryRing(gin.H{"_id": uid, "username": uname, "avatar": uavatar,
 			"verified": verified, "isFollowing": following}, hasStory, unseenStory),
 	}
+	attachReelSaves([]gin.H{one})
 	attachReelPlayback([]gin.H{one})
 	// Ҳолати навбат — барои ташхис ва санҷиши API.
 	one["renditionStatus"] = reelRenditionStatus(c.Request.Context(), rid)

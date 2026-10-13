@@ -2275,6 +2275,8 @@ class _ReelItemState extends State<_ReelItem> {
               sharesCount: _cs.sharesCount ?? 0,
               onShare: _share,
               saved: _saved,
+              savesCount: reelSavesCount(reel.savesCount,
+                  savedAtLoad: reel.isSaved, savedNow: _saved),
               onSave: widget.onSave, // VM ба ContentSync хабар медиҳад
               onMore: _isOwner ? _showOwnerMenu : _showOtherMenu,
               gap: size.height < 640 ? 12 : 16,

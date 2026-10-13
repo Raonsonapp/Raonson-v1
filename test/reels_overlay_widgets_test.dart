@@ -197,6 +197,32 @@ void main() {
     });
   });
 
+  testWidgets('муаллифи обунашуда: тугма нест ва FittedBox намешиканад',
+      (t) async {
+    // Регрессия: FittedBox бо кӯдаки 0×0 дар эмулятор
+    // «width > 0.0» assertion медод.
+    await t.pumpWidget(_dark(SizedBox(
+      width: 220,
+      child: ReelAuthorRow(
+        userId: 'u-followed',
+        username: 'dust',
+        avatarUrl: '',
+        following: true,
+        onProfile: () {},
+      ),
+    )));
+    await t.pump();
+    expect(t.takeException(), isNull);
+    expect(find.byType(FittedBox), findsNothing);
+  });
+
+  test('рақами захираҳо: ±1 баъди пахш, ҳеҷ гоҳ манфӣ', () {
+    expect(reelSavesCount(10, savedAtLoad: false, savedNow: true), 11);
+    expect(reelSavesCount(10, savedAtLoad: true, savedNow: false), 9);
+    expect(reelSavesCount(10, savedAtLoad: true, savedNow: true), 10);
+    expect(reelSavesCount(0, savedAtLoad: true, savedNow: false), 0);
+  });
+
   group('сарлавҳаи Reels', () {
     testWidgets('«Дӯстон» → филтри дӯстон; аватарҳо танҳо агар бошанд',
         (t) async {

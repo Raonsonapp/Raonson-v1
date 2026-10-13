@@ -104,42 +104,47 @@ class ReelAuthorRow extends StatelessWidget {
       ),
       if (!isOwner && userId.isNotEmpty)
         // Ҳарфи калон дар 320dp: тугма хурд мешавад, аз сатр берун намеравад.
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: ValueListenableBuilder<Map<String, bool>>(
+        //
+        // ⚠️ FittedBox танҳо дар атрофи худи тугма: пеш вай атрофи
+        // ValueListenableBuilder буд ва вақте ки баъди обуна кӯдак ба
+        // SizedBox.shrink() иваз мешуд, дар эмулятор assertion-и
+        // «size: MISSING» мебаромад.
+        ValueListenableBuilder<Map<String, bool>>(
           valueListenable: FollowService.instance.states,
           builder: (_, __, ___) {
             final f = FollowService.instance.resolve(userId, following);
             if (f) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(left: 10),
-              child: GestureDetector(
-                onTap: () => FollowService.instance
-                    .toggle(userId, false, source: followSource),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white, width: 1.1),
-                      borderRadius: BorderRadius.circular(8)),
-                  child: Text(
-                      // Ҳисоби пӯшида: дархост фиристода шуд.
-                      FollowService.instance.isRequested(userId)
-                          ? tr('common.requested')
-                          : tr('ui.61dfadd676'),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12.5,
-                          shadows: _shadow)),
+            return Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: GestureDetector(
+                    onTap: () => FollowService.instance
+                        .toggle(userId, false, source: followSource),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white, width: 1.1),
+                          borderRadius: BorderRadius.circular(8)),
+                      child: Text(
+                          // Ҳисоби пӯшида: дархост фиристода шуд.
+                          FollowService.instance.isRequested(userId)
+                              ? tr('common.requested')
+                              : tr('ui.61dfadd676'),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12.5,
+                              shadows: _shadow)),
+                    ),
+                  ),
                 ),
               ),
             );
           },
-            ),
-          ),
         ),
     ]);
   }

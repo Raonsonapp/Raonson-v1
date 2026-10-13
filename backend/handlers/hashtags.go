@@ -354,6 +354,7 @@ func reelsByIDs(ctx context.Context, myID string, ids []string) map[string]gin.H
 		list = append(list, r)
 	}
 	attachReelShares(list)
+	attachReelSaves(list)
 	attachReelPlayback(list)
 	return out
 }

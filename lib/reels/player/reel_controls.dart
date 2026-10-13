@@ -187,6 +187,8 @@ class _ReelControlsState extends State<ReelControls> {
           sharesCount: _cs.sharesCount ?? 0,
           onShare: _share,
           saved: _saved,
+          savesCount: reelSavesCount(reel.savesCount,
+              savedAtLoad: reel.isSaved, savedNow: _saved),
           onSave: _toggleSave,
           onMore: _more,
           gap: mq.size.height < 640 ? 12 : 16,

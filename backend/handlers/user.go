@@ -386,6 +386,7 @@ func GetUserReels(c *gin.Context) {
 		})
 	}
 	attachReelLocations(out)
+	attachReelSaves(out)
 	attachReelPlayback(out)
 	c.JSON(http.StatusOK, out)
 }

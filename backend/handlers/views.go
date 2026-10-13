@@ -160,3 +160,49 @@ func attachReelShares(reels []gin.H) {
 		}
 	}
 }
+
+// attachReelSaves — «savesCount» барои рӯйхати reels бо як дархост
+// (рақами зери 🔖, мисли Instagram). Ҳамон қоидаи attachReelShares.
+func attachReelSaves(reels []gin.H) {
+	ids := make([]string, 0, len(reels))
+	for _, r := range reels {
+		if r == nil {
+			continue
+		}
+		if _, has := r["savesCount"]; has {
+			continue
+		}
+		r["savesCount"] = 0
+		if id, _ := r["_id"].(string); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 || db.Pool == nil {
+		return
+	}
+	rows, err := db.Pool.Query(context.Background(), `
+		SELECT reel_id, COUNT(*) FROM reel_saves
+		 WHERE reel_id = ANY($1::text[]) GROUP BY reel_id`, ids)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	found := map[string]int{}
+	for rows.Next() {
+		var id string
+		var n int
+		if rows.Scan(&id, &n) == nil {
+			found[id] = n
+		}
+	}
+	for _, r := range reels {
+		if r == nil {
+			continue
+		}
+		if id, _ := r["_id"].(string); id != "" {
+			if n, ok := found[id]; ok {
+				r["savesCount"] = n
+			}
+		}
+	}
+}

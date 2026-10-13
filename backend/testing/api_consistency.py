@@ -274,7 +274,10 @@ def counters(tok, kind, id_):
         x = get_item(tok, p, id_)
         if x is CROWDED: continue
         out[name] = None if x is None else (x.get("likesCount"), x.get("commentsCount"), x.get("sharesCount"))
+        if kind == "reel" and x is not None:
+            saves[name] = x.get("savesCount")
     return out
+saves = {}
 for kind, id_, base in (("reel", rid2, "/reels"), ("post", pid2, "/posts")):
     b0 = counters(tG, kind, id_)
     call("POST", f"{base}/{id_}/like", tok=tH)
@@ -287,6 +290,11 @@ for kind, id_, base in (("reel", rid2, "/reels"), ("post", pid2, "/posts")):
                for k, t in present.items())
     ok(f"кэши гарм: {kind} лайк/шарҳ/паҳн +1 ФАВРАН дар ҳама ҷо",
        len(present) >= 3 and len({t for t in present.values()}) == 1 and grew, (b0, b1))
+    if kind == "reel":
+        # Рақами зери 🔖 — дар Reels, профил ва reel-и ягона якхела.
+        sv = {k: v for k, v in saves.items() if k in ("reels", "profile", "single")}
+        ok("reel: savesCount баъди захира 1 ва дар ҳама ҷо якхела",
+           len(sv) >= 2 and set(sv.values()) == {1}, sv)
 
 # Обуначиён / обунаҳо / шумораи постҳо дар сарлавҳаи профил (кэши гарм).
 def header(tok):

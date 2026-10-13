@@ -23,6 +23,13 @@ import '../../core/i18n/strings.dart';
 String reelCountLabel(int? n) =>
     (n == null || n <= 0) ? '' : compactCount(n);
 
+/// Рақами захираҳо: аз сервер + тағйири худи ман (захира/бекор) —
+/// то пас аз пахш фавран ±1 шавад, мисли лайк.
+int reelSavesCount(int server, {required bool savedAtLoad, required bool savedNow}) {
+  final n = server + (savedNow ? 1 : 0) - (savedAtLoad ? 1 : 0);
+  return n < 0 ? 0 : n;
+}
+
 /// Лайкҳо: пинҳон ва бинанда соҳиб нест → калимаи «Лайкҳо», на рақам.
 String reelLikesLabel(int likes, {bool hidden = false}) =>
     hidden ? tr('reels.likesWord') : reelCountLabel(likes);

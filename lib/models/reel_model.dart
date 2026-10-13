@@ -20,6 +20,8 @@ class ReelModel {
   final int       commentsCount;
   final int       viewsCount;    // ← нав
   final int       sharesCount;   // ← нав
+  /// Чанд кас захира кард (рақами зери 🔖, мисли Instagram).
+  final int       savesCount;
   final bool      isLiked;
   final bool      isSaved;
   final String    audioTitle;    // ← нав: "оригинал садо" ё "Суруди ном"
@@ -49,6 +51,7 @@ class ReelModel {
     required this.commentsCount,
     this.viewsCount    = 0,
     this.sharesCount   = 0,
+    this.savesCount    = 0,
     required this.isLiked,
     this.isSaved       = false,
     this.audioTitle    = 'оригинал садо',
@@ -96,6 +99,7 @@ class ReelModel {
     int?       commentsCount,
     int?       viewsCount,
     int?       sharesCount,
+    int?       savesCount,
     bool?      isLiked,
     bool?      isSaved,
     String?    audioTitle,
@@ -123,6 +127,7 @@ class ReelModel {
       commentsCount: commentsCount ?? this.commentsCount,
       viewsCount:    viewsCount    ?? this.viewsCount,
       sharesCount:   sharesCount   ?? this.sharesCount,
+      savesCount:    savesCount    ?? this.savesCount,
       isLiked:       isLiked       ?? this.isLiked,
       isSaved:       isSaved       ?? this.isSaved,
       audioTitle:    audioTitle    ?? this.audioTitle,
@@ -162,6 +167,7 @@ class ReelModel {
       commentsCount: (json['commentsCount'] as num?)?.toInt() ?? 0,
       viewsCount:    (json['viewsCount'] as num?)?.toInt() ?? (json['views'] as num?)?.toInt() ?? 0,
       sharesCount:   (json['sharesCount'] as num?)?.toInt() ?? 0,
+      savesCount:    (json['savesCount'] as num?)?.toInt() ?? 0,
       isLiked:       json['isLiked']       ?? json['liked'] ?? false,
       isSaved:       json['isSaved']       ?? json['saved'] ?? false,
       audioTitle:    (audio['title']  ?? json['audioTitle']  ?? 'оригинал садо').toString(),
@@ -193,6 +199,7 @@ class ReelModel {
     'commentsCount':commentsCount,
     'viewsCount':   viewsCount,
     'sharesCount':  sharesCount,
+    'savesCount':   savesCount,
     'isLiked':      isLiked,
     'isSaved':      isSaved,
     'audioTitle':   audioTitle,

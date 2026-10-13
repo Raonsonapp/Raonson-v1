@@ -2047,6 +2047,9 @@ class _FeedCardState extends State<_FeedCard> {
           sharesCount: _shareCount,
           onShare: _share,
           saved: _saved,
+          savesCount: reelSavesCount(
+              (widget.item.reelData?['savesCount'] as num?)?.toInt() ?? 0,
+              savedAtLoad: _base.saved ?? false, savedNow: _saved),
           onSave: _toggleSave,
           // Меню (шикоят, профил, ҳазфи худӣ) — пеш «⋮» дар боло буд.
           onMore: _showMenu,

@@ -220,6 +220,7 @@ func GetSmartReels(c *gin.Context) {
 
 	attachReelLocations(reels)
 	attachReelShares(reels)
+	attachReelSaves(reels)
 	attachReelPlayback(reels)
 	result := gin.H{
 		"reels": reels, "page": page,
