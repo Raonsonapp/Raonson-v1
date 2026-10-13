@@ -1313,6 +1313,7 @@ func ExploreGrid(c *gin.Context) {
 		}
 	}
 	attachSalePct(posts)
+	attachPollFlags(posts)
 
 	// ⚠️ Reels ин ҷо ҲЕҶ маълумоти муаллиф надоштанд.
 	//

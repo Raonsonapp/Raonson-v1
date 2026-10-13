@@ -205,14 +205,10 @@ jobs:
           echo "── ҳаҷми APK-ҳо ──"
           du -h build/app/outputs/flutter-apk/*-release.apk
 
-      # =============================
-      # 8.1 BUILD AAB (RELEASE)
-      # =============================
-      - name: Build AAB (release)
-        if: steps.signing.outputs.ready == 'true'
-        run: |
-          flutter build appbundle --release --dart-define-from-file=.env \
-            --dart-define-from-file=dart_defines/ad_units.json
+      # AAB дар ин ҷо сохта НАМЕШАВАД. Пеш ин workflow `app-release.aab`-ро
+      # бо versionCode=100 (APP_VERSION_CODE нагузошта) мебаровард ва он
+      # ба Google Play бор шуда рад мешуд. AAB барои Play танҳо аз
+      # «Release AAB (signed)» (release.yml) — versionCode = 1000 + run.
 
       # =============================
       # 9. UPLOAD APK ARTIFACT
@@ -227,12 +223,3 @@ jobs:
           path: build/app/outputs/flutter-apk/*-release.apk
           if-no-files-found: error
 
-      # =============================
-      # 9.1 UPLOAD AAB ARTIFACT
-      # =============================
-      - name: Upload AAB
-        if: steps.signing.outputs.ready == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: raonson-release-aab
-          path: build/app/outputs/bundle/release/app-release.aab

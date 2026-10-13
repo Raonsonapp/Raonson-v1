@@ -1,3 +1,4 @@
+import '../../polls/post_poll.dart';
 import '../drafts/drafts_store.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -195,7 +196,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       List<String> taggedUsers = const [],
       List<String> collaborators = const [],
       String altText = '',
-      AutoDmDraft? autoDm}) async {
+      AutoDmDraft? autoDm,
+      PollDraft? poll}) async {
     if (_publishing) return; // ду бор зеркунӣ → ду пости якхела
     _publishing = true;
     // Интихоб: ҳозир ё ба нақша (Pro).
@@ -216,6 +218,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       scheduledAt: scheduledAt,
       altText: altText,
       autoDm: autoDm,
+      poll: poll,
     );
     // Лоиҳаи нашршуда дигар лозим нест.
     if (_draftId != null) DraftsStore.instance.delete(_draftId!);
@@ -292,7 +295,7 @@ class _PostEditor extends StatefulWidget {
   final void Function(File, String,
       {SongInfo? song, String location, String locationId,
        List<String> taggedUsers, List<String> collaborators,
-       String altText, AutoDmDraft? autoDm}) onPublish;
+       String altText, AutoDmDraft? autoDm, PollDraft? poll}) onPublish;
   /// Баромадан (тавсиф ва ҷой — барои лоиҳа).
   final void Function(String caption, Place? place) onClose;
   final String? errorMessage;
@@ -333,6 +336,13 @@ class _PostEditorState extends State<_PostEditor> {
   String _altText = '';
   /// Паёми худкор ба Direct аз рӯи калимаи шарҳ.
   AutoDmDraft? _autoDm;
+  /// Пурсиш ё викторина зери пост.
+  PollDraft? _poll;
+
+  Future<void> _showPollEditor() async {
+    final r = await showPollEditor(context, initial: _poll);
+    if (r != null && mounted) setState(() => _poll = r.draft);
+  }
 
   Future<void> _showAutoDm() async {
     final r = await showAutoDmEditor(context,
@@ -563,7 +573,7 @@ class _PostEditorState extends State<_PostEditor> {
           song: _song, location: _place?.name ?? '',
           locationId: _place?.id ?? '',
           taggedUsers: tagged, collaborators: _collaborators,
-          altText: _altText, autoDm: _autoDm);
+          altText: _altText, autoDm: _autoDm, poll: _poll);
     } else {
       // Агар ягон overlay (матн/стикер/зикр/расм) НЕСТ → расми аслиро мегузорем,
       // то формат/нисбати тарафҳо нигоҳ дошта шавад (бе хатти ранга дар боло/поён).
@@ -574,7 +584,7 @@ class _PostEditorState extends State<_PostEditor> {
           song: _song, location: _place?.name ?? '',
           locationId: _place?.id ?? '',
           taggedUsers: tagged, collaborators: _collaborators,
-          altText: _altText, autoDm: _autoDm);
+          altText: _altText, autoDm: _autoDm, poll: _poll);
     }
   }
 
@@ -1036,6 +1046,9 @@ class _PostEditorState extends State<_PostEditor> {
                   _ToolBtn(icon: AppIcons.accessibility_new_rounded, label: 'Alt text',
                     isActive: _altText.isNotEmpty,
                     onTap: () { setState(() => _tool = _Tool.none); _showAltTextDialog(); }),
+                _ToolBtn(icon: AppIcons.poll_rounded, label: tr('poll.add'),
+                  isActive: _poll != null,
+                  onTap: () { setState(() => _tool = _Tool.none); _showPollEditor(); }),
                 _ToolBtn(icon: AppIcons.chat_bubble_outline, label: 'Auto DM',
                   isActive: _autoDm != null,
                   onTap: () { setState(() => _tool = _Tool.none); _showAutoDm(); }),

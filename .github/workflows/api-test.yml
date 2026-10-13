@@ -474,6 +474,23 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
         run: python3 backend/testing/api_features_b.py
 
+      # Панҷ имконияти нав: «Даъватнома», пурсиш дар пост, «Савол ба ман»,
+      # «Мактуб ба оянда», «Чаленҷ» — махфият, модератсия, ҳадди суръат ва
+      # корҳои вақтӣ (кушодани мактуб, ғолибони чаленҷ; ~2 дақиқа).
+      - name: Санҷиши имкониятҳои нав
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_features_a.py
+
+      # Ёдрасии чорабинӣ ва корҳои вақтӣ бо базаи воқеӣ.
+      - name: Тестҳои Go бо база (имкониятҳои нав)
+        working-directory: backend
+        env:
+          RAONSON_TEST_DB: '1'
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
+        run: go test -count=1 ./featuredb/
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

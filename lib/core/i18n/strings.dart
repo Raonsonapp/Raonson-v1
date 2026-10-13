@@ -8,6 +8,7 @@
 // ════════════════════════════════════════════════════════════════════
 import '../../app/app_settings.dart';
 import 'strings_features_b.dart';
+import 'strings_features.dart';
 
 /// Translate [key] into the currently selected app language.
 /// Falls back to Tajik, then to the key itself.
@@ -23,9 +24,14 @@ import 'strings_features_b.dart';
 String tr(String key, [Map<String, Object?>? params]) {
   final lang = AppSettingsState.instance.lang;
   final table = _strings[lang] ?? _strings['tj']!;
-  // Сатрҳои функсияҳои нав дар файли ҷудогона (strings_features_b.dart).
-  var out = table[key] ?? _strings['tj']?[key] ??
-      featureStringsB[lang]?[key] ?? featureStringsB['tj']?[key] ?? key;
+  // Сатрҳои функсияҳои нав дар файлҳои ҷудогона.
+  var out = table[key] ??
+      featureStrings[lang]?[key] ??
+      featureStringsB[lang]?[key] ??
+      _strings['tj']?[key] ??
+      featureStrings['tj']?[key] ??
+      featureStringsB['tj']?[key] ??
+      key;
   if (params != null) {
     params.forEach((k, v) => out = out.replaceAll('{$k}', '${v ?? ''}'));
   }

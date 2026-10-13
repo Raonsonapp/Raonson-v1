@@ -15,6 +15,7 @@ import '../voice/create_voice_post_screen.dart';
 import '../help/help_screens.dart' show CreateHelpScreen;
 import '../core/ui/app_icons.dart';
 import '../core/i18n/strings.dart';
+import 'create_more_sheet.dart';
 
 enum CreateMode { post, story, reel }
 
@@ -265,6 +266,8 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
             // Дар Instagram Live маҳз ҳамин ҷо, дар қатори
             // Пост/Стори/Reels аст.
             _liveTab(),
+            // Даъватнома, «Мактуб ба оянда», «Чаленҷ».
+            _moreTab(),
           ],
         ),
         ),
@@ -305,6 +308,23 @@ class _GalleryPickerScreenState extends State<GalleryPickerScreen> {
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Text('Live',
             style: TextStyle(
+                color: Colors.white38,
+                fontWeight: FontWeight.w500,
+                fontSize: 15)),
+      ),
+    );
+  }
+
+  /// «Бештар» — имкониятҳое, ки галерея лозим надоранд.
+  Widget _moreTab() {
+    return GestureDetector(
+      key: const ValueKey('create-more'),
+      onTap: () => showCreateMoreSheet(context),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Text(tr('feat.more'),
+            style: const TextStyle(
                 color: Colors.white38,
                 fontWeight: FontWeight.w500,
                 fontSize: 15)),

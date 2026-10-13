@@ -18,6 +18,19 @@ class AppIcons {
   static const IconData add_circle_outline = HeroiconsOutline.plusCircle;
   static const IconData add_circle_outline_rounded = HeroiconsOutline.plusCircle;
   static const IconData add_rounded = HeroiconsOutline.plus;
+  // Имкониятҳои нав: даъватнома, пурсиш, савол, мактуб, чаленҷ.
+  static const IconData event_rounded = HeroiconsOutline.cake;
+  static const IconData event_calendar = HeroiconsOutline.calendarDays;
+  static const IconData poll_rounded = HeroiconsOutline.chartBarSquare;
+  static const IconData question_rounded = HeroiconsOutline.questionMarkCircle;
+  static const IconData inbox_rounded = HeroiconsOutline.inboxArrowDown;
+  static const IconData capsule_rounded = HeroiconsOutline.envelope;
+  static const IconData capsule_open = HeroiconsOutline.envelopeOpen;
+  static const IconData lock_closed = HeroiconsOutline.lockClosed;
+  static const IconData challenge_rounded = HeroiconsOutline.trophy;
+  static const IconData ticket_rounded = HeroiconsOutline.ticket;
+  static const IconData user_plus = HeroiconsOutline.userPlus;
+  static const IconData settings_outlined = HeroiconsOutline.cog6Tooth;
   static const IconData add_a_photo_rounded = HeroiconsOutline.camera;
   static const IconData storefront_rounded = HeroiconsOutline.buildingStorefront;
   static const IconData admin_panel_settings_outlined = HeroiconsOutline.shieldCheck;

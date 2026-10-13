@@ -43,6 +43,9 @@ func StartJobs() {
 	// Огоҳиномаҳои вақтӣ: ҷамъбаст, нишон, поксозии токен.
 	StartNotificationJobs()
 
+	// Даъватнома (ёдрасӣ), мактуб ба оянда, ғолибони чаленҷ.
+	StartFeatureJobs()
+
 	log.Println("✅ All background jobs + queues started")
 }
 

@@ -710,6 +710,62 @@ func main() {
 		ad2.POST("/sponsored/:id/hide", handlers.HideSponsored)
 	}
 
+	// ── «ДАЪВАТНОМА» — тӯй, зодрӯз, вохӯрӣ ───────────────────────
+	evg := r.Group("/events", auth, rl100)
+	{
+		evg.POST("", handlers.CreateEvent)
+		evg.GET("", handlers.ListEvents)
+		evg.GET("/:id", handlers.GetEvent)
+		evg.PUT("/:id", handlers.UpdateEvent)
+		evg.DELETE("/:id", handlers.CancelEvent)
+		evg.POST("/:id/invite", handlers.InviteToEvent)
+		evg.DELETE("/:id/guests/:userId", handlers.RemoveEventGuest)
+		evg.POST("/:id/rsvp", handlers.RSVPEvent)
+		evg.GET("/:id/guests", handlers.GetEventGuests)
+		evg.GET("/:id/photos", handlers.GetEventPhotos)
+		evg.POST("/:id/photos", handlers.AddEventPhoto)
+		evg.DELETE("/:id/photos/:photoId", handlers.DeleteEventPhoto)
+	}
+
+	// ── ПУРСИШ ДАР ПОСТ ─────────────────────────────────────────
+	r.GET("/posts/:id/poll", auth, rl100, handlers.RequireVisible("post"), handlers.GetPostPoll)
+	r.POST("/posts/:id/poll/vote", auth, rl100, handlers.RequireVisible("post"), handlers.VotePostPoll)
+	r.GET("/posts/:id/poll/voters", auth, rl100, handlers.GetPostPollVoters)
+
+	// ── «САВОЛ БА МАН» ──────────────────────────────────────────
+	r.GET("/qa/settings", auth, rl100, handlers.GetQASettings)
+	r.PUT("/qa/settings", auth, rl20, handlers.UpdateQASettings)
+	r.GET("/qa/inbox", auth, rl100, handlers.GetQAInbox)
+	r.GET("/qa/sent", auth, rl100, handlers.GetQASent)
+	r.POST("/users/:id/questions", auth, rl20, handlers.AskQuestion)
+	r.GET("/users/:id/questions", auth, rl100, handlers.GetAnsweredQuestions)
+	r.POST("/questions/:id/answer", auth, rl100, handlers.AnswerQuestion)
+	r.DELETE("/questions/:id", auth, rl100, handlers.DeleteQuestion)
+	r.POST("/questions/:id/block-asker", auth, rl20, handlers.BlockQuestionAsker)
+	r.GET("/admin/questions/:id", auth, admin, handlers.AdminGetQuestion)
+
+	// ── «МАКТУБ БА ОЯНДА» ───────────────────────────────────────
+	cpg := r.Group("/capsules", auth, rl100)
+	{
+		cpg.POST("", handlers.CreateCapsule)
+		cpg.GET("", handlers.ListCapsules)
+		cpg.GET("/:id", handlers.GetCapsule)
+		cpg.PUT("/:id", handlers.UpdateCapsule)
+		cpg.DELETE("/:id", handlers.DeleteCapsule)
+	}
+	r.GET("/users/:id/capsules", auth, rl100, handlers.GetUserCapsules)
+
+	// ── «ЧАЛЕНҶ» ────────────────────────────────────────────────
+	chg := r.Group("/challenges", auth, rl100)
+	{
+		chg.POST("", handlers.CreateChallenge)
+		chg.GET("", handlers.ListChallenges)
+		chg.GET("/:id", handlers.GetChallenge)
+		chg.GET("/:id/leaderboard", handlers.GetChallengeLeaderboard)
+		chg.DELETE("/:id", handlers.DeleteChallenge)
+	}
+	r.GET("/users/:id/challenge-badges", auth, rl100, handlers.GetChallengeBadges)
+
 	// ── ДАЪВАТ ──────────────────────────────────────────────────
 	r.GET("/referrals/me", auth, rl100, handlers.GetMyReferrals)
 

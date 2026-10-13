@@ -52,6 +52,7 @@ import '../../core/ui/r_icon.dart';
 import '../../widgets/linked_text.dart';
 import '../../widgets/translate_toggle.dart';
 import '../../voice/voice_post_player.dart';
+import '../../polls/post_poll.dart';
 
 class PostCard extends StatefulWidget {
   final PostModel post;
@@ -1773,6 +1774,10 @@ class _PostCardState extends State<PostCard>
             ),
           ),
         ),
+
+      // ── ПУРСИШ / ВИКТОРИНА ─────────────────────────────────────
+      if (post.hasPoll)
+        PostPollCard(key: ValueKey('poll_${post.id}'), postId: post.id),
 
       // ── CAPTION бо Show more / less ───────────────────────────
       if (_caption.isNotEmpty)

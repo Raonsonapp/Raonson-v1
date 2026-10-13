@@ -119,6 +119,16 @@ android {
 }
 
 gradle.taskGraph.whenReady {
+    // AAB барои Google Play бе APP_VERSION_CODE (versionCode=100) ҳамеша рад
+    // мешавад («version code already used» / версияи кӯҳна). Пас онро
+    // тамоман намесозем — AAB танҳо аз workflow-и «Release AAB (signed)».
+    if (allTasks.any { it.name.startsWith("bundle") && it.name.contains("Release") } &&
+        System.getenv("APP_VERSION_CODE").isNullOrBlank()) {
+        throw GradleException(
+            "APP_VERSION_CODE холӣ аст — AAB бо versionCode=100 ба Google Play " +
+            "рад мешавад. AAB-ро аз GitHub Actions → «Release AAB (signed)» гиред."
+        )
+    }
     if (allTasks.any { it.name.contains("Release") } && !hasReleaseKeystore) {
         throw GradleException(
             "Release keystore not found! Create android/key.properties with " +

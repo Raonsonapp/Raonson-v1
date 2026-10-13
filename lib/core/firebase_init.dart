@@ -281,7 +281,8 @@ class FirebaseInit {
     // ⚠️ Даъвати ҳамкорӣ пеш ба худи ПОСТ мебурд. Вале одам ҳанӯз
     // ҳамкор нест: ӯ постро мебинад ва ҳеҷ тугмаи қабул намебинад —
     // даъват «кор намекунад».
-    if (link == '/collab-invites') {
+    if (link == '/collab-invites' || link == '/questions' ||
+        link == '/capsules') {
       nav.pushNamed(link);
       return;
     }

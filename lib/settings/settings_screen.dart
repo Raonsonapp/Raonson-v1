@@ -49,6 +49,10 @@ import '../chat/chat_pin_screen.dart';
 import '../create/scheduled_posts_screen.dart';
 import '../core/ui/app_icons.dart';
 import 'child_safety_screen.dart';
+import '../qa/qa_screens.dart';
+import '../events/events_screens.dart';
+import '../capsules/capsule_screens.dart';
+import '../challenges/challenge_screens.dart';
 import 'community_guidelines_screen.dart';
 import '../marketplace/creator_marketplace_screen.dart';
 import '../marketplace/marketplace_widgets.dart' show ErrorState;
@@ -286,6 +290,41 @@ class SettingsScreen extends StatelessWidget {
                 title: tr('ui.9d39abf489'),
                 sub:   tr('set.scheduledSub'),
                 onTap: () => _go(ctx, const ScheduledPostsScreen()),
+              ),
+              // ── Имкониятҳои нав ────────────────────────────────────
+              _NavTile(
+                key:   const ValueKey('set-qa'),
+                icon:  AppIcons.question_rounded,
+                title: tr('qa.settings'),
+                sub:   tr('qa.title'),
+                onTap: () => _go(ctx, const QASettingsScreen()),
+              ),
+              _NavTile(
+                key:   const ValueKey('set-qa-inbox'),
+                icon:  AppIcons.inbox_rounded,
+                title: tr('qa.inbox'),
+                onTap: () => _go(ctx, const QAInboxScreen()),
+              ),
+              _NavTile(
+                key:   const ValueKey('set-events'),
+                icon:  AppIcons.event_rounded,
+                title: tr('ev.title'),
+                sub:   tr('ev.createSub'),
+                onTap: () => _go(ctx, const EventsScreen()),
+              ),
+              _NavTile(
+                key:   const ValueKey('set-capsules'),
+                icon:  AppIcons.capsule_rounded,
+                title: tr('cap.title'),
+                sub:   tr('cap.createSub'),
+                onTap: () => _go(ctx, const CapsulesScreen()),
+              ),
+              _NavTile(
+                key:   const ValueKey('set-challenges'),
+                icon:  AppIcons.challenge_rounded,
+                title: tr('chl.title'),
+                sub:   tr('chl.createSub'),
+                onTap: () => _go(ctx, const ChallengesScreen()),
               ),
 
               // ── APPEARANCE ────────────────────────────────────────

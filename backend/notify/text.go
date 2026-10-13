@@ -211,6 +211,36 @@ var bodies = map[Kind]map[Lang]string{
 		RU: "купил(а) ваш эффект",
 		EN: "bought your effect",
 	},
+	EventInvite: {
+		TJ: "шуморо ба чорабинӣ даъват кард",
+		RU: "приглашает вас на событие",
+		EN: "invited you to an event",
+	},
+	EventRSVP: {
+		TJ: "ба даъвати шумо ҷавоб дод",
+		RU: "ответил(а) на ваше приглашение",
+		EN: "replied to your invitation",
+	},
+	EventUpdate: {
+		TJ: "маълумоти чорабиниро иваз кард",
+		RU: "изменил(а) детали события",
+		EN: "changed the event details",
+	},
+	PostPollVote: {
+		TJ: "дар пурсиши пости шумо овоз дод",
+		RU: "проголосовал(а) в опросе вашего поста",
+		EN: "voted in your post poll",
+	},
+	QAAnswer: {
+		TJ: "ба саволи шумо ҷавоб дод",
+		RU: "ответил(а) на ваш вопрос",
+		EN: "answered your question",
+	},
+	CapsuleSealed: {
+		TJ: "ба шумо мактуб ба оянда навишт",
+		RU: "написал(а) вам письмо в будущее",
+		EN: "wrote you a letter to the future",
+	},
 }
 
 // grouped — матн вақте чанд нафар ҳамон корро карданд.
@@ -245,6 +275,16 @@ var grouped = map[Kind]map[Lang]string{
 		RU: "и ещё {n} отреагировали на вашу заметку",
 		EN: "and {n} others reacted to your note",
 	},
+	EventRSVP: {
+		TJ: "ва {n} нафари дигар ба даъвати шумо ҷавоб доданд",
+		RU: "и ещё {n} ответили на ваше приглашение",
+		EN: "and {n} others replied to your invitation",
+	},
+	PostPollVote: {
+		TJ: "ва {n} нафари дигар дар пурсиши шумо овоз доданд",
+		RU: "и ещё {n} проголосовали в вашем опросе",
+		EN: "and {n} others voted in your poll",
+	},
 }
 
 // standalone — огоҳиномаҳое, ки муаллиф надоранд (аз худи барнома).
@@ -278,6 +318,26 @@ var standalone = map[Kind]map[Lang][2]string{
 		TJ: {"Пардохт", "Ҳолати пардохти шумо тағйир ёфт"},
 		RU: {"Выплата", "Статус вашей выплаты изменился"},
 		EN: {"Payout", "Your payout status changed"},
+	},
+	EventReminder: {
+		TJ: {"Ёдрасӣ", "Чорабинии шумо ба зудӣ оғоз мешавад"},
+		RU: {"Напоминание", "Ваше событие скоро начнётся"},
+		EN: {"Reminder", "Your event starts soon"},
+	},
+	QAQuestion: {
+		TJ: {"Савол ба шумо", "Шумо саволи нав доред"},
+		RU: {"Вопрос вам", "У вас новый вопрос"},
+		EN: {"A question for you", "You have a new question"},
+	},
+	CapsuleUnlocked: {
+		TJ: {"Мактуб кушода шуд", "Мактуб аз гузашта ба шумо расид"},
+		RU: {"Письмо открыто", "Вам пришло письмо из прошлого"},
+		EN: {"Letter unlocked", "A letter from the past has arrived"},
+	},
+	ChallengeWin: {
+		TJ: {"Табрик!", "Шумо дар чаленҷ ғолиб шудед"},
+		RU: {"Поздравляем!", "Вы победили в челлендже"},
+		EN: {"Congratulations", "You won a challenge"},
 	},
 }
 
@@ -392,6 +452,29 @@ func Link(k Kind, targetID, actorName string) string {
 	case HelpBlood, HelpResponse:
 		if targetID != "" {
 			return "/help/" + targetID
+		}
+	case EventInvite, EventRSVP, EventReminder, EventUpdate:
+		if targetID != "" {
+			return "/event/" + targetID
+		}
+	case PostPollVote:
+		if targetID != "" {
+			return "/post/" + targetID
+		}
+	case QAQuestion:
+		// Қуттии саволҳо — на профили савoлдиҳанда (метавонад беном бошад).
+		return "/questions"
+	case QAAnswer:
+		if actorName != "" {
+			return "/profile/" + actorName
+		}
+	case CapsuleSealed, CapsuleUnlocked:
+		if targetID != "" {
+			return "/capsule/" + targetID
+		}
+	case ChallengeWin:
+		if targetID != "" {
+			return "/challenge/" + targetID
 		}
 	case RecommendedCreator:
 		if actorName != "" {

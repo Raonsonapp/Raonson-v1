@@ -28,6 +28,10 @@ import '../core/links/deep_link_resolver_screen.dart';
 import '../chat/group/groups_list_screen.dart';
 import '../core/sso/tajikshop_sso.dart';
 import '../auth/sso/tajikshop_sign_in_screen.dart';
+import '../events/events_screens.dart';
+import '../capsules/capsule_screens.dart';
+import '../challenges/challenge_screens.dart';
+import '../qa/qa_screens.dart';
 
 class AppController {
   final AppState appState;
@@ -65,6 +69,16 @@ class AppController {
       // Даъвати ҳамкорӣ — ҷои қабул, на худи пост.
       case '/collab-invites':
         return _page(const CollabInvitesScreen());
+
+      // Имкониятҳои нав: қуттии саволҳо, мактубҳо, даъватномаҳо, чаленҷҳо.
+      case '/questions':
+        return _page(const QAInboxScreen());
+      case '/capsules':
+        return _page(const CapsulesScreen());
+      case '/events':
+        return _page(const EventsScreen());
+      case '/challenges':
+        return _page(const ChallengesScreen());
 
       case '/profile-by-username':
         final uname = settings.arguments as String? ?? '';
@@ -171,6 +185,13 @@ class AppController {
                 return _page(GroupsListScreen(inviteToken: link.id));
               }
               break;
+            case DeepLinkKind.event:
+              // `/event/<id>/<код>` — коди мизбон даъватро илова мекунад.
+              return _page(EventDetailScreen(eventId: link.id, code: link.extra));
+            case DeepLinkKind.capsule:
+              return _page(CapsuleDetailScreen(capsuleId: link.id));
+            case DeepLinkKind.challenge:
+              return _page(ChallengeDetailScreen(challengeId: link.id));
             case DeepLinkKind.unknown:
               break;
           }

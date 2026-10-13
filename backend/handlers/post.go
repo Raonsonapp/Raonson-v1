@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"raonson/db"
+	"raonson/features"
 	mw "raonson/middleware"
 	"raonson/sockets"
 	"raonson/utils"
@@ -49,6 +50,8 @@ func CreatePost(c *gin.Context) {
 		ScheduledAt    string                  `json:"scheduledAt"`
 		// Паёми худкор ба Direct аз рӯи калимаи шарҳ (ихтиёрӣ).
 		AutoDM         *AutoDMInput            `json:"autoDm"`
+		// Пурсиш ё викторина (ихтиёрӣ; ниг. polls.go).
+		Poll           *features.PollInput     `json:"poll"`
 	}
 	if err := c.ShouldBindJSON(&b); err != nil || len(b.Media) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "At least one media item required"})
@@ -88,10 +91,23 @@ func CreatePost(c *gin.Context) {
 			"code": "voice_invalid"})
 		return
 	}
+	var poll *features.PollInput
+	if b.Poll != nil {
+		p, err := features.NormalizePoll(*b.Poll, time.Now())
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			return
+		}
+		poll = &p
+	}
 
 	// Модератсия ПЕШ аз нашр: тавсиф, линкҳо, расм ва видео.
 	modReq := modRequest{Surface: "post", AI: true,
 		Texts: []string{b.Caption, b.Location, b.ProductName}}
+	if poll != nil {
+		modReq.Texts = append(modReq.Texts, poll.Question)
+		modReq.Texts = append(modReq.Texts, poll.Options...)
+	}
 	if b.AutoDM != nil {
 		modReq.Texts = append(modReq.Texts, b.AutoDM.Message, b.AutoDM.Link)
 	}
@@ -156,6 +172,15 @@ func CreatePost(c *gin.Context) {
 	}
 	// Хештегҳо — дар ҳамон транзаксия: пост бе индекси хештег намемонад.
 	syncContentHashtags(context.Background(), tx, "post", postID, b.Caption)
+	if poll != nil {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO post_polls(post_id, question, options, correct_index, ends_at)
+			VALUES ($1,$2,$3,$4,$5)`,
+			postID, poll.Question, poll.Options, poll.Correct, poll.EndsAt); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Create post failed"})
+			return
+		}
+	}
 
 	for i, m := range b.Media {
 		url, _ := m["url"].(string)
@@ -283,6 +308,7 @@ wsPost := gin.H{
 	"taggedUsers":   b.TaggedUsers,
 	// Ҷавоб вазъи ВОҚЕИИ пост аст: даъватҳо ҳанӯз тасдиқ нашудаанд.
 	"collaborators": []string{},
+	"hasPoll":       poll != nil,
 	"createdAt":     time.Now().Format(time.RFC3339),
 	"user": gin.H{
 		"_id":      myID,
@@ -458,6 +484,7 @@ func GetPost(c *gin.Context) {
 		"taggedUsers": extra["taggedUsers"],
 		"collaborators": extra["collaborators"], "collaboratorUsers": extra["collaboratorUsers"],
 		"isPinned": extra["isPinned"],
+		"hasPoll": extra["hasPoll"] == true,
 		"_id": pid2, "caption": cap, "likesCount": likes, "commentsCount": comms,
 		"createdAt": createdAt, "media": nilToEmpty(media), "liked": liked, "saved": saved,
 		"hideLikes": hideLikes, "commentsOff": commentsOff,

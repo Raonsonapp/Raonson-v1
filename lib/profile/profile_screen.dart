@@ -22,6 +22,9 @@ import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../thanks/thanks_screen.dart';
+import '../qa/qa_screens.dart';
+import '../challenges/challenge_screens.dart';
+import '../capsules/capsule_screens.dart';
 import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
@@ -82,7 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.initState();
     _ctrl = ProfileController(
         userId: widget.userId, byUsername: widget.byUsername);
-    _tab  = TabController(length: 3, vsync: this);
+    _tab  = TabController(length: 4, vsync: this);
     _ctrl.loadProfile();
     _ctrl.addListener(_onCtrl);
     AnalyticsService.instance.logEvent(AnalyticsEvents.profileView);
@@ -90,7 +93,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _onCtrl() {
     if (!mounted) return;
-    final want = _isMe ? 4 : 3;
+    // Пост, Reels, нишонҳо, «Ҷавобҳо» (+ захирашуда барои худ).
+    final want = _isMe ? 5 : 4;
     if (_tab.length != want) {
       final old = _tab;
       _tab = TabController(length: want, vsync: this);
@@ -107,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (_tab.index == 2) {
       _ctrl.loadTaggedPosts();
     }
-    if (_isMe && _tab.index == 3) {
+    if (_isMe && _tab.index == 4) {
       _ctrl.loadSavedPosts();
     }
   }
@@ -170,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _refreshAll() async {
     await _ctrl.loadProfile();
     if (_tab.index == 2) await _ctrl.loadTaggedPosts();
-    if (_isMe && _tab.index == 3) await _ctrl.loadSavedPosts();
+    if (_isMe && _tab.index == 4) await _ctrl.loadSavedPosts();
   }
 
   @override
@@ -749,6 +753,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               ThanksChip(key: ValueKey('thx_${user.id}'), userId: user.id,
                   username: user.username, isMe: _isMe),
 
+              // ── НИШОНҲОИ ҒОЛИБИ ЧАЛЕНҶ ва «МАКТУБ БА ОЯНДА» ─────────
+              ChallengeBadgesRow(key: ValueKey('badges_${user.id}'),
+                  userId: user.id),
+              ProfileCapsulesChip(key: ValueKey('caps_${user.id}'),
+                  userId: user.id),
+
               // ── HIGHLIGHTS ──────────────────────────────────────────
               const SizedBox(height: 12),
               HighlightsRow(
@@ -828,6 +838,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                               BlendMode.srcIn)),
                     )),
                     const Tab(icon: Icon(AppIcons.person_pin_outlined)),
+                    // «Савол ба ман» — ҷавобҳои оммавӣ.
+                    Tab(key: const ValueKey('profile-tab-qa'),
+                        icon: Tooltip(message: tr('qa.tab'),
+                            child: const Icon(AppIcons.question_rounded))),
                     if (_isMe)
                       const Tab(icon: Icon(AppIcons.bookmark_border_rounded)),
                   ],
@@ -851,6 +865,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               onRemoved:   (id) => _ctrl.removePostById(id))),
           _onNearEnd(_ctrl.loadMoreReels, ProfileReelGrid(reels: _ctrl.reels)),
           _TaggedGrid(ctrl: _ctrl),
+          ProfileAnswersTab(key: ValueKey('qa_${user.id}'),
+              userId: user.id, isMe: _isMe),
           if (_isMe) _onNearEnd(_ctrl.loadMoreSaved, _SavedGrid(ctrl: _ctrl)),
         ]),
         ),
