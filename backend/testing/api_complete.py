@@ -256,7 +256,12 @@ else:
                     "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
                     "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-shortest", vid], check=True)
-    st, up = _upload(vid, tA)
+    # Аввал бо файли хурд: бе анбор сервер 503-ро пеш аз хондани бадан
+    # медиҳад ва видеои калон бо «connection reset» мешиканад.
+    tiny = os.path.join(tmpd, "t.mp4"); open(tiny, "wb").write(b"\0" * 512)
+    st, up = _upload(tiny, tA)
+    if st != 503:
+        st, up = _upload(vid, tA)
     if st == 503:
         print("  ⏭  HLS: анбор танзим нашудааст (R2 / MEDIA_LOCAL_DIR) — SKIP")
     else:

@@ -175,7 +175,7 @@ for _ in range(10):
     st, n1 = call("GET", "/notifications?page=1&limit=2", tok=tA)
     st2, n2 = call("GET", "/notifications?page=2&limit=2", tok=tA)
     e1, e2 = ids(items(n1, "notifications")), ids(items(n2, "notifications"))
-    if len(e1) == 2 and e2:
+    if len(e1) == 2 and e2 and not set(e1) & set(e2):
         break
     time.sleep(0.5)
 ok("огоҳиномаҳо: page/limit кор мекунад",

@@ -1140,7 +1140,7 @@ func GetNotifications(c *gin.Context) {
 		       SELECT 1 FROM blocks b
 		        WHERE (b.blocker_id=$1 AND b.blocked_id=n.from_user_id)
 		           OR (b.blocker_id=n.from_user_id AND b.blocked_id=$1)))
-		ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`,
+		ORDER BY n.created_at DESC, n.id DESC LIMIT $2 OFFSET $3`,
 		myID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get notifications failed"})

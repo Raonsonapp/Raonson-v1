@@ -102,7 +102,7 @@ func SendEventReminders(ctx context.Context, db push.DB, now time.Time, send Not
 	rows, err := db.Query(ctx, `
 		SELECT id, created_at, starts_at, reminded_day, reminded_2h FROM invite_events
 		 WHERE cancelled = FALSE AND hidden = FALSE
-		   AND starts_at > $1 AND starts_at <= $1 + INTERVAL '24 hours'
+		   AND starts_at > $1::timestamptz AND starts_at <= $1::timestamptz + INTERVAL '24 hours'
 		   AND (reminded_day = FALSE OR reminded_2h = FALSE)
 		 ORDER BY starts_at LIMIT 500`, now)
 	if err != nil {
