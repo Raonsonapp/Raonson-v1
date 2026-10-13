@@ -4,10 +4,9 @@ import 'dart:async';
 import '../../models/story_model.dart';
 import '../../stories/story_seen_sync.dart';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart' show ValueListenable, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -20,7 +19,6 @@ import '../../core/services/follow_service.dart';
 import '../../core/content_sync.dart';
 import '../../core/services/network_quality.dart';
 import '../../widgets/embed_player.dart';
-import '../../widgets/verified_badge.dart';
 import '../../models/reel_model.dart';
 import '../../models/post_model.dart';
 import '../reels_repository.dart';
@@ -44,13 +42,30 @@ import '../../core/ads/rewarded_ad_flow.dart';
 import '../../core/ads/sponsored_ads.dart';
 import '../../core/ui/app_icons.dart';
 import '../../core/music/feed_audio.dart';
-import '../audio/audio_page_screen.dart';
+import '../widgets/reel_action_column.dart';
+import '../widgets/reel_info_block.dart';
+import '../widgets/reels_top_bar.dart';
 import '../player/reel_gestures.dart';
 import '../player/reel_location_chip.dart';
 import 'reel_removal.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
 import '../../core/ui/r_icon.dart';
 import '../../widgets/linked_text.dart';
+
+/// Аватарҳои муаллифони гуногун (бе худам ва бе акси холӣ), то [max].
+@visibleForTesting
+List<String> friendAvatarsOf(List<ReelModel> reels, String myId, {int max = 3}) {
+  final seen = <String>{};
+  final out = <String>[];
+  for (final r in reels) {
+    final u = r.user;
+    if (u.id.isEmpty || u.id == myId || u.avatar.isEmpty) continue;
+    if (!seen.add(u.id)) continue;
+    out.add(u.avatar);
+    if (out.length >= max) break;
+  }
+  return out;
+}
 
 class ReelsScreen extends StatelessWidget {
   final bool isActive;
@@ -59,7 +74,9 @@ class ReelsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => _ReelsVM(ReelsRepository(ApiClient.instance))..load(),
+      create: (_) => _ReelsVM(ReelsRepository(ApiClient.instance))
+        ..load()
+        ..loadFriendAvatars(),
       child: _ReelsView(isActive: isActive),
     );
   }
@@ -202,10 +219,31 @@ class _ReelsVM extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleFilter() {
-    _friendsFilter = !_friendsFilter;
+  /// «Reels» (false) ё «Дӯстон» (true) — аз менюи «Reels ˅» ё таби «Дӯстон».
+  void setFriends(bool friends) {
+    if (friends == _friendsFilter) return;
+    _friendsFilter = friends;
     notifyListeners();
     load(); // филтр иваз шуд → лента аз нав бор мешавад
+  }
+
+  /// То 3 аватари дӯстоне, ки Reels-и нав доранд (назди таби «Дӯстон»,
+  /// мисли Instagram). Аз ҳамон лентаи «Дӯстон» — маълумоти воқеӣ; агар
+  /// ҳеҷ кас набошад, аватарҳо нишон дода намешаванд.
+  List<String> friendAvatars = const [];
+  bool _friendsLoaded = false;
+
+  Future<void> loadFriendAvatars() async {
+    if (_friendsLoaded) return;
+    _friendsLoaded = true;
+    try {
+      final list = await _repo.fetchReels(
+          page: 1, limit: 12, smart: false, friends: true);
+      friendAvatars = friendAvatarsOf(list, UserSession.userId ?? '');
+      notifyListeners();
+    } catch (_) {
+      _friendsLoaded = false; // дафъаи дигар боз кӯшиш
+    }
   }
 
   void trackWatch({
@@ -552,8 +590,11 @@ class _ReelsViewState extends State<_ReelsView> {
 
     if (vm.reels.isEmpty) {
       return Scaffold(
-          backgroundColor: AppColors.bg,
-          body: Center(
+          backgroundColor: Colors.black,
+          // Сарлавҳа ин ҷо ҳам ҳаст: лентаи «Дӯстон» холӣ бошад, корбар
+          // бояд ба «Reels» баргашта тавонад (пеш дар ин экран мемонд).
+          body: Stack(children: [
+            Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
                 width: 80,
@@ -614,7 +655,9 @@ class _ReelsViewState extends State<_ReelsView> {
                 onPressed: vm.load,
                 child: Text(tr('reels.tryAgain'),
                     style: const TextStyle(color: Colors.white38))),
-          ])));
+          ])),
+            _topBar(vm),
+          ]));
     }
 
     return Scaffold(
@@ -649,13 +692,10 @@ class _ReelsViewState extends State<_ReelsView> {
           reel: vm.reels[i],
           isActive: page == _currentPage && _active,
           isMuted: vm.isMuted,
-          friendsFilter: vm.friendsFilter,
           preloadCtrl: _preloaded[i],
           onLike: () => vm.toggleLike(vm.reels[i].id),
           onSave: () => vm.toggleSave(vm.reels[i].id),
           onMuteToggle: vm.toggleMute,
-          onToggleFilter: vm.toggleFilter,
-          onAddReel: () => _showReelCreateOptions(vm),
           onDelete: () => _removeReel(vm, vm.reels[i].id, deleted: true),
           onNotInterested: () {
             _removeReel(vm, vm.reels[i].id);
@@ -689,9 +729,23 @@ class _ReelsViewState extends State<_ReelsView> {
               onRetry: () => _refreshKey.currentState?.show()),
         ),
       ),
+      _topBar(vm),
       ]),
     );
   }
+
+  /// Сарлавҳа болои ҳамаи саҳифаҳо (бо reel ҳаракат намекунад).
+  Widget _topBar(_ReelsVM vm) => Positioned(
+        top: MediaQuery.of(context).padding.top + 4,
+        left: 0,
+        right: 0,
+        child: ReelsTopBar(
+          friends: vm.friendsFilter,
+          friendAvatars: vm.friendAvatars,
+          onSelect: vm.setFriends,
+          onCreate: () => _showReelCreateOptions(vm),
+        ),
+      );
 }
 
 // ── Reels loading skeleton (shimmer) ─────────────────────────────────
@@ -754,13 +808,10 @@ class _ReelItem extends StatefulWidget {
   final ReelModel reel;
   final bool isActive;
   final bool isMuted;
-  final bool friendsFilter;
   final VideoPlayerController? preloadCtrl;
   final VoidCallback onLike;
   final VoidCallback onSave;
   final VoidCallback onMuteToggle;
-  final VoidCallback onToggleFilter;
-  final VoidCallback onAddReel;
   final VoidCallback onDelete;
   final VoidCallback onNotInterested;
   final void Function(int watchMs, int durationMs) onWatchTime;
@@ -771,13 +822,10 @@ class _ReelItem extends StatefulWidget {
     required this.reel,
     required this.isActive,
     required this.isMuted,
-    required this.friendsFilter,
     this.preloadCtrl,
     required this.onLike,
     required this.onSave,
     required this.onMuteToggle,
-    required this.onToggleFilter,
-    required this.onAddReel,
     required this.onDelete,
     required this.onNotInterested,
     required this.onWatchTime,
@@ -811,7 +859,6 @@ class _ReelItemState extends State<_ReelItem> {
   bool _paused = false;
   bool _showHeart = false;
   bool _following = false;
-  bool _captionExpanded = false;
   bool _isBuffering = false;
   bool _downloading = false; // ← НАВ
   // Лайк/захира/шарҳ/пинҳонӣ — на нусхаи маҳаллӣ, балки ContentSync:
@@ -1813,14 +1860,6 @@ class _ReelItemState extends State<_ReelItem> {
         authorUsername: widget.reel.user.username,
       );
 
-  String _fmt(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}K';
-    }
-    return n > 0 ? '$n' : '';
-  }
-
   // Хештег ва зикр — ҳамон қоидаи ягона (core/hashtags), мисли пост.
   // Пеш «#сафар» (тоҷикӣ) ба саҳифаи холӣ мебурд.
   List<InlineSpan> _buildCaptionSpans(String text) => linkedSpans(context, text,
@@ -1835,7 +1874,6 @@ class _ReelItemState extends State<_ReelItem> {
     final reel = widget.reel;
     final size = MediaQuery.of(context).size;
     final bottom = MediaQuery.of(context).padding.bottom;
-    final top = MediaQuery.of(context).padding.top;
 
     // Зарба → садо; hold миёна → ист; hold канор → 2x (ниг. reel_gestures).
     return ReelPressGestures(
@@ -1924,468 +1962,77 @@ class _ReelItemState extends State<_ReelItem> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: ValueListenableBuilder(
-                  valueListenable: _ctrl!,
-                  builder: (_, val, __) {
-                    final pos = val.position.inMilliseconds;
-                    final dur = val.duration.inMilliseconds;
-                    return LinearProgressIndicator(
-                        value: dur > 0 ? pos / dur : 0,
-                        backgroundColor: Colors.white24,
-                        valueColor:
-                            const AlwaysStoppedAnimation(Colors.white),
-                        minHeight: 2);
-                  })),
+              child: ReelProgressBar(controller: _ctrl!)),
 
+        // ── Сутуни рост: ♡ 💬 ➤ 🔖 ≡ (диск) — ҳамон виҷети Explore ──
         Positioned(
-            top: top + 12,
-            left: 0,
-            right: 0,
-            child: Stack(alignment: Alignment.center, children: [
-              // ── CENTER: Рилсҳо | Дӯстон (точно по середине) ──
-              GestureDetector(
-                  onTap: widget.onToggleFilter,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text(
-                        widget.friendsFilter ? tr('reels.friends') : tr('reels.reels'),
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
-                    const SizedBox(width: 6),
-                    const Text('|',
-                        style: TextStyle(color: Colors.white54, fontSize: 15)),
-                    const SizedBox(width: 6),
-                    Text(
-                        widget.friendsFilter ? tr('reels.reels') : tr('reels.friends'),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 15,
-                            shadows: [Shadow(blurRadius: 6, color: Colors.black54)])),
-                    const SizedBox(width: 4),
-                    const Icon(AppIcons.keyboard_arrow_down_rounded,
-                        color: Colors.white70, size: 18),
-                  ])),
-              // ── RIGHT: Upload SVG icon ────────────────────────
-              Positioned(
-                  right: 16,
-                  child: GestureDetector(
-                      onTap: widget.onAddReel,
-                      child: SvgPicture.asset('assets/icons/upload.svg',
-                          width: 26, height: 26,
-                          colorFilter: const ColorFilter.mode(
-                              Colors.white, BlendMode.srcIn)))),
-            ])),
+            right: 4,
+            // Каме поёнтар — мисли Instagram.
+            bottom: bottom + size.height * 0.045,
+            child: ReelActionColumn(
+              liked: _cs.liked ?? false,
+              // Лайкҳо пинҳонанд ва бинанда соҳиб нест → калима, на рақам.
+              likesLabel: reelLikesLabel(_cs.likesCount ?? 0,
+                  hidden: _hideLikes && !_isOwner),
+              onLike: widget.onLike,
+              // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад.
+              showComments: !_commentsOff,
+              commentsCount: _commentsCount,
+              onComment: _openComments,
+              // Ҳамон рақаме, ки Explore нишон медиҳад.
+              sharesCount: _cs.sharesCount ?? 0,
+              onShare: _share,
+              saved: _saved,
+              onSave: widget.onSave, // VM ба ContentSync хабар медиҳад
+              onMore: _isOwner ? _showOwnerMenu : _showOtherMenu,
+              gap: size.height < 640 ? 12 : 16,
+              // Диски садо — танҳо агар reel садои воқеӣ дошта бошад.
+              footer: reel.audioId.isEmpty
+                  ? null
+                  : _SpinningDisc(
+                      avatar: reel.user.avatar,
+                      size: 30,
+                      isPlaying: _initialized && !_paused),
+            )),
 
-        Positioned(
-            right: 10,
-            // Каме поёнтар — мисли Instagram (пеш ба миёнаи экран
-            // хеле наздик буд).
-            bottom: bottom + size.height * 0.055,
-            child:
-                Column(mainAxisSize: MainAxisSize.min, children: [
-              _LikeBtn(
-                  isLiked: _cs.liked ?? false,
-                  // Лайкҳо пинҳонанд ва бинанда соҳиб нест → калима, на рақам.
-                  count: (_hideLikes && !_isOwner)
-                      ? tr('reels.likesWord')
-                      : _fmt(_cs.likesCount ?? 0),
-                  onTap: widget.onLike),
-              const SizedBox(height: 22),
-              // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад (мисли Instagram).
-              if (!_commentsOff) ...[
-                _ReelStableBtn(
-                    svgPath: 'assets/icons/comment.svg',
-                    count: _fmt(_commentsCount),
-                    onTap: _openComments),
-                const SizedBox(height: 22),
-              ],
-              _ReelStableBtn(
-                  svgPath: 'assets/icons/share.svg',
-                  // Ҳамон рақаме, ки Explore нишон медиҳад.
-                  count: _fmt(_cs.sharesCount ?? 0),
-                  onTap: _share),
-              const SizedBox(height: 22),
-              _ReelStableBtn(
-                  svgPath: 'assets/icons/save.svg',
-                  activeSvgPath: 'assets/icons/save_filled.svg',
-                  isActive: _saved,
-                  activeColor: Colors.white,
-                  count: '',
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    widget.onSave(); // VM ба ContentSync хабар медиҳад
-                  }),
-              const SizedBox(height: 22),
-              GestureDetector(
-                  onTap: _isOwner ? _showOwnerMenu : _showOtherMenu,
-                  child: const SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: Icon(AppIcons.more_vert_rounded,
-                          color: Colors.white,
-                          size: 28,
-                          shadows: [
-                            Shadow(blurRadius: 6, color: Colors.black54)
-                          ]))),
-              const SizedBox(height: 16),
-              _SpinningDisc(
-                  avatar: reel.user.avatar,
-                  isPlaying: _initialized && !_paused),
-            ])),
-
+        // ── Поён-чап: ном → садо → тавсиф → ҷой ──
         Positioned(
             left: 14,
-            right: 90,
+            right: 72,
             bottom: bottom + 14,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(children: [
-                    GestureDetector(
-                        onTap: _openAvatar,
-                        child: ValueListenableBuilder<StoryRing>(
-                            valueListenable:
-                                StorySeenSync.instance.watch(reel.user.id),
-                            builder: (_, ring, __) => _AvatarWithStoryRing(
-                                avatarUrl: reel.user.avatar,
-                                hasStory: ring != StoryRing.none,
-                                storyViewed: ring == StoryRing.seen))),
-                    const SizedBox(width: 10),
-                    Flexible(
-                        child: GestureDetector(
-                            onTap: _openProfile,
-                            child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                      child: Text(reel.user.username,
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight:
-                                                  FontWeight.bold,
-                                              fontSize: 15,
-                                              shadows: [
-                                                Shadow(
-                                                    blurRadius: 4,
-                                                    color: Colors.black)
-                                              ]),
-                                          maxLines: 1,
-                                          overflow:
-                                              TextOverflow.ellipsis)),
-                                  if (reel.user.isVerified) ...[
-                                    const SizedBox(width: 4),
-                                    const VerifiedBadge(size: 14, color: Colors.white)
-                                  ],
-                                ]))),
-                    if (!_isOwner)
-                      ValueListenableBuilder<Map<String, bool>>(
-                        valueListenable: FollowService.instance.states,
-                        builder: (_, __, ___) {
-                          final following = FollowService.instance
-                              .resolve(reel.user.id, _following);
-                          if (following) return const SizedBox.shrink();
-                          return Row(mainAxisSize: MainAxisSize.min, children: [
-                            const SizedBox(width: 10),
-                            GestureDetector(
-                              onTap: () => FollowService.instance
-                                  .toggle(reel.user.id, false,
-                                      source: FollowSource.reel(reel.id)),
-                              child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 5),
-                                  decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.white, width: 1.2),
-                                      borderRadius:
-                                          BorderRadius.circular(20)),
-                                  child: Text(
-                                      // Ҳисоби пӯшида: дархост фиристода шуд.
-                                      FollowService.instance.isRequested(reel.user.id)
-                                          ? tr('common.requested')
-                                          : tr('ui.61dfadd676'),
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
-                                          shadows: [
-                                            Shadow(
-                                                blurRadius: 4,
-                                                color: Colors.black)
-                                          ]))),
-                            ),
-                          ]);
-                        },
-                      ),
-                  ]),
-                  // «Ҷой» — зер мешавад → саҳифаи ҷой (мисли Instagram).
+            child: ReelInfoBlock(
+              author: ReelAuthorRow(
+                userId: reel.user.id,
+                username: reel.user.username,
+                avatarUrl: reel.user.avatar,
+                verified: reel.user.isVerified,
+                isOwner: _isOwner,
+                following: _following,
+                followSource: FollowSource.reel(reel.id),
+                onProfile: _openProfile,
+                avatar: GestureDetector(
+                    onTap: _openAvatar,
+                    child: ValueListenableBuilder<StoryRing>(
+                        valueListenable:
+                            StorySeenSync.instance.watch(reel.user.id),
+                        builder: (_, ring, __) => _AvatarWithStoryRing(
+                            avatarUrl: reel.user.avatar,
+                            hasStory: ring != StoryRing.none,
+                            storyViewed: ring == StoryRing.seen))),
+              ),
+              music: ReelMusicLine(
+                  title: reel.audioTitle,
+                  artist: reel.audioArtist,
+                  audioId: reel.audioId,
+                  username: reel.user.username,
+                  isPlaying: _initialized && !_paused && widget.isActive),
+              caption: _caption,
+              captionSpans: _buildCaptionSpans,
+              // «Ҷой» — зер мешавад → саҳифаи ҷой (мисли Instagram).
+              location:
                   ReelLocationChip(reel: reel, onOpen: () => _ctrl?.pause()),
-                  if (_caption.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    _CaptionWidget(
-                        caption: _caption,
-                        spans: _buildCaptionSpans(_caption),
-                        expanded: _captionExpanded,
-                        onToggle: () => setState(
-                            () => _captionExpanded = !_captionExpanded)),
-                  ],
-                  const SizedBox(height: 10),
-                  _AudioBar(
-                      title: reel.audioTitle,
-                      artist: reel.audioArtist,
-                      audioId: reel.audioId,
-                      avatar: reel.user.avatar,
-                      isPlaying: _initialized && !_paused),
-                ])),
+            )),
       ]),
-    );
-  }
-}
-
-class _CaptionWidget extends StatelessWidget {
-  final String caption;
-  final List<InlineSpan> spans;
-  final bool expanded;
-  final VoidCallback onToggle;
-  static const int _maxLines = 2;
-
-  const _CaptionWidget(
-      {required this.caption,
-      required this.spans,
-      required this.expanded,
-      required this.onToggle});
-
-  bool _needsTruncation(BuildContext context) {
-    final tp = TextPainter(
-      text: TextSpan(
-          text: caption,
-          style:
-              const TextStyle(color: Colors.white, fontSize: 14)),
-      maxLines: _maxLines,
-      textDirection: TextDirection.ltr,
-    )..layout(
-        maxWidth: MediaQuery.of(context).size.width - 110);
-    return tp.didExceedMaxLines;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final needsMore = _needsTruncation(context);
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          RichText(
-              maxLines:
-                  expanded ? null : (needsMore ? _maxLines : null),
-              overflow: expanded
-                  ? TextOverflow.visible
-                  : TextOverflow.ellipsis,
-              text: TextSpan(children: spans)),
-          if (needsMore)
-            GestureDetector(
-                onTap: onToggle,
-                child: Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                        expanded ? tr('common.less') : tr('common.more'),
-                        style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600)))),
-        ]);
-  }
-}
-
-class _AudioBar extends StatefulWidget {
-  final String title, artist, avatar;
-  final String audioId;
-  final bool isPlaying;
-  const _AudioBar(
-      {required this.title,
-      required this.artist,
-      required this.avatar,
-      required this.isPlaying,
-      this.audioId = ''});
-  @override
-  State<_AudioBar> createState() => _AudioBarState();
-}
-
-class _AudioBarState extends State<_AudioBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _scrollCtrl;
-  late Animation<double> _scrollAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollCtrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 8))
-      ..repeat();
-    _scrollAnim = Tween(begin: 0.0, end: 1.0).animate(_scrollCtrl);
-    if (!widget.isPlaying) _scrollCtrl.stop();
-  }
-
-  @override
-  void didUpdateWidget(_AudioBar old) {
-    super.didUpdateWidget(old);
-    if (widget.isPlaying && !old.isPlaying) {
-      _scrollCtrl.repeat();
-    } else if (!widget.isPlaying && old.isPlaying) {
-      _scrollCtrl.stop();
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Музика → ном • хонанда; вагарна «Аудиои оригиналӣ» (мисли Instagram)
-    final displayText = widget.title.trim().isEmpty
-        ? tr('audio.originalAudio')
-        : (widget.artist.isNotEmpty
-            ? '${widget.title} — ${widget.artist}'
-            : widget.title);
-
-    final row = Row(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(AppIcons.music_note_rounded,
-          color: Colors.white,
-          size: 15,
-          shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
-      const SizedBox(width: 5),
-      Flexible(
-        child: ClipRect(
-          child: AnimatedBuilder(
-            animation: _scrollAnim,
-            builder: (_, __) {
-              final double dx = -(_scrollAnim.value * 0.5);
-              return FractionalTranslation(
-                translation: Offset(dx, 0.0),
-                child: Text(
-                  '$displayText   $displayText',
-                  style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                      shadows: [
-                        Shadow(blurRadius: 4, color: Colors.black)
-                      ]),
-                  maxLines: 1,
-                  overflow: TextOverflow.visible,
-                  softWrap: false,
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-      // Садои воқеӣ саҳифа дорад — тир нишон медиҳад, ки зер кардан мумкин.
-      if (widget.audioId.isNotEmpty) ...[
-        const SizedBox(width: 4),
-        const Icon(AppIcons.chevron_right_rounded,
-            color: Colors.white70,
-            size: 14,
-            shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
-      ],
-    ]);
-
-    // Танҳо садои дар реестр буда саҳифа дорад. Барои «оригинал садо»
-    // (audioId холӣ) зер кардан ҷои рафтан надорад.
-    if (widget.audioId.isEmpty) return row;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AudioPageScreen(
-            audioId: widget.audioId,
-            initialTitle: widget.title,
-            initialArtist: widget.artist,
-          ),
-        ),
-      ),
-      child: row,
-    );
-  }
-}
-
-class _LikeBtn extends StatefulWidget {
-  final bool isLiked;
-  final String count;
-  final VoidCallback onTap;
-  const _LikeBtn(
-      {required this.isLiked,
-      required this.count,
-      required this.onTap});
-  @override
-  State<_LikeBtn> createState() => _LikeBtnState();
-}
-
-class _LikeBtnState extends State<_LikeBtn>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 200));
-    _scale = TweenSequence([
-      TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 1.35), weight: 50),
-      TweenSequenceItem(
-          tween: Tween(begin: 1.35, end: 1.0), weight: 50),
-    ]).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        if (!widget.isLiked) _ctrl.forward(from: 0);
-        widget.onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: ScaleTransition(
-        scale: _scale,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-              width: 30,
-              height: 30,
-              child: SvgPicture.asset(
-                  widget.isLiked
-                      ? 'assets/icons/heart_filled.svg'
-                      : 'assets/icons/heart.svg',
-                  width: 30,
-                  height: 30,
-                  fit: BoxFit.contain,
-                  colorFilter: ColorFilter.mode(
-                      widget.isLiked ? Colors.red : Colors.white,
-                      BlendMode.srcIn))),
-          if (widget.count.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(widget.count,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(blurRadius: 4, color: Colors.black54)
-                    ])),
-          ],
-        ]),
-      ),
     );
   }
 }
@@ -2405,15 +2052,15 @@ class _AvatarWithStoryRing extends StatelessWidget {
       return ClipOval(
           child: CachedNetworkImage(
               imageUrl: avatarUrl,
-              width: 42,
-              height: 42,
+              width: 34,
+              height: 34,
               fit: BoxFit.cover,
-              memCacheWidth: 126,
+              memCacheWidth: 102,
               placeholder: (_, __) => Container(
-                  width: 42, height: 42, color: AppColors.card),
+                  width: 34, height: 34, color: AppColors.card),
               errorWidget: (_, __, ___) => Container(
-                  width: 42,
-                  height: 42,
+                  width: 34,
+                  height: 34,
                   color: AppColors.card,
                   child: const Icon(AppIcons.person,
                       color: Colors.white54, size: 22))));
@@ -2422,8 +2069,8 @@ class _AvatarWithStoryRing extends StatelessWidget {
         ? [const Color(0xFF555555), const Color(0xFF444444)]
         : AppColors.storyGradient;
     return Container(
-        width: 46,
-        height: 46,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: hasStory == true
@@ -2455,53 +2102,6 @@ class _AvatarWithStoryRing extends StatelessWidget {
                         color: AppColors.card,
                         child: const Icon(AppIcons.person,
                             color: Colors.white54, size: 20)))));
-  }
-}
-
-class _ReelStableBtn extends StatelessWidget {
-  final String svgPath, count;
-  final String? activeSvgPath;
-  final bool isActive;
-  final Color activeColor;
-  final VoidCallback onTap;
-  const _ReelStableBtn(
-      {required this.svgPath,
-      this.activeSvgPath,
-      this.isActive = false,
-      this.activeColor = Colors.red,
-      required this.count,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final path =
-        (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
-    final color = isActive ? activeColor : Colors.white;
-    return GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-              width: 30,
-              height: 30,
-              child: SvgPicture.asset(path,
-                  width: 30,
-                  height: 30,
-                  fit: BoxFit.contain,
-                  colorFilter:
-                      ColorFilter.mode(color, BlendMode.srcIn))),
-          if (count.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(count,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(blurRadius: 4, color: Colors.black54)
-                    ])),
-          ],
-        ]));
   }
 }
 

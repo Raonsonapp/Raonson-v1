@@ -225,7 +225,8 @@ void main() {
         'lib/search/search_screen.dart',
         'lib/profile/profile_screen.dart',
         'lib/feed/timeline/feed_screen.dart',
-        'lib/reels/reels_feed/reels_screen.dart',
+        // Тугмаи «Подписаться»-и Reels — дар виҷети умумии Reels/Explore.
+        'lib/reels/widgets/reel_info_block.dart',
         'lib/friends/friends_screen.dart',
       ]) {
         expect(_read(f), contains("tr('common.requested')"), reason: f);
