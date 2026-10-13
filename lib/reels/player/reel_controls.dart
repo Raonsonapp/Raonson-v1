@@ -1,13 +1,11 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
 
 import '../../models/reel_model.dart';
 import '../../widgets/avatar.dart';
-import '../../widgets/verified_badge.dart';
 import '../../core/api/api_client.dart';
 import '../../core/content_sync.dart';
 import '../../core/services/user_session.dart';
@@ -18,6 +16,10 @@ import '../../core/links/deep_links.dart';
 import '../../widgets/hashtag_suggestions.dart';
 import '../../widgets/linked_text.dart';
 import 'reel_location_chip.dart';
+import '../../app/app_theme.dart';
+import '../../core/services/follow_service.dart';
+import '../widgets/reel_action_column.dart';
+import '../widgets/reel_info_block.dart';
 
 // Overlay-и пурраи reel — мисли Instagram (иконкаҳои худамон + тугмаҳои корӣ).
 class ReelControls extends StatefulWidget {
@@ -156,142 +158,68 @@ class _ReelControlsState extends State<ReelControls> {
     );
   }
 
-  String _fmt(int v) {
-    if (v >= 1000000) return '${(v / 1e6).toStringAsFixed(1)}M';
-    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
-    return '$v';
-  }
+  // Хештег ва зикр — ҳамон қоидаи ягона, ки таби Reels дорад.
+  List<InlineSpan> _captionSpans(String t) => linkedSpans(context, t,
+      style: const TextStyle(color: Colors.white, fontSize: 14,
+          shadows: [Shadow(blurRadius: 4, color: Colors.black)]),
+      linkStyle: const TextStyle(color: AppColors.neonBlue, fontSize: 14,
+          fontWeight: FontWeight.w600,
+          shadows: [Shadow(blurRadius: 4, color: Colors.black)]));
 
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final bottom = mq.padding.bottom;
+    final caption = ContentSync.instance.get(reel.id)?.caption ?? reel.caption;
     return Stack(children: [
-      // ── Тугмаҳои рост ──
+      // ── Тугмаҳои рост — ҳамон сутуни таби Reels ва Explore ──
       Positioned(
-        right: 10,
-        bottom: 90,
-        child: Column(children: [
-          _SvgBtn(
-              asset: _liked
-                  ? 'assets/icons/heart_filled.svg'
-                  : 'assets/icons/heart.svg',
-              color: _liked ? const Color(0xFFFF3040) : Colors.white,
-              label: (_hideLikes && !_isOwner)
-                  ? 'Лайкҳо'
-                  : _fmt(_likeCount),
-              onTap: _toggleLike),
-          const SizedBox(height: 18),
+        right: 4,
+        bottom: bottom + 20,
+        child: ReelActionColumn(
+          liked: _liked,
+          likesLabel: reelLikesLabel(_likeCount, hidden: _hideLikes && !_isOwner),
+          onLike: _toggleLike,
           // Шарҳҳо хомӯшанд → icon-и коммент нопадид мешавад.
-          if (!_commentsOff) ...[
-            _SvgBtn(
-                asset: 'assets/icons/comment.svg',
-                label: _fmt(_commentCount),
-                onTap: _openComments),
-            const SizedBox(height: 18),
-          ],
-          _SvgBtn(asset: 'assets/icons/share.svg', onTap: _share),
-          const SizedBox(height: 18),
-          _SvgBtn(
-              asset: _saved
-                  ? 'assets/icons/save_filled.svg'
-                  : 'assets/icons/save.svg',
-              onTap: _toggleSave),
-          const SizedBox(height: 18),
-          GestureDetector(
-            onTap: _more,
-            child: const Icon(AppIcons.more_vert, color: Colors.white, size: 26),
-          ),
-        ]),
+          showComments: !_commentsOff,
+          commentsCount: _commentCount,
+          onComment: _openComments,
+          sharesCount: _cs.sharesCount ?? 0,
+          onShare: _share,
+          saved: _saved,
+          onSave: _toggleSave,
+          onMore: _more,
+          gap: mq.size.height < 640 ? 12 : 16,
+        ),
       ),
 
-      // ── Маълумоти корбар (поён-чап) ──
+      // ── Маълумоти корбар (поён-чап): ном → садо → тавсиф → ҷой ──
       Positioned(
-        left: 14, right: 80, bottom: 80,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(children: [
-              GestureDetector(
-                onTap: _openProfile,
-                child: Avatar(
-                  imageUrl: reel.user.avatar,
-                  name: reel.user.username,
-                  size: 34,
-                  storyUserId: reel.user.id,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Номи дароз дар экрани хурд сатрро аз экран берун мебурд.
-              Flexible(child: GestureDetector(
-                onTap: _openProfile,
-                child: Text(reel.user.username,
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700, fontSize: 14)),
-              )),
-              if (reel.user.verified) ...[
-                const SizedBox(width: 4),
-                const VerifiedBadge(size: 14, color: Colors.white),
-              ],
-            ]),
-            ReelLocationChip(reel: reel),
-            if (reel.caption.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(reel.caption,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-            ],
-            const SizedBox(height: 8),
-            Row(children: [
-              SvgPicture.asset('assets/icons/music.svg',
-                  width: 13, height: 13,
-                  colorFilter: const ColorFilter.mode(
-                      Colors.white, BlendMode.srcIn)),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  reel.audioTitle.isNotEmpty
-                      ? (reel.audioArtist.isNotEmpty
-                          ? '${reel.audioTitle} • ${reel.audioArtist}'
-                          : reel.audioTitle)
-                      : tr('audio.originalAudio'),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ),
-            ]),
-          ],
+        left: 14, right: 72, bottom: bottom + 18,
+        child: ReelInfoBlock(
+          author: ReelAuthorRow(
+            userId: reel.user.id,
+            username: reel.user.username,
+            avatarUrl: reel.user.avatar,
+            verified: reel.user.verified,
+            isOwner: _isOwner,
+            following: reel.user.isFollowing,
+            followSource: FollowSource.reel(reel.id),
+            onProfile: _openProfile,
+          ),
+          music: ReelMusicLine(
+            title: reel.audioTitle,
+            artist: reel.audioArtist,
+            audioId: reel.audioId,
+            username: reel.user.username,
+            isPlaying: widget.isPlaying,
+          ),
+          caption: caption,
+          captionSpans: _captionSpans,
+          location: ReelLocationChip(reel: reel),
         ),
       ),
     ]);
-  }
-}
-
-class _SvgBtn extends StatelessWidget {
-  final String asset;
-  final String? label;
-  final Color color;
-  final VoidCallback onTap;
-  const _SvgBtn(
-      {required this.asset, this.label, this.color = Colors.white, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(children: [
-        SvgPicture.asset(asset, width: 30, height: 30,
-            colorFilter: ColorFilter.mode(color, BlendMode.srcIn)),
-        if (label != null && label!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(label!,
-              style: const TextStyle(color: Colors.white, fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-        ],
-      ]),
-    );
   }
 }
 

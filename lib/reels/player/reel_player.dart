@@ -10,6 +10,7 @@ import '../../core/ui/app_icons.dart';
 import '../../widgets/embed_player.dart';
 import 'reel_controls.dart';
 import 'reel_gestures.dart';
+import '../widgets/reel_info_block.dart' show ReelProgressBar;
 
 class ReelPlayer extends StatefulWidget {
   final ReelModel reel;
@@ -165,6 +166,13 @@ class _ReelPlayerState extends State<ReelPlayer> {
           },
           child: const SizedBox.expand(),
         ),
+
+        // Хати борики пешрафт — мисли таби Reels ва Explore.
+        if (_initialized && ctrl != null)
+          Positioned(
+            left: 0, right: 0, bottom: 0,
+            child: ReelProgressBar(controller: ctrl),
+          ),
 
         ReelControls(
           reel: widget.reel,
