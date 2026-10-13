@@ -418,6 +418,18 @@ extension ProfileRepositoryExt on ProfileRepository {
         jsonDecode(res.body) as Map<String, dynamic>);
   }
 
+  /// Якчанд сторис якбора ба актуалии мавҷуда (POST /highlights/:id/stories
+  /// {storyIds}). Сервер танҳо сторисҳои худамро қабул мекунад.
+  Future<bool> addStoriesToHighlight(String id, List<String> storyIds) async {
+    try {
+      final res = await _api.post('/highlights/$id/stories',
+          body: {'storyIds': storyIds});
+      return res.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Rename / update highlight (title, cover, items)
   Future<void> updateHighlight(String id,
       {String? title, String? coverUrl, List<HighlightItem>? items}) async {

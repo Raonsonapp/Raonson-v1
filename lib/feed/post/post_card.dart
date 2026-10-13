@@ -1611,7 +1611,9 @@ class _PostCardState extends State<PostCard>
               setState(() => _showHeart = true);
               _heartCtrl.forward(from: 0);
             },
-            child: MediaCarousel(media: post.media, isActive: _hasFocus),
+            // Суруд бошад — видео хомӯш мемонад (ду садо якбора не).
+            child: MediaCarousel(media: post.media, isActive: _hasFocus,
+                soundless: _song.isNotEmpty),
           ),
 
           // ── Нишони одамони зикршуда ─────────────────────────

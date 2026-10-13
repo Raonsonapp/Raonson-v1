@@ -114,8 +114,11 @@ class _HlItem extends StatelessWidget {
 class HighlightOptionsSheet extends StatelessWidget {
   final HighlightModel highlight;
   final VoidCallback onDelete;
+  /// «Илова кардани сторисҳо» — экрани интихоб (якчанд сторис якбора).
+  final VoidCallback? onAddStories;
   const HighlightOptionsSheet(
-      {super.key, required this.highlight, required this.onDelete});
+      {super.key, required this.highlight, required this.onDelete,
+      this.onAddStories});
 
   @override
   Widget build(BuildContext context) {
@@ -129,6 +132,16 @@ class HighlightOptionsSheet extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
               color: AppColors.textFaint, borderRadius: BorderRadius.circular(2)))),
+        if (onAddStories != null)
+          ListTile(
+            key: const ValueKey('highlight-add-stories'),
+            leading: Icon(AppIcons.add_rounded, color: AppColors.textPrimary),
+            title: Text(tr('highlight.addStories'),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+            onTap: () {
+              Navigator.pop(context);
+              onAddStories!();
+            }),
         ListTile(
           leading: const Icon(AppIcons.delete_outline_rounded, color: Colors.redAccent),
           title: Text(tr('highlight.deleteTitle', {'name': highlight.title}),

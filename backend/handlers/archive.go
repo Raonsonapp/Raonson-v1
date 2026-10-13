@@ -90,18 +90,27 @@ func GetArchivedStories(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"stories": out, "page": page, "limit": limit})
 }
 
-// POST /highlights/:id/stories {storyId} — сторисро ба актуалии
-// МАВҶУДА илова мекунад (мисли Instagram «Ба актуалӣ илова кардан»).
+// POST /highlights/:id/stories {storyId} ё {storyIds: [...]} — сторис(ҳо)ро
+// ба актуалии МАВҶУДА илова мекунад (мисли Instagram «Ба актуалӣ илова
+// кардан»).
 //
 // Пеш аз сторис ҳамеша актуалии НАВ сохта мешуд — ба актуалии ҳозира
-// илова кардан ғайриимкон буд.
+// илова кардан ғайриимкон буд. Акнун аз экрани интихоб якчанд сторис
+// якбора илова мешаванд. Ҳама ё ҳеҷ: агар ягон сторис бегона, несткарда
+// ё пинҳони модератсия бошад — ҳеҷ чиз илова намешавад (404).
 func AddStoryToHighlight(c *gin.Context) {
 	myID := mw.UID(c)
 	hid := c.Param("id")
 	var b struct {
-		StoryID string `json:"storyId"`
+		StoryID  string   `json:"storyId"`
+		StoryIDs []string `json:"storyIds"`
 	}
-	if c.ShouldBindJSON(&b) != nil || strings.TrimSpace(b.StoryID) == "" {
+	if c.ShouldBindJSON(&b) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "storyId лозим аст"})
+		return
+	}
+	ids, ok := normalizeHighlightStoryIDs(b.StoryID, b.StoryIDs)
+	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "storyId лозим аст"})
 		return
 	}
@@ -111,48 +120,88 @@ func AddStoryToHighlight(c *gin.Context) {
 	}
 	// Танҳо сторисҳои ХУДАМ (ҳатто гузашта — аз бойгонӣ), ки модератсия
 	// пинҳон ё нест накардааст (ниг. highlight_guard.go).
-	b.StoryID = strings.TrimSpace(b.StoryID)
-	m, ok := allowedHighlightStories(ctx, myID, []string{b.StoryID})[b.StoryID]
-	if !ok {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Сторис ёфт нашуд"})
-		return
+	allowed := allowedHighlightStories(ctx, myID, ids)
+	for _, id := range ids {
+		if _, ok := allowed[id]; !ok {
+			c.JSON(http.StatusNotFound, gin.H{"message": "Сторис ёфт нашуд"})
+			return
+		}
 	}
-	url, mtype := m.url, m.kind
 	var itemsRaw []byte
 	var storyIDs []string
+	var cover string
 	if err := db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(items,'[]'::jsonb), COALESCE(story_ids,'{}')
+		`SELECT COALESCE(items,'[]'::jsonb), COALESCE(story_ids,'{}'), COALESCE(cover_url,'')
 		 FROM highlights WHERE id=$1 AND user_id=$2::text`, hid, myID).
-		Scan(&itemsRaw, &storyIDs); err != nil {
+		Scan(&itemsRaw, &storyIDs, &cover); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Актуалӣ ёфт нашуд"})
 		return
 	}
 	items := []map[string]interface{}{}
 	json.Unmarshal(itemsRaw, &items)
+	have := map[string]bool{}
 	for _, it := range items {
-		if sid, _ := it["storyId"].(string); sid == b.StoryID {
-			c.JSON(http.StatusOK, gin.H{"added": false, "items": items})
-			return
+		if sid, _ := it["storyId"].(string); sid != "" {
+			have[sid] = true
 		}
 	}
-	items = append(items, map[string]interface{}{
-		"url": url, "type": mtype, "storyId": b.StoryID,
-	})
+	for _, sid := range storyIDs {
+		have[sid] = true
+	}
+	added := 0
+	for _, id := range ids {
+		if have[id] {
+			continue // такрор илова намешавад
+		}
+		if len(items) >= maxHighlightItems {
+			break
+		}
+		m := allowed[id]
+		items = append(items, map[string]interface{}{
+			"url": m.url, "type": m.kind, "storyId": id,
+		})
+		storyIDs = append(storyIDs, id)
+		have[id] = true
+		added++
+	}
+	if added == 0 {
+		c.JSON(http.StatusOK, gin.H{"added": false, "count": 0, "items": items})
+		return
+	}
+	if cover == "" && len(items) > 0 {
+		cover, _ = items[0]["url"].(string)
+	}
 	raw, _ := json.Marshal(items)
 	if _, err := db.Pool.Exec(ctx, `
-		UPDATE highlights SET items = $1::jsonb,
-		       story_ids = CASE WHEN $2 = ANY(COALESCE(story_ids,'{}'))
-		                        THEN story_ids
-		                        ELSE array_append(COALESCE(story_ids,'{}'), $2) END,
-		       cover_url = CASE WHEN COALESCE(cover_url,'') = '' THEN $3 ELSE cover_url END
+		UPDATE highlights SET items = $1::jsonb, story_ids = $2::text[], cover_url = $3
 		WHERE id=$4 AND user_id=$5::text`,
-		string(raw), b.StoryID, url, hid, myID); err != nil {
+		string(raw), storyIDs, cover, hid, myID); err != nil {
 		log.Printf("[AddStoryToHighlight] %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Илова нашуд"})
 		return
 	}
 	mw.InvalidateUserCache(myID)
-	c.JSON(http.StatusOK, gin.H{"added": true, "items": items})
+	c.JSON(http.StatusOK, gin.H{"added": true, "count": added, "items": items})
+}
+
+// normalizeHighlightStoryIDs — storyId-и ягона ва/ё рӯйхат: бе ҷойи холӣ,
+// бе такрор, тартиб нигоҳ дошта мешавад. false — ҳеҷ id нест ё аз
+// [maxHighlightItems] зиёд.
+func normalizeHighlightStoryIDs(single string, list []string) ([]string, bool) {
+	out := []string{}
+	seen := map[string]bool{}
+	for _, raw := range append([]string{single}, list...) {
+		id := strings.TrimSpace(raw)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	if len(out) == 0 || len(out) > maxHighlightItems {
+		return nil, false
+	}
+	return out, true
 }
 
 // GET /users/muted — хомӯшшудагон (Танзимот → Махфият). Пеш хомӯш

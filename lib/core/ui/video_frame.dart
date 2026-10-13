@@ -54,6 +54,9 @@ class VideoFrame extends StatefulWidget {
   /// мекунад, вагарна «видео кушода нашуд» то абад мемонд.
   final VoidCallback? onFailed;
 
+  /// Видео кушода шуд — давомнокии он (мас. «0:15» дар плиткаи сторис).
+  final void Function(Duration duration)? onDuration;
+
   const VideoFrame({
     super.key,
     required this.thumbUrl,
@@ -61,6 +64,7 @@ class VideoFrame extends StatefulWidget {
     this.fit = BoxFit.cover,
     this.autoPlay = false,
     this.onFailed,
+    this.onDuration,
   });
 
   @override
@@ -120,6 +124,7 @@ class _VideoFrameState extends State<VideoFrame> {
         await c.seekTo(Duration.zero);
       }
       if (mounted) setState(() => _ready = true);
+      if (mounted) widget.onDuration?.call(c.value.duration);
     } catch (e) {
       debugPrint('[VideoFrame] $e');
       _releaseSlot();

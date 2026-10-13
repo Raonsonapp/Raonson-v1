@@ -437,6 +437,14 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/raonson?sslmode=disable
         run: python3 backend/testing/api_audit.py
 
+      # «Илова ба актуалӣ»: актуалӣ аз якчанд сторис, илова кардани
+      # якчанд сторис якбора (ҳама ё ҳеҷ — сториси бегона → 404).
+      - name: Санҷиши актуалӣ аз якчанд сторис
+        env:
+          BASE: http://127.0.0.1:8099
+          SUFFIX: ci${{ github.run_number }}
+        run: python3 backend/testing/api_highlights_multi.py
+
       - name: Log-и сервер
         if: always()
         run: tail -120 /tmp/server.log

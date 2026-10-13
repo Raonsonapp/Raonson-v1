@@ -19,7 +19,6 @@ import '../core/api/api_client.dart';
 import '../core/services/user_session.dart';
 import '../core/services/follow_service.dart';
 import '../thanks/thanks_screen.dart';
-import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';
@@ -34,6 +33,7 @@ import '../stories/story_open.dart';
 import '../stories/story_seen_sync.dart';
 import 'edit/edit_profile_screen.dart';
 import 'highlight_model.dart';
+import 'highlight_story_picker.dart';
 import 'highlight_viewer.dart';
 import 'highlights_row.dart';
 import 'profile_controller.dart';
@@ -257,76 +257,41 @@ class _ProfileScreenState extends State<ProfileScreen>
     showModalBottomSheet(
       context: context, backgroundColor: Colors.transparent,
       builder: (_) => HighlightOptionsSheet(
-          highlight: h, onDelete: () => _ctrl.deleteHighlight(h.id)));
+          highlight: h,
+          onDelete: () => _ctrl.deleteHighlight(h.id),
+          onAddStories: () => _addStoriesToHighlight(h)));
   }
 
   // ── Create highlight (Актуальный) ────────────────────────────────
+  //
+  // Мисли Instagram: «+ Нав» → гриди сторисҳои худам (ҳозира ва бойгонӣ),
+  // якчандто интихоб → муқова ва ном. Пеш галереяи телефон кушода мешуд
+  // ва актуалӣ аз расмҳои тасодуфӣ сохта мешуд, на аз сторисҳо.
   Future<void> _createHighlight() async {
-    // Якчанд расм интихоб мекунем (мисли Instagram — маҷмӯаи актуалӣ).
-    final picked = await ImagePicker()
-        .pickMultiImage(maxWidth: 1080, maxHeight: 1080, imageQuality: 80);
-    if (picked.isEmpty || !mounted) return;
-
-    final title = await _askHighlightTitle();
-    if (title == null || title.trim().isEmpty || !mounted) return;
-
-    // Loading overlay
-    showDialog(
-      context: context, barrierDismissible: false,
-      builder: (_) => const Center(
-          child: CircularProgressIndicator(
-              color: AppColors.neonBlue, strokeWidth: 2)),
-    );
-    final items = <HighlightItem>[];
-    for (final p in picked) {
-      try {
-        final url = await UploadManager().uploadFile(File(p.path));
-        if (url.isNotEmpty) items.add(HighlightItem(url: url, type: 'image'));
-      } catch (_) {}
-    }
-    final coverUrl = items.isNotEmpty ? items.first.url : '';
-    await _ctrl.createHighlight(title.trim(), coverUrl, const [], items: items);
-    if (mounted) Navigator.pop(context); // close loading
+    final draft = await Navigator.push<HighlightDraft>(context,
+        MaterialPageRoute(builder: (_) => const HighlightStoryPicker()));
+    if (draft == null || !mounted) return;
+    final ok = await _ctrl.createHighlight(
+        draft.title, draft.coverUrl, draft.storyIds, items: draft.items);
+    if (!mounted) return;
+    _snack(ok ? tr('story.addedTo', {'name': draft.title})
+        : tr('common.failedRetry'));
   }
 
-  Future<String?> _askHighlightTitle() {
-    final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
-        title: Text(tr('ui.f34e8f52dd'),
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          maxLength: 20,
-          style: TextStyle(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: tr('ui.3679b2134b'),
-            hintStyle: TextStyle(color: AppColors.textFaint),
-            counterStyle: TextStyle(color: AppColors.textFaint),
-            enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.textFaint)),
-            focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.neonBlue)),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(tr('ui.47ba09d086'),
-                  style: TextStyle(color: AppColors.textTertiary))),
-          TextButton(
-              onPressed: () => Navigator.pop(context, ctrl.text),
-              child: Text(tr('ui.b9b1bc06dc'),
-                  style: TextStyle(
-                      color: AppColors.neonBlue, fontWeight: FontWeight.bold))),
-        ],
-      ),
-    );
+  /// Якчанд сторис якбора ба актуалии мавҷуда (аз менюи актуалӣ).
+  Future<void> _addStoriesToHighlight(HighlightModel h) async {
+    final have = <String>{
+      ...h.storyIds,
+      ...h.items.map((e) => e.storyId).where((id) => id.isNotEmpty),
+    };
+    final draft = await Navigator.push<HighlightDraft>(context,
+        MaterialPageRoute(builder: (_) => HighlightStoryPicker(
+            mode: HighlightPickMode.add, exclude: have)));
+    if (draft == null || !mounted) return;
+    final ok = await _ctrl.addStoriesToHighlight(h.id, draft.storyIds);
+    if (!mounted) return;
+    _snack(ok ? tr('story.addedTo', {'name': h.title})
+        : tr('common.failedRetry'));
   }
 
   // ── Other user menu ───────────────────────────────────────────────
