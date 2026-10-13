@@ -5,6 +5,7 @@ import '../../core/api/api_client.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/min_height_scroll.dart';
 import '../../core/analytics/analytics_service.dart';
 import '../../core/analytics/analytics_events.dart';
 import 'package:provider/provider.dart';
@@ -200,7 +201,8 @@ class _ChatView extends StatelessWidget {
         // Экрани паст (телефони хурд, уфуқӣ, клавиатура): ёддоштҳо, Ёрдамчии
         // AI ва эзоҳи дархостҳо пинҳон мешаванд, то рӯйхати чатҳо ҷой дошта
         // бошад. Пеш сарлавҳа 76px аз ҳудуд мебаромад (санҷиши эмулятор).
-        child: LayoutBuilder(builder: (context, box) {
+        // Клавиатура + экрани 320×640: ҷой қариб 0 → саҳифа варақ мешавад.
+        child: MinHeightScroll(child: LayoutBuilder(builder: (context, box) {
         final compact = box.maxHeight < 560;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,7 +450,7 @@ class _ChatView extends StatelessWidget {
             ),
           ],
         );
-        }),
+        })),
       ),
     );
   }

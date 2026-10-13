@@ -12,6 +12,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import '../widgets/min_height_scroll.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/analytics/analytics_service.dart';
@@ -714,7 +715,10 @@ class _SearchScreenState extends State<SearchScreen>
   Widget _buildBody() {
     switch (_mode) {
       case _Mode.idle:   return _buildIdle();
-      case _Mode.recent: return _buildRecent();
+      // Клавиатура дар экрани хурд — таърих варақ мешавад, на навори зард.
+      case _Mode.recent:
+        return MinHeightScroll(
+            key: const ValueKey('recent-wrap'), child: _buildRecent());
       case _Mode.result: return _buildResult();
     }
   }
