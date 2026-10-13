@@ -20,7 +20,7 @@ import 'api/api_client.dart';
 class ErrorReporter {
   ErrorReporter._();
 
-  static const appVersion = '1.2.0';
+  static const appVersion = '1.3.0';
   static const _maxPerSession = 20;
 
   static final Set<String> _sent = {};
