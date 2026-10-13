@@ -1614,9 +1614,11 @@ class _PostCardState extends State<PostCard>
               _heartCtrl.forward(from: 0);
             },
             // «Овоз»: плеери садо бо мавҷ; ду бор пахш — лайк, мисли расм.
+            // Суруд бошад — видео хомӯш мемонад (ду садо якбора не).
             child: post.mediaType == 'audio'
                 ? VoicePostPlayer(media: post.media.first, postId: post.id)
-                : MediaCarousel(media: post.media, isActive: _hasFocus),
+                : MediaCarousel(media: post.media, isActive: _hasFocus,
+                    soundless: _song.isNotEmpty),
           ),
 
           // ── Нишони одамони зикршуда ─────────────────────────

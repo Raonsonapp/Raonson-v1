@@ -14,6 +14,7 @@ import '../../app/app_state.dart';
 import '../feed_repository.dart';
 import 'feed_controller.dart';
 import 'feed_state.dart';
+import 'feed_reels_carousel.dart';
 import '../post/post_card.dart';
 import '../post/post_card_skeleton.dart';
 import '../../stories/story_bar.dart';
@@ -60,6 +61,11 @@ class FeedScreen extends StatelessWidget {
           create: (_) =>
               StoryController(StoryRepository(ApiClient.instance))
                 ..loadStories(),
+        ),
+        // «Рекомендуем видео Reels» — қаторҳои байни постҳо.
+        ChangeNotifierProvider(
+          create: (_) =>
+              FeedReelsController(const HttpFeedReelsSource())..load(),
         ),
       ],
       child: _FeedShell(isActive: isActive, onCreatePost: onCreatePost),
@@ -467,11 +473,15 @@ class _FeedBody extends StatelessWidget {
     }
 
     // ── Main feed ───────────────────────────────────────────────
+    final reelsCtrl = context.read<FeedReelsController>();
     return RefreshIndicator(
       key: refreshKey,
       color: AppColors.neonBlue,
       backgroundColor: AppColors.surface,
-      onRefresh: () => feedCtrl.refresh(),
+      onRefresh: () {
+        reelsCtrl.load();
+        return feedCtrl.refresh();
+      },
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         // Пости феҳрист ~700px аст, вале cacheExtent-и пешфарз 250px —
@@ -505,6 +515,12 @@ class _FeedBody extends StatelessWidget {
             builder: (context, adsFree, _) {
               final layout = kFeedAdLayout.copyWith(enabled: !adsFree);
               final total = layout.totalFor(state.posts.length);
+              // Қаторҳои Reels — пеш аз ин постҳо, на дар паҳлӯи реклама.
+              final reelsAt = feedReelsBoundaries(
+                posts: state.posts.length,
+                adAt: (b) => layout.enabled && b >= layout.first &&
+                    (b - layout.first) % layout.every == 0,
+              );
               return SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -524,12 +540,24 @@ class _FeedBody extends StatelessWidget {
                                   color: AppColors.neonBlue, strokeWidth: 2)))
                           : const SizedBox(height: 40);
                     }
-                    return PostCard(
-                      key: ValueKey(state.posts[postIndex].id), // ҳар пост state-и худаш
-                      post: state.posts[postIndex],
-                      isActive: isActive,
-                      onDeleted: () => context.read<FeedController>()
-                          .removePost(state.posts[postIndex].id),
+                    final slot = reelsAt.indexOf(postIndex);
+                    // Ҳамеша Column — то илова шудани қатор PostCard-ро
+                    // аз нав насозад (видео аз сар сар мешуд).
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (slot >= 0)
+                          FeedReelsCarousel(
+                              key: ValueKey('feed-reels-row-$slot'),
+                              controller: reelsCtrl, slot: slot),
+                        PostCard(
+                          key: ValueKey(state.posts[postIndex].id), // ҳар пост state-и худаш
+                          post: state.posts[postIndex],
+                          isActive: isActive,
+                          onDeleted: () => context.read<FeedController>()
+                              .removePost(state.posts[postIndex].id),
+                        ),
+                      ],
                     );
                   },
                   // Постҳо + ҷойҳои реклама + як сатри поёнӣ.

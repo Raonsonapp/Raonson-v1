@@ -15,10 +15,14 @@ class ReelPlayer extends StatefulWidget {
   final ReelModel reel;
   final VoidCallback onLike;
 
+  /// Саҳифаи ҷорӣ дар рӯйхати амудӣ — танҳо он бозӣ мекунад.
+  final bool isActive;
+
   const ReelPlayer({
     super.key,
     required this.reel,
     required this.onLike,
+    this.isActive = true,
   });
 
   @override
@@ -69,15 +73,26 @@ class _ReelPlayerState extends State<ReelPlayer> {
     _videoController = c;
     c.initialize().then((_) {
       if (!mounted) return;
-      c
-        ..setLooping(true)
-        ..play();
+      c.setLooping(true);
+      if (widget.isActive) c.play();
       setState(() => _initialized = true);
     }).catchError((Object e) {
       // Видеои ҳазфшуда/вайрон — ба ҷои спиннери абадӣ хато нишон медиҳем.
       debugPrint('[ReelPlayer] видео кушода нашуд: $e');
       if (mounted) setState(() => _failed = true);
     });
+  }
+
+  @override
+  void didUpdateWidget(ReelPlayer old) {
+    super.didUpdateWidget(old);
+    final c = _videoController;
+    if (c == null || !_initialized || old.isActive == widget.isActive) return;
+    if (widget.isActive && !_paused) {
+      c.play();
+    } else {
+      c.pause();
+    }
   }
 
   @override

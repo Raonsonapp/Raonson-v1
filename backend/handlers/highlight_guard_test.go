@@ -52,3 +52,27 @@ func TestTaggedVisibleLimitedBranchesAreBounded(t *testing.T) {
 }
 
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
+
+// Якчанд сторис якбора ба актуалӣ: бе такрор ва бе ҷойи холӣ.
+func TestNormalizeHighlightStoryIDs(t *testing.T) {
+	got, ok := normalizeHighlightStoryIDs(" a ", []string{"b", "a", "", "  ", "c", "b"})
+	if !ok || strings.Join(got, ",") != "a,b,c" {
+		t.Fatalf("got %v %v, want a,b,c", got, ok)
+	}
+	if got, ok := normalizeHighlightStoryIDs("", []string{"x"}); !ok || len(got) != 1 || got[0] != "x" {
+		t.Errorf("list-only: %v %v", got, ok)
+	}
+	if _, ok := normalizeHighlightStoryIDs("", nil); ok {
+		t.Error("empty input accepted")
+	}
+	if _, ok := normalizeHighlightStoryIDs(" ", []string{"", " "}); ok {
+		t.Error("blank ids accepted")
+	}
+	many := make([]string, maxHighlightItems+1)
+	for i := range many {
+		many[i] = strings.Repeat("z", i+1)
+	}
+	if _, ok := normalizeHighlightStoryIDs("", many); ok {
+		t.Error("over-limit list accepted")
+	}
+}

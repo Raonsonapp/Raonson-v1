@@ -392,14 +392,32 @@ class ProfileController extends ChangeNotifier {
   }
 
   // Highlights CRUD
-  Future<void> createHighlight(String title, String coverUrl,
+  /// true — сохта шуд.
+  Future<bool> createHighlight(String title, String coverUrl,
       List<String> storyIds, {List<HighlightItem> items = const []}) async {
     try {
       final h = await _repo.createHighlight(
           title: title, coverUrl: coverUrl, storyIds: storyIds, items: items);
       highlights.add(h);
       notifyListeners();
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Сторисҳо ба актуалии мавҷуда; баъд рӯйхат аз сервер (унсурҳо ва
+  /// муқова аз он ҷо меоянд).
+  Future<bool> addStoriesToHighlight(String id, List<String> storyIds) async {
+    final ok = await _repo.addStoriesToHighlight(id, storyIds);
+    if (ok) {
+      final fresh = await _repo.fetchHighlights(profile?.id ?? userId);
+      if (fresh != null) {
+        highlights = fresh;
+        notifyListeners();
+      }
+    }
+    return ok;
   }
 
   Future<void> renameHighlight(String id, String title) async {

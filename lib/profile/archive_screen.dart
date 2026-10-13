@@ -12,6 +12,7 @@ import '../core/utils/server_time.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
 import 'add_to_highlight_sheet.dart';
+import 'story_date_badge.dart';
 
 /// Сториси бойгонӣ (GET /archive/stories).
 class ArchivedStory {
@@ -304,12 +305,6 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
     );
   }
 
-  String _date(DateTime? d) {
-    if (d == null) return '';
-    final l = d.toLocal();
-    return '${l.day.toString().padLeft(2, '0')}.${l.month.toString().padLeft(2, '0')}';
-  }
-
   Widget _storiesTab() {
     final stories = _stories;
     if (stories == null || stories.isEmpty || _storiesError) {
@@ -341,20 +336,16 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       fit: BoxFit.cover,
                       memCacheWidth: 360,
                       errorWidget: (_, __, ___) => Container(color: AppColors.card)),
-              Positioned(
-                left: 6,
-                top: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-                  child: Text(_date(s.createdAt),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
+              // Рӯз ва моҳ (мисли Instagram) — танҳо дар плиткаи аввали
+              // ҳар рӯз; ҳамон виҷет дар «Илова ба актуалӣ».
+              if (s.createdAt != null &&
+                  showStoryDateBadge(
+                      i == 0 ? null : stories[i - 1].createdAt, s.createdAt))
+                Positioned(
+                  left: 6,
+                  top: 6,
+                  child: StoryDateBadge(date: s.createdAt!),
                 ),
-              ),
             ]),
           );
         },
