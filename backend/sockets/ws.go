@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"raonson/calllog"
 	"raonson/db"
 	mw "raonson/middleware"
 
@@ -399,6 +400,9 @@ func dispatch(cl *client, raw []byte) {
 		db.Pool.QueryRow(context.Background(),
 			`SELECT username, COALESCE(avatar,'') FROM users WHERE id=$1`,
 			p.From).Scan(&p.FromUsername, &p.FromAvatar)
+		// Таърихи зангҳо — ПЕШ аз emit ва пайдарпай (на go): гиранда
+		// метавонад фавран answer/decline фиристад ва он бояд сатрро ёбад.
+		calllog.Offer(p.From, p.To, p.CallType)
 		emit(p.To, "call:incoming", map[string]interface{}{
 			"from": p.From, "fromUsername": p.FromUsername,
 			"fromAvatar": p.FromAvatar, "offer": p.Offer, "callType": p.CallType,
@@ -419,6 +423,7 @@ func dispatch(cl *client, raw []byte) {
 		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) {
 			break
 		}
+		calllog.Answer(cl.userID, p.To)
 		emit(p.To, "call:answered", map[string]interface{}{"answer": p.Answer})
 
 	case "call:ice-candidate":
@@ -438,7 +443,29 @@ func dispatch(cl *client, raw []byte) {
 		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) {
 			break
 		}
+		calllog.End(cl.userID, p.To)
 		emit(p.To, "call:ended", map[string]interface{}{})
+
+	// Гузариш дар миёни гуфтугӯ: аудио → видео (бо розигии ҳамсӯҳбат) ва
+	// видео → аудио. Сервер танҳо мерасонад; розигиро барнома мепурсад.
+	//   action: request | accept | decline | cancel | apply
+	//   mode:   video | voice
+	case "call:switch":
+		var p struct {
+			To     string `json:"to"`
+			Mode   string `json:"mode"`
+			Action string `json:"action"`
+		}
+		json.Unmarshal(msg.Data, &p)
+		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) ||
+			!validSwitch(p.Mode, p.Action) {
+			break
+		}
+		if p.Mode == "video" && p.Action == "accept" {
+			calllog.VideoUsed(cl.userID, p.To)
+		}
+		emit(p.To, "call:switch", map[string]interface{}{
+			"from": cl.userID, "mode": p.Mode, "action": p.Action})
 
 	// ── Notifications ──────────────────────────────────────
 	case "notification:subscribe":
@@ -466,8 +493,22 @@ func dispatch(cl *client, raw []byte) {
 		if p.To == "" || p.To == cl.userID || !callAllowed(cl.userID, p.To) {
 			break
 		}
+		calllog.Decline(cl.userID, p.To)
 		emit(p.To, "call:declined", map[string]interface{}{})
 	}
+}
+
+// validSwitch — танҳо қиматҳои маълуми call:switch (сатри дилхоҳи
+// муштарӣ ба ҳамсӯҳбат намерасад).
+func validSwitch(mode, action string) bool {
+	if mode != "video" && mode != "voice" {
+		return false
+	}
+	switch action {
+	case "request", "accept", "decline", "cancel", "apply":
+		return true
+	}
+	return false
 }
 
 func nullIfEmpty(s string) interface{} {

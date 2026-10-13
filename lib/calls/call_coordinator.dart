@@ -28,6 +28,8 @@ import 'call_payload.dart';
 import 'call_strings.dart';
 import 'callkit_bridge.dart';
 import 'incoming_call_page.dart';
+import 'missed_call_notifier.dart';
+import 'outgoing_call.dart';
 
 class CallCoordinator {
   CallCoordinator._();
@@ -38,6 +40,9 @@ class CallCoordinator {
 
   /// Зангҳое, ки ҳоло дар экрани натиҳӣ занг мезананд (ҳанӯз қабул нашуда).
   final Map<String, IncomingCall> _ringingNative = {};
+
+  /// Аздастрафтаҳои натиҳӣ (барои «Занг задан»-и огоҳинома).
+  final Map<String, IncomingCall> _missedNative = {};
   StreamSubscription<CallEvent?>? _eventsSub;
   bool _inited = false;
 
@@ -137,7 +142,11 @@ class CallCoordinator {
   /// Экрани даруни барнома бе ҷавоб баста шуд (вақт гузашт / қатъ).
   void missed(IncomingCall c) {
     dedupe.finish(c.callerId);
-    CallkitBridge.showMissed(c);
+    // «Занг задан» + «Паём»; агар огоҳиномаи маҳаллӣ натавонист —
+    // огоҳиномаи натиҳии callkit.
+    MissedCallNotifier.show(c).then((ok) {
+      if (!ok) CallkitBridge.showMissed(c);
+    });
   }
 
   // ── Ҳодисаҳои callkit ────────────────────────────────────────────
@@ -154,10 +163,19 @@ class CallCoordinator {
       case CallEventActionCallTimeout(:final id):
         // Плагин худаш «занги аздастрафта» нишон медиҳад.
         final c = _ringingNative.remove(id);
-        if (c != null) dedupe.finish(c.callerId);
+        if (c != null) {
+          dedupe.finish(c.callerId);
+          _missedNative[id] = c;
+        }
       case CallEventActionCallEnded(:final callKitParams):
         final c = _ringingNative.remove(callKitParams.id);
         if (c != null) dedupe.finish(c.callerId);
+      case CallEventActionCallCallback(:final id):
+        // «Занг задан» дар огоҳиномаи натиҳии «аздастрафта». Плагин танҳо
+        // id медиҳад — зангро аз рӯйхати аздастрафтаҳои ин сессия меёбем
+        // (барномаи пӯшида танҳо кушода мешавад).
+        final c = _missedNative.remove(id);
+        if (c != null) unawaited(_callBack(c));
       default:
         break;
     }
@@ -188,6 +206,13 @@ class CallCoordinator {
         return;
       }
     }
+  }
+
+  Future<void> _callBack(IncomingCall c) async {
+    final nav = await _waitNavigator();
+    if (nav == null) return;
+    await startOutgoingCall(
+        nav, _peerOf(c), c.isVideo ? CallType.video : CallType.voice);
   }
 
   Future<NavigatorState?> _waitNavigator() async {

@@ -449,6 +449,10 @@ func main() {
 
 	// Token ва номи канали Agora барои занги аудио/видео.
 	r.POST("/calls/token", auth, rl100, handlers.CallToken)
+	// Таърихи зангҳо (сабт аз ҳодисаҳои сокет).
+	r.GET("/calls/history", auth, rl100, handlers.CallHistory)
+	r.DELETE("/calls/history", auth, rl100, handlers.DeleteCallHistory)
+	r.DELETE("/calls/history/:id", auth, rl100, handlers.DeleteCallHistory)
 
 	// ── Effects marketplace ────────────────────────────────────────
 	ef := r.Group("/effects", auth, rl100)

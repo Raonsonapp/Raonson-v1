@@ -11,122 +11,7 @@ import 'package:raonson/calls/minimized_call_view.dart';
 import 'package:raonson/calls/snap_tile.dart';
 import 'package:raonson/chat/room/call_screen.dart';
 import 'package:raonson/core/ui/app_icons.dart';
-import 'package:raonson/models/user_model.dart';
-
-class FakeEngine extends ChangeNotifier implements CallEngine {
-  bool joined = false;
-  int joins = 0;
-  int leaves = 0;
-  @override
-  bool configured = true;
-  @override
-  bool remoteJoined = false;
-  @override
-  int? remoteUid;
-  @override
-  bool muted = false;
-  @override
-  bool speakerOn = true;
-  @override
-  bool cameraOff = false;
-  @override
-  String? error;
-  @override
-  bool get hasVideo => joined;
-
-  void peerJoins() {
-    remoteJoined = true;
-    remoteUid = 42;
-    notifyListeners();
-  }
-
-  @override
-  Future<({String channel, String token})?> credentials(String peerId) async =>
-      (channel: 'ch', token: 't');
-  @override
-  Future<void> join(
-      {required String channel,
-      required String token,
-      required bool isVideo}) async {
-    joins++;
-    joined = true;
-    notifyListeners();
-  }
-
-  @override
-  Future<void> leave() async {
-    leaves++;
-    joined = false;
-    remoteJoined = false;
-    remoteUid = null;
-    notifyListeners();
-  }
-
-  @override
-  Future<void> toggleMute() async {
-    muted = !muted;
-    notifyListeners();
-  }
-
-  @override
-  Future<void> toggleCamera() async {
-    cameraOff = !cameraOff;
-    notifyListeners();
-  }
-
-  @override
-  Future<void> toggleSpeaker() async {
-    speakerOn = !speakerOn;
-    notifyListeners();
-  }
-
-  @override
-  Future<void> flipCamera() async {}
-
-  @override
-  Widget remoteView(String tag) =>
-      ColoredBox(key: Key('fake_remote_$tag'), color: const Color(0xFF00FF00));
-  @override
-  Widget localView(String tag) =>
-      ColoredBox(key: Key('fake_local_$tag'), color: const Color(0xFF0000FF));
-}
-
-class FakeSignal implements CallSignal {
-  final answered = <String>[];
-  final ends = <String>[];
-  VoidCallback? ended;
-  VoidCallback? declined;
-  @override
-  void sendAnswered(String to) => answered.add(to);
-  @override
-  void sendEnd(String to) => ends.add(to);
-  @override
-  set onEnded(VoidCallback? cb) => ended = cb;
-  @override
-  set onDeclined(VoidCallback? cb) => declined = cb;
-}
-
-class FakeSounds implements CallSounds {
-  @override
-  Future<void> playRingback() async {}
-  @override
-  Future<void> playConnected() async {}
-  @override
-  Future<void> stop() async {}
-  @override
-  Future<void> dispose() async {}
-}
-
-final peer = UserModel(
-  id: 'p1',
-  username: 'ali',
-  avatar: '',
-  verified: false,
-  isPrivate: false,
-  postsCount: 0,
-  followersCount: 0,
-  followingCount: 0,
-);
+import 'support/call_fakes.dart';
 
 void main() {
   group('TileSnap (математика)', () {
@@ -226,6 +111,7 @@ void main() {
         signal: signal,
         sounds: FakeSounds.new,
         logger: (_, t) => logs.add(t),
+        platform: FakePlatform(),
       )..navigatorKey = navKey;
     });
 

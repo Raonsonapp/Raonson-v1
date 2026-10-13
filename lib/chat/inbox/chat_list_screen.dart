@@ -30,6 +30,8 @@ import '../room/chat_room_screen.dart';
 import '../room/new_chat_screen.dart';
 import '../group/groups_list_screen.dart';
 import '../room/call_screen.dart';
+import '../../calls/call_history.dart';
+import '../../calls/call_strings.dart';
 import '../ai_assistant_chat_screen.dart';
 import '../../core/ui/app_icons.dart';
 import '../../navigation/bottom_nav/bottom_nav_controller.dart';
@@ -239,6 +241,18 @@ class _ChatView extends StatelessWidget {
                         ],
                       ),
                     ),
+                  ),
+                ),
+                // Таърихи зангҳо (воридотӣ/содиротӣ/аздастрафта).
+                IconButton(
+                  key: const Key('open_call_history'),
+                  icon: Icon(AppIcons.history_rounded,
+                      color: AppColors.textPrimary, size: 24),
+                  tooltip: CallStrings.t('history'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const CallHistoryScreen()),
                   ),
                 ),
                 IconButton(
