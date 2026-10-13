@@ -32,7 +32,7 @@ class MinimizedCallView extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: SnapTile(
-        size: s.isVideo ? videoSize : voiceSize,
+        size: controller.type == CallType.video ? videoSize : voiceSize,
         insets: insets,
         initialCorner: SnapCorner.topRight,
         onTap: controller.restore,
@@ -43,7 +43,9 @@ class MinimizedCallView extends StatelessWidget {
           child: AnimatedBuilder(
             animation: controller,
             builder: (_, __) =>
-                s.isVideo ? _video(controller, s) : _voice(controller, s),
+                controller.type == CallType.video
+                    ? _video(controller, s)
+                    : _voice(controller, s),
           ),
         ),
       ),

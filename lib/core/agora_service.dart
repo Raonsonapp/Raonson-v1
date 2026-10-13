@@ -4,6 +4,7 @@ import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../calls/call_media.dart';
 import 'api/api_client.dart';
 
 const String kAgoraAppId = String.fromEnvironment('AGORA_APP_ID',
@@ -24,6 +25,32 @@ class AgoraService extends ChangeNotifier {
   bool _cameraOff    = false;
   bool _frontCamera  = true;
   int? _remoteUid;
+
+  // ── Ҳолати иловагии занг (шабака, садо, видео) ──
+  CallNetState   _connState      = CallNetState.idle;
+  int            _netQuality     = 0;
+  bool           _remoteFallback = false;
+  bool           _remoteDropped  = false;
+  CallAudioRoute _audioRoute     = CallAudioRoute.unknown;
+  bool           _videoOn        = false;
+  bool           _dataSaver      = false;
+  bool           _ainsOn         = false;
+  bool           _blurOn         = false;
+  bool           _beautyOn       = false;
+
+  CallNetState   get connState      => _connState;
+  /// Сифати шабакаи худ (Agora QualityType 0..6; бадтарини uplink/downlink).
+  int            get netQuality     => _netQuality;
+  /// Agora видеои ҳамсӯҳбатро бо сабаби шабака хомӯш кард (танҳо садо).
+  bool           get remoteFallback => _remoteFallback;
+  /// Ҳамсӯҳбат пайвастро гум кард (на «баромад»).
+  bool           get remoteDropped  => _remoteDropped;
+  CallAudioRoute get audioRoute     => _audioRoute;
+  bool           get videoOn        => _videoOn;
+  bool           get dataSaver      => _dataSaver;
+  bool           get ainsOn         => _ainsOn;
+  bool           get blurOn         => _blurOn;
+  bool           get beautyOn       => _beautyOn;
 
   bool       get localJoined  => _localJoined;
   bool       get remoteJoined => _remoteJoined;
@@ -61,23 +88,55 @@ class AgoraService extends ChangeNotifier {
     }
     _engine = createAgoraRtcEngine();
     await _engine!.initialize(const RtcEngineContext(appId: kAgoraAppId));
+    _connState      = CallNetState.connecting;
+    _netQuality     = 0;
+    _remoteFallback = false;
+    _remoteDropped  = false;
+    _audioRoute     = CallAudioRoute.unknown;
+    _videoOn        = isVideo;
+    _dataSaver      = false;
+    _blurOn         = false;
+    _beautyOn       = false;
+    // Мисли WhatsApp: аудио — гӯшаки телефон, видео — баландгӯяк.
+    _speakerOn      = isVideo;
 
     _engine!.registerEventHandler(RtcEngineEventHandler(
       onJoinChannelSuccess: (connection, elapsed) {
         debugPrint('[Agora] Local joined: ${connection.channelId}');
         _localJoined = true;
+        _connState   = CallNetState.connected;
         notifyListeners();
       },
       onUserJoined: (connection, remoteUid, elapsed) {
         debugPrint('[Agora] Remote joined: $remoteUid');
-        _remoteUid    = remoteUid;
-        _remoteJoined = true;
+        _remoteUid     = remoteUid;
+        _remoteJoined  = true;
+        _remoteDropped = false;
         notifyListeners();
       },
       onUserOffline: (connection, remoteUid, reason) {
-        debugPrint('[Agora] Remote left: $remoteUid');
-        _remoteUid    = null;
-        _remoteJoined = false;
+        debugPrint('[Agora] Remote left: $remoteUid ($reason)');
+        _remoteUid     = null;
+        _remoteJoined  = false;
+        _remoteDropped = reason == UserOfflineReasonType.userOfflineDropped;
+        notifyListeners();
+      },
+      onNetworkQuality: (connection, remoteUid, tx, rx) {
+        // uid 0 — худи мо.
+        if (remoteUid != 0) return;
+        final q = _q(tx) > _q(rx) ? _q(tx) : _q(rx);
+        if (q != _netQuality) {
+          _netQuality = q;
+          notifyListeners();
+        }
+      },
+      onRemoteSubscribeFallbackToAudioOnly: (uid, isFallbackOrRecover) {
+        _remoteFallback = isFallbackOrRecover;
+        notifyListeners();
+      },
+      onAudioRoutingChanged: (routing) {
+        _audioRoute = routeFromAgora(routing);
+        _speakerOn  = _audioRoute == CallAudioRoute.speaker;
         notifyListeners();
       },
       onError: (err, msg) {
@@ -85,6 +144,14 @@ class AgoraService extends ChangeNotifier {
         if (_fatal(err)) { _error = err.name; notifyListeners(); }
       },
       onConnectionStateChanged: (connection, state, reason) {
+        _connState = switch (state) {
+          ConnectionStateType.connectionStateConnecting   => CallNetState.connecting,
+          ConnectionStateType.connectionStateConnected    => CallNetState.connected,
+          ConnectionStateType.connectionStateReconnecting => CallNetState.reconnecting,
+          ConnectionStateType.connectionStateFailed       => CallNetState.failed,
+          ConnectionStateType.connectionStateDisconnected => CallNetState.idle,
+        };
+        notifyListeners();
         if (state == ConnectionStateType.connectionStateFailed ||
             reason == ConnectionChangedReasonType.connectionChangedInvalidToken ||
             reason == ConnectionChangedReasonType.connectionChangedTokenExpired ||
@@ -106,6 +173,17 @@ class AgoraService extends ChangeNotifier {
     }
 
     await _engine!.setDefaultAudioRouteToSpeakerphone(_speakerOn);
+
+    // Шабакаи суст: ҳамсӯҳбат видеои сифати пастро мегирад, баъд танҳо
+    // садо — занг қатъ намешавад. Видеои худ ду ҷараён (баланд/паст).
+    try {
+      await _engine!.enableDualStreamMode(enabled: true);
+      await _engine!.setRemoteSubscribeFallbackOption(
+          StreamFallbackOptions.streamFallbackOptionAudioOnly);
+    } catch (e) {
+      debugPrint('[Agora] fallback setup: $e');
+    }
+    if (_ainsOn) await setNoiseSuppression(true);
 
     _channelId = channelName;
     await _engine!.joinChannel(
@@ -190,8 +268,162 @@ class AgoraService extends ChangeNotifier {
     _remoteUid    = null;
     _muted        = false;
     _cameraOff    = false;
+    _connState      = CallNetState.idle;
+    _netQuality     = 0;
+    _remoteFallback = false;
+    _remoteDropped  = false;
+    _audioRoute     = CallAudioRoute.unknown;
+    _videoOn        = false;
+    _dataSaver      = false;
+    _blurOn         = false;
+    _beautyOn       = false;
     notifyListeners();
   }
+
+  // ─── ЗАНГ: ИЛОВАГӢ ───
+
+  /// Аудио ↔ видео дар ҳамон канал (бе аз нав пайвастшавӣ).
+  Future<void> setVideoEnabled(bool on) async {
+    final e = _engine;
+    if (e == null || on == _videoOn) return;
+    if (on) await _requestPermissions(true);
+    _videoOn = on;
+    try {
+      if (on) {
+        await e.enableVideo();
+        await e.startPreview();
+        _cameraOff = false;
+        await e.muteLocalVideoStream(false);
+      }
+      await e.updateChannelMediaOptions(ChannelMediaOptions(
+        publishCameraTrack: on,
+        autoSubscribeVideo: on,
+      ));
+      if (!on) {
+        await e.stopPreview();
+        await e.disableVideo();
+      }
+    } catch (err) {
+      debugPrint('[Agora] setVideoEnabled($on): $err');
+    }
+    notifyListeners();
+  }
+
+  /// Камера дар паснамо таваққуф (бе тағйири интихоби корбар).
+  Future<void> setCameraPaused(bool paused) async {
+    try {
+      await _engine?.enableLocalVideo(!paused);
+    } catch (_) {}
+  }
+
+  /// Сарфаи интернет: видеои ҳамсӯҳбатро нагирифтан.
+  Future<void> setDataSaver(bool on) async {
+    _dataSaver = on;
+    try {
+      await _engine?.muteAllRemoteVideoStreams(on);
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  /// Роҳи садо. Android — setRouteInCommunicationMode (Bluetooth →
+  /// телефон ҳам); дигар ҷо — танҳо баландгӯяк ҳа/не.
+  Future<void> setAudioRoute(CallAudioRoute r) async {
+    final e = _engine;
+    _speakerOn = r == CallAudioRoute.speaker;
+    if (e != null) {
+      try {
+        if (defaultTargetPlatform == TargetPlatform.android &&
+            r != CallAudioRoute.unknown) {
+          await e.setRouteInCommunicationMode(agoraRouteOf(r));
+        } else {
+          await e.setEnableSpeakerphone(_speakerOn);
+        }
+      } catch (err) {
+        debugPrint('[Agora] route: $err');
+        try { await e.setEnableSpeakerphone(_speakerOn); } catch (_) {}
+      }
+    }
+    notifyListeners();
+  }
+
+  /// AI-хомӯшкунии садои атроф (дар full-sdk ҳаст, калид намехоҳад).
+  Future<bool> setNoiseSuppression(bool on) async {
+    _ainsOn = on;
+    var ok = true;
+    try {
+      await _engine?.setAINSMode(enabled: on, mode: AudioAinsMode.ainsModeBalanced);
+    } catch (err) {
+      debugPrint('[Agora] AINS: $err');
+      ok = false;
+      _ainsOn = false;
+    }
+    notifyListeners();
+    return ok;
+  }
+
+  /// Хира кардани замина (virtual background, blur). Дастгоҳи заиф —
+  /// false (Agora худаш намедиҳад).
+  Future<bool> setBackgroundBlur(bool on) async {
+    final e = _engine;
+    if (e == null) return false;
+    try {
+      if (on && !await e.isFeatureAvailableOnDevice(
+          FeatureType.videoVirtualBackground)) {
+        return false;
+      }
+      await e.enableVirtualBackground(
+        enabled: on,
+        backgroundSource: const VirtualBackgroundSource(
+          backgroundSourceType: BackgroundSourceType.backgroundBlur,
+          blurDegree: BackgroundBlurDegree.blurDegreeHigh,
+        ),
+        segproperty: const SegmentationProperty(),
+      );
+      _blurOn = on;
+      notifyListeners();
+      return true;
+    } catch (err) {
+      debugPrint('[Agora] blur: $err');
+      return false;
+    }
+  }
+
+  /// Зебоии сабук (ҳамворӣ/равшанӣ) — дохили SDK, бе калид.
+  Future<bool> setBeauty(bool on) async {
+    final e = _engine;
+    if (e == null) return false;
+    try {
+      if (on && !await e.isFeatureAvailableOnDevice(
+          FeatureType.videoBeautyEffect)) {
+        return false;
+      }
+      await e.setBeautyEffectOptions(
+        enabled: on,
+        options: const BeautyOptions(
+          lighteningLevel: 0.5,
+          smoothnessLevel: 0.5,
+          rednessLevel: 0.1,
+          sharpnessLevel: 0.2,
+        ),
+      );
+      _beautyOn = on;
+      notifyListeners();
+      return true;
+    } catch (err) {
+      debugPrint('[Agora] beauty: $err');
+      return false;
+    }
+  }
+
+  static int _q(QualityType q) => switch (q) {
+        QualityType.qualityExcellent => 1,
+        QualityType.qualityGood      => 2,
+        QualityType.qualityPoor      => 3,
+        QualityType.qualityBad       => 4,
+        QualityType.qualityVbad      => 5,
+        QualityType.qualityDown      => 6,
+        _                            => 0,
+      };
 
   // ─── CONTROLS ───
   Future<void> toggleMute() async {

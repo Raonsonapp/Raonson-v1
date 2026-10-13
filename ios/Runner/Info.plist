@@ -66,6 +66,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Raonson микрофонро барои зангҳои аудио/видео ва паёмҳои овозӣ истифода мебарад.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Raonson камераро барои зангҳои видеоӣ ва гирифтани акс/видео истифода мебарад.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Raonson ҷойи шуморо танҳо вақте мепурсад, ки шумо «Ҷойи ҳозираи ман»-ро пахш мекунед ё ҷойгиршавиро дар чат мефиристед — то ҷойи наздиктаринро барои пост пешниҳод кунад. Координатаҳои дақиқи шумо нашр намешаванд.</string>
 </dict>

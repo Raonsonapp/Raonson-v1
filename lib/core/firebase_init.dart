@@ -26,6 +26,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../calls/call_coordinator.dart';
 import '../calls/call_payload.dart';
 import '../calls/callkit_bridge.dart';
+import '../calls/missed_call_notifier.dart';
 import '../chat/chat_repository.dart';
 import '../chat/room/chat_room_screen.dart';
 import '../models/message_model.dart';
@@ -83,11 +84,29 @@ class FirebaseInit {
         ),
         // Пахши banner-и маҳаллӣ низ бояд ба ҳамон ҷо барад.
         onDidReceiveNotificationResponse: (r) {
+          // «Занги аздастрафта»: «Занг задан» / «Паём».
+          if (MissedCallNotifier.handle(
+              r.payload, r.actionId, navigatorKey?.currentState)) {
+            return;
+          }
           final payload = r.payload;
           if (payload != null && payload.isNotEmpty) _openPayload(payload);
         },
       );
       LocalUploadNotificationSink.markInitialized();
+      // Барнома аз тугмаи «аздастрафта» кушода шуд (пӯшида буд).
+      try {
+        final launch = await _localNotif.getNotificationAppLaunchDetails();
+        final r = launch?.notificationResponse;
+        if ((launch?.didNotificationLaunchApp ?? false) &&
+            r != null &&
+            MissedCallNotifier.parse(r.payload) != null) {
+          Future.delayed(const Duration(milliseconds: 800), () {
+            MissedCallNotifier.handle(
+                r.payload, r.actionId, navigatorKey?.currentState);
+          });
+        }
+      } catch (_) {}
       final android = _localNotif.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       for (final ch in NotificationChannels.all()) {

@@ -52,7 +52,8 @@ class CallkitBridge {
       duration: ringDuration.inMilliseconds,
       missedCallNotification: NotificationParams(
         showNotification: true,
-        isShowCallback: false,
+        // «Занг задан» → CallCoordinator (CallEventActionCallCallback).
+        isShowCallback: true,
         subtitle: CallStrings.t('missed'),
         callbackText: CallStrings.t('callBack'),
       ),

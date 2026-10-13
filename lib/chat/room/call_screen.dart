@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../../app/app_theme.dart';
 import '../../calls/active_call.dart';
+import '../../calls/call_controls.dart';
 import '../../calls/call_strings.dart';
 import '../../calls/snap_tile.dart';
 import '../../models/user_model.dart';
@@ -16,6 +18,8 @@ export '../../calls/active_call.dart' show CallType;
 /// Ҳолати занг (Agora, вақтсанҷ, оҳанг) дар [ActiveCallController] аст,
 /// на дар State — бинобар ин экран метавонад «хурд» шавад (тугма ё
 /// ишораи «ақиб») ва занг дар ҳубобчаи болои барнома идома ёбад.
+///
+/// Дар PiP-и система (видео, барнома берун) танҳо видеои ҳамсӯҳбат.
 class CallScreen extends StatefulWidget {
   final UserModel peer;
   final CallType  callType;
@@ -92,6 +96,11 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       _close(s.endMessage);
       return;
     }
+    final notice = _ctl.takeNotice();
+    if (notice != null) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+          content: Text(notice), duration: const Duration(seconds: 3)));
+    }
     setState(() {});
   }
 
@@ -105,6 +114,10 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     }
     final route = ModalRoute.of(context);
     final nav = Navigator.of(context);
+    // Варақаи кушода (садо/бештар) низ пӯшида шавад.
+    if (route != null && route.isActive && !route.isCurrent) {
+      nav.popUntil((r) => r == route || r.isFirst);
+    }
     if (route == null || route.isCurrent) {
       nav.pop();
     } else if (route.isActive) {
@@ -132,8 +145,13 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     if (mounted && !_closing) _close(null);
   }
 
+  bool get _mine => _ctl.session == _session && _ctl.isActive;
   bool get _connected => _ctl.connected && _ctl.session == _session;
   String get _statusText => _ctl.statusText;
+
+  /// Намуди ҷорӣ: пас аз гузариш аудио ↔ видео иваз мешавад.
+  bool get _isVideo =>
+      _mine ? _ctl.type == CallType.video : widget.callType == CallType.video;
 
   @override
   void dispose() {
@@ -158,11 +176,45 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     onPopInvoked: (didPop) { if (!didPop) _minimize(); },
     child: Scaffold(
       backgroundColor: AppColors.bg,
-      body: FadeTransition(
-        opacity: _fadeAnim,
-        child: widget.callType == CallType.video ? _buildVideo() : _buildVoice(),
+      body: ValueListenableBuilder<bool>(
+        valueListenable: _ctl.platform.inPip,
+        builder: (_, inPip, __) => inPip && _mine
+            ? _buildPip()
+            : FadeTransition(
+                opacity: _fadeAnim,
+                child: Stack(children: [
+                  Positioned.fill(child: _isVideo ? _buildVideo() : _buildVoice()),
+                  if (_ctl.switchState == CallSwitchState.incoming && _mine)
+                    Positioned(
+                      left: 16, right: 16,
+                      top: MediaQuery.paddingOf(context).top + 64,
+                      child: VideoRequestBanner(
+                        name: widget.peer.username,
+                        onAccept: () => _ctl.answerVideoRequest(true),
+                        onDecline: () => _ctl.answerVideoRequest(false),
+                      ),
+                    ),
+                ]),
+              ),
       ),
     ),
+  );
+
+  /// Тирезаи хурди PiP: танҳо ҳамсӯҳбат (тасвири худ пинҳон).
+  Widget _buildPip() => KeyedSubtree(
+    key: const Key('call_pip_mode'),
+    child: _isVideo
+        ? _remoteOrPlaceholder('pipwin', big: false)
+        : Container(
+            color: const Color(0xFF0D1B3E),
+            alignment: Alignment.center,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Avatar(imageUrl: widget.peer.avatar, size: 48, glowBorder: false),
+              const SizedBox(height: 6),
+              Text(_statusText,
+                  style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ]),
+          ),
   );
 
   Widget _minimizeBtn() => IconButton(
@@ -170,6 +222,62 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     tooltip: CallStrings.t('minimize'),
     icon: Icon(AppIcons.keyboard_arrow_down_rounded, color: AppColors.textPrimary),
     onPressed: _minimize,
+  );
+
+  Widget _moreBtn() => IconButton(
+    key: const Key('call_more'),
+    tooltip: CallStrings.t('more'),
+    icon: Icon(AppIcons.more_vert_rounded, color: AppColors.textPrimary),
+    onPressed: _mine ? () => showCallMoreSheet(context, _ctl) : null,
+  );
+
+  /// «Пайвасти суст» / «танҳо садо» / «камера таваққуф».
+  Widget _hints() {
+    if (!_mine) return const SizedBox.shrink();
+    final chips = <Widget>[
+      if (_ctl.weakNetwork)
+        CallHintChip(
+          key: const Key('call_weak_network'),
+          icon: Symbols.signal_cellular_alt_1_bar,
+          text: CallStrings.t('weakNetwork'),
+          action: _isVideo && !_ctl.engine.dataSaver
+              ? CallStrings.t('dataSaver')
+              : null,
+          onAction: () => _ctl.setDataSaver(true),
+        ),
+      if (_ctl.videoFallback)
+        CallHintChip(
+          key: const Key('call_video_fallback'),
+          icon: Symbols.data_saver_on,
+          text: CallStrings.t('videoFallback'),
+        ),
+      if (_ctl.switchState == CallSwitchState.requesting)
+        CallHintChip(
+          key: const Key('call_video_waiting'),
+          icon: AppIcons.videocam_rounded,
+          text: CallStrings.t('videoWaiting', {'name': widget.peer.username}),
+          action: CallStrings.t('cancel'),
+          onAction: _ctl.cancelVideoRequest,
+        ),
+    ];
+    if (chips.isEmpty) return const SizedBox.shrink();
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      for (final c in chips) Padding(padding: const EdgeInsets.only(top: 6), child: c),
+    ]);
+  }
+
+  Widget _routeBtn() => _Btn(
+    key: const Key('call_route'),
+    icon:   routeIcon(_ctl.route),
+    label:  routeLabel(_ctl.route),
+    active: _ctl.route == CallAudioRoute.speaker,
+    onTap:  () {
+      if (_ctl.routes.length > 2) {
+        showAudioRouteSheet(context, _ctl);
+      } else {
+        _ctl.toggleSpeaker();
+      }
+    },
   );
 
   // ══════════════════ VOICE UI ══════════════════
@@ -182,15 +290,16 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       ),
     ),
     child: SafeArea(child: Column(children: [
-      Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: Padding(padding: const EdgeInsets.all(8), child: _minimizeBtn()),
+      Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(children: [_minimizeBtn(), const Spacer(), _moreBtn()]),
       ),
       const SizedBox(height: 4),
       Text(_statusText,
           style: TextStyle(
               color: AppColors.textPrimary.withOpacity(0.65), fontSize: 16, letterSpacing: 1.2)),
-      const SizedBox(height: 48),
+      _hints(),
+      const SizedBox(height: 40),
       Stack(alignment: Alignment.center, children: [
         if (!_connected) ...[_ring(180, 0.04), _ring(150, 0.08), _ring(120, 0.13)],
         ScaleTransition(
@@ -223,16 +332,19 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
             active: _ctl.engine.muted,
             onTap:  _ctl.toggleMute,
           ),
-          _EndBtn(onTap: _endCall),
           _Btn(
-            icon:   _ctl.engine.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_down_rounded,
-            label:  tr('ui.ce3cad995c'),
-            active: _ctl.engine.speakerOn,
-            onTap:  _ctl.toggleSpeaker,
+            key: const Key('call_to_video'),
+            icon:   AppIcons.videocam_rounded,
+            label:  CallStrings.t('video'),
+            active: _ctl.switchState == CallSwitchState.requesting,
+            onTap:  _connected ? _ctl.requestVideo : () {},
           ),
+          _routeBtn(),
         ]),
       ),
-      const SizedBox(height: 56),
+      const SizedBox(height: 28),
+      _EndBtn(onTap: _endCall),
+      const SizedBox(height: 40),
     ])),
   );
 
@@ -243,7 +355,8 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   static const Size selfTileSize = Size(100, 140);
 
   bool get _remoteVisible =>
-      _connected && _ctl.engine.remoteUid != null && _ctl.engine.hasVideo;
+      _connected && _ctl.engine.remoteUid != null && _ctl.engine.hasVideo &&
+      !_ctl.videoFallback && !_ctl.engine.dataSaver;
   bool get _localVisible => !_ctl.engine.cameraOff && _ctl.engine.hasVideo;
 
   Widget _remoteOrPlaceholder(String tag, {required bool big}) => _remoteVisible
@@ -320,16 +433,19 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
       SafeArea(child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(children: [
-          _minimizeBtn(),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Text(widget.peer.username,
-                style: TextStyle(
-                    color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
-            Text(_statusText,
-                style: TextStyle(color: AppColors.textPrimary.withOpacity(0.6), fontSize: 13)),
-          ])),
-          const SizedBox(width: 48),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            _minimizeBtn(),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              Text(widget.peer.username,
+                  style: TextStyle(
+                      color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 17)),
+              Text(_statusText,
+                  style: TextStyle(color: AppColors.textPrimary.withOpacity(0.6), fontSize: 13)),
+            ])),
+            _moreBtn(),
+          ]),
+          _hints(),
         ]),
       )),
 
@@ -348,8 +464,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
             _EndBtn(onTap: _endCall),
             _Btn(icon: AppIcons.flip_camera_ios_rounded,
                 label: tr('ui.05a19ea7d3'), active: false, onTap: _ctl.flipCamera),
-            _Btn(icon: _ctl.engine.speakerOn ? AppIcons.volume_up_rounded : AppIcons.volume_off_rounded,
-                label: tr('ui.ce3cad995c'), active: _ctl.engine.speakerOn, onTap: _ctl.toggleSpeaker),
+            _routeBtn(),
           ]),
         ),
       ),
@@ -384,7 +499,7 @@ class _Btn extends StatelessWidget {
   final String       label;
   final bool         active;
   final VoidCallback onTap;
-  const _Btn({required this.icon, required this.label,
+  const _Btn({super.key, required this.icon, required this.label,
       required this.active, required this.onTap});
 
   @override

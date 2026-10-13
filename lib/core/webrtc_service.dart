@@ -20,6 +20,10 @@ class WebRTCService extends ChangeNotifier {
   VoidFn?         onCallDeclined;
   VoidFn?         onCallAnswered;
 
+  /// Гузариш дар миёни гуфтугӯ (`call:switch`): mode video|voice,
+  /// action request|accept|decline|cancel|apply.
+  void Function(String from, String mode, String action)? onCallSwitch;
+
   bool get isConnected => _socket.isConnected;
 
   Future<void> connect() async {
@@ -41,6 +45,14 @@ class WebRTCService extends ChangeNotifier {
     _socket.on('call:answered', (_) => onCallAnswered?.call());
     _socket.on('call:ended',    (_) => onCallEnded?.call());
     _socket.on('call:declined', (_) => onCallDeclined?.call());
+    _socket.on('call:switch', (data) {
+      if (data is! Map) return;
+      onCallSwitch?.call(
+        (data['from'] ?? '').toString(),
+        (data['mode'] ?? '').toString(),
+        (data['action'] ?? '').toString(),
+      );
+    });
     _registered = true;
     debugPrint('[WebRTC] registered');
   }
@@ -63,4 +75,6 @@ class WebRTCService extends ChangeNotifier {
       _socket.emit('call:decline', {'to': to});
   void sendEnd(String to) =>
       _socket.emit('call:end', {'to': to});
+  void sendSwitch(String to, {required String mode, required String action}) =>
+      _socket.emit('call:switch', {'to': to, 'mode': mode, 'action': action});
 }
