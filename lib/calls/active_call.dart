@@ -13,7 +13,9 @@
 //  система барои видео. Барнома ба паснамо равад — занг идома дорад.
 //
 //  Иловаҳо: аз нав пайвастшавӣ (30с), сифати шабака, роҳи садо,
-//  аудио ↔ видео бо розигии ҳамсӯҳбат, AI-хомӯшкунии садо, хира/зебоӣ.
+//  аудио ↔ видео бо розигии ҳамсӯҳбат, AI-хомӯшкунии садо, хира/зебоӣ,
+//  намоиши экран (Android; мисли WhatsApp — ҳамсӯҳбат экрани телефонро
+//  ба ҷои камера мебинад).
 //
 //  Муҳаррик, сигнал, садо, платформа ва сабти чат — интерфейсҳо, то
 //  тестҳо бе Agora, бе сокет ва бе Android кор кунанд.
@@ -36,7 +38,7 @@ import 'call_native.dart';
 import 'call_strings.dart';
 import 'minimized_call_view.dart';
 
-export 'call_media.dart' show CallAudioRoute, CallNetState;
+export 'call_media.dart' show CallAudioRoute, CallNetState, ScreenCaptureStatus;
 
 enum CallType { voice, video }
 
@@ -44,6 +46,12 @@ enum CallType { voice, video }
 ///   requesting — ман пурсидам, интизори ҳамсӯҳбат;
 ///   incoming   — ҳамсӯҳбат пурсид, ман бояд ҷавоб диҳам.
 enum CallSwitchState { idle, requesting, incoming }
+
+/// Намоиши экрани ХУДИ мо:
+///   idle       — намоиш нест (ё қатъ шуд);
+///   requesting — интизори розигии система (MediaProjection);
+///   sharing    — ҳамсӯҳбат экрани моро мебинад.
+enum ScreenShareState { idle, requesting, sharing }
 
 // ── Вобастагиҳо (дар тест — қалбакӣ) ─────────────────────────────
 
@@ -78,6 +86,9 @@ abstract class CallEngine implements Listenable {
   bool get blur;
   bool get beauty;
 
+  /// Гирифтани экран (намоиш ба ҳамсӯҳбат).
+  ScreenCaptureStatus get screenCapture;
+
   Future<({String channel, String token})?> credentials(String peerId);
   Future<void> join(
       {required String channel, required String token, required bool isVideo});
@@ -93,9 +104,20 @@ abstract class CallEngine implements Listenable {
   Future<bool> setBackgroundBlur(bool on);
   Future<bool> setBeauty(bool on);
 
+  /// Розигии система → гирифтан ва фиристодани экран ба ҷои камера.
+  Future<void> startScreenShare();
+
+  /// Қатъи намоиш; камера (агар видео бошад) бармегардад.
+  Future<void> stopScreenShare();
+
+  /// Ҳамсӯҳбат экран нишон медиҳад — видеои ӯро гирифтан (ҳатто дар
+  /// занги аудиоӣ).
+  Future<void> setRemoteScreenViewing(bool on);
+
   /// Видеои ҳамсӯҳбат. [tag] — ҷои намоиш (big/small/pip): калиди нав
-  /// view-и платформаро дар ҷои нав аз нав месозад.
-  Widget remoteView(String tag);
+  /// view-и платформаро дар ҷои нав аз нав месозад. [fit] — тамоми
+  /// кадр бе буридан (экрани телефон), на «пур кардан».
+  Widget remoteView(String tag, {bool fit = false});
 
   /// Пешнамоиши камераи худ.
   Widget localView(String tag);
@@ -105,9 +127,13 @@ abstract class CallSignal {
   void sendAnswered(String to);
   void sendEnd(String to);
   void sendSwitch(String to, {required String mode, required String action});
+
+  /// `call:screen` start|stop ба ҳамсӯҳбат.
+  void sendScreen(String to, {required bool sharing});
   set onEnded(VoidCallback? cb);
   set onDeclined(VoidCallback? cb);
   set onSwitch(void Function(String from, String mode, String action)? cb);
+  set onScreen(void Function(String from, String action)? cb);
 }
 
 abstract class CallSounds {
@@ -164,6 +190,8 @@ class AgoraCallEngine implements CallEngine {
   bool get blur => _a.blurOn;
   @override
   bool get beauty => _a.beautyOn;
+  @override
+  ScreenCaptureStatus get screenCapture => _a.screenCapture;
 
   @override
   Future<({String channel, String token})?> credentials(String peerId) =>
@@ -196,17 +224,28 @@ class AgoraCallEngine implements CallEngine {
   Future<bool> setBackgroundBlur(bool on) => _a.setBackgroundBlur(on);
   @override
   Future<bool> setBeauty(bool on) => _a.setBeauty(on);
+  @override
+  Future<void> startScreenShare() => _a.startScreenShare();
+  @override
+  Future<void> stopScreenShare() => _a.stopScreenShare();
+  @override
+  Future<void> setRemoteScreenViewing(bool on) => _a.setRemoteScreenViewing(on);
 
   @override
-  Widget remoteView(String tag) {
+  Widget remoteView(String tag, {bool fit = false}) {
     final e = _a.engine;
     final uid = _a.remoteUid;
     if (e == null || uid == null) return const SizedBox.shrink();
     return AgoraVideoView(
-      key: ValueKey('remote-$tag-$uid'),
+      key: ValueKey('remote-$tag-$uid-$fit'),
       controller: VideoViewController.remote(
         rtcEngine: e,
-        canvas: VideoCanvas(uid: uid),
+        canvas: VideoCanvas(
+          uid: uid,
+          renderMode: fit
+              ? RenderModeType.renderModeFit
+              : RenderModeType.renderModeHidden,
+        ),
         connection: RtcConnection(channelId: _a.channelId),
       ),
     );
@@ -236,12 +275,18 @@ class SocketCallSignal implements CallSignal {
   void sendSwitch(String to, {required String mode, required String action}) =>
       _s.sendSwitch(to, mode: mode, action: action);
   @override
+  void sendScreen(String to, {required bool sharing}) =>
+      _s.sendScreen(to, sharing: sharing);
+  @override
   set onEnded(VoidCallback? cb) => _s.onCallEnded = cb;
   @override
   set onDeclined(VoidCallback? cb) => _s.onCallDeclined = cb;
   @override
   set onSwitch(void Function(String from, String mode, String action)? cb) =>
       _s.onCallSwitch = cb;
+  @override
+  set onScreen(void Function(String from, String action)? cb) =>
+      _s.onCallScreen = cb;
 }
 
 class PlayerCallSounds implements CallSounds {
@@ -438,6 +483,26 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
   /// Барнома дар тирезаи PiP-и система.
   bool get inPip => platform.inPip.value;
 
+  ScreenShareState _share = ScreenShareState.idle;
+  ScreenShareState get shareState => _share;
+
+  /// Ҳамсӯҳбат экрани моро мебинад.
+  bool get screenSharing => isActive && _share == ScreenShareState.sharing;
+
+  bool _peerSharing = false;
+
+  /// Ҳамсӯҳбат экрани худро нишон медиҳад.
+  bool get peerSharing => isActive && _peerSharing;
+
+  /// Огоҳии махфият («ҳама чиз намоён мешавад») дар ин гуфтугӯ нишон
+  /// дода шуд — бори дуюм намепурсем.
+  bool _shareWarned = false;
+  bool get shareWarned => _shareWarned;
+  void markShareWarned() => _shareWarned = true;
+
+  /// Тугмаи «Намоиши экран»: танҳо дар гуфтугӯи пайваст ва Android.
+  bool get canShareScreen => connected && platform.canShareScreen;
+
   /// Хабари кӯтоҳ барои экран (snackbar). [takeNotice] онро мегирад.
   String? _notice;
   String? takeNotice() {
@@ -501,12 +566,16 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
     _switch = CallSwitchState.idle;
     _cameraAutoPaused = false;
     _notice = null;
+    _share = ScreenShareState.idle;
+    _peerSharing = false;
+    _shareWarned = false;
     _sounds = _soundsFactory();
     _idle ??= Completer<void>();
     engine.addListener(_onEngine);
     signal.onEnded = _onRemoteEnded;
     signal.onDeclined = _onDeclined;
     signal.onSwitch = _onSwitch;
+    signal.onScreen = _onScreen;
     platform.onAction = _onNativeAction;
     _observe(true);
     _syncOverlay();
@@ -573,6 +642,7 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
     _syncReconnect();
+    _syncShare();
     if (engine.remoteJoined && _tick == null) {
       final snd = _sounds;
       if (snd != null) snd.stop().then((_) => snd.playConnected());
@@ -772,6 +842,88 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  // ── Намоиши экран ─────────────────────────────────────────────
+  //
+  // idle → requesting (равзанаи розигии система) → sharing → idle.
+  // Ҳолат аз муҳаррик меояд (screenCapture): розигӣ → active → sharing ва
+  // `call:screen start` ба ҳамсӯҳбат; рад/хато → idle бо хабар; система
+  // қатъ кард (чипи Android 14+) → idle ва `stop`. Занг тамом → қатъ.
+
+  Future<void> startScreenShare() async {
+    if (!canShareScreen || _share != ScreenShareState.idle) return;
+    _share = ScreenShareState.requesting;
+    notifyListeners();
+    await engine.startScreenShare();
+    _syncShare();
+    notifyListeners();
+  }
+
+  /// Қатъ (тугма, чип, огоҳинома). Камера бармегардад.
+  Future<void> stopScreenShare() async {
+    final s = _session;
+    final was = _share;
+    if (was == ScreenShareState.idle) return;
+    _share = ScreenShareState.idle;
+    if (was == ScreenShareState.sharing && s != null && isActive) {
+      signal.sendScreen(s.peer.id, sharing: false);
+    }
+    notifyListeners();
+    await engine.stopScreenShare();
+  }
+
+  Future<void> toggleScreenShare() =>
+      _share == ScreenShareState.idle ? startScreenShare() : stopScreenShare();
+
+  void _syncShare() {
+    final s = _session;
+    if (s == null || !isActive) return;
+    final c = engine.screenCapture;
+    switch (_share) {
+      case ScreenShareState.requesting:
+        if (c == ScreenCaptureStatus.active) {
+          _share = ScreenShareState.sharing;
+          signal.sendScreen(s.peer.id, sharing: true);
+        } else if (c == ScreenCaptureStatus.failed) {
+          _share = ScreenShareState.idle;
+          _notice = CallStrings.t('screenShareFailed');
+          unawaited(engine.stopScreenShare());
+        }
+      case ScreenShareState.sharing:
+        if (c != ScreenCaptureStatus.active) {
+          // Система ё огоҳинома намоишро қатъ кард.
+          _share = ScreenShareState.idle;
+          signal.sendScreen(s.peer.id, sharing: false);
+          unawaited(engine.stopScreenShare());
+        }
+      case ScreenShareState.idle:
+        // Розигӣ пас аз «бекор» омад — гирифтанро фавран мебандем.
+        if (c == ScreenCaptureStatus.active) {
+          unawaited(engine.stopScreenShare());
+        }
+    }
+  }
+
+  /// Корбар дар равзанаи система рад кард (аз Android).
+  void _onShareDenied() {
+    if (_share != ScreenShareState.requesting) return;
+    _share = ScreenShareState.idle;
+    _notice = CallStrings.t('screenShareDenied');
+    notifyListeners();
+    unawaited(engine.stopScreenShare());
+  }
+
+  void _onScreen(String from, String action) {
+    final s = _session;
+    if (s == null || !isActive || from != s.peer.id) return;
+    if (action != 'start' && action != 'stop') return;
+    final on = action == 'start';
+    if (on == _peerSharing) return;
+    _peerSharing = on;
+    _syncPip();
+    unawaited(engine.setRemoteScreenViewing(on));
+    notifyListeners();
+  }
+
   // ── Пешзамина / паснамо / PiP ────────────────────────────────
 
   @override
@@ -792,7 +944,12 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
     _backgrounded = bg;
     if (!isActive) return;
     if (bg) {
-      if (_type == CallType.video && !inPip && !engine.cameraOff) {
+      // Намоиши экран: камера аллакай нашр намешавад ва паснамо — ҳамон
+      // ҳолате, ки корбар экрани дигар барномаҳоро нишон медиҳад.
+      if (_type == CallType.video &&
+          !inPip &&
+          !engine.cameraOff &&
+          _share == ScreenShareState.idle) {
         _cameraAutoPaused = true;
         unawaited(engine.setCameraPaused(true));
       }
@@ -830,6 +987,10 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
         unawaited(endCall());
       case CallNativeAction.open:
         if (_minimized) restore();
+      case CallNativeAction.stopShare:
+        unawaited(stopScreenShare());
+      case CallNativeAction.shareDenied:
+        _onShareDenied();
     }
   }
 
@@ -863,9 +1024,12 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
       connectedAtMs: live ? _connectedAtMs : null,
       muted: engine.muted,
       speakerOn: route == CallAudioRoute.speaker,
+      screenSharing: _share == ScreenShareState.sharing,
       labels: {
         for (final k in _nativeLabels) k: CallStrings.t(k),
         'channel': CallStrings.t('channelOngoing'),
+        'sharing': CallStrings.t('screenSharingNotif'),
+        'stopShare': CallStrings.t('screenShareStop'),
       },
     );
   }
@@ -881,7 +1045,8 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _syncPip() {
-    final want = isActive && _type == CallType.video;
+    // Экрани ҳамсӯҳбат дар занги аудиоӣ ҳам дар PiP намоён.
+    final want = isActive && (_type == CallType.video || _peerSharing);
     if (want == _pipSent) return;
     _pipSent = want;
     unawaited(platform.setPipEligible(want));
@@ -943,6 +1108,11 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
     s.endMessage = message;
     s._ended = true;
     _logCall(s);
+    // Намоиши экран бо занг тамом мешавад (пеш аз тарки канал).
+    final wasSharing = _share != ScreenShareState.idle;
+    _share = ScreenShareState.idle;
+    _peerSharing = false;
+    if (wasSharing) unawaited(engine.stopScreenShare());
     if (!_hungUp) {
       _hungUp = true;
       if (notifyPeer) signal.sendEnd(s.peer.id);
@@ -952,6 +1122,7 @@ class ActiveCallController extends ChangeNotifier with WidgetsBindingObserver {
     signal.onEnded = null;
     signal.onDeclined = null;
     signal.onSwitch = null;
+    signal.onScreen = null;
     platform.onAction = null;
     _observe(false);
     _tick?.cancel();

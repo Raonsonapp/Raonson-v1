@@ -198,6 +198,8 @@ class AppIcons {
   static const IconData reply_rounded = HeroiconsOutline.arrowUturnLeft;
   static const IconData schedule_rounded = HeroiconsOutline.clock;
   static const IconData screen_rotation_rounded = HeroiconsOutline.arrowPath;
+  // Намоиши экрани телефон дар занг.
+  static const IconData screen_share_rounded = HeroiconsOutline.devicePhoneMobile;
   static const IconData search = HeroiconsOutline.magnifyingGlass;
   static const IconData search_off_rounded = HeroiconsOutline.magnifyingGlass;
   static const IconData search_rounded = HeroiconsOutline.magnifyingGlass;

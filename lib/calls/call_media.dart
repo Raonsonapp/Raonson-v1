@@ -10,6 +10,12 @@ enum CallAudioRoute { earpiece, speaker, bluetooth, wired, unknown }
 /// Ҳолати пайвасти худи мо ба канал.
 enum CallNetState { idle, connecting, connected, reconnecting, failed }
 
+/// Ҳолати гирифтани экран дар муҳаррик (Agora startScreenCapture):
+///   starting — розигии система (MediaProjection) пурсида шуд;
+///   active   — экран гирифта ва фиристода мешавад;
+///   failed   — корбар рад кард ё гирифтан оғоз нашуд.
+enum ScreenCaptureStatus { idle, starting, active, failed }
+
 /// Сифати шабака аз рӯи шкалаи Agora (QualityType):
 /// 0 номаълум, 1 аъло, 2 хуб, 3 миёна, 4 бад, 5 хеле бад, 6 нест.
 class NetQuality {

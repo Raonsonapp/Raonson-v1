@@ -24,6 +24,9 @@ class WebRTCService extends ChangeNotifier {
   /// action request|accept|decline|cancel|apply.
   void Function(String from, String mode, String action)? onCallSwitch;
 
+  /// Намоиши экрани ҳамсӯҳбат (`call:screen`): action start|stop.
+  void Function(String from, String action)? onCallScreen;
+
   bool get isConnected => _socket.isConnected;
 
   Future<void> connect() async {
@@ -53,6 +56,13 @@ class WebRTCService extends ChangeNotifier {
         (data['action'] ?? '').toString(),
       );
     });
+    _socket.on('call:screen', (data) {
+      if (data is! Map) return;
+      onCallScreen?.call(
+        (data['from'] ?? '').toString(),
+        (data['action'] ?? '').toString(),
+      );
+    });
     _registered = true;
     debugPrint('[WebRTC] registered');
   }
@@ -77,4 +87,6 @@ class WebRTCService extends ChangeNotifier {
       _socket.emit('call:end', {'to': to});
   void sendSwitch(String to, {required String mode, required String action}) =>
       _socket.emit('call:switch', {'to': to, 'mode': mode, 'action': action});
+  void sendScreen(String to, {required bool sharing}) =>
+      _socket.emit('call:screen', {'to': to, 'action': sharing ? 'start' : 'stop'});
 }

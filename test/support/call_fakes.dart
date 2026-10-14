@@ -46,8 +46,15 @@ class FakeEngine extends ChangeNotifier implements CallEngine {
   bool blur = false;
   @override
   bool beauty = false;
+  @override
+  ScreenCaptureStatus screenCapture = ScreenCaptureStatus.idle;
 
   bool videoOn = false;
+  int shareStarts = 0;
+  int shareStops = 0;
+
+  /// setRemoteScreenViewing-и охирин (null — ҳеҷ гоҳ).
+  bool? viewingRemoteScreen;
   bool cameraPaused = false;
   final routeCalls = <CallAudioRoute>[];
   bool blurSupported = true;
@@ -72,6 +79,24 @@ class FakeEngine extends ChangeNotifier implements CallEngine {
     remoteJoined = false;
     remoteUid = null;
     remoteDropped = false;
+    notifyListeners();
+  }
+
+  /// Корбар дар равзанаи система розӣ шуд — Agora гирифтанро оғоз кард.
+  void shareGranted() {
+    screenCapture = ScreenCaptureStatus.active;
+    notifyListeners();
+  }
+
+  /// Agora: гирифтани экран FAILED (рад ё хато).
+  void shareFailed() {
+    screenCapture = ScreenCaptureStatus.failed;
+    notifyListeners();
+  }
+
+  /// Система намоишро қатъ кард (чипи Android 14+).
+  void shareStoppedBySystem() {
+    screenCapture = ScreenCaptureStatus.idle;
     notifyListeners();
   }
 
@@ -178,8 +203,30 @@ class FakeEngine extends ChangeNotifier implements CallEngine {
   }
 
   @override
-  Widget remoteView(String tag) =>
-      ColoredBox(key: Key('fake_remote_$tag'), color: const Color(0xFF00FF00));
+  Future<void> startScreenShare() async {
+    shareStarts++;
+    screenCapture = ScreenCaptureStatus.starting;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> stopScreenShare() async {
+    shareStops++;
+    if (screenCapture == ScreenCaptureStatus.idle) return;
+    screenCapture = ScreenCaptureStatus.idle;
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setRemoteScreenViewing(bool on) async {
+    viewingRemoteScreen = on;
+    notifyListeners();
+  }
+
+  @override
+  Widget remoteView(String tag, {bool fit = false}) => ColoredBox(
+      key: Key(fit ? 'fake_remote_${tag}_fit' : 'fake_remote_$tag'),
+      color: const Color(0xFF00FF00));
   @override
   Widget localView(String tag) =>
       ColoredBox(key: Key('fake_local_$tag'), color: const Color(0xFF0000FF));
@@ -189,9 +236,11 @@ class FakeSignal implements CallSignal {
   final answered = <String>[];
   final ends = <String>[];
   final switches = <String>[]; // "to:mode:action"
+  final screens = <String>[]; // "to:start|stop"
   VoidCallback? ended;
   VoidCallback? declined;
   void Function(String from, String mode, String action)? switched;
+  void Function(String from, String action)? screened;
   @override
   void sendAnswered(String to) => answered.add(to);
   @override
@@ -200,12 +249,17 @@ class FakeSignal implements CallSignal {
   void sendSwitch(String to, {required String mode, required String action}) =>
       switches.add('$to:$mode:$action');
   @override
+  void sendScreen(String to, {required bool sharing}) =>
+      screens.add('$to:${sharing ? 'start' : 'stop'}');
+  @override
   set onEnded(VoidCallback? cb) => ended = cb;
   @override
   set onDeclined(VoidCallback? cb) => declined = cb;
   @override
   set onSwitch(void Function(String from, String mode, String action)? cb) =>
       switched = cb;
+  @override
+  set onScreen(void Function(String from, String action)? cb) => screened = cb;
 }
 
 class FakeSounds implements CallSounds {
@@ -224,6 +278,8 @@ class FakePlatform implements CallPlatform {
   final infos = <OngoingCallInfo>[];
   bool pipEligible = false;
   AudioDevices devices = const AudioDevices();
+  @override
+  bool canShareScreen = true;
   void Function(CallNativeAction)? action;
   final pip = ValueNotifier<bool>(false);
 

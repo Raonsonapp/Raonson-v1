@@ -5,7 +5,9 @@
 //    • варақаи «Бештар»: аудио ↔ видео, AI-хомӯшкунии садо, хира/зебоӣ,
 //      сарфаи интернет;
 //    • баннери «X мехоҳад ба видео гузарад» (Қабул / Рад);
-//    • чипҳои ҳолат («Пайвасти суст», «танҳо садо»).
+//    • чипҳои ҳолат («Пайвасти суст», «танҳо садо»);
+//    • намоиши экран: тугма дар «Бештар», огоҳии махфият, баннери
+//      «Шумо экранро нишон медиҳед» ва нишонаи «@user экранро нишон медиҳад».
 // ════════════════════════════════════════════════════════════════════
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -70,8 +72,7 @@ Future<void> showAudioRouteSheet(
   );
 }
 
-Future<void> showCallMoreSheet(
-    BuildContext context, ActiveCallController ctl) {
+Future<void> showCallMoreSheet(BuildContext context, ActiveCallController ctl) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   void unsupported(bool ok) {
     if (!ok) {
@@ -90,70 +91,92 @@ Future<void> showCallMoreSheet(
       builder: (_, __) {
         final e = ctl.engine;
         final video = ctl.type == CallType.video;
+        // Тугмаҳо зиёд — дар телефони паст варақа варақзананда аст.
         return SafeArea(
-          child: Column(
-            key: const Key('call_more_sheet'),
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _grabber(),
-              if (!video)
-                ListTile(
-                  key: const Key('more_to_video'),
-                  enabled: ctl.connected &&
-                      ctl.switchState == CallSwitchState.idle,
-                  leading: const Icon(AppIcons.videocam_rounded,
-                      color: Colors.white),
-                  title: Text(CallStrings.t('toVideo'),
-                      style: const TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    ctl.requestVideo();
-                  },
-                )
-              else
-                ListTile(
-                  key: const Key('more_to_voice'),
-                  leading:
-                      const Icon(AppIcons.call_rounded, color: Colors.white),
-                  title: Text(CallStrings.t('toVoice'),
-                      style: const TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    ctl.switchToVoice();
-                  },
-                ),
-              _toggle(
-                key: const Key('more_ains'),
-                icon: Symbols.noise_aware,
-                label: CallStrings.t('noiseSuppression'),
-                value: e.noiseSuppression,
-                onChanged: (v) async => unsupported(await ctl.setNoiseSuppression(v)),
-              ),
-              if (video) ...[
+          child: SingleChildScrollView(
+            child: Column(
+              key: const Key('call_more_sheet'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _grabber(),
+                if (!video)
+                  ListTile(
+                    key: const Key('more_to_video'),
+                    enabled: ctl.connected &&
+                        ctl.switchState == CallSwitchState.idle,
+                    leading: const Icon(AppIcons.videocam_rounded,
+                        color: Colors.white),
+                    title: Text(CallStrings.t('toVideo'),
+                        style: const TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      ctl.requestVideo();
+                    },
+                  )
+                else
+                  ListTile(
+                    key: const Key('more_to_voice'),
+                    leading:
+                        const Icon(AppIcons.call_rounded, color: Colors.white),
+                    title: Text(CallStrings.t('toVoice'),
+                        style: const TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      ctl.switchToVoice();
+                    },
+                  ),
+                if (ctl.platform.canShareScreen)
+                  _toggle(
+                    key: const Key('more_screen_share'),
+                    icon: AppIcons.screen_share_rounded,
+                    label: CallStrings.t('screenShare'),
+                    value: ctl.shareState != ScreenShareState.idle,
+                    onChanged: !ctl.connected
+                        ? null
+                        : (v) {
+                            Navigator.of(ctx).pop();
+                            if (v) {
+                              startScreenShareFlow(context, ctl);
+                            } else {
+                              ctl.stopScreenShare();
+                            }
+                          },
+                  ),
                 _toggle(
-                  key: const Key('more_blur'),
-                  icon: Symbols.blur_on,
-                  label: CallStrings.t('blur'),
-                  value: e.blur,
-                  onChanged: (v) async => unsupported(await ctl.setBackgroundBlur(v)),
+                  key: const Key('more_ains'),
+                  icon: Symbols.noise_aware,
+                  label: CallStrings.t('noiseSuppression'),
+                  value: e.noiseSuppression,
+                  onChanged: (v) async =>
+                      unsupported(await ctl.setNoiseSuppression(v)),
                 ),
-                _toggle(
-                  key: const Key('more_beauty'),
-                  icon: Symbols.face_retouching_natural,
-                  label: CallStrings.t('beauty'),
-                  value: e.beauty,
-                  onChanged: (v) async => unsupported(await ctl.setBeauty(v)),
-                ),
-                _toggle(
-                  key: const Key('more_data_saver'),
-                  icon: Symbols.data_saver_on,
-                  label: CallStrings.t('dataSaver'),
-                  value: e.dataSaver,
-                  onChanged: ctl.setDataSaver,
-                ),
+                if (video) ...[
+                  _toggle(
+                    key: const Key('more_blur'),
+                    icon: Symbols.blur_on,
+                    label: CallStrings.t('blur'),
+                    value: e.blur,
+                    onChanged: (v) async =>
+                        unsupported(await ctl.setBackgroundBlur(v)),
+                  ),
+                  _toggle(
+                    key: const Key('more_beauty'),
+                    icon: Symbols.face_retouching_natural,
+                    label: CallStrings.t('beauty'),
+                    value: e.beauty,
+                    onChanged: (v) async => unsupported(await ctl.setBeauty(v)),
+                  ),
+                  _toggle(
+                    key: const Key('more_data_saver'),
+                    icon: Symbols.data_saver_on,
+                    label: CallStrings.t('dataSaver'),
+                    value: e.dataSaver,
+                    onChanged: ctl.setDataSaver,
+                  ),
+                ],
+                const SizedBox(height: 8),
               ],
-              const SizedBox(height: 8),
-            ],
+            ),
           ),
         );
       },
@@ -166,7 +189,7 @@ Widget _toggle({
   required IconData icon,
   required String label,
   required bool value,
-  required ValueChanged<bool> onChanged,
+  required ValueChanged<bool>? onChanged,
 }) =>
     SwitchListTile(
       key: key,
@@ -190,6 +213,100 @@ Widget _title(String t) => Padding(
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
     );
+
+/// «Намоиши экран»: бори аввал дар гуфтугӯ огоҳии махфият, баъд
+/// розигии система (Android MediaProjection) ва гирифтан.
+Future<void> startScreenShareFlow(
+    BuildContext context, ActiveCallController ctl) async {
+  if (!ctl.canShareScreen || ctl.shareState != ScreenShareState.idle) return;
+  if (!ctl.shareWarned) {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('screen_share_warning'),
+        backgroundColor: _sheetBg,
+        icon: const Icon(AppIcons.screen_share_rounded, color: Colors.white),
+        title: Text(CallStrings.t('screenShare'),
+            style: const TextStyle(color: Colors.white)),
+        content: Text(CallStrings.t('screenShareWarn'),
+            style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            key: const Key('screen_share_cancel'),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(CallStrings.t('cancel')),
+          ),
+          FilledButton(
+            key: const Key('screen_share_confirm'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(CallStrings.t('screenShareStart')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    ctl.markShareWarned();
+  }
+  await ctl.startScreenShare();
+}
+
+/// Барои намоишдиҳанда: «Шумо экранро нишон медиҳед» + «Қатъ кардан».
+class ScreenShareBanner extends StatelessWidget {
+  const ScreenShareBanner({super.key, required this.onStop});
+
+  final VoidCallback onStop;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        key: const Key('call_sharing_banner'),
+        color: const Color(0xF0101D3A),
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 10, 10),
+          child: Row(children: [
+            const Icon(AppIcons.screen_share_rounded, color: Color(0xFF34C759)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(CallStrings.t('screenSharingSelf'),
+                  style: const TextStyle(color: Colors.white, fontSize: 14)),
+            ),
+            FilledButton(
+              key: const Key('call_sharing_stop'),
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF3B55)),
+              onPressed: onStop,
+              child: Text(CallStrings.t('screenShareStop')),
+            ),
+          ]),
+        ),
+      );
+}
+
+/// Барои бинанда: «@user экранро нишон медиҳад».
+class ScreenShareLabel extends StatelessWidget {
+  const ScreenShareLabel({super.key, required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        key: const Key('call_peer_sharing_label'),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xCC1B1B1F),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(AppIcons.screen_share_rounded,
+              color: Color(0xFF34C759), size: 16),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(CallStrings.t('screenSharingPeer', {'name': name}),
+                style: const TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+        ]),
+      );
+}
 
 /// «X мехоҳад ба видео гузарад» — Рад / Қабул.
 class VideoRequestBanner extends StatelessWidget {
@@ -270,12 +387,12 @@ class CallHintChip extends StatelessWidget {
             const SizedBox(width: 8),
             Flexible(
               child: GestureDetector(
-              onTap: onAction,
-              child: Text(action!,
-                  style: const TextStyle(
-                      color: Color(0xFF64B5F6),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600)),
+                onTap: onAction,
+                child: Text(action!,
+                    style: const TextStyle(
+                        color: Color(0xFF64B5F6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
               ),
             ),
           ],

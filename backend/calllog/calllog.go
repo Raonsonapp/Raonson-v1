@@ -126,6 +126,23 @@ func VideoUsed(a, b string) {
 		a, b)
 }
 
+// InCall — оё [a] ва [b] ҳоло бо ҳам гуфтугӯ доранд (занги қабулшуда,
+// ҳанӯз қатънашуда, на кӯҳнатар аз MaxOpenCall). Барои сигналҳое, ки
+// танҳо дар миёни гуфтугӯ маъно доранд (масалан намоиши экран).
+func InCall(a, b string) bool {
+	if db.Pool == nil || a == "" || b == "" || a == b {
+		return false
+	}
+	var ok bool
+	_ = db.Pool.QueryRow(context.Background(),
+		`SELECT EXISTS(SELECT 1 FROM call_logs
+		  WHERE ended_at IS NULL AND answered_at IS NOT NULL
+		    AND answered_at > NOW() - ($3 * INTERVAL '1 second')
+		    AND ((caller_id=$1 AND callee_id=$2) OR (caller_id=$2 AND callee_id=$1)))`,
+		a, b, int(MaxOpenCall.Seconds())).Scan(&ok)
+	return ok
+}
+
 // ── Тасниф ────────────────────────────────────────────────────────
 
 // Row — як сатри call_logs.
