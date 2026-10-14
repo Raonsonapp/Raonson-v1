@@ -467,6 +467,20 @@ func dispatch(cl *client, raw []byte) {
 		emit(p.To, "call:switch", map[string]interface{}{
 			"from": cl.userID, "mode": p.Mode, "action": p.Action})
 
+	// Намоиши экран дар миёни гуфтугӯ: action start | stop. Танҳо ба
+	// ҳамсӯҳбати ҳамин занги ҷорӣ (на ба ҳар кас) — ниг. screenRelayOK.
+	case "call:screen":
+		var p struct {
+			To     string `json:"to"`
+			Action string `json:"action"`
+		}
+		json.Unmarshal(msg.Data, &p)
+		if !screenRelayOK(cl.userID, p.To, p.Action, callAllowed, calllog.InCall) {
+			break
+		}
+		emit(p.To, "call:screen", map[string]interface{}{
+			"from": cl.userID, "action": p.Action})
+
 	// ── Notifications ──────────────────────────────────────
 	case "notification:subscribe":
 		var p struct{ UserID string `json:"userId"` }
@@ -509,6 +523,23 @@ func validSwitch(mode, action string) bool {
 		return true
 	}
 	return false
+}
+
+// validScreen — танҳо амалҳои маълуми call:screen.
+func validScreen(action string) bool {
+	return action == "start" || action == "stop"
+}
+
+// screenRelayOK — call:screen аз [from] ба [to] расонида шавад?
+// Шартҳо: ҳамсӯҳбат дигар кас, амал маълум, блок нест ва ҳарду ҳоло дар
+// ҳамин гуфтугӯ ҳастанд (занги қабулшудаи кушода). allowed/inCall —
+// функсияҳо, то тест бе база кор кунад.
+func screenRelayOK(from, to, action string,
+	allowed func(a, b string) bool, inCall func(a, b string) bool) bool {
+	if from == "" || to == "" || from == to || !validScreen(action) {
+		return false
+	}
+	return allowed(from, to) && inCall(from, to)
 }
 
 func nullIfEmpty(s string) interface{} {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
@@ -38,6 +39,12 @@ class AgoraService extends ChangeNotifier {
   bool           _blurOn         = false;
   bool           _beautyOn       = false;
 
+  // ── Намоиши экран ──
+  ScreenCaptureStatus _screen = ScreenCaptureStatus.idle;
+  /// Ҳамсӯҳбат экран нишон медиҳад ва мо (дар занги аудиоӣ) видеоро
+  /// барои дидани он гирифтаем.
+  bool _viewingRemoteScreen = false;
+
   CallNetState   get connState      => _connState;
   /// Сифати шабакаи худ (Agora QualityType 0..6; бадтарини uplink/downlink).
   int            get netQuality     => _netQuality;
@@ -51,6 +58,7 @@ class AgoraService extends ChangeNotifier {
   bool           get ainsOn         => _ainsOn;
   bool           get blurOn         => _blurOn;
   bool           get beautyOn       => _beautyOn;
+  ScreenCaptureStatus get screenCapture => _screen;
 
   bool       get localJoined  => _localJoined;
   bool       get remoteJoined => _remoteJoined;
@@ -97,6 +105,8 @@ class AgoraService extends ChangeNotifier {
     _dataSaver      = false;
     _blurOn         = false;
     _beautyOn       = false;
+    _screen         = ScreenCaptureStatus.idle;
+    _viewingRemoteScreen = false;
     // Мисли WhatsApp: аудио — гӯшаки телефон, видео — баландгӯяк.
     _speakerOn      = isVideo;
 
@@ -133,6 +143,12 @@ class AgoraService extends ChangeNotifier {
       onRemoteSubscribeFallbackToAudioOnly: (uid, isFallbackOrRecover) {
         _remoteFallback = isFallbackOrRecover;
         notifyListeners();
+      },
+      onLocalVideoStateChanged: (source, state, reason) {
+        if (source == VideoSourceType.videoSourceScreen ||
+            source == VideoSourceType.videoSourceScreenPrimary) {
+          _onScreenState(state, reason);
+        }
       },
       onAudioRoutingChanged: (routing) {
         _audioRoute = routeFromAgora(routing);
@@ -260,6 +276,13 @@ class AgoraService extends ChangeNotifier {
 
   // ─── LEAVE ───
   Future<void> leaveCall() async {
+    // Гирифтани экран бо занг тамом мешавад (MediaProjection озод).
+    if (_screen == ScreenCaptureStatus.starting ||
+        _screen == ScreenCaptureStatus.active) {
+      try { await _engine?.stopScreenCapture(); } catch (_) {}
+    }
+    _screen = ScreenCaptureStatus.idle;
+    _viewingRemoteScreen = false;
     await _engine?.leaveChannel();
     await _engine?.release();
     _engine       = null;
@@ -288,20 +311,29 @@ class AgoraService extends ChangeNotifier {
     if (e == null || on == _videoOn) return;
     if (on) await _requestPermissions(true);
     _videoOn = on;
+    final sharing = _screen == ScreenCaptureStatus.active;
     try {
       if (on) {
         await e.enableVideo();
+        // Шояд ҳангоми намоиши экран дар занги аудиоӣ хомӯш шуда бошад.
+        await e.enableLocalVideo(true);
         await e.startPreview();
         _cameraOff = false;
         await e.muteLocalVideoStream(false);
       }
+      // Ҳангоми намоиши экран камера нашр намешавад (як ҷараёни видео).
       await e.updateChannelMediaOptions(ChannelMediaOptions(
-        publishCameraTrack: on,
-        autoSubscribeVideo: on,
+        publishCameraTrack: on && !sharing,
+        autoSubscribeVideo: on || _viewingRemoteScreen,
       ));
       if (!on) {
         await e.stopPreview();
-        await e.disableVideo();
+        // Модули видео барои экран (худ ё ҳамсӯҳбат) лозим аст.
+        if (_screen == ScreenCaptureStatus.idle && !_viewingRemoteScreen) {
+          await e.disableVideo();
+        } else {
+          await e.enableLocalVideo(false);
+        }
       }
     } catch (err) {
       debugPrint('[Agora] setVideoEnabled($on): $err');
@@ -415,6 +447,165 @@ class AgoraService extends ChangeNotifier {
     }
   }
 
+  // ─── НАМОИШИ ЭКРАН ───
+  //
+  // Android: Agora (full-screen-sharing) худаш равзанаи розигии система
+  // (MediaProjection)-ро мекушояд, ПАС аз розигӣ хизматрасонии пешзаминаи
+  // навъи mediaProjection-и худро (LocalScreenSharingService) оғоз мекунад
+  // ва танҳо баъд гирифтанро сар мекунад — тартиби Android 14.
+  // Огоҳиномаи он хизматрасонӣ аз MainActivity/ScreenShareNative меояд.
+  //
+  // Камера то оғози воқеии гирифтан нашр мешавад (ҳамсӯҳбат ҳангоми
+  // равзанаи розигӣ экрани сиёҳ намебинад).
+
+  /// Оғоз: розигии система → гирифтан. Натиҷа дар [screenCapture].
+  Future<void> startScreenShare() async {
+    final e = _engine;
+    if (e == null ||
+        _screen == ScreenCaptureStatus.starting ||
+        _screen == ScreenCaptureStatus.active) {
+      return;
+    }
+    _screen = ScreenCaptureStatus.starting;
+    notifyListeners();
+    try {
+      if (!_videoOn) {
+        // Занги аудиоӣ: модули видео барои ҷараёни экран лозим, камера — не.
+        await e.enableVideo();
+        await e.enableLocalVideo(false);
+      }
+      await e.startScreenCapture(const ScreenCaptureParameters2(
+        captureVideo: true,
+        captureAudio: false,
+        videoParams: ScreenVideoParameters(
+          dimensions: VideoDimensions(width: 720, height: 1280),
+          frameRate: 15,
+          contentHint: VideoContentHint.contentHintDetails,
+        ),
+      ));
+    } catch (err) {
+      debugPrint('[Agora] startScreenCapture: $err');
+      _screen = ScreenCaptureStatus.failed;
+      notifyListeners();
+      unawaited(_restoreAfterScreen());
+    }
+  }
+
+  /// Қатъ ва баргардонидани камера (агар занги видеоӣ бошад).
+  Future<void> stopScreenShare() async {
+    final e = _engine;
+    final was = _screen;
+    if (was == ScreenCaptureStatus.idle) return;
+    _screen = ScreenCaptureStatus.idle;
+    notifyListeners();
+    if (e == null) return;
+    if (was == ScreenCaptureStatus.starting ||
+        was == ScreenCaptureStatus.active) {
+      try {
+        await e.stopScreenCapture();
+      } catch (err) {
+        debugPrint('[Agora] stopScreenCapture: $err');
+      }
+    }
+    await _restoreAfterScreen();
+  }
+
+  /// Ҳамсӯҳбат экран нишон медиҳад: дар занги аудиоӣ видеоро мегирем
+  /// (камераи худ хомӯш), сарфаи интернет барои экран муваққатан не.
+  Future<void> setRemoteScreenViewing(bool on) async {
+    final e = _engine;
+    if (e == null || on == _viewingRemoteScreen) return;
+    _viewingRemoteScreen = on;
+    try {
+      if (on) {
+        if (!_videoOn && _screen == ScreenCaptureStatus.idle) {
+          await e.enableVideo();
+          await e.enableLocalVideo(false);
+        }
+        await e.updateChannelMediaOptions(
+            const ChannelMediaOptions(autoSubscribeVideo: true));
+        final uid = _remoteUid;
+        if (uid != null) {
+          await e.muteRemoteVideoStream(uid: uid, mute: false);
+        }
+        if (_dataSaver) await e.muteAllRemoteVideoStreams(false);
+      } else {
+        if (_dataSaver) await e.muteAllRemoteVideoStreams(true);
+        if (!_videoOn) {
+          await e.updateChannelMediaOptions(
+              const ChannelMediaOptions(autoSubscribeVideo: false));
+          if (_screen == ScreenCaptureStatus.idle) {
+            await e.disableVideo();
+            await e.enableLocalVideo(true);
+          }
+        }
+      }
+    } catch (err) {
+      debugPrint('[Agora] remote screen($on): $err');
+    }
+    notifyListeners();
+  }
+
+  void _onScreenState(LocalVideoStreamState state, LocalVideoStreamReason reason) {
+    debugPrint('[Agora] screen: ${state.name} (${reason.name})');
+    if (state == LocalVideoStreamState.localVideoStreamStateCapturing ||
+        state == LocalVideoStreamState.localVideoStreamStateEncoding) {
+      if (_screen != ScreenCaptureStatus.starting) return;
+      _screen = ScreenCaptureStatus.active;
+      unawaited(_publishScreen());
+      notifyListeners();
+    } else if (state == LocalVideoStreamState.localVideoStreamStateFailed) {
+      // Android: корбар розигиро рад кард ё MediaProjection оғоз нашуд.
+      if (_screen != ScreenCaptureStatus.starting &&
+          _screen != ScreenCaptureStatus.active) {
+        return;
+      }
+      _screen = ScreenCaptureStatus.failed;
+      unawaited(_restoreAfterScreen());
+      notifyListeners();
+    } else if (state == LocalVideoStreamState.localVideoStreamStateStopped) {
+      // Система қатъ кард (масалан чипи «Қатъи намоиш»-и Android 14+).
+      if (_screen != ScreenCaptureStatus.active) return;
+      _screen = ScreenCaptureStatus.idle;
+      unawaited(_restoreAfterScreen());
+      notifyListeners();
+    }
+  }
+
+  Future<void> _publishScreen() async {
+    final e = _engine;
+    if (e == null) return;
+    try {
+      // Камераи хомӯш (muteLocalVideoStream) экранро ҳам пинҳон мекард.
+      if (_cameraOff) await e.muteLocalVideoStream(false);
+      await e.updateChannelMediaOptions(const ChannelMediaOptions(
+        publishScreenCaptureVideo: true,
+        publishCameraTrack: false,
+      ));
+    } catch (err) {
+      debugPrint('[Agora] publish screen: $err');
+    }
+  }
+
+  Future<void> _restoreAfterScreen() async {
+    final e = _engine;
+    if (e == null) return;
+    try {
+      await e.updateChannelMediaOptions(ChannelMediaOptions(
+        publishScreenCaptureVideo: false,
+        publishCameraTrack: _videoOn,
+      ));
+      if (_videoOn) {
+        await e.muteLocalVideoStream(_cameraOff);
+      } else if (!_viewingRemoteScreen) {
+        await e.disableVideo();
+        await e.enableLocalVideo(true);
+      }
+    } catch (err) {
+      debugPrint('[Agora] restore camera: $err');
+    }
+  }
+
   static int _q(QualityType q) => switch (q) {
         QualityType.qualityExcellent => 1,
         QualityType.qualityGood      => 2,
@@ -434,7 +625,11 @@ class AgoraService extends ChangeNotifier {
 
   Future<void> toggleCamera() async {
     _cameraOff = !_cameraOff;
-    await _engine?.muteLocalVideoStream(_cameraOff);
+    // Ҳангоми намоиши экран muteLocalVideoStream экранро ҳам пинҳон
+    // мекард — интихоб баъди қатъи намоиш татбиқ мешавад.
+    if (_screen != ScreenCaptureStatus.active) {
+      await _engine?.muteLocalVideoStream(_cameraOff);
+    }
     notifyListeners();
   }
 

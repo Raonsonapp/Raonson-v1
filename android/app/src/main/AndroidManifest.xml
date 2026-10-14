@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
      
      <!-- ✅ INTERNET PERMISSION (ҶОЙИ ДУРУСТ) -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -39,6 +40,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA"/>
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
+     <!-- ✅ НАМОИШИ ЭКРАН дар занг (MediaProjection, Android 14+): навъи
+          mediaProjection-и хизматрасонии пешзаминаи Agora. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
      <!-- ✅ ҶОЙГИРШАВӢ — мубодилаи ҷойгиршавӣ дар чат -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
@@ -111,6 +115,18 @@
             android:exported="false"
             android:stopWithTask="false"
             android:foregroundServiceType="phoneCall|microphone|camera" />
+
+        <!-- Намоиши экран дар занг: хизматрасонии пешзаминаи навъи
+             mediaProjection-и худи Agora (full-screen-sharing). Agora онро
+             ПАС аз розигии корбар (равзанаи MediaProjection) оғоз мекунад ва
+             танҳо баъд экранро мегирад — тартиби Android 14. Ин ҷо ошкоро
+             (бо манифести китобхона якҷоя мешавад), то навъ ва exported
+             дида шаванд. Огоҳинома — ScreenShareNative.kt. -->
+        <service
+            android:name="io.agora.rtc2.extensions.MediaProjectionMgr$LocalScreenSharingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection"
+            tools:node="merge" />
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

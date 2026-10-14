@@ -36,6 +36,9 @@ object CallBridge {
     fun attach(engine: FlutterEngine, context: Context, onPip: (Boolean) -> Unit) {
         val ch = MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
         val app = context.applicationContext
+        // Намоиши экран: огоҳиномаи «Экран намоиш дода мешавад» + «Қатъ
+        // кардан» ва хабари радди розигӣ (як бор барои раванд).
+        ScreenShareNative.install(app)
         ch.setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
@@ -74,7 +77,7 @@ object CallBridge {
         activityAttached = false
     }
 
-    /** Тугмаи огоҳинома → Dart (mute / speaker / end / open). */
+    /** Тугмаи огоҳинома → Dart (mute / speaker / end / open / stopShare / shareDenied). */
     fun sendAction(name: String) {
         main.post { channel?.invokeMethod("action", name) }
     }

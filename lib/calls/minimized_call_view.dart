@@ -66,7 +66,8 @@ class MinimizedCallView extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Stack(fit: StackFit.expand, children: [
           if (showRemote)
-            e.remoteView('pip')
+            // Экрани ҳамсӯҳбат — пурра, бе буридан.
+            e.remoteView('pip', fit: c.peerSharing)
           else
             Container(
               color: const Color(0xFF0D1B3E),

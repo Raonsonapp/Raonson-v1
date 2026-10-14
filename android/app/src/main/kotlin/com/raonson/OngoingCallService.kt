@@ -40,6 +40,10 @@ import java.net.URL
  *    (ё ҳамсӯҳбат) онро тамом мекунад.
  *
  * Ҳолат (ном, бесадо, вақт) аз Dart меояд; ин ҷо танҳо нишон дода мешавад.
+ *
+ * Намоиши экран: хизматрасонии mediaProjection-и алоҳидаи Agora (ниг.
+ * ScreenShareNative); ин ҷо — матни «Экран намоиш дода мешавад» дар
+ * огоҳиномаи занг ва амали «Қатъ кардан» (ACTION_STOP_SHARE → Dart).
  */
 class OngoingCallService : Service() {
 
@@ -52,6 +56,7 @@ class OngoingCallService : Service() {
         private const val ACTION_SPEAKER = "com.raonson.app.call.SPEAKER"
         private const val ACTION_END = "com.raonson.app.call.END"
         const val ACTION_OPEN_CALL = "com.raonson.app.call.OPEN"
+        const val ACTION_STOP_SHARE = "com.raonson.app.call.STOP_SHARE"
 
         @Volatile private var latest: Map<String, Any?> = emptyMap()
 
@@ -79,6 +84,15 @@ class OngoingCallService : Service() {
                 Log.w(TAG, "start: ${e.message}")
             }
         }
+
+        /** Матни тугма/сарлавҳа бо забони корбар (аз Dart) — барои ScreenShareNative. */
+        @Suppress("UNCHECKED_CAST")
+        fun sharedLabel(key: String, def: String): String {
+            val labels = latest["labels"] as? Map<String, Any?> ?: return def
+            return labels[key]?.toString()?.takeIf { it.isNotEmpty() } ?: def
+        }
+
+        fun sharedPeerName(): String = latest["peerName"]?.toString().orEmpty()
 
         fun stop(context: Context) {
             latest = emptyMap()
@@ -109,11 +123,12 @@ class OngoingCallService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (val action = intent?.action) {
-            ACTION_MUTE, ACTION_SPEAKER, ACTION_END -> {
+            ACTION_MUTE, ACTION_SPEAKER, ACTION_END, ACTION_STOP_SHARE -> {
                 CallBridge.sendAction(
                     when (action) {
                         ACTION_MUTE -> "mute"
                         ACTION_SPEAKER -> "speaker"
+                        ACTION_STOP_SHARE -> "stopShare"
                         else -> "end"
                     }
                 )
@@ -265,6 +280,7 @@ class OngoingCallService : Service() {
         val muted = args["muted"] == true
         val speakerOn = args["speakerOn"] == true
         val connectedAt = (args["connectedAtMs"] as? Number)?.toLong()
+        val sharing = args["screenSharing"] == true
 
         val b = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
@@ -282,7 +298,8 @@ class OngoingCallService : Service() {
         if (connectedAt != null && connectedAt > 0) {
             b.setUsesChronometer(true).setShowWhen(true).setWhen(connectedAt)
             b.setContentText(
-                label(if (isVideo) "video" else "voice", if (isVideo) "Занги видеоӣ" else "Занги аудиоӣ")
+                if (sharing) label("sharing", "Экран намоиш дода мешавад")
+                else label(if (isVideo) "video" else "voice", if (isVideo) "Занги видеоӣ" else "Занги аудиоӣ")
             )
         } else {
             b.setShowWhen(false).setContentText(status)

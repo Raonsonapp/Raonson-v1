@@ -8,6 +8,8 @@
 //    «охиринҳо» бароварда шавад — занг қатъ намешавад (мисли WhatsApp).
 //  • Picture-in-Picture-и система барои занги видеоӣ (Android 8+).
 //  • Рӯйхати дастгоҳҳои садо (Bluetooth / гӯшмонаки симдор).
+//  • Намоиши экран: тугмаи «Қатъ кардан» дар огоҳинома (stopShare) ва
+//    радди розигии система (shareDenied) — аз ScreenShareNative.kt.
 //
 //  Дар iOS/web/тест ҳамаи даъватҳо бехатар хомӯшанд (MissingPlugin).
 // ════════════════════════════════════════════════════════════════════
@@ -17,7 +19,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Тугмаҳои огоҳиномаи занг (ва пахши худи огоҳинома → `open`).
-enum CallNativeAction { mute, speaker, end, open }
+/// stopShare — «Қатъ кардан»-и намоиши экран; shareDenied — корбар дар
+/// равзанаи система намоиши экранро рад кард.
+enum CallNativeAction { mute, speaker, end, open, stopShare, shareDenied }
 
 /// Маълумоти огоҳиномаи доимӣ.
 @immutable
@@ -30,6 +34,7 @@ class OngoingCallInfo {
     this.connectedAtMs,
     this.muted = false,
     this.speakerOn = false,
+    this.screenSharing = false,
     this.labels = const {},
   });
 
@@ -45,6 +50,9 @@ class OngoingCallInfo {
   final bool muted;
   final bool speakerOn;
 
+  /// Экрани худ ба ҳамсӯҳбат нишон дода мешавад.
+  final bool screenSharing;
+
   /// Матни тугмаҳо бо забони корбар: mute, unmute, speaker, end.
   final Map<String, String> labels;
 
@@ -56,6 +64,7 @@ class OngoingCallInfo {
         'connectedAtMs': connectedAtMs,
         'muted': muted,
         'speakerOn': speakerOn,
+        'screenSharing': screenSharing,
         'labels': labels,
       };
 
@@ -69,11 +78,12 @@ class OngoingCallInfo {
       other.connectedAtMs == connectedAtMs &&
       other.muted == muted &&
       other.speakerOn == speakerOn &&
+      other.screenSharing == screenSharing &&
       mapEquals(other.labels, labels);
 
   @override
   int get hashCode => Object.hash(peerName, avatarUrl, isVideo, status,
-      connectedAtMs, muted, speakerOn);
+      connectedAtMs, muted, speakerOn, screenSharing);
 }
 
 /// Дастгоҳҳои садои пайвастшуда.
@@ -99,6 +109,11 @@ abstract class CallPlatform {
 
   /// Барнома ҳоло дар тирезаи PiP аст?
   ValueListenable<bool> get inPip;
+
+  /// Намоиши экран дастрас аст? Танҳо Android (MediaProjection, API 21+;
+  /// minSdk 23). iOS барои экрани тамоми система Broadcast Upload
+  /// Extension мехоҳад — сохта нашудааст, тугма пинҳон.
+  bool get canShareScreen;
 }
 
 /// Android: MethodChannel. Дигар платформаҳо — ҳеҷ кор намекунад.
@@ -123,6 +138,9 @@ class MethodChannelCallPlatform implements CallPlatform {
 
   bool get _android =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  @override
+  bool get canShareScreen => _android;
 
   Future<T?> _invoke<T>(String method, [Object? args]) async {
     if (!_android) return null;

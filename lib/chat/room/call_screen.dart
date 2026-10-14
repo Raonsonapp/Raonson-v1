@@ -20,6 +20,11 @@ export '../../calls/active_call.dart' show CallType;
 /// ишораи «ақиб») ва занг дар ҳубобчаи болои барнома идома ёбад.
 ///
 /// Дар PiP-и система (видео, барнома берун) танҳо видеои ҳамсӯҳбат.
+///
+/// Намоиши экран: ҳамсӯҳбат экран нишон диҳад — тамоми экран бо
+/// BoxFit.contain (бе буридан) ва pinch-to-zoom; худамон нишон диҳем —
+/// баннери «Шумо экранро нишон медиҳед» ва тасвири хурди худ пинҳон
+/// (оинаи беохир нашавад).
 class CallScreen extends StatefulWidget {
   final UserModel peer;
   final CallType  callType;
@@ -183,11 +188,22 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
             : FadeTransition(
                 opacity: _fadeAnim,
                 child: Stack(children: [
-                  Positioned.fill(child: _isVideo ? _buildVideo() : _buildVoice()),
-                  if (_ctl.switchState == CallSwitchState.incoming && _mine)
+                  Positioned.fill(
+                    child: _peerScreen
+                        ? _buildPeerScreen()
+                        : _isVideo ? _buildVideo() : _buildVoice(),
+                  ),
+                  if (_selfSharing)
                     Positioned(
                       left: 16, right: 16,
                       top: MediaQuery.paddingOf(context).top + 64,
+                      child: ScreenShareBanner(onStop: _ctl.stopScreenShare),
+                    ),
+                  if (_ctl.switchState == CallSwitchState.incoming && _mine)
+                    Positioned(
+                      left: 16, right: 16,
+                      top: MediaQuery.paddingOf(context).top + 64 +
+                          (_selfSharing ? 72 : 0),
                       child: VideoRequestBanner(
                         name: widget.peer.username,
                         onAccept: () => _ctl.answerVideoRequest(true),
@@ -200,10 +216,20 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     ),
   );
 
+  /// Ҳамсӯҳбат экрани худро нишон медиҳад.
+  bool get _peerScreen => _mine && _ctl.peerSharing;
+
+  /// Мо экранро нишон медиҳем.
+  bool get _selfSharing => _mine && _ctl.screenSharing;
+
   /// Тирезаи хурди PiP: танҳо ҳамсӯҳбат (тасвири худ пинҳон).
   Widget _buildPip() => KeyedSubtree(
     key: const Key('call_pip_mode'),
-    child: _isVideo
+    child: _peerScreen
+        ? ColoredBox(
+            color: Colors.black,
+            child: _ctl.engine.remoteView('pipwin', fit: true))
+        : _isVideo
         ? _remoteOrPlaceholder('pipwin', big: false)
         : Container(
             color: const Color(0xFF0D1B3E),
@@ -250,6 +276,14 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
           key: const Key('call_video_fallback'),
           icon: Symbols.data_saver_on,
           text: CallStrings.t('videoFallback'),
+        ),
+      if (_ctl.shareState == ScreenShareState.requesting)
+        CallHintChip(
+          key: const Key('call_share_requesting'),
+          icon: AppIcons.screen_share_rounded,
+          text: CallStrings.t('screenShareRequesting'),
+          action: CallStrings.t('cancel'),
+          onAction: _ctl.stopScreenShare,
         ),
       if (_ctl.switchState == CallSwitchState.requesting)
         CallHintChip(
@@ -386,10 +420,13 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
         );
 
   Widget _buildVideo() {
-    final selfBig = _ctl.selfIsBig;
+    // Ҳангоми намоиши экран камера нашр намешавад ва тасвири худ пинҳон —
+    // ҳамсӯҳбат калон, бе тасвири хурд (оинаи беохир дар экран нашавад).
+    final sharing = _selfSharing;
+    final selfBig = _ctl.selfIsBig && !sharing;
     // Пеш аз «хурд»: худ дар тасвири хурд (агар камера хомӯш бошад —
     // мисли пештар тасвири хурд нест).
-    final showSmall = selfBig || _localVisible;
+    final showSmall = !sharing && (selfBig || _localVisible);
     final pad = MediaQuery.paddingOf(context);
     return Stack(children: [
       Positioned.fill(
@@ -464,6 +501,87 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
             _EndBtn(onTap: _endCall),
             _Btn(icon: AppIcons.flip_camera_ios_rounded,
                 label: tr('ui.05a19ea7d3'), active: false, onTap: _ctl.flipCamera),
+            _routeBtn(),
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  // ══════════════════ ЭКРАНИ ҲАМСӮҲБАТ ══════════════════
+
+  /// Ҳамсӯҳбат экрани телефонашро нишон медиҳад: тамоми кадр бо
+  /// BoxFit.contain (экрани телефон бурида намешавад) ва pinch-to-zoom.
+  Widget _buildPeerScreen() {
+    final pad = MediaQuery.paddingOf(context);
+    final ready = _ctl.engine.remoteUid != null && _ctl.engine.hasVideo;
+    return Stack(children: [
+      Positioned.fill(
+        child: ColoredBox(
+          key: const Key('call_peer_screen'),
+          color: Colors.black,
+          child: ready
+              ? InteractiveViewer(
+                  key: const Key('call_peer_screen_zoom'),
+                  minScale: 1,
+                  maxScale: 5,
+                  child: SizedBox.expand(
+                    child: _ctl.engine.remoteView('screen', fit: true),
+                  ),
+                )
+              : const Center(
+                  child: CircularProgressIndicator(color: Colors.white54)),
+        ),
+      ),
+
+      // Тасвири хурди худ (занги видеоӣ) — бе иваз: калон ҳамеша экран.
+      if (_isVideo && _localVisible)
+        Positioned.fill(
+          child: SnapTile(
+            key: const Key('call_self_tile'),
+            size: selfTileSize,
+            insets: EdgeInsets.fromLTRB(pad.left + 16, pad.top + 96,
+                pad.right + 16, controlBarHeight + 8),
+            initialCorner: SnapCorner.topRight,
+            onTap: () {},
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: _localOrPlaceholder('small'),
+            ),
+          ),
+        ),
+
+      SafeArea(child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            _minimizeBtn(),
+            Expanded(child: Column(children: [
+              ScreenShareLabel(name: widget.peer.username),
+              const SizedBox(height: 2),
+              Text(_statusText,
+                  style: TextStyle(color: AppColors.textPrimary.withOpacity(0.6), fontSize: 13)),
+            ])),
+            _moreBtn(),
+          ]),
+          _hints(),
+        ]),
+      )),
+
+      Positioned(bottom: 0, left: 0, right: 0,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 32, 16, 52),
+          decoration: BoxDecoration(gradient: LinearGradient(
+            begin: Alignment.bottomCenter, end: Alignment.topCenter,
+            colors: [Colors.black.withOpacity(0.88), Colors.transparent],
+          )),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+            _Btn(icon: _ctl.engine.muted ? AppIcons.mic_off_rounded : AppIcons.mic_rounded,
+                label: tr('ui.485bf9ddc4'), active: _ctl.engine.muted, onTap: _ctl.toggleMute),
+            if (_isVideo)
+              _Btn(icon: _ctl.engine.cameraOff ? AppIcons.videocam_off_rounded : AppIcons.videocam_rounded,
+                  label: tr('ui.a71a775fd9'), active: _ctl.engine.cameraOff, onTap: _ctl.toggleCamera),
+            _EndBtn(onTap: _endCall),
             _routeBtn(),
           ]),
         ),

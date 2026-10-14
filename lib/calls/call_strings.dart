@@ -75,6 +75,17 @@ class CallStrings {
       'loadFailed': 'Бор нашуд. Интернетро санҷед.',
       'channelOngoing': 'Гуфтугӯи ҷорӣ',
       'cancel': 'Бекор',
+      'screenShare': 'Намоиши экран',
+      'screenShareStart': 'Нишон додан',
+      'screenShareStop': 'Қатъ кардан',
+      'screenShareWarn':
+          'Ҳамаи он чи дар экран аст, аз ҷумла огоҳиномаҳо, ба тарафи дигар намоён мешавад',
+      'screenShareRequesting': 'Интизори иҷозати намоиши экран…',
+      'screenSharingSelf': 'Шумо экранро нишон медиҳед',
+      'screenSharingPeer': '@{name} экранро нишон медиҳад',
+      'screenSharingNotif': 'Экран намоиш дода мешавад',
+      'screenShareDenied': 'Иҷозати намоиши экран дода нашуд',
+      'screenShareFailed': 'Намоиши экран оғоз нашуд',
     },
     'ru': {
       'voice': 'Аудиозвонок',
@@ -137,6 +148,17 @@ class CallStrings {
       'loadFailed': 'Не загрузилось. Проверьте интернет.',
       'channelOngoing': 'Текущий звонок',
       'cancel': 'Отмена',
+      'screenShare': 'Демонстрация экрана',
+      'screenShareStart': 'Показать',
+      'screenShareStop': 'Остановить',
+      'screenShareWarn':
+          'Всё, что на экране, включая уведомления, будет видно собеседнику',
+      'screenShareRequesting': 'Ожидание разрешения на показ экрана…',
+      'screenSharingSelf': 'Вы показываете экран',
+      'screenSharingPeer': '@{name} показывает экран',
+      'screenSharingNotif': 'Идёт демонстрация экрана',
+      'screenShareDenied': 'Разрешение на показ экрана не получено',
+      'screenShareFailed': 'Не удалось начать показ экрана',
     },
     'en': {
       'voice': 'Voice call',
@@ -199,6 +221,17 @@ class CallStrings {
       'loadFailed': "Couldn't load. Check your internet.",
       'channelOngoing': 'Ongoing call',
       'cancel': 'Cancel',
+      'screenShare': 'Share screen',
+      'screenShareStart': 'Share',
+      'screenShareStop': 'Stop',
+      'screenShareWarn':
+          'Everything on your screen, including notifications, will be visible to the other person',
+      'screenShareRequesting': 'Waiting for screen sharing permission…',
+      'screenSharingSelf': "You're sharing your screen",
+      'screenSharingPeer': '@{name} is sharing their screen',
+      'screenSharingNotif': 'Screen is being shared',
+      'screenShareDenied': 'Screen sharing permission was not granted',
+      'screenShareFailed': "Couldn't start screen sharing",
     },
   };
 
