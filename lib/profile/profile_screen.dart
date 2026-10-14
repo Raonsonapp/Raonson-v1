@@ -25,7 +25,6 @@ import '../thanks/thanks_screen.dart';
 import '../qa/qa_screens.dart';
 import '../challenges/challenge_screens.dart';
 import '../capsules/capsule_screens.dart';
-import '../create/upload/upload_manager.dart';
 import '../feed/post/post_detail_screen.dart';
 import '../models/post_model.dart';
 import '../models/reel_model.dart';

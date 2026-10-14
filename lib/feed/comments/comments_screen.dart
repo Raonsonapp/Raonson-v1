@@ -272,16 +272,20 @@ class _CommentsScreenState extends State<CommentsScreen> {
       if (res.statusCode < 400) {
         final real = CommentModel.fromJson(
             jsonDecode(res.body) as Map<String, dynamic>);
-        setState(() {
-          final idx = _comments.indexWhere((c) => c.id == tempId);
-          if (idx >= 0) _comments[idx] = real;
-        });
+        // Корбар метавонад варақро то ҷавоби сервер пӯшад. Пеш setState
+        // баъди dispose хато медод ва шумораи шарҳҳо дар лента нав намешуд.
+        if (mounted) {
+          setState(() {
+            final idx = _comments.indexWhere((c) => c.id == tempId);
+            if (idx >= 0) _comments[idx] = real;
+          });
+        }
         // Шумораи шарҳҳо дар ҳамаи экранҳо (Home, Reels, Explore, профил).
         ContentSync.instance.bumpComments(widget.post.id, 1,
             base: widget.post.commentsCount);
         widget.onCommentAdded?.call();
       } else {
-        setState(() => _comments.removeWhere((c) => c.id == tempId));
+        if (mounted) setState(() => _comments.removeWhere((c) => c.id == tempId));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(tr('ui.adf53b93fc')),
@@ -290,7 +294,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
         }
       }
     } catch (_) {
-      setState(() => _comments.removeWhere((c) => c.id == tempId));
+      if (mounted) setState(() => _comments.removeWhere((c) => c.id == tempId));
     }
     if (mounted) setState(() => _sending = false);
   }
@@ -670,6 +674,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     width: 24, height: 24,
                     colorFilter: ColorFilter.mode(
                         AppColors.textSecondary, BlendMode.srcIn)),
+                tooltip: tr('common.gift'),
                 onPressed: _openGift,
               ),
               _sending
@@ -680,6 +685,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   : IconButton(
                       icon: const Icon(AppIcons.send_rounded,
                           color: AppColors.neonBlue, size: 22),
+                      tooltip: tr('common.send'),
                       onPressed: _send),
             ]),
           ),

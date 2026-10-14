@@ -325,6 +325,8 @@ class _AudioPageScreenState extends State<AudioPageScreen> {
               CachedNetworkImage(
                 imageUrl: thumb,
                 fit: BoxFit.cover,
+                // Плиткаи 1/3 васеъ — расми пурраро дар хотира намекушоем.
+                memCacheWidth: 360,
                 errorWidget: (_, __, ___) => Container(color: AppColors.card),
               ),
             // Ҳамон нишон (чашм) ва рақам (ContentSync), ки дар профил ва

@@ -221,6 +221,8 @@ class ReelActionColumn extends StatelessWidget {
           active: liked,
           activeColor: const Color(0xFFFF3040),
           label: likesLabel,
+          // Пеш `semantics` дода намешуд — TalkBack танҳо «тугма» мегуфт.
+          semantics: liked ? tr('a11y.unlike') : tr('a11y.like'),
           bounce: true,
           onTap: () {
             HapticFeedback.lightImpact();
@@ -232,12 +234,14 @@ class ReelActionColumn extends StatelessWidget {
         ReelActionButton(
             svg: 'assets/icons/comment.svg',
             label: reelCountLabel(commentsCount),
+            semantics: tr('a11y.comments'),
             onTap: onComment!),
       ],
       g,
       ReelActionButton(
           svg: 'assets/icons/share.svg',
           label: reelCountLabel(sharesCount),
+          semantics: tr('common.share'),
           onTap: onShare),
       g,
       ReelActionButton(
@@ -245,6 +249,7 @@ class ReelActionColumn extends StatelessWidget {
           activeSvg: 'assets/icons/save_filled.svg',
           active: saved,
           label: reelCountLabel(savesCount),
+          semantics: saved ? tr('a11y.unsave') : tr('common.save'),
           onTap: () {
             HapticFeedback.selectionClick();
             onSave();

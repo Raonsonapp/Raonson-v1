@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/services/user_session.dart';
 import '../../app/app_theme.dart';
 import '../../core/ui/app_icons.dart';
+import '../../core/i18n/strings.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -43,18 +44,21 @@ class BottomNavBar extends StatelessWidget {
                 svgActive: 'assets/icons/nav_home_filled.svg',
                 svgInactive: 'assets/icons/nav_home.svg',
                 fallback: AppIcons.home_rounded,
+                label: tr('nav.home'),
               ),
               _SvgNavItem(
                 index: 1, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_reels.svg',
                 svgInactive: 'assets/icons/nav_reels.svg',
                 fallback: AppIcons.smart_display_outlined,
+                label: tr('nav.reels'),
               ),
               _SvgNavItem(
                 index: 2, currentIndex: currentIndex, onTap: onTap,
                 svgActive: 'assets/icons/nav_chat_filled.svg',
                 svgInactive: 'assets/icons/nav_chat.svg',
                 fallback: AppIcons.chat_bubble_outline_rounded,
+                label: tr('nav.messages'),
                 badge: chatUnread,
               ),
               _SvgNavItem(
@@ -62,6 +66,7 @@ class BottomNavBar extends StatelessWidget {
                 svgActive: 'assets/icons/nav_search.svg',
                 svgInactive: 'assets/icons/nav_search.svg',
                 fallback: AppIcons.search_rounded,
+                label: tr('nav.search'),
               ),
               // Profile — ValueListenableBuilder аватари live
               ValueListenableBuilder<String?>(
@@ -94,6 +99,8 @@ class _SvgNavItem extends StatelessWidget {
   final String svgInactive;
   final IconData fallback;
   final int badge;
+  /// Барои хонандаи экран: пеш табҳо бе ном буданд (TalkBack «тугма» мегуфт).
+  final String label;
 
   const _SvgNavItem({
     required this.index,
@@ -102,6 +109,7 @@ class _SvgNavItem extends StatelessWidget {
     required this.svgActive,
     required this.svgInactive,
     required this.fallback,
+    required this.label,
     this.badge = 0,
   });
 
@@ -109,7 +117,14 @@ class _SvgNavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final sel = currentIndex == index;
     final color = sel ? AppColors.textPrimary : Color(0xFF555555);
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: sel,
+      label: badge > 0 ? '$label, $badge' : label,
+      // Фарзандон хориҷ — пас амали «пахш»-ро худамон медиҳем.
+      excludeSemantics: true,
+      onTap: () => onTap(index),
+      child: GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
       child: Padding(
@@ -144,6 +159,7 @@ class _SvgNavItem extends StatelessWidget {
             ),
         ]),
       ),
+    ),
     );
   }
 }
@@ -169,7 +185,14 @@ class _ProfileItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sel = currentIndex == index;
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: sel,
+      label: tr('nav.profile'),
+      excludeSemantics: true,
+      onTap: () => onTap(index),
+      onLongPress: onLongPress,
+      child: GestureDetector(
       onTap: () => onTap(index),
       onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
@@ -214,6 +237,7 @@ class _ProfileItem extends StatelessWidget {
             ),
         ]),
       ),
+    ),
     );
   }
 

@@ -164,6 +164,7 @@ class _ShopScreenState extends State<ShopScreen> {
                             color: AppColors.textFaint))
                     : CachedNetworkImage(
                         imageUrl: p.image, fit: BoxFit.cover,
+                        memCacheWidth: 540, // плиткаи 1/2 васеъ
                         placeholder: (_, __) => Container(color: AppColors.card),
                         errorWidget: (_, __, ___) =>
                             Container(color: AppColors.card)),

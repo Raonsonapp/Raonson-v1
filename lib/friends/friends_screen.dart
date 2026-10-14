@@ -220,14 +220,14 @@ class _FriendsScreenState extends State<FriendsScreen>
   Future<void> _accept(String userId) async {
     try {
       await ApiClient.instance.postOk('/follow/request/$userId/accept');
-      setState(() => _requests.removeWhere((u) => u.id == userId));
+      if (mounted) setState(() => _requests.removeWhere((u) => u.id == userId));
     } catch (_) {}
   }
 
   Future<void> _decline(String userId) async {
     try {
       await ApiClient.instance.postOk('/follow/request/$userId/reject');
-      setState(() => _requests.removeWhere((u) => u.id == userId));
+      if (mounted) setState(() => _requests.removeWhere((u) => u.id == userId));
     } catch (_) {}
   }
 

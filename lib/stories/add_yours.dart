@@ -159,6 +159,8 @@ class _AddYoursSheetState extends State<_AddYoursSheet> {
           child: Stack(fit: StackFit.expand, children: [
             if (!isVideo)
               CachedNetworkImage(imageUrl: s.mediaUrl, fit: BoxFit.cover,
+                  // Сторис расми пурраи экран аст; плитка 1/3 — хотира кам.
+                  memCacheWidth: 360,
                   errorWidget: (_, __, ___) =>
                       const ColoredBox(color: Color(0xFF222222)))
             else

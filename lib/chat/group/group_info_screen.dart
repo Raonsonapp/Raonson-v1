@@ -305,6 +305,7 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
         final users =
             (body is List ? body : (body['users'] ?? body['data'] ?? []))
                 as List;
+        if (!mounted) return; // экран то ҷавоб пӯшида шуд
         setState(() => _results = users
             .map((e) => (e as Map).cast<String, dynamic>())
             .where((u) => !widget.existingIds

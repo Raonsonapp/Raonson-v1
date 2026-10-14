@@ -1691,7 +1691,11 @@ class _PostCardState extends State<PostCard>
           // ♡ Like — bounce + count slide animation
           ScaleTransition(
             scale: _likeScale,
-            child: GestureDetector(
+            child: Semantics(
+              button: true,
+              toggled: _liked,
+              label: _liked ? tr('a11y.unlike') : tr('a11y.like'),
+              child: GestureDetector(
               onTap: _toggleLike,
               onLongPress: _showWhoLiked,
               behavior: HitTestBehavior.opaque,
@@ -1711,6 +1715,7 @@ class _PostCardState extends State<PostCard>
                 ]),
               ),
             ),
+            ),
           ),
 
           const SizedBox(width: 4),
@@ -1720,12 +1725,14 @@ class _PostCardState extends State<PostCard>
           // мебурд, ки майдони навиштанаш ҳамеша кушода буд.
           if (!_commentsDisabled) ...[
             _StableBtn(onTap: _openComments,
+                label: tr('a11y.comments'),
                 svgPath: 'assets/icons/comment.svg', size: 25,
                 count: _commentCount, fmt: _fmt),
             const SizedBox(width: 4),
           ],
 
           _StableBtn(onTap: _showShare,
+              label: tr('common.share'),
               svgPath: 'assets/icons/share.svg', size: 25,
               count: _shareCount, fmt: _fmt),
             ]),
@@ -1734,6 +1741,7 @@ class _PostCardState extends State<PostCard>
           _StableBtn(
             onTap: _toggleSave,
             onLongPress: _pickCollection,
+            label: _saved ? tr('a11y.unsave') : tr('common.save'),
             svgPath: 'assets/icons/save.svg',
             activeSvgPath: 'assets/icons/save_filled.svg',
             isActive: _saved, activeColor: AppColors.textPrimary,
@@ -2040,16 +2048,21 @@ class _StableBtn extends StatelessWidget {
   final int count;
   final String Function(int) fmt;
   final VoidCallback? onLongPress;
+  /// Номи тугма барои хонандаи экран (TalkBack/VoiceOver).
+  final String? label;
   const _StableBtn({
     required this.onTap, required this.svgPath, this.activeSvgPath,
     this.isActive = false, this.activeColor,
     this.inactiveColor, required this.size,
-    required this.count, required this.fmt, this.onLongPress});
+    required this.count, required this.fmt, this.onLongPress, this.label});
   @override
   Widget build(BuildContext context) {
     final path  = (isActive && activeSvgPath != null) ? activeSvgPath! : svgPath;
     final color = (isActive ? activeColor : inactiveColor) ?? AppColors.textPrimary;
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
       onTap: onTap, onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
       child: Padding(
@@ -2062,7 +2075,7 @@ class _StableBtn extends StatelessWidget {
           if (count > 0) ...[ const SizedBox(width: 5),
             Text(fmt(count), style: TextStyle(color: AppColors.textPrimary,
                 fontSize: 14, fontWeight: FontWeight.w500))],
-        ])));
+        ]))));
   }
 }
 

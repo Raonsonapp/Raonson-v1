@@ -62,8 +62,8 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
   // ── Мусиқӣ кушо ──
   Future<void> _openMusic() async {
     await _player.stop();
-    setState(() => _playing = false);
     if (!mounted) return;
+    setState(() => _playing = false);
     final result = await showModalBottomSheet<SongInfo>(
       context: context,
       isScrollControlled: true,
@@ -89,10 +89,12 @@ class _NoteBottomSheetState extends State<NoteBottomSheet> {
     if (_song == null || _song!.previewUrl.isEmpty) return;
     if (_playing) {
       await _player.pause();
-      setState(() => _playing = false);
+      if (mounted) setState(() => _playing = false);
     } else {
       await _player.play(UrlSource(_song!.previewUrl));
       await _player.seek(Duration(milliseconds: _song!.startMs));
+      // Боргирии суруд аз шабака вақт мегирад — варақ шояд пӯшида бошад.
+      if (!mounted) return;
       setState(() => _playing = true);
       // Auto-stop at segment end
       final segLen = _song!.endMs - _song!.startMs;
