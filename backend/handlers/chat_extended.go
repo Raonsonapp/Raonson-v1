@@ -167,6 +167,9 @@ func SendMessageExt(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text or mediaUrl required"})
 		return
 	}
+	// Ҳамон ҳадди таҳрири паём (EditMessage: 4000). Пеш матн ҳадде
+	// надошт — як дархост метавонист мегабайтҳо ба базаи паёмҳо нависад.
+	body.Text = clampRunes(body.Text, maxDMRunes)
 
 	msgType := body.MediaType
 	if msgType == "" {

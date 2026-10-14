@@ -86,6 +86,13 @@ for name, path in checks:
 
 st, r = call("GET", f"/posts/{pid}/likes", tok=tB)
 ok("БЕГОНА: лайккунандагон — пинҳон", C not in jd(r), r)
+# Баҳоҳо ва тарҷумаҳои маҳсул — пеш ба ҳар кас бо донистани id кушода буданд.
+st, r = call("GET", f"/posts/{pid}/reviews", tok=tB)
+ok("БЕГОНА: баҳоҳои маҳсул — пинҳон (404)", st == 404, f"HTTP {st} {r}")
+st, r = call("GET", f"/posts/{pid}/translations", tok=tB)
+ok("БЕГОНА: тарҷумаҳои маҳсул — пинҳон (404)", st == 404, f"HTTP {st} {r}")
+st, r = call("GET", f"/posts/{pid}/reviews", tok=tC)
+ok("ОБУНА: баҳоҳои маҳсул — дастрас", st == 200, f"HTTP {st} {r}")
 st, r = call("GET", f"/users/{A}/followers", tok=tB)
 ok("БЕГОНА: рӯйхати обунаҳо — пинҳон", C not in jd(r), r)
 st, r = call("GET", f"/highlights/{A}", tok=tB)

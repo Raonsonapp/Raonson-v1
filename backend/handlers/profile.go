@@ -517,7 +517,12 @@ func GetFriendsNotes(c *gin.Context) {
 		  -- Блок: ёддошти басташуда (ва басткунанда) нишон дода намешавад.
 		  AND NOT EXISTS(SELECT 1 FROM blocks b
 		     WHERE (b.blocker_id=$1 AND b.blocked_id=u.id)
-		        OR (b.blocker_id=u.id AND b.blocked_id=$1))`,
+		        OR (b.blocker_id=u.id AND b.blocked_id=$1))
+		-- Навтаринҳо аввал ва ҳадди 100. Пеш тартиб тасодуфӣ буд ва
+		-- рӯйхат ҳадде надошт (ҳазорҳо обуна → ҷавоби бузург дар ҳар
+		-- кушодани чат).
+		ORDER BY u.note_expires_at DESC
+		LIMIT 100`,
 		myID)
 	if err != nil {
 		log.Printf("[Profile] GetFriendsNotes error: %v", err)

@@ -39,7 +39,7 @@ func EditMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "text лозим"})
 		return
 	}
-	text := clampRunes(strings.TrimSpace(b.Text), 4000)
+	text := clampRunes(strings.TrimSpace(b.Text), maxDMRunes)
 	if text == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Паём холӣ буда наметавонад"})
 		return

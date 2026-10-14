@@ -25,7 +25,7 @@ func GetStories(c *gin.Context) {
 
 	// Сторисҳо танҳо аз корбароне, ки ман пайравӣ мекунам (+ худам).
 	// Сторисҳои «наздикон» танҳо ба дӯстони наздики соҳиб намоён мешаванд.
-	rows, _ := db.Pool.Query(context.Background(), `
+	rows, err := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
 		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),
 		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false),
@@ -54,6 +54,13 @@ func GetStories(c *gin.Context) {
 		  AND ( s.user_id = $1::text OR NOT EXISTS (SELECT 1 FROM muted_users mu
 		        WHERE mu.user_id = $1::text AND mu.muted_id = s.user_id) )
 		ORDER BY s.created_at DESC`, myID, targetID)
+	// Хатои база — 500, на рӯйхати холӣ: барнома ҷавоби 200-и холиро дар
+	// кэши офлайн менавишт ва ҳалқаи сторисҳо то навсозии дигар нопадид
+	// мешуд. Бо 500 кэши кӯҳна нишон дода мешавад.
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get stories failed"})
+		return
+	}
 	c.JSON(http.StatusOK, scanStoryRows(rows, myID))
 }
 
@@ -90,7 +97,7 @@ func ToggleStoryReplies(c *gin.Context) {
 // GET /stories/my
 func GetMyStories(c *gin.Context) {
 	myID := mw.UID(c)
-	rows, _ := db.Pool.Query(context.Background(), `
+	rows, err := db.Pool.Query(context.Background(), `
 		SELECT s.id,s.media_url,s.media_type,s.expires_at,s.created_at,
 		       u.id,u.username,COALESCE(u.avatar,''),COALESCE(u.verified,false),
 		       COALESCE(s.audience,'all'), COALESCE(s.replies_off,false),
@@ -103,6 +110,10 @@ func GetMyStories(c *gin.Context) {
 		FROM stories s JOIN users u ON u.id=s.user_id
 		WHERE s.user_id=$1 AND s.expires_at > NOW()
 		ORDER BY s.created_at DESC`, myID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get stories failed"})
+		return
+	}
 	c.JSON(http.StatusOK, scanStoryRows(rows, myID))
 }
 

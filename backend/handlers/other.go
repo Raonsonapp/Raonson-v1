@@ -689,7 +689,7 @@ func SearchUsers(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Query required"})
 		return
 	}
-	rows, _ := db.Pool.Query(context.Background(), `
+	rows, err := db.Pool.Query(context.Background(), `
 		SELECT id,username,avatar,verified,bio,
 		       -- Ҳамон рақами сарлавҳаи профил (COUNT(follows), ниг.
 		       -- userSelectSQL), на сутуни ҳисобшудаи followers_count.
@@ -701,6 +701,11 @@ func SearchUsers(c *gin.Context) {
 		          OR (vb.blocker_id = u.id AND vb.blocked_id = $2::text))
 		ORDER BY followers_count DESC, username ASC LIMIT 30`,
 		"%"+q+"%", mw.UID(c))
+	// Хатои база ≠ «касе ёфт нашуд».
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Search failed"})
+		return
+	}
 	users := []gin.H{}
 	if rows != nil {
 		defer rows.Close()
@@ -990,7 +995,7 @@ func GetReelComments(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	// Ҳамон шакли ҷавоб мисли шарҳҳои пост — likes, replies ва pagination.
-	rows, _ := db.Pool.Query(context.Background(), `
+	rows, err := db.Pool.Query(context.Background(), `
 		SELECT rc.id, rc.text, COALESCE(rc.likes_count,0), rc.created_at,
 		       COALESCE(rc.parent_id,''),
 		       u.id, u.username, COALESCE(u.avatar,''), COALESCE(u.verified,false),
@@ -1006,6 +1011,12 @@ func GetReelComments(c *gin.Context) {
 		ORDER BY (rc.pinned_at IS NOT NULL) DESC, rc.pinned_at DESC, rc.created_at DESC
 		LIMIT $3 OFFSET $4`,
 		rid, myID, limit, offset)
+	// Мисли шарҳҳои пост: хатои база — 500, то барнома «Шарҳе нест»
+	// нишон надиҳад ва шарҳҳои кэшшударо пок накунад.
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Get comments failed"})
+		return
+	}
 	comments := []gin.H{}
 	if rows != nil {
 		defer rows.Close()

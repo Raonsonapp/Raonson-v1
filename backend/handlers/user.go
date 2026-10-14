@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"raonson/db"
@@ -72,6 +73,18 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Bad request"})
 		return
 	}
+	// Ҳамон қоидаҳои PUT /profile/. Пеш модератсия танҳо 150 ҳарфи
+	// аввали bio-ро медид, вале ПУРРА сабт мешуд — дашном баъди ҳарфи
+	// 150 аз санҷиш мегузашт ва дарозӣ ҳадде надошт. Аватар низ бо ҳар
+	// нақша (javascript:, file:) қабул мешуд.
+	if b.Bio != nil {
+		v := clampRunes(strings.TrimSpace(*b.Bio), 150)
+		b.Bio = &v
+	}
+	if b.Avatar != nil && *b.Avatar != "" && !isWebURL(*b.Avatar) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Линк бояд бо https:// сар шавад"})
+		return
+	}
 	if !normalizeUsernameUpdate(c, myID, b.Username) {
 		return
 	}
@@ -87,7 +100,7 @@ func UpdateUser(c *gin.Context) {
 		COALESCE(avatar,'') FROM users WHERE id=$1`, myID).Scan(&curBio, &curUser, &curAvatar)
 	modReq := modRequest{Surface: "bio", AI: true}
 	if b.Bio != nil && *b.Bio != "" && *b.Bio != curBio {
-		modReq.Texts = append(modReq.Texts, clampRunes(*b.Bio, 150))
+		modReq.Texts = append(modReq.Texts, *b.Bio)
 	}
 	if b.Username != nil && *b.Username != "" && *b.Username != curUser {
 		modReq.Texts = append(modReq.Texts, *b.Username)

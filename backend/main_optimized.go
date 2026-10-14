@@ -395,12 +395,13 @@ func main() {
 		po.GET("/:id/stats",         handlers.GetPostStats)
 		po.POST("/:id/order",        handlers.PlaceOrder) // хариди маҳсулот
 		po.POST("/:id/feature",      handlers.ToggleProductFeature) // маҳсули беҳтарин
-		po.GET("/:id/translations",  handlers.GetProductTranslations)
+		po.GET("/:id/translations",  handlers.RequireVisible("post"), handlers.GetProductTranslations)
 		po.PUT("/:id/translations",  handlers.SetProductTranslations)
 		po.PUT("/:id/product",       handlers.UpdateProduct) // таҳрири маҳсул
 		po.PUT("/:id/sale",          handlers.SetProductSale) // тахфифи муддатнок
 		po.POST("/:id/review",       handlers.AddReview)     // баҳои маҳсул
-		po.GET("/:id/reviews",       handlers.GetReviews)
+		// Баҳоҳо (бо номи харидорон) — ҳамон қулфи ҳисоби пӯшида/бастан.
+		po.GET("/:id/reviews",       handlers.RequireVisible("post"), handlers.GetReviews)
 	}
 
 	// ── Shopping (маркетплейс + фармоишҳо) ─────────────────────────
